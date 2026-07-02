@@ -1,0 +1,31 @@
+# Deploys the static site to Cloudflare Pages on every push to main.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   CLOUDFLARE_API_TOKEN   - API token with "Cloudflare Pages: Edit" permission
+#   CLOUDFLARE_ACCOUNT_ID  - Cloudflare dashboard -> Workers & Pages -> Account ID
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      PROJECT_NAME: kitabi-in
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble deploy directory
+        run: |
+          mkdir -p public
+          cp index.html avatar.jpg ico.png public/
+
+      - name: Deploy
+        run: npx wrangler@4 pages deploy public --project-name="$PROJECT_NAME" --branch=main

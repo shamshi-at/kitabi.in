@@ -1,72 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Kitabi</title>
-    <link rel="icon" href="ico.png" type="image/png">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #000034;
-            color: white;
-        }
-        header {
-            background: #000031;
-            padding: 20px 20px;
-            text-align: center;
-        }
-        header img {
-            width: 120px;
-            height: auto;
-        }
-        nav {
-            background: #000033;
-            padding: 10px 20px;
-            text-align: center;
-        }
-        nav a {
-            color: white;
-            padding: 0 15px;
-            text-decoration: none;
-        }
-        nav a:hover {
-            text-decoration: underline;
-        }
-        .content {
-            padding: 20px;
-            text-align: center;
-        }
-        .footer {
-            background: #000031;
-            color: white;
-        }
-        .footer p {
-            text-align: center;
-            padding: 10px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kitabi — Beyond the Bookshelf</title>
+<meta name="description" content="Discover, manage, and review books all in one place. Join the community of book lovers today!">
+<meta name="theme-color" content="#050724">
+<link rel="icon" href="ico.png" type="image/png">
+
+<meta property="og:title" content="Kitabi — Beyond the Bookshelf">
+<meta property="og:description" content="Discover, manage, and review books all in one place. Join the community of book lovers today!">
+<meta property="og:image" content="https://kitabi.in/avatar.jpg">
+<meta property="og:url" content="https://kitabi.in">
+
+<style>
+:root{
+  --bg:#050724;
+  --surface:rgba(255,255,255,.05);
+  --border:rgba(255,255,255,.1);
+  --text:#edeef6;
+  --dim:#a0a5c0;
+  --gold:#e8b84d;
+  --teal:#2dd4bf;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:var(--bg);
+  background-image:
+    radial-gradient(60vw 60vw at 75% -15%,rgba(232,184,77,.12),transparent 60%),
+    radial-gradient(55vw 55vw at 0% 110%,rgba(45,212,191,.10),transparent 60%);
+  background-attachment:fixed;
+  color:var(--text);
+  min-height:100vh;
+  min-height:100dvh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:max(20px,env(safe-area-inset-top)) 16px max(20px,env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color:transparent;
+  overflow-x:hidden;
+}
+
+/* Star field (pure CSS, transform/opacity only) */
+.star{
+  position:fixed;
+  width:2px;height:2px;
+  background:#fff;
+  border-radius:50%;
+  opacity:0;
+  animation:sparkle 2.6s linear infinite;
+  pointer-events:none;
+}
+.star:nth-child(1){top:16%;left:20%}
+.star:nth-child(2){top:30%;left:9%;animation-delay:.5s}
+.star:nth-child(3){top:11%;left:75%;animation-delay:1.2s}
+.star:nth-child(4){top:55%;left:90%;animation-delay:.3s}
+.star:nth-child(5){top:80%;left:26%;animation-delay:1.7s}
+.star:nth-child(6){top:42%;left:64%;animation-delay:.9s}
+.star:nth-child(7){top:88%;left:74%;animation-delay:2.1s}
+@keyframes sparkle{
+  0%,100%{opacity:0;transform:scale(.6)}
+  50%{opacity:.9;transform:scale(1)}
+}
+
+.card{
+  width:100%;
+  max-width:440px;
+  text-align:center;
+  position:relative;
+  z-index:1;
+}
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes pop{
+  0%{opacity:0;transform:scale(.55)}
+  70%{transform:scale(1.06)}
+  100%{opacity:1;transform:scale(1)}
+}
+.avatar{
+  width:120px;height:120px;
+  margin:0 auto 20px;
+  border-radius:50%;
+  display:block;
+  object-fit:cover;
+  background:#141643;
+  box-shadow:0 0 0 3px var(--bg),0 0 0 6px rgba(232,184,77,.55),0 14px 40px rgba(0,0,0,.5);
+  animation:pop .55s cubic-bezier(.34,1.56,.64,1) both;
+}
+h1{
+  font-size:34px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;
+  background:linear-gradient(120deg,#ffffff,#e8b84d 70%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+  animation:up .5s ease-out .1s both;
+}
+.tagline{
+  margin-top:6px;
+  font-size:14px;font-weight:600;
+  letter-spacing:.28em;text-transform:uppercase;
+  color:var(--teal);
+  animation:up .5s ease-out .18s both;
+}
+.intro{
+  margin:28px auto 0;
+  padding:22px 24px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:18px;
+  animation:up .5s ease-out .28s both;
+}
+.intro h2{
+  font-size:18px;font-weight:700;
+  color:var(--gold);
+}
+.intro p{
+  margin-top:10px;
+  font-size:15px;
+  line-height:1.65;
+  color:var(--dim);
+}
+.badge{
+  display:inline-block;
+  margin-top:24px;
+  padding:9px 20px;
+  font-size:12.5px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);
+  background:rgba(232,184,77,.1);
+  border:1px solid rgba(232,184,77,.35);
+  border-radius:999px;
+  animation:up .5s ease-out .38s both;
+}
+.footer{
+  margin-top:26px;font-size:12.5px;color:var(--dim);
+  animation:up .5s ease-out .48s both;
+}
+@media (prefers-reduced-motion:reduce){
+  .avatar,h1,.tagline,.intro,.badge,.footer{animation:none}
+  .star{animation:none;opacity:.4}
+}
+</style>
 </head>
 <body>
-    <header>
-        <img src="logo.png" alt="Kitabi Logo">
-        <h1>Welcome to Kitabi</h1>
-        <p>Beyond the Bookshelf</p>
-    </header>
-    <nav>
-        <a href="#">Home</a>
-        <a href="#">About</a>
-        <a href="#">Contact</a>
-    </nav>
-    <div class="content">
-        <h2>Explore Your Favorite Books</h2>
-        <p>Discover, manage, and review books all in one place. Join the community of book lovers today!</p>
-    </div>
-    <footer class="awesome-footer">
-        <p>© 2024 Kitabi. All rights reserved.</p>
-    </footer>
+<div class="star" aria-hidden="true"></div><div class="star" aria-hidden="true"></div><div class="star" aria-hidden="true"></div><div class="star" aria-hidden="true"></div><div class="star" aria-hidden="true"></div><div class="star" aria-hidden="true"></div><div class="star" aria-hidden="true"></div>
+
+<main class="card">
+  <img class="avatar" src="avatar.jpg" alt="Kitabi logo" width="120" height="120" fetchpriority="high">
+  <h1>Kitabi</h1>
+  <p class="tagline">Beyond the Bookshelf</p>
+
+  <section class="intro">
+    <h2>Explore Your Favorite Books</h2>
+    <p>Discover, manage, and review books all in one place. Join the community of book lovers today!</p>
+  </section>
+
+  <span class="badge">Launching soon</span>
+
+  <p class="footer">© <span id="y">2026</span> Kitabi. All rights reserved.</p>
+</main>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
 </body>
 </html>
-
