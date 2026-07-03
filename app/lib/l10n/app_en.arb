@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "appTitle": "Kitabi",
+  "@appTitle": {
+    "description": "The application name"
+  },
+  "homeGreeting": "Beyond the Bookshelf",
+  "@homeGreeting": {
+    "description": "Tagline shown on the placeholder home screen"
+  }
+}
