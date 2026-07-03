@@ -121,6 +121,18 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
 .rib{position:absolute;top:-2px;right:6px;width:9px;height:20px;background:var(--gold);
   clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
 
+/* Ticker — overflowing title/author on generated covers scrolls gently.
+   Production rule: only when text overflows, one book at a time (grids scroll
+   on long-press; single-book cards may auto-run). Off under reduced motion. */
+.tick{white-space:nowrap;overflow:hidden;display:block}
+.tick span{display:inline-block;animation:tick 7s ease-in-out 1.2s infinite}
+@keyframes tick{
+  0%,12%{transform:translateX(0)}
+  55%,70%{transform:translateX(calc(-100% + 56px))}
+  100%{transform:translateX(0)}
+}
+@media (prefers-reduced-motion:reduce){.tick span{animation:none}}
+
 /* misc literary flourishes */
 .orn{text-align:center;color:var(--gold);font-size:11px;letter-spacing:6px;margin:6px 0}
 .quote{font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);line-height:1.5}
@@ -144,7 +156,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   </div>
   <nav class="toc">
     <a href="#welcome">Welcome</a><a href="#home">Home</a><a href="#library">Library</a>
-    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a>
+    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a><a href="#extras">Extras</a>
   </nav>
 </header>
 
@@ -336,6 +348,50 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       right in results.</p>
     </div>
 
+    <!-- 4b. Filters -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative">
+          <div style="filter:blur(2px) brightness(.92);padding:6px 13px">
+            <div class="pgtitle">My Library</div>
+            <div class="card" style="height:44px;margin-top:8px"></div>
+            <div class="card" style="height:44px;margin-top:7px"></div>
+            <div class="card" style="height:44px;margin-top:7px"></div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:13px 15px 16px;box-shadow:0 -12px 30px rgba(43,33,24,.18)">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 9px"></div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <div class="h-serif" style="font-size:15px">Filter</div>
+              <span style="font-size:8.5px;color:var(--oxblood);font-weight:700">Clear all</span>
+            </div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 4px">LANGUAGE</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="chip on" style="font-size:8px">മലയാളം</span><span class="chip" style="font-size:8px">English</span><span class="chip" style="font-size:8px">தமிழ்</span><span class="chip" style="font-size:8px">हिन्दी</span>
+            </div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 4px">GENRE</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="chip on" style="font-size:8px">Fiction</span><span class="chip" style="font-size:8px">Memoir</span><span class="chip" style="font-size:8px">History</span><span class="chip" style="font-size:8px">Poetry</span>
+            </div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 4px">STATUS</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="chip" style="font-size:8px">Reading</span><span class="chip on" style="font-size:8px">Read</span><span class="chip" style="font-size:8px">To read</span><span class="chip" style="font-size:8px">Wishlist</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:9px">
+              <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">YEAR READ</div>
+                <div class="search" style="font-size:9px">2024 – 2026</div></div>
+              <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">AUTHOR / PUBLISHER</div>
+                <div class="search" style="font-size:9px">⌕ Any</div></div>
+            </div>
+            <div class="btn" style="margin-top:11px">Show 18 books</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4b · Filters</b> The full V1 filter set — language, genre, status, year,
+      author, publisher — as a bottom sheet with a live result count. Regional scripts are
+      first-class citizens in the language chips.</p>
+    </div>
+
   </div>
 </section>
 
@@ -403,7 +459,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
             <span class="chip on">All</span><span class="chip">Reading</span><span class="chip">Read</span>
             <span class="chip">To read</span><span class="chip">★ Favourites</span><span class="chip">Beach reads</span>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px 8px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 8px;overflow:hidden">
             <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:7px">The Covenant of Water</div><div class="ca">Verghese</div></div>
               <div style="margin-top:4px"><span class="stamp reading">Reading</span></div></div>
             <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#5C3A24,#3A2114);color:#F0E2C2"><div class="rib"></div><div class="ct" style="font-size:7px">Khasakkinte Itihasam</div><div class="ca">O.V. Vijayan</div></div>
@@ -421,8 +477,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
               <div style="margin-top:4px"><span class="stamp tbr">To read</span></div></div>
             <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#6b4a68,#3d2a3b);color:#F0E2C2"><div class="ct" style="font-size:7px">Tomb of Sand</div><div class="ca">Shree</div></div>
               <div style="margin-top:4px"><span class="stamp wish">Wishlist</span></div></div>
-            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#7a4a23,#4b2c12);color:#F0E2C2"><div class="ct" style="font-size:7px">Em and the Big Hoom</div><div class="ca">Pinto</div></div>
-              <div style="margin-top:4px"><span class="stamp stop">Stopped</span></div></div>
+            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#43617E,#2a4058);color:#F0E2C2">
+              <div class="ct tick" style="font-size:7px"><span>മയ്യഴിപ്പുഴയുടെ തീരങ്ങളിൽ</span></div>
+              <div class="ca tick" style="font-size:5.5px"><span>M. MUKUNDAN · എം. മുകുന്ദൻ</span></div></div>
+              <div style="margin-top:4px"><span class="stamp wish">Wishlist</span></div></div>
           </div>
         </div>
         <div class="nav">
@@ -434,9 +492,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         </div>
       </div></div>
       <p class="cap"><b>5 · Library</b> Cover grid with tinted status pills, gold ribbon =
-      favourite, and a “WITH ANU” band on lent books. Norwegian Wood shows an uploaded cover
-      image sitting in the same frame as the generated ones. Personal shelves sit beside
-      statuses as chips.</p>
+      favourite, and a “WITH ANU” band on lent books. Norwegian Wood shows an uploaded cover.
+      <i>Mayyazhippuzhayude Theerangalil</i> demos the “ticker”: titles/authors too long for a
+      generated cover scroll gently and settle — overflow-only, one at a time (long-press in
+      grids), off under reduced motion.</p>
     </div>
 
     <!-- 6. Book detail -->
@@ -510,7 +569,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <div style="margin:0 20px 8px;background:#2E2318;border:1px solid #4a3a28;border-radius:11px;padding:9px;display:flex;gap:9px;align-items:center">
             <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:5px">Ponniyin Selvan</div></div>
             <div style="flex:1"><div style="font-size:10px;font-weight:600;color:#F0E2C2">Ponniyin Selvan — Vol I</div>
-            <div style="font-size:8.5px;color:#A08D6E">Kalki · Tamil · 1955</div></div>
+            <div style="font-size:8.5px;color:#A08D6E">Kalki · Tamil · Book 1 of 5</div></div>
             <span style="background:var(--gold);color:#241811;font-size:9px;font-weight:700;border-radius:8px;padding:5px 10px">Add</span>
           </div>
           <div style="display:flex;gap:8px;margin:0 20px 16px">
@@ -521,6 +580,55 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       </div></div>
       <p class="cap"><b>7 · Add — ISBN scan</b> The only dark screen (it’s a camera). Detected
       book slides up as a confirm card; search and manual entry are one tap away, never buried.</p>
+    </div>
+
+    <!-- 7b. Add / edit book form -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+            <div class="pgtitle" style="margin:0">Edit book</div>
+            <span class="sub" style="font-size:8px">catalog entry · shared</span>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">TITLE</div>
+          <div class="search" style="font-size:9.5px;color:var(--ink);font-weight:600">Ponniyin Selvan — Vol I</div>
+          <div style="display:flex;gap:7px;margin-top:7px">
+            <div style="flex:1.4"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">AUTHOR</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">Kalki Krishnamurthy</div></div>
+            <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">LANGUAGE</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">Tamil ▾</div></div>
+          </div>
+          <div style="display:flex;gap:7px;margin-top:7px">
+            <div style="flex:1.4"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">SERIES</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">Ponniyin Selvan</div></div>
+            <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">BOOK №</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">1 of 5</div></div>
+          </div>
+          <div style="display:flex;gap:7px;margin-top:7px">
+            <div style="flex:1.4"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">PUBLISHER</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">Vanathi Pathippakam</div></div>
+            <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">PAGES</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">520</div></div>
+          </div>
+          <div style="display:flex;gap:7px;margin-top:7px">
+            <div style="flex:1.4"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">ISBN · this edition</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">978-81-8493-066-6</div></div>
+            <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">FORMAT</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">Paperback ▾</div></div>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">GENRES · global</div>
+          <div style="display:flex;gap:4px"><span class="chip on" style="font-size:8px">Historical</span><span class="chip on" style="font-size:8px">Fiction</span><span class="chip" style="font-size:8px">+ add</span></div>
+          <div class="card" style="margin-top:8px;padding:8px;display:flex;align-items:center;gap:8px">
+            <div class="cover" style="width:24px;height:36px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:4.5px">Ponniyin Selvan</div></div>
+            <div style="flex:1;font-size:8.5px;color:var(--ink-soft)">Typeset cover in use · <b style="color:var(--oxblood)">⇧ upload a photo</b></div>
+          </div>
+          <div class="btn" style="margin-top:9px;padding:8px">Save to catalog</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>7b · Add / edit form</b> The catalog data-entry path: series + book number,
+      ISBN scoped to <i>this edition</i>, format, and global genres — the Work vs. Edition split
+      and series ordering wired exactly as the feature map demands.</p>
     </div>
 
   </div>
@@ -651,9 +759,22 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         <div class="body">
           <div class="pgtitle">Insights</div>
           <div class="chiprow" style="margin-top:6px"><span class="chip on">2026</span><span class="chip">2025</span><span class="chip">All time</span></div>
-          <div class="card" style="text-align:center;padding:12px">
-            <div class="h-serif" style="font-size:26px">24 <span style="font-size:11px;color:var(--ink-soft)">books</span></div>
-            <div class="sub">8,412 pages · longest: 724 pp</div>
+          <div class="card" style="padding:11px 12px;display:flex;align-items:center;gap:10px">
+            <div style="flex:1">
+              <div class="h-serif" style="font-size:23px">24 <span style="font-size:11px;color:var(--ink-soft)">books</span></div>
+              <div class="sub" style="font-size:8px">8,412 pages · longest: 724 pp</div>
+              <svg viewBox="0 0 120 24" style="width:100%;height:20px;margin-top:4px" aria-hidden="true">
+                <polyline points="2,19 13,15 24,17 35,9 46,12 57,5 68,11 79,3 90,8 101,6 112,9 118,7"
+                  fill="none" stroke="#B8862B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div class="sub" style="font-size:6.5px;letter-spacing:1px">PAGES PER MONTH</div>
+            </div>
+            <div style="width:58px;text-align:center">
+              <div style="width:50px;height:50px;border-radius:50%;background:conic-gradient(var(--moss) 0 80%,var(--paper-deep) 80% 100%);position:relative;margin:0 auto">
+                <span style="position:absolute;inset:7px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700">80%</span>
+              </div>
+              <div class="sub" style="font-size:6.5px;letter-spacing:.8px;margin-top:3px">GOAL · 30 BOOKS</div>
+            </div>
           </div>
           <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:11px 0 5px">Books per month</div>
           <div class="card" style="padding:10px 8px 6px">
@@ -704,9 +825,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <div class="on"><span class="ic">◔</span>Insights</div>
         </div>
       </div></div>
-      <p class="cap"><b>10 · Stats</b> Pages and books per month, language donut (the regional
-      angle made visible), status counts as stamps. Charts are flat and paper-toned — no
-      dashboard gloss.</p>
+      <p class="cap"><b>10 · Stats</b> All three V1 visualizations — bars (books/month), donut
+      (languages), line (pages/month) — plus a personal reading-goal ring, flat and paper-toned.
+      No dashboard gloss.</p>
     </div>
 
     <!-- 11. Recommendations -->
@@ -734,7 +855,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
               <div class="btn ghost" style="flex:1;padding:7px;font-size:9px;border-width:1px">Not for me</div>
             </div>
           </div>
-          <div class="card" style="margin-top:9px;padding:11px">
+          <div class="card" style="margin-top:7px;padding:9px 11px">
             <div style="display:flex;gap:10px">
               <div class="cover" style="width:44px;height:64px;background:linear-gradient(150deg,#6b4a68,#3d2a3b);color:#F0E2C2"><div class="ct" style="font-size:6.5px">Tomb of Sand</div></div>
               <div style="flex:1">
@@ -822,6 +943,88 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       <p class="cap"><b>12 · Profile</b> The `[WIRED]` community switchboard: profile, library and
       review visibility all exist and all default off. A Borges quote instead of a promo banner —
       the app’s voice in one card.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 7 — EXTRAS ================= -->
+<section class="area" id="extras">
+  <div class="ah"><span class="an">Area 7</span><h2>Extras — share &amp; delight</h2></div>
+  <p class="desc">The referral loop (share cards are V1 — they’re how spreadsheet friends find
+  Kitabi) and the v1.5 delight teaser: quote capture with OCR.</p>
+  <div class="row">
+
+    <!-- 13. Share card -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.28)">
+          <div style="margin:26px 22px 0;background:var(--paper);border-radius:16px;padding:16px 16px 13px;border:1px solid var(--gold);box-shadow:0 16px 36px rgba(43,33,24,.35)">
+            <div style="font-size:7px;font-weight:700;letter-spacing:1.6px;color:var(--oxblood)">SHAMSHI RECOMMENDS</div>
+            <div style="display:flex;gap:10px;margin-top:9px">
+              <div class="cover" style="width:52px;height:76px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:7.5px">The Covenant of Water</div><div class="ca">Verghese</div></div>
+              <div style="flex:1;align-self:center">
+                <div class="h-serif" style="font-size:13.5px;line-height:1.25">The Covenant of Water</div>
+                <div class="sub" style="font-size:8.5px;margin-top:2px">Abraham Verghese</div>
+                <div class="stars" style="font-size:11px;margin-top:4px">★★★★<span class="off">★</span></div>
+              </div>
+            </div>
+            <div class="quote" style="font-size:9.5px;margin-top:9px;border-left:2px solid var(--gold);padding-left:8px">“Unhurried and devastating — the backwaters stay with you.”</div>
+            <div class="rule" style="margin:10px 0 8px"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;align-items:center;gap:5px">
+                <svg viewBox="0 0 512 512" style="width:14px;height:14px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/><path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/></svg>
+                <span style="font-size:8px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+              </div>
+              <span class="sub" style="font-size:7px">beyond the bookshelf</span>
+            </div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 16px 16px">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px"></div>
+            <div style="display:flex;gap:7px">
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px">WhatsApp</div>
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px">Instagram</div>
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px">Copy link</div>
+            </div>
+            <div class="btn" style="margin-top:8px;padding:9px;font-size:10px">Share card</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>13 · Share card</b> V1’s referral engine: a gold-framed recommendation
+      card with your stars and one line of your review, stamped with the mark and kitabi.in.
+      Works solo — no community needed.</p>
+    </div>
+
+    <!-- 14. Quote capture -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+            <div class="pgtitle" style="margin:0">Quotes</div>
+            <span class="kbadge" style="background:#3A2C1E">v1.5 preview</span>
+          </div>
+          <div class="sub">Khasakkinte Itihasam · 3 saved</div>
+          <div class="card" style="margin-top:11px;padding:11px;border-left:3px solid var(--gold)">
+            <div class="quote" style="font-size:10.5px">“ഖസാക്കിന്റെ ഇതിഹാസം തുടങ്ങുകയായിരുന്നു…”</div>
+            <div class="sub" style="font-size:8px;margin-top:5px">p. 12 · scanned 2 Jul</div>
+          </div>
+          <div class="card" style="margin-top:8px;padding:11px;border-left:3px solid var(--gold)">
+            <div class="quote" style="font-size:10.5px">“Where does one journey end and the next begin?”</div>
+            <div class="sub" style="font-size:8px;margin-top:5px">p. 87 · typed</div>
+          </div>
+          <div class="card" style="margin-top:8px;padding:11px;border-left:3px solid var(--gold)">
+            <div class="quote" style="font-size:10.5px">“The rain had a memory of its own.”</div>
+            <div class="sub" style="font-size:8px;margin-top:5px">p. 141 · scanned 28 Jun</div>
+          </div>
+          <div class="btn" style="margin-top:12px;background:var(--ink)">📷 Scan a page</div>
+          <div style="text-align:center;font-size:8.5px;color:var(--ink-soft);margin-top:8px">OCR keeps Malayalam ligatures intact — point, crop, save.</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>14 · Quote capture</b> The good-to-have from the roadmap: photograph a
+      page, crop the line, OCR saves it against the book — regional scripts included. Ships
+      after the thin slice; designed now so it has a home.</p>
     </div>
 
   </div>

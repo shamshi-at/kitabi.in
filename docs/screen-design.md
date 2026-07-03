@@ -52,6 +52,13 @@ camera; everything else stays paper.
   "WITH <NAME>" band on lent books) render identically over both, so mixed shelves
   still read as one bookshelf. See the "Cover treatments" exhibit in the mockups.
 - **Progress in pages** — "p. 302 of 724 · 42%", never a bare percentage.
+- **Ticker titles** — when a title or author overflows a *generated* cover, it scrolls
+  gently (music-player style: pause → slide → settle back) instead of truncating.
+  Rules: overflow-only, never in loops on a full grid (grids scroll on long-press or
+  once on first render; single-book cards may auto-run one at a time), disabled under
+  reduced motion. Uploaded cover images never get tickers — the art carries the title.
+  Implementation note: nowrap ticker text must not widen layout — grid tracks need
+  `minmax(0, 1fr)` (see the library grid in the mockups).
 - **Three-way split made visible** on the book page: rating (shared), review (visibility
   control, private by default), notes on dashed "slip paper" (always private).
 - **AI stays quiet** — recommendations are cards with a "WHY THIS?" reasoning block
@@ -63,9 +70,17 @@ camera; everything else stays paper.
 ## Screen inventory (v1)
 
 1. Sign in (Google/Apple) · 2. CSV import · 3. Home dashboard · 4. Global search ·
-5. Library grid · 6. Book page · 7. Add via ISBN scan · 8. Lending ledger ·
-9. Lend flow (bottom sheet) · 10. Stats · 11. Recommendations · 12. Profile
-(visibility switchboard).
+4b. Filter sheet (language/genre/status/year/author/publisher) · 5. Library grid ·
+6. Book page · 7. Add via ISBN scan · 7b. Add/edit book form (series + book №,
+edition-scoped ISBN, format, global genres, cover upload) · 8. Lending ledger ·
+9. Lend flow (bottom sheet) · 10. Stats (bars + donut + line spark + reading-goal
+ring) · 11. Recommendations · 12. Profile (visibility switchboard) ·
+13. Share card (V1 referral engine) · 14. Quote capture (v1.5 preview, OCR).
+
+Feature-map audit (3 Jul 2026): every `[V1]` feature now has a home on a screen —
+series ordering (7b + search results), share cards (13), full filter set (4b),
+manual add/edit path (7b), and all three chart types (10). Good-to-haves added:
+personal reading goal (10) and quote capture (14).
 
 Preview locally: `python3 -m http.server 4173 --directory docs` →
 http://localhost:4173/kitabi_screens.html
