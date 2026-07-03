@@ -100,10 +100,21 @@ body{
 .feat p{margin-top:7px;font-size:13.5px;line-height:1.65;color:var(--ink-soft)}
 .feat .free{display:inline-block;margin-left:6px;font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--moss);background:#E3EAD9;border-radius:999px;padding:2px 8px;vertical-align:2px}
 
-/* quote strip */
-.strip{margin-top:76px;background:var(--night);color:#EFE3C8;text-align:center;padding:52px 22px;border-top:3px solid var(--gold);border-bottom:3px solid var(--gold)}
+/* quote strip — swipeable, shuffled on each visit */
+.strip{position:relative;margin-top:76px;background:var(--night);color:#EFE3C8;text-align:center;padding:52px 0 44px;border-top:3px solid var(--gold);border-bottom:3px solid var(--gold)}
 .strip .q{font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:clamp(19px,5vw,26px);line-height:1.5;max-width:640px;margin:0 auto}
-.strip .a{margin-top:12px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#A08D6E}
+.strip .a{margin-top:14px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#A08D6E}
+.strip .g{margin:10px auto 0;max-width:560px;font-size:13.5px;font-style:italic;color:#CBB897;line-height:1.55}
+.qtrack{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.qtrack::-webkit-scrollbar{display:none}
+.qslide{flex:0 0 100%;scroll-snap-align:center;padding:0 58px;margin:0}
+.qdots{display:flex;gap:7px;justify-content:center;margin-top:24px}
+.qdots i{width:6px;height:6px;border-radius:50%;background:rgba(239,227,200,.22);transition:background .2s}
+.qdots i.on{background:var(--gold)}
+.qarrow{position:absolute;top:50%;transform:translateY(-50%);background:transparent;border:1px solid rgba(239,227,200,.28);color:#CBB897;width:36px;height:36px;border-radius:50%;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.qarrow:hover{border-color:var(--gold);color:var(--gold)}
+.qarrow.l{left:16px}.qarrow.r{right:16px}
+@media(max-width:680px){.qarrow{display:none}.qslide{padding:0 26px}}
 
 /* closing cta */
 .close{padding:70px 22px 26px;text-align:center}
@@ -138,7 +149,7 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
       <span><small>Launching soon</small><span>Google Play</span></span>
     </a>
   </div>
-  <p class="trust"><b>Free lending ledger</b> · <b>Private by default</b> · Import from Goodreads in minutes</p>
+  <p class="trust"><b>Free</b> · <b>Your library stays private</b> · Your Goodreads list moves in, in minutes</p>
 </header>
 
 <!-- floating app preview -->
@@ -166,57 +177,66 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 
     <div class="feats">
       <div class="feat"><div class="fi" style="background:var(--gold-soft)">📚</div>
-        <h3>Covers-first library</h3>
-        <p>Your shelves look like shelves. Books without cover photos get a quietly
-        typeset cover of their own — no broken-image grid, ever.</p></div>
+        <h3>A shelf that looks like your shelf</h3>
+        <p>Cover after cover, just like the real thing. Even books without a photo get
+        a handsome cover of their own — your library always looks loved, never empty.</p></div>
 
       <div class="feat"><div class="fi" style="background:#F2DEDA">⇄</div>
-        <h3>Lending ledger<span class="free">FREE</span></h3>
-        <p>“Lent to Anu, 2 June, due back in two weeks.” A proper record with a gentle
-        reminder — never lose a book to a forgetful friend again.</p></div>
+        <h3>Never lose a lent book<span class="free">FREE</span></h3>
+        <p>“Lent to Anu, 2 June.” Kitabi remembers who has your books and gives you a
+        gentle nudge when it’s time to ask for one back. Your paperbacks come home.</p></div>
 
       <div class="feat"><div class="fi" style="background:#E3EAD9">▦</div>
-        <h3>Import in minutes</h3>
-        <p>Bring your Goodreads export or that trusty spreadsheet. Kitabi matches your
-        columns, shelves, ratings and reviews — 142 rows, one tap.</p></div>
+        <h3>Move in, in minutes</h3>
+        <p>Already keep your books on Goodreads or in a spreadsheet? Bring it along —
+        your shelves, ratings and reviews arrive together, in one tap.</p></div>
 
       <div class="feat"><div class="fi" style="background:#DEE7EF">✎</div>
-        <h3>Your reading, your notes</h3>
-        <p>Statuses, page progress, star ratings, reviews — plus truly private notes
-        (“signed copy, don’t lend”). Everything starts private. You decide what’s shared.</p></div>
+        <h3>Your reading, remembered</h3>
+        <p>Where you stopped, what you rated, what you really thought — and the little
+        notes you’d never say out loud (“signed copy, don’t lend”). All of it stays
+        yours, private until you decide otherwise.</p></div>
 
       <div class="feat"><div class="fi" style="background:var(--gold-soft)">◔</div>
         <h3>Your year in pages</h3>
-        <p>Books per month, pages read, languages on your shelf — clean, paper-toned
-        stats that feel like a reading journal, not a dashboard.</p></div>
+        <p>Watch your reading add up — books finished, pages turned, the languages on
+        your shelf. A reading journal that fills itself in.</p></div>
 
       <div class="feat"><div class="fi" style="background:#F2DEDA">✦</div>
-        <h3>Picks that show their work</h3>
-        <p>Recommendations reasoned from <em>your</em> ratings, each with a plain-words
-        “why”. Opt-in, easy to switch off, never a feed.</p></div>
+        <h3>Know what to read next</h3>
+        <p>Warm suggestions drawn from the books you loved, each with an honest
+        “why this one”. Prefer to browse in peace? One switch turns them off.</p></div>
     </div>
   </section>
 
   <section class="sect">
     <span class="kicker">Reads your language</span>
     <h2>മലയാളം · தமிழ் · English &amp; beyond</h2>
-    <p class="lead">Kitabi is built from India’s bookshelves up — regional-language titles are
-    first-class citizens, and translations link back to the original work, so
-    <span class="serif" style="font-style:italic">Mayyazhippuzhayude Theerangalil</span> and
-    <span class="serif" style="font-style:italic">On the Banks of the Mayyazhi</span> are one book, not two.</p>
+    <p class="lead">Kitabi grew up on Indian bookshelves. Your മലയാളം, தமிழ் and English books
+    live side by side — spelled right, shown proudly, never an afterthought. And when you own
+    both <span class="serif" style="font-style:italic">Mayyazhippuzhayude Theerangalil</span> and
+    <span class="serif" style="font-style:italic">On the Banks of the Mayyazhi</span>, Kitabi
+    knows they’re the same story.</p>
   </section>
 </main>
 
-<section class="strip">
-  <p class="q">“I have always imagined that Paradise will be a kind of library.”</p>
-  <p class="a">— Jorge Luis Borges</p>
+<section class="strip" aria-label="Words from great writers">
+  <button class="qarrow l" id="qprev" aria-label="Previous quote">‹</button>
+  <div class="qtrack" id="qtrack">
+    <figure class="qslide">
+      <blockquote class="q" style="margin:0">“I have always imagined that Paradise will be a kind of library.”</blockquote>
+      <figcaption class="a">— Jorge Luis Borges</figcaption>
+    </figure>
+  </div>
+  <div class="qdots" id="qdots" aria-hidden="true"></div>
+  <button class="qarrow r" id="qnext" aria-label="Next quote">›</button>
 </section>
 
 <section class="close" id="notify">
   <div class="orn">❦</div>
   <h2>Your shelf is waiting</h2>
-  <p>Kitabi is launching soon on Android and iOS. The page you’re reading will become
-  the door — check back, or watch <b>kitabi.in</b>.</p>
+  <p>Kitabi arrives soon on Android and iOS — because your books deserve better than
+  a spreadsheet. The door opens right here at <b>kitabi.in</b>.</p>
   <div class="ctas dark">
     <a class="store" href="#" aria-disabled="true">
       <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
@@ -232,6 +252,52 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
   <p style="margin-top:8px">© <span id="y">2026</span> Kitabi. All rights reserved.</p>
 </footer>
 
-<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+<script>
+document.getElementById('y').textContent = new Date().getFullYear();
+
+// Quote carousel — legends in their own languages, shuffled every visit.
+(function () {
+  var QUOTES = [
+    {q: "ഒന്നും ഒന്നും ഇമ്മിണി ബല്യ ഒന്ന്.", a: "Vaikom Muhammad Basheer", l: "Malayalam",
+     g: "One and one make one — one that is quite big."},
+    {q: "கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக.", a: "Thiruvalluvar", l: "Tamil",
+     g: "Learn flawlessly what is worth learning — then live by what you have learned."},
+    {q: "साहित्य समाज का दर्पण है।", a: "Munshi Premchand", l: "Hindi",
+     g: "Literature is the mirror of society."},
+    {q: "Ein Buch muss die Axt sein für das gefrorene Meer in uns.", a: "Franz Kafka", l: "German",
+     g: "A book must be the axe for the frozen sea within us."},
+    {q: "I have always imagined that Paradise will be a kind of library.", a: "Jorge Luis Borges", l: "", g: ""},
+    {q: "Chi legge avrà vissuto cinquemila anni. La lettura è un’immortalità all’indietro.", a: "Umberto Eco", l: "Italian",
+     g: "The reader will have lived five thousand years — reading is immortality, backwards."},
+    {q: "Si hortum in bibliotheca habes, deerit nihil.", a: "Cicero", l: "Latin",
+     g: "If you have a garden and a library, you have everything you need."},
+    {q: "A reader lives a thousand lives before he dies. The man who never reads lives only one.", a: "George R.R. Martin", l: "", g: ""}
+  ];
+  for (var i = QUOTES.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1)), t = QUOTES[i]; QUOTES[i] = QUOTES[j]; QUOTES[j] = t;
+  }
+  var track = document.getElementById('qtrack'), dots = document.getElementById('qdots');
+  track.innerHTML = QUOTES.map(function (x) {
+    return '<figure class="qslide"><blockquote class="q" style="margin:0">“' + x.q + '”</blockquote>' +
+      (x.g ? '<div class="g">' + x.g + '</div>' : '') +
+      '<figcaption class="a">— ' + x.a + (x.l ? ' · ' + x.l : '') + '</figcaption></figure>';
+  }).join('');
+  dots.innerHTML = QUOTES.map(function (_, k) { return '<i' + (k === 0 ? ' class="on"' : '') + '></i>'; }).join('');
+  function setDots(idx) {
+    for (var k = 0; k < dots.children.length; k++) dots.children[k].classList.toggle('on', k === idx);
+  }
+  track.addEventListener('scroll', function () {
+    setDots(Math.round(track.scrollLeft / track.clientWidth));
+  }, {passive: true});
+  function go(d) {
+    var idx = Math.round(track.scrollLeft / track.clientWidth) + d;
+    idx = Math.max(0, Math.min(QUOTES.length - 1, idx));
+    track.scrollTo({left: idx * track.clientWidth, behavior: 'smooth'});
+    setDots(idx);
+  }
+  document.getElementById('qprev').addEventListener('click', function () { go(-1); });
+  document.getElementById('qnext').addEventListener('click', function () { go(1); });
+})();
+</script>
 </body>
 </html>
