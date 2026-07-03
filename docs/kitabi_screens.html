@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — V1 Screen Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Kitabi design tokens — "The Reading Room"
+   Paper, ink, oxblood leather, antique gold, pressed moss.
+   Documented in docs/screen-design.md
+   ============================================================ */
+:root{
+  --paper:#F6F0E3;        /* app background — aged paper */
+  --paper-deep:#EFE6D2;   /* wells, inset areas */
+  --card:#FFFCF4;         /* raised cards — fresh page */
+  --ink:#2B2118;          /* primary text — warm ink */
+  --ink-soft:#7A6A55;     /* secondary text */
+  --line:#E2D6BD;         /* hairline rules */
+  --oxblood:#7E2A33;      /* primary actions, "reading" */
+  --oxblood-deep:#5E1F26;
+  --gold:#B8862B;         /* stars, favourites, accents */
+  --gold-soft:#F0E2C2;
+  --moss:#48663F;         /* read / success */
+  --slate:#43617E;        /* wishlist / info */
+  --stamp-grey:#9A8F7C;   /* stopped / muted */
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink);padding-bottom:80px}
+
+/* ---------- page chrome ---------- */
+.hero{background:
+  radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:60px 32px 52px;text-align:center;
+  border-bottom:3px solid var(--gold)}
+.hero .mark{width:56px;height:56px;border-radius:12px;background:var(--gold);
+  color:#241811;font-family:'Fraunces',serif;font-size:32px;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center;
+  box-shadow:0 10px 28px rgba(0,0,0,.45)}
+.hero h1{font-family:'Fraunces',serif;font-size:44px;font-weight:400;margin:16px 0 6px;letter-spacing:.5px}
+.hero .tag{font-size:15px;color:#CBB897;max-width:660px;margin:0 auto;line-height:1.6}
+.hero .tag i{font-family:'Fraunces',serif}
+.legend{display:flex;gap:18px;justify-content:center;margin-top:20px;font-size:12px;color:#A08D6E;flex-wrap:wrap}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.toc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:1000px;margin:24px auto 0;padding:0 24px}
+.toc a{font-size:12px;font-weight:600;color:#E9DCC2;text-decoration:none;
+  border:1px solid rgba(240,226,194,.28);padding:6px 13px;border-radius:999px;transition:.15s}
+.toc a:hover{background:var(--gold);color:#241811;border-color:var(--gold)}
+
+.area{max-width:1520px;margin:56px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.area h2{font-family:'Fraunces',serif;font-size:30px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:8px 0 26px;max-width:880px;font-size:14.5px;line-height:1.65}
+.row{display:flex;flex-wrap:wrap;gap:36px}
+.shot{display:flex;flex-direction:column;gap:12px}
+.cap{width:272px;font-size:12.5px;color:#6d5f4b;line-height:1.55}
+.cap b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:2px;font-weight:600}
+
+/* ---------- phone frame ---------- */
+.phone{width:272px;height:588px;border-radius:34px;border:8px solid #241B12;
+  background:var(--paper);overflow:hidden;position:relative;
+  box-shadow:0 24px 50px rgba(43,33,24,.30),0 4px 12px rgba(43,33,24,.18)}
+.scr{height:100%;display:flex;flex-direction:column;background:var(--paper)}
+.sbar{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px 5px;font-size:9.5px;font-weight:600;color:var(--ink)}
+.body{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0 13px;position:relative}
+.body.flush{padding:0}
+
+/* bottom nav */
+.nav{display:flex;align-items:flex-end;justify-content:space-around;
+  padding:7px 8px 12px;background:var(--card);border-top:1px solid var(--line)}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-size:8px;font-weight:600;color:var(--ink-soft);width:44px}
+.nav div.on{color:var(--oxblood)}
+.nav .ic{font-size:15px;line-height:1}
+.nav .fab{width:40px;height:40px;border-radius:14px;background:var(--oxblood);color:#F6F0E3;
+  display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:400;
+  margin-bottom:2px;box-shadow:0 6px 14px rgba(126,42,51,.4)}
+
+/* ---------- shared bits ---------- */
+.h-serif{font-family:'Fraunces',serif;font-weight:500}
+.pgtitle{font-family:'Fraunces',serif;font-size:19px;font-weight:500;margin:10px 0 2px}
+.sub{font-size:9.5px;color:var(--ink-soft)}
+.rule{height:1px;background:var(--line);margin:10px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.stamp{display:inline-block;font-size:7.5px;font-weight:700;letter-spacing:.9px;
+  text-transform:uppercase;padding:3px 8px;border-radius:999px;
+  background:#EAE4D6;color:#7A6A55}
+.stamp.reading{background:#F2DEDA;color:var(--oxblood)}
+.stamp.read{background:#E3EAD9;color:var(--moss)}
+.stamp.tbr{background:#F2E6C4;color:#8F681E}
+.stamp.wish{background:#DEE7EF;color:var(--slate)}
+.stamp.stop{background:#EAE4D6;color:#8a7f6c}
+.stars{color:var(--gold);font-size:10px;letter-spacing:1.5px}
+.stars .off{color:#D8CBAE}
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;background:var(--oxblood);
+  color:#F8F1E2;font-size:11px;font-weight:600;border-radius:10px;padding:10px}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+.btn.soft{background:var(--paper-deep);color:var(--ink);font-weight:600}
+.chiprow{display:flex;gap:5px;overflow:hidden;margin:9px 0 10px}
+.chip{font-size:8.5px;font-weight:600;padding:4.5px 9px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink-soft);white-space:nowrap}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.search{display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;padding:8px 10px;font-size:10px;color:var(--ink-soft)}
+
+/* book covers — CSS-only, spine + tone */
+.cover{border-radius:4px 7px 7px 4px;position:relative;overflow:hidden;flex-shrink:0;
+  display:flex;flex-direction:column;justify-content:space-between;
+  box-shadow:0 3px 8px rgba(43,33,24,.28)}
+.cover::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:rgba(0,0,0,.22)}
+.cover .ct{font-family:'Fraunces',serif;padding:8px 6px 0 10px;line-height:1.15}
+.cover .ca{font-size:6px;letter-spacing:.6px;text-transform:uppercase;opacity:.85;padding:0 6px 7px 10px}
+.rib{position:absolute;top:-2px;right:6px;width:9px;height:20px;background:var(--gold);
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
+
+/* misc literary flourishes */
+.orn{text-align:center;color:var(--gold);font-size:11px;letter-spacing:6px;margin:6px 0}
+.quote{font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);line-height:1.5}
+.kbadge{font-size:7.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  color:var(--gold);background:#3A2C1E;padding:3px 8px;border-radius:999px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="mark">❦</div>
+  <h1>Kitabi — Screen Mockups</h1>
+  <p class="tag">The <i>Reading Room</i> design language: aged paper, warm ink, oxblood leather and
+  antique gold. Quiet, literary, unhurried — a private library in your pocket, not another feed.
+  These mockups are the design source of truth for the Flutter app (v1 slice).</p>
+  <div class="legend">
+    <span><i style="background:#7E2A33"></i>Oxblood — actions &amp; “reading”</span>
+    <span><i style="background:#B8862B"></i>Gold — stars &amp; favourites</span>
+    <span><i style="background:#48663F"></i>Moss — read</span>
+    <span><i style="background:#43617E"></i>Slate — wishlist</span>
+  </div>
+  <nav class="toc">
+    <a href="#welcome">Welcome</a><a href="#home">Home</a><a href="#library">Library</a>
+    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a>
+  </nav>
+</header>
+
+<!-- ================= AREA 1 — WELCOME ================= -->
+<section class="area" id="welcome">
+  <div class="ah"><span class="an">Area 1</span><h2>Welcome &amp; first shelf</h2></div>
+  <p class="desc">Two doors into the app: sign in, then bring your existing library with you.
+  CSV import is the front door for spreadsheet and Goodreads users — it gets a full screen,
+  not a buried setting.</p>
+  <div class="row">
+
+    <!-- 1. Sign in -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="justify-content:center;gap:0;text-align:center">
+          <svg viewBox="0 0 512 512" style="width:74px;height:74px;margin:0 auto 14px;display:block">
+            <rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/>
+            <rect x="34" y="34" width="444" height="444" rx="96" fill="none" stroke="#B8862B" stroke-width="3" opacity=".55"/>
+            <path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/>
+            <path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/>
+            <rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/>
+            <g stroke="#D9CBAA" stroke-width="9" stroke-linecap="round">
+              <path d="M150 214 H214"/><path d="M150 252 H214"/><path d="M150 290 H196"/>
+              <path d="M298 214 H362"/><path d="M316 290 H362"/>
+            </g>
+            <path d="M298 252 H362" stroke="#B8862B" stroke-width="10" stroke-linecap="round"/>
+            <path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/>
+          </svg>
+          <div class="h-serif" style="font-size:30px;letter-spacing:1px">Kitabi</div>
+          <div style="font-size:8.5px;letter-spacing:3.5px;text-transform:uppercase;color:var(--gold);margin-top:3px">Beyond the Bookshelf</div>
+          <div class="orn">❦</div>
+          <p class="quote" style="font-size:11px;padding:0 18px">“A reader lives a thousand lives before he dies.”</p>
+          <div style="margin-top:26px;display:flex;flex-direction:column;gap:8px">
+            <div class="btn ghost" style="font-size:10.5px"><span style="font-weight:700">G</span> Continue with Google</div>
+            <div class="btn" style="background:var(--ink)"> Continue with Apple</div>
+          </div>
+          <p class="sub" style="margin-top:16px;font-size:8.5px">Your library is private by default.<br>Nothing is shared unless you choose to.</p>
+        </div>
+      </div></div>
+      <p class="cap"><b>1 · Sign in</b> Google &amp; Apple only (locked v1 decision). Monogram in a
+      gold-ruled ex-libris circle; a rotating literary quote replaces marketing copy.</p>
+    </div>
+
+    <!-- 2. Import -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Bring your books</div>
+          <div class="sub">Most readers already keep a list. Kitabi reads it.</div>
+          <div class="card" style="margin-top:14px;display:flex;gap:10px;align-items:center">
+            <div style="width:34px;height:34px;border-radius:9px;background:var(--gold-soft);display:flex;align-items:center;justify-content:center;font-size:16px">⇲</div>
+            <div style="flex:1"><div style="font-size:11px;font-weight:600">Goodreads export</div>
+            <div class="sub">CSV from “Import/Export” — shelves, ratings &amp; reviews come along</div></div>
+            <div style="color:var(--oxblood);font-weight:700">›</div>
+          </div>
+          <div class="card" style="margin-top:8px;display:flex;gap:10px;align-items:center">
+            <div style="width:34px;height:34px;border-radius:9px;background:#E3EAE0;display:flex;align-items:center;justify-content:center;font-size:16px">▦</div>
+            <div style="flex:1"><div style="font-size:11px;font-weight:600">Google Sheets / CSV</div>
+            <div class="sub">Any spreadsheet with a title column — we’ll match the rest</div></div>
+            <div style="color:var(--oxblood);font-weight:700">›</div>
+          </div>
+          <div class="rule"></div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft)">Preview — 142 rows matched</div>
+          <div class="card" style="margin-top:7px;padding:0;overflow:hidden">
+            <div style="display:flex;font-size:8.5px;font-weight:700;background:var(--paper-deep);padding:6px 9px"><span style="flex:1.6">Title</span><span style="flex:1">Status</span><span style="flex:.8">Rating</span></div>
+            <div style="display:flex;align-items:center;font-size:8.5px;padding:6px 9px;border-top:1px solid var(--line)"><span style="flex:1.6">Khasakkinte Itihasam</span><span style="flex:1"><span class="stamp read">Read</span></span><span style="flex:.8" class="stars">★★★★★</span></div>
+            <div style="display:flex;align-items:center;font-size:8.5px;padding:6px 9px;border-top:1px solid var(--line)"><span style="flex:1.6">The God of Small Things</span><span style="flex:1"><span class="stamp read">Read</span></span><span style="flex:.8" class="stars">★★★★<span class="off">★</span></span></div>
+            <div style="display:flex;align-items:center;font-size:8.5px;padding:6px 9px;border-top:1px solid var(--line)"><span style="flex:1.6">Norwegian Wood</span><span style="flex:1"><span class="stamp tbr">To read</span></span><span style="flex:.8" class="stars off">—</span></div>
+          </div>
+          <div class="btn" style="margin-top:12px">Import 142 books</div>
+          <div style="text-align:center;font-size:9px;color:var(--ink-soft);margin-top:8px">Skip for now — add books anytime</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>2 · CSV import</b> The spreadsheet-beater. Column mapping is automatic;
+      the preview table builds trust before anything is written.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 2 — HOME ================= -->
+<section class="area" id="home">
+  <div class="ah"><span class="an">Area 2</span><h2>Home — the reading desk</h2></div>
+  <p class="desc">One glance answers three questions: what am I reading, what needs attention
+  (lending), and how is my year going. No feed, no noise.</p>
+  <div class="row">
+
+    <!-- 3. Dashboard -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+            <div><div class="h-serif" style="font-size:17px">Good evening, Shamshi</div>
+            <div class="sub">Wednesday · 2 July</div></div>
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--oxblood);color:#F6F0E3;display:flex;align-items:center;justify-content:center;font-size:11px;font-family:'Fraunces',serif">S</div>
+          </div>
+
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:13px 0 6px">Currently reading</div>
+          <div class="card" style="display:flex;gap:10px">
+            <div class="cover" style="width:46px;height:66px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8">
+              <div class="ct" style="font-size:7px">The Covenant of Water</div><div class="ca">Verghese</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px">
+              <div style="font-size:11.5px;font-weight:600">The Covenant of Water</div>
+              <div class="sub">Abraham Verghese</div>
+              <div style="height:4px;border-radius:99px;background:var(--paper-deep);margin-top:3px"><div style="width:42%;height:100%;border-radius:99px;background:var(--oxblood)"></div></div>
+              <div class="sub" style="font-size:8.5px">p. 302 of 724 · 42%</div>
+            </div>
+            <div style="align-self:center;color:var(--oxblood);font-size:14px">›</div>
+          </div>
+
+          <div class="card" style="margin-top:8px;display:flex;gap:9px;align-items:center;border-left:3px solid var(--gold)">
+            <span style="font-size:13px">⏳</span>
+            <div style="flex:1;font-size:9.5px"><b>Wuthering Heights</b> is with <b>Anu</b> — due back in 3 days</div>
+            <span style="font-size:8.5px;font-weight:700;color:var(--oxblood)">Remind</span>
+          </div>
+
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:13px 0 6px">Your shelves</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+            <div class="card" style="padding:9px"><div class="h-serif" style="font-size:18px">128</div><div class="sub">Owned</div></div>
+            <div class="card" style="padding:9px"><div class="h-serif" style="font-size:18px;color:var(--moss)">54</div><div class="sub">Read</div></div>
+            <div class="card" style="padding:9px"><div class="h-serif" style="font-size:18px;color:var(--oxblood)">3</div><div class="sub">Lent out</div></div>
+            <div class="card" style="padding:9px"><div class="h-serif" style="font-size:18px;color:var(--slate)">12</div><div class="sub">Wishlist</div></div>
+          </div>
+
+          <div class="card" style="margin-top:8px;background:#3A2C1E;border-color:#3A2C1E;color:#EFE3C8;display:flex;align-items:center;gap:9px">
+            <span style="font-size:14px">✦</span>
+            <div style="flex:1;font-size:9.5px;line-height:1.45">Because you loved <i class="h-serif">Khasakkinte Itihasam</i> — a pick for your shelf</div>
+            <span class="kbadge">For you</span>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="on"><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>3 · Home</b> Reading progress in pages (not just %), the lending nudge as
+      a gold-edged slip, plain-number shelf cards, and the AI pick as one quiet, clearly-labelled
+      card — never a feed.</p>
+    </div>
+
+    <!-- 4. Global search -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="search" style="margin-top:10px;border-color:var(--ink)">⌕ <span style="color:var(--ink);font-weight:600">malayalam classics</span><span style="margin-left:auto;color:var(--ink-soft)">✕</span></div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:12px 0 6px">In your library — 2</div>
+          <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+            <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#5C3A24,#3A2114);color:#F0E2C2"><div class="ct" style="font-size:5.5px">Khasakkinte Itihasam</div></div>
+            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Khasakkinte Itihasam</div><div class="sub">O.V. Vijayan · Malayalam</div></div>
+            <span class="stamp read">Read</span>
+          </div>
+          <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px;margin-top:6px">
+            <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#7E2A33,#4A161C);color:#F0E2C2"><div class="ct" style="font-size:5.5px">രണ്ടാമൂഴം</div></div>
+            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Randamoozham</div><div class="sub">M.T. Vasudevan Nair · Malayalam</div></div>
+            <span class="stamp reading">Reading</span>
+          </div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:12px 0 6px">In the catalog</div>
+          <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+            <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#43617E,#22344a);color:#F0E2C2"><div class="ct" style="font-size:5.5px">Mayyazhi…</div></div>
+            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Mayyazhippuzhayude Theerangalil</div><div class="sub">M. Mukundan · has English translation</div></div>
+            <span style="color:var(--oxblood);font-weight:700;font-size:13px">+</span>
+          </div>
+          <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px;margin-top:6px">
+            <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:5.5px">Aarachar</div></div>
+            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Aarachar</div><div class="sub">K.R. Meera · Malayalam</div></div>
+            <span style="color:var(--oxblood);font-weight:700;font-size:13px">+</span>
+          </div>
+          <div class="rule"></div>
+          <div class="sub" style="font-size:8.5px;text-align:center">Filters: language · genre · year · status · author · publisher</div>
+        </div>
+        <div class="nav">
+          <div class="on"><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4 · Global search</b> One box searches your shelves first, then the shared
+      catalog — the two-section split makes “owned vs. addable” obvious. Translation links surface
+      right in results.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 3 — LIBRARY ================= -->
+<section class="area" id="library">
+  <div class="ah"><span class="an">Area 3</span><h2>Library — the real bookshelf</h2></div>
+  <p class="desc">Covers-first, always (the #1 gripe with Libib). Personal shelves are chips, a
+  book’s page is split into <i>the book</i> (shared catalog) and <i>your copy</i> (private), and
+  adding a book is a camera-first flow.</p>
+
+  <!-- cover treatments exhibit -->
+  <div class="card" style="max-width:680px;margin-bottom:30px;padding:18px 20px;display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+    <div style="display:flex;gap:16px">
+      <div style="text-align:center">
+        <div class="cover" style="width:88px;height:130px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8">
+          <div class="ct" style="font-size:10px">The Covenant of Water</div><div class="ca" style="font-size:7px;padding-bottom:9px">Verghese</div>
+        </div>
+        <div class="sub" style="margin-top:7px;font-size:10.5px">Generated<br>(no image yet)</div>
+      </div>
+      <div style="text-align:center">
+        <div class="cover" style="width:88px;height:130px;color:#FFF8E6;background:
+          radial-gradient(30px 30px at 70% 22%,#F2D98C 0 42%,transparent 60%),
+          radial-gradient(120px 60px at 20% 78%,#1E4438 0 55%,transparent 70%),
+          radial-gradient(110px 46px at 90% 88%,#173931 0 55%,transparent 72%),
+          linear-gradient(180deg,#C4D5C4 0%,#93B7A0 40%,#3E6B5B 62%,#1C3E34 100%)">
+          <div class="ct" style="font-size:9.5px;text-shadow:0 1px 3px rgba(0,0,0,.45)">The Covenant of Water</div>
+          <div class="ca" style="font-size:6.5px;padding-bottom:9px;text-shadow:0 1px 3px rgba(0,0,0,.45)">A NOVEL · VERGHESE</div>
+        </div>
+        <div class="sub" style="margin-top:7px;font-size:10.5px">Uploaded / catalog<br>cover image</div>
+      </div>
+      <div style="text-align:center">
+        <div class="cover" style="width:88px;height:130px;color:#FFF8E6;position:relative;background:
+          radial-gradient(30px 30px at 70% 22%,#F2D98C 0 42%,transparent 60%),
+          radial-gradient(120px 60px at 20% 78%,#1E4438 0 55%,transparent 70%),
+          radial-gradient(110px 46px at 90% 88%,#173931 0 55%,transparent 72%),
+          linear-gradient(180deg,#C4D5C4 0%,#93B7A0 40%,#3E6B5B 62%,#1C3E34 100%)">
+          <div class="rib" style="width:12px;height:26px"></div>
+          <div class="ct" style="font-size:9.5px;text-shadow:0 1px 3px rgba(0,0,0,.45)">The Covenant of Water</div>
+          <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(184,134,43,.94);color:#241811;font-size:7.5px;font-weight:700;text-align:center;padding:3px 0;letter-spacing:.6px">WITH ANU</div>
+        </div>
+        <div class="sub" style="margin-top:7px;font-size:10.5px">Same image with<br>overlays on top</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:210px;font-size:12.5px;color:#6d5f4b;line-height:1.6">
+      <b style="color:var(--ink)">Cover treatments.</b> Every cover — generated or real — sits in the
+      same frame: rounded corners, left spine shade, drop shadow. With no image, Kitabi typesets a
+      quiet cover from title + author on a colour derived from the book. When the user uploads a
+      photo (or the catalog has one), the image fills the same frame edge-to-edge, and favourites
+      ribbons or lending bands overlay it identically — so a shelf of mixed real and generated
+      covers still reads as one bookshelf.
+    </div>
+  </div>
+
+  <div class="row">
+
+    <!-- 5. Library grid -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+            <div class="pgtitle" style="margin:0">My Library</div><div class="sub">128 books</div>
+          </div>
+          <div class="chiprow">
+            <span class="chip on">All</span><span class="chip">Reading</span><span class="chip">Read</span>
+            <span class="chip">To read</span><span class="chip">★ Favourites</span><span class="chip">Beach reads</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px 8px;overflow:hidden">
+            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:7px">The Covenant of Water</div><div class="ca">Verghese</div></div>
+              <div style="margin-top:4px"><span class="stamp reading">Reading</span></div></div>
+            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#5C3A24,#3A2114);color:#F0E2C2"><div class="rib"></div><div class="ct" style="font-size:7px">Khasakkinte Itihasam</div><div class="ca">O.V. Vijayan</div></div>
+              <div style="margin-top:4px"><span class="stamp read">Read</span></div></div>
+            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#7E2A33,#4A161C);color:#F0E2C2"><div class="ct" style="font-size:7px">രണ്ടാമൂഴം</div><div class="ca">M.T.</div></div>
+              <div style="margin-top:4px"><span class="stamp reading">Reading</span></div></div>
+            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:7px">Aarachar</div><div class="ca">K.R. Meera</div></div>
+              <div style="margin-top:4px"><span class="stamp read">Read</span></div></div>
+            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#43617E,#22344a);color:#F0E2C2"><div class="rib"></div><div class="ct" style="font-size:7px">The God of Small Things</div><div class="ca">Roy</div></div>
+              <div style="margin-top:4px"><span class="stamp read">Read</span></div></div>
+            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#4d4a45,#2e2c29);color:#EFE6C8;position:relative"><div class="ct" style="font-size:7px">Wuthering Heights</div><div class="ca">Brontë</div>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(184,134,43,.92);color:#241811;font-size:6.5px;font-weight:700;text-align:center;padding:2px 0;letter-spacing:.5px">WITH ANU</div></div>
+              <div style="margin-top:4px"><span class="stamp read">Read</span></div></div>
+            <div><div class="cover" style="height:100px;color:#FBF3DF;background:linear-gradient(180deg,#AE3B2E 0 52%,#1E5945 52% 100%)"><div class="ct" style="font-size:7px;text-align:center;padding-top:14px;text-shadow:0 1px 2px rgba(0,0,0,.4)">Norwegian Wood</div><div class="ca" style="text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.4)">Murakami</div></div>
+              <div style="margin-top:4px"><span class="stamp tbr">To read</span></div></div>
+            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#6b4a68,#3d2a3b);color:#F0E2C2"><div class="ct" style="font-size:7px">Tomb of Sand</div><div class="ca">Shree</div></div>
+              <div style="margin-top:4px"><span class="stamp wish">Wishlist</span></div></div>
+            <div><div class="cover" style="height:100px;background:linear-gradient(150deg,#7a4a23,#4b2c12);color:#F0E2C2"><div class="ct" style="font-size:7px">Em and the Big Hoom</div><div class="ca">Pinto</div></div>
+              <div style="margin-top:4px"><span class="stamp stop">Stopped</span></div></div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div class="on"><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>5 · Library</b> Cover grid with tinted status pills, gold ribbon =
+      favourite, and a “WITH ANU” band on lent books. Norwegian Wood shows an uploaded cover
+      image sitting in the same frame as the generated ones. Personal shelves sit beside
+      statuses as chips.</p>
+    </div>
+
+    <!-- 6. Book detail -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar" style="background:var(--paper-deep)"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="overflow:hidden">
+          <div style="background:var(--paper-deep);padding:6px 13px 12px;display:flex;gap:11px">
+            <div class="cover" style="width:58px;height:84px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:8px">The Covenant of Water</div><div class="ca">Verghese</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="h-serif" style="font-size:15px;line-height:1.2">The Covenant of Water</div>
+              <div class="sub" style="margin-top:2px">Abraham Verghese · 2023</div>
+              <div class="sub" style="font-size:8.5px">Grove Press · 724 pp · English</div>
+              <div class="stars" style="margin-top:4px;font-size:12px">★★★★<span class="off">★</span> <span style="color:var(--ink-soft);font-size:8px;font-family:'Inter'">your rating</span></div>
+            </div>
+          </div>
+          <div style="padding:10px 13px;display:flex;flex-direction:column;gap:8px;flex:1;overflow:hidden">
+            <div style="display:flex;gap:4px">
+              <span class="chip">Pending</span><span class="chip on" style="background:var(--oxblood);border-color:var(--oxblood)">Reading</span><span class="chip">Read</span><span class="chip">Stopped</span><span class="chip">Wishlist</span>
+            </div>
+            <div class="card" style="display:flex;gap:8px;align-items:center;padding:8px">
+              <div style="flex:1"><div class="sub" style="font-size:8px">PROGRESS</div><div style="font-size:10.5px;font-weight:600">p. 302 of 724</div></div>
+              <div style="flex:1"><div class="sub" style="font-size:8px">STARTED</div><div style="font-size:10.5px;font-weight:600">14 Jun 2026</div></div>
+              <span style="color:var(--oxblood);font-size:11px;font-weight:700">✎</span>
+            </div>
+            <div class="card" style="padding:8px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div class="sub" style="font-size:8px">MY REVIEW</div>
+                <span style="font-size:8px;color:var(--ink-soft)">🔒 Private ▾</span>
+              </div>
+              <div class="quote" style="font-size:9.5px;margin-top:3px">“Three generations, one condition, and the backwaters of Kerala — unhurried and devastating…”</div>
+            </div>
+            <div class="card" style="padding:8px;background:#F6EEDC;border-color:#E8DCC0">
+              <div class="sub" style="font-size:8px">🔒 PERSONAL NOTES · always private</div>
+              <div style="font-size:9.5px;margin-top:2px">Hardcover, signed copy. Don’t lend this one.</div>
+            </div>
+            <div class="card" style="padding:8px;display:flex;align-items:center;gap:8px;border-left:3px solid var(--gold)">
+              <span style="font-size:12px">⇄</span>
+              <div style="flex:1;font-size:9.5px"><b>Not lent out.</b> <span class="sub">3 past lendings — tap for the ledger</span></div>
+              <span style="font-size:8.5px;font-weight:700;color:var(--oxblood)">Lend</span>
+            </div>
+            <div style="display:flex;gap:6px;font-size:8.5px;color:var(--ink-soft)">
+              <span class="chip" style="font-size:8px">Fiction</span><span class="chip" style="font-size:8px">Historical</span><span class="chip" style="font-size:8px">Kerala</span>
+              <span style="margin-left:auto;align-self:center">ISBN 9780802162175</span>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>6 · Book page</b> The three-way split made visible: rating on the shared
+      book, review with a visibility control (private by default), and personal notes on a
+      warmer paper tint that is <i>always</i> private. Lending is one row away.</p>
+    </div>
+
+    <!-- 7. Add book -->
+    <div class="shot">
+      <div class="phone"><div class="scr" style="background:#1E1710">
+        <div class="sbar" style="color:#EFE6C8"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="color:#EFE6C8">
+          <div style="text-align:center;margin-top:8px"><div class="h-serif" style="font-size:15px">Add a book</div>
+          <div style="font-size:9px;color:#A08D6E">Point at the barcode on the back cover</div></div>
+          <div style="margin:14px 20px;flex:1;border-radius:14px;position:relative;background:
+            radial-gradient(140px 100px at 50% 45%,#4a3a28 0%,#2b2118 70%);border:1px solid #4a3a28;overflow:hidden">
+            <div style="position:absolute;inset:36px 26px auto 26px;height:120px;border:1.5px solid var(--gold);border-radius:10px">
+              <div style="position:absolute;top:46%;left:8px;right:8px;height:2px;background:var(--oxblood);box-shadow:0 0 8px rgba(232,72,72,.8)"></div>
+              <div style="position:absolute;bottom:8px;left:0;right:0;text-align:center;display:flex;justify-content:center;gap:2px">
+                <span style="display:inline-block;width:2px;height:22px;background:#EFE6C8"></span><span style="display:inline-block;width:4px;height:22px;background:#EFE6C8"></span><span style="display:inline-block;width:2px;height:22px;background:#EFE6C8"></span><span style="display:inline-block;width:3px;height:22px;background:#EFE6C8"></span><span style="display:inline-block;width:6px;height:22px;background:#EFE6C8"></span><span style="display:inline-block;width:2px;height:22px;background:#EFE6C8"></span><span style="display:inline-block;width:4px;height:22px;background:#EFE6C8"></span><span style="display:inline-block;width:3px;height:22px;background:#EFE6C8"></span>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:14px;left:0;right:0;text-align:center;font-size:9px;color:#CBB897">ISBN detected — 978-93-5299-…</div>
+          </div>
+          <div style="margin:0 20px 8px;background:#2E2318;border:1px solid #4a3a28;border-radius:11px;padding:9px;display:flex;gap:9px;align-items:center">
+            <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:5px">Ponniyin Selvan</div></div>
+            <div style="flex:1"><div style="font-size:10px;font-weight:600;color:#F0E2C2">Ponniyin Selvan — Vol I</div>
+            <div style="font-size:8.5px;color:#A08D6E">Kalki · Tamil · 1955</div></div>
+            <span style="background:var(--gold);color:#241811;font-size:9px;font-weight:700;border-radius:8px;padding:5px 10px">Add</span>
+          </div>
+          <div style="display:flex;gap:8px;margin:0 20px 16px">
+            <div style="flex:1;text-align:center;font-size:9px;font-weight:600;color:#CBB897;border:1px solid #4a3a28;border-radius:9px;padding:7px">⌕ Search instead</div>
+            <div style="flex:1;text-align:center;font-size:9px;font-weight:600;color:#CBB897;border:1px solid #4a3a28;border-radius:9px;padding:7px">✎ Add manually</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>7 · Add — ISBN scan</b> The only dark screen (it’s a camera). Detected
+      book slides up as a confirm card; search and manual entry are one tap away, never buried.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 4 — LENDING ================= -->
+<section class="area" id="lending">
+  <div class="ah"><span class="an">Area 4</span><h2>Lending — the ledger</h2></div>
+  <p class="desc">The wedge feature, styled as what it is: a ledger. Each lending is a record —
+  who, when, due — with return as a satisfying stamp. Free and first-class (Libib paywalls this).</p>
+  <div class="row">
+
+    <!-- 8. Lending ledger -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+            <div class="pgtitle" style="margin:0">Lending ledger</div><div class="sub">3 out</div>
+          </div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:11px 0 6px">Out now</div>
+          <div class="card" style="padding:9px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#4d4a45,#2e2c29);color:#EFE6C8"><div class="ct" style="font-size:5px">Wuthering Heights</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Wuthering Heights</div>
+              <div class="sub" style="font-size:8.5px">to <b>Anu</b> · since 2 Jun</div></div>
+              <span class="stamp reading">Due in 3 d</span>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <div class="btn soft" style="flex:1;padding:6px;font-size:9px">Remind Anu</div>
+              <div class="btn ghost" style="flex:1;padding:6px;font-size:9px;border-width:1px">Mark returned ✓</div>
+            </div>
+          </div>
+          <div class="card" style="padding:9px;margin-top:7px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#43617E,#22344a);color:#F0E2C2"><div class="ct" style="font-size:5px">God of Small Things</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">The God of Small Things</div>
+              <div class="sub" style="font-size:8.5px">to <b>Faisal</b> · since 18 May</div></div>
+              <span class="stamp stop">No due date</span>
+            </div>
+          </div>
+          <div class="card" style="padding:9px;margin-top:7px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#7a4a23,#4b2c12);color:#F0E2C2"><div class="ct" style="font-size:5px">Em and the Big Hoom</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Em and the Big Hoom</div>
+              <div class="sub" style="font-size:8.5px">to <b>Amma</b> · since 27 Jun</div></div>
+              <span class="stamp tbr">Due 20 Jul</span>
+            </div>
+          </div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:12px 0 6px">Returned</div>
+          <div class="card" style="padding:8px;display:flex;gap:8px;align-items:center;opacity:.75">
+            <div style="flex:1"><div style="font-size:10px;font-weight:600">Norwegian Wood <span class="sub">→ Anu</span></div>
+            <div class="sub" style="font-size:8.5px">12 Mar – 30 Apr</div></div>
+            <span class="stamp read">Returned ✓</span>
+          </div>
+          <div class="card" style="padding:8px;display:flex;gap:8px;align-items:center;opacity:.75;margin-top:6px">
+            <div style="flex:1"><div style="font-size:10px;font-weight:600">Aarachar <span class="sub">→ Divya</span></div>
+            <div class="sub" style="font-size:8.5px">2 Jan – 9 Feb</div></div>
+            <span class="stamp read">Returned ✓</span>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div class="on"><span class="ic">⇄</span>Lending</div>
+          <div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>8 · Lending ledger</b> Records, not flags: borrower, dates, optional due
+      date with a local reminder, and a moss “Returned ✓” pill to close each record. Borrower is
+      free text today, a real user later.</p>
+    </div>
+
+    <!-- 9. Lend sheet -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative">
+          <div style="filter:blur(2px) brightness(.92);padding:6px 13px">
+            <div class="pgtitle">Lending ledger</div>
+            <div class="card" style="height:52px;margin-top:8px"></div>
+            <div class="card" style="height:52px;margin-top:7px"></div>
+            <div class="card" style="height:52px;margin-top:7px"></div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:14px 16px 18px;box-shadow:0 -12px 30px rgba(43,33,24,.18)">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px"></div>
+            <div class="h-serif" style="font-size:15px">Lend a book</div>
+            <div style="display:flex;gap:9px;align-items:center;margin-top:10px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:5.5px">Covenant of Water</div></div>
+              <div><div style="font-size:10.5px;font-weight:600">The Covenant of Water</div><div class="sub">from “My Library”</div></div>
+            </div>
+            <div class="sub" style="font-size:8px;margin:11px 0 3px;letter-spacing:1px">TO</div>
+            <div class="search" style="border-color:var(--ink)"><span style="color:var(--ink);font-weight:600">Anu</span></div>
+            <div style="display:flex;gap:8px;margin-top:9px">
+              <div style="flex:1"><div class="sub" style="font-size:8px;letter-spacing:1px;margin-bottom:3px">LENT ON</div>
+                <div class="search">2 Jul 2026</div></div>
+              <div style="flex:1"><div class="sub" style="font-size:8px;letter-spacing:1px;margin-bottom:3px">DUE BACK · optional</div>
+                <div class="search">16 Jul 2026</div></div>
+            </div>
+            <label style="display:flex;gap:7px;align-items:center;font-size:9.5px;margin-top:10px;color:var(--ink-soft)">
+              <span style="width:26px;height:15px;border-radius:99px;background:var(--moss);position:relative;display:inline-block"><span style="position:absolute;right:2px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff"></span></span>
+              Remind me when it’s due
+            </label>
+            <div class="btn" style="margin-top:12px">Record lending</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>9 · Lend flow</b> A bottom sheet, three fields, done. Borrower is plain
+      text (contacts later); the due-date reminder is a local notification — the
+      spreadsheet-beater in one toggle.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 5 — INSIGHTS ================= -->
+<section class="area" id="insights">
+  <div class="ah"><span class="an">Area 5</span><h2>Insights — your year in pages</h2></div>
+  <p class="desc">Clean stats without trying to out-StoryGraph StoryGraph, plus the quiet
+  differentiator: recommendations that always show their reasoning and are opt-in.</p>
+  <div class="row">
+
+    <!-- 10. Stats -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="chiprow" style="margin-top:6px"><span class="chip on">2026</span><span class="chip">2025</span><span class="chip">All time</span></div>
+          <div class="card" style="text-align:center;padding:12px">
+            <div class="h-serif" style="font-size:26px">24 <span style="font-size:11px;color:var(--ink-soft)">books</span></div>
+            <div class="sub">8,412 pages · longest: 724 pp</div>
+          </div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:11px 0 5px">Books per month</div>
+          <div class="card" style="padding:10px 8px 6px">
+            <div style="display:flex;align-items:flex-end;gap:5px;height:56px">
+              <div style="flex:1;background:var(--gold-soft);border-radius:3px 3px 0 0;height:30%"></div>
+              <div style="flex:1;background:var(--gold-soft);border-radius:3px 3px 0 0;height:55%"></div>
+              <div style="flex:1;background:var(--gold-soft);border-radius:3px 3px 0 0;height:40%"></div>
+              <div style="flex:1;background:var(--gold);border-radius:3px 3px 0 0;height:88%"></div>
+              <div style="flex:1;background:var(--gold-soft);border-radius:3px 3px 0 0;height:62%"></div>
+              <div style="flex:1;background:var(--oxblood);border-radius:3px 3px 0 0;height:48%"></div>
+              <div style="flex:1;background:var(--paper-deep);border-radius:3px 3px 0 0;height:8%"></div>
+              <div style="flex:1;background:var(--paper-deep);border-radius:3px 3px 0 0;height:8%"></div>
+              <div style="flex:1;background:var(--paper-deep);border-radius:3px 3px 0 0;height:8%"></div>
+              <div style="flex:1;background:var(--paper-deep);border-radius:3px 3px 0 0;height:8%"></div>
+              <div style="flex:1;background:var(--paper-deep);border-radius:3px 3px 0 0;height:8%"></div>
+              <div style="flex:1;background:var(--paper-deep);border-radius:3px 3px 0 0;height:8%"></div>
+            </div>
+            <div style="display:flex;gap:5px;font-size:6.5px;color:var(--ink-soft);margin-top:3px">
+              <span style="flex:1;text-align:center">J</span><span style="flex:1;text-align:center">F</span><span style="flex:1;text-align:center">M</span><span style="flex:1;text-align:center">A</span><span style="flex:1;text-align:center">M</span><span style="flex:1;text-align:center">J</span><span style="flex:1;text-align:center">J</span><span style="flex:1;text-align:center">A</span><span style="flex:1;text-align:center">S</span><span style="flex:1;text-align:center">O</span><span style="flex:1;text-align:center">N</span><span style="flex:1;text-align:center">D</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:7px;margin-top:8px">
+            <div class="card" style="flex:1;padding:9px;display:flex;gap:8px;align-items:center">
+              <div style="width:34px;height:34px;border-radius:50%;background:conic-gradient(var(--oxblood) 0 46%,var(--gold) 46% 78%,var(--slate) 78% 100%);position:relative">
+                <span style="position:absolute;inset:8px;border-radius:50%;background:var(--card)"></span></div>
+              <div style="font-size:8px;line-height:1.7"><span style="color:var(--oxblood)">●</span> Malayalam 46%<br><span style="color:var(--gold)">●</span> English 32%<br><span style="color:var(--slate)">●</span> Tamil 22%</div>
+            </div>
+            <div class="card" style="flex:1;padding:9px">
+              <div class="sub" style="font-size:8px;letter-spacing:1px">BY STATUS</div>
+              <div style="display:flex;flex-direction:column;gap:5px;font-size:8.5px;margin-top:5px">
+                <div style="display:flex;justify-content:space-between"><span class="stamp read" style="font-size:6.5px">Read</span><b>54</b></div>
+                <div style="display:flex;justify-content:space-between"><span class="stamp reading" style="font-size:6.5px">Reading</span><b>2</b></div>
+                <div style="display:flex;justify-content:space-between"><span class="stamp tbr" style="font-size:6.5px">To read</span><b>60</b></div>
+                <div style="display:flex;justify-content:space-between"><span class="stamp wish" style="font-size:6.5px">Wishlist</span><b>12</b></div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:8px;padding:9px;display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:9.5px"><b>Most-read author</b><div class="sub">M.T. Vasudevan Nair · 6 books</div></div>
+            <div class="h-serif" style="font-size:18px;color:var(--gold)">✒</div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>10 · Stats</b> Pages and books per month, language donut (the regional
+      angle made visible), status counts as stamps. Charts are flat and paper-toned — no
+      dashboard gloss.</p>
+    </div>
+
+    <!-- 11. Recommendations -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Picked for your shelf</div>
+          <div class="sub">Reasoned from your ratings — never from ads. <b style="color:var(--oxblood)">Opt-in.</b></div>
+          <div class="card" style="margin-top:11px;padding:11px">
+            <div style="display:flex;gap:10px">
+              <div class="cover" style="width:44px;height:64px;background:linear-gradient(150deg,#43617E,#22344a);color:#F0E2C2"><div class="ct" style="font-size:6.5px">Mayyazhi-ppuzhayude Theeranga-lil</div></div>
+              <div style="flex:1">
+                <div style="font-size:11px;font-weight:600;line-height:1.25">Mayyazhippuzhayude Theerangalil</div>
+                <div class="sub">M. Mukundan · Malayalam</div>
+                <div class="stars" style="margin-top:3px;font-size:9px">★★★★★ <span style="color:var(--ink-soft);font-family:'Inter';font-size:7.5px">catalog avg</span></div>
+              </div>
+            </div>
+            <div style="margin-top:9px;background:var(--paper);border-left:2px solid var(--gold);padding:7px 9px;border-radius:0 8px 8px 0">
+              <div class="sub" style="font-size:7.5px;letter-spacing:1px">WHY THIS?</div>
+              <div class="quote" style="font-size:9.5px;margin-top:2px">You rated <b>Khasakkinte Itihasam</b> ★★★★★ and finished three Mukundan-era Malayalam classics this year — this is the one you haven’t met yet.</div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:9px">
+              <div class="btn soft" style="flex:1;padding:7px;font-size:9px">+ Wishlist</div>
+              <div class="btn ghost" style="flex:1;padding:7px;font-size:9px;border-width:1px">Not for me</div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:9px;padding:11px">
+            <div style="display:flex;gap:10px">
+              <div class="cover" style="width:44px;height:64px;background:linear-gradient(150deg,#6b4a68,#3d2a3b);color:#F0E2C2"><div class="ct" style="font-size:6.5px">Tomb of Sand</div></div>
+              <div style="flex:1">
+                <div style="font-size:11px;font-weight:600">Tomb of Sand</div>
+                <div class="sub">Geetanjali Shree · tr. Daisy Rockwell</div>
+                <div class="stars" style="margin-top:3px;font-size:9px">★★★★<span class="off">★</span> <span style="color:var(--ink-soft);font-family:'Inter';font-size:7.5px">catalog avg</span></div>
+              </div>
+            </div>
+            <div style="margin-top:9px;background:var(--paper);border-left:2px solid var(--gold);padding:7px 9px;border-radius:0 8px 8px 0">
+              <div class="sub" style="font-size:7.5px;letter-spacing:1px">WHY THIS?</div>
+              <div class="quote" style="font-size:9.5px;margin-top:2px">You keep four-starring translated fiction — the first Hindi Booker winner belongs on that shelf.</div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:8.5px;color:var(--ink-soft);margin-top:10px">Recommendations run on your ratings only ·
+          <span style="color:var(--oxblood);font-weight:600">Turn off anytime</span></div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>11 · Recommendations</b> The AI-wary market answer: every pick carries a
+      “why” in plain words, sourced from the user’s own ratings, opt-in with an always-visible
+      off switch. A helper, not a feed.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 6 — PROFILE ================= -->
+<section class="area" id="profile">
+  <div class="ah"><span class="an">Area 6</span><h2>Profile — the dormant switchboard</h2></div>
+  <p class="desc">Every visibility toggle the community layer will need, wired now and defaulted
+  to private. When community switches on, this screen is already the control room.</p>
+  <div class="row">
+
+    <!-- 12. Profile -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;gap:11px;align-items:center;margin-top:12px">
+            <div style="width:46px;height:46px;border-radius:50%;background:var(--oxblood);color:#F6F0E3;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:20px;border:2px solid var(--gold)">S</div>
+            <div><div class="h-serif" style="font-size:15px">Shamshi</div>
+            <div class="sub">Reading since 2026 · 128 books</div></div>
+          </div>
+          <div class="card" style="margin-top:12px;padding:0;overflow:hidden">
+            <div style="padding:8px 11px;background:var(--paper-deep);font-size:8px;font-weight:700;letter-spacing:1.2px;color:var(--ink-soft)">VISIBILITY · everything starts private</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border-top:1px solid var(--line)">
+              <div style="font-size:10px"><b>Profile</b><div class="sub" style="font-size:8px">Name &amp; reading stats</div></div>
+              <span style="width:26px;height:15px;border-radius:99px;background:#D8CBAE;position:relative"><span style="position:absolute;left:2px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff"></span></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border-top:1px solid var(--line)">
+              <div style="font-size:10px"><b>Library</b><div class="sub" style="font-size:8px">What’s on your shelves</div></div>
+              <span style="width:26px;height:15px;border-radius:99px;background:#D8CBAE;position:relative"><span style="position:absolute;left:2px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff"></span></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border-top:1px solid var(--line)">
+              <div style="font-size:10px"><b>Reviews</b><div class="sub" style="font-size:8px">Default for new reviews</div></div>
+              <span style="width:26px;height:15px;border-radius:99px;background:#D8CBAE;position:relative"><span style="position:absolute;left:2px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff"></span></span>
+            </div>
+          </div>
+          <div class="card" style="margin-top:8px;padding:0;overflow:hidden">
+            <div style="display:flex;justify-content:space-between;padding:9px 11px;font-size:10px"><span>✦ Recommendations</span><span class="sub">On ›</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 11px;border-top:1px solid var(--line);font-size:10px"><span>⇲ Share a book card</span><span class="sub">›</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 11px;border-top:1px solid var(--line);font-size:10px"><span>▦ Import / export CSV</span><span class="sub">›</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 11px;border-top:1px solid var(--line);font-size:10px"><span>⚙ App settings</span><span class="sub">›</span></div>
+          </div>
+          <div class="card" style="margin-top:8px;background:#3A2C1E;border-color:#3A2C1E;color:#EFE3C8;padding:11px;text-align:center">
+            <div class="quote" style="font-size:10px;color:#EFE3C8">“I have always imagined that Paradise will be a kind of library.”</div>
+            <div style="font-size:7.5px;color:#A08D6E;margin-top:4px;letter-spacing:1px">— BORGES · TAP FOR A NEW ONE</div>
+          </div>
+          <div style="text-align:center;font-size:9px;color:var(--stamp-grey);margin-top:10px">Sign out</div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>12 · Profile</b> The `[WIRED]` community switchboard: profile, library and
+      review visibility all exist and all default off. A Borges quote instead of a promo banner —
+      the app’s voice in one card.</p>
+    </div>
+
+  </div>
+</section>
+
+<footer style="text-align:center;margin:70px 0 30px;color:#8a7a5f;font-size:12px">
+  <div class="orn" style="font-size:14px">❦</div>
+  Kitabi · V1 mockups · the design source of truth for <code>app/</code> — tokens in docs/screen-design.md
+</footer>
+
+</body>
+</html>
