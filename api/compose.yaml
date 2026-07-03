@@ -1,0 +1,15 @@
+# Local dev database — `docker compose up -d db` before `uvicorn app.main:app --reload`
+# Port 55442 (not 55432) so it can run alongside rupee-diary's local db.
+services:
+  db:
+    image: postgres:17-alpine
+    ports:
+      - "55442:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: kitabi
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
