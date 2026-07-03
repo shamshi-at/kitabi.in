@@ -6,8 +6,9 @@
 <title>Kitabi — Beyond the Bookshelf</title>
 <meta name="description" content="Your whole library in your pocket: every book you own, who borrowed what, and what to read next. Import from Goodreads or a spreadsheet in minutes. Private by default.">
 <meta name="theme-color" content="#241811">
-<link rel="icon" href="logo.svg" type="image/svg+xml">
-<link rel="icon" href="ico.png" type="image/png">
+<link rel="icon" href="logo.svg?v=3" type="image/svg+xml">
+<link rel="icon" href="ico.png?v=3" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
 
 <meta property="og:title" content="Kitabi — Beyond the Bookshelf">
 <meta property="og:description" content="Every book you own, who borrowed what, and what to read next — a private library in your pocket. Launching soon.">
@@ -45,6 +46,12 @@ body{
   padding:max(56px,env(safe-area-inset-top)) 22px 84px;
   border-bottom:3px solid var(--gold);position:relative;
 }
+.langsel{position:absolute;top:max(14px,env(safe-area-inset-top));right:16px;z-index:5}
+.langsel::after{content:"▾";position:absolute;right:11px;top:50%;transform:translateY(-52%);color:#CBB897;pointer-events:none;font-size:9px}
+.langsel select{appearance:none;-webkit-appearance:none;background:rgba(246,240,227,.07);
+  border:1px solid rgba(246,240,227,.32);color:#EFE3C8;font:600 12px 'Inter',system-ui,sans-serif;
+  border-radius:999px;padding:7px 27px 7px 13px;cursor:pointer}
+.langsel select:focus{outline:none;border-color:var(--gold)}
 .badge{width:104px;height:104px;display:block;margin:0 auto 18px;animation:pop .6s cubic-bezier(.34,1.56,.64,1) both;
   filter:drop-shadow(0 12px 30px rgba(0,0,0,.45))}
 .hero h1{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:clamp(42px,11vw,64px);letter-spacing:.5px;animation:up .5s ease-out .08s both}
@@ -73,7 +80,7 @@ body{
 .chips{display:flex;gap:5px;margin:10px 0 12px;overflow:hidden}
 .chip{font-size:8.5px;font-weight:600;padding:4.5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);white-space:nowrap}
 .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 8px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}
 .cover{border-radius:4px 7px 7px 4px;height:96px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 3px 8px rgba(43,33,24,.28)}
 .cover::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(0,0,0,.22)}
 .cover .ct{font-family:'Fraunces',Georgia,serif;font-size:7px;padding:8px 6px 0 10px;line-height:1.2}
@@ -134,22 +141,22 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 <body>
 
 <header class="hero">
+  <div class="langsel"><select id="langsel" aria-label="Language"></select></div>
   <img class="badge" src="logo.svg" alt="Kitabi — an open book with a ribbon bookmark and one gold line" width="104" height="104">
   <h1>Kitabi</h1>
   <p class="tagline">Beyond the Bookshelf</p>
-  <p class="pitch">Every book you <b>own</b>, who <b>borrowed</b> what, and what to
-  <b>read next</b> — a private library in your pocket, not another feed.</p>
+  <p class="pitch" data-i18n="pitch"></p>
   <div class="ctas">
     <a class="store" href="#notify" aria-label="App Store — launching soon">
       <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
-      <span><small>Launching soon</small><span>App Store</span></span>
+      <span><small data-i18n="soon"></small><span>App Store</span></span>
     </a>
     <a class="store ghost" href="#notify" aria-label="Google Play — launching soon">
       <svg class="ic" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M4 2.3v19.4c0 .4.45.65.79.42l14.4-9.7a.5.5 0 0 0 0-.84L4.79 1.88A.5.5 0 0 0 4 2.3z"/></svg>
-      <span><small>Launching soon</small><span>Google Play</span></span>
+      <span><small data-i18n="soon"></small><span>Google Play</span></span>
     </a>
   </div>
-  <p class="trust"><b>Free</b> · <b>Your library stays private</b> · Your Goodreads list moves in, in minutes</p>
+  <p class="trust" data-i18n="trust"></p>
 </header>
 
 <!-- floating app preview -->
@@ -170,53 +177,36 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 
 <main class="wrap">
   <section class="sect">
-    <span class="kicker">Why Kitabi</span>
-    <h2>A real bookshelf, finally digital</h2>
-    <p class="lead">Reading apps track what you read. Cataloguing apps list what you own.
-    Kitabi does both — and remembers which friend still has your favourite paperback.</p>
+    <span class="kicker" data-i18n="whyK"></span>
+    <h2 data-i18n="whyH"></h2>
+    <p class="lead" data-i18n="whyLead"></p>
 
     <div class="feats">
       <div class="feat"><div class="fi" style="background:var(--gold-soft)">📚</div>
-        <h3>A shelf that looks like your shelf</h3>
-        <p>Cover after cover, just like the real thing. Even books without a photo get
-        a handsome cover of their own — your library always looks loved, never empty.</p></div>
+        <h3 data-i18n="f1h"></h3><p data-i18n="f1p"></p></div>
 
       <div class="feat"><div class="fi" style="background:#F2DEDA">⇄</div>
-        <h3>Never lose a lent book<span class="free">FREE</span></h3>
-        <p>“Lent to Anu, 2 June.” Kitabi remembers who has your books and gives you a
-        gentle nudge when it’s time to ask for one back. Your paperbacks come home.</p></div>
+        <h3><span data-i18n="f2h"></span><span class="free" data-i18n="free"></span></h3>
+        <p data-i18n="f2p"></p></div>
 
       <div class="feat"><div class="fi" style="background:#E3EAD9">▦</div>
-        <h3>Move in, in minutes</h3>
-        <p>Already keep your books on Goodreads or in a spreadsheet? Bring it along —
-        your shelves, ratings and reviews arrive together, in one tap.</p></div>
+        <h3 data-i18n="f3h"></h3><p data-i18n="f3p"></p></div>
 
       <div class="feat"><div class="fi" style="background:#DEE7EF">✎</div>
-        <h3>Your reading, remembered</h3>
-        <p>Where you stopped, what you rated, what you really thought — and the little
-        notes you’d never say out loud (“signed copy, don’t lend”). All of it stays
-        yours, private until you decide otherwise.</p></div>
+        <h3 data-i18n="f4h"></h3><p data-i18n="f4p"></p></div>
 
       <div class="feat"><div class="fi" style="background:var(--gold-soft)">◔</div>
-        <h3>Your year in pages</h3>
-        <p>Watch your reading add up — books finished, pages turned, the languages on
-        your shelf. A reading journal that fills itself in.</p></div>
+        <h3 data-i18n="f5h"></h3><p data-i18n="f5p"></p></div>
 
       <div class="feat"><div class="fi" style="background:#F2DEDA">✦</div>
-        <h3>Know what to read next</h3>
-        <p>Warm suggestions drawn from the books you loved, each with an honest
-        “why this one”. Prefer to browse in peace? One switch turns them off.</p></div>
+        <h3 data-i18n="f6h"></h3><p data-i18n="f6p"></p></div>
     </div>
   </section>
 
   <section class="sect">
-    <span class="kicker">Reads your language</span>
+    <span class="kicker" data-i18n="langK"></span>
     <h2>മലയാളം · தமிழ் · English &amp; beyond</h2>
-    <p class="lead">Kitabi grew up on Indian bookshelves. Your മലയാളം, தமிழ் and English books
-    live side by side — spelled right, shown proudly, never an afterthought. And when you own
-    both <span class="serif" style="font-style:italic">Mayyazhippuzhayude Theerangalil</span> and
-    <span class="serif" style="font-style:italic">On the Banks of the Mayyazhi</span>, Kitabi
-    knows they’re the same story.</p>
+    <p class="lead" data-i18n="langLead"></p>
   </section>
 </main>
 
@@ -224,7 +214,7 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
   <button class="qarrow l" id="qprev" aria-label="Previous quote">‹</button>
   <div class="qtrack" id="qtrack">
     <figure class="qslide">
-      <blockquote class="q" style="margin:0">“I have always imagined that Paradise will be a kind of library.”</blockquote>
+      <blockquote class="q">“I have always imagined that Paradise will be a kind of library.”</blockquote>
       <figcaption class="a">— Jorge Luis Borges</figcaption>
     </figure>
   </div>
@@ -234,70 +224,254 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 
 <section class="close" id="notify">
   <div class="orn">❦</div>
-  <h2>Your shelf is waiting</h2>
-  <p>Kitabi arrives soon on Android and iOS — because your books deserve better than
-  a spreadsheet. The door opens right here at <b>kitabi.in</b>.</p>
+  <h2 data-i18n="closeH"></h2>
+  <p data-i18n="closeP"></p>
   <div class="ctas dark">
     <a class="store" href="#" aria-disabled="true">
       <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
-      <span><small>Launching soon</small><span>App Store</span></span></a>
+      <span><small data-i18n="soon"></small><span>App Store</span></span></a>
     <a class="store" href="#" aria-disabled="true">
       <svg class="ic" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M4 2.3v19.4c0 .4.45.65.79.42l14.4-9.7a.5.5 0 0 0 0-.84L4.79 1.88A.5.5 0 0 0 4 2.3z"/></svg>
-      <span><small>Launching soon</small><span>Google Play</span></span></a>
+      <span><small data-i18n="soon"></small><span>Google Play</span></span></a>
   </div>
 </section>
 
 <footer>
-  <p class="fm">Kitabi <span style="color:var(--gold)">·</span> beyond the bookshelf</p>
+  <p class="fm">Kitabi <span style="color:var(--gold)">·</span> <span data-i18n="footTag"></span></p>
   <p style="margin-top:8px">© <span id="y">2026</span> Kitabi. All rights reserved.</p>
 </footer>
 
 <script>
 document.getElementById('y').textContent = new Date().getFullYear();
 
-// Quote carousel — legends in their own languages, shuffled every visit.
-(function () {
-  var QUOTES = [
-    {q: "ഒന്നും ഒന്നും ഇമ്മിണി ബല്യ ഒന്ന്.", a: "Vaikom Muhammad Basheer", l: "Malayalam",
-     g: "One and one make one — one that is quite big."},
-    {q: "கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக.", a: "Thiruvalluvar", l: "Tamil",
-     g: "Learn flawlessly what is worth learning — then live by what you have learned."},
-    {q: "साहित्य समाज का दर्पण है।", a: "Munshi Premchand", l: "Hindi",
-     g: "Literature is the mirror of society."},
-    {q: "Ein Buch muss die Axt sein für das gefrorene Meer in uns.", a: "Franz Kafka", l: "German",
-     g: "A book must be the axe for the frozen sea within us."},
-    {q: "I have always imagined that Paradise will be a kind of library.", a: "Jorge Luis Borges", l: "", g: ""},
-    {q: "Chi legge avrà vissuto cinquemila anni. La lettura è un’immortalità all’indietro.", a: "Umberto Eco", l: "Italian",
-     g: "The reader will have lived five thousand years — reading is immortality, backwards."},
-    {q: "Si hortum in bibliotheca habes, deerit nihil.", a: "Cicero", l: "Latin",
-     g: "If you have a garden and a library, you have everything you need."},
-    {q: "A reader lives a thousand lives before he dies. The man who never reads lives only one.", a: "George R.R. Martin", l: "", g: ""}
-  ];
-  for (var i = QUOTES.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1)), t = QUOTES[i]; QUOTES[i] = QUOTES[j]; QUOTES[j] = t;
-  }
-  var track = document.getElementById('qtrack'), dots = document.getElementById('qdots');
+// ---------- i18n — the whole page in major Indian languages ----------
+var I18N = {
+en:{pitch:'Every book you <b>own</b>, who <b>borrowed</b> what, and what to <b>read next</b> — a private library in your pocket, not another feed.',
+trust:'<b>Free</b> · <b>Your library stays private</b> · Your Goodreads list moves in, in minutes',
+soon:'Launching soon',whyK:'Why Kitabi',whyH:'A real bookshelf, finally digital',
+whyLead:'Reading apps track what you read. Cataloguing apps list what you own. Kitabi does both — and remembers which friend still has your favourite paperback.',
+f1h:'A shelf that looks like your shelf',f1p:'Cover after cover, just like the real thing. Even books without a photo get a handsome cover of their own — your library always looks loved, never empty.',
+f2h:'Never lose a lent book',free:'FREE',f2p:'“Lent to Anu, 2 June.” Kitabi remembers who has your books and gives you a gentle nudge when it’s time to ask for one back. Your paperbacks come home.',
+f3h:'Move in, in minutes',f3p:'Already keep your books on Goodreads or in a spreadsheet? Bring it along — your shelves, ratings and reviews arrive together, in one tap.',
+f4h:'Your reading, remembered',f4p:'Where you stopped, what you rated, what you really thought — and the little notes you’d never say out loud (“signed copy, don’t lend”). All of it stays yours, private until you decide otherwise.',
+f5h:'Your year in pages',f5p:'Watch your reading add up — books finished, pages turned, the languages on your shelf. A reading journal that fills itself in.',
+f6h:'Know what to read next',f6p:'Warm suggestions drawn from the books you loved, each with an honest “why this one”. Prefer to browse in peace? One switch turns them off.',
+langK:'Reads your language',
+langLead:'Kitabi grew up on Indian bookshelves. Your മലയാളം, தமிழ் and English books live side by side — spelled right, shown proudly, never an afterthought. And when you own both <span class="serif" style="font-style:italic">Mayyazhippuzhayude Theerangalil</span> and <span class="serif" style="font-style:italic">On the Banks of the Mayyazhi</span>, Kitabi knows they’re the same story.',
+closeH:'Your shelf is waiting',closeP:'Kitabi arrives soon on Android and iOS — because your books deserve better than a spreadsheet. The door opens right here at <b>kitabi.in</b>.',
+footTag:'beyond the bookshelf'},
+hi:{pitch:'आपकी <b>हर किताब</b>, किसने <b>उधार ली</b>, और आगे <b>क्या पढ़ें</b> — आपकी जेब में आपकी निजी लाइब्रेरी, कोई फ़ीड नहीं।',
+trust:'<b>मुफ़्त</b> · <b>आपकी लाइब्रेरी निजी रहती है</b> · Goodreads की सूची मिनटों में आ जाती है',
+soon:'जल्द आ रहा है',whyK:'Kitabi ही क्यों',whyH:'असली बुकशेल्फ़, अब डिजिटल',
+whyLead:'रीडिंग ऐप्स बताते हैं कि आपने क्या पढ़ा। कैटलॉग ऐप्स गिनते हैं कि आपके पास क्या है। Kitabi दोनों करता है — और याद रखता है कि आपकी पसंदीदा किताब किस दोस्त के पास है।',
+f1h:'शेल्फ़, बिल्कुल आपकी शेल्फ़ जैसी',f1p:'कवर के बाद कवर, बिल्कुल असली जैसा। जिन किताबों की फ़ोटो नहीं, उन्हें भी सुंदर कवर मिलता है — आपकी लाइब्रेरी हमेशा सजी दिखती है।',
+f2h:'उधार दी किताब अब खोएगी नहीं',free:'मुफ़्त',f2p:'“अनु को दी, 2 जून।” Kitabi याद रखता है कि आपकी किताबें किसके पास हैं और समय आने पर धीरे से याद दिला देता है। आपकी किताबें घर लौट आती हैं।',
+f3h:'मिनटों में शिफ़्ट हो जाइए',f3p:'Goodreads या स्प्रेडशीट में सूची रखते हैं? उसे साथ ले आइए — आपकी शेल्फ़ें, रेटिंग और समीक्षाएँ एक टैप में आ जाती हैं।',
+f4h:'आपका पढ़ना, याद रखा हुआ',f4p:'कहाँ रुके, क्या रेटिंग दी, सच में क्या लगा — और वे छोटे नोट जो आप किसी से नहीं कहते (“हस्ताक्षरित प्रति, उधार नहीं”)। सब आपका, जब तक आप न चाहें, निजी।',
+f5h:'पन्नों में आपका साल',f5p:'देखिए पढ़ना कैसे जुड़ता जाता है — पूरी की गई किताबें, पलटे गए पन्ने, शेल्फ़ की भाषाएँ। एक रीडिंग जर्नल जो खुद भरता है।',
+f6h:'आगे क्या पढ़ें, पता रहेगा',f6p:'आपकी पसंद की किताबों से निकले आत्मीय सुझाव, हर एक के साथ साफ़ “यही क्यों”। शांति चाहिए? एक स्विच, बंद।',
+langK:'आपकी भाषा पढ़ता है',
+langLead:'Kitabi भारतीय बुकशेल्फ़ों पर पला-बढ़ा है। आपकी हिन्दी, മലയാളം और English किताबें साथ-साथ रहती हैं — सही लिखी, गर्व से दिखाई गईं। और अनुवाद तथा मूल — Kitabi जानता है कि वे एक ही कहानी हैं।',
+closeH:'आपकी शेल्फ़ इंतज़ार में है',closeP:'Kitabi जल्द ही Android और iOS पर — क्योंकि आपकी किताबें स्प्रेडशीट से बेहतर की हक़दार हैं। दरवाज़ा यहीं खुलेगा — <b>kitabi.in</b>।',
+footTag:'बुकशेल्फ़ से आगे'},
+bn:{pitch:'আপনার <b>প্রতিটি বই</b>, কে <b>ধার নিয়েছে</b>, এরপর <b>কী পড়বেন</b> — পকেটে আপনার নিজের লাইব্রেরি, কোনো ফিড নয়।',
+trust:'<b>বিনামূল্যে</b> · <b>আপনার লাইব্রেরি ব্যক্তিগত</b> · Goodreads তালিকা মিনিটে চলে আসে',
+soon:'শীঘ্রই আসছে',whyK:'কেন Kitabi',whyH:'আসল বইয়ের তাক, এবার ডিজিটাল',
+whyLead:'রিডিং অ্যাপ লেখে আপনি কী পড়েছেন। ক্যাটালগ অ্যাপ গোনে আপনার কী আছে। Kitabi দুটোই করে — আর মনে রাখে প্রিয় বইটা কোন বন্ধুর কাছে।',
+f1h:'আপনার তাকের মতোই একটা তাক',f1p:'কভারের পর কভার, একেবারে আসলের মতো। ছবি নেই যে বইয়ের, তারও সুন্দর কভার — লাইব্রেরি সবসময় ভরা দেখায়।',
+f2h:'ধার দেওয়া বই আর হারাবে না',free:'ফ্রি',f2p:'“অনুকে দিয়েছি, ২ জুন।” কার কাছে কোন বই, Kitabi মনে রাখে; ফেরত চাওয়ার সময় আলতো করে মনে করিয়ে দেয়। আপনার বই ঘরে ফেরে।',
+f3h:'মিনিটেই চলে আসুন',f3p:'Goodreads বা স্প্রেডশিটে তালিকা আছে? নিয়ে আসুন — তাক, রেটিং, রিভিউ এক ট্যাপে চলে আসবে।',
+f4h:'আপনার পড়া, মনে রাখা',f4p:'কোথায় থামলেন, কী রেটিং, সত্যি কেমন লাগল — আর সেই ছোট নোটগুলোও যা কাউকে বলেন না (“সই করা কপি, ধার নয়”)। সবই আপনার, আপনি না চাইলে ব্যক্তিগত।',
+f5h:'পাতায় পাতায় আপনার বছর',f5p:'পড়া জমে ওঠা দেখুন — শেষ করা বই, উল্টানো পাতা, তাকের ভাষাগুলো। নিজে থেকেই ভরে ওঠা পড়ার ডায়েরি।',
+f6h:'এরপর কী পড়বেন, জানা থাকবে',f6p:'আপনার ভালোবাসার বই থেকে আন্তরিক পরামর্শ, প্রতিটির সঙ্গে সৎ “কেন এটা”। চান না? এক সুইচ, বন্ধ।',
+langK:'আপনার ভাষা পড়ে',
+langLead:'Kitabi বেড়ে উঠেছে ভারতীয় বইয়ের তাকে। আপনার বাংলা, English, മലയാളം বই পাশাপাশি — ঠিকঠাক লেখা, গর্বে দেখানো। অনুবাদ আর মূল যে একই গল্প, Kitabi জানে।',
+closeH:'আপনার তাক অপেক্ষায়',closeP:'Kitabi শীঘ্রই Android ও iOS-এ — আপনার বই স্প্রেডশিটের চেয়ে ভালো কিছু পাওয়ার যোগ্য। দরজা খুলবে এখানেই — <b>kitabi.in</b>।',
+footTag:'বইয়ের তাক পেরিয়ে'},
+ta:{pitch:'உங்களுடைய <b>ஒவ்வொரு புத்தகமும்</b>, யார் <b>இரவல் வாங்கினார்</b>, அடுத்து <b>என்ன படிக்கலாம்</b> — பாக்கெட்டில் ஒரு தனிப்பட்ட நூலகம், ஃபீடு அல்ல.',
+trust:'<b>இலவசம்</b> · <b>உங்கள் நூலகம் தனிப்பட்டது</b> · Goodreads பட்டியல் நிமிடங்களில் வந்துவிடும்',
+soon:'விரைவில்',whyK:'ஏன் Kitabi',whyH:'உண்மையான புத்தக அலமாரி, இப்போது டிஜிட்டல்',
+whyLead:'ரீடிங் ஆப்கள் நீங்கள் படித்ததை பதிவு செய்கின்றன. கேட்டலாக் ஆப்கள் உங்களிடம் இருப்பதை எண்ணுகின்றன. Kitabi இரண்டையும் செய்கிறது — பிடித்த புத்தகம் எந்த நண்பரிடம் என்பதையும் நினைவில் வைக்கிறது.',
+f1h:'உங்கள் அலமாரி போலவே ஒரு அலமாரி',f1p:'அட்டைக்குப் பின் அட்டை, அசல் போலவே. புகைப்படம் இல்லாத புத்தகங்களுக்கும் அழகான அட்டை — உங்கள் நூலகம் எப்போதும் நிறைந்து தெரியும்.',
+f2h:'இரவல் கொடுத்த புத்தகம் இனி தொலையாது',free:'இலவசம்',f2p:'“அனுவுக்கு, ஜூன் 2.” உங்கள் புத்தகங்கள் யாரிடம் என்பதை Kitabi நினைவில் வைத்து, திரும்பக் கேட்க வேண்டிய நேரத்தில் மெதுவாக நினைவூட்டும். உங்கள் புத்தகங்கள் வீடு திரும்பும்.',
+f3h:'நிமிடங்களில் குடிபெயருங்கள்',f3p:'Goodreads அல்லது ஸ்ப்ரெட்ஷீட்டில் பட்டியல் உள்ளதா? கொண்டு வாருங்கள் — அலமாரிகள், மதிப்பீடுகள், விமர்சனங்கள் ஒரே தட்டலில்.',
+f4h:'உங்கள் வாசிப்பு, நினைவில்',f4p:'எங்கே நிறுத்தினீர்கள், என்ன மதிப்பீடு, உண்மையில் என்ன நினைத்தீர்கள் — யாரிடமும் சொல்லாத சிறு குறிப்புகளும் (“கையொப்பப் பிரதி, இரவல் வேண்டாம்”). எல்லாம் உங்களுடையது, நீங்கள் விரும்பும் வரை தனிப்பட்டது.',
+f5h:'பக்கங்களில் உங்கள் ஆண்டு',f5p:'வாசிப்பு சேர்ந்து வளர்வதைப் பாருங்கள் — முடித்த புத்தகங்கள், புரட்டிய பக்கங்கள், அலமாரியின் மொழிகள். தானே நிறையும் வாசிப்பு நாட்குறிப்பு.',
+f6h:'அடுத்து என்ன படிப்பது என்று தெரியும்',f6p:'நீங்கள் விரும்பிய புத்தகங்களிலிருந்து அன்பான பரிந்துரைகள், ஒவ்வொன்றுக்கும் நேர்மையான “ஏன் இது”. அமைதி வேண்டுமா? ஒரு ஸ்விட்ச், ஆஃப்.',
+langK:'உங்கள் மொழியை வாசிக்கிறது',
+langLead:'Kitabi வளர்ந்தது இந்திய புத்தக அலமாரிகளில். உங்கள் தமிழ், മലയാളം, English புத்தகங்கள் அருகருகே — சரியாக எழுதப்பட்டு, பெருமையுடன். மொழிபெயர்ப்பும் மூலமும் ஒரே கதை என்பது Kitabi-க்குத் தெரியும்.',
+closeH:'உங்கள் அலமாரி காத்திருக்கிறது',closeP:'Kitabi விரைவில் Android மற்றும் iOS-ல் — உங்கள் புத்தகங்கள் ஸ்ப்ரெட்ஷீட்டை விட சிறந்ததற்குத் தகுதியானவை. கதவு இங்கே திறக்கும் — <b>kitabi.in</b>.',
+footTag:'புத்தக அலமாரிக்கு அப்பால்'},
+te:{pitch:'మీ <b>ప్రతి పుస్తకం</b>, ఎవరు <b>అరువు తీసుకున్నారు</b>, తర్వాత <b>ఏమి చదవాలి</b> — జేబులో మీ సొంత గ్రంథాలయం, ఫీడ్ కాదు.',
+trust:'<b>ఉచితం</b> · <b>మీ లైబ్రరీ ప్రైవేట్</b> · Goodreads జాబితా నిమిషాల్లో వచ్చేస్తుంది',
+soon:'త్వరలో',whyK:'ఎందుకు Kitabi',whyH:'నిజమైన పుస్తకాల అర, ఇప్పుడు డిజిటల్',
+whyLead:'రీడింగ్ యాప్‌లు మీరు చదివింది నమోదు చేస్తాయి. కేటలాగ్ యాప్‌లు మీ దగ్గర ఉన్నవి లెక్కిస్తాయి. Kitabi రెండూ చేస్తుంది — మీకు ఇష్టమైన పుస్తకం ఏ స్నేహితుడి దగ్గర ఉందో కూడా గుర్తుంచుకుంటుంది.',
+f1h:'మీ అర లాంటిదే ఒక అర',f1p:'కవర్ తర్వాత కవర్, అసలైనట్టే. ఫోటో లేని పుస్తకాలకూ అందమైన కవర్ — మీ లైబ్రరీ ఎప్పుడూ నిండుగా కనిపిస్తుంది.',
+f2h:'అరువిచ్చిన పుస్తకం ఇక పోదు',free:'ఉచితం',f2p:'“అనుకు ఇచ్చాను, జూన్ 2.” మీ పుస్తకాలు ఎవరి దగ్గర ఉన్నాయో Kitabi గుర్తుంచుకుంటుంది; అడగాల్సిన సమయానికి మెల్లగా గుర్తు చేస్తుంది. మీ పుస్తకాలు ఇంటికి తిరిగొస్తాయి.',
+f3h:'నిమిషాల్లో వచ్చేయండి',f3p:'Goodreads లేదా స్ప్రెడ్‌షీట్‌లో జాబితా ఉందా? తీసుకురండి — అరలు, రేటింగ్‌లు, సమీక్షలు ఒక్క ట్యాప్‌లో.',
+f4h:'మీ చదువు, గుర్తుగా',f4p:'ఎక్కడ ఆగారు, ఏ రేటింగ్, నిజంగా ఏమనిపించింది — ఎవరికీ చెప్పని చిన్న నోట్స్ కూడా (“సంతకం ఉన్న ప్రతి, అరువివ్వద్దు”). అన్నీ మీవే, మీరు కోరే వరకు ప్రైవేట్.',
+f5h:'పేజీలలో మీ సంవత్సరం',f5p:'చదువు పెరుగుతూ ఉండటం చూడండి — పూర్తి చేసిన పుస్తకాలు, తిప్పిన పేజీలు, అరలోని భాషలు. తనంతట తానే నిండే రీడింగ్ డైరీ.',
+f6h:'తర్వాత ఏమి చదవాలో తెలుస్తుంది',f6p:'మీరు ఇష్టపడిన పుస్తకాల నుంచి ఆత్మీయ సూచనలు, ప్రతి దానికీ నిజాయితీగా “ఇది ఎందుకు”. వద్దా? ఒక స్విచ్, ఆఫ్.',
+langK:'మీ భాషను చదువుతుంది',
+langLead:'Kitabi పెరిగింది భారతీయ పుస్తకాల అరల్లోనే. మీ తెలుగు, English, മലയാളം పుస్తకాలు పక్కపక్కనే — సరిగ్గా రాసి, గర్వంగా చూపించి. అనువాదం, మూలం ఒకే కథ అని Kitabi-కి తెలుసు.',
+closeH:'మీ అర ఎదురుచూస్తోంది',closeP:'Kitabi త్వరలో Android, iOS లలో — మీ పుస్తకాలు స్ప్రెడ్‌షీట్ కంటే మంచివి పొందాలి. తలుపు ఇక్కడే తెరుచుకుంటుంది — <b>kitabi.in</b>.',
+footTag:'పుస్తకాల అరకు ఆవల'},
+mr:{pitch:'तुमचं <b>प्रत्येक पुस्तक</b>, कोणी <b>उसनं नेलं</b>, पुढे <b>काय वाचायचं</b> — खिशातलं तुमचं खासगी ग्रंथालय, फीड नाही.',
+trust:'<b>मोफत</b> · <b>तुमची लायब्ररी खासगी</b> · Goodreads यादी मिनिटांत येते',
+soon:'लवकरच',whyK:'का Kitabi',whyH:'खरं पुस्तकांचं कपाट, आता डिजिटल',
+whyLead:'रीडिंग अ‍ॅप्स तुम्ही काय वाचलं ते नोंदवतात. कॅटलॉग अ‍ॅप्स तुमच्याकडे काय आहे ते मोजतात. Kitabi दोन्ही करतं — आणि आवडतं पुस्तक कोणत्या मित्राकडे आहे हेही लक्षात ठेवतं.',
+f1h:'तुमच्या कपाटासारखंच कपाट',f1p:'कव्हरमागून कव्हर, अगदी खऱ्यासारखं. फोटो नसलेल्या पुस्तकांनाही देखणं कव्हर — लायब्ररी नेहमी भरलेली दिसते.',
+f2h:'उसनं दिलेलं पुस्तक आता हरवणार नाही',free:'मोफत',f2p:'“अनुला दिलं, २ जून.” पुस्तकं कोणाकडे आहेत हे Kitabi लक्षात ठेवतं; परत मागायची वेळ आली की हळूच आठवण करून देतं. तुमची पुस्तकं घरी परततात.',
+f3h:'मिनिटांत शिफ्ट व्हा',f3p:'Goodreads किंवा स्प्रेडशीटमध्ये यादी आहे? घेऊन या — कपाटं, रेटिंग्ज, परीक्षणं एका टॅपमध्ये.',
+f4h:'तुमचं वाचन, लक्षात ठेवलेलं',f4p:'कुठे थांबलात, काय रेटिंग, खरंच काय वाटलं — आणि कोणालाही न सांगितलेल्या छोट्या नोंदीही (“सही असलेली प्रत, उसनं देऊ नका”). सगळं तुमचं, तुम्ही ठरवेपर्यंत खासगी.',
+f5h:'पानांमध्ये तुमचं वर्ष',f5p:'वाचन वाढताना पाहा — संपवलेली पुस्तकं, उलटलेली पानं, कपाटातल्या भाषा. आपोआप भरणारी वाचन-डायरी.',
+f6h:'पुढे काय वाचायचं ते कळेल',f6p:'तुम्हाला आवडलेल्या पुस्तकांतून आपुलकीच्या शिफारसी, प्रत्येकीसोबत प्रामाणिक “हेच का”. नको असेल? एक स्विच, बंद.',
+langK:'तुमची भाषा वाचतं',
+langLead:'Kitabi वाढलं भारतीय पुस्तकांच्या कपाटांवर. तुमची मराठी, English, മലയാളം पुस्तकं शेजारी-शेजारी — नीट लिहिलेली, अभिमानाने. अनुवाद आणि मूळ एकच गोष्ट आहे हे Kitabi-ला माहीत आहे.',
+closeH:'तुमचं कपाट वाट पाहतंय',closeP:'Kitabi लवकरच Android आणि iOS वर — तुमची पुस्तकं स्प्रेडशीटपेक्षा चांगल्याची हक्कदार आहेत. दार इथेच उघडेल — <b>kitabi.in</b>.',
+footTag:'पुस्तकांच्या कपाटापलीकडे'},
+gu:{pitch:'તમારું <b>દરેક પુસ્તક</b>, કોણે <b>ઉછીનું લીધું</b>, હવે <b>શું વાંચવું</b> — ખિસ્સામાં તમારી ખાનગી લાઇબ્રેરી, ફીડ નહીં.',
+trust:'<b>મફત</b> · <b>તમારી લાઇબ્રેરી ખાનગી</b> · Goodreads યાદી મિનિટોમાં આવી જાય',
+soon:'ટૂંક સમયમાં',whyK:'કેમ Kitabi',whyH:'સાચી બુકશેલ્ફ, હવે ડિજિટલ',
+whyLead:'રીડિંગ ઍપ્સ નોંધે છે તમે શું વાંચ્યું. કૅટલૉગ ઍપ્સ ગણે છે તમારી પાસે શું છે. Kitabi બંને કરે છે — અને યાદ રાખે છે કે તમારું પ્રિય પુસ્તક કયા મિત્ર પાસે છે.',
+f1h:'તમારી શેલ્ફ જેવી જ શેલ્ફ',f1p:'કવર પછી કવર, સાવ સાચા જેવું. ફોટો વગરનાં પુસ્તકોને પણ સુંદર કવર — લાઇબ્રેરી હંમેશાં ભરેલી લાગે.',
+f2h:'ઉછીનું આપેલું પુસ્તક હવે ખોવાશે નહીં',free:'મફત',f2p:'“અનુને આપ્યું, 2 જૂન.” કયું પુસ્તક કોની પાસે છે તે Kitabi યાદ રાખે છે; પાછું માગવાનો સમય થાય ત્યારે હળવેથી યાદ કરાવે છે. તમારાં પુસ્તકો ઘરે પાછાં આવે છે.',
+f3h:'મિનિટોમાં આવી જાઓ',f3p:'Goodreads કે સ્પ્રેડશીટમાં યાદી છે? લઈ આવો — શેલ્ફ, રેટિંગ અને રિવ્યૂ એક જ ટૅપમાં.',
+f4h:'તમારું વાંચન, યાદ રાખેલું',f4p:'ક્યાં અટક્યા, શું રેટિંગ, ખરેખર શું લાગ્યું — અને એ નાની નોંધો પણ જે કોઈને નથી કહેતા (“સહી કરેલી નકલ, ઉછીની નહીં”). બધું તમારું, તમે ઇચ્છો ત્યાં સુધી ખાનગી.',
+f5h:'પાનાંઓમાં તમારું વર્ષ',f5p:'વાંચન વધતું જુઓ — પૂરાં કરેલાં પુસ્તકો, ફેરવેલાં પાનાં, શેલ્ફની ભાષાઓ. જાતે ભરાતી વાંચન-ડાયરી.',
+f6h:'હવે શું વાંચવું તે ખબર રહેશે',f6p:'તમને ગમેલાં પુસ્તકોમાંથી હૂંફાળી ભલામણો, દરેક સાથે પ્રામાણિક “આ કેમ”. ન જોઈએ? એક સ્વિચ, બંધ.',
+langK:'તમારી ભાષા વાંચે છે',
+langLead:'Kitabi ઊછર્યું ભારતીય બુકશેલ્ફ પર. તમારાં ગુજરાતી, English, മലയാളം પુસ્તકો સાથે સાથે — બરાબર લખેલાં, ગર્વથી. અનુવાદ અને મૂળ એક જ વાર્તા છે એ Kitabi જાણે છે.',
+closeH:'તમારી શેલ્ફ રાહ જુએ છે',closeP:'Kitabi ટૂંક સમયમાં Android અને iOS પર — તમારાં પુસ્તકો સ્પ્રેડશીટ કરતાં સારાનાં હકદાર છે. દરવાજો અહીં જ ખૂલશે — <b>kitabi.in</b>.',
+footTag:'બુકશેલ્ફથી આગળ'},
+kn:{pitch:'ನಿಮ್ಮ <b>ಪ್ರತಿ ಪುಸ್ತಕ</b>, ಯಾರು <b>ಎರವಲು ಪಡೆದರು</b>, ಮುಂದೆ <b>ಏನು ಓದಬೇಕು</b> — ಜೇಬಿನಲ್ಲಿ ನಿಮ್ಮ ಖಾಸಗಿ ಗ್ರಂಥಾಲಯ, ಫೀಡ್ ಅಲ್ಲ.',
+trust:'<b>ಉಚಿತ</b> · <b>ನಿಮ್ಮ ಲೈಬ್ರರಿ ಖಾಸಗಿ</b> · Goodreads ಪಟ್ಟಿ ನಿಮಿಷಗಳಲ್ಲಿ ಬರುತ್ತದೆ',
+soon:'ಶೀಘ್ರದಲ್ಲೇ',whyK:'ಏಕೆ Kitabi',whyH:'ನಿಜವಾದ ಪುಸ್ತಕದ ಕಪಾಟು, ಈಗ ಡಿಜಿಟಲ್',
+whyLead:'ರೀಡಿಂಗ್ ಆ್ಯಪ್‌ಗಳು ನೀವು ಓದಿದ್ದನ್ನು ದಾಖಲಿಸುತ್ತವೆ. ಕ್ಯಾಟಲಾಗ್ ಆ್ಯಪ್‌ಗಳು ನಿಮ್ಮಲ್ಲಿರುವುದನ್ನು ಎಣಿಸುತ್ತವೆ. Kitabi ಎರಡನ್ನೂ ಮಾಡುತ್ತದೆ — ನಿಮ್ಮ ಮೆಚ್ಚಿನ ಪುಸ್ತಕ ಯಾವ ಗೆಳೆಯನ ಬಳಿ ಇದೆ ಎಂಬುದನ್ನೂ ನೆನಪಿಡುತ್ತದೆ.',
+f1h:'ನಿಮ್ಮ ಕಪಾಟಿನಂತೆಯೇ ಇರುವ ಕಪಾಟು',f1p:'ಕವರ್ ನಂತರ ಕವರ್, ನಿಜವಾದಂತೆ. ಫೋಟೋ ಇಲ್ಲದ ಪುಸ್ತಕಗಳಿಗೂ ಸುಂದರ ಕವರ್ — ಲೈಬ್ರರಿ ಸದಾ ತುಂಬಿ ಕಾಣುತ್ತದೆ.',
+f2h:'ಎರವಲು ಕೊಟ್ಟ ಪುಸ್ತಕ ಇನ್ನು ಕಳೆದುಹೋಗದು',free:'ಉಚಿತ',f2p:'“ಅನುಗೆ ಕೊಟ್ಟೆ, ಜೂನ್ 2.” ನಿಮ್ಮ ಪುಸ್ತಕಗಳು ಯಾರ ಬಳಿ ಇವೆ ಎಂಬುದನ್ನು Kitabi ನೆನಪಿಟ್ಟು, ಕೇಳುವ ಸಮಯಕ್ಕೆ ಮೃದುವಾಗಿ ನೆನಪಿಸುತ್ತದೆ. ನಿಮ್ಮ ಪುಸ್ತಕಗಳು ಮನೆಗೆ ಮರಳುತ್ತವೆ.',
+f3h:'ನಿಮಿಷಗಳಲ್ಲಿ ವಲಸೆ ಬನ್ನಿ',f3p:'Goodreads ಅಥವಾ ಸ್ಪ್ರೆಡ್‌ಶೀಟ್‌ನಲ್ಲಿ ಪಟ್ಟಿ ಇದೆಯೇ? ತನ್ನಿ — ಕಪಾಟುಗಳು, ರೇಟಿಂಗ್‌ಗಳು, ವಿಮರ್ಶೆಗಳು ಒಂದೇ ಟ್ಯಾಪ್‌ನಲ್ಲಿ.',
+f4h:'ನಿಮ್ಮ ಓದು, ನೆನಪಿನಲ್ಲಿ',f4p:'ಎಲ್ಲಿ ನಿಲ್ಲಿಸಿದಿರಿ, ಯಾವ ರೇಟಿಂಗ್, ನಿಜವಾಗಿ ಏನನಿಸಿತು — ಯಾರಿಗೂ ಹೇಳದ ಸಣ್ಣ ಟಿಪ್ಪಣಿಗಳೂ (“ಸಹಿ ಇರುವ ಪ್ರತಿ, ಎರವಲು ಕೊಡಬೇಡ”). ಎಲ್ಲವೂ ನಿಮ್ಮದೇ, ನೀವು ಬಯಸುವವರೆಗೂ ಖಾಸಗಿ.',
+f5h:'ಪುಟಗಳಲ್ಲಿ ನಿಮ್ಮ ವರ್ಷ',f5p:'ಓದು ಬೆಳೆಯುವುದನ್ನು ನೋಡಿ — ಮುಗಿಸಿದ ಪುಸ್ತಕಗಳು, ತಿರುವಿದ ಪುಟಗಳು, ಕಪಾಟಿನ ಭಾಷೆಗಳು. ತಾನಾಗಿಯೇ ತುಂಬುವ ಓದಿನ ದಿನಚರಿ.',
+f6h:'ಮುಂದೇನು ಓದಬೇಕೆಂದು ತಿಳಿಯುತ್ತದೆ',f6p:'ನೀವು ಮೆಚ್ಚಿದ ಪುಸ್ತಕಗಳಿಂದ ಆತ್ಮೀಯ ಸಲಹೆಗಳು, ಪ್ರತಿಯೊಂದಕ್ಕೂ ಪ್ರಾಮಾಣಿಕ “ಇದು ಏಕೆ”. ಬೇಡವೇ? ಒಂದು ಸ್ವಿಚ್, ಆಫ್.',
+langK:'ನಿಮ್ಮ ಭಾಷೆಯನ್ನು ಓದುತ್ತದೆ',
+langLead:'Kitabi ಬೆಳೆದದ್ದು ಭಾರತೀಯ ಪುಸ್ತಕ ಕಪಾಟುಗಳಲ್ಲಿ. ನಿಮ್ಮ ಕನ್ನಡ, English, മലയാളം ಪುಸ್ತಕಗಳು ಜೊತೆಜೊತೆಗೆ — ಸರಿಯಾಗಿ ಬರೆದು, ಹೆಮ್ಮೆಯಿಂದ. ಅನುವಾದ ಮತ್ತು ಮೂಲ ಒಂದೇ ಕಥೆ ಎಂದು Kitabi-ಗೆ ಗೊತ್ತು.',
+closeH:'ನಿಮ್ಮ ಕಪಾಟು ಕಾಯುತ್ತಿದೆ',closeP:'Kitabi ಶೀಘ್ರದಲ್ಲೇ Android ಮತ್ತು iOS ನಲ್ಲಿ — ನಿಮ್ಮ ಪುಸ್ತಕಗಳಿಗೆ ಸ್ಪ್ರೆಡ್‌ಶೀಟ್‌ಗಿಂತ ಉತ್ತಮ ಸಿಗಬೇಕು. ಬಾಗಿಲು ಇಲ್ಲೇ ತೆರೆಯುತ್ತದೆ — <b>kitabi.in</b>.',
+footTag:'ಪುಸ್ತಕ ಕಪಾಟಿನ ಆಚೆಗೆ'},
+ml:{pitch:'നിങ്ങളുടെ <b>ഓരോ പുസ്തകവും</b>, ആരു <b>കടം വാങ്ങി</b>, ഇനി <b>എന്തു വായിക്കണം</b> — പോക്കറ്റിലെ സ്വകാര്യ ലൈബ്രറി, ഫീഡ് അല്ല.',
+trust:'<b>സൗജന്യം</b> · <b>ലൈബ്രറി സ്വകാര്യം</b> · Goodreads പട്ടിക മിനിറ്റുകളിൽ എത്തും',
+soon:'ഉടൻ വരുന്നു',whyK:'എന്തിന് Kitabi',whyH:'യഥാർത്ഥ ബുക്ക്ഷെൽഫ്, ഇനി ഡിജിറ്റൽ',
+whyLead:'റീഡിംഗ് ആപ്പുകൾ നിങ്ങൾ വായിച്ചത് രേഖപ്പെടുത്തുന്നു. കാറ്റലോഗ് ആപ്പുകൾ കൈവശമുള്ളത് എണ്ണുന്നു. Kitabi രണ്ടും ചെയ്യുന്നു — പ്രിയപ്പെട്ട പുസ്തകം ഏതു കൂട്ടുകാരന്റെ കൈയിലാണെന്നും ഓർക്കുന്നു.',
+f1h:'നിങ്ങളുടെ ഷെൽഫ് പോലൊരു ഷെൽഫ്',f1p:'കവറിനു പിന്നാലെ കവർ, യഥാർത്ഥം പോലെ. ഫോട്ടോ ഇല്ലാത്ത പുസ്തകങ്ങൾക്കും ഭംഗിയുള്ള കവർ — ലൈബ്രറി എപ്പോഴും നിറഞ്ഞു കാണും.',
+f2h:'കടം കൊടുത്ത പുസ്തകം ഇനി നഷ്ടമാകില്ല',free:'സൗജന്യം',f2p:'“അനുവിന് കൊടുത്തു, ജൂൺ 2.” ആരുടെ കൈയിലാണ് പുസ്തകങ്ങളെന്ന് Kitabi ഓർക്കുന്നു; തിരികെ ചോദിക്കേണ്ട സമയത്ത് മൃദുവായി ഓർമ്മിപ്പിക്കും. പുസ്തകങ്ങൾ വീട്ടിലെത്തും.',
+f3h:'മിനിറ്റുകളിൽ താമസം മാറാം',f3p:'Goodreads-ലോ സ്പ്രെഡ്ഷീറ്റിലോ ആണോ പുസ്തകപ്പട്ടിക? കൂടെ കൊണ്ടുവരൂ — ഷെൽഫുകളും റേറ്റിംഗുകളും റിവ്യൂകളും ഒറ്റ ടാപ്പിൽ.',
+f4h:'നിങ്ങളുടെ വായന, ഓർമ്മയിൽ',f4p:'എവിടെ നിർത്തി, എന്ത് റേറ്റിംഗ്, ശരിക്കും എന്തു തോന്നി — ആരോടും പറയാത്ത കുറിപ്പുകളും (“ഒപ്പിട്ട കോപ്പി, കടം കൊടുക്കരുത്”). എല്ലാം നിങ്ങളുടേത്, നിങ്ങൾ തീരുമാനിക്കുംവരെ സ്വകാര്യം.',
+f5h:'താളുകളിൽ നിങ്ങളുടെ വർഷം',f5p:'വായന കൂടിവരുന്നത് കാണൂ — തീർത്ത പുസ്തകങ്ങൾ, മറിച്ച താളുകൾ, ഷെൽഫിലെ ഭാഷകൾ. സ്വയം നിറയുന്ന വായനാ ഡയറി.',
+f6h:'ഇനി എന്തു വായിക്കണമെന്ന് അറിയാം',f6p:'ഇഷ്ടപ്പെട്ട പുസ്തകങ്ങളിൽ നിന്നുള്ള സ്നേഹമുള്ള നിർദ്ദേശങ്ങൾ, ഓരോന്നിനും തെളിഞ്ഞ “എന്തുകൊണ്ട്”. വേണ്ടെങ്കിൽ? ഒറ്റ സ്വിച്ച്, ഓഫ്.',
+langK:'നിങ്ങളുടെ ഭാഷ വായിക്കുന്നു',
+langLead:'Kitabi വളർന്നത് ഇന്ത്യൻ ബുക്ക്ഷെൽഫുകളിലാണ്. മലയാളവും தமிழும் English-ഉം ഒരുമിച്ച് — ശരിയായി എഴുതി, അഭിമാനത്തോടെ. വിവർത്തനവും മൂലകൃതിയും ഒരേ കഥയാണെന്ന് Kitabi-ക്ക് അറിയാം.',
+closeH:'നിങ്ങളുടെ ഷെൽഫ് കാത്തിരിക്കുന്നു',closeP:'Kitabi ഉടൻ Android-ലും iOS-ലും — നിങ്ങളുടെ പുസ്തകങ്ങൾ സ്പ്രെഡ്ഷീറ്റിനേക്കാൾ മികച്ചത് അർഹിക്കുന്നു. വാതിൽ തുറക്കുന്നത് ഇവിടെ — <b>kitabi.in</b>.',
+footTag:'ബുക്ക്ഷെൽഫിനപ്പുറം'},
+pa:{pitch:'ਤੁਹਾਡੀ <b>ਹਰ ਕਿਤਾਬ</b>, ਕਿਸਨੇ <b>ਉਧਾਰ ਲਈ</b>, ਅੱਗੇ <b>ਕੀ ਪੜ੍ਹਨਾ</b> — ਜੇਬ ਵਿੱਚ ਤੁਹਾਡੀ ਨਿੱਜੀ ਲਾਇਬ੍ਰੇਰੀ, ਕੋਈ ਫੀਡ ਨਹੀਂ।',
+trust:'<b>ਮੁਫ਼ਤ</b> · <b>ਤੁਹਾਡੀ ਲਾਇਬ੍ਰੇਰੀ ਨਿੱਜੀ</b> · Goodreads ਸੂਚੀ ਮਿੰਟਾਂ ਵਿੱਚ ਆ ਜਾਂਦੀ ਹੈ',
+soon:'ਜਲਦੀ ਆ ਰਿਹਾ',whyK:'ਕਿਉਂ Kitabi',whyH:'ਅਸਲ ਕਿਤਾਬਾਂ ਦੀ ਅਲਮਾਰੀ, ਹੁਣ ਡਿਜੀਟਲ',
+whyLead:'ਰੀਡਿੰਗ ਐਪਸ ਲਿਖਦੀਆਂ ਹਨ ਤੁਸੀਂ ਕੀ ਪੜ੍ਹਿਆ। ਕੈਟਾਲਾਗ ਐਪਸ ਗਿਣਦੀਆਂ ਹਨ ਤੁਹਾਡੇ ਕੋਲ ਕੀ ਹੈ। Kitabi ਦੋਵੇਂ ਕਰਦੀ ਹੈ — ਅਤੇ ਯਾਦ ਰੱਖਦੀ ਹੈ ਕਿ ਤੁਹਾਡੀ ਮਨਪਸੰਦ ਕਿਤਾਬ ਕਿਸ ਦੋਸਤ ਕੋਲ ਹੈ।',
+f1h:'ਤੁਹਾਡੀ ਅਲਮਾਰੀ ਵਰਗੀ ਹੀ ਅਲਮਾਰੀ',f1p:'ਕਵਰ ਤੋਂ ਬਾਅਦ ਕਵਰ, ਬਿਲਕੁਲ ਅਸਲ ਵਾਂਗ। ਫੋਟੋ ਤੋਂ ਬਿਨਾਂ ਕਿਤਾਬਾਂ ਨੂੰ ਵੀ ਸੋਹਣਾ ਕਵਰ — ਲਾਇਬ੍ਰੇਰੀ ਹਮੇਸ਼ਾ ਭਰੀ ਦਿਸਦੀ ਹੈ।',
+f2h:'ਉਧਾਰ ਦਿੱਤੀ ਕਿਤਾਬ ਹੁਣ ਨਹੀਂ ਗੁਆਚੇਗੀ',free:'ਮੁਫ਼ਤ',f2p:'“ਅਨੂ ਨੂੰ ਦਿੱਤੀ, 2 ਜੂਨ।” Kitabi ਯਾਦ ਰੱਖਦੀ ਹੈ ਕਿ ਕਿਤਾਬਾਂ ਕਿਸ ਕੋਲ ਹਨ; ਵਾਪਸ ਮੰਗਣ ਵੇਲੇ ਹੌਲੀ ਜਿਹੇ ਯਾਦ ਕਰਵਾ ਦਿੰਦੀ ਹੈ। ਤੁਹਾਡੀਆਂ ਕਿਤਾਬਾਂ ਘਰ ਮੁੜਦੀਆਂ ਹਨ।',
+f3h:'ਮਿੰਟਾਂ ਵਿੱਚ ਆ ਜਾਓ',f3p:'Goodreads ਜਾਂ ਸਪ੍ਰੈਡਸ਼ੀਟ ਵਿੱਚ ਸੂਚੀ ਹੈ? ਲੈ ਆਓ — ਅਲਮਾਰੀਆਂ, ਰੇਟਿੰਗਾਂ, ਰਿਵਿਊ ਇੱਕੋ ਟੈਪ ਵਿੱਚ।',
+f4h:'ਤੁਹਾਡਾ ਪੜ੍ਹਨਾ, ਯਾਦ ਰੱਖਿਆ',f4p:'ਕਿੱਥੇ ਰੁਕੇ, ਕੀ ਰੇਟਿੰਗ, ਸੱਚੀਂ ਕੀ ਲੱਗਿਆ — ਅਤੇ ਉਹ ਛੋਟੇ ਨੋਟ ਵੀ ਜੋ ਕਿਸੇ ਨੂੰ ਨਹੀਂ ਦੱਸਦੇ (“ਦਸਤਖਤ ਵਾਲੀ ਕਾਪੀ, ਉਧਾਰ ਨਹੀਂ”)। ਸਭ ਤੁਹਾਡਾ, ਜਦ ਤੱਕ ਤੁਸੀਂ ਨਾ ਚਾਹੋ ਨਿੱਜੀ।',
+f5h:'ਪੰਨਿਆਂ ਵਿੱਚ ਤੁਹਾਡਾ ਸਾਲ',f5p:'ਪੜ੍ਹਨਾ ਵਧਦਾ ਵੇਖੋ — ਮੁਕੰਮਲ ਕਿਤਾਬਾਂ, ਪਲਟੇ ਪੰਨੇ, ਅਲਮਾਰੀ ਦੀਆਂ ਭਾਸ਼ਾਵਾਂ। ਆਪੇ ਭਰਦੀ ਪੜ੍ਹਨ-ਡਾਇਰੀ।',
+f6h:'ਅੱਗੇ ਕੀ ਪੜ੍ਹਨਾ, ਪਤਾ ਰਹੇਗਾ',f6p:'ਤੁਹਾਡੀਆਂ ਪਸੰਦੀਦਾ ਕਿਤਾਬਾਂ ਤੋਂ ਨਿੱਘੀਆਂ ਸਿਫ਼ਾਰਸ਼ਾਂ, ਹਰ ਇੱਕ ਨਾਲ ਇਮਾਨਦਾਰ “ਇਹ ਕਿਉਂ”। ਨਹੀਂ ਚਾਹੀਦਾ? ਇੱਕ ਸਵਿੱਚ, ਬੰਦ।',
+langK:'ਤੁਹਾਡੀ ਭਾਸ਼ਾ ਪੜ੍ਹਦੀ ਹੈ',
+langLead:'Kitabi ਪਲੀ ਭਾਰਤੀ ਕਿਤਾਬਾਂ ਦੀਆਂ ਅਲਮਾਰੀਆਂ ਉੱਤੇ। ਤੁਹਾਡੀਆਂ ਪੰਜਾਬੀ, English, മലയാളം ਕਿਤਾਬਾਂ ਨਾਲ-ਨਾਲ — ਸਹੀ ਲਿਖੀਆਂ, ਮਾਣ ਨਾਲ। ਅਨੁਵਾਦ ਤੇ ਮੂਲ ਇੱਕੋ ਕਹਾਣੀ ਹਨ, Kitabi ਜਾਣਦੀ ਹੈ।',
+closeH:'ਤੁਹਾਡੀ ਅਲਮਾਰੀ ਉਡੀਕ ਰਹੀ ਹੈ',closeP:'Kitabi ਜਲਦੀ Android ਅਤੇ iOS ਉੱਤੇ — ਤੁਹਾਡੀਆਂ ਕਿਤਾਬਾਂ ਸਪ੍ਰੈਡਸ਼ੀਟ ਤੋਂ ਬਿਹਤਰ ਦੀਆਂ ਹੱਕਦਾਰ ਹਨ। ਦਰਵਾਜ਼ਾ ਇੱਥੇ ਹੀ ਖੁੱਲ੍ਹੇਗਾ — <b>kitabi.in</b>।',
+footTag:'ਕਿਤਾਬਾਂ ਦੀ ਅਲਮਾਰੀ ਤੋਂ ਪਾਰ'}
+};
+var LANG_NAMES = {en:'English',hi:'हिन्दी',bn:'বাংলা',ta:'தமிழ்',te:'తెలుగు',mr:'मराठी',gu:'ગુજરાતી',kn:'ಕನ್ನಡ',ml:'മലയാളം',pa:'ਪੰਜਾਬੀ'};
+
+// ---------- quotes — legends in their own languages, glosses follow the site language ----------
+var QUOTES = [
+{q:'ഒന്നും ഒന്നും ഇമ്മിണി ബല്യ ഒന്ന്.',a:'Vaikom Muhammad Basheer',lang:'Malayalam',l:'ml',
+ g:{en:'One and one make one — one that is quite big.',hi:'एक और एक मिलकर एक — काफ़ी बड़ा एक।',bn:'এক আর এক মিলে এক — বেশ বড় এক।',ta:'ஒன்றும் ஒன்றும் சேர்ந்து ஒன்றே — கொஞ்சம் பெரிய ஒன்று.',te:'ఒకటి, ఒకటి కలిస్తే ఒకటే — బాగా పెద్ద ఒకటి.',mr:'एक अन् एक मिळून एकच — बराच मोठा एक.',gu:'એક અને એક મળીને એક — ઠીક ઠીક મોટું એક.',kn:'ಒಂದು ಮತ್ತು ಒಂದು ಸೇರಿ ಒಂದೇ — ಸಾಕಷ್ಟು ದೊಡ್ಡ ಒಂದು.',pa:'ਇੱਕ ਤੇ ਇੱਕ ਮਿਲ ਕੇ ਇੱਕ — ਕਾਫ਼ੀ ਵੱਡਾ ਇੱਕ।'}},
+{q:'கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக.',a:'Thiruvalluvar',lang:'Tamil',l:'ta',
+ g:{en:'Learn flawlessly what is worth learning — then live by what you have learned.',hi:'जो सीखने योग्य है उसे निर्दोष सीखो — फिर सीखे के अनुसार जियो।',bn:'যা শেখার তা নিখুঁতভাবে শেখো — তারপর শেখা অনুযায়ী চলো।',te:'నేర్చుకోదగినది లోపం లేకుండా నేర్చుకో — నేర్చుకున్నట్టు జీవించు.',mr:'शिकण्यासारखं निर्दोष शिका — मग शिकल्याप्रमाणे जगा.',gu:'શીખવા જેવું નિર્દોષ શીખો — પછી શીખ્યા પ્રમાણે જીવો.',kn:'ಕಲಿಯಬೇಕಾದದ್ದನ್ನು ದೋಷವಿಲ್ಲದೆ ಕಲಿ — ಕಲಿತಂತೆ ಬದುಕು.',ml:'പഠിക്കേണ്ടത് കുറ്റമറ്റ് പഠിക്കുക — പിന്നെ പഠിച്ചതനുസരിച്ച് ജീവിക്കുക.',pa:'ਸਿੱਖਣ ਯੋਗ ਨੂੰ ਨਿਰਦੋਸ਼ ਸਿੱਖੋ — ਫਿਰ ਸਿੱਖੇ ਅਨੁਸਾਰ ਜੀਓ।'}},
+{q:'साहित्य समाज का दर्पण है।',a:'Munshi Premchand',lang:'Hindi',l:'hi',
+ g:{en:'Literature is the mirror of society.',bn:'সাহিত্য সমাজের আয়না।',ta:'இலக்கியம் சமூகத்தின் கண்ணாடி.',te:'సాహిత్యం సమాజానికి అద్దం.',mr:'साहित्य समाजाचा आरसा आहे.',gu:'સાહિત્ય સમાજનો અરીસો છે.',kn:'ಸಾಹಿತ್ಯ ಸಮಾಜದ ಕನ್ನಡಿ.',ml:'സാഹിത്യം സമൂഹത്തിന്റെ കണ്ണാടിയാണ്.',pa:'ਸਾਹਿਤ ਸਮਾਜ ਦਾ ਸ਼ੀਸ਼ਾ ਹੈ।'}},
+{q:'Ein Buch muss die Axt sein für das gefrorene Meer in uns.',a:'Franz Kafka',lang:'German',l:'de',
+ g:{en:'A book must be the axe for the frozen sea within us.',hi:'किताब हमारे भीतर जमे समुद्र के लिए कुल्हाड़ी होनी चाहिए।',bn:'বই হোক আমাদের ভেতরের জমাট সমুদ্রের কুঠার।',ta:'நமக்குள் உறைந்த கடலுக்கு கோடரியாக இருக்க வேண்டும் புத்தகம்.',te:'మనలో గడ్డకట్టిన సముద్రానికి పుస్తకం గొడ్డలి కావాలి.',mr:'पुस्तक म्हणजे आपल्यातील गोठलेल्या समुद्रासाठी कुऱ्हाड.',gu:'પુસ્તક આપણા અંદરના થીજેલા દરિયા માટે કુહાડી હોવી જોઈએ.',kn:'ನಮ್ಮೊಳಗಿನ ಹೆಪ್ಪುಗಟ್ಟಿದ ಕಡಲಿಗೆ ಪುಸ್ತಕ ಕೊಡಲಿಯಾಗಬೇಕು.',ml:'നമ്മുടെ ഉള്ളിലെ ഉറഞ്ഞ കടലിന് കോടാലിയാകണം പുസ്തകം.',pa:'ਕਿਤਾਬ ਸਾਡੇ ਅੰਦਰ ਜੰਮੇ ਸਮੁੰਦਰ ਲਈ ਕੁਹਾੜੀ ਹੋਵੇ।'}},
+{q:'I have always imagined that Paradise will be a kind of library.',a:'Jorge Luis Borges',lang:'',l:'en',
+ g:{hi:'मैंने हमेशा कल्पना की है कि स्वर्ग किसी लाइब्रेरी जैसा होगा।',bn:'আমি সবসময় ভেবেছি স্বর্গ হবে লাইব্রেরির মতো।',ta:'சொர்க்கம் ஒரு நூலகம் போலவே இருக்கும் என்று நான் எப்போதும் கற்பனை செய்திருக்கிறேன்.',te:'స్వర్గం ఒక గ్రంథాలయంలా ఉంటుందని నేను ఎప్పుడూ ఊహించాను.',mr:'स्वर्ग एखाद्या ग्रंथालयासारखा असेल अशी मी नेहमी कल्पना केली.',gu:'સ્વર્ગ કોઈ લાઇબ્રેરી જેવું હશે એવી કલ્પના મેં હંમેશાં કરી છે.',kn:'ಸ್ವರ್ಗ ಒಂದು ಗ್ರಂಥಾಲಯದಂತೆ ಇರುತ್ತದೆ ಎಂದು ನಾನು ಸದಾ ಕಲ್ಪಿಸಿದ್ದೇನೆ.',ml:'സ്വർഗം ഒരുതരം ലൈബ്രറിയായിരിക്കുമെന്ന് ഞാൻ എപ്പോഴും സങ്കൽപ്പിച്ചിട്ടുണ്ട്.',pa:'ਮੈਂ ਹਮੇਸ਼ਾ ਸੋਚਿਆ ਕਿ ਸਵਰਗ ਲਾਇਬ੍ਰੇਰੀ ਵਰਗਾ ਹੋਵੇਗਾ।'}},
+{q:'Chi legge avrà vissuto cinquemila anni. La lettura è un’immortalità all’indietro.',a:'Umberto Eco',lang:'Italian',l:'it',
+ g:{en:'The reader will have lived five thousand years — reading is immortality, backwards.',hi:'पाठक पाँच हज़ार साल जी चुका होगा — पढ़ना पीछे की ओर अमरता है।',bn:'পাঠক পাঁচ হাজার বছর বেঁচে থাকবে — পড়া হলো পেছন দিকের অমরত্ব।',ta:'வாசகர் ஐயாயிரம் ஆண்டுகள் வாழ்ந்திருப்பார் — வாசிப்பு பின்னோக்கிய அமரத்துவம்.',te:'పాఠకుడు ఐదు వేల ఏళ్లు జీవించి ఉంటాడు — చదవడం వెనుకకు సాగే అమరత్వం.',mr:'वाचक पाच हजार वर्षं जगलेला असेल — वाचन म्हणजे मागे जाणारं अमरत्व.',gu:'વાચક પાંચ હજાર વર્ષ જીવ્યો હશે — વાંચન એટલે પાછળ તરફની અમરતા.',kn:'ಓದುಗ ಐದು ಸಾವಿರ ವರ್ಷ ಬದುಕಿರುತ್ತಾನೆ — ಓದು ಹಿಂದಕ್ಕೆ ಸಾಗುವ ಅಮರತ್ವ.',ml:'വായനക്കാരൻ അയ്യായിരം വർഷം ജീവിച്ചിരിക്കും — വായന പിന്നിലേക്കുള്ള അമരത്വമാണ്.',pa:'ਪਾਠਕ ਪੰਜ ਹਜ਼ਾਰ ਸਾਲ ਜੀ ਚੁੱਕਾ ਹੋਵੇਗਾ — ਪੜ੍ਹਨਾ ਪਿੱਛੇ ਵੱਲ ਦੀ ਅਮਰਤਾ ਹੈ।'}},
+{q:'Si hortum in bibliotheca habes, deerit nihil.',a:'Cicero',lang:'Latin',l:'la',
+ g:{en:'If you have a garden and a library, you have everything you need.',hi:'बग़ीचा और लाइब्रेरी हो, तो सब कुछ है।',bn:'বাগান আর লাইব্রেরি থাকলে সবই আছে।',ta:'தோட்டமும் நூலகமும் இருந்தால், தேவையானது எல்லாம் உண்டு.',te:'తోట, గ్రంథాలయం ఉంటే కావాల్సినదంతా ఉన్నట్టే.',mr:'बाग आणि ग्रंथालय असेल, तर सगळं आहे.',gu:'બગીચો અને લાઇબ્રેરી હોય તો બધું જ છે.',kn:'ತೋಟ ಮತ್ತು ಗ್ರಂಥಾಲಯವಿದ್ದರೆ ಬೇಕಾದದ್ದೆಲ್ಲ ಇದೆ.',ml:'ഒരു തോട്ടവും ലൈബ്രറിയും ഉണ്ടെങ്കിൽ വേണ്ടതെല്ലാം ഉണ്ട്.',pa:'ਬਾਗ਼ ਤੇ ਲਾਇਬ੍ਰੇਰੀ ਹੋਵੇ ਤਾਂ ਸਭ ਕੁਝ ਹੈ।'}},
+{q:'A reader lives a thousand lives before he dies. The man who never reads lives only one.',a:'George R.R. Martin',lang:'',l:'en',
+ g:{hi:'पाठक मरने से पहले हज़ार ज़िंदगियाँ जीता है; जो कभी नहीं पढ़ता, वह सिर्फ़ एक।',bn:'পাঠক মৃত্যুর আগে হাজার জীবন বাঁচে; যে পড়ে না, সে কেবল একটাই।',ta:'வாசிப்பவர் இறப்பதற்குள் ஆயிரம் வாழ்க்கை வாழ்கிறார்; படிக்காதவர் ஒன்றே ஒன்று.',te:'చదివేవాడు చనిపోయే లోపు వెయ్యి జీవితాలు జీవిస్తాడు; చదవనివాడు ఒక్కటే.',mr:'वाचणारा मरण्याआधी हजार आयुष्यं जगतो; न वाचणारा फक्त एक.',gu:'વાચક મરતાં પહેલાં હજાર જિંદગી જીવે છે; ન વાંચનાર માત્ર એક.',kn:'ಓದುವವನು ಸಾಯುವ ಮೊದಲು ಸಾವಿರ ಬದುಕು ಬದುಕುತ್ತಾನೆ; ಓದದವನು ಒಂದೇ ಒಂದು.',ml:'വായനക്കാരൻ മരിക്കുംമുമ്പ് ആയിരം ജീവിതങ്ങൾ ജീവിക്കുന്നു; വായിക്കാത്തവൻ ഒന്നു മാത്രം.',pa:'ਪੜ੍ਹਨ ਵਾਲਾ ਮਰਨ ਤੋਂ ਪਹਿਲਾਂ ਹਜ਼ਾਰ ਜ਼ਿੰਦਗੀਆਂ ਜਿਉਂਦਾ ਹੈ; ਨਾ ਪੜ੍ਹਨ ਵਾਲਾ ਸਿਰਫ਼ ਇੱਕ।'}}
+];
+for (var i = QUOTES.length - 1; i > 0; i--) {
+  var j = Math.floor(Math.random() * (i + 1)), t = QUOTES[i]; QUOTES[i] = QUOTES[j]; QUOTES[j] = t;
+}
+
+var track = document.getElementById('qtrack'), dots = document.getElementById('qdots');
+var CUR = 'en';
+
+function renderQuotes() {
   track.innerHTML = QUOTES.map(function (x) {
-    return '<figure class="qslide"><blockquote class="q" style="margin:0">“' + x.q + '”</blockquote>' +
-      (x.g ? '<div class="g">' + x.g + '</div>' : '') +
-      '<figcaption class="a">— ' + x.a + (x.l ? ' · ' + x.l : '') + '</figcaption></figure>';
+    var gloss = (x.l === CUR) ? '' : ((x.g && (x.g[CUR] || x.g.en)) || '');
+    return '<figure class="qslide"><blockquote class="q">“' + x.q + '”</blockquote>' +
+      (gloss ? '<div class="g">' + gloss + '</div>' : '') +
+      '<figcaption class="a">— ' + x.a + (x.lang ? ' · ' + x.lang : '') + '</figcaption></figure>';
   }).join('');
   dots.innerHTML = QUOTES.map(function (_, k) { return '<i' + (k === 0 ? ' class="on"' : '') + '></i>'; }).join('');
-  function setDots(idx) {
-    for (var k = 0; k < dots.children.length; k++) dots.children[k].classList.toggle('on', k === idx);
+  track.scrollLeft = 0;
+}
+function setDots(idx) {
+  for (var k = 0; k < dots.children.length; k++) dots.children[k].classList.toggle('on', k === idx);
+}
+track.addEventListener('scroll', function () {
+  setDots(Math.round(track.scrollLeft / track.clientWidth));
+}, {passive: true});
+function go(d) {
+  var idx = Math.round(track.scrollLeft / track.clientWidth) + d;
+  idx = Math.max(0, Math.min(QUOTES.length - 1, idx));
+  track.scrollTo({left: idx * track.clientWidth, behavior: 'smooth'});
+  setDots(idx);
+}
+document.getElementById('qprev').addEventListener('click', function () { go(-1); });
+document.getElementById('qnext').addEventListener('click', function () { go(1); });
+
+// ---------- language switcher ----------
+var sel = document.getElementById('langsel');
+Object.keys(LANG_NAMES).forEach(function (code) {
+  var o = document.createElement('option');
+  o.value = code; o.textContent = LANG_NAMES[code];
+  sel.appendChild(o);
+});
+function applyLang(code) {
+  if (!I18N[code]) code = 'en';
+  CUR = code;
+  var dict = I18N[code];
+  document.querySelectorAll('[data-i18n]').forEach(function (el) {
+    var key = el.getAttribute('data-i18n');
+    el.innerHTML = dict[key] != null ? dict[key] : I18N.en[key];
+  });
+  document.documentElement.lang = code;
+  sel.value = code;
+  try { localStorage.setItem('kitabi-lang', code); } catch (e) {}
+  renderQuotes();
+}
+sel.addEventListener('change', function () { applyLang(sel.value); });
+
+var saved = null;
+try { saved = localStorage.getItem('kitabi-lang'); } catch (e) {}
+if (!saved) {
+  var navs = navigator.languages || [navigator.language || 'en'];
+  for (var n = 0; n < navs.length && !saved; n++) {
+    var p = String(navs[n]).slice(0, 2).toLowerCase();
+    if (I18N[p]) saved = p;
   }
-  track.addEventListener('scroll', function () {
-    setDots(Math.round(track.scrollLeft / track.clientWidth));
-  }, {passive: true});
-  function go(d) {
-    var idx = Math.round(track.scrollLeft / track.clientWidth) + d;
-    idx = Math.max(0, Math.min(QUOTES.length - 1, idx));
-    track.scrollTo({left: idx * track.clientWidth, behavior: 'smooth'});
-    setDots(idx);
-  }
-  document.getElementById('qprev').addEventListener('click', function () { go(-1); });
-  document.getElementById('qnext').addEventListener('click', function () { go(1); });
-})();
+}
+applyLang(saved || 'en');
 </script>
 </body>
 </html>
