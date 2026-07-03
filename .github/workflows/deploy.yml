@@ -1,13 +1,17 @@
-# Deploys the static site to Cloudflare Pages on every push to main.
+# Deploys the landing page to Cloudflare Pages on every push to main
+# that touches landing-page/.
 #
 # Required repository secrets (Settings -> Secrets and variables -> Actions):
 #   CLOUDFLARE_API_TOKEN   - API token with "Cloudflare Pages: Edit" permission
 #   CLOUDFLARE_ACCOUNT_ID  - Cloudflare dashboard -> Workers & Pages -> Account ID
-name: Deploy to Cloudflare Pages
+name: Deploy landing page to Cloudflare Pages
 
 on:
   push:
     branches: [main]
+    paths:
+      - "landing-page/**"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 jobs:
@@ -25,7 +29,7 @@ jobs:
       - name: Assemble deploy directory
         run: |
           mkdir -p public
-          cp index.html avatar.jpg ico.png public/
+          cp landing-page/index.html landing-page/logo.svg landing-page/kitabi-logo.png landing-page/ico.png public/
 
       - name: Deploy
         run: npx wrangler@4 pages deploy public --project-name="$PROJECT_NAME" --branch=main
