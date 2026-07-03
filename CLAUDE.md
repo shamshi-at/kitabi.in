@@ -130,6 +130,17 @@ flutter run -d <device>
 After changing any Drift table or Riverpod codegen-annotated file, **always run
 build_runner** before assuming compilation errors are real.
 
+## Workflow
+
+- **Task tracking:** `docs/tasks.md` is the living checklist, phased in build order
+  (P0 foundations → P8 launch). Pick work from it; tick a box **only after** the
+  definition of done below is met, in the same commit as the change. If scope
+  shifts, edit the list rather than working off-list.
+- **Definition of done:** code + tests pass (`pytest` / `flutter test`), lint clean,
+  migration included if schema changed, Docker still builds, app features work
+  offline (airplane-mode check), matches the mockup screen.
+- Don't build parking-lot (v1.5) items early even if convenient — flag and skip.
+
 ## Conventions
 
 - Routers thin, services thick — sync batching, recommendation calls, CSV import
