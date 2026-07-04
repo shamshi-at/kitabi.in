@@ -25,8 +25,8 @@ API_DIR = Path(__file__).resolve().parents[1]
 CONTAINER = "kitabi-test-pg"
 # Port 55443 — clear of rupee-diary's test container (55433) and both dev DBs.
 LOCAL_URL = "postgresql+asyncpg://postgres:test@localhost:55443/test"
-# Syncable tables to truncate between tests — extend as models land.
-TABLES: list[str] = []
+# Tables to truncate between tests — extend as models land.
+TABLES: list[str] = ["profiles"]
 
 
 def _wait_for_pg() -> None:
@@ -107,6 +107,23 @@ async def client(db_sessionmaker, user) -> AsyncIterator[AsyncClient]:
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_current_user] = lambda: user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+
+
+@pytest.fixture
+async def unauthenticated_client(db_sessionmaker) -> AsyncIterator[AsyncClient]:
+    """Real get_current_user runs — no bearer token override — for testing
+    the 401 path itself."""
+    app = create_app()
+
+    async def override_db():
+        async with db_sessionmaker() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_db
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:

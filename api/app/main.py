@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import health
+from app.api import auth, health, me
 from app.core.config import get_settings
 from app.jobs import scheduler
 
@@ -47,6 +47,8 @@ def create_app() -> FastAPI:
         return JSONResponse(status_code=exc.status_code, content=detail, headers=exc.headers)
 
     app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(me.router)
     return app
 
 
