@@ -104,20 +104,42 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 
 ## Phase 3 — Personal library + sync engine (Layer 2)
 
-- [ ] Drift schema: library entries, personal tags, reviews, ratings, lending, activity log, sync_queue
-- [ ] Syncable tables on API: `user_id` + soft delete + `server_seq` (SyncableMixin) — migration
-- [ ] Sync engine: queue → `POST /sync/push` (op UUIDs, idempotent) → `GET /sync/pull?cursor=` — port rupee-diary pattern
-- [ ] Conflict rules: delete-wins → LWW by server time; conflict history row `[WIRED]`
-- [ ] Add/remove book to library; reading status (5 states) — S5/S6
-- [ ] Start/finish dates + reading progress in pages — S6
-- [ ] Personal notes (always private) — S6
-- [ ] Personal tags / shelves (chips, filterable) — S5
-- [ ] Favorite flag (gold ribbon) — S5
-- [ ] Star rating → attaches to **work** — S6
-- [ ] Review text + per-review visibility flag (default private); edit/delete — S6
-- [ ] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — future feed
-- [ ] Library grid UI: covers-first, status pills, lent band, ticker for overflowing generated-cover titles — S5
-- [ ] Airplane-mode test pass: every feature above works offline and syncs later
+- [x] Drift schema: library entries, personal tags, reviews, ratings, lending, activity log, sync_queue
+      — `app/lib/data/db/tables.dart`, plus `sync_state`/`conflict_history`/`key_values` (device_id) and
+      a denormalized `cached_books` table (offline read cache for the shared catalog, populated the
+      moment a book is added — CLAUDE.md rule 2)
+- [x] Syncable tables on API: `user_id` + soft delete + `server_seq` (SyncableMixin) — migration
+      `000004` (`library_entries`, `ratings`, `reviews`, `personal_tags`, `library_entry_tags`,
+      `lending_records`, `activity_log_entries`), plus `sync_ops` (push idempotency ledger) and
+      `conflict_history`; RLS enabled, zero policies, on every table
+- [x] Sync engine: queue → `POST /sync/push` (op UUIDs, idempotent) → `GET /sync/pull?cursor=` —
+      ported from rupee-diary (`app/lib/data/sync/sync_engine.dart`,
+      `api/app/services/sync_service.py`), scoped by `user_id` alone (no `budget_id`/role checks —
+      Kitabi has no cross-user sharing in V1); workmanager 15-min drain + connectivity-triggered sync
+- [x] Conflict rules: delete-wins → LWW by server time; conflict history row `[WIRED]`. Kitabi has no
+      sharing, so the LWW signal isn't "a different user" (rupee-diary) — it's "a different one of my
+      devices" (`device_id`, generated once per install); delete-wins and LWW both write a
+      `conflict_history` row, no dedicated viewer screen yet
+- [x] Add/remove book to library; reading status (5 states: Pending/Reading/Read/Stopped/Wishlist,
+      exact mockup enum) — S5/S6
+- [x] Start/finish dates + reading progress in pages — S6 (start date auto-set on first progress
+      entry, finish date auto-set when status → Read, matching the mockup's implicit behavior)
+- [x] Personal notes (always private) — S6
+- [x] Personal tags / shelves (chips, filterable) — S6 add/remove; S5 grid doesn't yet filter by tag
+      (only by status + favourites — tag filter chips on S5 are a small follow-up)
+- [x] Favorite flag (gold ribbon) — S5 grid overlay + S6 toggle
+- [x] Star rating → attaches to **work** — S6
+- [x] Review text + per-review visibility flag (default private); edit/delete — S6
+- [x] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — written server-side as a side
+      effect of other syncable ops, pulled to the client; no feed UI yet (feature-map.md: "flip it
+      public later")
+- [x] Library grid UI: covers-first, status pills, lent band — S5. **Ticker animation for overflowing
+      generated-cover titles deliberately not built** (polish item, plain ellipsis for now)
+- [~] Airplane-mode test pass: sync engine logic is thoroughly unit-tested offline (in-memory Drift +
+      fake API client — push/pull/conflict/idempotency all covered), and the app boots cleanly on an
+      Android emulator with all the new tables/workmanager/providers wired in. **Not yet verified on a
+      real device with real airplane mode** — needs a real Google sign-in, which wasn't done in-session
+      (see STATUS.md)
 
 ## Phase 4 — Lending (the wedge, both directions)
 
@@ -184,7 +206,13 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       (`api` → Railway's target, proxied) and TXT ownership-verification record,
       same pattern as rupee-diary's `api.rupeediary.com`. Fallback origin domain:
       `https://kitabi-api-production.up.railway.app`.
-- [ ] App icons + splash from the Gold Line mark; store listings (Play + App Store)
+- [x] App icons + splash from the Gold Line mark — `flutter_launcher_icons` (full-bleed
+      `app_icon.png` source, no pre-baked rounding since the OS applies its own mask;
+      Android adaptive icon with an oxblood `#7E2A33` background layer +
+      `app_icon_foreground.png`) and `flutter_native_splash` (paper `#F6F0E3` background
+      + the existing rounded `kitabi-logo.png` mark, matching `SplashScreen` exactly so
+      native → Flutter splash hands off with no color flash). Store listings (Play +
+      App Store) still open.
 - [ ] Landing page: swap "Launching soon" for real store badges
 - [ ] Privacy policy + terms pages (store requirement; landing footer links)
 

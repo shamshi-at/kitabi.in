@@ -199,4 +199,140 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get formTitleRequired => 'Title is required';
+
+  @override
+  String get bookAddToLibrary => 'Add to my library';
+
+  @override
+  String get bookYourRating => 'your rating';
+
+  @override
+  String get bookProgressLabel => 'PROGRESS';
+
+  @override
+  String bookProgressValue(int page, int total) {
+    return 'p. $page of $total';
+  }
+
+  @override
+  String get bookStartedLabel => 'STARTED';
+
+  @override
+  String get bookNotStarted => 'Not started';
+
+  @override
+  String get bookEditProgress => 'Edit progress';
+
+  @override
+  String get bookCurrentPage => 'Current page';
+
+  @override
+  String get bookReviewLabel => 'MY REVIEW';
+
+  @override
+  String get bookReviewEmpty => 'No review yet — tap to write one.';
+
+  @override
+  String get bookReviewVisibilityPrivate => 'Private';
+
+  @override
+  String get bookReviewVisibilityPublic => 'Public';
+
+  @override
+  String get bookEditReview => 'Edit review';
+
+  @override
+  String get bookNotesLabel => 'PERSONAL NOTES · always private';
+
+  @override
+  String get bookNotesEmpty =>
+      'Tap to add a private note — edition, condition, why this copy matters.';
+
+  @override
+  String get bookEditNotes => 'Edit notes';
+
+  @override
+  String get bookLendingNotLentOut => 'Not lent out.';
+
+  @override
+  String bookLendingWithSomeone(String name) {
+    return 'With $name';
+  }
+
+  @override
+  String bookLendingPastCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'lendings',
+      one: 'lending',
+    );
+    return '$count past $_temp0';
+  }
+
+  @override
+  String get bookLendAction => 'Lend';
+
+  @override
+  String get bookMarkReturnedAction => 'Mark returned';
+
+  @override
+  String get bookLendDialogTitle => 'Lend this book';
+
+  @override
+  String get bookLendBorrowerName => 'Borrower\'s name';
+
+  @override
+  String get bookCancel => 'Cancel';
+
+  @override
+  String get bookSave => 'Save';
+
+  @override
+  String bookIsbnLabel(String isbn) {
+    return 'ISBN $isbn';
+  }
+
+  @override
+  String get libraryTitle => 'My Library';
+
+  @override
+  String libraryBookCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'books',
+      one: 'book',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String get libraryFilterAll => 'All';
+
+  @override
+  String get libraryFilterFavourites => '★ Favourites';
+
+  @override
+  String get libraryEmpty =>
+      'Nothing here yet — search or scan a book to add it.';
+
+  @override
+  String get bookRemoveFromLibrary => 'Remove from library';
+
+  @override
+  String get bookRemoveConfirm =>
+      'Remove this book from your library? Your rating and review stay on the shared catalog entry, but this copy, its reading progress, and its notes are gone.';
+
+  @override
+  String get bookTagsLabel => 'SHELVES · yours only';
+
+  @override
+  String get bookAddTag => '+ add';
+
+  @override
+  String get bookNewTagTitle => 'Add to a shelf';
+
+  @override
+  String get bookNewTagHint => 'e.g. beach reads';
 }

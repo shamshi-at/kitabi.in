@@ -80,6 +80,17 @@ class ApiClient {
     final res = await _dio.get('/catalog/publishers/$publisherId');
     return res.data as Map<String, dynamic>;
   }
+
+  /// Sync engine wire calls — see data/sync/sync_engine.dart.
+  Future<List<Map<String, dynamic>>> syncPush(List<Map<String, dynamic>> ops) async {
+    final res = await _dio.post('/sync/push', data: {'ops': ops});
+    return ((res.data as Map<String, dynamic>)['results'] as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> syncPull({required int cursor, int limit = 500}) async {
+    final res = await _dio.get('/sync/pull', queryParameters: {'cursor': cursor, 'limit': limit});
+    return res.data as Map<String, dynamic>;
+  }
 }
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());

@@ -239,5 +239,169 @@
   "formTitleRequired": "Title is required",
   "@formTitleRequired": {
     "description": "Validation message for the title field"
+  },
+  "bookAddToLibrary": "Add to my library",
+  "@bookAddToLibrary": {
+    "description": "Button that creates a library entry for the current edition"
+  },
+  "bookYourRating": "your rating",
+  "@bookYourRating": {
+    "description": "Label under the star rating control on the book detail screen"
+  },
+  "bookProgressLabel": "PROGRESS",
+  "@bookProgressLabel": {
+    "description": "Eyebrow label on the progress card"
+  },
+  "bookProgressValue": "p. {page} of {total}",
+  "@bookProgressValue": {
+    "description": "Progress card value — current page of total pages",
+    "placeholders": {
+      "page": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "bookStartedLabel": "STARTED",
+  "@bookStartedLabel": {
+    "description": "Eyebrow label for the start date on the progress card"
+  },
+  "bookNotStarted": "Not started",
+  "@bookNotStarted": {
+    "description": "Progress card placeholder when no start date is set"
+  },
+  "bookEditProgress": "Edit progress",
+  "@bookEditProgress": {
+    "description": "Dialog title for editing reading progress"
+  },
+  "bookCurrentPage": "Current page",
+  "@bookCurrentPage": {
+    "description": "Text field label in the edit-progress dialog"
+  },
+  "bookReviewLabel": "MY REVIEW",
+  "@bookReviewLabel": {
+    "description": "Eyebrow label on the review card"
+  },
+  "bookReviewEmpty": "No review yet — tap to write one.",
+  "@bookReviewEmpty": {
+    "description": "Review card placeholder before a review exists"
+  },
+  "bookReviewVisibilityPrivate": "Private",
+  "@bookReviewVisibilityPrivate": {
+    "description": "Review visibility toggle option"
+  },
+  "bookReviewVisibilityPublic": "Public",
+  "@bookReviewVisibilityPublic": {
+    "description": "Review visibility toggle option"
+  },
+  "bookEditReview": "Edit review",
+  "@bookEditReview": {
+    "description": "Dialog title for editing a review"
+  },
+  "bookNotesLabel": "PERSONAL NOTES · always private",
+  "@bookNotesLabel": {
+    "description": "Eyebrow label on the personal notes card"
+  },
+  "bookNotesEmpty": "Tap to add a private note — edition, condition, why this copy matters.",
+  "@bookNotesEmpty": {
+    "description": "Personal notes card placeholder"
+  },
+  "bookEditNotes": "Edit notes",
+  "@bookEditNotes": {
+    "description": "Dialog title for editing personal notes"
+  },
+  "bookLendingNotLentOut": "Not lent out.",
+  "@bookLendingNotLentOut": {
+    "description": "Lending card status when the book isn't currently lent"
+  },
+  "bookLendingWithSomeone": "With {name}",
+  "@bookLendingWithSomeone": {
+    "description": "Lending card status when the book is currently lent out",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "bookLendingPastCount": "{count} past {count, plural, one{lending} other{lendings}}",
+  "@bookLendingPastCount": {
+    "description": "Lending card secondary line",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "bookLendAction": "Lend",
+  "@bookLendAction": {
+    "description": "Lending card action button when not currently lent"
+  },
+  "bookMarkReturnedAction": "Mark returned",
+  "@bookMarkReturnedAction": {
+    "description": "Lending card action button when currently lent out"
+  },
+  "bookLendDialogTitle": "Lend this book",
+  "@bookLendDialogTitle": {
+    "description": "Dialog title for recording a new loan"
+  },
+  "bookLendBorrowerName": "Borrower's name",
+  "@bookLendBorrowerName": {
+    "description": "Text field label in the lend dialog"
+  },
+  "bookCancel": "Cancel",
+  "@bookCancel": {
+    "description": "Generic cancel button in book detail dialogs"
+  },
+  "bookSave": "Save",
+  "@bookSave": {
+    "description": "Generic save button in book detail dialogs"
+  },
+  "bookIsbnLabel": "ISBN {isbn}",
+  "@bookIsbnLabel": {
+    "description": "ISBN footer on the book detail screen",
+    "placeholders": {
+      "isbn": {"type": "String"}
+    }
+  },
+  "libraryTitle": "My Library",
+  "@libraryTitle": {
+    "description": "Title on the personal library grid screen"
+  },
+  "libraryBookCount": "{count} {count, plural, one{book} other{books}}",
+  "@libraryBookCount": {
+    "description": "Book count subtitle on the library grid screen",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "libraryFilterAll": "All",
+  "@libraryFilterAll": {
+    "description": "Library grid filter chip"
+  },
+  "libraryFilterFavourites": "★ Favourites",
+  "@libraryFilterFavourites": {
+    "description": "Library grid filter chip"
+  },
+  "libraryEmpty": "Nothing here yet — search or scan a book to add it.",
+  "@libraryEmpty": {
+    "description": "Empty state on the library grid screen"
+  },
+  "bookRemoveFromLibrary": "Remove from library",
+  "@bookRemoveFromLibrary": {
+    "description": "Menu action that removes the book from the user's library"
+  },
+  "bookRemoveConfirm": "Remove this book from your library? Your rating and review stay on the shared catalog entry, but this copy, its reading progress, and its notes are gone.",
+  "bookTagsLabel": "SHELVES · yours only",
+  "@bookTagsLabel": {
+    "description": "Eyebrow label on the personal tags/shelves row"
+  },
+  "bookAddTag": "+ add",
+  "@bookAddTag": {
+    "description": "Chip that opens the new-tag dialog"
+  },
+  "bookNewTagTitle": "Add to a shelf",
+  "@bookNewTagTitle": {
+    "description": "Dialog title for creating/choosing a personal tag"
+  },
+  "bookNewTagHint": "e.g. beach reads",
+  "@bookNewTagHint": {
+    "description": "Text field hint in the new-tag dialog"
+  },
+  "@bookRemoveConfirm": {
+    "description": "Confirmation dialog body before removing a library entry"
   }
 }

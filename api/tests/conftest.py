@@ -29,6 +29,15 @@ LOCAL_URL = "postgresql+asyncpg://postgres:test@localhost:55443/test"
 # Tables to truncate between tests — extend as models land.
 TABLES: list[str] = [
     "profiles",
+    "conflict_history",
+    "sync_ops",
+    "activity_log_entries",
+    "lending_records",
+    "library_entry_tags",
+    "personal_tags",
+    "reviews",
+    "ratings",
+    "library_entries",
     "work_authors",
     "work_genres",
     "editions",

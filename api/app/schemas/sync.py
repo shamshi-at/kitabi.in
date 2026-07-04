@@ -1,0 +1,135 @@
+import uuid
+from datetime import date
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+# Entities the client can push. `activity_log_entries` is pull-only — it's
+# written server-side as a side effect of other ops, never created directly.
+PushEntity = Literal[
+    "library_entries",
+    "ratings",
+    "reviews",
+    "personal_tags",
+    "library_entry_tags",
+    "lending_records",
+]
+PullEntity = PushEntity | Literal["activity_log_entries"]
+OpType = Literal["create", "update", "delete"]
+
+MAX_OPS_PER_PUSH = 200
+
+
+class SyncOpIn(BaseModel):
+    op_id: uuid.UUID
+    device_id: uuid.UUID
+    entity: PushEntity
+    entity_id: uuid.UUID
+    op_type: OpType
+    payload: dict[str, Any] = {}
+
+
+class SyncPushIn(BaseModel):
+    ops: list[SyncOpIn] = Field(min_length=1, max_length=MAX_OPS_PER_PUSH)
+
+
+class SyncOpResult(BaseModel):
+    op_id: uuid.UUID
+    status: Literal["applied", "duplicate", "rejected"]
+    code: str | None = None
+    server_seq: int | None = None
+
+
+class SyncPushOut(BaseModel):
+    results: list[SyncOpResult]
+
+
+class SyncChange(BaseModel):
+    entity: PullEntity
+    data: dict[str, Any]
+
+
+class SyncPullOut(BaseModel):
+    changes: list[SyncChange]
+    next_cursor: int
+    has_more: bool
+
+
+# --- Per-entity create/update payload shapes, validated inside apply_ops ---
+
+
+class LibraryEntryCreate(BaseModel):
+    id: uuid.UUID
+    edition_id: uuid.UUID
+    status: str = "pending"
+    start_date: date | None = None
+    finish_date: date | None = None
+    current_page: int | None = None
+    is_favorite: bool = False
+    notes: str | None = None
+
+
+class LibraryEntryUpdate(BaseModel):
+    status: str | None = None
+    start_date: date | None = None
+    finish_date: date | None = None
+    current_page: int | None = None
+    is_favorite: bool | None = None
+    notes: str | None = None
+
+
+class RatingCreate(BaseModel):
+    id: uuid.UUID
+    work_id: uuid.UUID
+    value: int = Field(ge=1, le=5)
+
+
+class RatingUpdate(BaseModel):
+    value: int | None = Field(default=None, ge=1, le=5)
+
+
+class ReviewCreate(BaseModel):
+    id: uuid.UUID
+    work_id: uuid.UUID
+    body: str
+    visible: bool = False
+
+
+class ReviewUpdate(BaseModel):
+    body: str | None = None
+    visible: bool | None = None
+
+
+class PersonalTagCreate(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
+class PersonalTagUpdate(BaseModel):
+    name: str | None = None
+
+
+class LibraryEntryTagCreate(BaseModel):
+    id: uuid.UUID
+    library_entry_id: uuid.UUID
+    tag_id: uuid.UUID
+
+
+class LibraryEntryTagUpdate(BaseModel):
+    """Assignments are create/delete only — nothing on one is ever patched."""
+
+
+class LendingRecordCreate(BaseModel):
+    id: uuid.UUID
+    library_entry_id: uuid.UUID
+    borrower_name: str
+    borrower_user_id: uuid.UUID | None = None
+    lent_date: date
+    due_date: date | None = None
+    returned_date: date | None = None
+
+
+class LendingRecordUpdate(BaseModel):
+    borrower_name: str | None = None
+    due_date: date | None = None
+    returned_date: date | None = None

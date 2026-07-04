@@ -48,9 +48,33 @@ dev_dependencies:
   build_runner: ^2.4.13
   drift_dev: ^2.22.1
   riverpod_generator: ^2.6.2
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
 
 flutter:
   generate: true
   uses-material-design: true
   assets:
     - assets/images/
+
+flutter_launcher_icons:
+  # "The Gold Line" mark — full-bleed variant of landing-page/logo.svg (no
+  # pre-baked rounding/border: the OS applies its own icon mask).
+  image_path: "assets/icon/app_icon.png"
+  remove_alpha_ios: true
+  android: true
+  adaptive_icon_background: "#7E2A33"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  ios: true
+
+flutter_native_splash:
+  # Matches lib/features/splash/presentation/splash_screen.dart exactly
+  # (AppColors.paper + centered BrandMark) so the native splash hands off to
+  # the Flutter one with no flash of mismatched color.
+  color: "#F6F0E3"
+  image: "assets/icon/splash_logo.png"
+  android_12:
+    color: "#F6F0E3"
+    image: "assets/icon/splash_logo.png"
+  ios: true
+  android: true

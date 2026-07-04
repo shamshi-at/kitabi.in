@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Android adaptive-icon foreground layer — same graphic as app_icon.svg,
+       transparent background (paired with a solid oxblood background layer
+       in flutter_launcher_icons config), content kept within the ~66% safe
+       zone so the OS mask/parallax never clips it. -->
+
+  <!-- pages -->
+  <path d="M228 320 C328 272 436 272 500 312 L500 732 C436 696 328 696 228 740 Z" fill="#F6F0E3"/>
+  <path d="M796 320 C696 272 588 272 524 312 L524 732 C588 696 696 696 796 740 Z" fill="#F6F0E3"/>
+  <rect x="500" y="296" width="24" height="444" rx="12" fill="#5E1F26"/>
+
+  <!-- text lines; one gold on the recto -->
+  <g stroke="#D9CBAA" stroke-width="18" stroke-linecap="round">
+    <path d="M300 428 H428"/><path d="M300 504 H428"/><path d="M300 580 H392"/>
+    <path d="M596 428 H724"/><path d="M632 580 H724"/>
+  </g>
+  <path d="M596 504 H724" stroke="#B8862B" stroke-width="20" stroke-linecap="round"/>
+
+  <!-- ribbon bookmark -->
+  <path d="M480 712 L544 712 L544 856 L512 820 L480 856 Z" fill="#C9973B"/>
+</svg>

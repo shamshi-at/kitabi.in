@@ -229,6 +229,30 @@ build_runner** before assuming compilation errors are real.
   iOS runtime actually still ships an x86_64 slice; the newest runtimes may not.
   Faster path when scanning code specifically: verify on an Android emulator (no such
   restriction there) or a real iPhone, not the iOS Simulator.
+- **A column `server_default` (e.g. `nextval('sync_seq')`) only fires on INSERT, never
+  on UPDATE.** Bit us building the sync engine (6 Jul 2026, `SyncableMixin.server_seq`):
+  a naive `await db.flush(); await db.refresh(row, ["server_seq"])` after mutating a
+  row left `server_seq` unchanged on updates/deletes, silently breaking the pull
+  cursor's ordering. Every mutation (create/update/delete) must explicitly reassign
+  `row.server_seq = text("nextval('sync_seq')")` before flushing — see
+  `sync_service._bump_seq` (API) and rupee-diary's identical `_bump_seq`, which this
+  was ported from; the bug was in dropping that explicit step, not in the pattern.
+- **`flutter build ipa` silently keeps `API_BASE_URL`'s pubspec default
+  (`http://localhost:8000`) unless `--dart-define=API_BASE_URL=...` is passed on that
+  exact command.** Bit us 6 Jul 2026 — a real device has nothing listening on
+  `localhost:8000`, so every API call (auth bootstrap included) failed, looking like
+  a broken sign-in flow. Always build with
+  `flutter build ipa --dart-define=API_BASE_URL=https://api.kitabi.in` for anything
+  meant to run on a real device; the flag doesn't carry over between builds or get
+  remembered anywhere, it must be passed every time.
+- **App icon/splash source art for `flutter_launcher_icons`/`flutter_native_splash`
+  should NOT reuse the in-app rounded brand tile (`logo.svg`) directly for the app
+  icon** — the OS applies its own rounding mask, so the icon source must be a flat,
+  full-bleed square (see `app/assets/icon/app_icon.svg`, a border-less variant of
+  `landing-page/logo.svg`). The *splash* image is the opposite case: it should be the
+  already-rounded `kitabi-logo.png`, since the splash background color (paper) plus a
+  centered rounded tile is exactly what `SplashScreen` renders in-app — the point is
+  to match, not to avoid double-masking.
 
 ## Open decisions
 

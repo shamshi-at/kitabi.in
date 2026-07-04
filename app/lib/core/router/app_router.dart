@@ -9,6 +9,8 @@ import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
 import '../../features/catalog/presentation/publisher_browse_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/library/presentation/book_detail_screen.dart';
+import '../../features/library/presentation/library_grid_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../auth/auth_providers.dart';
@@ -24,9 +26,13 @@ abstract final class Routes {
   static const catalogAdd = '/catalog/add';
   static const authorBrowse = '/catalog/authors/:authorId';
   static const publisherBrowse = '/catalog/publishers/:publisherId';
+  static const library = '/library';
+  static const bookDetail = '/library/book/:workId/:editionId';
 
   static String authorBrowsePath(String authorId) => '/catalog/authors/$authorId';
   static String publisherBrowsePath(String publisherId) => '/catalog/publishers/$publisherId';
+  static String bookDetailPath(String workId, String editionId) =>
+      '/library/book/$workId/$editionId';
 }
 
 /// Re-runs the router's redirect whenever auth or bootstrap state changes
@@ -119,6 +125,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'publisher-browse',
         builder: (context, state) =>
             PublisherBrowseScreen(publisherId: state.pathParameters['publisherId']!),
+      ),
+      GoRoute(
+        path: Routes.library,
+        name: 'library',
+        builder: (context, state) => const LibraryGridScreen(),
+      ),
+      GoRoute(
+        path: Routes.bookDetail,
+        name: 'book-detail',
+        builder: (context, state) => BookDetailScreen(
+          workId: state.pathParameters['workId']!,
+          editionId: state.pathParameters['editionId']!,
+        ),
       ),
     ],
   );

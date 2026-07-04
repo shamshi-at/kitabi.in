@@ -423,6 +423,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Title is required'**
   String get formTitleRequired;
+
+  /// Button that creates a library entry for the current edition
+  ///
+  /// In en, this message translates to:
+  /// **'Add to my library'**
+  String get bookAddToLibrary;
+
+  /// Label under the star rating control on the book detail screen
+  ///
+  /// In en, this message translates to:
+  /// **'your rating'**
+  String get bookYourRating;
+
+  /// Eyebrow label on the progress card
+  ///
+  /// In en, this message translates to:
+  /// **'PROGRESS'**
+  String get bookProgressLabel;
+
+  /// Progress card value — current page of total pages
+  ///
+  /// In en, this message translates to:
+  /// **'p. {page} of {total}'**
+  String bookProgressValue(int page, int total);
+
+  /// Eyebrow label for the start date on the progress card
+  ///
+  /// In en, this message translates to:
+  /// **'STARTED'**
+  String get bookStartedLabel;
+
+  /// Progress card placeholder when no start date is set
+  ///
+  /// In en, this message translates to:
+  /// **'Not started'**
+  String get bookNotStarted;
+
+  /// Dialog title for editing reading progress
+  ///
+  /// In en, this message translates to:
+  /// **'Edit progress'**
+  String get bookEditProgress;
+
+  /// Text field label in the edit-progress dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Current page'**
+  String get bookCurrentPage;
+
+  /// Eyebrow label on the review card
+  ///
+  /// In en, this message translates to:
+  /// **'MY REVIEW'**
+  String get bookReviewLabel;
+
+  /// Review card placeholder before a review exists
+  ///
+  /// In en, this message translates to:
+  /// **'No review yet — tap to write one.'**
+  String get bookReviewEmpty;
+
+  /// Review visibility toggle option
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get bookReviewVisibilityPrivate;
+
+  /// Review visibility toggle option
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get bookReviewVisibilityPublic;
+
+  /// Dialog title for editing a review
+  ///
+  /// In en, this message translates to:
+  /// **'Edit review'**
+  String get bookEditReview;
+
+  /// Eyebrow label on the personal notes card
+  ///
+  /// In en, this message translates to:
+  /// **'PERSONAL NOTES · always private'**
+  String get bookNotesLabel;
+
+  /// Personal notes card placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to add a private note — edition, condition, why this copy matters.'**
+  String get bookNotesEmpty;
+
+  /// Dialog title for editing personal notes
+  ///
+  /// In en, this message translates to:
+  /// **'Edit notes'**
+  String get bookEditNotes;
+
+  /// Lending card status when the book isn't currently lent
+  ///
+  /// In en, this message translates to:
+  /// **'Not lent out.'**
+  String get bookLendingNotLentOut;
+
+  /// Lending card status when the book is currently lent out
+  ///
+  /// In en, this message translates to:
+  /// **'With {name}'**
+  String bookLendingWithSomeone(String name);
+
+  /// Lending card secondary line
+  ///
+  /// In en, this message translates to:
+  /// **'{count} past {count, plural, one{lending} other{lendings}}'**
+  String bookLendingPastCount(int count);
+
+  /// Lending card action button when not currently lent
+  ///
+  /// In en, this message translates to:
+  /// **'Lend'**
+  String get bookLendAction;
+
+  /// Lending card action button when currently lent out
+  ///
+  /// In en, this message translates to:
+  /// **'Mark returned'**
+  String get bookMarkReturnedAction;
+
+  /// Dialog title for recording a new loan
+  ///
+  /// In en, this message translates to:
+  /// **'Lend this book'**
+  String get bookLendDialogTitle;
+
+  /// Text field label in the lend dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Borrower\'s name'**
+  String get bookLendBorrowerName;
+
+  /// Generic cancel button in book detail dialogs
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get bookCancel;
+
+  /// Generic save button in book detail dialogs
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get bookSave;
+
+  /// ISBN footer on the book detail screen
+  ///
+  /// In en, this message translates to:
+  /// **'ISBN {isbn}'**
+  String bookIsbnLabel(String isbn);
+
+  /// Title on the personal library grid screen
+  ///
+  /// In en, this message translates to:
+  /// **'My Library'**
+  String get libraryTitle;
+
+  /// Book count subtitle on the library grid screen
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, one{book} other{books}}'**
+  String libraryBookCount(int count);
+
+  /// Library grid filter chip
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get libraryFilterAll;
+
+  /// Library grid filter chip
+  ///
+  /// In en, this message translates to:
+  /// **'★ Favourites'**
+  String get libraryFilterFavourites;
+
+  /// Empty state on the library grid screen
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet — search or scan a book to add it.'**
+  String get libraryEmpty;
+
+  /// Menu action that removes the book from the user's library
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from library'**
+  String get bookRemoveFromLibrary;
+
+  /// Confirmation dialog body before removing a library entry
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this book from your library? Your rating and review stay on the shared catalog entry, but this copy, its reading progress, and its notes are gone.'**
+  String get bookRemoveConfirm;
+
+  /// Eyebrow label on the personal tags/shelves row
+  ///
+  /// In en, this message translates to:
+  /// **'SHELVES · yours only'**
+  String get bookTagsLabel;
+
+  /// Chip that opens the new-tag dialog
+  ///
+  /// In en, this message translates to:
+  /// **'+ add'**
+  String get bookAddTag;
+
+  /// Dialog title for creating/choosing a personal tag
+  ///
+  /// In en, this message translates to:
+  /// **'Add to a shelf'**
+  String get bookNewTagTitle;
+
+  /// Text field hint in the new-tag dialog
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. beach reads'**
+  String get bookNewTagHint;
 }
 
 class _AppLocalizationsDelegate

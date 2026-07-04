@@ -11,21 +11,27 @@
 > tokens. This document summarizes and cross-links all of them plus the live/deployed state
 > those docs don't cover.
 
-**Last updated:** 5 Jul 2026
+**Last updated:** 6 Jul 2026
 
 ---
 
 ## Snapshot
 
-Solo-built personal library app, pre-launch. **Phases 1–2 (auth & profile, shared
-catalog) are complete** — real Google + Apple sign-in, a real Supabase project, a real
-Railway deployment at a real custom domain, and now a full shared-catalog backend
-(works/editions/authors/publishers/genres/series) backed by OpenLibrary with
-cache-on-first-use, plus app screens for catalog search, ISBN scan, add/edit, and
-author/publisher browse. Phases 3–8 (personal library, lending, sync engine, insights,
-recommendations, launch plumbing) are not started. The landing page is live and public;
-the mobile app is not yet store-submitted (no personal-library feature exists yet — a
-user can browse/add to the shared catalog but can't yet mark a book as owned).
+Solo-built personal library app, pre-launch. **Phases 1–3 (auth & profile, shared
+catalog, personal library + sync engine) are complete** — real Google + Apple sign-in,
+a real Supabase project, a real Railway deployment at a real custom domain, a full
+shared-catalog backend (works/editions/authors/publishers/genres/series) backed by
+OpenLibrary with cache-on-first-use, and now a full offline-first personal library:
+Drift schema, a sync engine ported from rupee-diary (push/pull, idempotent, conflict
+rules), and the S5 library grid + S6 book detail screens (reading status, progress,
+notes, ratings, reviews, lending, personal tags). Phases 4–8 (dedicated lending flows,
+import, insights, recommendations, launch plumbing) are not started. The landing page
+is live and public; the mobile app is not yet store-submitted. **Not yet verified: a
+real end-to-end run with a signed-in user and real airplane-mode testing** — the sync
+engine is thoroughly unit-tested (in-memory Drift + fake API client) and the app boots
+cleanly with all the new plumbing wired in, but no session in this repo has driven it
+through a real Google sign-in to see the library screens live (would need the owner's
+own account).
 
 ---
 
@@ -52,7 +58,7 @@ of shared budgets:
 │  ┌─────────────────┐  │
 │  │  Drift (SQLite)  │  │  ← source of truth on device for personal library data
 │  └────────┬────────┘  │
-│     Sync Engine         │  ← queue, retries, conflict rules (not yet built)
+│     Sync Engine         │  ← queue, retries, conflict rules — built Phase 3
 └──────────┬────────────┘
            │ HTTPS (JWT)
 ┌──────────▼────────────┐      ┌───────────────────┐
@@ -78,7 +84,18 @@ Two data tiers, never conflated (feature-map.md's core principle):
   ("4.2 across all translations") without merging the underlying per-translation pools.
 - **Layer 2 — personal** (library entries, statuses, notes, tags, lending, reviews,
   progress): offline-first, Drift is the source of truth, synced via the sync engine
-  (queue + push/pull, not yet implemented — Phase 3).
+  (queue + push/pull). **Built in Phase 3**, ported from rupee-diary's proven pattern
+  (CLAUDE.md: "reuse, don't reinvent") — same push-then-pull loop, same idempotency
+  via a client-generated op UUID (`sync_ops` ledger), same delete-wins/last-write-wins
+  conflict rules writing a `conflict_history` row. The one structural difference:
+  Kitabi has no cross-user sharing in V1, so everything scopes by `user_id` alone (no
+  `budget_id`/role checks), and the conflict signal is "a different one of *my*
+  devices" (`device_id`, generated once per install) rather than "a different user."
+  Tables: `library_entries`, `ratings`, `reviews`, `personal_tags`,
+  `library_entry_tags`, `lending_records`, `activity_log_entries` (`[WIRED]`, written
+  server-side as a mutation side effect, pull-only). A denormalized `cached_books`
+  table (app-side only) gives the library grid offline-readable titles/covers/authors,
+  populated the moment a book is added.
 
 The `Profile` row (this session's Phase 1 work) is neither — it's the user's own
 identity row, keyed directly by the Supabase auth user id, updated via direct online
@@ -90,7 +107,7 @@ identity row, keyed directly by the Supabase auth user id, updated via direct on
 
 | Part | Stack | Version notes |
 |---|---|---|
-| `app/` | Flutter — Riverpod (`flutter_riverpod` ^2.6.1, codegen not yet used), go_router ^14.6.2, Drift ^2.22.1 (schema not yet defined — Layer 1 catalog is fetched via API, not stored in Drift yet), Dio ^5.7.0, supabase_flutter ^2.8.0, sign_in_with_apple ^6.1.0, flutter_secure_storage ^9.2.2, google_fonts ^6.2.1, flutter_svg ^2.0.0, workmanager ^0.9.0, mobile_scanner ^6.0.2 (ISBN scan) | iOS deployment target **15.5** (bumped from 14.0 — `mobile_scanner`'s MLKit requirement); SDK `^3.12.2` |
+| `app/` | Flutter — Riverpod (`flutter_riverpod` ^2.6.1, codegen not yet used), go_router ^14.6.2, **Drift ^2.22.1 (full schema: 12 tables — 7 syncable Layer 2 entities, sync_queue/sync_state/conflict_history/key_values, and a denormalized cached_books offline read cache)**, Dio ^5.7.0, supabase_flutter ^2.8.0, sign_in_with_apple ^6.1.0, flutter_secure_storage ^9.2.2, google_fonts ^6.2.1, flutter_svg ^2.0.0, **workmanager ^0.9.0 (now wired: 15-min background sync)**, mobile_scanner ^6.0.2 (ISBN scan), connectivity_plus (sync-on-reconnect trigger) | iOS deployment target **15.5** (bumped from 14.0 — `mobile_scanner`'s MLKit requirement); SDK `^3.12.2` |
 | `api/` | FastAPI 0.115.12, Python 3.12+, fully async — SQLAlchemy 2.0.36 async + asyncpg 0.30.0, Alembic 1.14.0, Pydantic 2.10.4, PyJWT[crypto] 2.10.1, APScheduler 3.11.0, httpx (OpenLibrary client), Docker | ruff + black line length 100 |
 | `landing-page/` | Dependency-free static HTML/CSS, no build step, no frameworks | Fraunces + Inter via Google Fonts CDN |
 | Database | Supabase Postgres — RLS deny-by-default, Data API disabled | Region: Southeast Asia (Singapore) |
@@ -136,7 +153,7 @@ any paid metadata API (open decision), Redis/queues (cost rule — CLAUDE.md rul
 | Landing page | https://kitabi.in | Cloudflare Pages, git-deploy from `landing-page/` on push to `main` | Live, public |
 | API | https://api.kitabi.in | Railway service `kitabi-api`, proxied CNAME via Cloudflare (Full strict) | Live; auth/profile + catalog endpoints |
 | API (origin, fallback) | https://kitabi-api-production.up.railway.app | Direct Railway domain | Keep working in case the custom domain ever breaks |
-| Mobile app | — | Not store-submitted | Auth verified on iOS Simulator (Phase 1); catalog screens verified on an Android emulator against a local API (Phase 2) — `mobile_scanner`'s MLKit dependency can't build on an Apple Silicon iOS simulator (no arm64 simulator slice), so the scan screen specifically needs a real iOS device or an older x86_64-capable simulator runtime to verify there |
+| Mobile app | — | Not store-submitted | Auth verified on iOS Simulator (Phase 1); catalog screens verified on an Android emulator against a local API (Phase 2) — `mobile_scanner`'s MLKit dependency can't build on an Apple Silicon iOS simulator (no arm64 simulator slice), so the scan screen specifically needs a real iOS device or an older x86_64-capable simulator runtime to verify there. Real app icon + splash screen now in place (see below). An IPA has been built pointed at production (`app/build/ios/ipa/kitabi.ipa`), but it's **development-signed only** — no Apple Distribution certificate exists yet, so it can only run on devices registered to the provisioning profile, not TestFlight/App Store |
 
 Redeploy the API by pushing to `main` (Railway auto-deploys); no manual `railway up`
 needed anymore. Redeploy the landing page the same way (push to `main` touching
@@ -161,8 +178,8 @@ Mirrors rupee-diary's pattern exactly (see that project's own CI for comparison)
 
 - **`api-ci.yml`** (paths: `api/**`) — ruff, black, pytest against a real `postgres:17-alpine`
   service container, pip-audit (advisory, `continue-on-error`), `docker build`.
-- **`app-ci.yml`** (paths: `app/**`) — `flutter pub get`, `build_runner` (codegen — currently
-  a no-op since no `@riverpod`/Drift schema exists yet, ready for Phase 3), `flutter analyze`, `flutter test`.
+- **`app-ci.yml`** (paths: `app/**`) — `flutter pub get`, `build_runner` (now generates real
+  Drift + Riverpod code — the full personal-library schema and DAOs), `flutter analyze`, `flutter test`.
 - **`deploy.yml`** (paths: `landing-page/**`) — the only workflow that actually deploys anything;
   ships to Cloudflare Pages.
 - **API deployment is NOT via GitHub Actions** — Railway's own git integration watches
@@ -184,7 +201,7 @@ Full spec in [feature-map.md](feature-map.md); phase-by-phase checklist in
 | 0 — Foundations | Monorepo, scaffolds, landing page, logo, mockups | Mostly done — CI workflow ✅, theme ✅; local dev runbook still open |
 | 1 — Auth & profile | Google + Apple sign-in, profile bootstrap, visibility switchboard | **✅ Done, verified live in production** |
 | 2 — Shared catalog | Books/authors/publishers/series, ISBN scan, Work vs Edition | **✅ Done** — OpenLibrary-backed, cache-on-first-use, migration `000003`, `GET /catalog/search`, `GET /catalog/isbn/{isbn}`, `POST/PATCH /catalog/works`, `PATCH /catalog/editions/{id}`, author/publisher browse; app has search, ISBN scan, add/edit form, author/publisher browse screens |
-| 3 — Personal library + sync engine | Drift schema, sync queue, push/pull, status/notes/tags/ratings/reviews | Not started — next up |
+| 3 — Personal library + sync engine | Drift schema, sync queue, push/pull, status/notes/tags/ratings/reviews | **✅ Done** — migration `000004`, `POST /sync/push` + `GET /sync/pull`, delete-wins/LWW conflict rules, `[WIRED]` activity log; app has S5 library grid + S6 book detail (status/progress/notes/rating/review/lending/tags), workmanager + connectivity-triggered background sync. Sync engine verified via unit tests (mocked API, in-memory Drift), not yet via a real signed-in device run |
 | 4 — Lending | Lend/borrow records, linked vs self-logged, due reminders | Not started (fully designed in mockups S8/S8b/S8c/S9) |
 | 5 — Import | Goodreads/CSV import | Not started |
 | 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | Not started (designed in mockups S3/S4/S4b/S4c/S4d/S10) |
@@ -198,6 +215,26 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **6 Jul 2026** — Real app icons + native splash screens: `flutter_launcher_icons`
+  (full-bleed icon source, no pre-baked rounding — the OS applies its own mask;
+  Android adaptive icon with an oxblood background layer) + `flutter_native_splash`
+  (paper background + the existing rounded Gold Line mark, matching `SplashScreen`
+  exactly). Also found and fixed a real bug: the first IPA build had no
+  `API_BASE_URL` dart-define, so it defaulted to `http://localhost:8000` — unreachable
+  from a real device, breaking anything that talks to the API. Rebuilt pointed at
+  `https://api.kitabi.in` (confirmed healthy). The IPA is still development-signed
+  only (no Apple Distribution certificate in this environment), so it can only run
+  on a device registered to the provisioning profile — not TestFlight/App Store yet.
+- **6 Jul 2026** — Phase 3 complete: personal-library sync engine ported from
+  rupee-diary (migration `000004`; `POST /sync/push` idempotent via a `sync_ops`
+  ledger; `GET /sync/pull?cursor=`; delete-wins/last-write-wins conflict rules keyed
+  by `device_id` since Kitabi has no cross-user sharing). App-side: full Drift schema
+  (12 tables), repositories, `SyncEngine`, workmanager 15-min drain + connectivity
+  trigger, a denormalized offline cache for library-grid display. UI: S5 library grid
+  (status pills, favourite ribbon, lending band, filter chips) and S6 book detail
+  (add/remove, 5-state status picker, progress, notes, star rating, review +
+  visibility, lending, personal tags). 36 backend tests total, 12 Flutter tests
+  (5 new sync-engine unit tests with a fake API client + in-memory Drift).
 - **5 Jul 2026** — Phase 2 complete: metadata source decided (OpenLibrary), shared
   catalog schema + migration (`works`/`editions`/`authors`/`publishers`/`genres`/`series`),
   catalog search + ISBN lookup (cache-on-first-use, verified live against the real
@@ -221,6 +258,12 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Open decisions / known gaps
 
+- **No Apple Distribution certificate yet** — only an Apple Development identity
+  exists in this environment's Keychain, so every IPA built so far is
+  development-signed (runs only on devices registered to the provisioning profile).
+  Getting a real TestFlight/App Store build needs a Distribution certificate,
+  generated via Xcode (signed in with sufficient account permissions) or the Apple
+  Developer portal.
 - **Apple OAuth secret expiry** — the JWT Supabase uses for Apple sign-in expires every
   ~6 months (`api/scripts/gen_apple_secret.py` regenerates it); no reminder/automation
   exists yet — worth a calendar reminder or a scheduled check.
@@ -237,3 +280,17 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   (OpenLibrary's own covers already populate it), but there's no Supabase storage
   bucket or upload flow for a user's own photo yet; would be new infrastructure, out
   of Phase 2's scope.
+- **Phase 3 not yet verified with a real signed-in device run.** The sync engine's
+  logic is thoroughly unit-tested (in-memory Drift + fake API client covering
+  push/pull/conflicts/idempotency), and the app boots cleanly on an Android emulator
+  with all the new tables/workmanager/providers wired in — but no session has driven
+  it through a real Google sign-in to see the S5/S6 screens live or done a literal
+  airplane-mode check on a device. Needs the owner's own account.
+- **S5 library grid doesn't filter by personal tag yet** — tags can be created and
+  assigned from S6, but the grid's filter chips are only status + favourites. Small
+  follow-up, not a redesign.
+- **Ticker animation for overflowing generated-cover titles not built** (S5/S6
+  mockups) — plain text ellipsis for now; a pure polish item.
+- **No dedicated conflict-history viewer** — `conflict_history` rows are written
+  correctly (delete-wins/LWW) but there's no screen surfacing them yet; `[WIRED]`
+  per CLAUDE.md rule 6, same pattern as the activity log.
