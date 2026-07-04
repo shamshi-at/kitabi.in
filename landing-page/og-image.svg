@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <!-- Social share card 1200x630 — regenerate og-image.png via headless Chrome
-       (qlmanage mangles non-square SVGs):
-       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
-         --screenshot=og-image.png --window-size=1200,630 "file://$PWD/og-image.svg" -->
+  <!-- Social share card 1200x630. Regenerate og-image.png with headless Chrome
+       (qlmanage mangles non-square SVGs); see landing-page/README or CLAUDE.md
+       for the exact command (flags omitted here to keep this comment valid XML). -->
   <rect width="1200" height="630" fill="#241811"/>
   <rect x="26" y="26" width="1148" height="578" rx="18" fill="none" stroke="#B8862B" stroke-width="3" opacity=".5"/>
 
@@ -23,6 +22,11 @@
     font-size="96" fill="#F6F0E3">Kitabi</text>
   <text x="600" y="465" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
     font-size="21" letter-spacing="9" fill="#B8862B">BEYOND THE BOOKSHELF</text>
-  <text x="600" y="530" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+  <text x="600" y="524" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
     font-size="26" fill="#E9DCC2">Every book you own, who borrowed what, and what to read next.</text>
+
+  <!-- CTA badge -->
+  <rect x="404" y="556" width="392" height="44" rx="22" fill="#B8862B"/>
+  <text x="600" y="584" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+    font-weight="700" font-size="17" letter-spacing="1.5" fill="#241811">GET EARLY ACCESS · KITABI.IN</text>
 </svg>
