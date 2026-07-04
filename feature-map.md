@@ -23,8 +23,8 @@ not two copies — even while you're the only user filling it in.*
 | Book core: title, subtitle, description, cover, page count, pub date, language | `[V1]` | The catalog record |
 | ISBN | `[V1]` | Identifier + dedupe key |
 | Edition field | `[WIRED]` | See "Work vs. Edition" below — decide the model now |
-| Authors (as catalog entities) | `[V1]` | Linkable, so filtering/grouping works |
-| Publishers (as catalog entities) | `[V1]` | Same |
+| Authors (as catalog entities) | `[V1]` | Linkable — tap a name to browse every catalog work by them |
+| Publishers (as catalog entities) | `[V1]` | Same, spanning authors instead of titles |
 | Genres (global, descriptive) | `[V1]` | Belongs to the book, *not* to you |
 | Series | `[V1]` | Cheap, readers love series ordering |
 | Global/descriptive tags | `[WIRED]` | Keep separate from *personal* tags (Layer 2) |
@@ -33,8 +33,8 @@ not two copies — even while you're the only user filling it in.*
 | Aggregate rating (avg across users) | `[WIRED]` | Computes for free *if* ratings attach here (see below) |
 | Report incorrect info | `[LATER]` | Needs other users to matter |
 | Verification status / verified badge | `[LATER]` | Nothing to moderate when solo |
-| Author profile pages + author reviews | `[LATER]` | Author as *field* = V1; author as full reviewed entity = later |
-| Publisher profile pages + publisher reviews | `[LATER]` | Same as authors |
+| Author profile pages + author reviews | `[LATER]` | The *browse* page (works list) is `[V1]` — see Layer 1; a full profile (bio, follows, aggregate author rating, reviews of the author) is the later, reviewed-entity version |
+| Publisher profile pages + publisher reviews | `[LATER]` | Same distinction as authors |
 
 ---
 
@@ -53,6 +53,7 @@ not two copies — even while you're the only user filling it in.*
 | Review (text) | `[V1]` | Attaches to book + you, with a visibility flag |
 | Edit / delete review | `[V1]` | |
 | Lending record ("lent to ___, on ___, returned ✓") | `[V1]` | A *record*, not a flag — see below |
+| Borrowed-books shelf (books you borrowed from friends) | `[V1]` | Same ledger, other side — self-logged, or linked when the lender is also a Kitabi user |
 | Reading progress updates (% or page) | `[V1]` | Lightweight |
 | Reading sessions (timed logs) | `[LATER]` | Nice-to-have; skip for the thin slice |
 | Quote / highlight capture (OCR a page) | `[LATER]` | Great "futuristic" add for v1.5 |
@@ -70,6 +71,7 @@ not two copies — even while you're the only user filling it in.*
 | Visualizations: pie / bar / line | `[V1]` | |
 | Global search (your library + catalog) | `[V1]` | |
 | Filters: language, genre, year, status, author, publisher | `[V1]` | "Verified" filter → later |
+| Browse by author / publisher (tap a name → every catalog work by them) | `[V1]` | Uses the Layer 1 catalog entities already wired to be linkable |
 | AI recommendations (LLM-reasoned, from your ratings) | `[V1]` | Your "futuristic." LLM sidesteps cold-start |
 | Embedding-based similarity ("books like this") | `[LATER]` | The cheaper/faster v1.5 upgrade |
 | Semantic / mood search ("like X but less bleak") | `[LATER]` | Strong differentiator for v1.5 |
@@ -94,7 +96,7 @@ it on is mostly building **views** over data that was already shaped to be share
 | Contribution tracking (books/reviews added) | `[LATER]` | Log your own activity now → becomes this |
 | Points & rewards | `[LATER]` | |
 | Badges / achievements / levels / leaderboards | `[LATER]` | Gamification needs scale |
-| Peer-to-peer lending | `[LATER]` | Your lending record's "borrower" field points at a real user later |
+| Peer-to-peer lending — social layer (borrower profile pages, notifications feed, in-app requests) | `[LATER]` | The lightweight version — a lending record optionally linking to a real Kitabi user so it appears on their Borrowed shelf automatically — is `[V1]`; this row is the fuller social layer on top |
 | Review responses / community notifications | `[LATER]` | |
 | Admin / moderation portal | `[LATER]` | Earns its keep only when there's shared content to police |
 
@@ -111,7 +113,7 @@ it on is mostly building **views** over data that was already shaped to be share
 | Email OTP, Facebook, Instagram, WhatsApp linking | `[LATER]` | |
 | Device tracking / login history | `[LATER]` | |
 | **CSV import (Google Sheets export + Goodreads)** | `[V1]` | **Your front door.** Your users are already in a spreadsheet |
-| Social share cards ("refer a book") | `[V1]` | You named referral as a goal; works fine solo |
+| Social share cards ("refer a book") | `[V1]` | Per-book (cover, rating, blurb) from any book page, plus a personal-endorsement variant with your rating + review; works fine solo |
 | Lending-due reminder (local notification) | `[V1]` | Small, but a real spreadsheet-beater |
 | Mobile app | `[V1]` | The platform |
 | Web app | `[LATER]` | Mobile-first |
@@ -129,9 +131,12 @@ can be added incrementally; these are expensive to reverse.
    - *Personal notes* → stay truly private on your library entry, forever.
    Splitting these now is what lets community aggregation work later with no migration.
 
-2. **Lending is a record, not a flag.** Store "lent to ___, on ___, returned ✓" as its
-   own little entry. The borrower is free text today; the day you go community, that
-   field can point at a real user and lending becomes peer-to-peer — same structure.
+2. **Lending is a record, not a flag — and it already has two sides.** Store "lent to
+   ___, on ___, returned ✓" as its own little entry. The borrower/lender name is free
+   text by default, but when it matches an existing Kitabi user, the record can carry
+   an optional real-user reference now — that's what makes the loan appear on the
+   *other* person's Borrowed shelf automatically, without waiting for full peer-to-peer
+   community features. Same one record either way; only the reference is optional.
 
 3. **Your personal activity log *is* the future feed.** Logging "you finished X, rated Y,
    added Z" for your own stats is structurally identical to a community activity feed.
@@ -155,8 +160,8 @@ can be added incrementally; these are expensive to reverse.
 
 Auth (Google + Apple) → **CSV import** → shared catalog with ISBN scan + manual add →
 personal library with status, dates, notes, personal tags, favorite → ratings + reviews
-(with visibility flags wired) → **lending records** → dashboard + stats → search + filters
-→ **LLM recommendations** → share cards.
+(with visibility flags wired) → **lending records, lent and borrowed** → dashboard +
+stats → search + filters → **LLM recommendations** → per-book and personal share cards.
 
 Everything tagged `[WIRED]` gets its data shape built in this slice even though the
 feature stays dormant. Everything `[LATER]` is deliberately absent — and *can* be absent,

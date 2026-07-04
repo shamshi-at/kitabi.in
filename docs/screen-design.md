@@ -66,21 +66,60 @@ camera; everything else stays paper.
   pick on Home, never a feed.
 - **Bottom nav** — Home · Library · [+] · Lending · Insights; oxblood FAB opens
   add-book (scan-first).
+- **Lending is two tabs, one ledger** — "Lent out" and "Borrowed" sit on the same
+  segmented control at the top of the Lending screen; it's one record set seen from
+  either side, not two features.
+- **Linked vs. self-logged borrowing** — a borrowed-book row gets a small gold
+  "🔗 on Kitabi" badge when the lender is also a registered user and named you (the
+  loan appeared with no action on your part); no badge means you typed it in yourself.
+  Both are plain personal records — no notifications or social layer yet, just the
+  optional user-reference on the existing lending record.
+- **Two share cards, one family** — the per-book card (any book, any time: cover,
+  rating, blurb) and the personal-endorsement card (your rating + your review line,
+  reached from a book you've actually read) share the same gold-framed layout and
+  destinations row; a toggle on the per-book card folds your rating/note in when you
+  have them, so it's one mental model, not two features.
+- **Author/publisher names are doors, not just labels** — anywhere a name appears
+  (search results, book page, add/edit form), it's tinted oxblood and tappable,
+  opening a browse page for everything by that author or publisher. One list
+  pattern serves both: chips split owned vs. not (author page) or lean on genre
+  (publisher page, since one publisher spans many authors); unowned rows carry the
+  same "+" add affordance as search. This is the catalog's existing linkability
+  (Layer 1) surfaced as a screen — not the fuller "author profile with bio and
+  reviews" feature, which stays `[LATER]`.
 
 ## Screen inventory (v1)
 
 1. Sign in (Google/Apple) · 2. CSV import · 3. Home dashboard · 4. Global search ·
-4b. Filter sheet (language/genre/status/year/author/publisher) · 5. Library grid ·
-6. Book page · 7. Add via ISBN scan · 7b. Add/edit book form (series + book №,
-edition-scoped ISBN, format, global genres, cover upload) · 8. Lending ledger ·
-9. Lend flow (bottom sheet) · 10. Stats (bars + donut + line spark + reading-goal
-ring) · 11. Recommendations · 12. Profile (visibility switchboard) ·
-13. Share card (V1 referral engine) · 14. Quote capture (v1.5 preview, OCR).
+4b. Filter sheet (language/genre/status/year/author/publisher) · 4c. Author page ·
+4d. Publisher page · 5. Library grid · 6. Book page · 6c. Share this book (generic
+per-book card) · 7. Add via ISBN scan · 7b. Add/edit book form (series + book №,
+edition-scoped ISBN, format, global genres, cover upload) · 8. Lending ledger (Lent
+out tab) · 8b. Borrowed tab (linked + self-logged) · 8c. Log a borrowed book (bottom
+sheet) · 9. Lend flow (bottom sheet, now detects Kitabi users) · 10. Stats (bars +
+donut + line spark + reading-goal ring) · 11. Recommendations · 12. Profile
+(visibility switchboard) · 13. Share card (personal-endorsement variant) ·
+14. Quote capture (v1.5 preview, OCR).
 
 Feature-map audit (3 Jul 2026): every `[V1]` feature now has a home on a screen —
 series ordering (7b + search results), share cards (13), full filter set (4b),
 manual add/edit path (7b), and all three chart types (10). Good-to-haves added:
 personal reading goal (10) and quote capture (14).
+
+Added (4 Jul 2026): borrowed-books shelf, both entry points — linked when the lender
+is also a Kitabi user (8b) and self-logged manually (8c) — plus a generic per-book
+share card (6c) usable on any book, distinct from the personal-endorsement card (13).
+feature-map.md's Layer 2 table, the Layer 4 peer-to-peer row, and wiring rule #2
+updated to match: the lending record's user-reference is `[V1]` now, the fuller
+social layer (profiles, notifications, requests) stays `[LATER]`.
+
+Added (4 Jul 2026, later same day): author (4c) and publisher (4d) browse pages —
+tap a name anywhere to see every catalog work by them. Names in search results, the
+book page, and the add/edit form are now tinted oxblood to signal they're tappable.
+This is the Layer 1 catalog's existing "linkable" author/publisher entities getting
+an actual screen, distinct from the `[LATER]` full profile-page feature (bios,
+follows, aggregate author ratings) — feature-map.md's Layer 1, Layer 3, and Layer 4
+rows updated to spell out that distinction.
 
 Preview locally: `python3 -m http.server 4173 --directory docs` →
 http://localhost:4173/kitabi_screens.html

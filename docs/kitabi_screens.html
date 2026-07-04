@@ -243,7 +243,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
 <section class="area" id="home">
   <div class="ah"><span class="an">Area 2</span><h2>Home — the reading desk</h2></div>
   <p class="desc">One glance answers three questions: what am I reading, what needs attention
-  (lending), and how is my year going. No feed, no noise.</p>
+  (lending), and how is my year going. No feed, no noise. Search doubles as a browser: an author
+  or publisher name is a door into everything they’ve written or printed.</p>
   <div class="row">
 
     <!-- 3. Dashboard -->
@@ -313,27 +314,27 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:12px 0 6px">In your library — 2</div>
           <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
             <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#5C3A24,#3A2114);color:#F0E2C2"><div class="ct" style="font-size:5.5px">Khasakkinte Itihasam</div></div>
-            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Khasakkinte Itihasam</div><div class="sub">O.V. Vijayan · Malayalam</div></div>
+            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Khasakkinte Itihasam</div><div class="sub"><span style="color:var(--oxblood);font-weight:600">O.V. Vijayan</span> · Malayalam</div></div>
             <span class="stamp read">Read</span>
           </div>
           <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px;margin-top:6px">
             <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#7E2A33,#4A161C);color:#F0E2C2"><div class="ct" style="font-size:5.5px">രണ്ടാമൂഴം</div></div>
-            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Randamoozham</div><div class="sub">M.T. Vasudevan Nair · Malayalam</div></div>
+            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Randamoozham</div><div class="sub"><span style="color:var(--oxblood);font-weight:600">M.T. Vasudevan Nair</span> · Malayalam</div></div>
             <span class="stamp reading">Reading</span>
           </div>
           <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:12px 0 6px">In the catalog</div>
           <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
             <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#43617E,#22344a);color:#F0E2C2"><div class="ct" style="font-size:5.5px">Mayyazhi…</div></div>
-            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Mayyazhippuzhayude Theerangalil</div><div class="sub">M. Mukundan · has English translation</div></div>
+            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Mayyazhippuzhayude Theerangalil</div><div class="sub"><span style="color:var(--oxblood);font-weight:600">M. Mukundan</span> · has English translation</div></div>
             <span style="color:var(--oxblood);font-weight:700;font-size:13px">+</span>
           </div>
           <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px;margin-top:6px">
             <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:5.5px">Aarachar</div></div>
-            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Aarachar</div><div class="sub">K.R. Meera · Malayalam</div></div>
+            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Aarachar</div><div class="sub"><span style="color:var(--oxblood);font-weight:600">K.R. Meera</span> · Malayalam</div></div>
             <span style="color:var(--oxblood);font-weight:700;font-size:13px">+</span>
           </div>
           <div class="rule"></div>
-          <div class="sub" style="font-size:8.5px;text-align:center">Filters: language · genre · year · status · author · publisher</div>
+          <div class="sub" style="font-size:8.5px;text-align:center">Tap an author or publisher name to browse everything by them</div>
         </div>
         <div class="nav">
           <div class="on"><span class="ic">⌂</span>Home</div>
@@ -388,8 +389,110 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         </div>
       </div></div>
       <p class="cap"><b>4b · Filters</b> The full V1 filter set — language, genre, status, year,
-      author, publisher — as a bottom sheet with a live result count. Regional scripts are
-      first-class citizens in the language chips.</p>
+      author, publisher — as a bottom sheet with a live result count. The author/publisher field
+      here narrows <i>your</i> library; tapping a name anywhere opens their full catalog page,
+      <b>4c</b>/<b>4d</b>.</p>
+    </div>
+
+    <!-- 4c. Author page -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="font-size:13px;color:var(--ink-soft);margin-top:6px">‹ Author</div>
+          <div style="display:flex;gap:11px;align-items:center;margin-top:9px">
+            <div style="width:46px;height:46px;border-radius:50%;background:var(--gold-soft);color:#8F681E;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:16px;font-weight:600;flex-shrink:0">MT</div>
+            <div>
+              <div class="h-serif" style="font-size:16px;line-height:1.2">M.T. Vasudevan Nair</div>
+              <div class="sub" style="font-size:8.5px;margin-top:2px">Malayalam · 14 works in the catalog</div>
+            </div>
+          </div>
+          <div class="chiprow" style="margin-top:12px">
+            <span class="chip on">All 14</span><span class="chip">In my library · 6</span><span class="chip">Wishlist</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:2px">
+            <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#7E2A33,#4A161C);color:#F0E2C2"><div class="ct" style="font-size:5.5px">രണ്ടാമൂഴം</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Randamoozham</div><div class="sub" style="font-size:8px">1984 · Novel</div></div>
+              <span class="stamp reading">Reading</span>
+            </div>
+            <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#3B4A2E,#232D1B);color:#EFE6C8"><div class="ct" style="font-size:5.5px">നാലുകെട്ട്</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Naalukettu</div><div class="sub" style="font-size:8px">1958 · Novel</div></div>
+              <span class="stamp read">Read</span>
+            </div>
+            <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#5C3A24,#3A2114);color:#F0E2C2"><div class="ct" style="font-size:5.5px">കാലം</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Kaalam</div><div class="sub" style="font-size:8px">1969 · Novel</div></div>
+              <span class="stamp read">Read</span>
+            </div>
+            <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#43617E,#22344a);color:#F0E2C2"><div class="ct" style="font-size:5.5px">മഞ്ഞ്</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Manju</div><div class="sub" style="font-size:8px">1964 · Novella</div></div>
+              <span style="color:var(--oxblood);font-weight:700;font-size:13px">+</span>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4c · Author page</b> Every catalog work by one author — reached by tapping
+      their name anywhere. Chips split what you own from what you don’t; unowned rows carry the
+      same “+” add affordance as search.</p>
+    </div>
+
+    <!-- 4d. Publisher page -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="font-size:13px;color:var(--ink-soft);margin-top:6px">‹ Publisher</div>
+          <div style="margin-top:9px">
+            <div class="h-serif" style="font-size:18px">DC Books</div>
+            <div class="sub" style="font-size:8.5px;margin-top:2px">Kottayam, Kerala · 340+ titles in the catalog · 8 in your library</div>
+          </div>
+          <div class="chiprow" style="margin-top:12px">
+            <span class="chip on">In my library · 8</span><span class="chip">Fiction</span><span class="chip">Poetry</span><span class="chip">Memoir</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:2px">
+            <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:5.5px">Aarachar</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Aarachar</div><div class="sub" style="font-size:8px">K.R. Meera</div></div>
+              <span class="stamp read">Read</span>
+            </div>
+            <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#7E2A33,#4A161C);color:#F0E2C2"><div class="ct" style="font-size:5.5px">രണ്ടാമൂഴം</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Randamoozham</div><div class="sub" style="font-size:8px">M.T. Vasudevan Nair</div></div>
+              <span class="stamp reading">Reading</span>
+            </div>
+            <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#6b4a68,#3d2a3b);color:#F0E2C2"><div class="ct" style="font-size:5.5px">എന്റെ കഥ</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Ente Katha</div><div class="sub" style="font-size:8px">Kamala Das</div></div>
+              <span style="color:var(--oxblood);font-weight:700;font-size:13px">+</span>
+            </div>
+            <div class="card" style="display:flex;gap:9px;align-items:center;padding:8px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#2e4b46,#1a2c29);color:#EFE6C8"><div class="ct" style="font-size:5.5px">ഖസാക്ക്</div></div>
+              <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Khasakkinte Itihasam</div><div class="sub" style="font-size:8px">O.V. Vijayan</div></div>
+              <span class="stamp read">Read</span>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4d · Publisher page</b> Same pattern as the author page, spanning
+      authors instead of titles — chips lean on genre since a publisher’s list is broad. Reached
+      by tapping a publisher name on the book page or in the add/edit form.</p>
     </div>
 
   </div>
@@ -506,9 +609,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <div style="background:var(--paper-deep);padding:6px 13px 12px;display:flex;gap:11px">
             <div class="cover" style="width:58px;height:84px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:8px">The Covenant of Water</div><div class="ca">Verghese</div></div>
             <div style="flex:1;align-self:center">
-              <div class="h-serif" style="font-size:15px;line-height:1.2">The Covenant of Water</div>
-              <div class="sub" style="margin-top:2px">Abraham Verghese · 2023</div>
-              <div class="sub" style="font-size:8.5px">Grove Press · 724 pp · English</div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+                <div class="h-serif" style="font-size:15px;line-height:1.2">The Covenant of Water</div>
+                <span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--oxblood);font-size:11px">⇪</span>
+              </div>
+              <div class="sub" style="margin-top:2px"><span style="color:var(--oxblood);font-weight:600">Abraham Verghese</span> · 2023</div>
+              <div class="sub" style="font-size:8.5px"><span style="color:var(--oxblood);font-weight:600">Grove Press</span> · 724 pp · English</div>
               <div class="stars" style="margin-top:4px;font-size:12px">★★★★<span class="off">★</span> <span style="color:var(--ink-soft);font-size:8px;font-family:'Inter'">your rating</span></div>
             </div>
           </div>
@@ -546,7 +652,55 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       </div></div>
       <p class="cap"><b>6 · Book page</b> The three-way split made visible: rating on the shared
       book, review with a visibility control (private by default), and personal notes on a
-      warmer paper tint that is <i>always</i> private. Lending is one row away.</p>
+      warmer paper tint that is <i>always</i> private. Lending is one row away. The share glyph
+      top-right opens 6c on <i>any</i> book — read or not. Author and publisher (oxblood) open
+      their catalog pages, <b>4c</b>/<b>4d</b>.</p>
+    </div>
+
+    <!-- 6c. Share this book -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.28)">
+          <div style="margin:22px 22px 0;background:var(--paper);border-radius:16px;padding:16px 16px 13px;border:1px solid var(--gold);box-shadow:0 16px 36px rgba(43,33,24,.35)">
+            <div style="font-size:7px;font-weight:700;letter-spacing:1.6px;color:var(--oxblood)">SHARE A BOOK</div>
+            <div style="display:flex;gap:10px;margin-top:9px">
+              <div class="cover" style="width:52px;height:76px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:7.5px">The Covenant of Water</div><div class="ca">Verghese</div></div>
+              <div style="flex:1;align-self:center">
+                <div class="h-serif" style="font-size:13.5px;line-height:1.25">The Covenant of Water</div>
+                <div class="sub" style="font-size:8.5px;margin-top:2px">Abraham Verghese</div>
+                <div class="stars" style="font-size:11px;margin-top:4px">★★★★<span class="off">★</span> <span style="color:var(--ink-soft);font-size:7px;font-family:'Inter'">your rating</span></div>
+              </div>
+            </div>
+            <p style="font-size:9.5px;margin-top:9px;color:var(--ink-soft);line-height:1.5">A sweeping saga of three generations bound by a strange family affliction — and the healing, unhurried power of water.</p>
+            <div class="rule" style="margin:10px 0 8px"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;align-items:center;gap:5px">
+                <svg viewBox="0 0 512 512" style="width:14px;height:14px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/><path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/></svg>
+                <span style="font-size:8px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+              </div>
+              <span class="sub" style="font-size:7px">beyond the bookshelf</span>
+            </div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 16px 16px">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px"></div>
+            <label style="display:flex;gap:7px;align-items:center;font-size:9px;color:var(--ink-soft);margin-bottom:10px">
+              <span style="width:24px;height:14px;border-radius:99px;background:var(--moss);position:relative;display:inline-block"><span style="position:absolute;right:2px;top:2px;width:10px;height:10px;border-radius:50%;background:#fff"></span></span>
+              Include my rating &amp; note
+            </label>
+            <div style="display:flex;gap:7px">
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px">WhatsApp</div>
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px">Instagram</div>
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px">Copy link</div>
+            </div>
+            <div class="btn" style="margin-top:8px;padding:9px;font-size:10px">Share card</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>6c · Share this book</b> Works on every book, read or not — cover, rating
+      (catalog average until you’ve rated it), and a short blurb instead of a personal quote.
+      One toggle folds in your own rating &amp; note when you have them; the personal-endorsement
+      version lives on at <b>13.</b></p>
     </div>
 
     <!-- 7. Add book -->
@@ -636,9 +790,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
 
 <!-- ================= AREA 4 — LENDING ================= -->
 <section class="area" id="lending">
-  <div class="ah"><span class="an">Area 4</span><h2>Lending — the ledger</h2></div>
+  <div class="ah"><span class="an">Area 4</span><h2>Lending — the ledger, both ways</h2></div>
   <p class="desc">The wedge feature, styled as what it is: a ledger. Each lending is a record —
-  who, when, due — with return as a satisfying stamp. Free and first-class (Libib paywalls this).</p>
+  who, when, due — with return as a satisfying stamp. Free and first-class (Libib paywalls this).
+  It runs both directions: what you’ve lent out, and what you’re borrowing — self-logged, or
+  linked automatically when the friend who lent it to you is a Kitabi user too.</p>
   <div class="row">
 
     <!-- 8. Lending ledger -->
@@ -648,6 +804,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         <div class="body">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
             <div class="pgtitle" style="margin:0">Lending ledger</div><div class="sub">3 out</div>
+          </div>
+          <div class="chiprow" style="margin:9px 0 2px">
+            <span class="chip on" style="flex:1;text-align:center">Lent out</span>
+            <span class="chip" style="flex:1;text-align:center">Borrowed · 2</span>
           </div>
           <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:11px 0 6px">Out now</div>
           <div class="card" style="padding:9px">
@@ -699,8 +859,93 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         </div>
       </div></div>
       <p class="cap"><b>8 · Lending ledger</b> Records, not flags: borrower, dates, optional due
-      date with a local reminder, and a moss “Returned ✓” pill to close each record. Borrower is
-      free text today, a real user later.</p>
+      date with a local reminder, and a moss “Returned ✓” pill to close each record. The
+      <b>Lent out / Borrowed</b> tabs are the same ledger seen from either side.</p>
+    </div>
+
+    <!-- 8b. Borrowed tab -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+            <div class="pgtitle" style="margin:0">Lending ledger</div><div class="sub">2 borrowed</div>
+          </div>
+          <div class="chiprow" style="margin:9px 0 2px">
+            <span class="chip" style="flex:1;text-align:center">Lent out</span>
+            <span class="chip on" style="flex:1;text-align:center">Borrowed · 2</span>
+          </div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:11px 0 6px">With you now</div>
+          <div class="card" style="padding:9px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:5px">Aarachar</div></div>
+              <div style="flex:1;min-width:0"><div style="font-size:10.5px;font-weight:600">Aarachar</div>
+              <div class="sub" style="font-size:8.5px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">from <b>Divya</b>
+                <span style="display:inline-flex;align-items:center;gap:2px;background:var(--gold-soft);color:#8F681E;border-radius:999px;padding:1px 6px;font-size:7px;font-weight:700;white-space:nowrap">🔗 on Kitabi</span></div></div>
+              <span class="stamp reading" style="flex-shrink:0;white-space:nowrap">Due in 5 d</span>
+            </div>
+            <div class="sub" style="font-size:7.5px;margin-top:6px;padding-left:34px">Linked automatically — Divya recorded this lend from her side.</div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <div class="btn ghost" style="flex:1;padding:6px;font-size:9px;border-width:1px">I’ve returned it ✓</div>
+            </div>
+          </div>
+          <div class="card" style="padding:9px;margin-top:7px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#43617E,#2a4058);color:#F0E2C2"><div class="ct" style="font-size:5px">Mayyazhi</div></div>
+              <div style="flex:1;min-width:0"><div style="font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Mayyazhippuzhayude…</div>
+              <div class="sub" style="font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">from <b>Faisal</b> · since 20 Jun</div></div>
+              <span class="stamp stop" style="flex-shrink:0;white-space:nowrap">No due date</span>
+            </div>
+            <div class="sub" style="font-size:7.5px;margin-top:6px;padding-left:34px">Self-logged — just for your own tracking.</div>
+          </div>
+          <div style="text-align:center;margin-top:14px">
+            <span style="font-size:9.5px;font-weight:700;color:var(--oxblood)">+ Log a borrowed book</span>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div class="on"><span class="ic">⇄</span>Lending</div>
+          <div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>8b · Borrowed</b> Two ways in: <b>linked</b> (gold badge) when the lender
+      is also a Kitabi user and named you — it appears here with no work on your part — or
+      <b>self-logged</b> for anything else. Either way it’s your own private record.</p>
+    </div>
+
+    <!-- 8c. Log a borrowed book -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative">
+          <div style="filter:blur(2px) brightness(.92);padding:6px 13px">
+            <div class="pgtitle">Lending ledger</div>
+            <div class="card" style="height:52px;margin-top:8px"></div>
+            <div class="card" style="height:52px;margin-top:7px"></div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:14px 16px 18px;box-shadow:0 -12px 30px rgba(43,33,24,.18)">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px"></div>
+            <div class="h-serif" style="font-size:15px">Log a borrowed book</div>
+            <div class="sub" style="font-size:8px;margin:11px 0 3px;letter-spacing:1px">BOOK</div>
+            <div class="search"><span style="color:var(--ink-soft)">⌕ Search or scan…</span></div>
+            <div class="sub" style="font-size:8px;margin:9px 0 3px;letter-spacing:1px">FROM</div>
+            <div class="search" style="border-color:var(--ink)"><span style="color:var(--ink);font-weight:600">Divya</span></div>
+            <div style="margin-top:5px;font-size:8.5px;color:var(--moss);display:flex;align-items:center;gap:4px">🔗 Divya is on Kitabi — this can link to her lending record</div>
+            <div style="display:flex;gap:8px;margin-top:9px">
+              <div style="flex:1"><div class="sub" style="font-size:8px;letter-spacing:1px;margin-bottom:3px">BORROWED ON</div>
+                <div class="search">2 Jul 2026</div></div>
+              <div style="flex:1"><div class="sub" style="font-size:8px;letter-spacing:1px;margin-bottom:3px">REMIND ME · optional</div>
+                <div class="search">16 Jul 2026</div></div>
+            </div>
+            <div class="btn" style="margin-top:12px">Save to my borrowed shelf</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>8c · Log a borrowed book</b> The other entry point from the goal: you add
+      it yourself, no waiting on a friend to use the app. Matches the lend flow’s shape exactly —
+      book, person, dates.</p>
     </div>
 
     <!-- 9. Lend sheet -->
@@ -723,6 +968,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
             </div>
             <div class="sub" style="font-size:8px;margin:11px 0 3px;letter-spacing:1px">TO</div>
             <div class="search" style="border-color:var(--ink)"><span style="color:var(--ink);font-weight:600">Anu</span></div>
+            <div style="margin-top:5px;font-size:8.5px;color:var(--moss);display:flex;align-items:center;gap:4px">🔗 Anu is on Kitabi — this will appear on her Borrowed shelf automatically</div>
             <div style="display:flex;gap:8px;margin-top:9px">
               <div style="flex:1"><div class="sub" style="font-size:8px;letter-spacing:1px;margin-bottom:3px">LENT ON</div>
                 <div class="search">2 Jul 2026</div></div>
@@ -737,9 +983,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           </div>
         </div>
       </div></div>
-      <p class="cap"><b>9 · Lend flow</b> A bottom sheet, three fields, done. Borrower is plain
-      text (contacts later); the due-date reminder is a local notification — the
-      spreadsheet-beater in one toggle.</p>
+      <p class="cap"><b>9 · Lend flow</b> A bottom sheet, three fields, done. Type a name that
+      matches a Kitabi user and the loan can link both sides — same free-text field, no separate
+      contacts step; the due-date reminder is a local notification either way.</p>
     </div>
 
   </div>
@@ -991,9 +1237,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           </div>
         </div>
       </div></div>
-      <p class="cap"><b>13 · Share card</b> V1’s referral engine: a gold-framed recommendation
-      card with your stars and one line of your review, stamped with the mark and kitabi.in.
-      Works solo — no community needed.</p>
+      <p class="cap"><b>13 · Share card</b> The personal-endorsement variant — your stars, one
+      line of your review, reached from Profile or a finished book. The generic per-book version
+      any reader can trigger, reviewed or not, is <b>6c.</b></p>
     </div>
 
     <!-- 14. Quote capture -->

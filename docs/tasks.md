@@ -4,7 +4,8 @@ The living checklist. Pick work from here; tick a box **only when** the Definiti
 Done is met (code + tests pass, lint clean, migration included if schema changed,
 Docker builds, works offline for app features, matches the mockup screen), in the
 same commit as the change. If scope shifts, edit this list rather than working
-off-list. Screens referenced as S1–S14 are in [kitabi_screens.html](kitabi_screens.html).
+off-list. Screens referenced as S1–S14 (plus lettered sub-screens like S4c, S6c, S8b)
+are in [kitabi_screens.html](kitabi_screens.html).
 
 Sources of truth: [feature-map.md](../feature-map.md) (product),
 [screen-design.md](screen-design.md) (design), [CLAUDE.md](../CLAUDE.md) (how to build).
@@ -42,6 +43,12 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [ ] ISBN barcode scanner in app (mobile_scanner) — S7
 - [ ] Generated "typeset" covers (title/author on colour derived from book) + uploaded cover images, one frame — S5 exhibit
 - [ ] Aggregate rating field on works `[WIRED]` (computes; not displayed publicly)
+- [ ] Author browse endpoint + screen: all catalog works by one author, split by
+      owned/not (reuses the existing add "+"/status-pill row pattern) — S4c
+- [ ] Publisher browse endpoint + screen: all catalog works by one publisher, spanning
+      authors, chips lean on genre — S4d
+- [ ] Author/publisher names tappable (oxblood tint) wherever they appear — search
+      results (S4), book page (S6), add/edit form (S7b) — routing to S4c/S4d
 
 ## Phase 3 — Personal library + sync engine (Layer 2)
 
@@ -60,14 +67,26 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [ ] Library grid UI: covers-first, status pills, lent band, ticker for overflowing generated-cover titles — S5
 - [ ] Airplane-mode test pass: every feature above works offline and syncs later
 
-## Phase 4 — Lending (the wedge)
+## Phase 4 — Lending (the wedge, both directions)
 
-- [ ] Lending record model: borrower free text, lent-on, due-back, returned-at — record, not flag
-- [ ] Lending ledger screen (out now / returned) — S8
-- [ ] Lend flow bottom sheet — S9
+- [ ] Lending record model: counterparty free text, lent-on, due-back, returned-at — record, not flag
+- [ ] Optional `counterparty_user_id` on the lending record + lightweight match (search
+      registered users by phone/email/username when recording a lend) `[WIRED→V1]`
+- [ ] When a lend links to a real user, server mirrors a "borrowed" record onto their
+      account (own row, own sync scope, correlated by a shared `linked_loan_id` — not a
+      shared row; each side's "mark returned" only closes their own copy, V1 has no
+      realtime handshake between the two)
+- [ ] Lending ledger screen, Lent-out tab (out now / returned) — S8
+- [ ] Lend flow bottom sheet, with "this person is on Kitabi" match + note — S9
 - [ ] Mark returned + "Returned ✓" pill
 - [ ] Due-date local notification (lending reminder) — S3 nudge
 - [ ] "WITH <NAME>" band on lent covers — S5
+- [ ] Borrowed tab: linked entries (auto-created when a lender names you) + self-logged
+      entries, in one list — S8b
+- [ ] "Log a borrowed book" flow: search/scan book, from-whom, borrowed-on, optional
+      remind-me date, note — S8c
+- [ ] "I've returned it" action on borrowed entries (closes your own record; does not
+      require the lender's app state — no realtime sync between the two sides in V1)
 
 ## Phase 5 — Import (the front door)
 
@@ -90,8 +109,12 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 
 - [ ] LLM recommendation service: reasoned from user's ratings, plain-words "why" — S11
 - [ ] Recs UX: opt-in, visible off switch, + Wishlist / Not for me feedback — S11/S12
-- [ ] Share card generator (gold-framed card: cover, stars, review line, mark, kitabi.in) — S13
-- [ ] Share sheet integration (WhatsApp / Instagram / copy link) — S13
+- [ ] Per-book share card generator (any book: cover, title, rating — catalog average if
+      you haven't rated it — short blurb, mark, kitabi.in), reachable from the book page
+      share icon and search results — S6c
+- [ ] Personal-endorsement share card (your rating + review line instead of the blurb) —
+      S13; toggle on S6c folds this in when you have a rating/review for that book
+- [ ] Share sheet integration (WhatsApp / Instagram / copy link) — S6c/S13
 
 ## Phase 8 — Platform & launch plumbing
 
