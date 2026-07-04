@@ -10,8 +10,10 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/notifications/notification_service.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../../lending/presentation/lend_sheet.dart';
+import '../../lending/reminder.dart';
 import '../reading_status.dart';
 import '../providers/library_providers.dart';
 
@@ -742,6 +744,7 @@ class _LendingCard extends ConsumerWidget {
   Future<void> _markReturned(WidgetRef ref, String lendingId) async {
     final repo = await ref.read(lendingRepositoryProvider.future);
     await repo.markReturned(lendingId, DateTime.now());
+    await ref.read(notificationServiceProvider).cancel(reminderIdForRecord(lendingId));
     ref.invalidate(lendingRecordsProvider(entry.id));
   }
 

@@ -643,5 +643,29 @@
   "lendSheetSave": "Lend it",
   "@lendSheetSave": {
     "description": "Submit button on the lend sheet"
+  },
+  "reminderLentTitle": "A lent book is due",
+  "@reminderLentTitle": {
+    "description": "Notification title for a lent-book due-date reminder"
+  },
+  "reminderLentBody": "{title} — with {name}",
+  "@reminderLentBody": {
+    "description": "Notification body for a lent-book reminder",
+    "placeholders": {
+      "title": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "reminderBorrowedTitle": "A borrowed book is due",
+  "@reminderBorrowedTitle": {
+    "description": "Notification title for a borrowed-book due-date reminder"
+  },
+  "reminderBorrowedBody": "Return {title} to {name}",
+  "@reminderBorrowedBody": {
+    "description": "Notification body for a borrowed-book reminder",
+    "placeholders": {
+      "title": {"type": "String"},
+      "name": {"type": "String"}
+    }
   }
 }

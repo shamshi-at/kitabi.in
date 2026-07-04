@@ -167,7 +167,12 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       bottom sheet (to-whom, lent-on, optional due date, note; shared field widgets with the
       log-borrowed sheet). The "on Kitabi" match rides on the cross-user work (Slice D `[WIRED]`)
 - [x] Mark returned + "Returned ✓" pill (book detail + ledger)
-- [ ] Due-date local notification (lending reminder) — S3 nudge
+- [x] Due-date local notification (lending reminder) — S3 nudge. `flutter_local_notifications`
+      (+ `timezone`/`flutter_timezone`), on-device only (no push/server, rule 8). Scheduled at
+      9am local on the due date when a lend/borrow has one; cancelled on "returned". Native
+      config: Android core-library desugaring + POST_NOTIFICATIONS/boot receiver, iOS
+      UNUserNotificationCenter delegate. Pure scheduling logic (id/time) unit-tested; **firing
+      not yet verified on a real device** (needs a signed-in device run, same standing gap)
 - [ ] "WITH <NAME>" band on lent covers — S5
 - [~] Borrowed tab: linked entries (auto-created when a lender names you) + self-logged
       entries, in one list — S8b. Slice B: the Borrowed tab is live (With-you-now / Returned,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/catalog_cache.dart';
@@ -9,6 +10,7 @@ import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../lending_format.dart';
+import '../reminder.dart';
 import 'sheet_fields.dart';
 
 /// S8c — log a book you've borrowed. The other entry point to the ledger:
@@ -57,16 +59,27 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
     final work = _selected;
     if (work == null || _lender.text.trim().isEmpty) return;
     setState(() => _saving = true);
+    final l10n = AppLocalizations.of(context)!;
+    final lender = _lender.text.trim();
     final edition = work['edition'] as Map<String, dynamic>;
     await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
     final repo = await ref.read(lendingRepositoryProvider.future);
-    await repo.logBorrowed(
+    final id = await repo.logBorrowed(
       editionId: edition['id'] as String,
-      lenderName: _lender.text.trim(),
+      lenderName: lender,
       borrowedDate: _borrowedOn,
       dueDate: _remindOn,
       note: _note.text,
     );
+    final due = _remindOn;
+    if (due != null) {
+      await ref.read(notificationServiceProvider).scheduleReminder(
+            id: reminderIdForRecord(id),
+            title: l10n.reminderBorrowedTitle,
+            body: l10n.reminderBorrowedBody(work['title'] as String? ?? '', lender),
+            when: reminderTimeFor(due),
+          );
+    }
     if (mounted) Navigator.of(context).pop();
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
@@ -9,6 +10,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
 import '../lending_format.dart';
+import '../reminder.dart';
 import 'log_borrowed_sheet.dart';
 
 /// S8 — the lending ledger, "the wedge styled as what it is: a ledger."
@@ -308,6 +310,7 @@ class _LoanCard extends ConsumerWidget {
               onPressed: () async {
                 final repo = await ref.read(lendingRepositoryProvider.future);
                 await repo.markReturned(r.id, DateTime.now());
+                await ref.read(notificationServiceProvider).cancel(reminderIdForRecord(r.id));
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.moss,

@@ -951,6 +951,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lend it'**
   String get lendSheetSave;
+
+  /// Notification title for a lent-book due-date reminder
+  ///
+  /// In en, this message translates to:
+  /// **'A lent book is due'**
+  String get reminderLentTitle;
+
+  /// Notification body for a lent-book reminder
+  ///
+  /// In en, this message translates to:
+  /// **'{title} — with {name}'**
+  String reminderLentBody(String title, String name);
+
+  /// Notification title for a borrowed-book due-date reminder
+  ///
+  /// In en, this message translates to:
+  /// **'A borrowed book is due'**
+  String get reminderBorrowedTitle;
+
+  /// Notification body for a borrowed-book reminder
+  ///
+  /// In en, this message translates to:
+  /// **'Return {title} to {name}'**
+  String reminderBorrowedBody(String title, String name);
 }
 
 class _AppLocalizationsDelegate

@@ -509,4 +509,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lendSheetSave => 'Lend it';
+
+  @override
+  String get reminderLentTitle => 'A lent book is due';
+
+  @override
+  String reminderLentBody(String title, String name) {
+    return '$title — with $name';
+  }
+
+  @override
+  String get reminderBorrowedTitle => 'A borrowed book is due';
+
+  @override
+  String reminderBorrowedBody(String title, String name) {
+    return 'Return $title to $name';
+  }
 }

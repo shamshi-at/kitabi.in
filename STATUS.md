@@ -107,7 +107,7 @@ identity row, keyed directly by the Supabase auth user id, updated via direct on
 
 | Part | Stack | Version notes |
 |---|---|---|
-| `app/` | Flutter — Riverpod (`flutter_riverpod` ^2.6.1, codegen not yet used), go_router ^14.6.2, **Drift ^2.22.1 (full schema: 12 tables — 7 syncable Layer 2 entities, sync_queue/sync_state/conflict_history/key_values, and a denormalized cached_books offline read cache)**, Dio ^5.7.0, supabase_flutter ^2.8.0, sign_in_with_apple ^6.1.0, flutter_secure_storage ^9.2.2, google_fonts ^6.2.1, flutter_svg ^2.0.0, **workmanager ^0.9.0 (now wired: 15-min background sync)**, mobile_scanner ^6.0.2 (ISBN scan), connectivity_plus (sync-on-reconnect trigger) | iOS deployment target **15.5** (bumped from 14.0 — `mobile_scanner`'s MLKit requirement); SDK `^3.12.2` |
+| `app/` | Flutter — Riverpod (`flutter_riverpod` ^2.6.1, codegen not yet used), go_router ^14.6.2, **Drift ^2.22.1 (full schema: 12 tables — 7 syncable Layer 2 entities, sync_queue/sync_state/conflict_history/key_values, and a denormalized cached_books offline read cache)**, Dio ^5.7.0, supabase_flutter ^2.8.0, sign_in_with_apple ^6.1.0, flutter_secure_storage ^9.2.2, google_fonts ^6.2.1, flutter_svg ^2.0.0, **workmanager ^0.9.0 (now wired: 15-min background sync)**, mobile_scanner ^6.0.2 (ISBN scan), connectivity_plus (sync-on-reconnect trigger), **flutter_local_notifications ^18.0.1 + timezone + flutter_timezone (on-device lending due-date reminders)** | iOS deployment target **15.5** (bumped from 14.0 — `mobile_scanner`'s MLKit requirement); SDK `^3.12.2` |
 | `api/` | FastAPI 0.115.12, Python 3.12+, fully async — SQLAlchemy 2.0.36 async + asyncpg 0.30.0, Alembic 1.14.0, Pydantic 2.10.4, PyJWT[crypto] 2.10.1, APScheduler 3.11.0, httpx (OpenLibrary client), Docker | ruff + black line length 100 |
 | `landing-page/` | Dependency-free static HTML/CSS, no build step, no frameworks | Fraunces + Inter via Google Fonts CDN |
 | Database | Supabase Postgres — RLS deny-by-default, Data API disabled | Region: Southeast Asia (Singapore) |
@@ -202,7 +202,7 @@ Full spec in [feature-map.md](feature-map.md); phase-by-phase checklist in
 | 1 — Auth & profile | Google + Apple sign-in, profile bootstrap, visibility switchboard | **✅ Done, verified live in production** |
 | 2 — Shared catalog | Books/authors/publishers/series, ISBN scan, Work vs Edition | **✅ Done** — OpenLibrary-backed, cache-on-first-use, migration `000003`, `GET /catalog/search`, `GET /catalog/isbn/{isbn}`, `POST/PATCH /catalog/works`, `PATCH /catalog/editions/{id}`, `GET /catalog/authors?q=` + `GET /catalog/publishers?q=` typeahead, author/publisher browse; app has search, ISBN scan, add/edit form (author/publisher are now dropdown-cum-add-new typeaheads; typeset cover previews live as you type), author/publisher browse screens |
 | 3 — Personal library + sync engine | Drift schema, sync queue, push/pull, status/notes/tags/ratings/reviews | **✅ Done** — migration `000004`, `POST /sync/push` + `GET /sync/pull`, delete-wins/LWW conflict rules, `[WIRED]` activity log; app has S5 library grid + S6 book detail (status/progress/notes/rating/review/lending/tags), workmanager + connectivity-triggered background sync. ISBN scan "Add" now creates a library entry (was a no-op that only popped the scanner). Sync engine verified via unit tests (mocked API, in-memory Drift), not yet via a real signed-in device run |
-| 4 — Lending | Lend/borrow records, linked vs self-logged, due reminders | **In progress** — Slices A+B: Lending ledger (S8) with **Lent out** and **Borrowed** tabs. Lent-out reads synced `lending_records` (Out now / Returned, computed due stamps, mark-returned); the lend dialog captures an optional due date. Borrowed side (migration `000005`: `direction`/`edition_id`/`linked_loan_id`/`note`, nullable `library_entry_id`) — self-logged borrows via the log-borrowed sheet (S8c, inline catalog search), "I've returned it". Still to build: full lend bottom sheet (S9), due-date reminders (Slice C), cross-user match/mirror `[WIRED]` (Slice D) |
+| 4 — Lending | Lend/borrow records, linked vs self-logged, due reminders | **In progress** — Slices A–C: Lending ledger (S8) with **Lent out** and **Borrowed** tabs (Out now / With-you-now / Returned, computed due stamps, mark-returned / "I've returned it"). Borrowed side via migration `000005` (`direction`/`edition_id`/`linked_loan_id`/`note`, nullable `library_entry_id`); log-borrowed sheet (S8c, inline catalog search); S9 lend bottom sheet; **due-date local reminders** (`flutter_local_notifications`, on-device, scheduled 9am on the due date, cancelled on return — firing not yet device-verified). Still to build: cross-user match/mirror `[WIRED]` (Slice D) |
 | 5 — Import | Goodreads/CSV import | Not started |
 | 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | Not started — but an **interim library-first home** now ships (currently-reading row + recent-books grid + add CTA) so the app opens onto your books instead of an empty placeholder; the full S3 dashboard (stats, lending nudge, AI pick) is still Phase 6 (designed in mockups S3/S4/S4b/S4c/S4d/S10) |
 | 7 — Recommendations & share | LLM recs, per-book + personal share cards | Not started (designed in mockups S6c/S11/S13) |
@@ -214,6 +214,17 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 ---
 
 ## Recent milestones
+
+- **6 Jul 2026** — Phase 4 Slice C — the lend flow + reminders. **S9 lend bottom sheet**
+  (to-whom, lent-on, optional due date, note; shared field widgets with the log-borrowed
+  sheet) replaces the old lend dialog. **Due-date local reminders** via
+  `flutter_local_notifications` (+ `timezone`/`flutter_timezone`) — on-device only (no push,
+  no server; rule 8), scheduled at 9am local on the due date when a lend/borrow has one and
+  cancelled when the book is returned. Native config added: Android core-library desugaring +
+  POST_NOTIFICATIONS/RECEIVE_BOOT_COMPLETED + boot receiver, iOS UNUserNotificationCenter
+  delegate. Scheduling logic (stable id, 9am time) is a pure unit-tested function; 20 app
+  tests green, analyze clean. **Reminder firing not yet verified on a real device** (same
+  standing signed-in-device gap).
 
 - **6 Jul 2026** — Phase 4 Slice B — the **Borrowed** side of the ledger. Migration `000005`
   adds `direction` (lent/borrowed), `edition_id` (a borrowed book isn't owned, so it's carried

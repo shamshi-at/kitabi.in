@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../lending_format.dart';
+import '../reminder.dart';
 import 'sheet_fields.dart';
 
 /// S9 — the lend flow. A bottom sheet on the book you already own: to whom,
@@ -71,14 +73,25 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
   Future<void> _save() async {
     if (_borrower.text.trim().isEmpty) return;
     setState(() => _saving = true);
+    final l10n = AppLocalizations.of(context)!;
+    final borrower = _borrower.text.trim();
     final repo = await ref.read(lendingRepositoryProvider.future);
-    await repo.lendOut(
+    final id = await repo.lendOut(
       widget.libraryEntryId,
-      borrowerName: _borrower.text.trim(),
+      borrowerName: borrower,
       lentDate: _lentOn,
       dueDate: _dueOn,
       note: _note.text,
     );
+    final due = _dueOn;
+    if (due != null) {
+      await ref.read(notificationServiceProvider).scheduleReminder(
+            id: reminderIdForRecord(id),
+            title: l10n.reminderLentTitle,
+            body: l10n.reminderLentBody(widget.bookTitle, borrower),
+            when: reminderTimeFor(due),
+          );
+    }
     if (mounted) Navigator.of(context).pop();
   }
 
