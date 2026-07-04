@@ -124,11 +124,18 @@ flutter pub get
 dart run build_runner build --delete-conflicting-outputs   # Drift/Riverpod codegen
 flutter test
 flutter analyze
-flutter run -d <device>
+cp dart_defines.env.example dart_defines.env   # once, then fill in real values (gitignored)
+./scripts/run_dev.sh -d <device>               # NOT `flutter run` directly — see below
+./scripts/build_ipa.sh                          # NOT `flutter build ipa` directly
 ```
 
 After changing any Drift table or Riverpod codegen-annotated file, **always run
 build_runner** before assuming compilation errors are real.
+
+Always build/run through `scripts/run_dev.sh` and `scripts/build_ipa.sh`, never
+`flutter run`/`flutter build ipa` directly — every `--dart-define` the app reads
+must be passed explicitly on every invocation (none of them carry over), and a
+missing one fails silently rather than loudly. See "Lessons learned" below.
 
 ## Workflow
 
@@ -237,14 +244,20 @@ build_runner** before assuming compilation errors are real.
   `row.server_seq = text("nextval('sync_seq')")` before flushing — see
   `sync_service._bump_seq` (API) and rupee-diary's identical `_bump_seq`, which this
   was ported from; the bug was in dropping that explicit step, not in the pattern.
-- **`flutter build ipa` silently keeps `API_BASE_URL`'s pubspec default
-  (`http://localhost:8000`) unless `--dart-define=API_BASE_URL=...` is passed on that
-  exact command.** Bit us 6 Jul 2026 — a real device has nothing listening on
-  `localhost:8000`, so every API call (auth bootstrap included) failed, looking like
-  a broken sign-in flow. Always build with
-  `flutter build ipa --dart-define=API_BASE_URL=https://api.kitabi.in` for anything
-  meant to run on a real device; the flag doesn't carry over between builds or get
-  remembered anywhere, it must be passed every time.
+- **Every `--dart-define` the app reads (`API_BASE_URL`, `SUPABASE_URL`,
+  `SUPABASE_PUBLISHABLE_KEY`) must be passed explicitly on every single
+  `flutter build`/`flutter run` invocation — none of them carry over between
+  builds, and a missing one fails silently, not loudly.** Bit us twice on
+  6 Jul 2026: first `API_BASE_URL` defaulted to `http://localhost:8000` (nothing
+  listens there on a real device, so every API call failed); then three IPA builds
+  in a row never passed `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` at all, so
+  `supabaseConfigured` was false and the app silently used `UnconfiguredAuthService`
+  — sign-in always threw, with no build-time warning that anything was misconfigured.
+  **Fix:** use `app/scripts/build_ipa.sh` / `run_dev.sh`, which read every required
+  define from `app/dart_defines.env` (gitignored — copy from `dart_defines.env.example`)
+  and fail loudly before Xcode/Gradle even starts if one is missing. Don't call
+  `flutter build ipa`/`flutter run` directly with hand-typed `--dart-define` flags —
+  that's exactly how this kept happening.
 - **App icon/splash source art for `flutter_launcher_icons`/`flutter_native_splash`
   should NOT reuse the in-app rounded brand tile (`logo.svg`) directly for the app
   icon** — the OS applies its own rounding mask, so the icon source must be a flat,

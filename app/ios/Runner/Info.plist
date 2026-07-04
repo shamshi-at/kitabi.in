@@ -28,6 +28,8 @@
 		<true/>
 		<key>NSCameraUsageDescription</key>
 		<string>Kitabi uses the camera to scan a book's ISBN barcode when you add it.</string>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>
