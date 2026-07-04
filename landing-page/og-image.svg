@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Social share card 1200x630 — regenerate og-image.png via headless Chrome
+       (qlmanage mangles non-square SVGs):
+       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+         --screenshot=og-image.png --window-size=1200,630 "file://$PWD/og-image.svg" -->
+  <rect width="1200" height="630" fill="#241811"/>
+  <rect x="26" y="26" width="1148" height="578" rx="18" fill="none" stroke="#B8862B" stroke-width="3" opacity=".5"/>
+
+  <!-- The Gold Line mark (book only, no tile) -->
+  <g transform="translate(600,88) scale(0.62) translate(-256,0)">
+    <path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/>
+    <path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/>
+    <rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/>
+    <g stroke="#D9CBAA" stroke-width="9" stroke-linecap="round">
+      <path d="M150 214 H214"/><path d="M150 252 H214"/><path d="M150 290 H196"/>
+      <path d="M298 214 H362"/><path d="M316 290 H362"/>
+    </g>
+    <path d="M298 252 H362" stroke="#B8862B" stroke-width="10" stroke-linecap="round"/>
+    <path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/>
+  </g>
+
+  <text x="600" y="415" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+    font-size="96" fill="#F6F0E3">Kitabi</text>
+  <text x="600" y="465" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+    font-size="21" letter-spacing="9" fill="#B8862B">BEYOND THE BOOKSHELF</text>
+  <text x="600" y="530" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+    font-size="26" fill="#E9DCC2">Every book you own, who borrowed what, and what to read next.</text>
+</svg>
