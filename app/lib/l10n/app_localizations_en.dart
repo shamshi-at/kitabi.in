@@ -370,4 +370,60 @@ class AppLocalizationsEn extends AppLocalizations {
   String formAddNew(String name) {
     return 'Add \"$name\"';
   }
+
+  @override
+  String get lendingLedgerTitle => 'Lending ledger';
+
+  @override
+  String lendingOutSubtitle(int count) {
+    return '$count out';
+  }
+
+  @override
+  String get lendingOutNowSection => 'Out now';
+
+  @override
+  String get lendingReturnedSection => 'Returned';
+
+  @override
+  String lendingToPersonSince(String name, String date) {
+    return 'to $name · since $date';
+  }
+
+  @override
+  String lendingReturnedRange(String name, String start, String end) {
+    return '$name · $start – $end';
+  }
+
+  @override
+  String get lendingNoDueDate => 'No due date';
+
+  @override
+  String lendingDueInDays(int days) {
+    return 'Due in ${days}d';
+  }
+
+  @override
+  String lendingDueOn(String date) {
+    return 'Due $date';
+  }
+
+  @override
+  String get lendingOverdue => 'Overdue';
+
+  @override
+  String get lendingReturnedStamp => 'Returned ✓';
+
+  @override
+  String get lendingMarkReturned => 'Mark returned ✓';
+
+  @override
+  String get lendingEmpty =>
+      'Nothing lent out yet.\nLend a book from its page to start the ledger.';
+
+  @override
+  String get lendingDueDateOptional => 'Due date · optional';
+
+  @override
+  String get lendingSetDueDate => 'Set a due date';
 }

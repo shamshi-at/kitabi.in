@@ -711,6 +711,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add \"{name}\"'**
   String formAddNew(String name);
+
+  /// Title of the lending ledger screen (S8)
+  ///
+  /// In en, this message translates to:
+  /// **'Lending ledger'**
+  String get lendingLedgerTitle;
+
+  /// Subtitle counting books currently lent out
+  ///
+  /// In en, this message translates to:
+  /// **'{count} out'**
+  String lendingOutSubtitle(int count);
+
+  /// Section header for books currently lent out
+  ///
+  /// In en, this message translates to:
+  /// **'Out now'**
+  String get lendingOutNowSection;
+
+  /// Section header for books that have been returned
+  ///
+  /// In en, this message translates to:
+  /// **'Returned'**
+  String get lendingReturnedSection;
+
+  /// Lending card subtitle: borrower and lent-on date
+  ///
+  /// In en, this message translates to:
+  /// **'to {name} · since {date}'**
+  String lendingToPersonSince(String name, String date);
+
+  /// Returned lending card: borrower and the lent–returned date range
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {start} – {end}'**
+  String lendingReturnedRange(String name, String start, String end);
+
+  /// Due stamp when no due date is set
+  ///
+  /// In en, this message translates to:
+  /// **'No due date'**
+  String get lendingNoDueDate;
+
+  /// Due stamp counting days until the due date
+  ///
+  /// In en, this message translates to:
+  /// **'Due in {days}d'**
+  String lendingDueInDays(int days);
+
+  /// Due stamp showing the due date
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String lendingDueOn(String date);
+
+  /// Due stamp when the due date has passed
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get lendingOverdue;
+
+  /// Stamp on a returned lending record
+  ///
+  /// In en, this message translates to:
+  /// **'Returned ✓'**
+  String get lendingReturnedStamp;
+
+  /// Button that closes a lending record
+  ///
+  /// In en, this message translates to:
+  /// **'Mark returned ✓'**
+  String get lendingMarkReturned;
+
+  /// Empty state on the lending ledger
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing lent out yet.\nLend a book from its page to start the ledger.'**
+  String get lendingEmpty;
+
+  /// Label for the optional due-date picker in the lend dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Due date · optional'**
+  String get lendingDueDateOptional;
+
+  /// Button/hint to pick a due date in the lend dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Set a due date'**
+  String get lendingSetDueDate;
 }
 
 class _AppLocalizationsDelegate

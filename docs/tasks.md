@@ -150,16 +150,23 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 
 ## Phase 4 — Lending (the wedge, both directions)
 
-- [ ] Lending record model: counterparty free text, lent-on, due-back, returned-at — record, not flag
+- [x] Lending record model: counterparty free text, lent-on, due-back, returned-at — record, not flag
+      (model + sync landed with Phase 3; `borrower_name`/`lent_date`/`due_date`/`returned_date`)
 - [ ] Optional `counterparty_user_id` on the lending record + lightweight match (search
       registered users by phone/email/username when recording a lend) `[WIRED→V1]`
 - [ ] When a lend links to a real user, server mirrors a "borrowed" record onto their
       account (own row, own sync scope, correlated by a shared `linked_loan_id` — not a
       shared row; each side's "mark returned" only closes their own copy, V1 has no
       realtime handshake between the two)
-- [ ] Lending ledger screen, Lent-out tab (out now / returned) — S8
-- [ ] Lend flow bottom sheet, with "this person is on Kitabi" match + note — S9
-- [ ] Mark returned + "Returned ✓" pill
+- [x] Lending ledger screen, Lent-out tab (out now / returned) — S8. Slice A: reads the
+      synced `lending_records` joined to their cached book (`LendingRecordsDao.watchAllActive`,
+      reactive `allLendingProvider`), Out-now cards with a computed due stamp (Due in Nd /
+      Due {date} / Overdue / No due date) + Mark returned, dimmed Returned section. Home has a
+      lending entry point until the Phase 6 bottom nav lands
+- [~] Lend flow bottom sheet, with "this person is on Kitabi" match + note — S9. The lend
+      dialog now captures an optional **due date**; the full S9 bottom sheet + on-Kitabi match
+      + note is still to build
+- [x] Mark returned + "Returned ✓" pill (book detail + ledger)
 - [ ] Due-date local notification (lending reminder) — S3 nudge
 - [ ] "WITH <NAME>" band on lent covers — S5
 - [ ] Borrowed tab: linked entries (auto-created when a lender names you) + self-logged

@@ -1,0 +1,136 @@
+import 'package:drift/drift.dart' show Value;
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:kitabi/data/db/database.dart';
+import 'package:kitabi/data/repositories/repositories.dart';
+import 'package:kitabi/features/lending/presentation/lending_ledger_screen.dart';
+import 'package:kitabi/features/library/providers/library_providers.dart';
+import 'package:kitabi/l10n/app_localizations.dart';
+
+/// Seeds a book + entry so a lending record can join through to its cover.
+Future<void> _seedBook(AppDatabase db, {String edition = 'ed1', String entry = 'le1'}) async {
+  await db.cachedBooksDao.upsert(
+    CachedBooksCompanion.insert(
+      editionId: edition,
+      workId: 'w1',
+      title: 'Wuthering Heights',
+      authorNames: 'Emily Brontë',
+    ),
+  );
+  await db.libraryEntriesDao.insertOne(
+    LibraryEntriesCompanion.insert(id: entry, userId: 'u1', editionId: edition),
+  );
+}
+
+void main() {
+  // Data-layer behaviour is exercised with plain tests (no widget binding), so
+  // the live Drift stream never trips the widget-test "pending timer" invariant.
+  test('watchAllActive joins each lending record to its book, newest first', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await _seedBook(db);
+
+    await db.lendingRecordsDao.insertOne(
+      LendingRecordsCompanion.insert(
+        id: 'lr1',
+        userId: 'u1',
+        libraryEntryId: 'le1',
+        borrowerName: 'Anu',
+        lentDate: DateTime(2026, 6, 2),
+      ),
+    );
+    await db.lendingRecordsDao.insertOne(
+      LendingRecordsCompanion.insert(
+        id: 'lr2',
+        userId: 'u1',
+        libraryEntryId: 'le1',
+        borrowerName: 'Divya',
+        lentDate: DateTime(2026, 1, 2),
+        returnedDate: Value(DateTime(2026, 2, 9)),
+      ),
+    );
+
+    final rows = await db.lendingRecordsDao.watchAllActive().first;
+    expect(rows, hasLength(2));
+    expect(rows.first.record.id, 'lr1'); // newest lent first
+    expect(rows.first.book?.title, 'Wuthering Heights');
+    expect(rows.where((r) => r.record.returnedDate == null), hasLength(1)); // out now
+    expect(rows.where((r) => r.record.returnedDate != null), hasLength(1)); // returned
+  });
+
+  test('markReturned closes the record so it leaves the out-now set', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    const session = SessionContext(userId: 'u1', deviceId: 'd1');
+    await _seedBook(db);
+    final repo = LendingRepository(db, session);
+
+    final id = await repo.lendOut('le1', borrowerName: 'Faisal', lentDate: DateTime(2026, 5, 18));
+    var rows = await db.lendingRecordsDao.watchAllActive().first;
+    expect(rows.single.record.returnedDate, isNull);
+
+    await repo.markReturned(id, DateTime(2026, 6, 1));
+    rows = await db.lendingRecordsDao.watchAllActive().first;
+    expect(rows.single.record.returnedDate, DateTime(2026, 6, 1));
+
+    // The mutation also enqueues a sync op (update).
+    final pending = await db.syncQueueDao.pending(limit: 10);
+    expect(pending.any((op) => op.entity == 'lending_records' && op.opType == 'update'), isTrue);
+  });
+
+  // The screen render is tested against a fixed stream (not a live Drift query),
+  // keeping the widget test deterministic and timer-free.
+  testWidgets('ledger screen renders out-now and returned sections with stamps', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    // Drift's async I/O must run outside the widget-test fake-async zone, so all
+    // DB work happens in runAsync; the screen then sees a plain closed stream.
+    final data = await tester.runAsync(() async {
+      await _seedBook(db);
+      await db.lendingRecordsDao.insertOne(
+        LendingRecordsCompanion.insert(
+          id: 'lr1',
+          userId: 'u1',
+          libraryEntryId: 'le1',
+          borrowerName: 'Anu',
+          lentDate: DateTime(2026, 6, 2),
+          dueDate: Value(DateTime.now().add(const Duration(days: 3))),
+        ),
+      );
+      await db.lendingRecordsDao.insertOne(
+        LendingRecordsCompanion.insert(
+          id: 'lr2',
+          userId: 'u1',
+          libraryEntryId: 'le1',
+          borrowerName: 'Divya',
+          lentDate: DateTime(2026, 1, 2),
+          returnedDate: Value(DateTime(2026, 2, 9)),
+        ),
+      );
+      return db.lendingRecordsDao.watchAllActive().first;
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [allLendingProvider.overrideWith((ref) => Stream.value(data!))],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: LendingLedgerScreen(),
+        ),
+      ),
+    );
+    // pump (not pumpAndSettle): deliver the stream value to move loading -> data.
+    // pumpAndSettle would spin forever on the loading spinner's animation.
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Wuthering Heights'), findsWidgets);
+    expect(find.textContaining('to Anu'), findsOneWidget);
+    expect(find.text('Due in 3d'), findsOneWidget);
+    expect(find.text('Mark returned ✓'), findsOneWidget);
+    expect(find.text('Returned ✓'), findsOneWidget);
+  });
+}

@@ -450,5 +450,83 @@
     "placeholders": {
       "name": {"type": "String"}
     }
+  },
+  "lendingLedgerTitle": "Lending ledger",
+  "@lendingLedgerTitle": {
+    "description": "Title of the lending ledger screen (S8)"
+  },
+  "lendingOutSubtitle": "{count} out",
+  "@lendingOutSubtitle": {
+    "description": "Subtitle counting books currently lent out",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "lendingOutNowSection": "Out now",
+  "@lendingOutNowSection": {
+    "description": "Section header for books currently lent out"
+  },
+  "lendingReturnedSection": "Returned",
+  "@lendingReturnedSection": {
+    "description": "Section header for books that have been returned"
+  },
+  "lendingToPersonSince": "to {name} · since {date}",
+  "@lendingToPersonSince": {
+    "description": "Lending card subtitle: borrower and lent-on date",
+    "placeholders": {
+      "name": {"type": "String"},
+      "date": {"type": "String"}
+    }
+  },
+  "lendingReturnedRange": "{name} · {start} – {end}",
+  "@lendingReturnedRange": {
+    "description": "Returned lending card: borrower and the lent–returned date range",
+    "placeholders": {
+      "name": {"type": "String"},
+      "start": {"type": "String"},
+      "end": {"type": "String"}
+    }
+  },
+  "lendingNoDueDate": "No due date",
+  "@lendingNoDueDate": {
+    "description": "Due stamp when no due date is set"
+  },
+  "lendingDueInDays": "Due in {days}d",
+  "@lendingDueInDays": {
+    "description": "Due stamp counting days until the due date",
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "lendingDueOn": "Due {date}",
+  "@lendingDueOn": {
+    "description": "Due stamp showing the due date",
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "lendingOverdue": "Overdue",
+  "@lendingOverdue": {
+    "description": "Due stamp when the due date has passed"
+  },
+  "lendingReturnedStamp": "Returned ✓",
+  "@lendingReturnedStamp": {
+    "description": "Stamp on a returned lending record"
+  },
+  "lendingMarkReturned": "Mark returned ✓",
+  "@lendingMarkReturned": {
+    "description": "Button that closes a lending record"
+  },
+  "lendingEmpty": "Nothing lent out yet.\nLend a book from its page to start the ledger.",
+  "@lendingEmpty": {
+    "description": "Empty state on the lending ledger"
+  },
+  "lendingDueDateOptional": "Due date · optional",
+  "@lendingDueDateOptional": {
+    "description": "Label for the optional due-date picker in the lend dialog"
+  },
+  "lendingSetDueDate": "Set a due date",
+  "@lendingSetDueDate": {
+    "description": "Button/hint to pick a due date in the lend dialog"
   }
 }

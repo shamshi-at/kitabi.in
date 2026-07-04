@@ -76,7 +76,16 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
       (update(libraryEntryTags)..where((t) => t.id.equals(id))).write(patch);
 }
 
-@DriftAccessor(tables: [LendingRecords])
+/// One lending record joined to the book it concerns — the shape the ledger
+/// (S8) needs, so each row can show a cover + title without a per-row lookup.
+class LendingWithBook {
+  LendingWithBook({required this.record, this.book});
+
+  final LendingRecord record;
+  final CachedBook? book;
+}
+
+@DriftAccessor(tables: [LendingRecords, LibraryEntries, CachedBooks])
 class LendingRecordsDao extends DatabaseAccessor<AppDatabase> with _$LendingRecordsDaoMixin {
   LendingRecordsDao(super.db);
 
@@ -84,6 +93,27 @@ class LendingRecordsDao extends DatabaseAccessor<AppDatabase> with _$LendingReco
         lendingRecords,
       )..where((t) => t.libraryEntryId.equals(libraryEntryId) & t.deletedAt.isNull()))
           .watch();
+
+  /// Every active lending record for the whole library, newest-lent first,
+  /// joined through the library entry to its cached book (the ledger screen).
+  Stream<List<LendingWithBook>> watchAllActive() {
+    final query = select(lendingRecords).join([
+      leftOuterJoin(libraryEntries, libraryEntries.id.equalsExp(lendingRecords.libraryEntryId)),
+      leftOuterJoin(cachedBooks, cachedBooks.editionId.equalsExp(libraryEntries.editionId)),
+    ])
+      ..where(lendingRecords.deletedAt.isNull())
+      ..orderBy([OrderingTerm.desc(lendingRecords.lentDate)]);
+    return query.watch().map(
+          (rows) => rows
+              .map(
+                (r) => LendingWithBook(
+                  record: r.readTable(lendingRecords),
+                  book: r.readTableOrNull(cachedBooks),
+                ),
+              )
+              .toList(),
+        );
+  }
 
   Future<void> insertOne(LendingRecordsCompanion row) => into(lendingRecords).insert(row);
 

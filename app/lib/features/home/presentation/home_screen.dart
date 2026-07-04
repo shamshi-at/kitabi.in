@@ -34,6 +34,10 @@ class HomeScreen extends ConsumerWidget {
             onPressed: () => context.push(Routes.library),
           ),
           IconButton(
+            icon: const Icon(Icons.swap_horiz, color: AppColors.oxblood),
+            onPressed: () => context.push(Routes.lendingLedger),
+          ),
+          IconButton(
             icon: const Icon(Icons.search, color: AppColors.oxblood),
             onPressed: () => context.push(Routes.catalogSearch),
           ),

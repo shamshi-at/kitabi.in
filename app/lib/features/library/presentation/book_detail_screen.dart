@@ -726,27 +726,64 @@ class _LendingCard extends ConsumerWidget {
   Future<void> _lend(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
-    final name = await showDialog<String>(
+    DateTime? dueDate;
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.bookLendDialogTitle),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(labelText: l10n.bookLendBorrowerName),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: Text(l10n.bookSave),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text(l10n.bookLendDialogTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(labelText: l10n.bookLendBorrowerName),
+                autofocus: true,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      dueDate == null
+                          ? l10n.lendingDueDateOptional
+                          : l10n.lendingDueOn(
+                              '${dueDate!.day}/${dueDate!.month}/${dueDate!.year}'),
+                      style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: dueDate ?? now.add(const Duration(days: 14)),
+                        firstDate: now,
+                        lastDate: now.add(const Duration(days: 365)),
+                      );
+                      if (picked != null) setLocal(() => dueDate = picked);
+                    },
+                    child: Text(l10n.lendingSetDueDate),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.bookSave)),
+          ],
+        ),
       ),
     );
-    if (name == null || name.trim().isEmpty) return;
+    if (confirmed != true || controller.text.trim().isEmpty) return;
     final repo = await ref.read(lendingRepositoryProvider.future);
-    await repo.lendOut(entry.id, borrowerName: name.trim(), lentDate: DateTime.now());
+    await repo.lendOut(
+      entry.id,
+      borrowerName: controller.text.trim(),
+      lentDate: DateTime.now(),
+      dueDate: dueDate,
+    );
     ref.invalidate(lendingRecordsProvider(entry.id));
   }
 

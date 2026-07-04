@@ -26,6 +26,13 @@ final lendingRecordsProvider =
   return repo.watchForEntry(libraryEntryId).first;
 });
 
+/// The whole lending ledger (S8) — reactive so a lend/return on any screen
+/// updates the ledger live.
+final allLendingProvider = StreamProvider.autoDispose<List<LendingWithBook>>((ref) async* {
+  final repo = await ref.watch(lendingRepositoryProvider.future);
+  yield* repo.watchAll();
+});
+
 final libraryTagsProvider =
     FutureProvider.autoDispose.family<List<LibraryEntryTag>, String>((ref, libraryEntryId) async {
   final repo = await ref.watch(tagsRepositoryProvider.future);

@@ -202,7 +202,7 @@ Full spec in [feature-map.md](feature-map.md); phase-by-phase checklist in
 | 1 — Auth & profile | Google + Apple sign-in, profile bootstrap, visibility switchboard | **✅ Done, verified live in production** |
 | 2 — Shared catalog | Books/authors/publishers/series, ISBN scan, Work vs Edition | **✅ Done** — OpenLibrary-backed, cache-on-first-use, migration `000003`, `GET /catalog/search`, `GET /catalog/isbn/{isbn}`, `POST/PATCH /catalog/works`, `PATCH /catalog/editions/{id}`, `GET /catalog/authors?q=` + `GET /catalog/publishers?q=` typeahead, author/publisher browse; app has search, ISBN scan, add/edit form (author/publisher are now dropdown-cum-add-new typeaheads; typeset cover previews live as you type), author/publisher browse screens |
 | 3 — Personal library + sync engine | Drift schema, sync queue, push/pull, status/notes/tags/ratings/reviews | **✅ Done** — migration `000004`, `POST /sync/push` + `GET /sync/pull`, delete-wins/LWW conflict rules, `[WIRED]` activity log; app has S5 library grid + S6 book detail (status/progress/notes/rating/review/lending/tags), workmanager + connectivity-triggered background sync. ISBN scan "Add" now creates a library entry (was a no-op that only popped the scanner). Sync engine verified via unit tests (mocked API, in-memory Drift), not yet via a real signed-in device run |
-| 4 — Lending | Lend/borrow records, linked vs self-logged, due reminders | Not started (fully designed in mockups S8/S8b/S8c/S9) |
+| 4 — Lending | Lend/borrow records, linked vs self-logged, due reminders | **In progress** — Slice A: Lending ledger screen (S8, Lent-out) reading synced `lending_records` (Out now / Returned, computed due stamps, mark-returned), and the lend dialog now captures an optional due date. Still to build: Borrowed tab (S8b) + log-borrowed flow (S8c), full lend bottom sheet (S9), due-date reminders, cross-user match/mirror `[WIRED]` (designed in S8/S8b/S8c/S9) |
 | 5 — Import | Goodreads/CSV import | Not started |
 | 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | Not started — but an **interim library-first home** now ships (currently-reading row + recent-books grid + add CTA) so the app opens onto your books instead of an empty placeholder; the full S3 dashboard (stats, lending nudge, AI pick) is still Phase 6 (designed in mockups S3/S4/S4b/S4c/S4d/S10) |
 | 7 — Recommendations & share | LLM recs, per-book + personal share cards | Not started (designed in mockups S6c/S11/S13) |
@@ -214,6 +214,15 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 ---
 
 ## Recent milestones
+
+- **6 Jul 2026** — Phase 4 (Lending) started — Slice A: the **Lending ledger** screen (S8,
+  Lent-out side). New `LendingRecordsDao.watchAllActive()` joins each synced lending record
+  through its library entry to the cached book; reactive `allLendingProvider` feeds an Out-now
+  / Returned ledger with a computed due stamp (Due in Nd / Due {date} / Overdue / No due date)
+  and mark-returned. The book-detail lend dialog now captures an optional due date. Home gains
+  a lending entry point (temporary until the Phase 6 bottom nav). 16 app tests green (3 new:
+  DAO join, mark-returned + sync-op, screen render), analyze clean. Next slices: Borrowed tab
+  + log-borrowed flow, full lend sheet, due-date reminders.
 
 - **6 Jul 2026** — Post-Phase-3 UX pass from real on-device feedback: (1) home was an
   empty placeholder → now a library-first landing (currently-reading row + recent-books

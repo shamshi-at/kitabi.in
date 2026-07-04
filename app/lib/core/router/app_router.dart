@@ -9,6 +9,7 @@ import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
 import '../../features/catalog/presentation/publisher_browse_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/lending/presentation/lending_ledger_screen.dart';
 import '../../features/library/presentation/book_detail_screen.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -27,6 +28,7 @@ abstract final class Routes {
   static const authorBrowse = '/catalog/authors/:authorId';
   static const publisherBrowse = '/catalog/publishers/:publisherId';
   static const library = '/library';
+  static const lendingLedger = '/lending';
   static const bookDetail = '/library/book/:workId/:editionId';
 
   static String authorBrowsePath(String authorId) => '/catalog/authors/$authorId';
@@ -130,6 +132,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.library,
         name: 'library',
         builder: (context, state) => const LibraryGridScreen(),
+      ),
+      GoRoute(
+        path: Routes.lendingLedger,
+        name: 'lending-ledger',
+        builder: (context, state) => const LendingLedgerScreen(),
       ),
       GoRoute(
         path: Routes.bookDetail,

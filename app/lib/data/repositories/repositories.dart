@@ -291,6 +291,9 @@ class LendingRepository extends Repo {
   Stream<List<LendingRecord>> watchForEntry(String libraryEntryId) =>
       db.lendingRecordsDao.watchForEntry(libraryEntryId);
 
+  /// The whole ledger (S8) — every active lending record joined to its book.
+  Stream<List<LendingWithBook>> watchAll() => db.lendingRecordsDao.watchAllActive();
+
   Future<String> lendOut(
     String libraryEntryId, {
     required String borrowerName,
