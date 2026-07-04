@@ -100,11 +100,119 @@ abstract class AppLocalizations {
   /// **'Kitabi'**
   String get appTitle;
 
-  /// Tagline shown on the placeholder home screen
+  /// Tagline shown on the placeholder home screen and sign-in
   ///
   /// In en, this message translates to:
   /// **'Beyond the Bookshelf'**
   String get homeGreeting;
+
+  /// Rotating literary quote on the sign-in screen
+  ///
+  /// In en, this message translates to:
+  /// **'A reader lives a thousand lives before he dies.'**
+  String get signInQuote1;
+
+  /// Rotating literary quote on the sign-in screen
+  ///
+  /// In en, this message translates to:
+  /// **'I have always imagined that Paradise will be a kind of library.'**
+  String get signInQuote2;
+
+  /// Rotating literary quote on the sign-in screen (Kafka, German)
+  ///
+  /// In en, this message translates to:
+  /// **'Ein Buch muss die Axt sein für das gefrorene Meer in uns.'**
+  String get signInQuote3;
+
+  /// Google sign-in button
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get signInGoogle;
+
+  /// Apple sign-in button (iOS only)
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Apple'**
+  String get signInApple;
+
+  /// Footer reassurance on the sign-in screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your library is private by default.\nNothing is shared unless you choose to.'**
+  String get signInPrivacyNote;
+
+  /// Generic sign-in failure message
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t sign in. Please try again.'**
+  String get signInError;
+
+  /// Section header on the profile screen's visibility switchboard
+  ///
+  /// In en, this message translates to:
+  /// **'VISIBILITY · everything starts private'**
+  String get profileVisibilityHeader;
+
+  /// Visibility toggle label
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileVisibilityProfileTitle;
+
+  /// Visibility toggle description
+  ///
+  /// In en, this message translates to:
+  /// **'Name & reading stats'**
+  String get profileVisibilityProfileDesc;
+
+  /// Visibility toggle label
+  ///
+  /// In en, this message translates to:
+  /// **'Library'**
+  String get profileVisibilityLibraryTitle;
+
+  /// Visibility toggle description
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s on your shelves'**
+  String get profileVisibilityLibraryDesc;
+
+  /// Visibility toggle label
+  ///
+  /// In en, this message translates to:
+  /// **'Reviews'**
+  String get profileVisibilityReviewsTitle;
+
+  /// Visibility toggle description
+  ///
+  /// In en, this message translates to:
+  /// **'Default for new reviews'**
+  String get profileVisibilityReviewsDesc;
+
+  /// Sign-out action on the profile screen
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get profileSignOut;
+
+  /// Account-deletion action on the profile screen
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get profileDeleteAccount;
+
+  /// Confirmation copy shown before deleting the account
+  ///
+  /// In en, this message translates to:
+  /// **'This deletes your Kitabi account and library. This can\'t be undone.'**
+  String get profileDeleteAccountConfirm;
+
+  /// Profile subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Reading since {year}'**
+  String profileReadingSince(int year);
 }
 
 class _AppLocalizationsDelegate

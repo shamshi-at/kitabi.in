@@ -6,6 +6,83 @@
   },
   "homeGreeting": "Beyond the Bookshelf",
   "@homeGreeting": {
-    "description": "Tagline shown on the placeholder home screen"
+    "description": "Tagline shown on the placeholder home screen and sign-in"
+  },
+  "signInQuote1": "A reader lives a thousand lives before he dies.",
+  "@signInQuote1": {
+    "description": "Rotating literary quote on the sign-in screen"
+  },
+  "signInQuote2": "I have always imagined that Paradise will be a kind of library.",
+  "@signInQuote2": {
+    "description": "Rotating literary quote on the sign-in screen"
+  },
+  "signInQuote3": "Ein Buch muss die Axt sein für das gefrorene Meer in uns.",
+  "@signInQuote3": {
+    "description": "Rotating literary quote on the sign-in screen (Kafka, German)"
+  },
+  "signInGoogle": "Continue with Google",
+  "@signInGoogle": {
+    "description": "Google sign-in button"
+  },
+  "signInApple": "Continue with Apple",
+  "@signInApple": {
+    "description": "Apple sign-in button (iOS only)"
+  },
+  "signInPrivacyNote": "Your library is private by default.\nNothing is shared unless you choose to.",
+  "@signInPrivacyNote": {
+    "description": "Footer reassurance on the sign-in screen"
+  },
+  "signInError": "Couldn't sign in. Please try again.",
+  "@signInError": {
+    "description": "Generic sign-in failure message"
+  },
+  "profileVisibilityHeader": "VISIBILITY · everything starts private",
+  "@profileVisibilityHeader": {
+    "description": "Section header on the profile screen's visibility switchboard"
+  },
+  "profileVisibilityProfileTitle": "Profile",
+  "@profileVisibilityProfileTitle": {
+    "description": "Visibility toggle label"
+  },
+  "profileVisibilityProfileDesc": "Name & reading stats",
+  "@profileVisibilityProfileDesc": {
+    "description": "Visibility toggle description"
+  },
+  "profileVisibilityLibraryTitle": "Library",
+  "@profileVisibilityLibraryTitle": {
+    "description": "Visibility toggle label"
+  },
+  "profileVisibilityLibraryDesc": "What's on your shelves",
+  "@profileVisibilityLibraryDesc": {
+    "description": "Visibility toggle description"
+  },
+  "profileVisibilityReviewsTitle": "Reviews",
+  "@profileVisibilityReviewsTitle": {
+    "description": "Visibility toggle label"
+  },
+  "profileVisibilityReviewsDesc": "Default for new reviews",
+  "@profileVisibilityReviewsDesc": {
+    "description": "Visibility toggle description"
+  },
+  "profileSignOut": "Sign out",
+  "@profileSignOut": {
+    "description": "Sign-out action on the profile screen"
+  },
+  "profileDeleteAccount": "Delete account",
+  "@profileDeleteAccount": {
+    "description": "Account-deletion action on the profile screen"
+  },
+  "profileDeleteAccountConfirm": "This deletes your Kitabi account and library. This can't be undone.",
+  "@profileDeleteAccountConfirm": {
+    "description": "Confirmation copy shown before deleting the account"
+  },
+  "profileReadingSince": "Reading since {year}",
+  "@profileReadingSince": {
+    "description": "Profile subtitle",
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
   }
 }
