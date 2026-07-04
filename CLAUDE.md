@@ -140,6 +140,10 @@ build_runner** before assuming compilation errors are real.
   migration included if schema changed, Docker still builds, app features work
   offline (airplane-mode check), matches the mockup screen.
 - Don't build parking-lot (v1.5) items early even if convenient — flag and skip.
+- **`STATUS.md` is the project's source of truth** (architecture, tech stack,
+  integrations, live URLs, deployment state, feature status). Update it in the same
+  commit whenever any of those change — new integration, new deploy target, a phase
+  completes, a URL changes. Don't let it drift from reality.
 
 ## Conventions
 
