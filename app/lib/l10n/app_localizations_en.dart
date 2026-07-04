@@ -74,4 +74,129 @@ class AppLocalizationsEn extends AppLocalizations {
   String profileReadingSince(int year) {
     return 'Reading since $year';
   }
+
+  @override
+  String get catalogSearchHint => 'Title, author, or ISBN';
+
+  @override
+  String get catalogSearchSectionCatalog => 'IN THE CATALOG';
+
+  @override
+  String get catalogSearchEmpty =>
+      'No matches yet — scan the barcode or add it by hand.';
+
+  @override
+  String get catalogSearchHelp =>
+      'Tap an author or publisher name to browse everything by them.';
+
+  @override
+  String get catalogScanButton => 'Scan ISBN';
+
+  @override
+  String get catalogAddManualButton => 'Add manually';
+
+  @override
+  String get catalogEditAction => 'Edit';
+
+  @override
+  String get authorBrowseLabel => 'Author';
+
+  @override
+  String authorBrowseWorksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'works',
+      one: 'work',
+    );
+    return '$count $_temp0 in the catalog';
+  }
+
+  @override
+  String get publisherBrowseLabel => 'Publisher';
+
+  @override
+  String publisherBrowseWorksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'titles',
+      one: 'title',
+    );
+    return '$count $_temp0 in the catalog';
+  }
+
+  @override
+  String get browseEmpty => 'Nothing catalogued here yet.';
+
+  @override
+  String get scanTitle => 'Add a book';
+
+  @override
+  String get scanSubtitle => 'Point at the barcode on the back cover';
+
+  @override
+  String scanDetected(String isbn) {
+    return 'ISBN detected — $isbn';
+  }
+
+  @override
+  String get scanNotFound => 'No book found for that ISBN.';
+
+  @override
+  String get scanConfirmAdd => 'Add';
+
+  @override
+  String get scanSearchInstead => 'Search instead';
+
+  @override
+  String get scanAddManually => 'Add manually';
+
+  @override
+  String get formTitleAdd => 'Add a book';
+
+  @override
+  String get formTitleEdit => 'Edit book';
+
+  @override
+  String get formSubtitle => 'catalog entry · shared';
+
+  @override
+  String get formFieldTitle => 'TITLE';
+
+  @override
+  String get formFieldAuthor => 'AUTHOR';
+
+  @override
+  String get formFieldLanguage => 'LANGUAGE';
+
+  @override
+  String get formFieldSeries => 'SERIES';
+
+  @override
+  String get formFieldBookNumber => 'BOOK №';
+
+  @override
+  String get formFieldPublisher => 'PUBLISHER';
+
+  @override
+  String get formFieldPages => 'PAGES';
+
+  @override
+  String get formFieldIsbn => 'ISBN · THIS EDITION';
+
+  @override
+  String get formFieldFormat => 'FORMAT';
+
+  @override
+  String get formFieldGenres => 'GENRES · GLOBAL';
+
+  @override
+  String get formCoverTypeset => 'Typeset cover in use';
+
+  @override
+  String get formSave => 'Save to catalog';
+
+  @override
+  String get formTitleRequired => 'Title is required';
 }

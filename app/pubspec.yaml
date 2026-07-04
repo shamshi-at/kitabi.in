@@ -28,6 +28,9 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   connectivity_plus: ^6.1.0
 
+  # ISBN barcode scanning (S7)
+  mobile_scanner: ^6.0.2
+
   # Background sync drain
   workmanager: ^0.9.0
 

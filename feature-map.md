@@ -29,8 +29,8 @@ not two copies — even while you're the only user filling it in.*
 | Series | `[V1]` | Cheap, readers love series ordering |
 | Global/descriptive tags | `[WIRED]` | Keep separate from *personal* tags (Layer 2) |
 | Add / edit a book | `[V1]` | Your data-entry path |
-| Translated-book linking (original ↔ translation) | `[WIRED]` | Structure now, full UI later |
-| Aggregate rating (avg across users) | `[WIRED]` | Computes for free *if* ratings attach here (see below) |
+| Translated-book linking (original ↔ translation) | `[WIRED]` | Structure now, full UI later. **Decided 5 Jul 2026: a translation is its own Work**, not a language variant of an Edition — its own authors/genres/editions, and its own independent rating/review pool once Phase 3 lands (a translation is its own literary object; a fresh translation shouldn't inherit the original's reviews). Linked Works only share a `translation_group_id` for cross-navigation |
+| Aggregate rating (avg across users) | `[WIRED]` | Computes for free *if* ratings attach here (see below). A **second**, separate aggregate — average *across every Work in a translation_group* — is computed at read time for display ("4.2 across all translations") without merging the underlying per-translation pools |
 | Report incorrect info | `[LATER]` | Needs other users to matter |
 | Verification status / verified badge | `[LATER]` | Nothing to moderate when solo |
 | Author profile pages + author reviews | `[LATER]` | The *browse* page (works list) is `[V1]` — see Layer 1; a full profile (bio, follows, aggregate author rating, reviews of the author) is the later, reviewed-entity version |

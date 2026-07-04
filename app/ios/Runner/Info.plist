@@ -26,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Kitabi uses the camera to scan a book's ISBN barcode when you add it.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

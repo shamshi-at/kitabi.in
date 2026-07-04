@@ -84,5 +84,160 @@
         "type": "int"
       }
     }
+  },
+  "catalogSearchHint": "Title, author, or ISBN",
+  "@catalogSearchHint": {
+    "description": "Search box placeholder on the catalog search screen"
+  },
+  "catalogSearchSectionCatalog": "IN THE CATALOG",
+  "@catalogSearchSectionCatalog": {
+    "description": "Section header above catalog-only search results"
+  },
+  "catalogSearchEmpty": "No matches yet — scan the barcode or add it by hand.",
+  "@catalogSearchEmpty": {
+    "description": "Empty state on the catalog search screen"
+  },
+  "catalogSearchHelp": "Tap an author or publisher name to browse everything by them.",
+  "@catalogSearchHelp": {
+    "description": "Footer help text on the catalog search screen"
+  },
+  "catalogScanButton": "Scan ISBN",
+  "@catalogScanButton": {
+    "description": "Entry point to the barcode scanner"
+  },
+  "catalogAddManualButton": "Add manually",
+  "@catalogAddManualButton": {
+    "description": "Entry point to the manual add/edit form"
+  },
+  "catalogEditAction": "Edit",
+  "@catalogEditAction": {
+    "description": "Action on a search/browse result row that opens the catalog edit form"
+  },
+  "authorBrowseLabel": "Author",
+  "@authorBrowseLabel": {
+    "description": "Eyebrow label on the author browse screen"
+  },
+  "authorBrowseWorksCount": "{count} {count, plural, one{work} other{works}} in the catalog",
+  "@authorBrowseWorksCount": {
+    "description": "Subheader on the author browse screen",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "publisherBrowseLabel": "Publisher",
+  "@publisherBrowseLabel": {
+    "description": "Eyebrow label on the publisher browse screen"
+  },
+  "publisherBrowseWorksCount": "{count} {count, plural, one{title} other{titles}} in the catalog",
+  "@publisherBrowseWorksCount": {
+    "description": "Subheader on the publisher browse screen",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browseEmpty": "Nothing catalogued here yet.",
+  "@browseEmpty": {
+    "description": "Empty state on author/publisher browse screens"
+  },
+  "scanTitle": "Add a book",
+  "@scanTitle": {
+    "description": "Title on the ISBN scan screen"
+  },
+  "scanSubtitle": "Point at the barcode on the back cover",
+  "@scanSubtitle": {
+    "description": "Subtitle on the ISBN scan screen"
+  },
+  "scanDetected": "ISBN detected — {isbn}",
+  "@scanDetected": {
+    "description": "Shown once a barcode has been decoded",
+    "placeholders": {
+      "isbn": {
+        "type": "String"
+      }
+    }
+  },
+  "scanNotFound": "No book found for that ISBN.",
+  "@scanNotFound": {
+    "description": "Shown when the ISBN doesn't resolve to a book"
+  },
+  "scanConfirmAdd": "Add",
+  "@scanConfirmAdd": {
+    "description": "Confirms adding the detected book to the catalog"
+  },
+  "scanSearchInstead": "Search instead",
+  "@scanSearchInstead": {
+    "description": "Falls back to catalog search from the scan screen"
+  },
+  "scanAddManually": "Add manually",
+  "@scanAddManually": {
+    "description": "Falls back to the manual add form from the scan screen"
+  },
+  "formTitleAdd": "Add a book",
+  "@formTitleAdd": {
+    "description": "Title on the add/edit catalog form when creating"
+  },
+  "formTitleEdit": "Edit book",
+  "@formTitleEdit": {
+    "description": "Title on the add/edit catalog form when editing"
+  },
+  "formSubtitle": "catalog entry · shared",
+  "@formSubtitle": {
+    "description": "Subheader clarifying the catalog entry is shared, not personal"
+  },
+  "formFieldTitle": "TITLE",
+  "@formFieldTitle": {
+    "description": "Form field label"
+  },
+  "formFieldAuthor": "AUTHOR",
+  "@formFieldAuthor": {
+    "description": "Form field label"
+  },
+  "formFieldLanguage": "LANGUAGE",
+  "@formFieldLanguage": {
+    "description": "Form field label"
+  },
+  "formFieldSeries": "SERIES",
+  "@formFieldSeries": {
+    "description": "Form field label"
+  },
+  "formFieldBookNumber": "BOOK №",
+  "@formFieldBookNumber": {
+    "description": "Form field label — position within a series"
+  },
+  "formFieldPublisher": "PUBLISHER",
+  "@formFieldPublisher": {
+    "description": "Form field label"
+  },
+  "formFieldPages": "PAGES",
+  "@formFieldPages": {
+    "description": "Form field label"
+  },
+  "formFieldIsbn": "ISBN · THIS EDITION",
+  "@formFieldIsbn": {
+    "description": "Form field label — scoped to the specific edition, not the work"
+  },
+  "formFieldFormat": "FORMAT",
+  "@formFieldFormat": {
+    "description": "Form field label"
+  },
+  "formFieldGenres": "GENRES · GLOBAL",
+  "@formFieldGenres": {
+    "description": "Form field label — clarifies genres are shared, not personal tags"
+  },
+  "formCoverTypeset": "Typeset cover in use",
+  "@formCoverTypeset": {
+    "description": "Cover-field caption when no image has been uploaded"
+  },
+  "formSave": "Save to catalog",
+  "@formSave": {
+    "description": "Submit button on the add/edit catalog form"
+  },
+  "formTitleRequired": "Title is required",
+  "@formTitleRequired": {
+    "description": "Validation message for the title field"
   }
 }

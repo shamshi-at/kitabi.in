@@ -40,6 +40,46 @@ class ApiClient {
   }
 
   Future<void> deleteMe() => _dio.delete('/me');
+
+  /// Catalog-only search (title / author / exact ISBN) — Phase 2 scope.
+  /// The "in your library" merge lands once the personal library (Phase 3)
+  /// and its Drift cache exist; for now every result is a catalog work.
+  Future<List<Map<String, dynamic>>> searchCatalog(String query) async {
+    final res = await _dio.get('/catalog/search', queryParameters: {'q': query});
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// ISBN scan flow (S7) — local match first, else OpenLibrary, cached
+  /// server-side either way.
+  Future<Map<String, dynamic>> lookupIsbn(String isbn) async {
+    final res = await _dio.get('/catalog/isbn/$isbn');
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createWork(Map<String, dynamic> payload) async {
+    final res = await _dio.post('/catalog/works', data: payload);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getWork(String workId) async {
+    final res = await _dio.get('/catalog/works/$workId');
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateWork(String workId, Map<String, dynamic> patch) async {
+    final res = await _dio.patch('/catalog/works/$workId', data: patch);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getAuthorWorks(String authorId) async {
+    final res = await _dio.get('/catalog/authors/$authorId');
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getPublisherWorks(String publisherId) async {
+    final res = await _dio.get('/catalog/publishers/$publisherId');
+    return res.data as Map<String, dynamic>;
+  }
 }
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());

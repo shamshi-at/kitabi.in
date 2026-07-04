@@ -20,13 +20,24 @@ from sqlalchemy.pool import NullPool
 from app.core.db import get_db
 from app.core.security import get_current_user
 from app.main import create_app
+from app.services.openlibrary_client import get_openlibrary_client
 
 API_DIR = Path(__file__).resolve().parents[1]
 CONTAINER = "kitabi-test-pg"
 # Port 55443 — clear of rupee-diary's test container (55433) and both dev DBs.
 LOCAL_URL = "postgresql+asyncpg://postgres:test@localhost:55443/test"
 # Tables to truncate between tests — extend as models land.
-TABLES: list[str] = ["profiles"]
+TABLES: list[str] = [
+    "profiles",
+    "work_authors",
+    "work_genres",
+    "editions",
+    "works",
+    "series",
+    "genres",
+    "publishers",
+    "authors",
+]
 
 
 def _wait_for_pg() -> None:
@@ -97,8 +108,40 @@ def user() -> dict:
     return {"id": str(uuid.uuid4()), "email": "tester@example.com"}
 
 
+class FakeOpenLibraryClient:
+    """Never touches the network — tests supply canned responses so the
+    catalog suite is fast and deterministic. A real lookup was verified
+    manually against the live API during development (see STATUS.md)."""
+
+    def __init__(self, isbn_responses: dict[str, dict] | None = None) -> None:
+        self.isbn_responses = isbn_responses or {}
+
+    async def lookup_isbn(self, isbn: str) -> dict | None:
+        return self.isbn_responses.get(isbn)
+
+    async def search(self, query: str, limit: int = 10) -> list[dict]:
+        return []
+
+
 @pytest.fixture
-async def client(db_sessionmaker, user) -> AsyncIterator[AsyncClient]:
+def fake_ol_client() -> FakeOpenLibraryClient:
+    return FakeOpenLibraryClient(
+        isbn_responses={
+            "9780802162175": {
+                "title": "The Covenant of Water",
+                "authors": [{"name": "Abraham Verghese"}],
+                "publishers": [{"name": "Grove Press"}],
+                "publish_date": "2023",
+                "number_of_pages": 736,
+                "cover": {"large": "https://covers.openlibrary.org/b/id/12345-L.jpg"},
+                "identifiers": {"openlibrary": ["OL12345W"]},
+            }
+        }
+    )
+
+
+@pytest.fixture
+async def client(db_sessionmaker, user, fake_ol_client) -> AsyncIterator[AsyncClient]:
     app = create_app()
 
     async def override_db():
@@ -107,6 +150,7 @@ async def client(db_sessionmaker, user) -> AsyncIterator[AsyncClient]:
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_openlibrary_client] = lambda: fake_ol_client
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:

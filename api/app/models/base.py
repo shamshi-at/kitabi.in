@@ -41,3 +41,23 @@ class SyncableMixin:
     @declared_attr.directive
     def __table_args__(cls):  # noqa: N805 — the sync-pull index (user_id, server_seq)
         return (Index(f"ix_{cls.__tablename__}_user_seq", "user_id", "server_seq"),)
+
+
+class CatalogMixin:
+    """Columns every Layer 1 (shared catalog) table carries.
+
+    Server-authoritative, not user-owned — no `user_id`, no `server_seq`
+    (there's nothing to sync-pull; the app fetches/searches these via API and
+    caches them locally for offline reading, per CLAUDE.md rule 2). Soft
+    deletes still apply (rule 3): a catalog entry can be superseded but is
+    never hard-deleted, since personal library entries may reference it.
+    """
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

@@ -52,21 +52,55 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 
 ## Phase 2 — Shared catalog (Layer 1)
 
-- [ ] **Decide metadata source** (OpenLibrary vs Google Books vs paid) — highest-leverage open item
-- [ ] Work vs Edition schema: works, editions, authors, publishers, genres, series (+ series №) — migration
-- [ ] Translated-work linking (original ↔ translation) `[WIRED]` — structure + API only
-- [ ] Catalog search API (title/author/ISBN; metadata-source passthrough + cache-on-first-use)
-- [ ] ISBN lookup endpoint (scan → edition match → create-if-missing)
-- [ ] Add/edit book API + app form — S7b (series, edition ISBN, format, global genres)
-- [ ] ISBN barcode scanner in app (mobile_scanner) — S7
-- [ ] Generated "typeset" covers (title/author on colour derived from book) + uploaded cover images, one frame — S5 exhibit
-- [ ] Aggregate rating field on works `[WIRED]` (computes; not displayed publicly)
-- [ ] Author browse endpoint + screen: all catalog works by one author, split by
-      owned/not (reuses the existing add "+"/status-pill row pattern) — S4c
-- [ ] Publisher browse endpoint + screen: all catalog works by one publisher, spanning
-      authors, chips lean on genre — S4d
-- [ ] Author/publisher names tappable (oxblood tint) wherever they appear — search
-      results (S4), book page (S6), add/edit form (S7b) — routing to S4c/S4d
+- [x] **Decide metadata source: OpenLibrary** — zero API key/credential to manage
+      (CLAUDE.md rule 8), free, Search + Covers + Books APIs, decent global/regional
+      ISBN coverage. Google Books would need a managed key; paid adds a bill. Verified
+      live against the real API during development (`api/app/services/openlibrary_client.py`).
+      `external_source`/`external_id` columns leave room to add a second source later
+      without re-architecting.
+- [x] Work vs Edition schema: works, editions, authors, publishers, genres, series
+      (+ `series_number`) — migration `000003`, `work_authors`/`work_genres` join
+      tables, RLS enabled with zero policies on every table (rule 11)
+- [x] Translated-work linking (original ↔ translation) `[WIRED]` — `translation_group_id`
+      on Work (shared UUID = same translation group) + `POST /catalog/works/{id}/link-translation`;
+      structure + API only, no UI yet. **Decided 5 Jul 2026:** each translation is a
+      separate Work with its own independent rating/review pool (not a language variant
+      of an Edition) — but `WorkOut.translation_group_rating` computes a *display-only*
+      average across every Work in the group at read time, so a book page can show
+      "4.2 across all translations" without merging the underlying pools
+      (`catalog_service.translation_group_rating`, tested in `test_catalog.py`)
+- [x] Catalog search API (title/author/ILIKE, or exact ISBN match) — `GET /catalog/search`;
+      cache-on-first-use means once a book is fetched from OpenLibrary it's served from
+      our own Postgres on every later search
+- [x] ISBN lookup endpoint (local match → OpenLibrary → create-if-missing, idempotent
+      on the `editions.isbn` unique constraint) — `GET /catalog/isbn/{isbn}`
+- [x] Add/edit book API + app form — S7b: `POST /catalog/works`, `PATCH /catalog/works/{id}`,
+      `PATCH /catalog/editions/{id}`; app form covers title, authors, language, series +
+      book №, publisher, pages, edition ISBN, format, genre chips + custom genres
+- [x] ISBN barcode scanner in app (`mobile_scanner`) — S7; iOS needs 15.5+ deployment
+      target (bumped from 14.0) and an `EXCLUDED_ARCHS[sdk=iphonesimulator*]=arm64`
+      Podfile `post_install` hook since Google's MLKit pods ship no arm64 simulator
+      slice (real devices and Android are unaffected) — verified on an Android emulator
+      against the real API (Apple Silicon + iOS 26 simulators can't build this plugin
+      at all; not testable there without an older x86_64-capable runtime)
+- [x] Generated "typeset" covers (title/author on colour derived from the book, one
+      shared frame for real and generated covers) — `core/widgets/typeset_cover.dart`,
+      used everywhere a cover appears; "uploaded" images are just any `cover_url`
+      (OpenLibrary's own cover URLs already populate this on ISBN lookup) — no separate
+      user-photo-upload endpoint built (would need a Supabase storage bucket, out of
+      scope for this phase)
+- [x] Aggregate rating field on works `[WIRED]` — nullable column, `[WIRED]` per
+      feature-map (computes once Layer 2 ratings exist in Phase 3; not written to yet)
+- [x] Author browse endpoint + screen: all catalog works by one author — `GET
+      /catalog/authors/{id}`, S4c app screen. Owned/not split deferred: needs the
+      personal library (Phase 3), which doesn't exist yet
+- [x] Publisher browse endpoint + screen: all catalog works by one publisher — `GET
+      /catalog/publishers/{id}`, S4d app screen. Genre-chip filtering deferred for the
+      same Phase 3 reason
+- [x] Author/publisher names tappable (oxblood tint) wherever they appear — search
+      results (S4, catalog-only slice — the personal-library merge is Phase 3/6),
+      add/edit form isn't itself a browse source but routes correctly; book page (S6)
+      doesn't exist yet (Phase 3), so that leg lands with S6
 
 ## Phase 3 — Personal library + sync engine (Layer 2)
 

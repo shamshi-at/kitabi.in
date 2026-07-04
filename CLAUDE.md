@@ -219,13 +219,30 @@ build_runner** before assuming compilation errors are real.
   bump `platform :ios` in `ios/Podfile` and `IPHONEOS_DEPLOYMENT_TARGET` in
   `project.pbxproj` (all three build configs) before the first real `pod install`,
   or CocoaPods dependency resolution fails opaquely.
+- **`mobile_scanner` needs iOS 15.5+** (bumped again from 14.0, same 3 pbxproj configs
+  + Podfile as above) **and cannot build at all on an Apple Silicon iOS Simulator.**
+  Its MLKit pods ship no arm64 simulator slice — only real devices and x86_64
+  simulators. Add an `EXCLUDED_ARCHS[sdk=iphonesimulator*] = arm64` line to every
+  build config in *both* `Podfile`'s `post_install` (for the Pods project) *and*
+  `Runner.xcodeproj/project.pbxproj` (for the app target itself) to force a
+  Rosetta-translated x86_64 simulator build — but that only helps if the installed
+  iOS runtime actually still ships an x86_64 slice; the newest runtimes may not.
+  Faster path when scanning code specifically: verify on an Android emulator (no such
+  restriction there) or a real iPhone, not the iOS Simulator.
 
 ## Open decisions
 
-- **Metadata source** (OpenLibrary vs. Google Books vs. paid) — highest-leverage open
-  item; decides whether the catalog feels populated or broken on day one.
-- ISBN barcode scanning package (rupee-diary uses `mobile_scanner` for QR — likely
-  reusable here).
+- ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential
+  (rule 8), free, decent global + regional ISBN coverage. Google Books would need a
+  managed key; paid adds a bill. `Edition`/`Work`/`Author`/`Publisher` all carry
+  `external_source`/`external_id` so a second source can be added later without
+  re-architecting.
+- ~~ISBN barcode scanning package~~ — **resolved 5 Jul 2026: `mobile_scanner`** (same
+  choice rupee-diary made for QR) — see the Simulator gotcha above before testing it.
+- **No user-photo cover upload endpoint yet.** `Edition.cover_url` holds any image URL
+  (OpenLibrary's own covers already populate it on ISBN lookup), but there's no
+  Supabase storage bucket or upload flow for a user's own photo — new infrastructure,
+  deliberately deferred past Phase 2.
 
 (Resolved: design tokens & mockups — `docs/kitabi_screens.html` + `docs/screen-design.md`,
 2 Jul 2026. `app/lib/core/theme/app_theme.dart` still carries the old landing-page

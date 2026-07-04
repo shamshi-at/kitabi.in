@@ -1,5 +1,5 @@
-# workmanager requires iOS 14+ (background task scheduling APIs).
-platform :ios, '14.0'
+# mobile_scanner requires iOS 15.5+ (workmanager only needed 14+).
+platform :ios, '15.5'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -39,5 +39,14 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # Google's MLKit pods (mobile_scanner's ISBN scan dependency) ship no
+    # arm64 simulator slice — only real devices and x86_64 (Rosetta)
+    # simulators. Exclude arm64 for the simulator SDK so `flutter run` on an
+    # Apple Silicon simulator builds via Rosetta instead of failing outright;
+    # device builds are unaffected (this only touches iphonesimulator*).
+    target.build_configurations.each do |config|
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+    end
   end
 end

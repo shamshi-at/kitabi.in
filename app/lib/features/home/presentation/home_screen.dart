@@ -18,6 +18,11 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          // Temporary entry points until the real bottom nav lands (Phase 6).
+          IconButton(
+            icon: const Icon(Icons.search, color: AppColors.oxblood),
+            onPressed: () => context.push(Routes.catalogSearch),
+          ),
           IconButton(
             icon: const Icon(Icons.person_outline, color: AppColors.oxblood),
             onPressed: () => context.push(Routes.profile),

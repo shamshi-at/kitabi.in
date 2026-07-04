@@ -213,6 +213,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reading since {year}'**
   String profileReadingSince(int year);
+
+  /// Search box placeholder on the catalog search screen
+  ///
+  /// In en, this message translates to:
+  /// **'Title, author, or ISBN'**
+  String get catalogSearchHint;
+
+  /// Section header above catalog-only search results
+  ///
+  /// In en, this message translates to:
+  /// **'IN THE CATALOG'**
+  String get catalogSearchSectionCatalog;
+
+  /// Empty state on the catalog search screen
+  ///
+  /// In en, this message translates to:
+  /// **'No matches yet — scan the barcode or add it by hand.'**
+  String get catalogSearchEmpty;
+
+  /// Footer help text on the catalog search screen
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an author or publisher name to browse everything by them.'**
+  String get catalogSearchHelp;
+
+  /// Entry point to the barcode scanner
+  ///
+  /// In en, this message translates to:
+  /// **'Scan ISBN'**
+  String get catalogScanButton;
+
+  /// Entry point to the manual add/edit form
+  ///
+  /// In en, this message translates to:
+  /// **'Add manually'**
+  String get catalogAddManualButton;
+
+  /// Action on a search/browse result row that opens the catalog edit form
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get catalogEditAction;
+
+  /// Eyebrow label on the author browse screen
+  ///
+  /// In en, this message translates to:
+  /// **'Author'**
+  String get authorBrowseLabel;
+
+  /// Subheader on the author browse screen
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, one{work} other{works}} in the catalog'**
+  String authorBrowseWorksCount(int count);
+
+  /// Eyebrow label on the publisher browse screen
+  ///
+  /// In en, this message translates to:
+  /// **'Publisher'**
+  String get publisherBrowseLabel;
+
+  /// Subheader on the publisher browse screen
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, one{title} other{titles}} in the catalog'**
+  String publisherBrowseWorksCount(int count);
+
+  /// Empty state on author/publisher browse screens
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing catalogued here yet.'**
+  String get browseEmpty;
+
+  /// Title on the ISBN scan screen
+  ///
+  /// In en, this message translates to:
+  /// **'Add a book'**
+  String get scanTitle;
+
+  /// Subtitle on the ISBN scan screen
+  ///
+  /// In en, this message translates to:
+  /// **'Point at the barcode on the back cover'**
+  String get scanSubtitle;
+
+  /// Shown once a barcode has been decoded
+  ///
+  /// In en, this message translates to:
+  /// **'ISBN detected — {isbn}'**
+  String scanDetected(String isbn);
+
+  /// Shown when the ISBN doesn't resolve to a book
+  ///
+  /// In en, this message translates to:
+  /// **'No book found for that ISBN.'**
+  String get scanNotFound;
+
+  /// Confirms adding the detected book to the catalog
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get scanConfirmAdd;
+
+  /// Falls back to catalog search from the scan screen
+  ///
+  /// In en, this message translates to:
+  /// **'Search instead'**
+  String get scanSearchInstead;
+
+  /// Falls back to the manual add form from the scan screen
+  ///
+  /// In en, this message translates to:
+  /// **'Add manually'**
+  String get scanAddManually;
+
+  /// Title on the add/edit catalog form when creating
+  ///
+  /// In en, this message translates to:
+  /// **'Add a book'**
+  String get formTitleAdd;
+
+  /// Title on the add/edit catalog form when editing
+  ///
+  /// In en, this message translates to:
+  /// **'Edit book'**
+  String get formTitleEdit;
+
+  /// Subheader clarifying the catalog entry is shared, not personal
+  ///
+  /// In en, this message translates to:
+  /// **'catalog entry · shared'**
+  String get formSubtitle;
+
+  /// Form field label
+  ///
+  /// In en, this message translates to:
+  /// **'TITLE'**
+  String get formFieldTitle;
+
+  /// Form field label
+  ///
+  /// In en, this message translates to:
+  /// **'AUTHOR'**
+  String get formFieldAuthor;
+
+  /// Form field label
+  ///
+  /// In en, this message translates to:
+  /// **'LANGUAGE'**
+  String get formFieldLanguage;
+
+  /// Form field label
+  ///
+  /// In en, this message translates to:
+  /// **'SERIES'**
+  String get formFieldSeries;
+
+  /// Form field label — position within a series
+  ///
+  /// In en, this message translates to:
+  /// **'BOOK №'**
+  String get formFieldBookNumber;
+
+  /// Form field label
+  ///
+  /// In en, this message translates to:
+  /// **'PUBLISHER'**
+  String get formFieldPublisher;
+
+  /// Form field label
+  ///
+  /// In en, this message translates to:
+  /// **'PAGES'**
+  String get formFieldPages;
+
+  /// Form field label — scoped to the specific edition, not the work
+  ///
+  /// In en, this message translates to:
+  /// **'ISBN · THIS EDITION'**
+  String get formFieldIsbn;
+
+  /// Form field label
+  ///
+  /// In en, this message translates to:
+  /// **'FORMAT'**
+  String get formFieldFormat;
+
+  /// Form field label — clarifies genres are shared, not personal tags
+  ///
+  /// In en, this message translates to:
+  /// **'GENRES · GLOBAL'**
+  String get formFieldGenres;
+
+  /// Cover-field caption when no image has been uploaded
+  ///
+  /// In en, this message translates to:
+  /// **'Typeset cover in use'**
+  String get formCoverTypeset;
+
+  /// Submit button on the add/edit catalog form
+  ///
+  /// In en, this message translates to:
+  /// **'Save to catalog'**
+  String get formSave;
+
+  /// Validation message for the title field
+  ///
+  /// In en, this message translates to:
+  /// **'Title is required'**
+  String get formTitleRequired;
 }
 
 class _AppLocalizationsDelegate

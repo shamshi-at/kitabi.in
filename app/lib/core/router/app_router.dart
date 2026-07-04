@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/sign_in_screen.dart';
+import '../../features/catalog/presentation/add_edit_book_screen.dart';
+import '../../features/catalog/presentation/author_browse_screen.dart';
+import '../../features/catalog/presentation/catalog_search_screen.dart';
+import '../../features/catalog/presentation/isbn_scan_screen.dart';
+import '../../features/catalog/presentation/publisher_browse_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -14,6 +19,14 @@ abstract final class Routes {
   static const signIn = '/sign-in';
   static const home = '/home';
   static const profile = '/profile';
+  static const catalogSearch = '/catalog/search';
+  static const catalogScan = '/catalog/scan';
+  static const catalogAdd = '/catalog/add';
+  static const authorBrowse = '/catalog/authors/:authorId';
+  static const publisherBrowse = '/catalog/publishers/:publisherId';
+
+  static String authorBrowsePath(String authorId) => '/catalog/authors/$authorId';
+  static String publisherBrowsePath(String publisherId) => '/catalog/publishers/$publisherId';
 }
 
 /// Re-runs the router's redirect whenever auth or bootstrap state changes
@@ -79,6 +92,33 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.profile,
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: Routes.catalogSearch,
+        name: 'catalog-search',
+        builder: (context, state) => const CatalogSearchScreen(),
+      ),
+      GoRoute(
+        path: Routes.catalogScan,
+        name: 'catalog-scan',
+        builder: (context, state) => const IsbnScanScreen(),
+      ),
+      GoRoute(
+        path: Routes.catalogAdd,
+        name: 'catalog-add',
+        builder: (context, state) => AddEditBookScreen(workId: state.extra as String?),
+      ),
+      GoRoute(
+        path: Routes.authorBrowse,
+        name: 'author-browse',
+        builder: (context, state) =>
+            AuthorBrowseScreen(authorId: state.pathParameters['authorId']!),
+      ),
+      GoRoute(
+        path: Routes.publisherBrowse,
+        name: 'publisher-browse',
+        builder: (context, state) =>
+            PublisherBrowseScreen(publisherId: state.pathParameters['publisherId']!),
       ),
     ],
   );

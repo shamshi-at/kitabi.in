@@ -11,18 +11,21 @@
 > tokens. This document summarizes and cross-links all of them plus the live/deployed state
 > those docs don't cover.
 
-**Last updated:** 4 Jul 2026
+**Last updated:** 5 Jul 2026
 
 ---
 
 ## Snapshot
 
-Solo-built personal library app, pre-launch. **Phase 1 (auth & profile) is complete and
-live in production** — real Google + Apple sign-in, a real Supabase project, a real
-Railway deployment at a real custom domain. Phases 2–8 (catalog, personal library,
-lending, sync engine, insights, recommendations, launch plumbing) are not started.
-The landing page is live and public; the mobile app is not yet store-submitted (still
-pre-Phase-2, no personal-library feature exists in the app yet beyond the auth shell).
+Solo-built personal library app, pre-launch. **Phases 1–2 (auth & profile, shared
+catalog) are complete** — real Google + Apple sign-in, a real Supabase project, a real
+Railway deployment at a real custom domain, and now a full shared-catalog backend
+(works/editions/authors/publishers/genres/series) backed by OpenLibrary with
+cache-on-first-use, plus app screens for catalog search, ISBN scan, add/edit, and
+author/publisher browse. Phases 3–8 (personal library, lending, sync engine, insights,
+recommendations, launch plumbing) are not started. The landing page is live and public;
+the mobile app is not yet store-submitted (no personal-library feature exists yet — a
+user can browse/add to the shared catalog but can't yet mark a book as owned).
 
 ---
 
@@ -61,8 +64,18 @@ of shared budgets:
 ```
 
 Two data tiers, never conflated (feature-map.md's core principle):
-- **Layer 1 — shared catalog** (books, authors, publishers, genres, series): server-authoritative,
-  fetched/cached, not user-synced.
+- **Layer 1 — shared catalog** (books, authors, publishers, genres, series):
+  server-authoritative, fetched/cached, not user-synced. **Built in Phase 2** —
+  `works`/`editions`/`authors`/`publishers`/`genres`/`series` tables (migration
+  `000003`), backed by OpenLibrary (`api/app/services/openlibrary_client.py`) with
+  cache-on-first-use: a book fetched once from OpenLibrary lives in our own Postgres
+  for every later search. Ratings/reviews/translations attach to the **Work**;
+  ownership/cover/ISBN/pages attach to the **Edition** (feature-map.md rule 17).
+  **A translation is its own Work**, not a language variant of an Edition — its own
+  authors/editions and its own independent rating pool, linked to the original only
+  via a shared `translation_group_id` (decided 5 Jul 2026). A separate, read-time-only
+  `translation_group_rating` field averages across the whole group for display
+  ("4.2 across all translations") without merging the underlying per-translation pools.
 - **Layer 2 — personal** (library entries, statuses, notes, tags, lending, reviews,
   progress): offline-first, Drift is the source of truth, synced via the sync engine
   (queue + push/pull, not yet implemented — Phase 3).
@@ -77,11 +90,12 @@ identity row, keyed directly by the Supabase auth user id, updated via direct on
 
 | Part | Stack | Version notes |
 |---|---|---|
-| `app/` | Flutter — Riverpod (`flutter_riverpod` ^2.6.1, codegen not yet used), go_router ^14.6.2, Drift ^2.22.1 (schema not yet defined), Dio ^5.7.0, supabase_flutter ^2.8.0, sign_in_with_apple ^6.1.0, flutter_secure_storage ^9.2.2, google_fonts ^6.2.1, flutter_svg ^2.0.0, workmanager ^0.9.0 | iOS deployment target 14.0 (workmanager requirement); SDK `^3.12.2` |
-| `api/` | FastAPI 0.115.12, Python 3.12+, fully async — SQLAlchemy 2.0.36 async + asyncpg 0.30.0, Alembic 1.14.0, Pydantic 2.10.4, PyJWT[crypto] 2.10.1, APScheduler 3.11.0, Docker | ruff + black line length 100 |
+| `app/` | Flutter — Riverpod (`flutter_riverpod` ^2.6.1, codegen not yet used), go_router ^14.6.2, Drift ^2.22.1 (schema not yet defined — Layer 1 catalog is fetched via API, not stored in Drift yet), Dio ^5.7.0, supabase_flutter ^2.8.0, sign_in_with_apple ^6.1.0, flutter_secure_storage ^9.2.2, google_fonts ^6.2.1, flutter_svg ^2.0.0, workmanager ^0.9.0, mobile_scanner ^6.0.2 (ISBN scan) | iOS deployment target **15.5** (bumped from 14.0 — `mobile_scanner`'s MLKit requirement); SDK `^3.12.2` |
+| `api/` | FastAPI 0.115.12, Python 3.12+, fully async — SQLAlchemy 2.0.36 async + asyncpg 0.30.0, Alembic 1.14.0, Pydantic 2.10.4, PyJWT[crypto] 2.10.1, APScheduler 3.11.0, httpx (OpenLibrary client), Docker | ruff + black line length 100 |
 | `landing-page/` | Dependency-free static HTML/CSS, no build step, no frameworks | Fraunces + Inter via Google Fonts CDN |
 | Database | Supabase Postgres — RLS deny-by-default, Data API disabled | Region: Southeast Asia (Singapore) |
 | Auth | Supabase Auth — Google (browser-redirect `signInWithOAuth`) + Apple (native `signInWithIdToken`) | No password/OTP auth |
+| Metadata source | **OpenLibrary** — Search API, Books API (`jscmd=data` ISBN lookup), Covers API. No API key/credential required | Chosen over Google Books (needs a managed API key) and any paid source (adds a bill) — see CLAUDE.md rule 8 |
 
 ---
 
@@ -93,8 +107,8 @@ parts, each with their own README and CI workflow:
 | Directory | What | Status |
 |---|---|---|
 | `landing-page/` | Static "launching soon" site | **Live** at kitabi.in |
-| `api/` | FastAPI backend | **Live** at api.kitabi.in — auth/profile only so far |
-| `app/` | Flutter mobile app | Scaffolded + auth flow working; no catalog/library UI yet |
+| `api/` | FastAPI backend | **Live** at api.kitabi.in — auth/profile + shared catalog (search, ISBN lookup, add/edit, author/publisher browse) |
+| `app/` | Flutter mobile app | Auth flow + catalog screens working (search, ISBN scan, add/edit form, author/publisher browse); no personal-library UI yet |
 | `docs/` | Mockups, design tokens, task checklist | — |
 
 ---
@@ -120,9 +134,9 @@ any paid metadata API (open decision), Redis/queues (cost rule — CLAUDE.md rul
 | What | URL | Hosted on | Notes |
 |---|---|---|---|
 | Landing page | https://kitabi.in | Cloudflare Pages, git-deploy from `landing-page/` on push to `main` | Live, public |
-| API | https://api.kitabi.in | Railway service `kitabi-api`, proxied CNAME via Cloudflare (Full strict) | Live; auth/profile endpoints only |
+| API | https://api.kitabi.in | Railway service `kitabi-api`, proxied CNAME via Cloudflare (Full strict) | Live; auth/profile + catalog endpoints |
 | API (origin, fallback) | https://kitabi-api-production.up.railway.app | Direct Railway domain | Keep working in case the custom domain ever breaks |
-| Mobile app | — | Not store-submitted | Tested on iOS Simulator against the real Supabase project during Phase 1 |
+| Mobile app | — | Not store-submitted | Auth verified on iOS Simulator (Phase 1); catalog screens verified on an Android emulator against a local API (Phase 2) — `mobile_scanner`'s MLKit dependency can't build on an Apple Silicon iOS simulator (no arm64 simulator slice), so the scan screen specifically needs a real iOS device or an older x86_64-capable simulator runtime to verify there |
 
 Redeploy the API by pushing to `main` (Railway auto-deploys); no manual `railway up`
 needed anymore. Redeploy the landing page the same way (push to `main` touching
@@ -169,8 +183,8 @@ Full spec in [feature-map.md](feature-map.md); phase-by-phase checklist in
 |---|---|---|
 | 0 — Foundations | Monorepo, scaffolds, landing page, logo, mockups | Mostly done — CI workflow ✅, theme ✅; local dev runbook still open |
 | 1 — Auth & profile | Google + Apple sign-in, profile bootstrap, visibility switchboard | **✅ Done, verified live in production** |
-| 2 — Shared catalog | Books/authors/publishers/series, ISBN scan, Work vs Edition | Not started — **metadata source decision (OpenLibrary vs Google Books vs paid) is the next highest-leverage call** |
-| 3 — Personal library + sync engine | Drift schema, sync queue, push/pull, status/notes/tags/ratings/reviews | Not started |
+| 2 — Shared catalog | Books/authors/publishers/series, ISBN scan, Work vs Edition | **✅ Done** — OpenLibrary-backed, cache-on-first-use, migration `000003`, `GET /catalog/search`, `GET /catalog/isbn/{isbn}`, `POST/PATCH /catalog/works`, `PATCH /catalog/editions/{id}`, author/publisher browse; app has search, ISBN scan, add/edit form, author/publisher browse screens |
+| 3 — Personal library + sync engine | Drift schema, sync queue, push/pull, status/notes/tags/ratings/reviews | Not started — next up |
 | 4 — Lending | Lend/borrow records, linked vs self-logged, due reminders | Not started (fully designed in mockups S8/S8b/S8c/S9) |
 | 5 — Import | Goodreads/CSV import | Not started |
 | 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | Not started (designed in mockups S3/S4/S4b/S4c/S4d/S10) |
@@ -184,6 +198,14 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **5 Jul 2026** — Phase 2 complete: metadata source decided (OpenLibrary), shared
+  catalog schema + migration (`works`/`editions`/`authors`/`publishers`/`genres`/`series`),
+  catalog search + ISBN lookup (cache-on-first-use, verified live against the real
+  OpenLibrary API) + add/edit + author/publisher browse endpoints, `[WIRED]` translation
+  linking and aggregate rating; app got a catalog search screen, `mobile_scanner` ISBN
+  scan screen, add/edit form, and author/publisher browse screens, all with tappable
+  author/publisher names. Verified end-to-end on an Android emulator against a local API
+  (iOS Simulator can't build `mobile_scanner` on Apple Silicon — see Open decisions).
 - **4 Jul 2026** — Phase 1 complete: Google + Apple sign-in built, tested end-to-end on
   a real iOS simulator against a real Supabase project (real profile row confirmed in
   the database); API deployed to Railway with git-based auto-deploy; custom domain
@@ -199,12 +221,19 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Open decisions / known gaps
 
-- **Metadata source** (OpenLibrary vs Google Books vs paid) — highest-leverage open item,
-  blocks Phase 2.
 - **Apple OAuth secret expiry** — the JWT Supabase uses for Apple sign-in expires every
   ~6 months (`api/scripts/gen_apple_secret.py` regenerates it); no reminder/automation
   exists yet — worth a calendar reminder or a scheduled check.
 - **No backup job yet** — fine while there's no real user data; must exist before real
   users sign up (rupee-diary's `backup.yml` is the reference).
-- **ISBN scanning package** — likely `mobile_scanner` (rupee-diary precedent), not yet added.
 - **Local dev / Supabase project creation runbook** — not yet written (Phase 0 task).
+- **`mobile_scanner` can't be verified on an Apple Silicon iOS Simulator** — Google's
+  MLKit pods ship no arm64 simulator slice, and the only iOS runtime installed in this
+  dev environment (iOS 26.5) has no x86_64 fallback either. A Podfile `post_install`
+  hook excludes arm64 for `sdk=iphonesimulator*` (real devices unaffected), but the
+  simulator itself can't build at all without an older x86_64-capable runtime. Verified
+  instead on an Android emulator; verify the scan screen on a real iPhone before launch.
+- **No user-photo cover upload endpoint** — `Edition.cover_url` can hold any image URL
+  (OpenLibrary's own covers already populate it), but there's no Supabase storage
+  bucket or upload flow for a user's own photo yet; would be new infrastructure, out
+  of Phase 2's scope.
