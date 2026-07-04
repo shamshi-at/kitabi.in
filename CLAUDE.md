@@ -200,6 +200,22 @@ build_runner** before assuming compilation errors are real.
 - Supabase free tier pauses after 7 days idle — keep the project warm (scheduled
   ping job in the API's `jobs/`).
 
+## Lessons learned in Kitabi
+
+- **Supabase's direct-connection hostname (`db.<ref>.supabase.co:5432`) resolves
+  IPv6-only.** On a network without a working IPv6 route it connects painfully
+  slowly or times out outright (bit us during Phase 1 auth testing, 4 Jul 2026) —
+  use the Supavisor transaction pooler (port 6543, IPv4 + IPv6) for literally
+  everything except one-off `psql`/debugging where you know IPv6 works.
+- **New Supabase OAuth redirect scheme → add it to Authentication → URL
+  Configuration → Redirect URLs before testing**, or sign-in silently falls back
+  to the default Site URL (`localhost:3000`) instead of returning to the app —
+  looks like a dead page, not an auth error, so it's non-obvious what broke.
+- **`workmanager` needs iOS 14+.** The default Flutter template targets iOS 13 —
+  bump `platform :ios` in `ios/Podfile` and `IPHONEOS_DEPLOYMENT_TARGET` in
+  `project.pbxproj` (all three build configs) before the first real `pod install`,
+  or CocoaPods dependency resolution fails opaquely.
+
 ## Open decisions
 
 - **Metadata source** (OpenLibrary vs. Google Books vs. paid) — highest-leverage open

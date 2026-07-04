@@ -19,18 +19,36 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Flutter scaffold (Riverpod, go_router, Drift deps, l10n, theme stub)
 - [x] Landing page (Reading Room) + logo ("The Gold Line") live at kitabi.in
 - [x] Screen mockups S1–S14 + design tokens (feature-map audited, 3 Jul 2026)
-- [ ] CI workflow: api (ruff, black, pytest, pip-audit, docker build) + app (analyze, test) with `paths:` filters
-- [ ] `app/lib/core/theme` updated to Reading Room tokens (replace landing-page dark seed)
+- [x] CI workflow: `api-ci.yml` (ruff, black, pytest against real Postgres, pip-audit
+      advisory, docker build) + `app-ci.yml` (build_runner, analyze, test), each
+      scoped with `paths:` filters, mirroring rupee-diary's ci.yml split per directory
+- [x] `app/lib/core/theme` updated to Reading Room tokens (done in Phase 1 — triggered
+      by the first real screens: sign-in, splash, profile)
 - [ ] Local dev docs: `.env` setup, Supabase project creation runbook
 
 ## Phase 1 — Auth & profile
 
-- [ ] Supabase project + Google sign-in (app: supabase_flutter; API: JWKS verify) — S1
-- [ ] Apple sign-in — S1
-- [ ] `profiles` table + `POST /auth/bootstrap` (create profile on first login)
-- [ ] App auth flow: splash → sign-in → home; go_router auth guard; secure token storage
-- [ ] Profile screen shell with visibility toggles (profile/library/reviews) — S12 `[WIRED]` all default private
-- [ ] Sign out + account deletion path (store requirement)
+- [x] **Create the Supabase project** + enable Google and Apple providers (owner
+      action, done 4 Jul 2026 — Google via a Web-application OAuth client, Apple via
+      an App ID + Services ID + Sign in with Apple key; see `api/scripts/gen_apple_secret.py`
+      for regenerating the Apple OAuth secret, which expires every 6 months)
+- [x] **Add `in.kitabi.kitabi://login-callback` (and `in.kitabi.kitabi://**`) to
+      Supabase → Authentication → URL Configuration → Redirect URLs** — without
+      this, OAuth silently falls back to the default Site URL (`localhost:3000`)
+      instead of returning to the app; easy to forget if the project is ever recreated
+- [x] Google sign-in code path — browser-redirect `signInWithOAuth`, matches
+      rupee-diary's pattern exactly (no native `google_sign_in` dependency) — S1
+- [x] Apple sign-in code path — `sign_in_with_apple` + `signInWithIdToken`, button
+      shown on iOS only — S1
+- [x] `profiles` table + `POST /auth/bootstrap` (idempotent; create-on-first-login) —
+      migration 000002, `GET/PATCH/DELETE /me`, 8 passing tests
+- [x] App auth flow: splash → sign-in → home; go_router auth guard (`_RouterRefreshNotifier`
+      pattern from rupee-diary); Supabase session persisted via a
+      `flutter_secure_storage`-backed `LocalStorage` override
+- [x] Profile screen shell with visibility toggles (profile/library/reviews) — S12
+      `[WIRED]`, all default private, wired to `PATCH /me`
+- [x] Sign out + account deletion path (confirm dialog → `DELETE /me` soft-delete →
+      sign out) — store requirement
 
 ## Phase 2 — Shared catalog (Layer 1)
 
@@ -121,7 +139,17 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [ ] Version gate: API 426 response + app update screen
 - [ ] Supabase keep-warm job + lending-reminder job (APScheduler, advisory locks)
 - [ ] Nightly `pg_dump` → encrypted → R2 backup workflow (before first real user data)
-- [ ] Railway deploy (API) + envs documented
+- [x] Railway deploy (API) + envs documented — project `kitabi-api`, config as
+      code in `api/railway.json` (Dockerfile builder, `/healthz` healthcheck).
+      Env vars set directly in Railway (`DATABASE_URL` = the Supavisor pooler
+      string, `SUPABASE_URL`, `ENV=production`, `SCHEDULER_ENABLED=true`).
+      Service now connected to `shamshi-at/kitabi.in` (branch `main`) for
+      git-based auto-deploy — matches rupee-diary (Root Directory `api` set in
+      Railway's dashboard, not CLI-settable); `railway up` no longer needed.
+- [x] Custom domain `api.kitabi.in` — Railway custom domain + Cloudflare CNAME
+      (`api` → Railway's target, proxied) and TXT ownership-verification record,
+      same pattern as rupee-diary's `api.rupeediary.com`. Fallback origin domain:
+      `https://kitabi-api-production.up.railway.app`.
 - [ ] App icons + splash from the Gold Line mark; store listings (Play + App Store)
 - [ ] Landing page: swap "Launching soon" for real store badges
 - [ ] Privacy policy + terms pages (store requirement; landing footer links)
