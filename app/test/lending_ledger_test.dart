@@ -80,6 +80,28 @@ void main() {
     expect(pending.any((op) => op.entity == 'lending_records' && op.opType == 'update'), isTrue);
   });
 
+  test('lendOut persists a trimmed note and enqueues it', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    const session = SessionContext(userId: 'u1', deviceId: 'd1');
+    await _seedBook(db);
+    final repo = LendingRepository(db, session);
+
+    final id = await repo.lendOut(
+      'le1',
+      borrowerName: 'Anu',
+      lentDate: DateTime(2026, 6, 2),
+      note: '  signed first edition ',
+    );
+
+    final rows = await db.lendingRecordsDao.watchAllActive().first;
+    expect(rows.firstWhere((r) => r.record.id == id).record.note, 'signed first edition');
+
+    final pending = await db.syncQueueDao.pending(limit: 10);
+    final op = pending.firstWhere((o) => o.entity == 'lending_records');
+    expect(op.payload.contains('signed first edition'), isTrue);
+  });
+
   test('logBorrowed records a borrowed row carried by editionId, no library entry', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);

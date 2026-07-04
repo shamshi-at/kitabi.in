@@ -619,5 +619,29 @@
   "logBorrowedNoDate": "Pick a date",
   "@logBorrowedNoDate": {
     "description": "Placeholder for an unset date field"
+  },
+  "lendSheetTitle": "Lend this book",
+  "@lendSheetTitle": {
+    "description": "Title of the lend bottom sheet (S9)"
+  },
+  "lendSheetToLabel": "TO",
+  "@lendSheetToLabel": {
+    "description": "Field label for the borrower on the lend sheet"
+  },
+  "lendSheetToHint": "Who are you lending it to?",
+  "@lendSheetToHint": {
+    "description": "Hint in the borrower field on the lend sheet"
+  },
+  "lendSheetLentOnLabel": "LENT ON",
+  "@lendSheetLentOnLabel": {
+    "description": "Field label for the lent-on date"
+  },
+  "lendSheetDueLabel": "Due date · optional",
+  "@lendSheetDueLabel": {
+    "description": "Field label for the optional due date"
+  },
+  "lendSheetSave": "Lend it",
+  "@lendSheetSave": {
+    "description": "Submit button on the lend sheet"
   }
 }

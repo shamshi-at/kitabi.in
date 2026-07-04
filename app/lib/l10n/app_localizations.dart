@@ -915,6 +915,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick a date'**
   String get logBorrowedNoDate;
+
+  /// Title of the lend bottom sheet (S9)
+  ///
+  /// In en, this message translates to:
+  /// **'Lend this book'**
+  String get lendSheetTitle;
+
+  /// Field label for the borrower on the lend sheet
+  ///
+  /// In en, this message translates to:
+  /// **'TO'**
+  String get lendSheetToLabel;
+
+  /// Hint in the borrower field on the lend sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Who are you lending it to?'**
+  String get lendSheetToHint;
+
+  /// Field label for the lent-on date
+  ///
+  /// In en, this message translates to:
+  /// **'LENT ON'**
+  String get lendSheetLentOnLabel;
+
+  /// Field label for the optional due date
+  ///
+  /// In en, this message translates to:
+  /// **'Due date · optional'**
+  String get lendSheetDueLabel;
+
+  /// Submit button on the lend sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Lend it'**
+  String get lendSheetSave;
 }
 
 class _AppLocalizationsDelegate

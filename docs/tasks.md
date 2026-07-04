@@ -163,9 +163,9 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       reactive `allLendingProvider`), Out-now cards with a computed due stamp (Due in Nd /
       Due {date} / Overdue / No due date) + Mark returned, dimmed Returned section. Home has a
       lending entry point until the Phase 6 bottom nav lands
-- [~] Lend flow bottom sheet, with "this person is on Kitabi" match + note — S9. The lend
-      dialog now captures an optional **due date**; the full S9 bottom sheet + on-Kitabi match
-      + note is still to build
+- [~] Lend flow bottom sheet, with "this person is on Kitabi" match + note — S9. Built the S9
+      bottom sheet (to-whom, lent-on, optional due date, note; shared field widgets with the
+      log-borrowed sheet). The "on Kitabi" match rides on the cross-user work (Slice D `[WIRED]`)
 - [x] Mark returned + "Returned ✓" pill (book detail + ledger)
 - [ ] Due-date local notification (lending reminder) — S3 nudge
 - [ ] "WITH <NAME>" band on lent covers — S5

@@ -491,4 +491,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logBorrowedNoDate => 'Pick a date';
+
+  @override
+  String get lendSheetTitle => 'Lend this book';
+
+  @override
+  String get lendSheetToLabel => 'TO';
+
+  @override
+  String get lendSheetToHint => 'Who are you lending it to?';
+
+  @override
+  String get lendSheetLentOnLabel => 'LENT ON';
+
+  @override
+  String get lendSheetDueLabel => 'Due date · optional';
+
+  @override
+  String get lendSheetSave => 'Lend it';
 }

@@ -299,8 +299,10 @@ class LendingRepository extends Repo {
     required String borrowerName,
     required DateTime lentDate,
     DateTime? dueDate,
+    String? note,
   }) async {
     final id = _uuid.v4();
+    final trimmedNote = note?.trim();
     await db.lendingRecordsDao.insertOne(
       LendingRecordsCompanion.insert(
         id: id,
@@ -309,6 +311,7 @@ class LendingRepository extends Repo {
         borrowerName: borrowerName,
         lentDate: lentDate,
         dueDate: Value(dueDate),
+        note: Value(trimmedNote),
       ),
     );
     await enqueue(
@@ -321,6 +324,7 @@ class LendingRepository extends Repo {
         'borrower_name': borrowerName,
         'lent_date': lentDate.toUtc().toIso8601String().split('T').first,
         if (dueDate != null) 'due_date': dueDate.toUtc().toIso8601String().split('T').first,
+        if (trimmedNote != null && trimmedNote.isNotEmpty) 'note': trimmedNote,
       },
     );
     return id;

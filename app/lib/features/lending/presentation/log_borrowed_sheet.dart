@@ -9,6 +9,7 @@ import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../lending_format.dart';
+import 'sheet_fields.dart';
 
 /// S8c — log a book you've borrowed. The other entry point to the ledger:
 /// you add it yourself, no waiting on a friend to use the app. Same shape as
@@ -106,20 +107,10 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 32,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-            ),
+            const SheetGrabber(),
             Text(l10n.logBorrowedTitle, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 14),
-            _Label(l10n.logBorrowedBookLabel),
+            SheetLabel(l10n.logBorrowedBookLabel),
             if (_selected != null)
               _SelectedBook(work: _selected!, onClear: () => setState(() => _selected = null))
             else
@@ -134,17 +125,17 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
                 }),
               ),
             const SizedBox(height: 12),
-            _Label(l10n.logBorrowedFromLabel),
+            SheetLabel(l10n.logBorrowedFromLabel),
             TextField(
               controller: _lender,
               onChanged: (_) => setState(() {}),
-              decoration: _inputDecoration(l10n.logBorrowedFromHint),
+              decoration: sheetInputDecoration(l10n.logBorrowedFromHint),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                  child: _DateField(
+                  child: SheetDateField(
                     label: l10n.logBorrowedOnLabel,
                     value: fmtLendingDate(_borrowedOn),
                     onTap: _pickBorrowedOn,
@@ -152,7 +143,7 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _DateField(
+                  child: SheetDateField(
                     label: l10n.logBorrowedRemindLabel,
                     value: _remindOn == null ? l10n.logBorrowedNoDate : fmtLendingDate(_remindOn!),
                     onTap: _pickRemindOn,
@@ -161,11 +152,11 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
               ],
             ),
             const SizedBox(height: 12),
-            _Label(l10n.logBorrowedNoteLabel),
+            SheetLabel(l10n.logBorrowedNoteLabel),
             TextField(
               controller: _note,
               maxLines: 2,
-              decoration: _inputDecoration(''),
+              decoration: sheetInputDecoration(''),
             ),
             const SizedBox(height: 18),
             SizedBox(
@@ -182,45 +173,6 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-InputDecoration _inputDecoration(String hint) => InputDecoration(
-      isDense: true,
-      filled: true,
-      fillColor: AppColors.paper,
-      hintText: hint,
-      hintStyle: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.line),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.line),
-      ),
-    );
-
-class _Label extends StatelessWidget {
-  const _Label(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 10,
-          letterSpacing: 1,
-          color: AppColors.inkSoft,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -251,7 +203,7 @@ class _BookSearch extends ConsumerWidget {
         TextField(
           controller: controller,
           onChanged: onQuery,
-          decoration: _inputDecoration(l10n.logBorrowedSearchHint).copyWith(
+          decoration: sheetInputDecoration(l10n.logBorrowedSearchHint).copyWith(
             prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.inkSoft),
           ),
         ),
@@ -352,33 +304,3 @@ class _SelectedBook extends StatelessWidget {
   }
 }
 
-class _DateField extends StatelessWidget {
-  const _DateField({required this.label, required this.value, required this.onTap});
-
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _Label(label),
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-            decoration: BoxDecoration(
-              color: AppColors.paper,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Text(value, style: const TextStyle(fontSize: 13, color: AppColors.ink)),
-          ),
-        ),
-      ],
-    );
-  }
-}

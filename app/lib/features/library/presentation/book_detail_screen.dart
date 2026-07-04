@@ -11,6 +11,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../catalog/providers/catalog_providers.dart';
+import '../../lending/presentation/lend_sheet.dart';
 import '../reading_status.dart';
 import '../providers/library_providers.dart';
 
@@ -724,65 +725,16 @@ class _LendingCard extends ConsumerWidget {
   final LibraryEntry entry;
 
   Future<void> _lend(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController();
-    DateTime? dueDate;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          title: Text(l10n.bookLendDialogTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                decoration: InputDecoration(labelText: l10n.bookLendBorrowerName),
-                autofocus: true,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      dueDate == null
-                          ? l10n.lendingDueDateOptional
-                          : l10n.lendingDueOn(
-                              '${dueDate!.day}/${dueDate!.month}/${dueDate!.year}'),
-                      style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      final now = DateTime.now();
-                      final picked = await showDatePicker(
-                        context: ctx,
-                        initialDate: dueDate ?? now.add(const Duration(days: 14)),
-                        firstDate: now,
-                        lastDate: now.add(const Duration(days: 365)),
-                      );
-                      if (picked != null) setLocal(() => dueDate = picked);
-                    },
-                    child: Text(l10n.lendingSetDueDate),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
-            TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.bookSave)),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true || controller.text.trim().isEmpty) return;
-    final repo = await ref.read(lendingRepositoryProvider.future);
-    await repo.lendOut(
-      entry.id,
-      borrowerName: controller.text.trim(),
-      lentDate: DateTime.now(),
-      dueDate: dueDate,
+    // The lend flow (S9) is a bottom sheet; pull the cached book so it can show
+    // the cover + title the same way the ledger does.
+    final book = await ref.read(cachedBookProvider(entry.editionId).future);
+    if (!context.mounted) return;
+    await showLendSheet(
+      context,
+      libraryEntryId: entry.id,
+      bookTitle: book?.title ?? '',
+      author: book?.authorNames,
+      coverUrl: book?.coverUrl,
     );
     ref.invalidate(lendingRecordsProvider(entry.id));
   }
