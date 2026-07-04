@@ -166,7 +166,7 @@
   },
   "scanConfirmAdd": "Add",
   "@scanConfirmAdd": {
-    "description": "Confirms adding the detected book to the catalog"
+    "description": "Confirms adding the detected book to the user's library"
   },
   "scanSearchInstead": "Search instead",
   "@scanSearchInstead": {
@@ -403,5 +403,52 @@
   },
   "@bookRemoveConfirm": {
     "description": "Confirmation dialog body before removing a library entry"
+  },
+  "scanAddedToLibrary": "Added to your library",
+  "@scanAddedToLibrary": {
+    "description": "Snackbar confirming a scanned book was added to the personal library"
+  },
+  "homeCurrentlyReading": "Currently reading",
+  "@homeCurrentlyReading": {
+    "description": "Section header on the home screen for books with the reading status"
+  },
+  "homeYourLibrary": "Your library",
+  "@homeYourLibrary": {
+    "description": "Section header on the home screen previewing the personal library"
+  },
+  "homeSeeAll": "See all",
+  "@homeSeeAll": {
+    "description": "Link to the full library grid from the home screen preview"
+  },
+  "homeEmptyTitle": "Your shelf is empty",
+  "@homeEmptyTitle": {
+    "description": "Title of the empty state on the home screen"
+  },
+  "homeEmptyBody": "Add a book to start building your library.",
+  "@homeEmptyBody": {
+    "description": "Body of the empty state on the home screen"
+  },
+  "homeAddBook": "Add a book",
+  "@homeAddBook": {
+    "description": "Primary call to action on the home screen that opens search/add"
+  },
+  "homeScanBarcode": "Scan a barcode",
+  "@homeScanBarcode": {
+    "description": "Secondary call to action on the home screen that opens the ISBN scanner"
+  },
+  "formAuthorAddHint": "Type to search or add an author",
+  "@formAuthorAddHint": {
+    "description": "Hint in the author autocomplete field on the add/edit form"
+  },
+  "formPublisherHint": "Type to search or add a publisher",
+  "@formPublisherHint": {
+    "description": "Hint in the publisher autocomplete field on the add/edit form"
+  },
+  "formAddNew": "Add \"{name}\"",
+  "@formAddNew": {
+    "description": "Autocomplete option that creates a new author/publisher from the typed text",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
   }
 }

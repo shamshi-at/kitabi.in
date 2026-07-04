@@ -37,12 +37,13 @@ final allTagsProvider = FutureProvider.autoDispose<List<PersonalTag>>((ref) asyn
   return repo.watchAll().first;
 });
 
-/// The library grid (S5) — active (non-deleted) entries, refreshed via
-/// manual invalidation after mutations (same pattern as profile_providers.dart:
-/// simplest correct thing for a V1 shell).
-final libraryEntriesProvider = FutureProvider.autoDispose<List<LibraryEntry>>((ref) async {
+/// Active (non-deleted) library entries — feeds the library grid (S5) and the
+/// home screen. A reactive stream (not a one-shot snapshot) so a book added on
+/// any screen surfaces immediately on the always-alive home route, without
+/// hand-invalidating from every mutation site.
+final libraryEntriesProvider = StreamProvider.autoDispose<List<LibraryEntry>>((ref) async* {
   final repo = await ref.watch(libraryRepositoryProvider.future);
-  return repo.watchActive().first;
+  yield* repo.watchActive();
 });
 
 /// Offline-capable display data for one edition — populated the moment a

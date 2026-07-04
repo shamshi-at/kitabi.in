@@ -71,6 +71,18 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Typeahead for the add/edit form's author field (dropdown-cum-add-new).
+  Future<List<Map<String, dynamic>>> searchAuthors(String query) async {
+    final res = await _dio.get('/catalog/authors', queryParameters: {'q': query});
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Typeahead for the add/edit form's publisher field.
+  Future<List<Map<String, dynamic>>> searchPublishers(String query) async {
+    final res = await _dio.get('/catalog/publishers', queryParameters: {'q': query});
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
   Future<Map<String, dynamic>> getAuthorWorks(String authorId) async {
     final res = await _dio.get('/catalog/authors/$authorId');
     return res.data as Map<String, dynamic>;

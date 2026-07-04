@@ -7,9 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import DbSession
 from app.models import Author, Publisher
 from app.schemas.catalog import (
+    AuthorOut,
     AuthorWorksOut,
     EditionOut,
     EditionUpdate,
+    PublisherOut,
     PublisherWorksOut,
     TranslationLinkIn,
     WorkCreate,
@@ -99,6 +101,19 @@ async def patch_edition(edition_id: uuid.UUID, payload: EditionUpdate, db: DbSes
     edition = await catalog_service.get_edition_or_404(db, edition_id)
     edition = await catalog_service.update_edition(db, edition, payload)
     return EditionOut.model_validate(edition)
+
+
+@router.get("/authors", response_model=list[AuthorOut])
+async def authors_typeahead(db: DbSession, q: str = Query(min_length=1)) -> list[AuthorOut]:
+    """Add/edit form author field — suggests existing catalog authors so a
+    user picks the canonical one instead of typing a near-duplicate."""
+    return await catalog_service.search_authors(db, q)
+
+
+@router.get("/publishers", response_model=list[PublisherOut])
+async def publishers_typeahead(db: DbSession, q: str = Query(min_length=1)) -> list[PublisherOut]:
+    """Add/edit form publisher field — same as authors_typeahead."""
+    return await catalog_service.search_publishers(db, q)
 
 
 @router.get("/authors/{author_id}", response_model=AuthorWorksOut)

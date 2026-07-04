@@ -335,4 +335,39 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookNewTagHint => 'e.g. beach reads';
+
+  @override
+  String get scanAddedToLibrary => 'Added to your library';
+
+  @override
+  String get homeCurrentlyReading => 'Currently reading';
+
+  @override
+  String get homeYourLibrary => 'Your library';
+
+  @override
+  String get homeSeeAll => 'See all';
+
+  @override
+  String get homeEmptyTitle => 'Your shelf is empty';
+
+  @override
+  String get homeEmptyBody => 'Add a book to start building your library.';
+
+  @override
+  String get homeAddBook => 'Add a book';
+
+  @override
+  String get homeScanBarcode => 'Scan a barcode';
+
+  @override
+  String get formAuthorAddHint => 'Type to search or add an author';
+
+  @override
+  String get formPublisherHint => 'Type to search or add a publisher';
+
+  @override
+  String formAddNew(String name) {
+    return 'Add \"$name\"';
+  }
 }

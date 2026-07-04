@@ -76,7 +76,11 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       on the `editions.isbn` unique constraint) — `GET /catalog/isbn/{isbn}`
 - [x] Add/edit book API + app form — S7b: `POST /catalog/works`, `PATCH /catalog/works/{id}`,
       `PATCH /catalog/editions/{id}`; app form covers title, authors, language, series +
-      book №, publisher, pages, edition ISBN, format, genre chips + custom genres
+      book №, publisher, pages, edition ISBN, format, genre chips + custom genres.
+      **Enhanced (6 Jul 2026):** author & publisher are now dropdown-cum-add-new
+      typeaheads backed by `GET /catalog/authors?q=` / `GET /catalog/publishers?q=`
+      (authors kept as removable chips, not a comma string); the typeset cover preview
+      redraws live as title/author are typed
 - [x] ISBN barcode scanner in app (`mobile_scanner`) — S7; iOS needs 15.5+ deployment
       target (bumped from 14.0) and an `EXCLUDED_ARCHS[sdk=iphonesimulator*]=arm64`
       Podfile `post_install` hook since Google's MLKit pods ship no arm64 simulator
@@ -121,7 +125,10 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       devices" (`device_id`, generated once per install); delete-wins and LWW both write a
       `conflict_history` row, no dedicated viewer screen yet
 - [x] Add/remove book to library; reading status (5 states: Pending/Reading/Read/Stopped/Wishlist,
-      exact mockup enum) — S5/S6
+      exact mockup enum) — S5/S6. **Fixed 6 Jul 2026:** the ISBN-scan confirm card's "Add"
+      was a no-op (only popped the scanner) — now creates the library entry, caches offline,
+      and opens the book. `libraryEntriesProvider` is a reactive Drift stream so adds surface
+      immediately on the always-alive home route
 - [x] Start/finish dates + reading progress in pages — S6 (start date auto-set on first progress
       entry, finish date auto-set when status → Read, matching the mockup's implicit behavior)
 - [x] Personal notes (always private) — S6
@@ -172,7 +179,10 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 
 ## Phase 6 — Insights & search
 
-- [ ] Home dashboard: currently reading, lending nudge, shelf counts, one AI pick — S3
+- [~] Home dashboard: currently reading, lending nudge, shelf counts, one AI pick — S3.
+      **Interim shipped 6 Jul 2026:** library-first home (currently-reading row +
+      recent-books grid + add CTA) so the app doesn't open onto an empty screen. Still
+      to do for full S3: lending nudge, shelf-count stats, the one AI pick
 - [ ] Global search: my library first, then catalog — S4
 - [ ] Filter sheet: language, genre, status, year, author/publisher + live count — S4b
 - [ ] Stats: books/month bars, language donut, pages/month line, status counts — S10

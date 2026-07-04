@@ -280,9 +280,11 @@ class _AddToLibraryButton extends ConsumerWidget {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () async {
+          // Cache before creating the entry so the grid/home cover tiles that
+          // rebuild on the insert already find the catalog data (rule 2).
+          await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
           final repo = await ref.read(libraryRepositoryProvider.future);
           await repo.add(editionId: editionId);
-          await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
           ref.invalidate(libraryEntryProvider(editionId));
         },
         child: Text(AppLocalizations.of(context)!.bookAddToLibrary),

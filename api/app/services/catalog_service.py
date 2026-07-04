@@ -172,6 +172,31 @@ async def search_local(db: AsyncSession, query: str, limit: int = 20) -> list[Wo
     return list((await db.execute(stmt)).scalars().all())
 
 
+async def search_authors(db: AsyncSession, query: str, limit: int = 10) -> list[Author]:
+    """Typeahead for the add/edit form's author field — case-insensitive
+    prefix-ish match, so "dropdown cum add new" can suggest existing catalog
+    authors before the user coins a duplicate."""
+    stmt = (
+        select(Author)
+        .where(Author.name.ilike(f"%{query.strip()}%"))
+        .order_by(Author.name)
+        .limit(limit)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def search_publishers(db: AsyncSession, query: str, limit: int = 10) -> list[Publisher]:
+    """Typeahead for the add/edit form's publisher field — same shape as
+    search_authors."""
+    stmt = (
+        select(Publisher)
+        .where(Publisher.name.ilike(f"%{query.strip()}%"))
+        .order_by(Publisher.name)
+        .limit(limit)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
 async def find_or_fetch_by_isbn(
     db: AsyncSession, ol_client: OpenLibraryClient, isbn: str
 ) -> Edition | None:

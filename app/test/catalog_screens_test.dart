@@ -98,6 +98,14 @@ class _FakeApiClient extends ApiClient {
   }
 
   @override
+  Future<List<Map<String, dynamic>>> searchAuthors(String query) async {
+    if (!query.toLowerCase().startsWith('k')) return [];
+    return [
+      {'id': _authorId, 'name': 'Kamala Das'},
+    ];
+  }
+
+  @override
   Future<Map<String, dynamic>> getWork(String workId) async => _work(id: workId);
 
   @override
@@ -157,14 +165,16 @@ void main() {
   });
 
   testWidgets('add form validates a required title before saving', (tester) async {
+    // A tall viewport so the whole form (and its Save button) fits without
+    // scrolling — the ListView lazily builds off-screen children, so a
+    // scroll-then-find approach is brittle.
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     final fake = _FakeApiClient();
     await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
-    // The button sits at the bottom of a long ListView, past the test
-    // viewport — scroll it into view before tapping.
-    await tester.drag(find.byType(ListView), const Offset(0, -600));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Save to catalog'));
     await tester.pumpAndSettle();
 
@@ -173,17 +183,46 @@ void main() {
   });
 
   testWidgets('add form submits a new work to the catalog', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     final fake = _FakeApiClient();
     await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'Oru Deshathinte Katha');
-    await tester.drag(find.byType(ListView), const Offset(0, -600));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Save to catalog'));
     await tester.pumpAndSettle();
 
     expect(fake.lastCreatePayload?['title'], 'Oru Deshathinte Katha');
+  });
+
+  testWidgets('author field suggests an existing author and adds it as a chip', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Ente Katha');
+    // Target the author input by its hint (TextFormField also wraps a TextField,
+    // so byType(TextField) alone would match the title field too).
+    final authorField = find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.hintText == 'Type to search or add an author',
+    );
+    await tester.enterText(authorField, 'Kam');
+    await tester.pump(const Duration(milliseconds: 300)); // clear the debounce
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kamala Das'), findsOneWidget); // the suggestion tile
+    await tester.tap(find.text('Kamala Das'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+
+    expect(fake.lastCreatePayload?['author_names'], contains('Kamala Das'));
   });
 
   testWidgets('edit form pre-fills from the existing work', (tester) async {

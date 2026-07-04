@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -62,7 +64,6 @@ class _BookForm extends ConsumerStatefulWidget {
 class _BookFormState extends ConsumerState<_BookForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _title;
-  late final TextEditingController _authors;
   late final TextEditingController _language;
   late final TextEditingController _series;
   late final TextEditingController _seriesNumber;
@@ -72,6 +73,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
   late final TextEditingController _customGenres;
   late String _format;
   late final Set<String> _selectedGenres;
+  // Authors are now a chip list (dropdown-cum-add-new) rather than a raw
+  // comma-separated string, so each author is a discrete, de-duplicatable token.
+  final List<String> _authorNames = [];
   bool _saving = false;
 
   Map<String, dynamic>? get _edition {
@@ -84,13 +88,16 @@ class _BookFormState extends ConsumerState<_BookForm> {
     super.initState();
     final work = widget.initialWork;
     final edition = _edition;
-    final authorNames =
-        (work?['authors'] as List?)?.map((a) => (a as Map)['name'] as String).join(', ') ?? '';
     final genreNames =
         (work?['genres'] as List?)?.map((g) => (g as Map)['name'] as String).toSet() ?? <String>{};
 
+    _authorNames.addAll(
+      (work?['authors'] as List?)?.map((a) => (a as Map)['name'] as String) ?? const <String>[],
+    );
     _title = TextEditingController(text: work?['title'] as String? ?? '');
-    _authors = TextEditingController(text: authorNames);
+    // Live cover preview (S7b): the typeset cover mirrors the title/author as
+    // they're typed, so a keystroke redraws it.
+    _title.addListener(_onCoverChanged);
     _language = TextEditingController(text: work?['language'] as String? ?? '');
     _series = TextEditingController(text: (edition?['series'] as Map?)?['name'] as String? ?? '');
     _seriesNumber =
@@ -105,11 +112,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
         TextEditingController(text: genreNames.where((g) => !_commonGenres.contains(g)).join(', '));
   }
 
+  void _onCoverChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    _title.removeListener(_onCoverChanged);
     for (final c in [
       _title,
-      _authors,
       _language,
       _series,
       _seriesNumber,
@@ -126,6 +137,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
   List<String> _splitNames(String raw) =>
       raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
+  void _addAuthor(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    if (_authorNames.any((a) => a.toLowerCase() == trimmed.toLowerCase())) return;
+    setState(() => _authorNames.add(trimmed));
+  }
+
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
@@ -134,7 +152,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final payload = {
       'title': _title.text.trim(),
       'language': _language.text.trim().isEmpty ? null : _language.text.trim(),
-      'author_names': _splitNames(_authors.text),
+      'author_names': _authorNames,
       'genre_names': genres,
       'publisher_name': _publisher.text.trim().isEmpty ? null : _publisher.text.trim(),
       'series_name': _series.text.trim().isEmpty ? null : _series.text.trim(),
@@ -204,7 +222,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
             children: [
               TypesetCover(
                 title: _title.text.isEmpty ? '…' : _title.text,
-                author: _authors.text.isEmpty ? null : _authors.text.split(',').first,
+                author: _authorNames.isEmpty ? null : _authorNames.first,
                 coverUrl: _edition?['cover_url'] as String?,
                 width: 40,
                 height: 60,
@@ -225,12 +243,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
             validator: (v) => (v == null || v.trim().isEmpty) ? l10n.formTitleRequired : null,
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(flex: 14, child: _Field(label: l10n.formFieldAuthor, controller: _authors)),
-              const SizedBox(width: 8),
-              Expanded(flex: 10, child: _Field(label: l10n.formFieldLanguage, controller: _language)),
-            ],
+          _AuthorField(
+            authors: _authorNames,
+            onAdd: _addAuthor,
+            onRemove: (name) => setState(() => _authorNames.remove(name)),
+            fetch: (q) => ref.read(apiClientProvider).searchAuthors(q),
           ),
           const SizedBox(height: 10),
           Row(
@@ -250,10 +267,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(
-                flex: 14,
-                child: _Field(label: l10n.formFieldPublisher, controller: _publisher),
-              ),
+              Expanded(flex: 14, child: _Field(label: l10n.formFieldLanguage, controller: _language)),
               const SizedBox(width: 8),
               Expanded(
                 flex: 10,
@@ -264,6 +278,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          _TypeaheadField(
+            label: l10n.formFieldPublisher,
+            controller: _publisher,
+            hintText: l10n.formPublisherHint,
+            fetch: (q) => ref.read(apiClientProvider).searchPublishers(q),
+            onSelected: (_) {},
           ),
           const SizedBox(height: 10),
           Row(
@@ -331,6 +353,245 @@ class _BookFormState extends ConsumerState<_BookForm> {
           ),
         ],
       ),
+    );
+  }
+}
+
+const _fieldLabelStyle = TextStyle(
+  fontSize: 10,
+  letterSpacing: 1,
+  color: AppColors.inkSoft,
+  fontWeight: FontWeight.w600,
+);
+
+/// Author input (S7b) — a "dropdown cum add new" chip field: existing catalog
+/// authors are suggested as you type (so you pick the canonical one rather
+/// than coining a near-duplicate), and anything you type is addable as-is.
+/// Multiple authors are kept as discrete chips instead of a comma string.
+class _AuthorField extends StatefulWidget {
+  const _AuthorField({
+    required this.authors,
+    required this.onAdd,
+    required this.onRemove,
+    required this.fetch,
+  });
+
+  final List<String> authors;
+  final void Function(String) onAdd;
+  final void Function(String) onRemove;
+  final Future<List<Map<String, dynamic>>> Function(String) fetch;
+
+  @override
+  State<_AuthorField> createState() => _AuthorFieldState();
+}
+
+class _AuthorFieldState extends State<_AuthorField> {
+  final _input = TextEditingController();
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.formFieldAuthor, style: _fieldLabelStyle),
+        const SizedBox(height: 4),
+        if (widget.authors.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final name in widget.authors)
+                  Chip(
+                    label: Text(name, style: const TextStyle(fontSize: 12)),
+                    onDeleted: () => widget.onRemove(name),
+                    backgroundColor: AppColors.goldSoft,
+                    side: BorderSide.none,
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+          ),
+        _TypeaheadField(
+          controller: _input,
+          hintText: l10n.formAuthorAddHint,
+          fetch: widget.fetch,
+          clearOnSelect: true,
+          onSelected: widget.onAdd,
+        ),
+      ],
+    );
+  }
+}
+
+/// A text field backed by server-side typeahead suggestions, with an
+/// "Add …" affordance so the typed value is always usable even when nothing
+/// matches — the reusable half of the dropdown-cum-add-new pattern.
+class _TypeaheadField extends StatefulWidget {
+  const _TypeaheadField({
+    required this.controller,
+    required this.fetch,
+    required this.onSelected,
+    this.label,
+    this.hintText,
+    this.clearOnSelect = false,
+  });
+
+  final TextEditingController controller;
+  final Future<List<Map<String, dynamic>>> Function(String) fetch;
+  final void Function(String) onSelected;
+  final String? label;
+  final String? hintText;
+
+  /// Author mode: commit clears the input (ready for the next chip). Publisher
+  /// mode (false): commit fills the field with the chosen value.
+  final bool clearOnSelect;
+
+  @override
+  State<_TypeaheadField> createState() => _TypeaheadFieldState();
+}
+
+class _TypeaheadFieldState extends State<_TypeaheadField> {
+  Timer? _debounce;
+  List<String> _suggestions = [];
+  String _query = '';
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    final query = value.trim();
+    setState(() => _query = query);
+    _debounce?.cancel();
+    if (query.isEmpty) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 250), () => _fetch(query));
+  }
+
+  Future<void> _fetch(String query) async {
+    try {
+      final rows = await widget.fetch(query);
+      if (!mounted || query != _query) return;
+      setState(() => _suggestions = rows.map((r) => r['name'] as String).toList());
+    } catch (_) {
+      if (mounted) setState(() => _suggestions = []);
+    }
+  }
+
+  void _select(String name) {
+    final value = name.trim();
+    if (value.isEmpty) return;
+    widget.onSelected(value);
+    if (widget.clearOnSelect) {
+      widget.controller.clear();
+    } else {
+      widget.controller.text = value;
+    }
+    setState(() {
+      _suggestions = [];
+      _query = '';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final showAddNew =
+        _query.isNotEmpty && !_suggestions.any((s) => s.toLowerCase() == _query.toLowerCase());
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.label != null) ...[
+          Text(widget.label!, style: _fieldLabelStyle),
+          const SizedBox(height: 4),
+        ],
+        TextField(
+          controller: widget.controller,
+          textInputAction: TextInputAction.done,
+          onChanged: _onChanged,
+          onSubmitted: _select,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: AppColors.card,
+            hintText: widget.hintText,
+            hintStyle: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.line),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.line),
+            ),
+          ),
+        ),
+        if (_suggestions.isNotEmpty || showAddNew)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Column(
+              children: [
+                for (final name in _suggestions)
+                  InkWell(
+                    onTap: () => _select(name),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Text(
+                        name,
+                        style: const TextStyle(fontSize: 13, color: AppColors.ink),
+                      ),
+                    ),
+                  ),
+                if (showAddNew)
+                  InkWell(
+                    onTap: () => _select(_query),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.add, size: 15, color: AppColors.oxblood),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              l10n.formAddNew(_query),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.oxblood,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

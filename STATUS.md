@@ -125,7 +125,7 @@ parts, each with their own README and CI workflow:
 |---|---|---|
 | `landing-page/` | Static "launching soon" site | **Live** at kitabi.in |
 | `api/` | FastAPI backend | **Live** at api.kitabi.in — auth/profile + shared catalog (search, ISBN lookup, add/edit, author/publisher browse) |
-| `app/` | Flutter mobile app | Auth flow + catalog screens working (search, ISBN scan, add/edit form, author/publisher browse); no personal-library UI yet |
+| `app/` | Flutter mobile app | Auth flow + library-first home + catalog screens working (search, ISBN scan → adds to library, add/edit form with typeahead author/publisher, author/publisher browse) + personal-library grid & book detail |
 | `docs/` | Mockups, design tokens, task checklist | — |
 
 ---
@@ -200,11 +200,11 @@ Full spec in [feature-map.md](feature-map.md); phase-by-phase checklist in
 |---|---|---|
 | 0 — Foundations | Monorepo, scaffolds, landing page, logo, mockups | Mostly done — CI workflow ✅, theme ✅; local dev runbook still open |
 | 1 — Auth & profile | Google + Apple sign-in, profile bootstrap, visibility switchboard | **✅ Done, verified live in production** |
-| 2 — Shared catalog | Books/authors/publishers/series, ISBN scan, Work vs Edition | **✅ Done** — OpenLibrary-backed, cache-on-first-use, migration `000003`, `GET /catalog/search`, `GET /catalog/isbn/{isbn}`, `POST/PATCH /catalog/works`, `PATCH /catalog/editions/{id}`, author/publisher browse; app has search, ISBN scan, add/edit form, author/publisher browse screens |
-| 3 — Personal library + sync engine | Drift schema, sync queue, push/pull, status/notes/tags/ratings/reviews | **✅ Done** — migration `000004`, `POST /sync/push` + `GET /sync/pull`, delete-wins/LWW conflict rules, `[WIRED]` activity log; app has S5 library grid + S6 book detail (status/progress/notes/rating/review/lending/tags), workmanager + connectivity-triggered background sync. Sync engine verified via unit tests (mocked API, in-memory Drift), not yet via a real signed-in device run |
+| 2 — Shared catalog | Books/authors/publishers/series, ISBN scan, Work vs Edition | **✅ Done** — OpenLibrary-backed, cache-on-first-use, migration `000003`, `GET /catalog/search`, `GET /catalog/isbn/{isbn}`, `POST/PATCH /catalog/works`, `PATCH /catalog/editions/{id}`, `GET /catalog/authors?q=` + `GET /catalog/publishers?q=` typeahead, author/publisher browse; app has search, ISBN scan, add/edit form (author/publisher are now dropdown-cum-add-new typeaheads; typeset cover previews live as you type), author/publisher browse screens |
+| 3 — Personal library + sync engine | Drift schema, sync queue, push/pull, status/notes/tags/ratings/reviews | **✅ Done** — migration `000004`, `POST /sync/push` + `GET /sync/pull`, delete-wins/LWW conflict rules, `[WIRED]` activity log; app has S5 library grid + S6 book detail (status/progress/notes/rating/review/lending/tags), workmanager + connectivity-triggered background sync. ISBN scan "Add" now creates a library entry (was a no-op that only popped the scanner). Sync engine verified via unit tests (mocked API, in-memory Drift), not yet via a real signed-in device run |
 | 4 — Lending | Lend/borrow records, linked vs self-logged, due reminders | Not started (fully designed in mockups S8/S8b/S8c/S9) |
 | 5 — Import | Goodreads/CSV import | Not started |
-| 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | Not started (designed in mockups S3/S4/S4b/S4c/S4d/S10) |
+| 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | Not started — but an **interim library-first home** now ships (currently-reading row + recent-books grid + add CTA) so the app opens onto your books instead of an empty placeholder; the full S3 dashboard (stats, lending nudge, AI pick) is still Phase 6 (designed in mockups S3/S4/S4b/S4c/S4d/S10) |
 | 7 — Recommendations & share | LLM recs, per-book + personal share cards | Not started (designed in mockups S6c/S11/S13) |
 | 8 — Launch plumbing | Version gate, backups, app icons, store listings, privacy policy | Not started (Railway deploy + custom domain items already done ✅) |
 
@@ -215,6 +215,28 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **6 Jul 2026** — Post-Phase-3 UX pass from real on-device feedback: (1) home was an
+  empty placeholder → now a library-first landing (currently-reading row + recent-books
+  grid + add CTA; full S3 dashboard stays Phase 6); (2) **bug** — the ISBN-scan "Add"
+  button only popped the scanner and never created a library entry, so scanned books
+  vanished → now adds to the library, caches for offline, and opens the book; (3)
+  add/edit form author & publisher became dropdown-cum-add-new typeaheads
+  (`GET /catalog/authors?q=` + `/catalog/publishers?q=`, authors as removable chips);
+  (4) the typeset cover on the form now redraws live as the title/author are typed.
+  `libraryEntriesProvider` switched to a reactive Drift stream so adds surface on the
+  always-alive home route without hand-invalidation. API + app tests + lint green,
+  Docker builds.
+
+- **6 Jul 2026** — Fixed the real cause of "Couldn't sign in" on a TestFlight build:
+  `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` were never passed as `--dart-define`s to
+  any local IPA build, so `supabaseConfigured` was false and the app silently used
+  `UnconfiguredAuthService` (throws on every sign-in attempt, no build-time warning).
+  Added `app/dart_defines.env` (gitignored) + `scripts/build_ipa.sh`/`run_dev.sh`,
+  which read every required define and fail loudly if one's missing — replacing
+  hand-typed `--dart-define` flags, which is exactly how this and the earlier
+  `API_BASE_URL` bug both happened. Rebuilt and confirmed via `strings` on the
+  compiled binary that the Supabase project ref and `api.kitabi.in` are present and
+  `localhost:8000` is absent.
 - **6 Jul 2026** — Real app icons + native splash screens: `flutter_launcher_icons`
   (full-bleed icon source, no pre-baked rounding — the OS applies its own mask;
   Android adaptive icon with an oxblood background layer) + `flutter_native_splash`
@@ -258,12 +280,19 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Open decisions / known gaps
 
-- **No Apple Distribution certificate yet** — only an Apple Development identity
-  exists in this environment's Keychain, so every IPA built so far is
-  development-signed (runs only on devices registered to the provisioning profile).
-  Getting a real TestFlight/App Store build needs a Distribution certificate,
-  generated via Xcode (signed in with sufficient account permissions) or the Apple
-  Developer portal.
+- **No Apple Distribution certificate in this local environment** — only an Apple
+  Development identity exists in this Keychain, so IPAs built here via
+  `scripts/build_ipa.sh` are development-signed (devices registered to the
+  provisioning profile only). **A real TestFlight build does exist** (seen in
+  App Store Connect, "Ready to Submit"), which means it was produced by a
+  different pipeline than this local one (Xcode Cloud or another machine) —
+  that pipeline's own signing setup is out of scope for what's tracked here.
+  **Important:** if that pipeline builds independently (not via this repo's
+  `scripts/build_ipa.sh`), it needs the same three `--dart-define` values
+  (`API_BASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`) configured in its
+  own build settings/environment — the "couldn't sign in" bug (6 Jul 2026, see
+  milestones) was caused by these being silently absent, and that would repeat
+  on any build path that doesn't set them, not just local ones.
 - **Apple OAuth secret expiry** — the JWT Supabase uses for Apple sign-in expires every
   ~6 months (`api/scripts/gen_apple_secret.py` regenerates it); no reminder/automation
   exists yet — worth a calendar reminder or a scheduled check.

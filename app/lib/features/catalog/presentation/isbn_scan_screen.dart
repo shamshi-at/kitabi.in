@@ -7,6 +7,9 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
+import '../../../data/db/catalog_cache.dart';
+import '../../../data/repositories/repository_providers.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// S7 — point the camera at a barcode; on a decode, resolve it through
@@ -207,14 +210,34 @@ class _ScanFooter extends StatelessWidget {
   }
 }
 
-class _ConfirmCard extends StatelessWidget {
+class _ConfirmCard extends ConsumerWidget {
   const _ConfirmCard({required this.work, required this.l10n});
 
   final Map<String, dynamic> work;
   final AppLocalizations l10n;
 
+  /// The scan flow's "Add" now creates a library entry (the previous version
+  /// only popped the scanner, so a scanned book landed nowhere) and caches the
+  /// catalog data for offline reading, then opens the book so the user can set
+  /// status/progress. Idempotent: re-scanning an already-owned book just opens it.
+  Future<void> _add(BuildContext context, WidgetRef ref, Map<String, dynamic> edition) async {
+    final editionId = edition['id'] as String;
+    final workId = work['id'] as String;
+    final repo = await ref.read(libraryRepositoryProvider.future);
+    final existing = await repo.getByEditionId(editionId);
+    if (existing == null) {
+      await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+      await repo.add(editionId: editionId);
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.scanAddedToLibrary)),
+    );
+    context.pushReplacement(Routes.bookDetailPath(workId, editionId));
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final editions = (work['editions'] as List?) ?? [];
     final edition = editions.isNotEmpty ? editions.first as Map<String, dynamic> : null;
     final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -267,7 +290,7 @@ class _ConfirmCard extends StatelessWidget {
                 backgroundColor: AppColors.gold,
                 foregroundColor: const Color(0xFF241811),
               ),
-              onPressed: () => context.pop(),
+              onPressed: edition == null ? null : () => _add(context, ref, edition),
               child: Text(l10n.scanConfirmAdd),
             ),
           ],

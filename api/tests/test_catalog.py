@@ -132,6 +132,32 @@ async def test_publisher_browse(client):
     assert any(w["title"] == "Ente Katha" for w in body["works"])
 
 
+async def test_author_typeahead(client):
+    await client.post(
+        "/catalog/works", json={"title": "Randamoozham", "author_names": ["M.T. Vasudevan Nair"]}
+    )
+    resp = await client.get("/catalog/authors", params={"q": "vasudevan"})
+    assert resp.status_code == 200
+    names = [a["name"] for a in resp.json()]
+    assert "M.T. Vasudevan Nair" in names
+
+
+async def test_publisher_typeahead(client):
+    await client.post(
+        "/catalog/works", json={"title": "Balyakalasakhi", "publisher_name": "Mathrubhumi Books"}
+    )
+    resp = await client.get("/catalog/publishers", params={"q": "mathru"})
+    assert resp.status_code == 200
+    names = [p["name"] for p in resp.json()]
+    assert "Mathrubhumi Books" in names
+
+
+async def test_typeahead_no_match_is_empty(client):
+    resp = await client.get("/catalog/authors", params={"q": "zzz-nobody-zzz"})
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
 async def test_link_translation(client):
     a = await client.post("/catalog/works", json={"title": "Mayyazhippuzhayude Theerangalil"})
     b = await client.post("/catalog/works", json={"title": "On the Banks of the Mayyazhi"})

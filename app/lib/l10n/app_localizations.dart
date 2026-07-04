@@ -310,7 +310,7 @@ abstract class AppLocalizations {
   /// **'No book found for that ISBN.'**
   String get scanNotFound;
 
-  /// Confirms adding the detected book to the catalog
+  /// Confirms adding the detected book to the user's library
   ///
   /// In en, this message translates to:
   /// **'Add'**
@@ -645,6 +645,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g. beach reads'**
   String get bookNewTagHint;
+
+  /// Snackbar confirming a scanned book was added to the personal library
+  ///
+  /// In en, this message translates to:
+  /// **'Added to your library'**
+  String get scanAddedToLibrary;
+
+  /// Section header on the home screen for books with the reading status
+  ///
+  /// In en, this message translates to:
+  /// **'Currently reading'**
+  String get homeCurrentlyReading;
+
+  /// Section header on the home screen previewing the personal library
+  ///
+  /// In en, this message translates to:
+  /// **'Your library'**
+  String get homeYourLibrary;
+
+  /// Link to the full library grid from the home screen preview
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get homeSeeAll;
+
+  /// Title of the empty state on the home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your shelf is empty'**
+  String get homeEmptyTitle;
+
+  /// Body of the empty state on the home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Add a book to start building your library.'**
+  String get homeEmptyBody;
+
+  /// Primary call to action on the home screen that opens search/add
+  ///
+  /// In en, this message translates to:
+  /// **'Add a book'**
+  String get homeAddBook;
+
+  /// Secondary call to action on the home screen that opens the ISBN scanner
+  ///
+  /// In en, this message translates to:
+  /// **'Scan a barcode'**
+  String get homeScanBarcode;
+
+  /// Hint in the author autocomplete field on the add/edit form
+  ///
+  /// In en, this message translates to:
+  /// **'Type to search or add an author'**
+  String get formAuthorAddHint;
+
+  /// Hint in the publisher autocomplete field on the add/edit form
+  ///
+  /// In en, this message translates to:
+  /// **'Type to search or add a publisher'**
+  String get formPublisherHint;
+
+  /// Autocomplete option that creates a new author/publisher from the typed text
+  ///
+  /// In en, this message translates to:
+  /// **'Add \"{name}\"'**
+  String formAddNew(String name);
 }
 
 class _AppLocalizationsDelegate
