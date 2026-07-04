@@ -92,11 +92,10 @@ class LibraryRepository extends Repo {
     DateTime? startDate,
     DateTime? finishDate,
   }) async {
-    final changes = <String, dynamic>{
-      if (currentPage != null) 'current_page': currentPage,
-      if (startDate != null) 'start_date': startDate.toUtc().toIso8601String(),
-      if (finishDate != null) 'finish_date': finishDate.toUtc().toIso8601String(),
-    };
+    final changes = <String, dynamic>{};
+    if (currentPage != null) changes['current_page'] = currentPage;
+    if (startDate != null) changes['start_date'] = startDate.toUtc().toIso8601String();
+    if (finishDate != null) changes['finish_date'] = finishDate.toUtc().toIso8601String();
     if (changes.isEmpty) return;
 
     await db.libraryEntriesDao.patch(
