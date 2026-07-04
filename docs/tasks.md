@@ -169,11 +169,15 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Mark returned + "Returned ✓" pill (book detail + ledger)
 - [ ] Due-date local notification (lending reminder) — S3 nudge
 - [ ] "WITH <NAME>" band on lent covers — S5
-- [ ] Borrowed tab: linked entries (auto-created when a lender names you) + self-logged
-      entries, in one list — S8b
-- [ ] "Log a borrowed book" flow: search/scan book, from-whom, borrowed-on, optional
-      remind-me date, note — S8c
-- [ ] "I've returned it" action on borrowed entries (closes your own record; does not
+- [~] Borrowed tab: linked entries (auto-created when a lender names you) + self-logged
+      entries, in one list — S8b. Slice B: the Borrowed tab is live (With-you-now / Returned,
+      self-logged), reading `direction='borrowed'` records that carry the book via `edition_id`
+      (no owned library entry). **Linked** (auto-created) entries need the cross-user mirror,
+      still to build (Slice D `[WIRED]`)
+- [x] "Log a borrowed book" flow: search/scan book, from-whom, borrowed-on, optional
+      remind-me date, note — S8c. Bottom sheet with inline catalog search; scan entry deferred
+      (search covers it for now)
+- [x] "I've returned it" action on borrowed entries (closes your own record; does not
       require the lender's app state — no realtime sync between the two sides in V1)
 
 ## Phase 5 — Import (the front door)

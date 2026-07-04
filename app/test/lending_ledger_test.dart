@@ -36,7 +36,7 @@ void main() {
       LendingRecordsCompanion.insert(
         id: 'lr1',
         userId: 'u1',
-        libraryEntryId: 'le1',
+        libraryEntryId: const Value('le1'),
         borrowerName: 'Anu',
         lentDate: DateTime(2026, 6, 2),
       ),
@@ -45,7 +45,7 @@ void main() {
       LendingRecordsCompanion.insert(
         id: 'lr2',
         userId: 'u1',
-        libraryEntryId: 'le1',
+        libraryEntryId: const Value('le1'),
         borrowerName: 'Divya',
         lentDate: DateTime(2026, 1, 2),
         returnedDate: Value(DateTime(2026, 2, 9)),
@@ -80,6 +80,41 @@ void main() {
     expect(pending.any((op) => op.entity == 'lending_records' && op.opType == 'update'), isTrue);
   });
 
+  test('logBorrowed records a borrowed row carried by editionId, no library entry', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    const session = SessionContext(userId: 'u1', deviceId: 'd1');
+    // A borrowed book isn't owned — cache it, but create no library entry.
+    await db.cachedBooksDao.upsert(
+      CachedBooksCompanion.insert(
+        editionId: 'ed9',
+        workId: 'w9',
+        title: 'Aarachar',
+        authorNames: 'K.R. Meera',
+      ),
+    );
+    final repo = LendingRepository(db, session);
+
+    final id = await repo.logBorrowed(
+      editionId: 'ed9',
+      lenderName: 'Divya',
+      borrowedDate: DateTime(2026, 7, 2),
+      note: 'careful',
+    );
+
+    final rows = await db.lendingRecordsDao.watchAllActive().first;
+    final rec = rows.firstWhere((r) => r.record.id == id);
+    expect(rec.record.direction, 'borrowed');
+    expect(rec.record.libraryEntryId, isNull);
+    expect(rec.record.editionId, 'ed9');
+    expect(rec.record.note, 'careful');
+    expect(rec.book?.title, 'Aarachar'); // joined via editionId, not a library entry
+
+    final pending = await db.syncQueueDao.pending(limit: 10);
+    final op = pending.firstWhere((o) => o.entity == 'lending_records');
+    expect(op.opType, 'create');
+  });
+
   // The screen render is tested against a fixed stream (not a live Drift query),
   // keeping the widget test deterministic and timer-free.
   testWidgets('ledger screen renders out-now and returned sections with stamps', (tester) async {
@@ -93,7 +128,7 @@ void main() {
         LendingRecordsCompanion.insert(
           id: 'lr1',
           userId: 'u1',
-          libraryEntryId: 'le1',
+          libraryEntryId: const Value('le1'),
           borrowerName: 'Anu',
           lentDate: DateTime(2026, 6, 2),
           dueDate: Value(DateTime.now().add(const Duration(days: 3))),
@@ -103,7 +138,7 @@ void main() {
         LendingRecordsCompanion.insert(
           id: 'lr2',
           userId: 'u1',
-          libraryEntryId: 'le1',
+          libraryEntryId: const Value('le1'),
           borrowerName: 'Divya',
           lentDate: DateTime(2026, 1, 2),
           returnedDate: Value(DateTime(2026, 2, 9)),

@@ -8,17 +8,13 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
-
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
-String _fmtDate(DateTime d) => '${d.day} ${_months[d.month - 1]}';
+import '../lending_format.dart';
+import 'log_borrowed_sheet.dart';
 
 /// S8 — the lending ledger, "the wedge styled as what it is: a ledger."
-/// Slice A ships the **Lent out** side (Out now / Returned); the Borrowed
-/// tab + due-date reminders land in the next slices (docs/tasks.md Phase 4).
+/// Both directions: **Lent out** (books with someone else) and **Borrowed**
+/// (someone's book with me, self-logged). Records, not flags — borrower/lender,
+/// dates, an optional due date, and a "Returned ✓" pill to close each one.
 class LendingLedgerScreen extends ConsumerWidget {
   const LendingLedgerScreen({super.key});
 
@@ -34,73 +30,149 @@ class LendingLedgerScreen extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('$err')),
           data: (all) {
-            final outNow = all.where((r) => r.record.returnedDate == null).toList();
-            final returned = all.where((r) => r.record.returnedDate != null).toList();
+            final lent = all.where((r) => r.record.direction != 'borrowed').toList();
+            final borrowed = all.where((r) => r.record.direction == 'borrowed').toList();
 
-            return CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                  sliver: SliverToBoxAdapter(
+            return DefaultTabController(
+              length: 2,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back, color: AppColors.ink),
                           onPressed: () => context.pop(),
-                          padding: EdgeInsets.zero,
                         ),
                         Text(l10n.lendingLedgerTitle,
                             style: Theme.of(context).textTheme.titleLarge),
-                        const Spacer(),
-                        Text(
-                          l10n.lendingOutSubtitle(outNow.length),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: AppColors.inkSoft),
-                        ),
                       ],
                     ),
                   ),
-                ),
-                if (all.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(28),
-                        child: Text(
-                          l10n.lendingEmpty,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: AppColors.inkSoft),
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                    sliver: SliverList.list(
+                  TabBar(
+                    labelColor: AppColors.oxblood,
+                    unselectedLabelColor: AppColors.inkSoft,
+                    indicatorColor: AppColors.oxblood,
+                    labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    tabs: [
+                      Tab(text: l10n.lendingLentOutTab(lent.length)),
+                      Tab(text: l10n.lendingBorrowedTab(borrowed.length)),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
                       children: [
-                        if (outNow.isNotEmpty) ...[
-                          _SectionLabel(l10n.lendingOutNowSection),
-                          for (final item in outNow) _OutNowCard(item: item),
-                        ],
-                        if (returned.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          _SectionLabel(l10n.lendingReturnedSection),
-                          for (final item in returned) _ReturnedCard(item: item),
-                        ],
+                        _LentView(records: lent),
+                        _BorrowedView(records: borrowed),
                       ],
                     ),
                   ),
-              ],
+                ],
+              ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _LentView extends StatelessWidget {
+  const _LentView({required this.records});
+
+  final List<LendingWithBook> records;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final outNow = records.where((r) => r.record.returnedDate == null).toList();
+    final returned = records.where((r) => r.record.returnedDate != null).toList();
+
+    if (records.isEmpty) {
+      return _EmptyState(text: l10n.lendingEmpty);
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      children: [
+        if (outNow.isNotEmpty) ...[
+          _SectionLabel(l10n.lendingOutNowSection),
+          for (final item in outNow)
+            _LoanCard(item: item, borrowed: false),
+        ],
+        if (returned.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _SectionLabel(l10n.lendingReturnedSection),
+          for (final item in returned) _ReturnedCard(item: item),
+        ],
+      ],
+    );
+  }
+}
+
+class _BorrowedView extends StatelessWidget {
+  const _BorrowedView({required this.records});
+
+  final List<LendingWithBook> records;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final withYou = records.where((r) => r.record.returnedDate == null).toList();
+    final returned = records.where((r) => r.record.returnedDate != null).toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      children: [
+        if (records.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 40, bottom: 20),
+            child: Text(
+              l10n.lendingBorrowedEmpty,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
+            ),
+          )
+        else ...[
+          if (withYou.isNotEmpty) ...[
+            _SectionLabel(l10n.lendingWithYouNowSection),
+            for (final item in withYou) _LoanCard(item: item, borrowed: true),
+          ],
+          if (returned.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _SectionLabel(l10n.lendingReturnedSection),
+            for (final item in returned) _ReturnedCard(item: item),
+          ],
+        ],
+        const SizedBox(height: 12),
+        Center(
+          child: TextButton(
+            onPressed: () => showLogBorrowedSheet(context),
+            child: Text(
+              l10n.lendingLogBorrowed,
+              style: const TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
         ),
       ),
     );
@@ -157,13 +229,17 @@ Widget _dueStamp(BuildContext context, DateTime? due) {
   final days = DateUtils.dateOnly(due).difference(DateUtils.dateOnly(DateTime.now())).inDays;
   if (days < 0) return _Stamp(label: l10n.lendingOverdue, color: AppColors.oxblood);
   if (days <= 7) return _Stamp(label: l10n.lendingDueInDays(days), color: AppColors.gold);
-  return _Stamp(label: l10n.lendingDueOn(_fmtDate(due)), color: AppColors.slate);
+  return _Stamp(label: l10n.lendingDueOn(fmtLendingDate(due)), color: AppColors.slate);
 }
 
-class _OutNowCard extends ConsumerWidget {
-  const _OutNowCard({required this.item});
+/// One "out now" / "with you now" card — the two sides share a shape, differing
+/// only in the "to X" vs "from X" subtitle, the self-logged note, and the
+/// close-out verb.
+class _LoanCard extends ConsumerWidget {
+  const _LoanCard({required this.item, required this.borrowed});
 
   final LendingWithBook item;
+  final bool borrowed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -180,9 +256,9 @@ class _OutNowCard extends ConsumerWidget {
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               TypesetCover(
                 title: book?.title ?? '…',
@@ -203,7 +279,9 @@ class _OutNowCard extends ConsumerWidget {
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                     Text(
-                      l10n.lendingToPersonSince(r.borrowerName, _fmtDate(r.lentDate)),
+                      borrowed
+                          ? l10n.lendingFromPersonSince(r.borrowerName, fmtLendingDate(r.lentDate))
+                          : l10n.lendingToPersonSince(r.borrowerName, fmtLendingDate(r.lentDate)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: AppColors.inkSoft, fontSize: 11),
@@ -215,6 +293,14 @@ class _OutNowCard extends ConsumerWidget {
               _dueStamp(context, r.dueDate),
             ],
           ),
+          if (borrowed)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 44),
+              child: Text(
+                l10n.lendingSelfLogged,
+                style: const TextStyle(color: AppColors.inkSoft, fontSize: 10, height: 1.2),
+              ),
+            ),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
@@ -228,7 +314,10 @@ class _OutNowCard extends ConsumerWidget {
                 side: const BorderSide(color: AppColors.line),
                 padding: const EdgeInsets.symmetric(vertical: 8),
               ),
-              child: Text(l10n.lendingMarkReturned, style: const TextStyle(fontSize: 12)),
+              child: Text(
+                borrowed ? l10n.lendingReturnedIt : l10n.lendingMarkReturned,
+                style: const TextStyle(fontSize: 12),
+              ),
             ),
           ),
         ],
@@ -273,8 +362,8 @@ class _ReturnedCard extends StatelessWidget {
                   Text(
                     l10n.lendingReturnedRange(
                       r.borrowerName,
-                      _fmtDate(r.lentDate),
-                      _fmtDate(r.returnedDate!),
+                      fmtLendingDate(r.lentDate),
+                      fmtLendingDate(r.returnedDate!),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

@@ -95,11 +95,14 @@ class LendingRecordsDao extends DatabaseAccessor<AppDatabase> with _$LendingReco
           .watch();
 
   /// Every active lending record for the whole library, newest-lent first,
-  /// joined through the library entry to its cached book (the ledger screen).
+  /// joined to its cached book. A lent record resolves the book through the
+  /// owned library entry; a borrowed one has no entry, so it falls back to the
+  /// record's own `editionId`.
   Stream<List<LendingWithBook>> watchAllActive() {
+    final bookEdition = coalesce([libraryEntries.editionId, lendingRecords.editionId]);
     final query = select(lendingRecords).join([
       leftOuterJoin(libraryEntries, libraryEntries.id.equalsExp(lendingRecords.libraryEntryId)),
-      leftOuterJoin(cachedBooks, cachedBooks.editionId.equalsExp(libraryEntries.editionId)),
+      leftOuterJoin(cachedBooks, cachedBooks.editionId.equalsExp(bookEdition)),
     ])
       ..where(lendingRecords.deletedAt.isNull())
       ..orderBy([OrderingTerm.desc(lendingRecords.lentDate)]);

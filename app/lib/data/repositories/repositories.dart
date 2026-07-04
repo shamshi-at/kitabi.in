@@ -305,7 +305,7 @@ class LendingRepository extends Repo {
       LendingRecordsCompanion.insert(
         id: id,
         userId: session.userId,
-        libraryEntryId: libraryEntryId,
+        libraryEntryId: Value(libraryEntryId),
         borrowerName: borrowerName,
         lentDate: lentDate,
         dueDate: Value(dueDate),
@@ -316,10 +316,51 @@ class LendingRepository extends Repo {
       entityId: id,
       opType: 'create',
       data: {
+        'direction': 'lent',
         'library_entry_id': libraryEntryId,
         'borrower_name': borrowerName,
         'lent_date': lentDate.toUtc().toIso8601String().split('T').first,
         if (dueDate != null) 'due_date': dueDate.toUtc().toIso8601String().split('T').first,
+      },
+    );
+    return id;
+  }
+
+  /// Log a borrowed book (S8c) — the other direction. There's no owned library
+  /// entry, so the book is carried by the catalog `editionId`. `lenderName` is
+  /// who I borrowed it from.
+  Future<String> logBorrowed({
+    required String editionId,
+    required String lenderName,
+    required DateTime borrowedDate,
+    DateTime? dueDate,
+    String? note,
+  }) async {
+    final id = _uuid.v4();
+    final trimmedNote = note?.trim();
+    await db.lendingRecordsDao.insertOne(
+      LendingRecordsCompanion.insert(
+        id: id,
+        userId: session.userId,
+        direction: const Value('borrowed'),
+        editionId: Value(editionId),
+        borrowerName: lenderName,
+        lentDate: borrowedDate,
+        dueDate: Value(dueDate),
+        note: Value(trimmedNote),
+      ),
+    );
+    await enqueue(
+      entity: 'lending_records',
+      entityId: id,
+      opType: 'create',
+      data: {
+        'direction': 'borrowed',
+        'edition_id': editionId,
+        'borrower_name': lenderName,
+        'lent_date': borrowedDate.toUtc().toIso8601String().split('T').first,
+        if (dueDate != null) 'due_date': dueDate.toUtc().toIso8601String().split('T').first,
+        if (trimmedNote != null && trimmedNote.isNotEmpty) 'note': trimmedNote,
       },
     );
     return id;

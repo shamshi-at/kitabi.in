@@ -801,6 +801,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Set a due date'**
   String get lendingSetDueDate;
+
+  /// Lent-out tab label with count
+  ///
+  /// In en, this message translates to:
+  /// **'Lent out · {count}'**
+  String lendingLentOutTab(int count);
+
+  /// Borrowed tab label with count
+  ///
+  /// In en, this message translates to:
+  /// **'Borrowed · {count}'**
+  String lendingBorrowedTab(int count);
+
+  /// Section header for books currently borrowed
+  ///
+  /// In en, this message translates to:
+  /// **'With you now'**
+  String get lendingWithYouNowSection;
+
+  /// Borrowed card subtitle: lender and borrowed-on date
+  ///
+  /// In en, this message translates to:
+  /// **'from {name} · since {date}'**
+  String lendingFromPersonSince(String name, String date);
+
+  /// Returned borrowed card: lender and the borrowed–returned date range
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {start} – {end}'**
+  String lendingBorrowedRange(String name, String start, String end);
+
+  /// Sublabel on a self-logged borrowed record
+  ///
+  /// In en, this message translates to:
+  /// **'Self-logged — just for your own tracking.'**
+  String get lendingSelfLogged;
+
+  /// Button that closes a borrowed record
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve returned it ✓'**
+  String get lendingReturnedIt;
+
+  /// Empty state on the borrowed tab
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing borrowed yet.'**
+  String get lendingBorrowedEmpty;
+
+  /// Opens the log-a-borrowed-book sheet
+  ///
+  /// In en, this message translates to:
+  /// **'+ Log a borrowed book'**
+  String get lendingLogBorrowed;
+
+  /// Title of the log-borrowed bottom sheet (S8c)
+  ///
+  /// In en, this message translates to:
+  /// **'Log a borrowed book'**
+  String get logBorrowedTitle;
+
+  /// Field label for the book picker
+  ///
+  /// In en, this message translates to:
+  /// **'BOOK'**
+  String get logBorrowedBookLabel;
+
+  /// Hint in the book search field
+  ///
+  /// In en, this message translates to:
+  /// **'Search a book…'**
+  String get logBorrowedSearchHint;
+
+  /// Field label for who lent the book
+  ///
+  /// In en, this message translates to:
+  /// **'FROM'**
+  String get logBorrowedFromLabel;
+
+  /// Hint in the lender name field
+  ///
+  /// In en, this message translates to:
+  /// **'Who lent it to you?'**
+  String get logBorrowedFromHint;
+
+  /// Field label for the borrowed-on date
+  ///
+  /// In en, this message translates to:
+  /// **'BORROWED ON'**
+  String get logBorrowedOnLabel;
+
+  /// Field label for the optional reminder date
+  ///
+  /// In en, this message translates to:
+  /// **'Remind me · optional'**
+  String get logBorrowedRemindLabel;
+
+  /// Field label for the optional note
+  ///
+  /// In en, this message translates to:
+  /// **'Note · optional'**
+  String get logBorrowedNoteLabel;
+
+  /// Submit button on the log-borrowed sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Save to my borrowed shelf'**
+  String get logBorrowedSave;
+
+  /// Placeholder for an unset date field
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a date'**
+  String get logBorrowedNoDate;
 }
 
 class _AppLocalizationsDelegate

@@ -234,6 +234,34 @@ async def test_rating_and_review_and_tag_and_lending_flow(client):
     assert statuses == ["applied"] * len(ops)
 
 
+async def test_push_borrowed_lending_record_without_library_entry(client):
+    """A borrowed record has no owned library entry — it points at the catalog
+    edition instead, with direction='borrowed' and an optional note."""
+    _, edition_id = await _seed_edition(client)
+    record_id = str(uuid.uuid4())
+    op = _op(
+        "lending_records",
+        record_id,
+        "create",
+        {
+            "direction": "borrowed",
+            "edition_id": edition_id,
+            "borrower_name": "Divya",
+            "lent_date": "2026-07-02",
+            "note": "Handle with care",
+        },
+    )
+    resp = await client.post("/sync/push", json={"ops": [op]})
+    assert resp.json()["results"][0]["status"] == "applied"
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    record = next(c for c in pulled.json()["changes"] if c["entity"] == "lending_records")
+    assert record["data"]["direction"] == "borrowed"
+    assert record["data"]["edition_id"] == edition_id
+    assert record["data"]["library_entry_id"] is None
+    assert record["data"]["note"] == "Handle with care"
+
+
 async def test_delete_op_carries_empty_payload_and_is_idempotent(client):
     _, edition_id = await _seed_edition(client)
     entry_id = str(uuid.uuid4())

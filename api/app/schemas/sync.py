@@ -121,15 +121,20 @@ class LibraryEntryTagUpdate(BaseModel):
 
 class LendingRecordCreate(BaseModel):
     id: uuid.UUID
-    library_entry_id: uuid.UUID
+    direction: str = "lent"
+    library_entry_id: uuid.UUID | None = None
+    edition_id: uuid.UUID | None = None
     borrower_name: str
     borrower_user_id: uuid.UUID | None = None
+    linked_loan_id: uuid.UUID | None = None
     lent_date: date
     due_date: date | None = None
     returned_date: date | None = None
+    note: str | None = None
 
 
 class LendingRecordUpdate(BaseModel):
     borrower_name: str | None = None
     due_date: date | None = None
     returned_date: date | None = None
+    note: str | None = None

@@ -56,14 +56,22 @@ class LibraryEntryTags extends Table with SyncColumns {
   TextColumn get tagId => text()();
 }
 
-/// A record, not a flag (rule 14) — lent to X, on date, returned Y/N.
+/// A record, not a flag (rule 14) — runs both ways. `direction` is 'lent' or
+/// 'borrowed'; a lent record hangs off my `libraryEntryId` (the copy I own), a
+/// borrowed one off the catalog `editionId` (I don't own it). `borrowerName` is
+/// the counterparty either way. `linkedLoanId` is the dormant [WIRED] cross-user
+/// correlation.
 class LendingRecords extends Table with SyncColumns {
-  TextColumn get libraryEntryId => text()();
+  TextColumn get direction => text().withDefault(const Constant('lent'))();
+  TextColumn get libraryEntryId => text().nullable()();
+  TextColumn get editionId => text().nullable()();
   TextColumn get borrowerName => text()();
   TextColumn get borrowerUserId => text().nullable()();
+  TextColumn get linkedLoanId => text().nullable()();
   DateTimeColumn get lentDate => dateTime()();
   DateTimeColumn get dueDate => dateTime().nullable()();
   DateTimeColumn get returnedDate => dateTime().nullable()();
+  TextColumn get note => text().nullable()();
 }
 
 /// [WIRED] — pulled from the server, never pushed; the server writes these

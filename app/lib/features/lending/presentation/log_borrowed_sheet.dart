@@ -1,0 +1,384 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/db/catalog_cache.dart';
+import '../../../data/repositories/repository_providers.dart';
+import '../../../data/sync/sync_providers.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../catalog/providers/catalog_providers.dart';
+import '../lending_format.dart';
+
+/// S8c — log a book you've borrowed. The other entry point to the ledger:
+/// you add it yourself, no waiting on a friend to use the app. Same shape as
+/// the lend flow — book, person, dates, note.
+Future<void> showLogBorrowedSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => const _LogBorrowedSheet(),
+  );
+}
+
+class _LogBorrowedSheet extends ConsumerStatefulWidget {
+  const _LogBorrowedSheet();
+
+  @override
+  ConsumerState<_LogBorrowedSheet> createState() => _LogBorrowedSheetState();
+}
+
+class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
+  final _lender = TextEditingController();
+  final _note = TextEditingController();
+  final _searchController = TextEditingController();
+  String _query = '';
+  Map<String, dynamic>? _selected;
+  DateTime _borrowedOn = DateTime.now();
+  DateTime? _remindOn;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _lender.dispose();
+    _note.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool get _canSave => _selected != null && _lender.text.trim().isNotEmpty && !_saving;
+
+  Future<void> _save() async {
+    final work = _selected;
+    if (work == null || _lender.text.trim().isEmpty) return;
+    setState(() => _saving = true);
+    final edition = work['edition'] as Map<String, dynamic>;
+    await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+    final repo = await ref.read(lendingRepositoryProvider.future);
+    await repo.logBorrowed(
+      editionId: edition['id'] as String,
+      lenderName: _lender.text.trim(),
+      borrowedDate: _borrowedOn,
+      dueDate: _remindOn,
+      note: _note.text,
+    );
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _pickBorrowedOn() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _borrowedOn,
+      firstDate: now.subtract(const Duration(days: 3650)),
+      lastDate: now,
+    );
+    if (picked != null) setState(() => _borrowedOn = picked);
+  }
+
+  Future<void> _pickRemindOn() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _remindOn ?? now.add(const Duration(days: 14)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 3650)),
+    );
+    if (picked != null) setState(() => _remindOn = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 12,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 18,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 32,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            Text(l10n.logBorrowedTitle, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 14),
+            _Label(l10n.logBorrowedBookLabel),
+            if (_selected != null)
+              _SelectedBook(work: _selected!, onClear: () => setState(() => _selected = null))
+            else
+              _BookSearch(
+                controller: _searchController,
+                query: _query,
+                onQuery: (v) => setState(() => _query = v),
+                onPick: (w) => setState(() {
+                  _selected = w;
+                  _query = '';
+                  _searchController.clear();
+                }),
+              ),
+            const SizedBox(height: 12),
+            _Label(l10n.logBorrowedFromLabel),
+            TextField(
+              controller: _lender,
+              onChanged: (_) => setState(() {}),
+              decoration: _inputDecoration(l10n.logBorrowedFromHint),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateField(
+                    label: l10n.logBorrowedOnLabel,
+                    value: fmtLendingDate(_borrowedOn),
+                    onTap: _pickBorrowedOn,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _DateField(
+                    label: l10n.logBorrowedRemindLabel,
+                    value: _remindOn == null ? l10n.logBorrowedNoDate : fmtLendingDate(_remindOn!),
+                    onTap: _pickRemindOn,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _Label(l10n.logBorrowedNoteLabel),
+            TextField(
+              controller: _note,
+              maxLines: 2,
+              decoration: _inputDecoration(''),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _canSave ? _save : null,
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+                      )
+                    : Text(l10n.logBorrowedSave),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+InputDecoration _inputDecoration(String hint) => InputDecoration(
+      isDense: true,
+      filled: true,
+      fillColor: AppColors.paper,
+      hintText: hint,
+      hintStyle: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.line),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.line),
+      ),
+    );
+
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 10,
+          letterSpacing: 1,
+          color: AppColors.inkSoft,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _BookSearch extends ConsumerWidget {
+  const _BookSearch({
+    required this.controller,
+    required this.query,
+    required this.onQuery,
+    required this.onPick,
+  });
+
+  final TextEditingController controller;
+  final String query;
+  final ValueChanged<String> onQuery;
+  final ValueChanged<Map<String, dynamic>> onPick;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final results = ref.watch(catalogSearchProvider(query));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          onChanged: onQuery,
+          decoration: _inputDecoration(l10n.logBorrowedSearchHint).copyWith(
+            prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.inkSoft),
+          ),
+        ),
+        if (query.trim().isNotEmpty)
+          results.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(12),
+              child: Center(child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )),
+            ),
+            error: (err, _) => Padding(padding: const EdgeInsets.all(8), child: Text('$err')),
+            data: (works) => Column(
+              children: [
+                for (final work in works.take(6))
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    dense: true,
+                    leading: TypesetCover(
+                      title: work['title'] as String? ?? '',
+                      author: _firstAuthor(work),
+                      coverUrl: (work['edition'] as Map?)?['cover_url'] as String?,
+                      width: 26,
+                      height: 38,
+                    ),
+                    title: Text(
+                      work['title'] as String? ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: _firstAuthor(work) == null
+                        ? null
+                        : Text(
+                            _firstAuthor(work)!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                          ),
+                    onTap: (work['edition'] as Map?)?['id'] == null ? null : () => onPick(work),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  static String? _firstAuthor(Map<String, dynamic> work) {
+    final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    return authors.isEmpty ? null : authors.first['name'] as String?;
+  }
+}
+
+class _SelectedBook extends StatelessWidget {
+  const _SelectedBook({required this.work, required this.onClear});
+
+  final Map<String, dynamic> work;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.ink),
+      ),
+      child: Row(
+        children: [
+          TypesetCover(
+            title: work['title'] as String? ?? '',
+            author: authors.isEmpty ? null : authors.first['name'] as String?,
+            coverUrl: (work['edition'] as Map?)?['cover_url'] as String?,
+            width: 26,
+            height: 38,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              work['title'] as String? ?? '',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18, color: AppColors.inkSoft),
+            onPressed: onClear,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  const _DateField({required this.label, required this.value, required this.onTap});
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Label(label),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Text(value, style: const TextStyle(fontSize: 13, color: AppColors.ink)),
+          ),
+        ),
+      ],
+    );
+  }
+}

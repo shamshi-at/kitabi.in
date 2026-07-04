@@ -426,4 +426,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lendingSetDueDate => 'Set a due date';
+
+  @override
+  String lendingLentOutTab(int count) {
+    return 'Lent out · $count';
+  }
+
+  @override
+  String lendingBorrowedTab(int count) {
+    return 'Borrowed · $count';
+  }
+
+  @override
+  String get lendingWithYouNowSection => 'With you now';
+
+  @override
+  String lendingFromPersonSince(String name, String date) {
+    return 'from $name · since $date';
+  }
+
+  @override
+  String lendingBorrowedRange(String name, String start, String end) {
+    return '$name · $start – $end';
+  }
+
+  @override
+  String get lendingSelfLogged => 'Self-logged — just for your own tracking.';
+
+  @override
+  String get lendingReturnedIt => 'I\'ve returned it ✓';
+
+  @override
+  String get lendingBorrowedEmpty => 'Nothing borrowed yet.';
+
+  @override
+  String get lendingLogBorrowed => '+ Log a borrowed book';
+
+  @override
+  String get logBorrowedTitle => 'Log a borrowed book';
+
+  @override
+  String get logBorrowedBookLabel => 'BOOK';
+
+  @override
+  String get logBorrowedSearchHint => 'Search a book…';
+
+  @override
+  String get logBorrowedFromLabel => 'FROM';
+
+  @override
+  String get logBorrowedFromHint => 'Who lent it to you?';
+
+  @override
+  String get logBorrowedOnLabel => 'BORROWED ON';
+
+  @override
+  String get logBorrowedRemindLabel => 'Remind me · optional';
+
+  @override
+  String get logBorrowedNoteLabel => 'Note · optional';
+
+  @override
+  String get logBorrowedSave => 'Save to my borrowed shelf';
+
+  @override
+  String get logBorrowedNoDate => 'Pick a date';
 }

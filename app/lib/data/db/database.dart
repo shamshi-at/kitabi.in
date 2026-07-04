@@ -48,5 +48,32 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // Lending runs both ways now: add direction/editionId/linkedLoanId/
+            // note and make libraryEntryId nullable (borrowed books aren't owned).
+            // TableMigration recreates the table with the new schema, copying
+            // existing rows and defaulting the new columns.
+            // TableMigration is the canonical drift way to add columns + relax
+            // a NOT NULL at once; marked experimental but stable in practice.
+            await m.alterTable(
+              // ignore: experimental_member_use
+              TableMigration(
+                lendingRecords,
+                newColumns: [
+                  lendingRecords.direction,
+                  lendingRecords.editionId,
+                  lendingRecords.linkedLoanId,
+                  lendingRecords.note,
+                ],
+              ),
+            );
+          }
+        },
+      );
 }

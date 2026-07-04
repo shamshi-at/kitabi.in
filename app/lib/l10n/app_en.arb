@@ -528,5 +528,96 @@
   "lendingSetDueDate": "Set a due date",
   "@lendingSetDueDate": {
     "description": "Button/hint to pick a due date in the lend dialog"
+  },
+  "lendingLentOutTab": "Lent out · {count}",
+  "@lendingLentOutTab": {
+    "description": "Lent-out tab label with count",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "lendingBorrowedTab": "Borrowed · {count}",
+  "@lendingBorrowedTab": {
+    "description": "Borrowed tab label with count",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "lendingWithYouNowSection": "With you now",
+  "@lendingWithYouNowSection": {
+    "description": "Section header for books currently borrowed"
+  },
+  "lendingFromPersonSince": "from {name} · since {date}",
+  "@lendingFromPersonSince": {
+    "description": "Borrowed card subtitle: lender and borrowed-on date",
+    "placeholders": {
+      "name": {"type": "String"},
+      "date": {"type": "String"}
+    }
+  },
+  "lendingBorrowedRange": "{name} · {start} – {end}",
+  "@lendingBorrowedRange": {
+    "description": "Returned borrowed card: lender and the borrowed–returned date range",
+    "placeholders": {
+      "name": {"type": "String"},
+      "start": {"type": "String"},
+      "end": {"type": "String"}
+    }
+  },
+  "lendingSelfLogged": "Self-logged — just for your own tracking.",
+  "@lendingSelfLogged": {
+    "description": "Sublabel on a self-logged borrowed record"
+  },
+  "lendingReturnedIt": "I've returned it ✓",
+  "@lendingReturnedIt": {
+    "description": "Button that closes a borrowed record"
+  },
+  "lendingBorrowedEmpty": "Nothing borrowed yet.",
+  "@lendingBorrowedEmpty": {
+    "description": "Empty state on the borrowed tab"
+  },
+  "lendingLogBorrowed": "+ Log a borrowed book",
+  "@lendingLogBorrowed": {
+    "description": "Opens the log-a-borrowed-book sheet"
+  },
+  "logBorrowedTitle": "Log a borrowed book",
+  "@logBorrowedTitle": {
+    "description": "Title of the log-borrowed bottom sheet (S8c)"
+  },
+  "logBorrowedBookLabel": "BOOK",
+  "@logBorrowedBookLabel": {
+    "description": "Field label for the book picker"
+  },
+  "logBorrowedSearchHint": "Search a book…",
+  "@logBorrowedSearchHint": {
+    "description": "Hint in the book search field"
+  },
+  "logBorrowedFromLabel": "FROM",
+  "@logBorrowedFromLabel": {
+    "description": "Field label for who lent the book"
+  },
+  "logBorrowedFromHint": "Who lent it to you?",
+  "@logBorrowedFromHint": {
+    "description": "Hint in the lender name field"
+  },
+  "logBorrowedOnLabel": "BORROWED ON",
+  "@logBorrowedOnLabel": {
+    "description": "Field label for the borrowed-on date"
+  },
+  "logBorrowedRemindLabel": "Remind me · optional",
+  "@logBorrowedRemindLabel": {
+    "description": "Field label for the optional reminder date"
+  },
+  "logBorrowedNoteLabel": "Note · optional",
+  "@logBorrowedNoteLabel": {
+    "description": "Field label for the optional note"
+  },
+  "logBorrowedSave": "Save to my borrowed shelf",
+  "@logBorrowedSave": {
+    "description": "Submit button on the log-borrowed sheet"
+  },
+  "logBorrowedNoDate": "Pick a date",
+  "@logBorrowedNoDate": {
+    "description": "Placeholder for an unset date field"
   }
 }
