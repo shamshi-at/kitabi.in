@@ -230,6 +230,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookAddToLibrary => 'Add to my library';
 
   @override
+  String get bookYourCopy => 'Your copy';
+
+  @override
   String get bookYourRating => 'your rating';
 
   @override

@@ -23,12 +23,18 @@ class TypesetCover extends StatelessWidget {
   final double width;
   final double height;
 
-  Color _derivedColor() {
-    final seed = '$title${author ?? ''}'.hashCode;
-    // Deterministic, muted hue so generated covers read as "part of the
-    // shelf" rather than clashing primary colors.
+  /// A deterministic, muted 2-stop gradient derived from the book — same book
+  /// always looks the same, but saturation/lightness vary a little per book so
+  /// a shelf of generated covers reads as a varied set of spines, not a wall of
+  /// one flat colour.
+  List<Color> _derivedGradient() {
+    final seed = '$title${author ?? ''}'.hashCode.abs();
     final hue = (seed % 360).toDouble();
-    return HSLColor.fromAHSL(1, hue, 0.32, 0.32).toColor();
+    final sat = 0.26 + (seed % 5) * 0.035; // 0.26 .. 0.40
+    final light = 0.25 + (seed % 4) * 0.03; // 0.25 .. 0.34
+    final top = HSLColor.fromAHSL(1, hue, sat, light).toColor();
+    final bottom = HSLColor.fromAHSL(1, (hue + 12) % 360, sat, (light - 0.09).clamp(0.1, 1)).toColor();
+    return [top, bottom];
   }
 
   @override
@@ -66,7 +72,13 @@ class TypesetCover extends StatelessWidget {
 
   Widget _typeset() {
     return Container(
-      color: _derivedColor(),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: _derivedGradient(),
+        ),
+      ),
       alignment: Alignment.topLeft,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -74,16 +86,24 @@ class TypesetCover extends StatelessWidget {
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(width * 0.18, height * 0.1, width * 0.1, 0),
-            child: Text(
-              title,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.fraunces(
-                color: AppColors.goldSoft,
-                fontSize: width * 0.24,
-                height: 1.15,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.fraunces(
+                    color: AppColors.goldSoft,
+                    fontSize: width * 0.24,
+                    height: 1.15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: height * 0.05),
+                // A gold hairline — the "one line that stays with you".
+                Container(width: width * 0.34, height: 1, color: AppColors.gold),
+              ],
             ),
           ),
           if (author != null)

@@ -472,6 +472,12 @@ abstract class AppLocalizations {
   /// **'Add to my library'**
   String get bookAddToLibrary;
 
+  /// Section header above the personal book sections
+  ///
+  /// In en, this message translates to:
+  /// **'Your copy'**
+  String get bookYourCopy;
+
   /// Label under the star rating control on the book detail screen
   ///
   /// In en, this message translates to:

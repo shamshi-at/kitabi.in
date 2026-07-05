@@ -42,3 +42,13 @@ final syncTriggerProvider = Provider<void Function()>((ref) {
     ref.read(syncEngineProvider).syncNow(session.userId);
   };
 });
+
+/// Count of queued (not-yet-synced) local mutations — drives the sync bar.
+final unsyncedCountProvider = StreamProvider.autoDispose<int>((ref) {
+  return ref.watch(appDatabaseProvider).syncQueueDao.watchPendingCount();
+});
+
+/// Count of ops that have exhausted their retries — a visible "sync failed".
+final syncErrorCountProvider = StreamProvider.autoDispose<int>((ref) {
+  return ref.watch(appDatabaseProvider).syncQueueDao.watchErroredCount();
+});

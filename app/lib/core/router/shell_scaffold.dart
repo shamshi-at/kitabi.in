@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../haptics.dart';
 import '../theme/app_theme.dart';
+import '../widgets/sync_status_bar.dart';
 import 'app_router.dart';
 
 /// The persistent bottom-nav shell (S3 mockup): Home · Library · [+] · Lending
@@ -22,7 +23,12 @@ class ShellScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.paper,
-      body: navigationShell,
+      body: Column(
+        children: [
+          const SyncStatusBar(),
+          Expanded(child: navigationShell),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: AppColors.card,

@@ -33,6 +33,16 @@ class SyncQueueDao extends DatabaseAccessor<AppDatabase> with _$SyncQueueDaoMixi
       (selectOnly(syncQueue)..addColumns([syncQueue.opId.count()]))
           .map((row) => row.read(syncQueue.opId.count()) ?? 0)
           .watchSingle();
+
+  /// Ops that have exhausted their retries (attempts >= 5) — surfaced in the UI
+  /// as "some changes haven't synced" (CLAUDE.md: max 5 attempts, then error).
+  Stream<int> watchErroredCount() {
+    final count = syncQueue.opId.count();
+    final query = selectOnly(syncQueue)
+      ..addColumns([count])
+      ..where(syncQueue.attempts.isBiggerOrEqualValue(5));
+    return query.map((row) => row.read(count) ?? 0).watchSingle();
+  }
 }
 
 @DriftAccessor(tables: [SyncState])

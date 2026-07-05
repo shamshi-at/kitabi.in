@@ -365,7 +365,20 @@ class _OwnedBookSections extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, left: 2),
+          child: Text(
+            AppLocalizations.of(context)!.bookYourCopy.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: AppColors.inkSoft,
+            ),
+          ),
+        ),
         _StatusPicker(entry: entry),
         const SizedBox(height: 8),
         _ProgressCard(entry: entry),
