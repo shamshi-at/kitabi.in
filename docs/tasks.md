@@ -224,12 +224,13 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 
 - [ ] LLM recommendation service: reasoned from user's ratings, plain-words "why" — S11
 - [ ] Recs UX: opt-in, visible off switch, + Wishlist / Not for me feedback — S11/S12
-- [ ] Per-book share card generator (any book: cover, title, rating — catalog average if
+- [x] Per-book share card generator (any book: cover, title, rating — catalog average if
       you haven't rated it — short blurb, mark, kitabi.in), reachable from the book page
-      share icon and search results — S6c
-- [ ] Personal-endorsement share card (your rating + review line instead of the blurb) —
-      S13; toggle on S6c folds this in when you have a rating/review for that book
-- [ ] Share sheet integration (WhatsApp / Instagram / copy link) — S6c/S13
+      share icon — S6c. `BookShareCard` rendered to PNG via `RepaintBoundary` + `share_plus`
+- [x] Personal-endorsement share card (your rating + review line instead of the blurb) —
+      S13; the "Include my rating & note" toggle on S6c folds this into the same card
+- [x] Share sheet integration (WhatsApp / Instagram / copy link) — S6c/S13. Uses the OS
+      share sheet (WhatsApp/Instagram appear there) + a Copy-link action
 
 ## Phase 8 — Platform & launch plumbing
 

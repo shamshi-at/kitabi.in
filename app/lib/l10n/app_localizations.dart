@@ -1054,6 +1054,66 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get navAdd;
 
+  /// Eyebrow label at the top of the share card
+  ///
+  /// In en, this message translates to:
+  /// **'SHARE A BOOK'**
+  String get shareEyebrow;
+
+  /// Caption next to the stars when showing the user's own rating
+  ///
+  /// In en, this message translates to:
+  /// **'your rating'**
+  String get shareYourRating;
+
+  /// Caption next to the stars when showing the catalog average rating
+  ///
+  /// In en, this message translates to:
+  /// **'catalog avg'**
+  String get shareCatalogAvg;
+
+  /// Tagline in the share card footer
+  ///
+  /// In en, this message translates to:
+  /// **'beyond the bookshelf'**
+  String get shareTagline;
+
+  /// Title of the share bottom sheet (S6c)
+  ///
+  /// In en, this message translates to:
+  /// **'Share this book'**
+  String get shareTitle;
+
+  /// Toggle that folds the user's rating and review into the card
+  ///
+  /// In en, this message translates to:
+  /// **'Include my rating & note'**
+  String get shareIncludeRating;
+
+  /// Copies a link to the book
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get shareCopyLink;
+
+  /// Renders the card to an image and opens the OS share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Share card'**
+  String get shareCardButton;
+
+  /// Snackbar shown after copying the book link
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get shareLinkCopied;
+
+  /// The text shared alongside the card image
+  ///
+  /// In en, this message translates to:
+  /// **'{title} by {author} — on Kitabi, kitabi.in'**
+  String shareBookText(String title, String author);
+
   /// Title of the insights/stats screen
   ///
   /// In en, this message translates to:

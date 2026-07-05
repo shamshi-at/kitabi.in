@@ -576,6 +576,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navAdd => 'Add';
 
   @override
+  String get shareEyebrow => 'SHARE A BOOK';
+
+  @override
+  String get shareYourRating => 'your rating';
+
+  @override
+  String get shareCatalogAvg => 'catalog avg';
+
+  @override
+  String get shareTagline => 'beyond the bookshelf';
+
+  @override
+  String get shareTitle => 'Share this book';
+
+  @override
+  String get shareIncludeRating => 'Include my rating & note';
+
+  @override
+  String get shareCopyLink => 'Copy link';
+
+  @override
+  String get shareCardButton => 'Share card';
+
+  @override
+  String get shareLinkCopied => 'Link copied';
+
+  @override
+  String shareBookText(String title, String author) {
+    return '$title by $author — on Kitabi, kitabi.in';
+  }
+
+  @override
   String get insightsTitle => 'Insights';
 
   @override

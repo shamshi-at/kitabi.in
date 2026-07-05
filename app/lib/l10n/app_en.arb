@@ -726,6 +726,50 @@
   "@navAdd": {
     "description": "Bottom navigation label for the add-a-book action"
   },
+  "shareEyebrow": "SHARE A BOOK",
+  "@shareEyebrow": {
+    "description": "Eyebrow label at the top of the share card"
+  },
+  "shareYourRating": "your rating",
+  "@shareYourRating": {
+    "description": "Caption next to the stars when showing the user's own rating"
+  },
+  "shareCatalogAvg": "catalog avg",
+  "@shareCatalogAvg": {
+    "description": "Caption next to the stars when showing the catalog average rating"
+  },
+  "shareTagline": "beyond the bookshelf",
+  "@shareTagline": {
+    "description": "Tagline in the share card footer"
+  },
+  "shareTitle": "Share this book",
+  "@shareTitle": {
+    "description": "Title of the share bottom sheet (S6c)"
+  },
+  "shareIncludeRating": "Include my rating & note",
+  "@shareIncludeRating": {
+    "description": "Toggle that folds the user's rating and review into the card"
+  },
+  "shareCopyLink": "Copy link",
+  "@shareCopyLink": {
+    "description": "Copies a link to the book"
+  },
+  "shareCardButton": "Share card",
+  "@shareCardButton": {
+    "description": "Renders the card to an image and opens the OS share sheet"
+  },
+  "shareLinkCopied": "Link copied",
+  "@shareLinkCopied": {
+    "description": "Snackbar shown after copying the book link"
+  },
+  "shareBookText": "{title} by {author} — on Kitabi, kitabi.in",
+  "@shareBookText": {
+    "description": "The text shared alongside the card image",
+    "placeholders": {
+      "title": {"type": "String"},
+      "author": {"type": "String"}
+    }
+  },
   "insightsTitle": "Insights",
   "@insightsTitle": {
     "description": "Title of the insights/stats screen"

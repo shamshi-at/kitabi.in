@@ -14,6 +14,7 @@ import '../../../core/notifications/notification_service.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../../lending/presentation/lend_sheet.dart';
 import '../../lending/reminder.dart';
+import '../../share/presentation/share_book_sheet.dart';
 import '../reading_status.dart';
 import '../providers/library_providers.dart';
 
@@ -129,6 +130,7 @@ class _BookDetailBody extends ConsumerWidget {
                   ],
                 ),
               ),
+              _ShareButton(work: work, edition: edition),
               _LibraryEntryMenu(editionId: editionId),
             ],
           ),
@@ -207,6 +209,39 @@ class _RatingRow extends ConsumerWidget {
         const SizedBox(width: 6),
         Text(l10n.bookYourRating, style: const TextStyle(color: AppColors.inkSoft, fontSize: 10)),
       ],
+    );
+  }
+}
+
+class _ShareButton extends ConsumerWidget {
+  const _ShareButton({required this.work, required this.edition});
+
+  final Map<String, dynamic> work;
+  final Map<String, dynamic>? edition;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final workId = work['id'] as String;
+    return IconButton(
+      icon: const Icon(Icons.ios_share, color: AppColors.oxblood),
+      onPressed: () {
+        final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final rating = ref.read(ratingProvider(workId)).valueOrNull;
+        final review = ref.read(reviewProvider(workId)).valueOrNull;
+        // Catalog average until the user has rated it (feature-map S6c).
+        final catalog = (work['aggregate_rating'] as num?)?.toDouble() ??
+            (work['translation_group_rating'] as num?)?.toDouble();
+        showShareBookSheet(
+          context,
+          title: work['title'] as String,
+          author: authors.isNotEmpty ? authors.first['name'] as String : '',
+          coverUrl: edition?['cover_url'] as String?,
+          blurb: work['description'] as String?,
+          catalogRating: catalog,
+          personalRating: rating?.value,
+          personalReview: review?.body,
+        );
+      },
     );
   }
 }
