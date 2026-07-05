@@ -49,6 +49,9 @@ class LibraryRepository extends Repo {
   Future<LibraryEntry?> getByEditionId(String editionId) =>
       db.libraryEntriesDao.getByEditionId(editionId);
 
+  /// Global search (S4) over the personal library — offline, from Drift.
+  Future<List<LibraryHit>> search(String query) => db.libraryEntriesDao.search(query);
+
   /// Add a book to the library (S6's implicit "own this" action).
   Future<String> add({required String editionId, String status = 'pending'}) async {
     final id = _uuid.v4();

@@ -4,7 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/status_pill.dart';
+import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/db/database.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../library/providers/library_providers.dart';
 import '../providers/catalog_providers.dart';
 import 'catalog_result_tile.dart';
 
@@ -31,7 +35,6 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final results = ref.watch(catalogSearchProvider(_query));
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -124,39 +127,137 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                         ),
                       ),
                     )
-                  : results.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => Center(child: Text('$err')),
-                      data: (works) => works.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Text(
-                                  l10n.catalogSearchEmpty,
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(color: AppColors.inkSoft),
-                                ),
-                              ),
-                            )
-                          : ListView(
-                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                              children: [
-                                Text(
-                                  l10n.catalogSearchSectionCatalog,
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                        color: AppColors.inkSoft,
-                                        letterSpacing: 1,
-                                      ),
-                                ),
-                                const SizedBox(height: 8),
-                                for (final work in works) CatalogResultTile(work: work),
-                              ],
-                            ),
-                    ),
+                  : _SearchResults(query: _query),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// S4 — global search: the personal library first (offline, from Drift), then
+/// the shared catalog (API). A library hit opens the book you own; a catalog
+/// hit opens it to add.
+class _SearchResults extends ConsumerWidget {
+  const _SearchResults({required this.query});
+
+  final String query;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final library = ref.watch(librarySearchProvider(query));
+    final catalog = ref.watch(catalogSearchProvider(query));
+    final hits = library.valueOrNull ?? const <LibraryHit>[];
+    final works = catalog.valueOrNull ?? const <Map<String, dynamic>>[];
+
+    if (library.isLoading && catalog.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (!library.isLoading && !catalog.isLoading && hits.isEmpty && works.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            l10n.catalogSearchEmpty,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
+          ),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      children: [
+        if (hits.isNotEmpty) ...[
+          _SectionHeader(l10n.catalogSearchSectionLibrary(hits.length)),
+          const SizedBox(height: 8),
+          for (final hit in hits) _LibraryHitTile(hit: hit),
+          const SizedBox(height: 16),
+        ],
+        if (works.isNotEmpty || catalog.isLoading) ...[
+          _SectionHeader(l10n.catalogSearchSectionCatalog),
+          const SizedBox(height: 8),
+          if (catalog.isLoading)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Center(child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )),
+            )
+          else
+            for (final work in works) CatalogResultTile(work: work),
+        ],
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context)
+          .textTheme
+          .labelSmall
+          ?.copyWith(color: AppColors.inkSoft, letterSpacing: 1),
+    );
+  }
+}
+
+class _LibraryHitTile extends StatelessWidget {
+  const _LibraryHitTile({required this.hit});
+
+  final LibraryHit hit;
+
+  @override
+  Widget build(BuildContext context) {
+    final book = hit.book;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            TypesetCover(
+              title: book.title,
+              author: book.authorNames,
+              coverUrl: book.coverUrl,
+              width: 30,
+              height: 44,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    book.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  Text(
+                    book.authorNames,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            StatusPill(status: hit.entry.status),
           ],
         ),
       ),

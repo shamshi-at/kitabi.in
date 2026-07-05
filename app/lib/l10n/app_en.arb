@@ -93,6 +93,13 @@
   "@catalogSearchSectionCatalog": {
     "description": "Section header above catalog-only search results"
   },
+  "catalogSearchSectionLibrary": "IN YOUR LIBRARY · {count}",
+  "@catalogSearchSectionLibrary": {
+    "description": "Section header above personal-library search matches",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "catalogSearchEmpty": "No matches yet — scan the barcode or add it by hand.",
   "@catalogSearchEmpty": {
     "description": "Empty state on the catalog search screen"

@@ -8,7 +8,7 @@ import 'tables.dart';
 
 // Hand-written join result types the DAOs return need to be visible wherever
 // `database.dart` is imported (repositories, providers, screens).
-export 'daos/library_daos.dart' show LendingWithBook;
+export 'daos/library_daos.dart' show LendingWithBook, LibraryHit;
 
 part 'database.g.dart';
 

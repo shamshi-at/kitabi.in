@@ -33,6 +33,14 @@ final allLendingProvider = StreamProvider.autoDispose<List<LendingWithBook>>((re
   yield* repo.watchAll();
 });
 
+/// Global search over the personal library (S4) — the "in your library" section.
+final librarySearchProvider =
+    FutureProvider.autoDispose.family<List<LibraryHit>, String>((ref, query) async {
+  if (query.trim().isEmpty) return [];
+  final repo = await ref.watch(libraryRepositoryProvider.future);
+  return repo.search(query);
+});
+
 final libraryTagsProvider =
     FutureProvider.autoDispose.family<List<LibraryEntryTag>, String>((ref, libraryEntryId) async {
   final repo = await ref.watch(tagsRepositoryProvider.future);

@@ -5,7 +5,16 @@ import '../tables.dart';
 
 part 'library_daos.g.dart';
 
-@DriftAccessor(tables: [LibraryEntries])
+/// A library entry joined to its cached book — the shape global search (S4)
+/// needs for the "in your library" section.
+class LibraryHit {
+  LibraryHit({required this.entry, required this.book});
+
+  final LibraryEntry entry;
+  final CachedBook book;
+}
+
+@DriftAccessor(tables: [LibraryEntries, CachedBooks])
 class LibraryEntriesDao extends DatabaseAccessor<AppDatabase> with _$LibraryEntriesDaoMixin {
   LibraryEntriesDao(super.db);
 
@@ -18,6 +27,26 @@ class LibraryEntriesDao extends DatabaseAccessor<AppDatabase> with _$LibraryEntr
       (select(libraryEntries)
             ..where((t) => t.editionId.equals(editionId) & t.deletedAt.isNull()))
           .getSingleOrNull();
+
+  /// Global-search the personal library by title or author (offline, from the
+  /// cached-book mirror). SQLite LIKE is case-insensitive for ASCII.
+  Future<List<LibraryHit>> search(String query) {
+    final q = '%${query.trim()}%';
+    final stmt = select(libraryEntries).join([
+      innerJoin(cachedBooks, cachedBooks.editionId.equalsExp(libraryEntries.editionId)),
+    ])..where(
+        libraryEntries.deletedAt.isNull() &
+            (cachedBooks.title.like(q) | cachedBooks.authorNames.like(q)),
+      );
+    return stmt
+        .map(
+          (row) => LibraryHit(
+            entry: row.readTable(libraryEntries),
+            book: row.readTable(cachedBooks),
+          ),
+        )
+        .get();
+  }
 
   Future<void> insertOne(LibraryEntriesCompanion row) => into(libraryEntries).insert(row);
 

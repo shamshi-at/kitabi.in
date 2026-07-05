@@ -226,6 +226,12 @@ abstract class AppLocalizations {
   /// **'IN THE CATALOG'**
   String get catalogSearchSectionCatalog;
 
+  /// Section header above personal-library search matches
+  ///
+  /// In en, this message translates to:
+  /// **'IN YOUR LIBRARY · {count}'**
+  String catalogSearchSectionLibrary(int count);
+
   /// Empty state on the catalog search screen
   ///
   /// In en, this message translates to:

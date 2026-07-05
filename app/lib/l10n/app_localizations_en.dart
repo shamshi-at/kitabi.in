@@ -82,6 +82,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get catalogSearchSectionCatalog => 'IN THE CATALOG';
 
   @override
+  String catalogSearchSectionLibrary(int count) {
+    return 'IN YOUR LIBRARY · $count';
+  }
+
+  @override
   String get catalogSearchEmpty =>
       'No matches yet — scan the barcode or add it by hand.';
 

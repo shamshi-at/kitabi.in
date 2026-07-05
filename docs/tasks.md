@@ -203,7 +203,10 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       **lending nudge** (soonest-due active lend → tap to the ledger), and the 2×2 shelf-count
       cards (Owned / Read / Lent out / Wishlist). The **AI pick** card is Phase 7
       (recommendations), so it's deliberately not here yet
-- [ ] Global search: my library first, then catalog — S4
+- [x] Global search: my library first, then catalog — S4. "In your library" matches come
+      offline from Drift (`LibraryEntriesDao.search` over the cached-book mirror, by title or
+      author) with a status pill → book detail; "In the catalog" from the API. Reached via the
+      "+" nav / the search field
 - [ ] Filter sheet: language, genre, status, year, author/publisher + live count — S4b
 - [ ] Stats: books/month bars, language donut, pages/month line, status counts — S10
 - [ ] Reading goal ring (personal, e.g. 30 books/year) — S10
