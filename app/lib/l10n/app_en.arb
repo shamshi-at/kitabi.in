@@ -703,6 +703,49 @@
   "@insightsComingSoon": {
     "description": "Placeholder body on the insights screen before stats are built"
   },
+  "insightsAllTime": "All time",
+  "@insightsAllTime": {
+    "description": "Year-selector chip for all-time stats"
+  },
+  "insightsGoalRing": "of {goal} books",
+  "@insightsGoalRing": {
+    "description": "Caption under the reading-goal ring",
+    "placeholders": {
+      "goal": {"type": "int"}
+    }
+  },
+  "insightsBooksReadTotal": "books read",
+  "@insightsBooksReadTotal": {
+    "description": "Caption under the all-time books-read number"
+  },
+  "insightsPagesRead": "Pages read",
+  "@insightsPagesRead": {
+    "description": "Stat tile label for total pages read"
+  },
+  "insightsReadingNow": "Reading now",
+  "@insightsReadingNow": {
+    "description": "Stat tile label for books currently being read"
+  },
+  "insightsBooksReadLabel": "Read",
+  "@insightsBooksReadLabel": {
+    "description": "Stat tile label for finished books"
+  },
+  "insightsPerMonth": "Books per month",
+  "@insightsPerMonth": {
+    "description": "Section header for the books-per-month bars"
+  },
+  "insightsNoData": "Finish a book and your reading stats will grow here.",
+  "@insightsNoData": {
+    "description": "Empty state on the insights screen"
+  },
+  "insightsGoalDialogTitle": "Reading goal",
+  "@insightsGoalDialogTitle": {
+    "description": "Title of the set-reading-goal dialog"
+  },
+  "insightsGoalDialogHint": "Books per year",
+  "@insightsGoalDialogHint": {
+    "description": "Hint in the reading-goal input"
+  },
   "homeYourShelves": "Your shelves",
   "@homeYourShelves": {
     "description": "Section header above the shelf-count cards on the home dashboard"

@@ -208,9 +208,13 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       author) with a status pill → book detail; "In the catalog" from the API. Reached via the
       "+" nav / the search field
 - [ ] Filter sheet: language, genre, status, year, author/publisher + live count — S4b
-- [ ] Stats: books/month bars, language donut, pages/month line, status counts — S10
-- [ ] Reading goal ring (personal, e.g. 30 books/year) — S10
-- [ ] Year selector (2026 / 2025 / all time) — S10
+- [~] Stats: books/month bars, language donut, pages/month line, status counts — S10. Insights
+      screen built (dependency-free): books-read + pages-read + reading-now stats and a
+      **books-per-month bar chart** from a pure, unit-tested `computeInsights`. The language
+      donut + pages/month line are a follow-up
+- [x] Reading goal ring (personal, e.g. 30 books/year) — S10. Progress ring (read ÷ goal),
+      goal stored device-local in `key_values` (default 30, tap to edit)
+- [x] Year selector (2026 / 2025 / all time) — S10
 
 ## Phase 7 — Recommendations & share
 

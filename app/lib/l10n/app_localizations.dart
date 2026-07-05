@@ -1024,6 +1024,66 @@ abstract class AppLocalizations {
   /// **'Your reading stats — books a month, languages, pages, and a reading goal — land here soon.'**
   String get insightsComingSoon;
 
+  /// Year-selector chip for all-time stats
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get insightsAllTime;
+
+  /// Caption under the reading-goal ring
+  ///
+  /// In en, this message translates to:
+  /// **'of {goal} books'**
+  String insightsGoalRing(int goal);
+
+  /// Caption under the all-time books-read number
+  ///
+  /// In en, this message translates to:
+  /// **'books read'**
+  String get insightsBooksReadTotal;
+
+  /// Stat tile label for total pages read
+  ///
+  /// In en, this message translates to:
+  /// **'Pages read'**
+  String get insightsPagesRead;
+
+  /// Stat tile label for books currently being read
+  ///
+  /// In en, this message translates to:
+  /// **'Reading now'**
+  String get insightsReadingNow;
+
+  /// Stat tile label for finished books
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get insightsBooksReadLabel;
+
+  /// Section header for the books-per-month bars
+  ///
+  /// In en, this message translates to:
+  /// **'Books per month'**
+  String get insightsPerMonth;
+
+  /// Empty state on the insights screen
+  ///
+  /// In en, this message translates to:
+  /// **'Finish a book and your reading stats will grow here.'**
+  String get insightsNoData;
+
+  /// Title of the set-reading-goal dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Reading goal'**
+  String get insightsGoalDialogTitle;
+
+  /// Hint in the reading-goal input
+  ///
+  /// In en, this message translates to:
+  /// **'Books per year'**
+  String get insightsGoalDialogHint;
+
   /// Section header above the shelf-count cards on the home dashboard
   ///
   /// In en, this message translates to:

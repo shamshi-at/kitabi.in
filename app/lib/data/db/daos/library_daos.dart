@@ -28,6 +28,22 @@ class LibraryEntriesDao extends DatabaseAccessor<AppDatabase> with _$LibraryEntr
             ..where((t) => t.editionId.equals(editionId) & t.deletedAt.isNull()))
           .getSingleOrNull();
 
+  /// Every active entry joined to its cached book — feeds the insights/stats
+  /// screen (S10), which needs page counts, finish dates, and statuses together.
+  Future<List<LibraryHit>> allWithBooks() {
+    final stmt = select(libraryEntries).join([
+      innerJoin(cachedBooks, cachedBooks.editionId.equalsExp(libraryEntries.editionId)),
+    ])..where(libraryEntries.deletedAt.isNull());
+    return stmt
+        .map(
+          (row) => LibraryHit(
+            entry: row.readTable(libraryEntries),
+            book: row.readTable(cachedBooks),
+          ),
+        )
+        .get();
+  }
+
   /// Global-search the personal library by title or author (offline, from the
   /// cached-book mirror). SQLite LIKE is case-insensitive for ASCII.
   Future<List<LibraryHit>> search(String query) {

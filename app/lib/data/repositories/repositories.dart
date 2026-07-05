@@ -52,6 +52,19 @@ class LibraryRepository extends Repo {
   /// Global search (S4) over the personal library — offline, from Drift.
   Future<List<LibraryHit>> search(String query) => db.libraryEntriesDao.search(query);
 
+  /// All entries joined to their books — for the insights/stats screen (S10).
+  Future<List<LibraryHit>> allWithBooks() => db.libraryEntriesDao.allWithBooks();
+
+  /// Personal reading goal (books/year). Device-local for now (key_values);
+  /// becomes syncable when a settings sync lands. Defaults to 30.
+  Future<int> readingGoal() async {
+    final raw = await db.keyValuesDao.getValue('reading_goal');
+    return int.tryParse(raw ?? '') ?? 30;
+  }
+
+  Future<void> setReadingGoal(int goal) =>
+      db.keyValuesDao.setValue('reading_goal', '$goal');
+
   /// Add a book to the library (S6's implicit "own this" action).
   Future<String> add({required String editionId, String status = 'pending'}) async {
     final id = _uuid.v4();

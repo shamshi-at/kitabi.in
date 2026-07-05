@@ -554,6 +554,39 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your reading stats — books a month, languages, pages, and a reading goal — land here soon.';
 
   @override
+  String get insightsAllTime => 'All time';
+
+  @override
+  String insightsGoalRing(int goal) {
+    return 'of $goal books';
+  }
+
+  @override
+  String get insightsBooksReadTotal => 'books read';
+
+  @override
+  String get insightsPagesRead => 'Pages read';
+
+  @override
+  String get insightsReadingNow => 'Reading now';
+
+  @override
+  String get insightsBooksReadLabel => 'Read';
+
+  @override
+  String get insightsPerMonth => 'Books per month';
+
+  @override
+  String get insightsNoData =>
+      'Finish a book and your reading stats will grow here.';
+
+  @override
+  String get insightsGoalDialogTitle => 'Reading goal';
+
+  @override
+  String get insightsGoalDialogHint => 'Books per year';
+
+  @override
   String get homeYourShelves => 'Your shelves';
 
   @override
