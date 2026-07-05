@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/haptics.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
@@ -28,8 +30,8 @@ class LendingLedgerScreen extends ConsumerWidget {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: ledger.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('$err')),
+          loading: () => const ListSkeleton(),
+          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(allLendingProvider)),
           data: (all) {
             final lent = all.where((r) => r.record.direction != 'borrowed').toList();
             final borrowed = all.where((r) => r.record.direction == 'borrowed').toList();
@@ -302,6 +304,7 @@ class _LoanCard extends ConsumerWidget {
             width: double.infinity,
             child: OutlinedButton(
               onPressed: () async {
+                Haptics.success();
                 final repo = await ref.read(lendingRepositoryProvider.future);
                 await repo.markReturned(r.id, DateTime.now());
                 await ref.read(notificationServiceProvider).cancel(reminderIdForRecord(r.id));

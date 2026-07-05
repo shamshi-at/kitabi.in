@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../l10n/app_localizations.dart';
 import '../providers/catalog_providers.dart';
 import 'catalog_result_tile.dart';
@@ -24,8 +25,9 @@ class PublisherBrowseScreen extends ConsumerWidget {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: data.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('$err')),
+          loading: () => const ListSkeleton(),
+          error: (err, _) =>
+              ErrorRetry(onRetry: () => ref.invalidate(publisherWorksProvider(publisherId))),
           data: (body) {
             final publisher = body['publisher'] as Map<String, dynamic>;
             final works = (body['works'] as List).cast<Map<String, dynamic>>();

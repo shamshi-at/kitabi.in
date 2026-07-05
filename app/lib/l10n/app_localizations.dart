@@ -100,6 +100,36 @@ abstract class AppLocalizations {
   /// **'Kitabi'**
   String get appTitle;
 
+  /// Generic friendly error message
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong.'**
+  String get commonError;
+
+  /// Retry button label
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get commonRetry;
+
+  /// Offline banner text
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline — changes will sync when you\'re back.'**
+  String get commonOffline;
+
+  /// Sync-in-progress indicator
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing…'**
+  String get syncPending;
+
+  /// Sync-failed banner
+  ///
+  /// In en, this message translates to:
+  /// **'Some changes haven\'t synced. Tap to retry.'**
+  String get syncError;
+
   /// Tagline shown on the placeholder home screen and sign-in
   ///
   /// In en, this message translates to:
@@ -615,6 +645,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'★ Favourites'**
   String get libraryFilterFavourites;
+
+  /// Title of the empty library state
+  ///
+  /// In en, this message translates to:
+  /// **'Your shelf is waiting'**
+  String get libraryEmptyTitle;
 
   /// Empty state on the library grid screen
   ///

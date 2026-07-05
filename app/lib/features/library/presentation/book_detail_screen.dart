@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/catalog_cache.dart';
 import '../../../data/db/database.dart';
@@ -34,8 +36,8 @@ class BookDetailScreen extends ConsumerWidget {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: work.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('$err')),
+          loading: () => const ListSkeleton(),
+          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId))),
           data: (body) => _BookDetailBody(work: body, editionId: editionId),
         ),
       ),
@@ -196,6 +198,7 @@ class _RatingRow extends ConsumerWidget {
         for (var i = 1; i <= 5; i++)
           GestureDetector(
             onTap: () async {
+              Haptics.selection();
               final repo = await ref.read(ratingsRepositoryProvider.future);
               await repo.setRating(workId, i);
               ref.invalidate(ratingProvider(workId));
@@ -291,6 +294,7 @@ class _LibraryEntryMenu extends ConsumerWidget {
             color: AppColors.gold,
           ),
           onPressed: () async {
+            Haptics.selection();
             final repo = await ref.read(libraryRepositoryProvider.future);
             await repo.setFavorite(current.id, !current.isFavorite);
             ref.invalidate(libraryEntryProvider(editionId));
@@ -371,6 +375,7 @@ class _StatusPicker extends ConsumerWidget {
         for (final status in readingStatuses)
           GestureDetector(
             onTap: () async {
+              Haptics.selection();
               final repo = await ref.read(libraryRepositoryProvider.future);
               await repo.updateStatus(entry.id, status);
               if (status == 'read' && entry.finishDate == null) {
@@ -777,6 +782,7 @@ class _LendingCard extends ConsumerWidget {
   }
 
   Future<void> _markReturned(WidgetRef ref, String lendingId) async {
+    Haptics.success();
     final repo = await ref.read(lendingRepositoryProvider.future);
     await repo.markReturned(lendingId, DateTime.now());
     await ref.read(notificationServiceProvider).cancel(reminderIdForRecord(lendingId));

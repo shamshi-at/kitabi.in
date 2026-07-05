@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../haptics.dart';
 import '../theme/app_theme.dart';
 import 'app_router.dart';
 
@@ -38,14 +39,14 @@ class ShellScaffold extends StatelessWidget {
                   activeIcon: Icons.home,
                   label: l10n.navHome,
                   selected: index == 0,
-                  onTap: () => navigationShell.goBranch(0),
+                  onTap: () { Haptics.selection(); navigationShell.goBranch(0); },
                 ),
                 _NavItem(
                   icon: Icons.auto_stories_outlined,
                   activeIcon: Icons.auto_stories,
                   label: l10n.navLibrary,
                   selected: index == 1,
-                  onTap: () => navigationShell.goBranch(1),
+                  onTap: () { Haptics.selection(); navigationShell.goBranch(1); },
                 ),
                 _AddButton(label: l10n.navAdd, onTap: () => context.push(Routes.catalogSearch)),
                 _NavItem(
@@ -53,14 +54,14 @@ class ShellScaffold extends StatelessWidget {
                   activeIcon: Icons.swap_horiz,
                   label: l10n.navLending,
                   selected: index == 2,
-                  onTap: () => navigationShell.goBranch(2),
+                  onTap: () { Haptics.selection(); navigationShell.goBranch(2); },
                 ),
                 _NavItem(
                   icon: Icons.donut_large_outlined,
                   activeIcon: Icons.donut_large,
                   label: l10n.navInsights,
                   selected: index == 3,
-                  onTap: () => navigationShell.goBranch(3),
+                  onTap: () { Haptics.selection(); navigationShell.goBranch(3); },
                 ),
               ],
             ),

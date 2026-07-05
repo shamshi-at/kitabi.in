@@ -12,6 +12,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Kitabi';
 
   @override
+  String get commonError => 'Something went wrong.';
+
+  @override
+  String get commonRetry => 'Retry';
+
+  @override
+  String get commonOffline =>
+      'You\'re offline — changes will sync when you\'re back.';
+
+  @override
+  String get syncPending => 'Syncing…';
+
+  @override
+  String get syncError => 'Some changes haven\'t synced. Tap to retry.';
+
+  @override
   String get homeGreeting => 'Beyond the Bookshelf';
 
   @override
@@ -322,6 +338,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryFilterFavourites => '★ Favourites';
+
+  @override
+  String get libraryEmptyTitle => 'Your shelf is waiting';
 
   @override
   String get libraryEmpty =>

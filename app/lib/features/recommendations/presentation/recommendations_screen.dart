@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/catalog_cache.dart';
 import '../../../data/repositories/repository_providers.dart';
@@ -30,8 +31,8 @@ class RecommendationsScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         child: optIn.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('$err')),
+          loading: () => const ListSkeleton(),
+      error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(recommendationsProvider)),
           data: (enabled) => enabled ? const _RecsList() : const _OptInPrompt(),
         ),
       ),
@@ -89,8 +90,8 @@ class _RecsListState extends ConsumerState<_RecsList> {
     final recs = ref.watch(recommendationsProvider);
 
     return recs.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => Center(child: Text('$err')),
+      loading: () => const ListSkeleton(),
+      error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(recommendationsProvider)),
       data: (data) {
         final enabled = data['enabled'] == true;
         final picks = ((data['picks'] as List?) ?? [])

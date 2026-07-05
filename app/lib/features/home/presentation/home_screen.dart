@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
 import '../../../l10n/app_localizations.dart';
@@ -23,12 +24,16 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: SafeArea(
-        child: entries.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('$err')),
-          data: (all) => all.isEmpty
-              ? _EmptyHome(l10n: l10n)
-              : _Dashboard(entries: all, l10n: l10n),
+        child: RefreshIndicator(
+          color: AppColors.oxblood,
+          onRefresh: () async => ref.invalidate(libraryEntriesProvider),
+          child: entries.when(
+            loading: () => const CoverGridSkeleton(),
+            error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryEntriesProvider)),
+            data: (all) => all.isEmpty
+                ? _EmptyHome(l10n: l10n)
+                : _Dashboard(entries: all, l10n: l10n),
+          ),
         ),
       ),
     );

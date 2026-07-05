@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../insights_stats.dart';
@@ -62,8 +63,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: data.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('$err')),
+          loading: () => const ListSkeleton(),
+          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryWithBooksProvider)),
           data: (hits) {
             if (hits.isEmpty) {
               return _Empty(title: l10n.insightsTitle, body: l10n.insightsNoData);

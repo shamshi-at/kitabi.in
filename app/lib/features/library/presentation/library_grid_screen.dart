@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
@@ -33,11 +34,14 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: hits.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('$err')),
+          loading: () => const CoverGridSkeleton(),
+          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryHitsProvider)),
           data: (all) {
             final filtered = all.where(_filter.matches).toList();
-            return CustomScrollView(
+            return RefreshIndicator(
+              color: AppColors.oxblood,
+              onRefresh: () async => ref.invalidate(libraryHitsProvider),
+              child: CustomScrollView(
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -79,19 +83,21 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                 if (filtered.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          all.isEmpty ? l10n.libraryEmpty : l10n.libraryNoMatches,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: AppColors.inkSoft),
-                        ),
-                      ),
-                    ),
+                    child: all.isEmpty
+                        ? EmptyState(
+                            icon: Icons.auto_stories_outlined,
+                            title: l10n.libraryEmptyTitle,
+                            body: l10n.libraryEmpty,
+                            action: ElevatedButton.icon(
+                              onPressed: () => context.push(Routes.catalogSearch),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: Text(l10n.homeAddBook),
+                            ),
+                          )
+                        : EmptyState(
+                            icon: Icons.filter_alt_off_outlined,
+                            title: l10n.libraryNoMatches,
+                          ),
                   )
                 else
                   SliverPadding(
@@ -110,6 +116,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                     ),
                   ),
               ],
+              ),
             );
           },
         ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
@@ -153,7 +154,10 @@ class _SearchResults extends ConsumerWidget {
     final works = catalog.valueOrNull ?? const <Map<String, dynamic>>[];
 
     if (library.isLoading && catalog.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const ListSkeleton();
+    }
+    if (catalog.hasError && hits.isEmpty) {
+      return ErrorRetry(onRetry: () => ref.invalidate(catalogSearchProvider(query)));
     }
     if (!library.isLoading && !catalog.isLoading && hits.isEmpty && works.isEmpty) {
       return Center(

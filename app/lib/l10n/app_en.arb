@@ -1,6 +1,16 @@
 {
   "@@locale": "en",
   "appTitle": "Kitabi",
+  "commonError": "Something went wrong.",
+  "@commonError": {"description": "Generic friendly error message"},
+  "commonRetry": "Retry",
+  "@commonRetry": {"description": "Retry button label"},
+  "commonOffline": "You're offline — changes will sync when you're back.",
+  "@commonOffline": {"description": "Offline banner text"},
+  "syncPending": "Syncing…",
+  "@syncPending": {"description": "Sync-in-progress indicator"},
+  "syncError": "Some changes haven't synced. Tap to retry.",
+  "@syncError": {"description": "Sync-failed banner"},
   "@appTitle": {
     "description": "The application name"
   },
@@ -390,6 +400,8 @@
   "@libraryFilterFavourites": {
     "description": "Library grid filter chip"
   },
+  "libraryEmptyTitle": "Your shelf is waiting",
+  "@libraryEmptyTitle": {"description": "Title of the empty library state"},
   "libraryEmpty": "Nothing here yet — search or scan a book to add it.",
   "@libraryEmpty": {
     "description": "Empty state on the library grid screen"
