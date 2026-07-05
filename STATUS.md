@@ -385,11 +385,20 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   hook excludes arm64 for `sdk=iphonesimulator*` (real devices unaffected), but the
   simulator itself can't build at all without an older x86_64-capable runtime. Verified
   instead on an Android emulator; verify the scan screen on a real iPhone before launch.
-- **User-photo cover upload** — the app now picks a photo (`image_picker`), uploads it to
-  a Supabase Storage bucket named **`covers`**, and points the edition's `cover_url` at the
-  public URL (tap the cover on the book page). **Owner setup required:** create a public
-  `covers` bucket in Supabase with an insert policy for authenticated users — until then the
-  upload throws and the app shows "couldn't upload the cover."
+- **User-photo cover upload** — the app picks a photo (`image_picker`), uploads it to the
+  Supabase Storage bucket **`covers`** as `<editionId>.jpg` (`upsert: true`), then points the
+  edition's `cover_url` at the public URL (tap the cover on the book page). This is the one
+  place the app talks to Supabase Storage directly (via the user's auth JWT), not through
+  FastAPI — separate from the deny-by-default Postgres tables, so rule 11 is untouched.
+  Covers are shared (path is per-edition, and it patches the shared `Edition.cover_url`) —
+  consistent with Editions being Layer-1 catalog data (rule 17).
+  - **Owner setup (done 6 Jul 2026):** `covers` bucket created **Public** (the app renders
+    covers with a plain `Image.network(getPublicUrl(...))` that carries no auth header, so
+    the bucket must be public — an authenticated SELECT policy alone won't make images load),
+    plus one Storage policy on `storage.objects`: SELECT+INSERT+UPDATE for `authenticated`
+    with `bucket_id = 'covers'` (INSERT+UPDATE both required because the upload upserts; no
+    DELETE — the app only overwrites). Until this exists the upload throws and the app shows
+    "couldn't upload the cover."
 - **Phase 3 not yet verified with a real signed-in device run.** The sync engine's
   logic is thoroughly unit-tested (in-memory Drift + fake API client covering
   push/pull/conflicts/idempotency), and the app boots cleanly on an Android emulator
