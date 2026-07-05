@@ -606,6 +606,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navAdd => 'Add';
 
   @override
+  String get welcomeTitle1 => 'Beyond the bookshelf';
+
+  @override
+  String get welcomeBody1 =>
+      'Track the books you own, what you\'re reading, and how your year is going — all yours, offline-first.';
+
+  @override
+  String get welcomeTitle2 => 'Lend, first-class and free';
+
+  @override
+  String get welcomeBody2 =>
+      'Keep a real ledger of who has your books — and what you\'ve borrowed — with gentle due-date reminders.';
+
+  @override
+  String get welcomeTitle3 => 'Private by default';
+
+  @override
+  String get welcomeBody3 =>
+      'Your library, reviews, and notes stay yours. Nothing is shared unless you choose to.';
+
+  @override
+  String get welcomeNext => 'Next';
+
+  @override
+  String get welcomeGetStarted => 'Get started';
+
+  @override
+  String get welcomeSkip => 'Skip';
+
+  @override
   String get updateTitle => 'Time to update';
 
   @override
@@ -672,6 +702,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exportShareText => 'My Kitabi library';
+
+  @override
+  String get activityTitle => 'Your activity';
+
+  @override
+  String get activityEntry => 'Your activity';
+
+  @override
+  String get activityEmpty =>
+      'Your reading activity — books added, finished, rated, lent — will show up here.';
+
+  @override
+  String get activityAddedBook => 'Added a book';
+
+  @override
+  String get activityFinishedBook => 'Finished a book';
+
+  @override
+  String get activityRatedBook => 'Rated a book';
+
+  @override
+  String get activityWroteReview => 'Wrote a review';
+
+  @override
+  String get activityLentBook => 'Lent a book';
+
+  @override
+  String activityWhen(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days ago',
+      one: '1 day ago',
+      zero: 'just now',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get shareEyebrow => 'SHARE A BOOK';

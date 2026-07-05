@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/activity/presentation/activity_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/catalog/presentation/add_edit_book_screen.dart';
 import '../../features/catalog/presentation/author_browse_screen.dart';
@@ -14,6 +15,8 @@ import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/lending/presentation/lending_ledger_screen.dart';
 import '../../features/library/presentation/book_detail_screen.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
+import '../../features/onboarding/onboarding_providers.dart';
+import '../../features/onboarding/presentation/welcome_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/recommendations/presentation/recommendations_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -27,6 +30,7 @@ abstract final class Routes {
   static const splash = '/';
   static const signIn = '/sign-in';
   static const update = '/update';
+  static const welcome = '/welcome';
   static const home = '/home';
   static const profile = '/profile';
   static const catalogSearch = '/catalog/search';
@@ -39,6 +43,7 @@ abstract final class Routes {
   static const insights = '/insights';
   static const recommendations = '/recommendations';
   static const importBooks = '/import';
+  static const activity = '/activity';
   // Top-level (not under a nav branch) so it covers the bottom nav full-screen.
   static const bookDetail = '/book/:workId/:editionId';
 
@@ -55,6 +60,7 @@ class _RouterRefreshNotifier extends ChangeNotifier {
     ref.listen(authStateProvider, (_, _) => notifyListeners());
     ref.listen(bootstrapProvider, (_, _) => notifyListeners());
     ref.listen(updateRequiredProvider, (_, _) => notifyListeners());
+    ref.listen(onboardingSeenProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -92,7 +98,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         return loc == Routes.splash ? null : Routes.splash;
       }
 
-      if (loc == Routes.splash || loc == Routes.signIn) {
+      // First run: show the welcome once (hold on splash until it resolves).
+      final onboarding = ref.read(onboardingSeenProvider);
+      if (!onboarding.hasValue && !onboarding.hasError) {
+        return loc == Routes.splash ? null : Routes.splash;
+      }
+      if (onboarding.valueOrNull == false) {
+        return loc == Routes.welcome ? null : Routes.welcome;
+      }
+      if (loc == Routes.splash || loc == Routes.signIn || loc == Routes.welcome) {
         return Routes.home;
       }
       return null;
@@ -112,6 +126,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.update,
         name: 'update',
         builder: (context, state) => const UpdateScreen(),
+      ),
+      GoRoute(
+        path: Routes.welcome,
+        name: 'welcome',
+        builder: (context, state) => const WelcomeScreen(),
       ),
       // The four tabs live in a persistent bottom-nav shell (S3). Each is its
       // own branch so tab state (scroll position, etc.) is preserved.
@@ -172,6 +191,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.importBooks,
         name: 'import',
         builder: (context, state) => const ImportScreen(),
+      ),
+      GoRoute(
+        path: Routes.activity,
+        name: 'activity',
+        builder: (context, state) => const ActivityScreen(),
       ),
       GoRoute(
         path: Routes.catalogSearch,

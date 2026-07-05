@@ -1108,6 +1108,60 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get navAdd;
 
+  /// Onboarding page 1 title
+  ///
+  /// In en, this message translates to:
+  /// **'Beyond the bookshelf'**
+  String get welcomeTitle1;
+
+  /// Onboarding page 1 body
+  ///
+  /// In en, this message translates to:
+  /// **'Track the books you own, what you\'re reading, and how your year is going — all yours, offline-first.'**
+  String get welcomeBody1;
+
+  /// Onboarding page 2 title
+  ///
+  /// In en, this message translates to:
+  /// **'Lend, first-class and free'**
+  String get welcomeTitle2;
+
+  /// Onboarding page 2 body
+  ///
+  /// In en, this message translates to:
+  /// **'Keep a real ledger of who has your books — and what you\'ve borrowed — with gentle due-date reminders.'**
+  String get welcomeBody2;
+
+  /// Onboarding page 3 title
+  ///
+  /// In en, this message translates to:
+  /// **'Private by default'**
+  String get welcomeTitle3;
+
+  /// Onboarding page 3 body
+  ///
+  /// In en, this message translates to:
+  /// **'Your library, reviews, and notes stay yours. Nothing is shared unless you choose to.'**
+  String get welcomeBody3;
+
+  /// Onboarding next button
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get welcomeNext;
+
+  /// Onboarding finish button
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get welcomeGetStarted;
+
+  /// Onboarding skip button
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get welcomeSkip;
+
   /// Title of the forced-update screen
   ///
   /// In en, this message translates to:
@@ -1203,6 +1257,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My Kitabi library'**
   String get exportShareText;
+
+  /// Title of the activity screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your activity'**
+  String get activityTitle;
+
+  /// Profile entry to the activity screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your activity'**
+  String get activityEntry;
+
+  /// Empty state on the activity screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your reading activity — books added, finished, rated, lent — will show up here.'**
+  String get activityEmpty;
+
+  /// Activity: added a book
+  ///
+  /// In en, this message translates to:
+  /// **'Added a book'**
+  String get activityAddedBook;
+
+  /// Activity: finished a book
+  ///
+  /// In en, this message translates to:
+  /// **'Finished a book'**
+  String get activityFinishedBook;
+
+  /// Activity: rated a book
+  ///
+  /// In en, this message translates to:
+  /// **'Rated a book'**
+  String get activityRatedBook;
+
+  /// Activity: wrote a review
+  ///
+  /// In en, this message translates to:
+  /// **'Wrote a review'**
+  String get activityWroteReview;
+
+  /// Activity: lent a book
+  ///
+  /// In en, this message translates to:
+  /// **'Lent a book'**
+  String get activityLentBook;
+
+  /// Relative day count for an activity entry
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{just now} one{1 day ago} other{{count} days ago}}'**
+  String activityWhen(int count);
 
   /// Eyebrow label at the top of the share card
   ///
