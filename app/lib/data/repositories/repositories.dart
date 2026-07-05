@@ -55,6 +55,9 @@ class LibraryRepository extends Repo {
   /// All entries joined to their books — for the insights/stats screen (S10).
   Future<List<LibraryHit>> allWithBooks() => db.libraryEntriesDao.allWithBooks();
 
+  /// Reactive entries-with-books — the library grid (S5) filters on this.
+  Stream<List<LibraryHit>> watchWithBooks() => db.libraryEntriesDao.watchAllWithBooks();
+
   /// Personal reading goal (books/year). Device-local for now (key_values);
   /// becomes syncable when a settings sync lands. Defaults to 30.
   Future<int> readingGoal() async {

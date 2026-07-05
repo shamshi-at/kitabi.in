@@ -616,6 +616,48 @@ abstract class AppLocalizations {
   /// **'Nothing here yet — search or scan a book to add it.'**
   String get libraryEmpty;
 
+  /// Shown when active filters exclude every book
+  ///
+  /// In en, this message translates to:
+  /// **'No books match these filters.'**
+  String get libraryNoMatches;
+
+  /// Title of the library filter sheet (S4b)
+  ///
+  /// In en, this message translates to:
+  /// **'Filter'**
+  String get libraryFilterTitle;
+
+  /// Filter sheet section header for reading status
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get libraryFilterStatus;
+
+  /// Filter sheet section header for language
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get libraryFilterLanguage;
+
+  /// Filter sheet toggle to show only favourited books
+  ///
+  /// In en, this message translates to:
+  /// **'Favourites only'**
+  String get libraryFilterFavouritesOnly;
+
+  /// Clears all active filters
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get libraryFilterClear;
+
+  /// Apply button on the filter sheet with a live count
+  ///
+  /// In en, this message translates to:
+  /// **'Show {count} {count, plural, one{book} other{books}}'**
+  String libraryFilterShow(int count);
+
   /// Menu action that removes the book from the user's library
   ///
   /// In en, this message translates to:

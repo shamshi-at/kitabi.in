@@ -9,15 +9,11 @@ import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
 import '../../../l10n/app_localizations.dart';
 import '../providers/library_providers.dart';
-import '../reading_status.dart';
-
-const _favouritesFilter = '__favourites__';
+import 'library_filter_sheet.dart';
 
 /// S5 — the personal library grid. Covers-first, status pills, favourite
-/// ribbon, lending band; filter chips for status + favourites + personal
-/// tags. The overflow-title ticker animation from the mockup is deliberately
-/// not implemented (polish item, tracked in docs/tasks.md) — long titles
-/// just ellipsize for now.
+/// ribbon, lending band; a filter sheet (S4b) narrows by status, language, and
+/// favourites with a live count.
 class LibraryGridScreen extends ConsumerStatefulWidget {
   const LibraryGridScreen({super.key});
 
@@ -26,71 +22,55 @@ class LibraryGridScreen extends ConsumerStatefulWidget {
 }
 
 class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
-  String _filter = 'all';
+  LibraryFilter _filter = const LibraryFilter();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final entries = ref.watch(libraryEntriesProvider);
+    final hits = ref.watch(libraryHitsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: SafeArea(
-        child: entries.when(
+        child: hits.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('$err')),
-          data: (allEntries) {
-            final filtered = allEntries.where((e) {
-              if (_filter == 'all') return true;
-              if (_filter == _favouritesFilter) return e.isFavorite;
-              return e.status == _filter;
-            }).toList();
-
+          data: (all) {
+            final filtered = all.where(_filter.matches).toList();
             return CustomScrollView(
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(l10n.libraryTitle, style: Theme.of(context).textTheme.titleLarge),
-                        Text(
-                          l10n.libraryBookCount(allEntries.length),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: AppColors.inkSoft),
-                        ),
-                        const SizedBox(height: 12),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _FilterChip(
-                                label: l10n.libraryFilterAll,
-                                selected: _filter == 'all',
-                                onTap: () => setState(() => _filter = 'all'),
-                              ),
-                              for (final status in readingStatuses)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 6),
-                                  child: _FilterChip(
-                                    label: readingStatusLabel(status),
-                                    selected: _filter == status,
-                                    onTap: () => setState(() => _filter = status),
-                                  ),
-                                ),
-                              Padding(
-                                padding: const EdgeInsets.only(left: 6),
-                                child: _FilterChip(
-                                  label: l10n.libraryFilterFavourites,
-                                  selected: _filter == _favouritesFilter,
-                                  onTap: () => setState(() => _filter = _favouritesFilter),
-                                ),
+                              Text(l10n.libraryTitle,
+                                  style: Theme.of(context).textTheme.titleLarge),
+                              Text(
+                                l10n.libraryBookCount(filtered.length),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: AppColors.inkSoft),
                               ),
                             ],
                           ),
+                        ),
+                        _FilterButton(
+                          activeCount: _filter.activeCount,
+                          onTap: () async {
+                            final result = await showLibraryFilterSheet(
+                              context,
+                              hits: all,
+                              current: _filter,
+                            );
+                            if (result != null) setState(() => _filter = result);
+                          },
                         ),
                       ],
                     ),
@@ -103,7 +83,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Text(
-                          l10n.libraryEmpty,
+                          all.isEmpty ? l10n.libraryEmpty : l10n.libraryNoMatches,
                           textAlign: TextAlign.center,
                           style: Theme.of(context)
                               .textTheme
@@ -124,7 +104,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                         childAspectRatio: 0.62,
                       ),
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) => _LibraryGridItem(entry: filtered[index]),
+                        (context, index) => _LibraryGridItem(hit: filtered[index]),
                         childCount: filtered.length,
                       ),
                     ),
@@ -138,31 +118,40 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.selected, required this.onTap});
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({required this.activeCount, required this.onTap});
 
-  final String label;
-  final bool selected;
+  final int activeCount;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final active = activeCount > 0;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.ink : AppColors.card,
+          color: active ? AppColors.ink : AppColors.card,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? AppColors.ink : AppColors.line),
+          border: Border.all(color: active ? AppColors.ink : AppColors.line),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: selected ? AppColors.paper : AppColors.ink,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.tune, size: 15, color: active ? AppColors.paper : AppColors.ink),
+            if (active) ...[
+              const SizedBox(width: 5),
+              Text(
+                '$activeCount',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.paper,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -170,23 +159,21 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _LibraryGridItem extends ConsumerWidget {
-  const _LibraryGridItem({required this.entry});
+  const _LibraryGridItem({required this.hit});
 
-  final LibraryEntry entry;
+  final LibraryHit hit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cached = ref.watch(cachedBookProvider(entry.editionId));
+    final entry = hit.entry;
+    final book = hit.book;
     final lending = ref.watch(lendingRecordsProvider(entry.id));
-    final book = cached.valueOrNull;
     final activeLending = (lending.valueOrNull ?? [])
         .where((r) => r.returnedDate == null)
         .firstOrNull;
 
     return GestureDetector(
-      onTap: book == null
-          ? null
-          : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+      onTap: () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -195,9 +182,9 @@ class _LibraryGridItem extends ConsumerWidget {
               fit: StackFit.expand,
               children: [
                 TypesetCover(
-                  title: book?.title ?? '…',
-                  author: book?.authorNames,
-                  coverUrl: book?.coverUrl,
+                  title: book.title,
+                  author: book.authorNames,
+                  coverUrl: book.coverUrl,
                   width: double.infinity,
                   height: double.infinity,
                 ),

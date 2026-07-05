@@ -33,6 +33,13 @@ final allLendingProvider = StreamProvider.autoDispose<List<LendingWithBook>>((re
   yield* repo.watchAll();
 });
 
+/// Reactive entries-with-books for the library grid (S5) — lets the grid filter
+/// by book metadata (language) and stay live as books are added/edited.
+final libraryHitsProvider = StreamProvider.autoDispose<List<LibraryHit>>((ref) async* {
+  final repo = await ref.watch(libraryRepositoryProvider.future);
+  yield* repo.watchWithBooks();
+});
+
 /// Global search over the personal library (S4) — the "in your library" section.
 final librarySearchProvider =
     FutureProvider.autoDispose.family<List<LibraryHit>, String>((ref, query) async {

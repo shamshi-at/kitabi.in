@@ -387,6 +387,37 @@
   "@libraryEmpty": {
     "description": "Empty state on the library grid screen"
   },
+  "libraryNoMatches": "No books match these filters.",
+  "@libraryNoMatches": {
+    "description": "Shown when active filters exclude every book"
+  },
+  "libraryFilterTitle": "Filter",
+  "@libraryFilterTitle": {
+    "description": "Title of the library filter sheet (S4b)"
+  },
+  "libraryFilterStatus": "Status",
+  "@libraryFilterStatus": {
+    "description": "Filter sheet section header for reading status"
+  },
+  "libraryFilterLanguage": "Language",
+  "@libraryFilterLanguage": {
+    "description": "Filter sheet section header for language"
+  },
+  "libraryFilterFavouritesOnly": "Favourites only",
+  "@libraryFilterFavouritesOnly": {
+    "description": "Filter sheet toggle to show only favourited books"
+  },
+  "libraryFilterClear": "Clear",
+  "@libraryFilterClear": {
+    "description": "Clears all active filters"
+  },
+  "libraryFilterShow": "Show {count} {count, plural, one{book} other{books}}",
+  "@libraryFilterShow": {
+    "description": "Apply button on the filter sheet with a live count",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "bookRemoveFromLibrary": "Remove from library",
   "@bookRemoveFromLibrary": {
     "description": "Menu action that removes the book from the user's library"

@@ -207,7 +207,11 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       offline from Drift (`LibraryEntriesDao.search` over the cached-book mirror, by title or
       author) with a status pill → book detail; "In the catalog" from the API. Reached via the
       "+" nav / the search field
-- [ ] Filter sheet: language, genre, status, year, author/publisher + live count — S4b
+- [~] Filter sheet: language, genre, status, year, author/publisher + live count — S4b. Library
+      grid (S5) now has a filter sheet: **status**, **language** (distinct langs in your library),
+      and **favourites-only**, with a **live count** ("Show N books") and an active-filter badge.
+      The grid reads a reactive entries⋈books stream (`watchAllWithBooks`) so language filtering
+      works offline. Genre/year/author-publisher facets are a follow-up
 - [~] Stats: books/month bars, language donut, pages/month line, status counts — S10. Insights
       screen built (dependency-free): books-read + pages-read + reading-now stats and a
       **books-per-month bar chart** from a pure, unit-tested `computeInsights`. The language

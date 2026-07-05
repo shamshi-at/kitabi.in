@@ -30,18 +30,22 @@ class LibraryEntriesDao extends DatabaseAccessor<AppDatabase> with _$LibraryEntr
 
   /// Every active entry joined to its cached book — feeds the insights/stats
   /// screen (S10), which needs page counts, finish dates, and statuses together.
-  Future<List<LibraryHit>> allWithBooks() {
-    final stmt = select(libraryEntries).join([
+  Future<List<LibraryHit>> allWithBooks() => _withBooksQuery().get();
+
+  /// Reactive version — the library grid (S5) watches this so adds/edits and
+  /// filtering by book metadata (language, genre) stay live.
+  Stream<List<LibraryHit>> watchAllWithBooks() => _withBooksQuery().watch();
+
+  Selectable<LibraryHit> _withBooksQuery() {
+    final query = select(libraryEntries).join([
       innerJoin(cachedBooks, cachedBooks.editionId.equalsExp(libraryEntries.editionId)),
     ])..where(libraryEntries.deletedAt.isNull());
-    return stmt
-        .map(
-          (row) => LibraryHit(
-            entry: row.readTable(libraryEntries),
-            book: row.readTable(cachedBooks),
-          ),
-        )
-        .get();
+    return query.map(
+      (row) => LibraryHit(
+        entry: row.readTable(libraryEntries),
+        book: row.readTable(cachedBooks),
+      ),
+    );
   }
 
   /// Global-search the personal library by title or author (offline, from the

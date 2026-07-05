@@ -323,6 +323,35 @@ class AppLocalizationsEn extends AppLocalizations {
       'Nothing here yet — search or scan a book to add it.';
 
   @override
+  String get libraryNoMatches => 'No books match these filters.';
+
+  @override
+  String get libraryFilterTitle => 'Filter';
+
+  @override
+  String get libraryFilterStatus => 'Status';
+
+  @override
+  String get libraryFilterLanguage => 'Language';
+
+  @override
+  String get libraryFilterFavouritesOnly => 'Favourites only';
+
+  @override
+  String get libraryFilterClear => 'Clear';
+
+  @override
+  String libraryFilterShow(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'books',
+      one: 'book',
+    );
+    return 'Show $count $_temp0';
+  }
+
+  @override
   String get bookRemoveFromLibrary => 'Remove from library';
 
   @override
