@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/auth/auth_providers.dart';
+import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/api/api_client.dart';
@@ -46,19 +47,43 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _ProfileBody extends ConsumerWidget {
+class _ProfileBody extends ConsumerStatefulWidget {
   const _ProfileBody({required this.profile});
 
   final Map<String, dynamic> profile;
 
-  Future<void> _toggle(WidgetRef ref, String field, bool value) async {
-    await ref.read(apiClientProvider).updateMe({field: value});
-    ref.invalidate(meProvider);
+  @override
+  ConsumerState<_ProfileBody> createState() => _ProfileBodyState();
+}
+
+class _ProfileBodyState extends ConsumerState<_ProfileBody> {
+  // Optimistic local mirror of the server-side visibility flags, so a tap flips
+  // instantly instead of waiting on the /me round-trip (what made the old
+  // switches feel dead). Reverts + warns if the save fails.
+  late final Map<String, bool> _vis = {
+    for (final k in const ['profile_visible', 'library_visible', 'reviews_visible_default'])
+      k: widget.profile[k] as bool? ?? false,
+  };
+
+  Future<void> _toggle(String field, bool value) async {
+    final previous = _vis[field]!;
+    setState(() => _vis[field] = value);
+    Haptics.selection();
+    try {
+      await ref.read(apiClientProvider).updateMe({field: value});
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _vis[field] = previous);
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.profileVisibilitySaveError)));
+    }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final profile = widget.profile;
     final fullName = profile['full_name'] as String? ?? profile['email'] as String? ?? '';
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
     final createdAt = DateTime.tryParse(profile['created_at'] as String? ?? '');
@@ -108,20 +133,20 @@ class _ProfileBody extends ConsumerWidget {
                 _VisibilityRow(
                   title: l10n.profileVisibilityProfileTitle,
                   subtitle: l10n.profileVisibilityProfileDesc,
-                  value: profile['profile_visible'] as bool? ?? false,
-                  onChanged: (v) => _toggle(ref, 'profile_visible', v),
+                  isPublic: _vis['profile_visible']!,
+                  onChanged: (v) => _toggle('profile_visible', v),
                 ),
                 _VisibilityRow(
                   title: l10n.profileVisibilityLibraryTitle,
                   subtitle: l10n.profileVisibilityLibraryDesc,
-                  value: profile['library_visible'] as bool? ?? false,
-                  onChanged: (v) => _toggle(ref, 'library_visible', v),
+                  isPublic: _vis['library_visible']!,
+                  onChanged: (v) => _toggle('library_visible', v),
                 ),
                 _VisibilityRow(
                   title: l10n.profileVisibilityReviewsTitle,
                   subtitle: l10n.profileVisibilityReviewsDesc,
-                  value: profile['reviews_visible_default'] as bool? ?? false,
-                  onChanged: (v) => _toggle(ref, 'reviews_visible_default', v),
+                  isPublic: _vis['reviews_visible_default']!,
+                  onChanged: (v) => _toggle('reviews_visible_default', v),
                 ),
               ],
             ),
@@ -130,45 +155,41 @@ class _ProfileBody extends ConsumerWidget {
         SizedBox(height: 16),
         Card(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(12, 4, 12, 4),
-            child: _VisibilityRow(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: _SwitchRow(
               title: l10n.profileDarkMode,
               subtitle: l10n.profileDarkModeDesc,
               value: ref.watch(themeModeControllerProvider),
-              onChanged: (v) => ref.read(themeModeControllerProvider.notifier).set(v),
+              onChanged: (v) {
+                Haptics.selection();
+                ref.read(themeModeControllerProvider.notifier).set(v);
+              },
             ),
           ),
         ),
         SizedBox(height: 24),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => context.push(Routes.activity),
-                icon: Icon(Icons.history, size: 18),
-                label: Text(l10n.activityEntry),
-              ),
-              SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => context.push(Routes.recommendations),
-                icon: Icon(Icons.auto_awesome, size: 18),
-                label: Text(l10n.recsProfileEntry),
-              ),
-              SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => context.push(Routes.importBooks),
-                icon: Icon(Icons.upload_file_outlined, size: 18),
-                label: Text(l10n.importEntry),
-              ),
-              SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => _exportLibrary(context, ref),
-                icon: Icon(Icons.download_outlined, size: 18),
-                label: Text(l10n.exportEntry),
-              ),
-            ],
-          ),
+        _ActionButton(
+          icon: Icons.history,
+          label: l10n.activityEntry,
+          onPressed: () => context.push(Routes.activity),
+        ),
+        SizedBox(height: 8),
+        _ActionButton(
+          icon: Icons.auto_awesome,
+          label: l10n.recsProfileEntry,
+          onPressed: () => context.push(Routes.recommendations),
+        ),
+        SizedBox(height: 8),
+        _ActionButton(
+          icon: Icons.upload_file_outlined,
+          label: l10n.importEntry,
+          onPressed: () => context.push(Routes.importBooks),
+        ),
+        SizedBox(height: 8),
+        _ActionButton(
+          icon: Icons.download_outlined,
+          label: l10n.exportEntry,
+          onPressed: () => _exportLibrary(context),
         ),
         SizedBox(height: 24),
         const _QuoteCard(),
@@ -181,7 +202,7 @@ class _ProfileBody extends ConsumerWidget {
         ),
         Center(
           child: TextButton(
-            onPressed: () => _confirmDelete(context, ref),
+            onPressed: () => _confirmDelete(context),
             child: Text(
               l10n.profileDeleteAccount,
               style: TextStyle(color: AppColors.oxbloodDeep, fontSize: 12),
@@ -192,7 +213,7 @@ class _ProfileBody extends ConsumerWidget {
     );
   }
 
-  Future<void> _exportLibrary(BuildContext context, WidgetRef ref) async {
+  Future<void> _exportLibrary(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     final hits = await ref.read(libraryWithBooksProvider.future);
     if (hits.isEmpty) {
@@ -209,7 +230,7 @@ class _ProfileBody extends ConsumerWidget {
     await Share.shareXFiles([file], text: l10n.exportShareText);
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmDelete(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -232,8 +253,101 @@ class _ProfileBody extends ConsumerWidget {
   }
 }
 
+/// A full-width outlined nav button — uniform across the profile's action list.
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({required this.icon, required this.label, required this.onPressed});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+      ),
+    );
+  }
+}
+
+/// A visibility setting shown as a tappable Private ⇄ Public pill — a clearer,
+/// bigger tap target than a bare switch, with the current state spelled out.
 class _VisibilityRow extends StatelessWidget {
   const _VisibilityRow({
+    required this.title,
+    required this.subtitle,
+    required this.isPublic,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool isPublic;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final color = isPublic ? AppColors.moss : AppColors.inkSoft;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.bodyMedium),
+                Text(subtitle,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppColors.inkSoft)),
+              ],
+            ),
+          ),
+          SizedBox(width: 12),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => onChanged(!isPublic),
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 150),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isPublic ? AppColors.moss.withValues(alpha: 0.14) : AppColors.paperDeep,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: color),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(isPublic ? Icons.public : Icons.lock_outline, size: 14, color: color),
+                    SizedBox(width: 5),
+                    Text(
+                      isPublic ? l10n.visibilityPublic : l10n.visibilityPrivate,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A plain on/off switch row — used for the Night reading (dark mode) toggle,
+/// where a two-state switch reads more naturally than a Private/Public pill.
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({
     required this.title,
     required this.subtitle,
     required this.value,

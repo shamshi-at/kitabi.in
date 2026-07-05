@@ -59,6 +59,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'VISIBILITY · everything starts private';
 
   @override
+  String get visibilityPublic => 'Public';
+
+  @override
+  String get visibilityPrivate => 'Private';
+
+  @override
+  String get profileVisibilitySaveError =>
+      'Couldn\'t save that — check your connection.';
+
+  @override
   String get profileDarkMode => 'Night reading';
 
   @override

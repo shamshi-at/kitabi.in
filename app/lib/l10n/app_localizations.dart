@@ -184,6 +184,24 @@ abstract class AppLocalizations {
   /// **'VISIBILITY · everything starts private'**
   String get profileVisibilityHeader;
 
+  /// Label on the visibility pill when a setting is public
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get visibilityPublic;
+
+  /// Label on the visibility pill when a setting is private
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get visibilityPrivate;
+
+  /// Snackbar when a visibility toggle fails to persist
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save that — check your connection.'**
+  String get profileVisibilitySaveError;
+
   /// Dark-mode toggle title on the profile screen
   ///
   /// In en, this message translates to:

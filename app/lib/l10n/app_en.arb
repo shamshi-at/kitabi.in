@@ -50,6 +50,12 @@
   "@profileVisibilityHeader": {
     "description": "Section header on the profile screen's visibility switchboard"
   },
+  "visibilityPublic": "Public",
+  "@visibilityPublic": {"description": "Label on the visibility pill when a setting is public"},
+  "visibilityPrivate": "Private",
+  "@visibilityPrivate": {"description": "Label on the visibility pill when a setting is private"},
+  "profileVisibilitySaveError": "Couldn't save that — check your connection.",
+  "@profileVisibilitySaveError": {"description": "Snackbar when a visibility toggle fails to persist"},
   "profileDarkMode": "Night reading",
   "@profileDarkMode": {
     "description": "Dark-mode toggle title on the profile screen"
