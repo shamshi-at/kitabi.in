@@ -12,6 +12,10 @@ class Author(CatalogMixin, Base):
     __tablename__ = "authors"
 
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    # The name they write/are known under, when different from `name` (e.g.
+    # Kamala Das wrote Malayalam as "Madhavikutty").
+    pen_name: Mapped[str | None] = mapped_column(String, default=None)
+    image_url: Mapped[str | None] = mapped_column(String, default=None)
     bio: Mapped[str | None] = mapped_column(String, default=None)
     external_source: Mapped[str | None] = mapped_column(String, default=None)
     external_id: Mapped[str | None] = mapped_column(String, default=None, index=True)

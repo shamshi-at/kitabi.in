@@ -215,6 +215,16 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **6 Jul 2026** — Seed catalog: major Kerala authors, publishers, works. Migration `000006`
+  adds `authors.pen_name`/`authors.image_url` and `publishers.logo_url`. `api/scripts/seed_catalog.py`
+  (idempotent, upserts by name/title, uses the pooler-safe engine) loads 37 major Malayalam
+  authors — with pen names (Madhavikutty, MT, Uroob, Anand, VKN…) and Wikimedia portrait URLs —
+  10 publishers (DC Books + Manorama logos), and ~80 major works with Malayalam editions.
+  **Run against the production Supabase catalog** (Layer 1 shared data, no user PII; idempotent
+  and reversible); verified live via `GET /catalog/search` and `/catalog/authors`. Author
+  portraits / publisher logos aren't surfaced in the app UI yet (author/publisher browse screens
+  are a follow-up).
+
 - **6 Jul 2026** — Phase 7 — recommendations & share. **Share cards (S6c/S13)**: `BookShareCard`
   (cover, title, catalog-avg or your rating, blurb or your review, kitabi.in mark) rasterised via
   `RepaintBoundary` and handed to the OS share sheet with `share_plus`, from a sheet with an

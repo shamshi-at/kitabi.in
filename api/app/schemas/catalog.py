@@ -8,12 +8,15 @@ class AuthorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     name: str
+    pen_name: str | None = None
+    image_url: str | None = None
 
 
 class PublisherOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     name: str
+    logo_url: str | None = None
 
 
 class GenreOut(BaseModel):
