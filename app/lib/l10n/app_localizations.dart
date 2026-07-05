@@ -1066,6 +1066,90 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get navAdd;
 
+  /// Title of the import screen (S2)
+  ///
+  /// In en, this message translates to:
+  /// **'Import books'**
+  String get importTitle;
+
+  /// Subtitle on the import screen
+  ///
+  /// In en, this message translates to:
+  /// **'From a Goodreads export or any book CSV.'**
+  String get importSubtitle;
+
+  /// Instruction for pasting CSV text
+  ///
+  /// In en, this message translates to:
+  /// **'Open your Goodreads export (or any book CSV) and paste its contents here.'**
+  String get importPasteHint;
+
+  /// Button that parses the pasted CSV and previews matches
+  ///
+  /// In en, this message translates to:
+  /// **'Preview matches'**
+  String get importPreviewButton;
+
+  /// Progress text while parsing the CSV
+  ///
+  /// In en, this message translates to:
+  /// **'Reading your file…'**
+  String get importParsing;
+
+  /// Summary of how many CSV rows matched the catalog
+  ///
+  /// In en, this message translates to:
+  /// **'{matched} of {total} matched to the catalog'**
+  String importMatched(int matched, int total);
+
+  /// Note that unmatched rows won't be imported
+  ///
+  /// In en, this message translates to:
+  /// **'Unmatched rows are skipped for now.'**
+  String get importUnmatchedNote;
+
+  /// Button that imports the matched books
+  ///
+  /// In en, this message translates to:
+  /// **'Import {count} {count, plural, one{book} other{books}}'**
+  String importAdd(int count);
+
+  /// Snackbar after a successful import
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {count} {count, plural, one{book} other{books}}'**
+  String importDone(int count);
+
+  /// Shown when the CSV has no usable rows
+  ///
+  /// In en, this message translates to:
+  /// **'No book rows found in that file.'**
+  String get importEmpty;
+
+  /// Profile entry point to the import screen
+  ///
+  /// In en, this message translates to:
+  /// **'Import from Goodreads / CSV'**
+  String get importEntry;
+
+  /// Profile action that exports the library to CSV
+  ///
+  /// In en, this message translates to:
+  /// **'Export my library (CSV)'**
+  String get exportEntry;
+
+  /// Shown when trying to export an empty library
+  ///
+  /// In en, this message translates to:
+  /// **'Your library is empty — nothing to export yet.'**
+  String get exportEmpty;
+
+  /// Text accompanying the shared CSV file
+  ///
+  /// In en, this message translates to:
+  /// **'My Kitabi library'**
+  String get exportShareText;
+
   /// Eyebrow label at the top of the share card
   ///
   /// In en, this message translates to:

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api import auth, catalog, health, me, recommendations, sync
+from app.api import import_ as import_api
 from app.core.config import get_settings
 from app.jobs import scheduler
 
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(me.router)
     app.include_router(catalog.router)
     app.include_router(recommendations.router)
+    app.include_router(import_api.router)
     app.include_router(sync.router)
     return app
 

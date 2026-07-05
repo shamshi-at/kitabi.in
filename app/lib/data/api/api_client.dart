@@ -100,6 +100,13 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Import (S2) — parse a Goodreads/generic CSV and match rows to the catalog.
+  /// Returns `{format, total, matched, rows}`.
+  Future<Map<String, dynamic>> importPreview(String csv) async {
+    final res = await _dio.post('/import/preview', data: {'csv': csv});
+    return res.data as Map<String, dynamic>;
+  }
+
   /// Sync engine wire calls — see data/sync/sync_engine.dart.
   Future<List<Map<String, dynamic>>> syncPush(List<Map<String, dynamic>> ops) async {
     final res = await _dio.post('/sync/push', data: {'ops': ops});

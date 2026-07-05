@@ -584,6 +584,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navAdd => 'Add';
 
   @override
+  String get importTitle => 'Import books';
+
+  @override
+  String get importSubtitle => 'From a Goodreads export or any book CSV.';
+
+  @override
+  String get importPasteHint =>
+      'Open your Goodreads export (or any book CSV) and paste its contents here.';
+
+  @override
+  String get importPreviewButton => 'Preview matches';
+
+  @override
+  String get importParsing => 'Reading your file…';
+
+  @override
+  String importMatched(int matched, int total) {
+    return '$matched of $total matched to the catalog';
+  }
+
+  @override
+  String get importUnmatchedNote => 'Unmatched rows are skipped for now.';
+
+  @override
+  String importAdd(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'books',
+      one: 'book',
+    );
+    return 'Import $count $_temp0';
+  }
+
+  @override
+  String importDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'books',
+      one: 'book',
+    );
+    return 'Imported $count $_temp0';
+  }
+
+  @override
+  String get importEmpty => 'No book rows found in that file.';
+
+  @override
+  String get importEntry => 'Import from Goodreads / CSV';
+
+  @override
+  String get exportEntry => 'Export my library (CSV)';
+
+  @override
+  String get exportEmpty => 'Your library is empty — nothing to export yet.';
+
+  @override
+  String get exportShareText => 'My Kitabi library';
+
+  @override
   String get shareEyebrow => 'SHARE A BOOK';
 
   @override

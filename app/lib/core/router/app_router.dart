@@ -9,6 +9,7 @@ import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
 import '../../features/catalog/presentation/publisher_browse_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/import_books/presentation/import_screen.dart';
 import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/lending/presentation/lending_ledger_screen.dart';
 import '../../features/library/presentation/book_detail_screen.dart';
@@ -34,6 +35,7 @@ abstract final class Routes {
   static const lendingLedger = '/lending';
   static const insights = '/insights';
   static const recommendations = '/recommendations';
+  static const importBooks = '/import';
   // Top-level (not under a nav branch) so it covers the bottom nav full-screen.
   static const bookDetail = '/book/:workId/:editionId';
 
@@ -150,6 +152,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.recommendations,
         name: 'recommendations',
         builder: (context, state) => const RecommendationsScreen(),
+      ),
+      GoRoute(
+        path: Routes.importBooks,
+        name: 'import',
+        builder: (context, state) => const ImportScreen(),
       ),
       GoRoute(
         path: Routes.catalogSearch,

@@ -737,6 +737,43 @@
   "@navAdd": {
     "description": "Bottom navigation label for the add-a-book action"
   },
+  "importTitle": "Import books",
+  "@importTitle": {"description": "Title of the import screen (S2)"},
+  "importSubtitle": "From a Goodreads export or any book CSV.",
+  "@importSubtitle": {"description": "Subtitle on the import screen"},
+  "importPasteHint": "Open your Goodreads export (or any book CSV) and paste its contents here.",
+  "@importPasteHint": {"description": "Instruction for pasting CSV text"},
+  "importPreviewButton": "Preview matches",
+  "@importPreviewButton": {"description": "Button that parses the pasted CSV and previews matches"},
+  "importParsing": "Reading your file…",
+  "@importParsing": {"description": "Progress text while parsing the CSV"},
+  "importMatched": "{matched} of {total} matched to the catalog",
+  "@importMatched": {
+    "description": "Summary of how many CSV rows matched the catalog",
+    "placeholders": {"matched": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "importUnmatchedNote": "Unmatched rows are skipped for now.",
+  "@importUnmatchedNote": {"description": "Note that unmatched rows won't be imported"},
+  "importAdd": "Import {count} {count, plural, one{book} other{books}}",
+  "@importAdd": {
+    "description": "Button that imports the matched books",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "importDone": "Imported {count} {count, plural, one{book} other{books}}",
+  "@importDone": {
+    "description": "Snackbar after a successful import",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "importEmpty": "No book rows found in that file.",
+  "@importEmpty": {"description": "Shown when the CSV has no usable rows"},
+  "importEntry": "Import from Goodreads / CSV",
+  "@importEntry": {"description": "Profile entry point to the import screen"},
+  "exportEntry": "Export my library (CSV)",
+  "@exportEntry": {"description": "Profile action that exports the library to CSV"},
+  "exportEmpty": "Your library is empty — nothing to export yet.",
+  "@exportEmpty": {"description": "Shown when trying to export an empty library"},
+  "exportShareText": "My Kitabi library",
+  "@exportShareText": {"description": "Text accompanying the shared CSV file"},
   "shareEyebrow": "SHARE A BOOK",
   "@shareEyebrow": {
     "description": "Eyebrow label at the top of the share card"

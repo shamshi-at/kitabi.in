@@ -135,6 +135,31 @@ class RecommendationsOut(BaseModel):
     picks: list[RecommendationOut]
 
 
+class ImportPreviewIn(BaseModel):
+    csv: str
+
+
+class ImportRowOut(BaseModel):
+    title: str
+    author: str | None = None
+    isbn: str | None = None
+    rating: int | None = None
+    review: str | None = None
+    status: str | None = None
+    date_read: str | None = None
+    tags: list[str] = []
+    # The catalog work this row matched, if any — the app adds this edition to
+    # the library on confirm; unmatched rows can be resolved by ISBN then.
+    match: WorkSummaryOut | None = None
+
+
+class ImportPreviewOut(BaseModel):
+    format: str  # 'goodreads' | 'generic'
+    total: int
+    matched: int
+    rows: list[ImportRowOut]
+
+
 class AuthorWorksOut(BaseModel):
     author: AuthorOut
     works: list[WorkSummaryOut]

@@ -1,12 +1,19 @@
 import 'dart:math';
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/auth/auth_providers.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../import_books/csv_export.dart';
+import '../../insights/providers/insights_providers.dart';
 import '../providers/profile_providers.dart';
 
 /// S12 — the dormant community switchboard: profile/library/review
@@ -112,6 +119,25 @@ class _ProfileBody extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => context.push(Routes.importBooks),
+                icon: const Icon(Icons.upload_file_outlined, size: 18),
+                label: Text(l10n.importEntry),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => _exportLibrary(context, ref),
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: Text(l10n.exportEntry),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
         const _QuoteCard(),
         const SizedBox(height: 24),
         Center(
@@ -131,6 +157,23 @@ class _ProfileBody extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _exportLibrary(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final hits = await ref.read(libraryWithBooksProvider.future);
+    if (hits.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.exportEmpty)));
+      }
+      return;
+    }
+    final file = XFile.fromData(
+      utf8.encode(buildLibraryCsv(hits)),
+      name: 'kitabi-library.csv',
+      mimeType: 'text/csv',
+    );
+    await Share.shareXFiles([file], text: l10n.exportShareText);
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
