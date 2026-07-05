@@ -27,16 +27,31 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: SafeArea(
-        child: RefreshIndicator(
-          color: AppColors.oxblood,
-          onRefresh: () async => ref.invalidate(libraryEntriesProvider),
-          child: entries.when(
-            loading: () => CoverGridSkeleton(),
-            error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryEntriesProvider)),
-            data: (all) => all.isEmpty
-                ? _EmptyHome(l10n: l10n)
-                : _Dashboard(entries: all, l10n: l10n),
-          ),
+        child: Column(
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                icon: Icon(Icons.person_outline, color: AppColors.oxblood),
+                tooltip: l10n.profileEntry,
+                onPressed: () => context.push(Routes.profile),
+              ),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColors.oxblood,
+                onRefresh: () async => ref.invalidate(libraryEntriesProvider),
+                child: entries.when(
+                  loading: () => CoverGridSkeleton(),
+                  error: (err, _) =>
+                      ErrorRetry(onRetry: () => ref.invalidate(libraryEntriesProvider)),
+                  data: (all) => all.isEmpty
+                      ? _EmptyHome(l10n: l10n)
+                      : _Dashboard(entries: all, l10n: l10n),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -50,33 +65,22 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.appTitle,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppColors.oxblood,
-                      fontWeight: FontWeight.w700,
-                    ),
+        Text(
+          l10n.appTitle,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppColors.oxblood,
+                fontWeight: FontWeight.w700,
               ),
-              Text(
-                l10n.homeGreeting,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.gold,
-                      letterSpacing: 2,
-                    ),
-              ),
-            ],
-          ),
         ),
-        IconButton(
-          icon: Icon(Icons.person_outline, color: AppColors.oxblood),
-          onPressed: () => context.push(Routes.profile),
+        Text(
+          l10n.homeGreeting,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.gold,
+                letterSpacing: 2,
+              ),
         ),
       ],
     );
@@ -489,16 +493,29 @@ class _EmptyHome extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
             ),
             SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => context.push(Routes.catalogSearch),
-              icon: Icon(Icons.add),
-              label: Text(l10n.homeAddBook),
-            ),
-            SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: () => context.push(Routes.catalogScan),
-              icon: Icon(Icons.qr_code_scanner, size: 18),
-              label: Text(l10n.homeScanBarcode),
+            SizedBox(
+              width: 240,
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => context.push(Routes.catalogSearch),
+                      icon: Icon(Icons.add),
+                      label: Text(l10n.homeAddBook),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push(Routes.catalogScan),
+                      icon: Icon(Icons.qr_code_scanner, size: 18),
+                      label: Text(l10n.homeScanBarcode),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

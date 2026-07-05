@@ -1288,6 +1288,18 @@ abstract class AppLocalizations {
   /// **'My Kitabi library'**
   String get exportShareText;
 
+  /// Title bar of the profile / account settings screen
+  ///
+  /// In en, this message translates to:
+  /// **'Profile & settings'**
+  String get profileTitle;
+
+  /// Tooltip/label for the profile button on the home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Profile & settings'**
+  String get profileEntry;
+
   /// Title of the activity screen
   ///
   /// In en, this message translates to:

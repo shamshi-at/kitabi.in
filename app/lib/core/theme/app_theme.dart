@@ -66,6 +66,8 @@ ThemeData buildAppTheme({bool dark = false}) {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.oxblood,
         foregroundColor: dark ? AppColors.ink : AppColors.paper,
+        elevation: 0, // flat — the Reading Room is paper + ink, no floating shadows
+        shadowColor: Colors.transparent,
         padding: EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),

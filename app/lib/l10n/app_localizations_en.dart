@@ -719,6 +719,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportShareText => 'My Kitabi library';
 
   @override
+  String get profileTitle => 'Profile & settings';
+
+  @override
+  String get profileEntry => 'Profile & settings';
+
+  @override
   String get activityTitle => 'Your activity';
 
   @override

@@ -25,11 +25,19 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(meProvider);
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.paper,
+      appBar: AppBar(
+        backgroundColor: AppColors.paper,
+        elevation: 0,
+        foregroundColor: AppColors.ink,
+        title: Text(l10n.profileTitle, style: Theme.of(context).textTheme.titleLarge),
+      ),
       body: SafeArea(
+        top: false,
         child: me.when(
-          loading: () => Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('$err')),
           data: (profile) => _ProfileBody(profile: profile),
         ),
