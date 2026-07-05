@@ -737,6 +737,10 @@
   "@navAdd": {
     "description": "Bottom navigation label for the add-a-book action"
   },
+  "updateTitle": "Time to update",
+  "@updateTitle": {"description": "Title of the forced-update screen"},
+  "updateBody": "This version of Kitabi is out of date. Please update from the App Store to keep going.",
+  "@updateBody": {"description": "Body of the forced-update screen"},
   "importTitle": "Import books",
   "@importTitle": {"description": "Title of the import screen (S2)"},
   "importSubtitle": "From a Goodreads export or any book CSV.",

@@ -1,0 +1,60 @@
+name: Nightly DB backup
+
+# Encrypted pg_dump of the Supabase database to Cloudflare R2 (CLAUDE.md rule 12
+# — the free tier has no backups). Runs nightly and on demand. Skips cleanly
+# until the secrets below are set, so it never fails red before it's configured.
+#
+# Required repo secrets:
+#   BACKUP_DATABASE_URL  — a Postgres connection string pg_dump can use
+#                          (Supavisor SESSION-mode pooler, port 5432 — the
+#                          transaction pooler on 6543 can't do pg_dump).
+#   BACKUP_PASSPHRASE    — symmetric passphrase for GPG (AES-256).
+#   R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET / R2_ENDPOINT
+#                        — Cloudflare R2 S3-compatible credentials.
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 UTC daily
+  workflow_dispatch:
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — secrets present?
+        id: guard
+        env:
+          DB: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: echo "ready=${{ secrets.BACKUP_DATABASE_URL != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Dump, encrypt, upload
+        if: steps.guard.outputs.ready == 'true'
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        run: |
+          set -euo pipefail
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          FILE="kitabi-${STAMP}.sql.gz.gpg"
+
+          # pg_dump 16 via docker so the client matches the Supabase server.
+          docker run --rm -e PGCONNECT_TIMEOUT=30 postgres:16-alpine \
+            pg_dump --no-owner --no-privileges "$BACKUP_DATABASE_URL" \
+            | gzip -9 \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                  --passphrase "$BACKUP_PASSPHRASE" -o "$FILE"
+
+          aws s3 cp "$FILE" "s3://${R2_BUCKET}/${FILE}" --endpoint-url "$R2_ENDPOINT"
+          echo "Uploaded ${FILE} ($(du -h "$FILE" | cut -f1)) to R2."
+
+      - name: Note if unconfigured
+        if: steps.guard.outputs.ready != 'true'
+        run: echo "Backup secrets not set yet — skipping. Add BACKUP_DATABASE_URL et al. to enable."

@@ -23,6 +23,11 @@ class Settings(BaseSettings):
 
     scheduler_enabled: bool = False
 
+    # Version gate: the app sends `X-App-Version`; anything older than this gets
+    # a 426 with an update payload (CLAUDE.md — the update-gate). Bump when a
+    # release must be forced.
+    min_app_version: str = "0.1.0"
+
     # LLM-reasoned recommendations (the opt-in "quiet delight" — feature-map.md).
     # Optional: unset means the feature is dormant and no external call is made
     # (CLAUDE.md rule 8 — the owner opts in by providing a key, so there's no

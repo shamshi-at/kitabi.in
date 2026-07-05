@@ -1066,6 +1066,18 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get navAdd;
 
+  /// Title of the forced-update screen
+  ///
+  /// In en, this message translates to:
+  /// **'Time to update'**
+  String get updateTitle;
+
+  /// Body of the forced-update screen
+  ///
+  /// In en, this message translates to:
+  /// **'This version of Kitabi is out of date. Please update from the App Store to keep going.'**
+  String get updateBody;
+
   /// Title of the import screen (S2)
   ///
   /// In en, this message translates to:

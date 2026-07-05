@@ -206,7 +206,7 @@ Full spec in [feature-map.md](feature-map.md); phase-by-phase checklist in
 | 5 — Import | Goodreads/CSV import | **Core done** — `import_service.parse_csv` (Goodreads + generic, fuzzy columns; unit-tested) + `POST /import/preview` (parse + local catalog match by ISBN/title). App S2 screen: paste CSV → preview matched/unmatched → import matched into the library (status/rating/review), offline-first. CSV **export** via `buildLibraryCsv` + share_plus from the profile. Follow-ups: native file picker (paste for now — file_picker's Android plugin conflicts with the SDK toolchain), and create-if-missing (OpenLibrary fetch) for unmatched rows |
 | 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | **Core done** — **bottom-nav shell** (Home · Library · [+] · Lending · Insights, `StatefulShellRoute`) + the real **S3 home dashboard** (currently-reading with page progress, gold-edged lending nudge, 2×2 shelf-count cards). AI pick deferred to Phase 7. **global search (S4)** — library-first (offline Drift) then catalog (API); **Insights/stats (S10)** — reading-goal ring (device-local goal), year selector, books/pages/reading-now stats, and a dependency-free books-per-month bar chart from a pure `computeInsights`. **filter sheet (S4b)** — library grid filters by status/language/favourites with a live count. Phase 6 core complete; follow-ups: S10 language donut + pages/month line, S4b genre/year facets |
 | 7 — Recommendations & share | LLM recs, per-book + personal share cards | **Core done** — **share cards (S6c/S13)** (`BookShareCard` → PNG via `RepaintBoundary` + `share_plus`, include-my-rating toggle, from the book page) and **LLM recommendations (S11)**: `GET /recommendations` reasons picks from the reader's ratings via Claude (gated behind an optional `ANTHROPIC_API_KEY` — dormant/no bill when unset), opt-in S11 screen with a "why" per pick, always-visible off switch, + Wishlist / Not-for-me, and a quiet "For you" home card. Live LLM output not yet verified (no key set) |
-| 8 — Launch plumbing | Version gate, backups, app icons, store listings, privacy policy | Not started (Railway deploy + custom domain items already done ✅) |
+| 8 — Launch plumbing | Version gate, backups, app icons, store listings, privacy policy | **Mostly done** — version gate (426 + update screen), Supabase keep-warm job, nightly encrypted R2 backup workflow, privacy + terms pages, Railway deploy + custom domain + app icons/splash all ✅. Remaining: store listings + store badges (pre-submission) |
 
 All 19 v1 screen mockups exist in [docs/kitabi_screens.html](docs/kitabi_screens.html),
 audited against feature-map.md so every `[V1]` feature has a designed home before it's built.
@@ -214,6 +214,17 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 ---
 
 ## Recent milestones
+
+- **6 Jul 2026** — Phase 8 launch plumbing + Phase 5 (import) + phase follow-ups. **Import
+  (S2)**: `import_service.parse_csv` (Goodreads + generic) + `POST /import/preview` (catalog
+  match); app pastes CSV → previews → imports into the library; CSV **export** from the profile.
+  **Version gate**: `VersionGateMiddleware` (426 + update payload) ↔ Dio `X-App-Version` +
+  blocking `UpdateScreen`. **Keep-warm** APScheduler job (6-hourly, advisory-locked). **Nightly
+  encrypted R2 backup** workflow (skips until secrets set). **Privacy + Terms** pages on the
+  landing site. Follow-ups shipped too: author portraits/pen-names + publisher logos in browse
+  screens, S10 language donut + pages/month line, S4b genre facet. API 54 tests + app 27 tests
+  green, lint clean, Docker + Android APK build. Deferred: native file picker (paste for now),
+  store badges (pre-listing), lending Slice D `[WIRED]`.
 
 - **6 Jul 2026** — Seed catalog: major Kerala authors, publishers, works. Migration `000006`
   adds `authors.pen_name`/`authors.image_url` and `publishers.logo_url`. `api/scripts/seed_catalog.py`

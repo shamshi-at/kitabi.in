@@ -6,23 +6,34 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // simply fails until the API is deployed and this is set).
 const _apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000');
 
-/// Thin Dio wrapper. JWT attach is the only interceptor for now; the 426
-/// update-gate and retry/backoff interceptors are planned (CLAUDE.md) but
-/// land with the sync engine in a later phase — no endpoint needs them yet.
+/// The client version, sent as `X-App-Version` so the API's update-gate can
+/// force old builds to upgrade. Keep in step with pubspec.yaml.
+const kAppVersion = '0.1.0';
+
+/// Thin Dio wrapper: attaches the JWT + app version on every request, and
+/// surfaces the 426 update-gate (CLAUDE.md) via [onUpdateRequired].
 class ApiClient {
-  ApiClient() : _dio = Dio(BaseOptions(baseUrl: _apiBaseUrl)) {
+  ApiClient({this.onUpdateRequired}) : _dio = Dio(BaseOptions(baseUrl: _apiBaseUrl)) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
+          options.headers['X-App-Version'] = kAppVersion;
           final token = Supabase.instance.client.auth.currentSession?.accessToken;
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
         },
+        onError: (error, handler) {
+          if (error.response?.statusCode == 426) onUpdateRequired?.call();
+          handler.next(error);
+        },
       ),
     );
   }
+
+  /// Called when the server rejects this build as too old (HTTP 426).
+  final void Function()? onUpdateRequired;
 
   final Dio _dio;
 
@@ -119,4 +130,12 @@ class ApiClient {
   }
 }
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+/// Set to true when the API returns 426 (this build is too old) — the router
+/// then forces the blocking update screen.
+final updateRequiredProvider = StateProvider<bool>((ref) => false);
+
+final apiClientProvider = Provider<ApiClient>(
+  (ref) => ApiClient(
+    onUpdateRequired: () => ref.read(updateRequiredProvider.notifier).state = true,
+  ),
+);

@@ -584,6 +584,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navAdd => 'Add';
 
   @override
+  String get updateTitle => 'Time to update';
+
+  @override
+  String get updateBody =>
+      'This version of Kitabi is out of date. Please update from the App Store to keep going.';
+
+  @override
   String get importTitle => 'Import books';
 
   @override

@@ -37,7 +37,10 @@ async def advisory_lock(session: AsyncSession, lock_id: int) -> AsyncIterator[bo
 
 
 def start() -> None:
-    # No jobs registered yet — register them here as they land.
+    from app.jobs.keep_warm import keep_warm
+
+    # Every 6 hours — comfortably under Supabase's 7-day idle-pause threshold.
+    scheduler.add_job(keep_warm, "interval", hours=6, id="keep_warm", replace_existing=True)
     scheduler.start()
 
 

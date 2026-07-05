@@ -253,9 +253,16 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 
 ## Phase 8 — Platform & launch plumbing
 
-- [ ] Version gate: API 426 response + app update screen
-- [ ] Supabase keep-warm job + lending-reminder job (APScheduler, advisory locks)
-- [ ] Nightly `pg_dump` → encrypted → R2 backup workflow (before first real user data)
+- [x] Version gate: API 426 response + app update screen — `VersionGateMiddleware` compares the
+      app's `X-App-Version` header against `min_app_version`, returns 426 with an update payload;
+      the Dio client sends the header and surfaces 426 → `updateRequiredProvider` → the router
+      locks onto a blocking `UpdateScreen`. Parser + gate + app-side unit-tested
+- [x] Supabase keep-warm job (APScheduler, advisory locks) — `keep_warm` runs every 6h under
+      `pg_try_advisory_lock` (no double-run across replicas), `SELECT 1` to beat the 7-day idle
+      pause. (Lending reminders are client-side local notifications — Phase 4 — so no server job)
+- [x] Nightly `pg_dump` → encrypted → R2 backup workflow — `.github/workflows/backup.yml`
+      (docker `postgres:16` dump → gzip → GPG AES-256 → R2 via `aws s3`), nightly + manual,
+      skips cleanly until the R2/DB secrets are set (owner action before first real user data)
 - [x] Railway deploy (API) + envs documented — project `kitabi-api`, config as
       code in `api/railway.json` (Dockerfile builder, `/healthz` healthcheck).
       Env vars set directly in Railway (`DATABASE_URL` = the Supavisor pooler
@@ -274,8 +281,11 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       + the existing rounded `kitabi-logo.png` mark, matching `SplashScreen` exactly so
       native → Flutter splash hands off with no color flash). Store listings (Play +
       App Store) still open.
-- [ ] Landing page: swap "Launching soon" for real store badges
-- [ ] Privacy policy + terms pages (store requirement; landing footer links)
+- [ ] Landing page: swap "Launching soon" for real store badges — deferred until store
+      listings exist (badges would link nowhere before submission)
+- [x] Privacy policy + terms pages (store requirement; landing footer links) — `privacy.html`
+      + `terms.html` (Reading Room theme, honest to the app's actual data practices), linked
+      from the landing footer and added to the Cloudflare Pages deploy
 
 ## Parking lot — v1.5 (designed or deliberately deferred)
 

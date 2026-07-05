@@ -17,6 +17,8 @@ import '../../features/library/presentation/library_grid_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/recommendations/presentation/recommendations_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
+import '../../features/update_gate/presentation/update_screen.dart';
+import '../../data/api/api_client.dart';
 import '../auth/auth_providers.dart';
 import 'shell_scaffold.dart';
 
@@ -24,6 +26,7 @@ import 'shell_scaffold.dart';
 abstract final class Routes {
   static const splash = '/';
   static const signIn = '/sign-in';
+  static const update = '/update';
   static const home = '/home';
   static const profile = '/profile';
   static const catalogSearch = '/catalog/search';
@@ -51,6 +54,7 @@ class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(Ref ref) {
     ref.listen(authStateProvider, (_, _) => notifyListeners());
     ref.listen(bootstrapProvider, (_, _) => notifyListeners());
+    ref.listen(updateRequiredProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -63,6 +67,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final loc = state.matchedLocation;
+
+      // A 426 from the API locks the app onto the update screen (version gate).
+      if (ref.read(updateRequiredProvider)) {
+        return loc == Routes.update ? null : Routes.update;
+      }
+
       final authState = ref.read(authStateProvider);
 
       // Auth state hasn't resolved its first value yet — stay on splash.
@@ -97,6 +107,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.signIn,
         name: 'sign-in',
         builder: (context, state) => const SignInScreen(),
+      ),
+      GoRoute(
+        path: Routes.update,
+        name: 'update',
+        builder: (context, state) => const UpdateScreen(),
       ),
       // The four tabs live in a persistent bottom-nav shell (S3). Each is its
       // own branch so tab state (scroll position, etc.) is preserved.

@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from app.api import auth, catalog, health, me, recommendations, sync
 from app.api import import_ as import_api
 from app.core.config import get_settings
+from app.core.version_gate import VersionGateMiddleware
 from app.jobs import scheduler
 
 
@@ -28,6 +29,8 @@ def create_app() -> FastAPI:
         docs_url="/docs" if settings.env == "dev" else None,
         redoc_url=None,
     )
+
+    app.add_middleware(VersionGateMiddleware)
 
     if settings.cors_origins:
         # The mobile app doesn't need CORS; only a future web origin goes here.
