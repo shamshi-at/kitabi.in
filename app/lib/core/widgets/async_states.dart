@@ -231,7 +231,9 @@ class EmptyState extends StatelessWidget {
             ],
             if (action != null) ...[
               SizedBox(height: 20),
-              action!,
+              // Consistent width for centered-prompt actions (matches the
+              // home-empty CTAs), so single buttons never look stranded.
+              SizedBox(width: 240, child: action!),
             ],
           ],
         ),

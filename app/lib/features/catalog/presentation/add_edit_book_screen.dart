@@ -341,15 +341,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
           SizedBox(height: 8),
           _Field(label: '+ ${l10n.formFieldGenres}', controller: _customGenres),
           SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
-                  )
-                : Text(l10n.formSave),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+                    )
+                  : Text(l10n.formSave),
+            ),
           ),
         ],
       ),

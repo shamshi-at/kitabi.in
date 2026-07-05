@@ -62,9 +62,12 @@ class _OptInPrompt extends ConsumerWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
             ),
             SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => setRecsOptIn(ref, enabled: true),
-              child: Text(l10n.recsEnable),
+            SizedBox(
+              width: 240,
+              child: ElevatedButton(
+                onPressed: () => setRecsOptIn(ref, enabled: true),
+                child: Text(l10n.recsEnable),
+              ),
             ),
           ],
         ),
