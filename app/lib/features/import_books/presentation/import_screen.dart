@@ -1,3 +1,4 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,6 +37,18 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       .cast<Map<String, dynamic>>()
       .where((r) => r['match'] != null)
       .toList();
+
+  Future<void> _pickFile() async {
+    const group = XTypeGroup(
+      label: 'CSV',
+      extensions: ['csv'],
+      mimeTypes: ['text/csv', 'text/comma-separated-values'],
+    );
+    final file = await openFile(acceptedTypeGroups: [group]);
+    if (file == null) return;
+    _csvController.text = await file.readAsString();
+    await _parse();
+  }
 
   Future<void> _parse() async {
     final csv = _csvController.text.trim();
@@ -113,7 +126,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           l10n.importSubtitle,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _busy ? null : _pickFile,
+            icon: const Icon(Icons.file_open_outlined, size: 18),
+            label: Text(l10n.importPickFile),
+          ),
+        ),
+        const SizedBox(height: 14),
         Text(
           l10n.importPasteHint,
           style: const TextStyle(fontSize: 11, color: AppColors.inkSoft),

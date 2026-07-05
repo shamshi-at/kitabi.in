@@ -649,8 +649,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importSubtitle => 'From a Goodreads export or any book CSV.';
 
   @override
+  String get importPickFile => 'Choose a CSV file';
+
+  @override
   String get importPasteHint =>
-      'Open your Goodreads export (or any book CSV) and paste its contents here.';
+      '…or open your Goodreads export (any book CSV) and paste its contents here.';
 
   @override
   String get importPreviewButton => 'Preview matches';

@@ -41,6 +41,9 @@ dependencies:
   # Share a book — render a card to an image and hand it to the OS share sheet
   share_plus: ^10.1.2
 
+  # CSV import — pick a file (S2). file_selector is the Flutter-team plugin.
+  file_selector: ^1.0.3
+
   # Utilities
   uuid: ^4.5.1
   intl: ^0.20.0

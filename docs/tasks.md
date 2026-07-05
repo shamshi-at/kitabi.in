@@ -193,10 +193,9 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Generic CSV / Google Sheets export mapping (title column minimum, fuzzy column match) —
       same `parse_csv`, header-alias matching for title/author/isbn/rating/review/status
 - [x] Import preview UI (matched rows table) + one-tap import — S2. `POST /import/preview`
-      parses + matches; app screen shows matched/unmatched rows and imports the matched ones
-      into the library (status/rating/review), offline-first. **CSV is pasted for now** — a
-      native file picker is a follow-up (`file_picker`'s Android plugin conflicts with the
-      current SDK toolchain)
+      parses + matches; app screen lets you **pick a CSV file** (`file_selector`) or paste it,
+      shows matched/unmatched rows, and imports the matched ones into the library
+      (status/rating/review), offline-first
 - [~] Catalog matching on import (ISBN → title/author fallback; create-if-missing). Match is
       ISBN-exact → title against the local catalog; **create-if-missing for unmatched rows
       (OpenLibrary fetch on import) is a follow-up** — unmatched rows are skipped for now

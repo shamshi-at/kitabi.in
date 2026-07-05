@@ -1186,10 +1186,16 @@ abstract class AppLocalizations {
   /// **'From a Goodreads export or any book CSV.'**
   String get importSubtitle;
 
+  /// Button that opens the file picker
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a CSV file'**
+  String get importPickFile;
+
   /// Instruction for pasting CSV text
   ///
   /// In en, this message translates to:
-  /// **'Open your Goodreads export (or any book CSV) and paste its contents here.'**
+  /// **'…or open your Goodreads export (any book CSV) and paste its contents here.'**
   String get importPasteHint;
 
   /// Button that parses the pasted CSV and previews matches
