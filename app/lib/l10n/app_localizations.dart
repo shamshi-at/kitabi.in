@@ -975,6 +975,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Return {title} to {name}'**
   String reminderBorrowedBody(String title, String name);
+
+  /// Bottom navigation label for the home tab
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
+  /// Bottom navigation label for the library tab
+  ///
+  /// In en, this message translates to:
+  /// **'Library'**
+  String get navLibrary;
+
+  /// Bottom navigation label for the lending tab
+  ///
+  /// In en, this message translates to:
+  /// **'Lending'**
+  String get navLending;
+
+  /// Bottom navigation label for the insights tab
+  ///
+  /// In en, this message translates to:
+  /// **'Insights'**
+  String get navInsights;
+
+  /// Bottom navigation label for the add-a-book action
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get navAdd;
+
+  /// Title of the insights/stats screen
+  ///
+  /// In en, this message translates to:
+  /// **'Insights'**
+  String get insightsTitle;
+
+  /// Placeholder body on the insights screen before stats are built
+  ///
+  /// In en, this message translates to:
+  /// **'Your reading stats — books a month, languages, pages, and a reading goal — land here soon.'**
+  String get insightsComingSoon;
+
+  /// Section header above the shelf-count cards on the home dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'Your shelves'**
+  String get homeYourShelves;
+
+  /// Shelf-count card label for total owned books
+  ///
+  /// In en, this message translates to:
+  /// **'Owned'**
+  String get homeShelfOwned;
+
+  /// Shelf-count card label for finished books
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get homeShelfRead;
+
+  /// Shelf-count card label for books currently lent out
+  ///
+  /// In en, this message translates to:
+  /// **'Lent out'**
+  String get homeShelfLentOut;
+
+  /// Shelf-count card label for wishlisted books
+  ///
+  /// In en, this message translates to:
+  /// **'Wishlist'**
+  String get homeShelfWishlist;
+
+  /// Reading progress line on a currently-reading card
+  ///
+  /// In en, this message translates to:
+  /// **'p. {page} of {total} · {percent}%'**
+  String homeProgressLine(int page, int total, int percent);
+
+  /// Lending nudge with a due date
+  ///
+  /// In en, this message translates to:
+  /// **'{title} is with {name} — due in {days}d'**
+  String homeNudgeDue(String title, String name, int days);
+
+  /// Lending nudge when the book is overdue
+  ///
+  /// In en, this message translates to:
+  /// **'{title} is with {name} — overdue'**
+  String homeNudgeOverdue(String title, String name);
+
+  /// Lending nudge with no due date
+  ///
+  /// In en, this message translates to:
+  /// **'{title} is with {name}'**
+  String homeNudgeNoDue(String title, String name);
 }
 
 class _AppLocalizationsDelegate

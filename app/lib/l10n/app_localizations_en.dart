@@ -525,4 +525,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String reminderBorrowedBody(String title, String name) {
     return 'Return $title to $name';
   }
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navLibrary => 'Library';
+
+  @override
+  String get navLending => 'Lending';
+
+  @override
+  String get navInsights => 'Insights';
+
+  @override
+  String get navAdd => 'Add';
+
+  @override
+  String get insightsTitle => 'Insights';
+
+  @override
+  String get insightsComingSoon =>
+      'Your reading stats — books a month, languages, pages, and a reading goal — land here soon.';
+
+  @override
+  String get homeYourShelves => 'Your shelves';
+
+  @override
+  String get homeShelfOwned => 'Owned';
+
+  @override
+  String get homeShelfRead => 'Read';
+
+  @override
+  String get homeShelfLentOut => 'Lent out';
+
+  @override
+  String get homeShelfWishlist => 'Wishlist';
+
+  @override
+  String homeProgressLine(int page, int total, int percent) {
+    return 'p. $page of $total · $percent%';
+  }
+
+  @override
+  String homeNudgeDue(String title, String name, int days) {
+    return '$title is with $name — due in ${days}d';
+  }
+
+  @override
+  String homeNudgeOverdue(String title, String name) {
+    return '$title is with $name — overdue';
+  }
+
+  @override
+  String homeNudgeNoDue(String title, String name) {
+    return '$title is with $name';
+  }
 }

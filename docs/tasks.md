@@ -195,10 +195,14 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 
 ## Phase 6 — Insights & search
 
+- [x] **Bottom-nav shell** (Home · Library · [+] · Lending · Insights) — `StatefulShellRoute`
+      with a branch per tab; the centre "+" pushes the add flow. Library/Lending lost their
+      back buttons (they're tabs now); detail screens push full-screen over the nav
 - [~] Home dashboard: currently reading, lending nudge, shelf counts, one AI pick — S3.
-      **Interim shipped 6 Jul 2026:** library-first home (currently-reading row +
-      recent-books grid + add CTA) so the app doesn't open onto an empty screen. Still
-      to do for full S3: lending nudge, shelf-count stats, the one AI pick
+      Built the real S3 dashboard: currently-reading cards with page progress, the gold-edged
+      **lending nudge** (soonest-due active lend → tap to the ledger), and the 2×2 shelf-count
+      cards (Owned / Read / Lent out / Wishlist). The **AI pick** card is Phase 7
+      (recommendations), so it's deliberately not here yet
 - [ ] Global search: my library first, then catalog — S4
 - [ ] Filter sheet: language, genre, status, year, author/publisher + live count — S4b
 - [ ] Stats: books/month bars, language donut, pages/month line, status counts — S10

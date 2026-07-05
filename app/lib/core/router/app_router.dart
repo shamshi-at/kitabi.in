@@ -9,12 +9,14 @@ import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
 import '../../features/catalog/presentation/publisher_browse_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/lending/presentation/lending_ledger_screen.dart';
 import '../../features/library/presentation/book_detail_screen.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../auth/auth_providers.dart';
+import 'shell_scaffold.dart';
 
 /// Route names as constants (CLAUDE.md convention).
 abstract final class Routes {
@@ -29,12 +31,13 @@ abstract final class Routes {
   static const publisherBrowse = '/catalog/publishers/:publisherId';
   static const library = '/library';
   static const lendingLedger = '/lending';
-  static const bookDetail = '/library/book/:workId/:editionId';
+  static const insights = '/insights';
+  // Top-level (not under a nav branch) so it covers the bottom nav full-screen.
+  static const bookDetail = '/book/:workId/:editionId';
 
   static String authorBrowsePath(String authorId) => '/catalog/authors/$authorId';
   static String publisherBrowsePath(String publisherId) => '/catalog/publishers/$publisherId';
-  static String bookDetailPath(String workId, String editionId) =>
-      '/library/book/$workId/$editionId';
+  static String bookDetailPath(String workId, String editionId) => '/book/$workId/$editionId';
 }
 
 /// Re-runs the router's redirect whenever auth or bootstrap state changes
@@ -91,11 +94,51 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'sign-in',
         builder: (context, state) => const SignInScreen(),
       ),
-      GoRoute(
-        path: Routes.home,
-        name: 'home',
-        builder: (context, state) => const HomeScreen(),
+      // The four tabs live in a persistent bottom-nav shell (S3). Each is its
+      // own branch so tab state (scroll position, etc.) is preserved.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            ShellScaffold(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.home,
+                name: 'home',
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.library,
+                name: 'library',
+                builder: (context, state) => const LibraryGridScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.lendingLedger,
+                name: 'lending-ledger',
+                builder: (context, state) => const LendingLedgerScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.insights,
+                name: 'insights',
+                builder: (context, state) => const InsightsScreen(),
+              ),
+            ],
+          ),
+        ],
       ),
+      // Full-screen routes pushed above the shell (they cover the bottom nav).
       GoRoute(
         path: Routes.profile,
         name: 'profile',
@@ -127,16 +170,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'publisher-browse',
         builder: (context, state) =>
             PublisherBrowseScreen(publisherId: state.pathParameters['publisherId']!),
-      ),
-      GoRoute(
-        path: Routes.library,
-        name: 'library',
-        builder: (context, state) => const LibraryGridScreen(),
-      ),
-      GoRoute(
-        path: Routes.lendingLedger,
-        name: 'lending-ledger',
-        builder: (context, state) => const LendingLedgerScreen(),
       ),
       GoRoute(
         path: Routes.bookDetail,

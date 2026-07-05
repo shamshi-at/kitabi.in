@@ -54,25 +54,13 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back, color: AppColors.ink),
-                              onPressed: () => context.pop(),
-                              padding: EdgeInsets.zero,
-                            ),
-                            Text(l10n.libraryTitle, style: Theme.of(context).textTheme.titleLarge),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 44),
-                          child: Text(
-                            l10n.libraryBookCount(allEntries.length),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: AppColors.inkSoft),
-                          ),
+                        Text(l10n.libraryTitle, style: Theme.of(context).textTheme.titleLarge),
+                        Text(
+                          l10n.libraryBookCount(allEntries.length),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: AppColors.inkSoft),
                         ),
                         const SizedBox(height: 12),
                         SingleChildScrollView(

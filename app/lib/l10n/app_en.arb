@@ -667,5 +667,87 @@
       "title": {"type": "String"},
       "name": {"type": "String"}
     }
+  },
+  "navHome": "Home",
+  "@navHome": {
+    "description": "Bottom navigation label for the home tab"
+  },
+  "navLibrary": "Library",
+  "@navLibrary": {
+    "description": "Bottom navigation label for the library tab"
+  },
+  "navLending": "Lending",
+  "@navLending": {
+    "description": "Bottom navigation label for the lending tab"
+  },
+  "navInsights": "Insights",
+  "@navInsights": {
+    "description": "Bottom navigation label for the insights tab"
+  },
+  "navAdd": "Add",
+  "@navAdd": {
+    "description": "Bottom navigation label for the add-a-book action"
+  },
+  "insightsTitle": "Insights",
+  "@insightsTitle": {
+    "description": "Title of the insights/stats screen"
+  },
+  "insightsComingSoon": "Your reading stats — books a month, languages, pages, and a reading goal — land here soon.",
+  "@insightsComingSoon": {
+    "description": "Placeholder body on the insights screen before stats are built"
+  },
+  "homeYourShelves": "Your shelves",
+  "@homeYourShelves": {
+    "description": "Section header above the shelf-count cards on the home dashboard"
+  },
+  "homeShelfOwned": "Owned",
+  "@homeShelfOwned": {
+    "description": "Shelf-count card label for total owned books"
+  },
+  "homeShelfRead": "Read",
+  "@homeShelfRead": {
+    "description": "Shelf-count card label for finished books"
+  },
+  "homeShelfLentOut": "Lent out",
+  "@homeShelfLentOut": {
+    "description": "Shelf-count card label for books currently lent out"
+  },
+  "homeShelfWishlist": "Wishlist",
+  "@homeShelfWishlist": {
+    "description": "Shelf-count card label for wishlisted books"
+  },
+  "homeProgressLine": "p. {page} of {total} · {percent}%",
+  "@homeProgressLine": {
+    "description": "Reading progress line on a currently-reading card",
+    "placeholders": {
+      "page": {"type": "int"},
+      "total": {"type": "int"},
+      "percent": {"type": "int"}
+    }
+  },
+  "homeNudgeDue": "{title} is with {name} — due in {days}d",
+  "@homeNudgeDue": {
+    "description": "Lending nudge with a due date",
+    "placeholders": {
+      "title": {"type": "String"},
+      "name": {"type": "String"},
+      "days": {"type": "int"}
+    }
+  },
+  "homeNudgeOverdue": "{title} is with {name} — overdue",
+  "@homeNudgeOverdue": {
+    "description": "Lending nudge when the book is overdue",
+    "placeholders": {
+      "title": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "homeNudgeNoDue": "{title} is with {name}",
+  "@homeNudgeNoDue": {
+    "description": "Lending nudge with no due date",
+    "placeholders": {
+      "title": {"type": "String"},
+      "name": {"type": "String"}
+    }
   }
 }

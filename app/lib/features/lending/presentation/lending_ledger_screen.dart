@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -40,16 +39,11 @@ class LendingLedgerScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, color: AppColors.ink),
-                          onPressed: () => context.pop(),
-                        ),
-                        Text(l10n.lendingLedgerTitle,
-                            style: Theme.of(context).textTheme.titleLarge),
-                      ],
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(l10n.lendingLedgerTitle,
+                          style: Theme.of(context).textTheme.titleLarge),
                     ),
                   ),
                   TabBar(

@@ -204,7 +204,7 @@ Full spec in [feature-map.md](feature-map.md); phase-by-phase checklist in
 | 3 — Personal library + sync engine | Drift schema, sync queue, push/pull, status/notes/tags/ratings/reviews | **✅ Done** — migration `000004`, `POST /sync/push` + `GET /sync/pull`, delete-wins/LWW conflict rules, `[WIRED]` activity log; app has S5 library grid + S6 book detail (status/progress/notes/rating/review/lending/tags), workmanager + connectivity-triggered background sync. ISBN scan "Add" now creates a library entry (was a no-op that only popped the scanner). Sync engine verified via unit tests (mocked API, in-memory Drift), not yet via a real signed-in device run |
 | 4 — Lending | Lend/borrow records, linked vs self-logged, due reminders | **In progress** — Slices A–C: Lending ledger (S8) with **Lent out** and **Borrowed** tabs (Out now / With-you-now / Returned, computed due stamps, mark-returned / "I've returned it"). Borrowed side via migration `000005` (`direction`/`edition_id`/`linked_loan_id`/`note`, nullable `library_entry_id`); log-borrowed sheet (S8c, inline catalog search); S9 lend bottom sheet; **due-date local reminders** (`flutter_local_notifications`, on-device, scheduled 9am on the due date, cancelled on return — firing not yet device-verified). Still to build: cross-user match/mirror `[WIRED]` (Slice D) |
 | 5 — Import | Goodreads/CSV import | Not started |
-| 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | Not started — but an **interim library-first home** now ships (currently-reading row + recent-books grid + add CTA) so the app opens onto your books instead of an empty placeholder; the full S3 dashboard (stats, lending nudge, AI pick) is still Phase 6 (designed in mockups S3/S4/S4b/S4c/S4d/S10) |
+| 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | **In progress** — **bottom-nav shell** (Home · Library · [+] · Lending · Insights, `StatefulShellRoute`) + the real **S3 home dashboard** (currently-reading with page progress, gold-edged lending nudge, 2×2 shelf-count cards). AI pick deferred to Phase 7. Still to build: global search (S4) + filter sheet (S4b), stats/goal ring (S10 — Insights tab is a stub for now) |
 | 7 — Recommendations & share | LLM recs, per-book + personal share cards | Not started (designed in mockups S6c/S11/S13) |
 | 8 — Launch plumbing | Version gate, backups, app icons, store listings, privacy policy | Not started (Railway deploy + custom domain items already done ✅) |
 
@@ -214,6 +214,16 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 ---
 
 ## Recent milestones
+
+- **6 Jul 2026** — Phase 6 started — navigation shell + home dashboard. A persistent
+  **bottom-nav shell** (`StatefulShellRoute.indexedStack`: Home · Library · [+] · Lending ·
+  Insights) replaces the temporary app-bar icons; the centre "+" pushes the add flow, and
+  detail screens (book, author/publisher, add/scan, profile) push full-screen over the nav.
+  Library and Lending lost their back buttons (they're tabs now). The interim home became the
+  real **S3 dashboard**: currently-reading cards with page progress, a gold-edged **lending
+  nudge** (soonest-due active lend, tap → ledger), and 2×2 shelf-count cards (Owned / Read /
+  Lent out / Wishlist). Insights is a stub pending S10. The AI-pick card stays Phase 7. 21 app
+  tests green (new: home shelf-count render), analyze clean.
 
 - **6 Jul 2026** — Phase 4 Slice C — the lend flow + reminders. **S9 lend bottom sheet**
   (to-whom, lent-on, optional due date, note; shared field widgets with the log-borrowed
