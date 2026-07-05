@@ -44,6 +44,9 @@ dependencies:
   # CSV import — pick a file (S2). file_selector is the Flutter-team plugin.
   file_selector: ^1.0.3
 
+  # Cover photo upload — pick from gallery/camera (S7b "⇧ upload a photo")
+  image_picker: ^1.1.2
+
   # Utilities
   uuid: ^4.5.1
   intl: ^0.20.0

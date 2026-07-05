@@ -385,10 +385,11 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   hook excludes arm64 for `sdk=iphonesimulator*` (real devices unaffected), but the
   simulator itself can't build at all without an older x86_64-capable runtime. Verified
   instead on an Android emulator; verify the scan screen on a real iPhone before launch.
-- **No user-photo cover upload endpoint** — `Edition.cover_url` can hold any image URL
-  (OpenLibrary's own covers already populate it), but there's no Supabase storage
-  bucket or upload flow for a user's own photo yet; would be new infrastructure, out
-  of Phase 2's scope.
+- **User-photo cover upload** — the app now picks a photo (`image_picker`), uploads it to
+  a Supabase Storage bucket named **`covers`**, and points the edition's `cover_url` at the
+  public URL (tap the cover on the book page). **Owner setup required:** create a public
+  `covers` bucket in Supabase with an insert policy for authenticated users — until then the
+  upload throws and the app shows "couldn't upload the cover."
 - **Phase 3 not yet verified with a real signed-in device run.** The sync engine's
   logic is thoroughly unit-tested (in-memory Drift + fake API client covering
   push/pull/conflicts/idempotency), and the app boots cleanly on an Android emulator

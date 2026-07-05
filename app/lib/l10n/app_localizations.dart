@@ -478,6 +478,18 @@ abstract class AppLocalizations {
   /// **'Your copy'**
   String get bookYourCopy;
 
+  /// Snackbar when a cover upload fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t upload the cover. Try again.'**
+  String get coverUploadFailed;
+
+  /// Snackbar when a cover upload succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Cover updated'**
+  String get coverUploaded;
+
   /// Label under the star rating control on the book detail screen
   ///
   /// In en, this message translates to:

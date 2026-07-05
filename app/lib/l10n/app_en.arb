@@ -270,6 +270,10 @@
   },
   "bookYourCopy": "Your copy",
   "@bookYourCopy": {"description": "Section header above the personal book sections"},
+  "coverUploadFailed": "Couldn't upload the cover. Try again.",
+  "@coverUploadFailed": {"description": "Snackbar when a cover upload fails"},
+  "coverUploaded": "Cover updated",
+  "@coverUploaded": {"description": "Snackbar when a cover upload succeeds"},
   "bookYourRating": "your rating",
   "@bookYourRating": {
     "description": "Label under the star rating control on the book detail screen"

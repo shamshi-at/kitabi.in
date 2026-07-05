@@ -94,6 +94,12 @@ class ApiClient {
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
+  /// Update an edition's fields (e.g. a user-uploaded cover URL) — S7b.
+  Future<Map<String, dynamic>> updateEdition(String editionId, Map<String, dynamic> patch) async {
+    final res = await _dio.patch('/catalog/editions/$editionId', data: patch);
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> getAuthorWorks(String authorId) async {
     final res = await _dio.get('/catalog/authors/$authorId');
     return res.data as Map<String, dynamic>;

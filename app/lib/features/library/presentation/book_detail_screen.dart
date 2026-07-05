@@ -17,6 +17,7 @@ import '../../catalog/providers/catalog_providers.dart';
 import '../../lending/presentation/lend_sheet.dart';
 import '../../lending/reminder.dart';
 import '../../share/presentation/share_book_sheet.dart';
+import '../cover_upload.dart';
 import '../reading_status.dart';
 import '../providers/library_providers.dart';
 
@@ -78,12 +79,12 @@ class _BookDetailBody extends ConsumerWidget {
                 padding: EdgeInsets.zero,
               ),
               const SizedBox(width: 4),
-              TypesetCover(
+              _CoverUploader(
+                editionId: editionId,
                 title: work['title'] as String,
                 author: authors.isNotEmpty ? authors.first['name'] as String? : null,
                 coverUrl: edition?['cover_url'] as String?,
-                width: 58,
-                height: 84,
+                workId: work['id'] as String,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -199,6 +200,84 @@ class _BookDetailBody extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
       ],
+    );
+  }
+}
+
+/// The book-detail cover — tappable to upload your own photo (S7b "⇧ upload a
+/// photo"), with a small camera badge. Uploads to Supabase Storage, points the
+/// edition's cover_url at it, and refreshes.
+class _CoverUploader extends ConsumerStatefulWidget {
+  const _CoverUploader({
+    required this.editionId,
+    required this.title,
+    required this.author,
+    required this.coverUrl,
+    required this.workId,
+  });
+
+  final String editionId;
+  final String title;
+  final String? author;
+  final String? coverUrl;
+  final String workId;
+
+  @override
+  ConsumerState<_CoverUploader> createState() => _CoverUploaderState();
+}
+
+class _CoverUploaderState extends ConsumerState<_CoverUploader> {
+  bool _busy = false;
+
+  Future<void> _upload() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final url = await pickAndUploadCover(ref, editionId: widget.editionId);
+      if (url != null) {
+        ref.invalidate(workProvider(widget.workId));
+        ref.invalidate(cachedBookProvider(widget.editionId));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.coverUploaded)));
+      }
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.coverUploadFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _upload,
+      child: Stack(
+        children: [
+          TypesetCover(
+            title: widget.title,
+            author: widget.author,
+            coverUrl: widget.coverUrl,
+            width: 58,
+            height: 84,
+          ),
+          Positioned(
+            right: 2,
+            bottom: 2,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(color: AppColors.oxblood, shape: BoxShape.circle),
+              child: _busy
+                  ? const SizedBox(
+                      width: 11,
+                      height: 11,
+                      child: CircularProgressIndicator(strokeWidth: 1.6, color: AppColors.paper),
+                    )
+                  : const Icon(Icons.photo_camera, size: 11, color: AppColors.paper),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

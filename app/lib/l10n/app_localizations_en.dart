@@ -233,6 +233,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookYourCopy => 'Your copy';
 
   @override
+  String get coverUploadFailed => 'Couldn\'t upload the cover. Try again.';
+
+  @override
+  String get coverUploaded => 'Cover updated';
+
+  @override
   String get bookYourRating => 'your rating';
 
   @override
