@@ -31,6 +31,8 @@ class AuthorBrowseScreen extends ConsumerWidget {
             final works = (body['works'] as List).cast<Map<String, dynamic>>();
             final name = author['name'] as String;
             final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+            final imageUrl = author['image_url'] as String?;
+            final penName = author['pen_name'] as String?;
 
             return ListView(
               padding: const EdgeInsets.all(20),
@@ -54,16 +56,19 @@ class AuthorBrowseScreen extends ConsumerWidget {
                 Row(
                   children: [
                     CircleAvatar(
-                      radius: 23,
+                      radius: 28,
                       backgroundColor: AppColors.goldSoft,
-                      child: Text(
-                        initials,
-                        style: const TextStyle(
-                          color: Color(0xFF8F681E),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
+                      foregroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
+                      child: imageUrl == null
+                          ? Text(
+                              initials,
+                              style: const TextStyle(
+                                color: Color(0xFF8F681E),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                              ),
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -71,6 +76,15 @@ class AuthorBrowseScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(name, style: Theme.of(context).textTheme.titleLarge),
+                          if (penName != null && penName.isNotEmpty)
+                            Text(
+                              l10n.authorWritingAs(penName),
+                              style: const TextStyle(
+                                color: AppColors.oxblood,
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
                           Text(
                             l10n.authorBrowseWorksCount(works.length),
                             style: Theme.of(context)

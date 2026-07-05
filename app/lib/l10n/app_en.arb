@@ -133,6 +133,13 @@
       }
     }
   },
+  "authorWritingAs": "writing as {name}",
+  "@authorWritingAs": {
+    "description": "Shows an author's pen name under their real name",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
   "publisherBrowseLabel": "Publisher",
   "@publisherBrowseLabel": {
     "description": "Eyebrow label on the publisher browse screen"

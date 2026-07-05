@@ -118,6 +118,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String authorWritingAs(String name) {
+    return 'writing as $name';
+  }
+
+  @override
   String get publisherBrowseLabel => 'Publisher';
 
   @override

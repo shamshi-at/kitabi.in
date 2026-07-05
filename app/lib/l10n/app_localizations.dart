@@ -274,6 +274,12 @@ abstract class AppLocalizations {
   /// **'{count} {count, plural, one{work} other{works}} in the catalog'**
   String authorBrowseWorksCount(int count);
 
+  /// Shows an author's pen name under their real name
+  ///
+  /// In en, this message translates to:
+  /// **'writing as {name}'**
+  String authorWritingAs(String name);
+
   /// Eyebrow label on the publisher browse screen
   ///
   /// In en, this message translates to:

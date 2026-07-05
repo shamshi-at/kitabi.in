@@ -30,6 +30,7 @@ class PublisherBrowseScreen extends ConsumerWidget {
             final publisher = body['publisher'] as Map<String, dynamic>;
             final works = (body['works'] as List).cast<Map<String, dynamic>>();
             final name = publisher['name'] as String;
+            final logoUrl = publisher['logo_url'] as String?;
 
             return ListView(
               padding: const EdgeInsets.all(20),
@@ -50,10 +51,43 @@ class PublisherBrowseScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(name, style: Theme.of(context).textTheme.titleLarge),
-                Text(
-                  l10n.publisherBrowseWorksCount(works.length),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
+                Row(
+                  children: [
+                    if (logoUrl != null) ...[
+                      Container(
+                        width: 52,
+                        height: 52,
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.line),
+                        ),
+                        child: Image.network(
+                          logoUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, _, _) =>
+                              const Icon(Icons.business, color: AppColors.inkSoft),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name, style: Theme.of(context).textTheme.titleLarge),
+                          Text(
+                            l10n.publisherBrowseWorksCount(works.length),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: AppColors.inkSoft),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
                 if (works.isEmpty)
