@@ -6,7 +6,7 @@ import '../api/api_client.dart';
 import '../db/database.dart';
 
 class SyncReport {
-  const SyncReport({required this.pushedOps, required this.pulledChanges});
+  SyncReport({required this.pushedOps, required this.pulledChanges});
   final int pushedOps;
   final int pulledChanges;
 }
@@ -136,7 +136,7 @@ class SyncEngine {
           LibraryEntriesCompanion(
             syncStatus: common.syncStatus,
             lastSyncedAt: common.lastSyncedAt,
-            serverSeq: serverSeq != null ? Value(serverSeq) : const Value.absent(),
+            serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
           ),
         );
       case 'ratings':
@@ -145,7 +145,7 @@ class SyncEngine {
           RatingsCompanion(
             syncStatus: common.syncStatus,
             lastSyncedAt: common.lastSyncedAt,
-            serverSeq: serverSeq != null ? Value(serverSeq) : const Value.absent(),
+            serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
           ),
         );
       case 'reviews':
@@ -154,7 +154,7 @@ class SyncEngine {
           ReviewsCompanion(
             syncStatus: common.syncStatus,
             lastSyncedAt: common.lastSyncedAt,
-            serverSeq: serverSeq != null ? Value(serverSeq) : const Value.absent(),
+            serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
           ),
         );
       case 'personal_tags':
@@ -162,7 +162,7 @@ class SyncEngine {
           PersonalTagsCompanion(
             syncStatus: common.syncStatus,
             lastSyncedAt: common.lastSyncedAt,
-            serverSeq: serverSeq != null ? Value(serverSeq) : const Value.absent(),
+            serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
           ),
         );
       case 'library_entry_tags':
@@ -171,7 +171,7 @@ class SyncEngine {
           LibraryEntryTagsCompanion(
             syncStatus: common.syncStatus,
             lastSyncedAt: common.lastSyncedAt,
-            serverSeq: serverSeq != null ? Value(serverSeq) : const Value.absent(),
+            serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
           ),
         );
       case 'lending_records':
@@ -180,7 +180,7 @@ class SyncEngine {
           LendingRecordsCompanion(
             syncStatus: common.syncStatus,
             lastSyncedAt: common.lastSyncedAt,
-            serverSeq: serverSeq != null ? Value(serverSeq) : const Value.absent(),
+            serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
           ),
         );
     }
@@ -189,7 +189,7 @@ class SyncEngine {
   Future<void> _applyChange(String entity, Map<String, dynamic> d) async {
     DateTime? ts(String key) => d[key] == null ? null : DateTime.parse(d[key] as String);
     final synced = (
-      syncStatus: const Value('synced'),
+      syncStatus: Value('synced'),
       lastSyncedAt: Value(DateTime.now()),
       serverSeq: Value(d['server_seq'] as int?),
       deletedAt: Value(ts('deleted_at')),

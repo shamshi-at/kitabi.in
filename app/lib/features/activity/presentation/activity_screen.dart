@@ -33,7 +33,7 @@ class ActivityScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         child: activity.when(
-          loading: () => const ListSkeleton(),
+          loading: () => ListSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(activityLogProvider)),
           data: (entries) => entries.isEmpty
               ? EmptyState(
@@ -42,9 +42,9 @@ class ActivityScreen extends ConsumerWidget {
                   body: l10n.activityEmpty,
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
                   itemCount: entries.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1, color: AppColors.line),
+                  separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.line),
                   itemBuilder: (context, i) => _ActivityRow(entry: entries[i]),
                 ),
         ),
@@ -82,17 +82,17 @@ class _ActivityRow extends StatelessWidget {
     final days = DateUtils.dateOnly(DateTime.now()).difference(DateUtils.dateOnly(entry.occurredAt)).inDays;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
           Icon(icon, size: 18, color: AppColors.oxblood),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
-            child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
           Text(
             l10n.activityWhen(days),
-            style: const TextStyle(fontSize: 11, color: AppColors.inkSoft),
+            style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
           ),
         ],
       ),

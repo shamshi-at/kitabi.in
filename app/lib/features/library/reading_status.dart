@@ -13,16 +13,16 @@ String readingStatusLabel(String status) => switch (status) {
     };
 
 Color readingStatusBackground(String status) => switch (status) {
-      'reading' => const Color(0xFFF2DEDA),
-      'read' => const Color(0xFFE3EAD9),
-      'wishlist' => const Color(0xFFDEE7EF),
-      _ => const Color(0xFFEAE4D6),
+      'reading' => Color(0xFFF2DEDA),
+      'read' => Color(0xFFE3EAD9),
+      'wishlist' => Color(0xFFDEE7EF),
+      _ => Color(0xFFEAE4D6),
     };
 
 Color readingStatusForeground(String status) => switch (status) {
-      'reading' => const Color(0xFF7E2A33),
-      'read' => const Color(0xFF48663F),
-      'stopped' => const Color(0xFF8A7F6C),
-      'wishlist' => const Color(0xFF43617E),
-      _ => const Color(0xFF7A6A55),
+      'reading' => Color(0xFF7E2A33),
+      'read' => Color(0xFF48663F),
+      'stopped' => Color(0xFF8A7F6C),
+      'wishlist' => Color(0xFF43617E),
+      _ => Color(0xFF7A6A55),
     };

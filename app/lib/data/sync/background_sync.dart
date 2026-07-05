@@ -41,7 +41,7 @@ void registerBackgroundSync() {
   Workmanager().registerPeriodicTask(
     _kTaskTag,
     _kTaskName,
-    frequency: const Duration(minutes: 15),
+    frequency: Duration(minutes: 15),
     constraints: Constraints(networkType: NetworkType.connected),
     existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );

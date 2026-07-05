@@ -25,7 +25,7 @@ class AuthorBrowseScreen extends ConsumerWidget {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: data.when(
-          loading: () => const ListSkeleton(),
+          loading: () => ListSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(authorWorksProvider(authorId))),
           data: (body) {
             final author = body['author'] as Map<String, dynamic>;
@@ -36,12 +36,12 @@ class AuthorBrowseScreen extends ConsumerWidget {
             final penName = author['pen_name'] as String?;
 
             return ListView(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               children: [
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back, color: AppColors.ink),
+                      icon: Icon(Icons.arrow_back, color: AppColors.ink),
                       onPressed: () => context.pop(),
                     ),
                     Text(
@@ -53,7 +53,7 @@ class AuthorBrowseScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   children: [
                     CircleAvatar(
@@ -63,7 +63,7 @@ class AuthorBrowseScreen extends ConsumerWidget {
                       child: imageUrl == null
                           ? Text(
                               initials,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Color(0xFF8F681E),
                                 fontWeight: FontWeight.w600,
                                 fontSize: 18,
@@ -71,7 +71,7 @@ class AuthorBrowseScreen extends ConsumerWidget {
                             )
                           : null,
                     ),
-                    const SizedBox(width: 14),
+                    SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,7 +80,7 @@ class AuthorBrowseScreen extends ConsumerWidget {
                           if (penName != null && penName.isNotEmpty)
                             Text(
                               l10n.authorWritingAs(penName),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.oxblood,
                                 fontSize: 12,
                                 fontStyle: FontStyle.italic,
@@ -98,10 +98,10 @@ class AuthorBrowseScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 if (works.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    padding: EdgeInsets.symmetric(vertical: 24),
                     child: Text(
                       l10n.browseEmpty,
                       textAlign: TextAlign.center,

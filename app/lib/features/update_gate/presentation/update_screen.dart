@@ -16,12 +16,12 @@ class UpdateScreen extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.system_update, size: 56, color: AppColors.oxblood),
-                const SizedBox(height: 20),
+                Icon(Icons.system_update, size: 56, color: AppColors.oxblood),
+                SizedBox(height: 20),
                 Text(
                   l10n.updateTitle,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -29,7 +29,7 @@ class UpdateScreen extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Text(
                   l10n.updateBody,
                   textAlign: TextAlign.center,

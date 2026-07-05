@@ -31,7 +31,7 @@ class RecommendationsScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         child: optIn.when(
-          loading: () => const ListSkeleton(),
+          loading: () => ListSkeleton(),
       error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(recommendationsProvider)),
           data: (enabled) => enabled ? const _RecsList() : const _OptInPrompt(),
         ),
@@ -48,20 +48,20 @@ class _OptInPrompt extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.auto_awesome, size: 44, color: AppColors.gold),
-            const SizedBox(height: 16),
+            Icon(Icons.auto_awesome, size: 44, color: AppColors.gold),
+            SizedBox(height: 16),
             Text(l10n.recsTitle, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               l10n.recsOptInBody,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => setRecsOptIn(ref, enabled: true),
               child: Text(l10n.recsEnable),
@@ -90,7 +90,7 @@ class _RecsListState extends ConsumerState<_RecsList> {
     final recs = ref.watch(recommendationsProvider);
 
     return recs.when(
-      loading: () => const ListSkeleton(),
+      loading: () => ListSkeleton(),
       error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(recommendationsProvider)),
       data: (data) {
         final enabled = data['enabled'] == true;
@@ -100,14 +100,14 @@ class _RecsListState extends ConsumerState<_RecsList> {
             .toList();
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
           children: [
             Text(l10n.recsTitle, style: Theme.of(context).textTheme.titleLarge),
             Text(
               l10n.recsSubtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             if (!enabled)
               _Note(l10n.recsUnavailable)
             else if (picks.isEmpty)
@@ -121,7 +121,7 @@ class _RecsListState extends ConsumerState<_RecsList> {
                     () => _handled.add((pick['work'] as Map)['id'] as String),
                   ),
                 ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Center(
               child: TextButton(
                 onPressed: () => setRecsOptIn(ref, enabled: false),
@@ -131,7 +131,7 @@ class _RecsListState extends ConsumerState<_RecsList> {
             Center(
               child: Text(
                 l10n.recsFooter,
-                style: const TextStyle(fontSize: 10, color: AppColors.inkSoft),
+                style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
               ),
             ),
           ],
@@ -159,7 +159,7 @@ class _Note extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: EdgeInsets.symmetric(vertical: 24),
       child: Text(
         text,
         textAlign: TextAlign.center,
@@ -189,8 +189,8 @@ class _RecCard extends StatelessWidget {
     final editionId = edition?['id'] as String?;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(11),
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(12),
@@ -213,7 +213,7 @@ class _RecCard extends StatelessWidget {
                   width: 44,
                   height: 64,
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,17 +222,17 @@ class _RecCard extends StatelessWidget {
                         work['title'] as String? ?? '',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
                       ),
                       if (author != null)
                         Text(
                           author,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                          style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
                         ),
                       if (rating != null) ...[
-                        const SizedBox(height: 3),
+                        SizedBox(height: 3),
                         _Stars(value: rating, caption: l10n.shareCatalogAvg),
                       ],
                     ],
@@ -241,10 +241,10 @@ class _RecCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 9),
+          SizedBox(height: 9),
           Container(
-            padding: const EdgeInsets.fromLTRB(9, 7, 9, 7),
-            decoration: const BoxDecoration(
+            padding: EdgeInsets.fromLTRB(9, 7, 9, 7),
+            decoration: BoxDecoration(
               color: AppColors.paper,
               borderRadius: BorderRadius.only(
                 topRight: Radius.circular(8),
@@ -257,22 +257,22 @@ class _RecCard extends StatelessWidget {
               children: [
                 Text(
                   l10n.recsWhy,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 7.5,
                     letterSpacing: 1,
                     color: AppColors.inkSoft,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   why,
-                  style: const TextStyle(fontSize: 11.5, height: 1.4, color: AppColors.ink),
+                  style: TextStyle(fontSize: 11.5, height: 1.4, color: AppColors.ink),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 9),
+          SizedBox(height: 9),
           Row(
             children: [
               Expanded(
@@ -280,18 +280,18 @@ class _RecCard extends StatelessWidget {
                   onPressed: onWishlist,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.oxblood,
-                    side: const BorderSide(color: AppColors.line),
-                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    side: BorderSide(color: AppColors.line),
+                    padding: EdgeInsets.symmetric(vertical: 7),
                   ),
-                  child: Text(l10n.recsWishlist, style: const TextStyle(fontSize: 12)),
+                  child: Text(l10n.recsWishlist, style: TextStyle(fontSize: 12)),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 child: TextButton(
                   onPressed: onDismiss,
                   style: TextButton.styleFrom(foregroundColor: AppColors.inkSoft),
-                  child: Text(l10n.recsNotForMe, style: const TextStyle(fontSize: 12)),
+                  child: Text(l10n.recsNotForMe, style: TextStyle(fontSize: 12)),
                 ),
               ),
             ],
@@ -318,8 +318,8 @@ class _Stars extends StatelessWidget {
             size: 12,
             color: AppColors.gold,
           ),
-        const SizedBox(width: 5),
-        Text(caption, style: const TextStyle(fontSize: 7.5, color: AppColors.inkSoft)),
+        SizedBox(width: 5),
+        Text(caption, style: TextStyle(fontSize: 7.5, color: AppColors.inkSoft)),
       ],
     );
   }

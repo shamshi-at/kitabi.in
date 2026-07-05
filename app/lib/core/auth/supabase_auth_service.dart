@@ -43,7 +43,7 @@ Future<void> initSupabase() async {
   await Supabase.initialize(
     url: supabaseUrl,
     publishableKey: supabasePublishableKey,
-    authOptions: const FlutterAuthClientOptions(localStorage: _SecureSessionStorage()),
+    authOptions: FlutterAuthClientOptions(localStorage: _SecureSessionStorage()),
   );
 }
 
@@ -54,7 +54,7 @@ class SupabaseAuthService implements AuthService {
 
   KitabiAuthUser? _toKitabiAuthUser(User? user) {
     if (user == null) return null;
-    final meta = user.userMetadata ?? const {};
+    final meta = user.userMetadata ?? {};
     return KitabiAuthUser(
       id: user.id,
       email: user.email,

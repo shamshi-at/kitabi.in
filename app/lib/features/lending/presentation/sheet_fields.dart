@@ -9,15 +9,15 @@ InputDecoration sheetInputDecoration(String hint) => InputDecoration(
       filled: true,
       fillColor: AppColors.paper,
       hintText: hint,
-      hintStyle: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      hintStyle: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.line),
+        borderSide: BorderSide(color: AppColors.line),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.line),
+        borderSide: BorderSide(color: AppColors.line),
       ),
     );
 
@@ -29,10 +29,10 @@ class SheetLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(bottom: 4),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           letterSpacing: 1,
           color: AppColors.inkSoft,
@@ -65,13 +65,13 @@ class SheetDateField extends StatelessWidget {
           onTap: onTap,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             decoration: BoxDecoration(
               color: AppColors.paper,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppColors.line),
             ),
-            child: Text(value, style: const TextStyle(fontSize: 13, color: AppColors.ink)),
+            child: Text(value, style: TextStyle(fontSize: 13, color: AppColors.ink)),
           ),
         ),
       ],
@@ -89,7 +89,7 @@ class SheetGrabber extends StatelessWidget {
       child: Container(
         width: 32,
         height: 4,
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: AppColors.line,
           borderRadius: BorderRadius.circular(99),

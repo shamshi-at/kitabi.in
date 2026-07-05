@@ -33,7 +33,7 @@ class CatalogResultTile extends ConsumerWidget {
     final editionId = edition?['id'] as String?;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      padding: EdgeInsets.symmetric(vertical: 7),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -51,7 +51,7 @@ class CatalogResultTile extends ConsumerWidget {
                     author: authors.isNotEmpty ? authors.first['name'] as String? : null,
                     coverUrl: edition?['cover_url'] as String?,
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,13 +70,13 @@ class CatalogResultTile extends ConsumerWidget {
                             children: [
                               for (final (i, author) in authors.indexed) ...[
                                 if (i > 0)
-                                  const Text(', ', style: TextStyle(color: AppColors.inkSoft)),
+                                  Text(', ', style: TextStyle(color: AppColors.inkSoft)),
                                 GestureDetector(
                                   onTap: () => context
                                       .push(Routes.authorBrowsePath(author['id'] as String)),
                                   child: Text(
                                     author['name'] as String,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: AppColors.oxblood,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 12,
@@ -88,7 +88,7 @@ class CatalogResultTile extends ConsumerWidget {
                           ),
                         if (publisher != null || year != null)
                           Padding(
-                            padding: const EdgeInsets.only(top: 2),
+                            padding: EdgeInsets.only(top: 2),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -100,18 +100,18 @@ class CatalogResultTile extends ConsumerWidget {
                                     child: Text(
                                       publisher['name'] as String,
                                       style:
-                                          const TextStyle(color: AppColors.oxblood, fontSize: 11),
+                                          TextStyle(color: AppColors.oxblood, fontSize: 11),
                                     ),
                                   ),
                                 if (publisher != null && year != null)
-                                  const Text(
+                                  Text(
                                     ' · ',
                                     style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
                                   ),
                                 if (year != null)
                                   Text(
                                     '$year',
-                                    style: const TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                                    style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
                                   ),
                               ],
                             ),
@@ -142,13 +142,13 @@ class _QuickAdd extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final owned = ref.watch(libraryEntryProvider(editionId)).valueOrNull != null;
     if (owned) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(horizontal: 12),
         child: Icon(Icons.check_circle, color: AppColors.moss, size: 22),
       );
     }
     return IconButton(
-      icon: const Icon(Icons.add_circle_outline, color: AppColors.oxblood),
+      icon: Icon(Icons.add_circle_outline, color: AppColors.oxblood),
       tooltip: AppLocalizations.of(context)!.bookAddToLibrary,
       onPressed: () async {
         Haptics.success();

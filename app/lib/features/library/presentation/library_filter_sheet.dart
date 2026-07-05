@@ -49,7 +49,7 @@ Future<LibraryFilter?> showLibraryFilterSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.card,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (_) => _FilterSheet(hits: hits, current: current),
@@ -127,7 +127,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               child: Container(
                 width: 32,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
                   color: AppColors.line,
                   borderRadius: BorderRadius.circular(99),
@@ -152,7 +152,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             _Label(l10n.libraryFilterStatus),
             Wrap(
               spacing: 6,
@@ -167,7 +167,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               ],
             ),
             if (languages.isNotEmpty) ...[
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               _Label(l10n.libraryFilterLanguage),
               Wrap(
                 spacing: 6,
@@ -183,7 +183,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               ),
             ],
             if (genres.isNotEmpty) ...[
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               _Label(l10n.libraryFilterGenre),
               Wrap(
                 spacing: 6,
@@ -198,7 +198,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 ],
               ),
             ],
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.libraryFilterFavouritesOnly),
@@ -206,7 +206,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               activeThumbColor: AppColors.gold,
               onChanged: (v) => setState(() => _favouritesOnly = v),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -229,10 +229,10 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: 6),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 9,
           letterSpacing: 1,
           color: AppColors.inkSoft,
@@ -255,7 +255,7 @@ class _Chip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? AppColors.oxblood : AppColors.paper,
           borderRadius: BorderRadius.circular(20),

@@ -9,7 +9,7 @@ mixin SyncColumns on Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get deletedAt => dateTime().nullable()();
-  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+  TextColumn get syncStatus => text().withDefault(Constant('pending'))();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
   IntColumn get serverSeq => integer().nullable()();
 
@@ -21,11 +21,11 @@ mixin SyncColumns on Table {
 /// favorite flag, and always-private notes (feature-map.md rule 13).
 class LibraryEntries extends Table with SyncColumns {
   TextColumn get editionId => text()();
-  TextColumn get status => text().withDefault(const Constant('pending'))();
+  TextColumn get status => text().withDefault(Constant('pending'))();
   DateTimeColumn get startDate => dateTime().nullable()();
   DateTimeColumn get finishDate => dateTime().nullable()();
   IntColumn get currentPage => integer().nullable()();
-  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  BoolColumn get isFavorite => boolean().withDefault(Constant(false))();
   TextColumn get notes => text().nullable()();
 }
 
@@ -40,7 +40,7 @@ class Ratings extends Table with SyncColumns {
 class Reviews extends Table with SyncColumns {
   TextColumn get workId => text()();
   TextColumn get body => text()();
-  BoolColumn get visible => boolean().withDefault(const Constant(false))();
+  BoolColumn get visible => boolean().withDefault(Constant(false))();
 }
 
 /// A user's own shelf/tag — never conflated with the global Genre (rule 6).
@@ -62,7 +62,7 @@ class LibraryEntryTags extends Table with SyncColumns {
 /// the counterparty either way. `linkedLoanId` is the dormant [WIRED] cross-user
 /// correlation.
 class LendingRecords extends Table with SyncColumns {
-  TextColumn get direction => text().withDefault(const Constant('lent'))();
+  TextColumn get direction => text().withDefault(Constant('lent'))();
   TextColumn get libraryEntryId => text().nullable()();
   TextColumn get editionId => text().nullable()();
   TextColumn get borrowerName => text()();
@@ -80,7 +80,7 @@ class ActivityLogEntries extends Table with SyncColumns {
   TextColumn get eventType => text()();
   TextColumn get entityType => text()();
   TextColumn get entityId => text()();
-  TextColumn get payload => text().withDefault(const Constant('{}'))(); // JSON
+  TextColumn get payload => text().withDefault(Constant('{}'))(); // JSON
   DateTimeColumn get occurredAt => dateTime()();
 }
 
@@ -96,7 +96,7 @@ class SyncQueue extends Table {
   TextColumn get entityId => text()();
   TextColumn get opType => text()();
   TextColumn get payload => text()(); // JSON, snake_case keys (wire format)
-  IntColumn get attempts => integer().withDefault(const Constant(0))();
+  IntColumn get attempts => integer().withDefault(Constant(0))();
   DateTimeColumn get queuedAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
@@ -107,7 +107,7 @@ class SyncQueue extends Table {
 /// user (device-local; a fresh sign-in on this device starts from 0).
 class SyncState extends Table {
   TextColumn get userId => text()();
-  IntColumn get cursor => integer().withDefault(const Constant(0))();
+  IntColumn get cursor => integer().withDefault(Constant(0))();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
 
   @override

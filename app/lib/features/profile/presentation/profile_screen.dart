@@ -14,6 +14,7 @@ import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../import_books/csv_export.dart';
 import '../../insights/providers/insights_providers.dart';
+import '../../settings/theme_mode_provider.dart';
 import '../providers/profile_providers.dart';
 
 /// S12 — the dormant community switchboard: profile/library/review
@@ -28,7 +29,7 @@ class ProfileScreen extends ConsumerWidget {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: me.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('$err')),
           data: (profile) => _ProfileBody(profile: profile),
         ),
@@ -55,16 +56,16 @@ class _ProfileBody extends ConsumerWidget {
     final createdAt = DateTime.tryParse(profile['created_at'] as String? ?? '');
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       children: [
         Row(
           children: [
             CircleAvatar(
               radius: 26,
               backgroundColor: AppColors.oxblood,
-              child: Text(initial, style: const TextStyle(color: AppColors.paper)),
+              child: Text(initial, style: TextStyle(color: AppColors.paper)),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -81,10 +82,10 @@ class _ProfileBody extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -95,7 +96,7 @@ class _ProfileBody extends ConsumerWidget {
                         letterSpacing: 1,
                       ),
                 ),
-                const Divider(height: 20),
+                Divider(height: 20),
                 _VisibilityRow(
                   title: l10n.profileVisibilityProfileTitle,
                   subtitle: l10n.profileVisibilityProfileDesc,
@@ -118,44 +119,56 @@ class _ProfileBody extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(12, 4, 12, 4),
+            child: _VisibilityRow(
+              title: l10n.profileDarkMode,
+              subtitle: l10n.profileDarkModeDesc,
+              value: ref.watch(themeModeControllerProvider),
+              onChanged: (v) => ref.read(themeModeControllerProvider.notifier).set(v),
+            ),
+          ),
+        ),
+        SizedBox(height: 24),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
               OutlinedButton.icon(
                 onPressed: () => context.push(Routes.activity),
-                icon: const Icon(Icons.history, size: 18),
+                icon: Icon(Icons.history, size: 18),
                 label: Text(l10n.activityEntry),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: () => context.push(Routes.recommendations),
-                icon: const Icon(Icons.auto_awesome, size: 18),
+                icon: Icon(Icons.auto_awesome, size: 18),
                 label: Text(l10n.recsProfileEntry),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: () => context.push(Routes.importBooks),
-                icon: const Icon(Icons.upload_file_outlined, size: 18),
+                icon: Icon(Icons.upload_file_outlined, size: 18),
                 label: Text(l10n.importEntry),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: () => _exportLibrary(context, ref),
-                icon: const Icon(Icons.download_outlined, size: 18),
+                icon: Icon(Icons.download_outlined, size: 18),
                 label: Text(l10n.exportEntry),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
         const _QuoteCard(),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
         Center(
           child: TextButton(
             onPressed: () => ref.read(authServiceProvider).signOut(),
-            child: Text(l10n.profileSignOut, style: const TextStyle(color: AppColors.inkSoft)),
+            child: Text(l10n.profileSignOut, style: TextStyle(color: AppColors.inkSoft)),
           ),
         ),
         Center(
@@ -163,7 +176,7 @@ class _ProfileBody extends ConsumerWidget {
             onPressed: () => _confirmDelete(context, ref),
             child: Text(
               l10n.profileDeleteAccount,
-              style: const TextStyle(color: AppColors.oxbloodDeep, fontSize: 12),
+              style: TextStyle(color: AppColors.oxbloodDeep, fontSize: 12),
             ),
           ),
         ),
@@ -196,11 +209,11 @@ class _ProfileBody extends ConsumerWidget {
         title: Text(l10n.profileDeleteAccount),
         content: Text(l10n.profileDeleteAccountConfirm),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.profileDeleteAccount,
-                style: const TextStyle(color: AppColors.oxbloodDeep)),
+                style: TextStyle(color: AppColors.oxbloodDeep)),
           ),
         ],
       ),
@@ -227,7 +240,7 @@ class _VisibilityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Expanded(
@@ -272,7 +285,7 @@ class _QuoteCardState extends State<_QuoteCard> {
     return GestureDetector(
       onTap: () => setState(() => _index = Random().nextInt(_quotes.length)),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.night,
           borderRadius: BorderRadius.circular(14),
@@ -282,15 +295,15 @@ class _QuoteCardState extends State<_QuoteCard> {
             Text(
               quote,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.goldSoft,
                 fontStyle: FontStyle.italic,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               '— $author · TAP FOR A NEW ONE',
-              style: const TextStyle(color: AppColors.inkSoft, fontSize: 10, letterSpacing: 1),
+              style: TextStyle(color: AppColors.inkSoft, fontSize: 10, letterSpacing: 1),
             ),
           ],
         ),

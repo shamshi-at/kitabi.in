@@ -44,7 +44,7 @@ class TypesetCover extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(color: Color(0x472B2118), blurRadius: 8, offset: Offset(0, 3)),
         ],
       ),
@@ -63,7 +63,7 @@ class TypesetCover extends StatelessWidget {
           // Spine shade — left edge, every cover in the app carries this.
           Align(
             alignment: Alignment.centerLeft,
-            child: Container(width: width * 0.09, color: const Color(0x38000000)),
+            child: Container(width: width * 0.09, color: Color(0x38000000)),
           ),
         ],
       ),

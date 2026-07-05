@@ -184,6 +184,18 @@ abstract class AppLocalizations {
   /// **'VISIBILITY · everything starts private'**
   String get profileVisibilityHeader;
 
+  /// Dark-mode toggle title on the profile screen
+  ///
+  /// In en, this message translates to:
+  /// **'Night reading'**
+  String get profileDarkMode;
+
+  /// Dark-mode toggle subtitle on the profile screen
+  ///
+  /// In en, this message translates to:
+  /// **'A warm dark theme for low light'**
+  String get profileDarkModeDesc;
+
   /// Visibility toggle label
   ///
   /// In en, this message translates to:

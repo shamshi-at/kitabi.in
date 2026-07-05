@@ -51,24 +51,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: EdgeInsets.symmetric(horizontal: 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const BrandMark(size: 88),
-                const SizedBox(height: 18),
+                BrandMark(size: 88),
+                SizedBox(height: 18),
                 Text(l10n.appTitle, style: Theme.of(context).textTheme.headlineLarge),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text(
                   l10n.homeGreeting.toUpperCase(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.gold,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 3.5,
                   ),
                 ),
-                const SizedBox(height: 28),
+                SizedBox(height: 28),
                 Text(
                   '“${quotes[_quoteIndex]}”',
                   textAlign: TextAlign.center,
@@ -77,7 +77,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         color: AppColors.inkSoft,
                       ),
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
@@ -86,7 +86,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                 ),
                 if (isIOS) ...[
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -96,7 +96,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 Text(
                   l10n.signInPrivacyNote,
                   textAlign: TextAlign.center,

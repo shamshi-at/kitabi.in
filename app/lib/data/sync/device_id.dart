@@ -10,7 +10,7 @@ const _kDeviceIdKey = 'device_id';
 Future<String> getOrCreateDeviceId(AppDatabase db) async {
   final existing = await db.keyValuesDao.getValue(_kDeviceIdKey);
   if (existing != null) return existing;
-  final id = const Uuid().v4();
+  final id = Uuid().v4();
   await db.keyValuesDao.setValue(_kDeviceIdKey, id);
   return id;
 }

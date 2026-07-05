@@ -50,6 +50,14 @@
   "@profileVisibilityHeader": {
     "description": "Section header on the profile screen's visibility switchboard"
   },
+  "profileDarkMode": "Night reading",
+  "@profileDarkMode": {
+    "description": "Dark-mode toggle title on the profile screen"
+  },
+  "profileDarkModeDesc": "A warm dark theme for low light",
+  "@profileDarkModeDesc": {
+    "description": "Dark-mode toggle subtitle on the profile screen"
+  },
   "profileVisibilityProfileTitle": "Profile",
   "@profileVisibilityProfileTitle": {
     "description": "Visibility toggle label"

@@ -31,7 +31,7 @@ class HomeScreen extends ConsumerWidget {
           color: AppColors.oxblood,
           onRefresh: () async => ref.invalidate(libraryEntriesProvider),
           child: entries.when(
-            loading: () => const CoverGridSkeleton(),
+            loading: () => CoverGridSkeleton(),
             error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryEntriesProvider)),
             data: (all) => all.isEmpty
                 ? _EmptyHome(l10n: l10n)
@@ -75,7 +75,7 @@ class _Header extends StatelessWidget {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.person_outline, color: AppColors.oxblood),
+          icon: Icon(Icons.person_outline, color: AppColors.oxblood),
           onPressed: () => context.push(Routes.profile),
         ),
       ],
@@ -106,20 +106,20 @@ class _Dashboard extends ConsumerWidget {
     );
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         _Header(l10n: l10n),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         if (reading.isNotEmpty) ...[
           _SectionLabel(l10n.homeCurrentlyReading),
           for (final entry in reading) _CurrentlyReadingCard(entry: entry),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
         ],
         if (activeLent.isNotEmpty) _LendingNudge(item: activeLent.first, l10n: l10n),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         _SectionLabel(l10n.homeYourShelves),
         _ShelfGrid(counts: counts, l10n: l10n),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         _RecsEntryCard(l10n: l10n),
       ],
     );
@@ -157,10 +157,10 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: 8),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 9,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
@@ -190,8 +190,8 @@ class _CurrentlyReadingCard extends ConsumerWidget {
           ? null
           : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
+        margin: EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(12),
@@ -206,7 +206,7 @@ class _CurrentlyReadingCard extends ConsumerWidget {
               width: 38,
               height: 56,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,37 +215,37 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                     book?.title ?? '…',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   if (book?.authorNames != null)
                     Text(
                       book!.authorNames,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
                     ),
                   if (page != null && total != null && percent != null) ...[
-                    const SizedBox(height: 5),
+                    SizedBox(height: 5),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(3),
                       child: LinearProgressIndicator(
                         value: (page / total).clamp(0.0, 1.0),
                         minHeight: 4,
                         backgroundColor: AppColors.line,
-                        valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+                        valueColor: AlwaysStoppedAnimation(AppColors.gold),
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    SizedBox(height: 3),
                     Text(
                       l10n.homeProgressLine(page, total, percent),
-                      style: const TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
                     ),
                   ],
                 ],
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.add_circle_outline, color: AppColors.oxblood, size: 22),
+              icon: Icon(Icons.add_circle_outline, color: AppColors.oxblood, size: 22),
               tooltip: l10n.homeUpdateProgress,
               onPressed: () => _updateProgress(context, ref, l10n),
             ),
@@ -308,8 +308,8 @@ class _LendingNudge extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push(Routes.lendingLedger),
       child: Container(
-        padding: const EdgeInsets.all(11),
-        decoration: const BoxDecoration(
+        padding: EdgeInsets.all(11),
+        decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.all(Radius.circular(12)),
           border: Border(
@@ -321,15 +321,15 @@ class _LendingNudge extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.hourglass_bottom, size: 16, color: AppColors.gold),
-            const SizedBox(width: 10),
+            Icon(Icons.hourglass_bottom, size: 16, color: AppColors.gold),
+            SizedBox(width: 10),
             Expanded(
               child: Text(
                 _message(),
-                style: const TextStyle(fontSize: 12, color: AppColors.ink),
+                style: TextStyle(fontSize: 12, color: AppColors.ink),
               ),
             ),
-            const Icon(Icons.chevron_right, size: 18, color: AppColors.oxblood),
+            Icon(Icons.chevron_right, size: 18, color: AppColors.oxblood),
           ],
         ),
       ),
@@ -347,7 +347,7 @@ class _ShelfGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return GridView.count(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
       mainAxisSpacing: 8,
       crossAxisSpacing: 8,
@@ -372,34 +372,34 @@ class _RecsEntryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(recsOptInProvider).valueOrNull != true) return const SizedBox.shrink();
+    if (ref.watch(recsOptInProvider).valueOrNull != true) return SizedBox.shrink();
     return GestureDetector(
       onTap: () => context.push(Routes.recommendations),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.night,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            const Icon(Icons.auto_awesome, size: 16, color: AppColors.gold),
-            const SizedBox(width: 10),
+            Icon(Icons.auto_awesome, size: 16, color: AppColors.gold),
+            SizedBox(width: 10),
             Expanded(
               child: Text(
                 l10n.recsHomePick,
-                style: const TextStyle(color: Color(0xFFEFE3C8), fontSize: 12, height: 1.4),
+                style: TextStyle(color: Color(0xFFEFE3C8), fontSize: 12, height: 1.4),
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: AppColors.gold,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 l10n.recsForYou,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.night,
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
@@ -423,7 +423,7 @@ class _ShelfCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(12),
@@ -438,8 +438,8 @@ class _ShelfCard extends StatelessWidget {
                 .headlineSmall
                 ?.copyWith(color: color, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(width: 10),
-          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.inkSoft)),
+          SizedBox(width: 10),
+          Text(label, style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
         ],
       ),
     );
@@ -455,7 +455,7 @@ class _EmptyHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -467,7 +467,7 @@ class _EmptyHome extends StatelessWidget {
                     letterSpacing: 4,
                   ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               l10n.homeGreeting,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -475,29 +475,29 @@ class _EmptyHome extends StatelessWidget {
                     letterSpacing: 3,
                   ),
             ),
-            const SizedBox(height: 40),
-            const Icon(Icons.menu_book_outlined, size: 48, color: AppColors.inkSoft),
-            const SizedBox(height: 16),
+            SizedBox(height: 40),
+            Icon(Icons.menu_book_outlined, size: 48, color: AppColors.inkSoft),
+            SizedBox(height: 16),
             Text(
               l10n.homeEmptyTitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.ink),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Text(
               l10n.homeEmptyBody,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => context.push(Routes.catalogSearch),
-              icon: const Icon(Icons.add),
+              icon: Icon(Icons.add),
               label: Text(l10n.homeAddBook),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: () => context.push(Routes.catalogScan),
-              icon: const Icon(Icons.qr_code_scanner, size: 18),
+              icon: Icon(Icons.qr_code_scanner, size: 18),
               label: Text(l10n.homeScanBarcode),
             ),
           ],

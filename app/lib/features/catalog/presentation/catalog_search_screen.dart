@@ -43,16 +43,16 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              padding: EdgeInsets.fromLTRB(12, 8, 12, 8),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: AppColors.ink),
+                    icon: Icon(Icons.arrow_back, color: AppColors.ink),
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         color: AppColors.card,
                         borderRadius: BorderRadius.circular(12),
@@ -62,8 +62,8 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.search, size: 18, color: AppColors.inkSoft),
-                          const SizedBox(width: 8),
+                          Icon(Icons.search, size: 18, color: AppColors.inkSoft),
+                          SizedBox(width: 8),
                           Expanded(
                             child: TextField(
                               controller: _controller,
@@ -81,7 +81,7 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                                 _controller.clear();
                                 _query = '';
                               }),
-                              child: const Icon(Icons.close, size: 16, color: AppColors.inkSoft),
+                              child: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
                             ),
                         ],
                       ),
@@ -91,20 +91,20 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: const Icon(Icons.qr_code_scanner, size: 18),
+                      icon: Icon(Icons.qr_code_scanner, size: 18),
                       label: Text(l10n.catalogScanButton),
                       onPressed: () => context.push(Routes.catalogScan),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: const Icon(Icons.edit_note, size: 18),
+                      icon: Icon(Icons.edit_note, size: 18),
                       label: Text(l10n.catalogAddManualButton),
                       onPressed: () => context.push(Routes.catalogAdd),
                     ),
@@ -112,12 +112,12 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Expanded(
               child: _query.trim().isEmpty
                   ? Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(24),
+                        padding: EdgeInsets.all(24),
                         child: Text(
                           l10n.catalogSearchHelp,
                           textAlign: TextAlign.center,
@@ -154,7 +154,7 @@ class _SearchResults extends ConsumerWidget {
     final works = catalog.valueOrNull ?? const <Map<String, dynamic>>[];
 
     if (library.isLoading && catalog.isLoading) {
-      return const ListSkeleton();
+      return ListSkeleton();
     }
     if (catalog.hasError && hits.isEmpty) {
       return ErrorRetry(onRetry: () => ref.invalidate(catalogSearchProvider(query)));
@@ -162,7 +162,7 @@ class _SearchResults extends ConsumerWidget {
     if (!library.isLoading && !catalog.isLoading && hits.isEmpty && works.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Text(
             l10n.catalogSearchEmpty,
             textAlign: TextAlign.center,
@@ -173,19 +173,19 @@ class _SearchResults extends ConsumerWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
       children: [
         if (hits.isNotEmpty) ...[
           _SectionHeader(l10n.catalogSearchSectionLibrary(hits.length)),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           for (final hit in hits) _LibraryHitTile(hit: hit),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
         ],
         if (works.isNotEmpty || catalog.isLoading) ...[
           _SectionHeader(l10n.catalogSearchSectionCatalog),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           if (catalog.isLoading)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(12),
               child: Center(child: SizedBox(
                 width: 18,
@@ -230,7 +230,7 @@ class _LibraryHitTile extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
+        padding: EdgeInsets.symmetric(vertical: 7),
         child: Row(
           children: [
             TypesetCover(
@@ -240,7 +240,7 @@ class _LibraryHitTile extends StatelessWidget {
               width: 30,
               height: 44,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,18 +249,18 @@ class _LibraryHitTile extends StatelessWidget {
                     book.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   Text(
                     book.authorNames,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             StatusPill(status: hit.entry.status),
           ],
         ),

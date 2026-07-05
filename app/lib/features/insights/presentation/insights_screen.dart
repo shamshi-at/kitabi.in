@@ -73,7 +73,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: data.when(
-          loading: () => const ListSkeleton(),
+          loading: () => ListSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryWithBooksProvider)),
           data: (hits) {
             if (hits.isEmpty) {
@@ -81,17 +81,17 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             }
             final stats = computeInsights(hits, year: _year);
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
               children: [
                 Text(l10n.insightsTitle, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _YearSelector(
                   year: _year,
                   thisYear: thisYear,
                   allTimeLabel: l10n.insightsAllTime,
                   onChanged: (y) => setState(() => _year = y),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _GoalRing(
                   booksRead: stats.booksRead,
                   goal: goal,
@@ -101,7 +101,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   paceNote: _year == thisYear ? _paceNote(l10n, stats.booksRead, goal) : null,
                   onTap: () => _editGoal(goal),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
@@ -111,7 +111,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                         color: AppColors.slate,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: _StatTile(
                         value: '${stats.currentlyReading}',
@@ -122,21 +122,21 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   ],
                 ),
                 if (_year != null && stats.busiestMonthCount > 0) ...[
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   _ChartLabel(l10n.insightsPerMonth),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   _MonthBars(counts: stats.booksPerMonth, max: stats.busiestMonthCount),
                 ],
                 if (_year != null && stats.peakPagesMonth > 0) ...[
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   _ChartLabel(l10n.insightsPagesPerMonth),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   _PagesLine(pages: stats.pagesPerMonth, max: stats.peakPagesMonth),
                 ],
                 if (stats.languageMix.length > 1) ...[
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   _ChartLabel(l10n.insightsLanguages),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   _LanguageDonut(mix: stats.languageMix),
                 ],
               ],
@@ -172,11 +172,11 @@ class _YearSelector extends StatelessWidget {
       children: [
         for (final (label, value) in options)
           Padding(
-            padding: const EdgeInsets.only(right: 6),
+            padding: EdgeInsets.only(right: 6),
             child: GestureDetector(
               onTap: () => onChanged(value),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   color: year == value ? AppColors.ink : AppColors.card,
                   borderRadius: BorderRadius.circular(20),
@@ -223,7 +223,7 @@ class _GoalRing extends StatelessWidget {
     return GestureDetector(
       onTap: showTarget ? onTap : null,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(16),
@@ -244,7 +244,7 @@ class _GoalRing extends StatelessWidget {
                       value: progress,
                       strokeWidth: 7,
                       backgroundColor: AppColors.line,
-                      valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+                      valueColor: AlwaysStoppedAnimation(AppColors.gold),
                     ),
                   ),
                   Text(
@@ -257,7 +257,7 @@ class _GoalRing extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,10 +269,10 @@ class _GoalRing extends StatelessWidget {
                         Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
                   ),
                   if (showTarget && paceNote != null) ...[
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       paceNote!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: AppColors.moss,
@@ -282,7 +282,7 @@ class _GoalRing extends StatelessWidget {
                 ],
               ),
             ),
-            if (showTarget) const Icon(Icons.edit, size: 16, color: AppColors.oxblood),
+            if (showTarget) Icon(Icons.edit, size: 16, color: AppColors.oxblood),
           ],
         ),
       ),
@@ -300,7 +300,7 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(12),
@@ -316,7 +316,7 @@ class _StatTile extends StatelessWidget {
                 .headlineSmall
                 ?.copyWith(color: color, fontWeight: FontWeight.w700),
           ),
-          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.inkSoft)),
+          Text(label, style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
         ],
       ),
     );
@@ -344,21 +344,21 @@ class _MonthBars extends StatelessWidget {
                   if (counts[i] > 0)
                     Text(
                       '${counts[i]}',
-                      style: const TextStyle(fontSize: 8, color: AppColors.inkSoft),
+                      style: TextStyle(fontSize: 8, color: AppColors.inkSoft),
                     ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                   Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    margin: EdgeInsets.symmetric(horizontal: 3),
                     height: (60 * (counts[i] / max)).clamp(counts[i] > 0 ? 4.0 : 0.0, 60.0),
                     decoration: BoxDecoration(
                       color: counts[i] > 0 ? AppColors.oxblood : AppColors.line,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     _monthLetters[i],
-                    style: const TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                    style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
                   ),
                 ],
               ),
@@ -378,7 +378,7 @@ class _ChartLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 9,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.2,
@@ -388,14 +388,15 @@ class _ChartLabel extends StatelessWidget {
   }
 }
 
-const _chartPalette = [
-  AppColors.oxblood,
-  AppColors.gold,
-  AppColors.slate,
-  AppColors.moss,
-  AppColors.ink,
-  AppColors.stampGrey,
-];
+// Runtime (not const): AppColors tokens resolve per active theme.
+List<Color> get _chartPalette => [
+      AppColors.oxblood,
+      AppColors.gold,
+      AppColors.slate,
+      AppColors.moss,
+      AppColors.ink,
+      AppColors.stampGrey,
+    ];
 
 class _PagesLine extends StatelessWidget {
   const _PagesLine({required this.pages, required this.max});
@@ -412,7 +413,7 @@ class _PagesLine extends StatelessWidget {
           width: double.infinity,
           child: CustomPaint(painter: _LinePainter(pages, max)),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Row(
           children: [
             for (final letter in _monthLetters)
@@ -420,7 +421,7 @@ class _PagesLine extends StatelessWidget {
                 child: Text(
                   letter,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                  style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
                 ),
               ),
           ],
@@ -484,14 +485,14 @@ class _LanguageDonut extends StatelessWidget {
           height: 78,
           child: CustomPaint(painter: _DonutPainter(entries.map((e) => e.value).toList(), total)),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final (i, entry) in entries.indexed)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  padding: EdgeInsets.symmetric(vertical: 2),
                   child: Row(
                     children: [
                       Container(
@@ -502,18 +503,18 @@ class _LanguageDonut extends StatelessWidget {
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           entry.key,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: AppColors.ink),
+                          style: TextStyle(fontSize: 12, color: AppColors.ink),
                         ),
                       ),
                       Text(
                         '${entry.value}',
-                        style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                        style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
                       ),
                     ],
                   ),
@@ -564,18 +565,18 @@ class _Empty extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
           child: Text(title, style: Theme.of(context).textTheme.titleLarge),
         ),
         Expanded(
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.all(28),
+              padding: EdgeInsets.all(28),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.donut_large_outlined, size: 44, color: AppColors.inkSoft),
-                  const SizedBox(height: 16),
+                  Icon(Icons.donut_large_outlined, size: 44, color: AppColors.inkSoft),
+                  SizedBox(height: 16),
                   Text(
                     body,
                     textAlign: TextAlign.center,

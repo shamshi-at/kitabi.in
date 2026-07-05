@@ -32,7 +32,7 @@ class SyncStatusBar extends ConsumerWidget {
     if (pending > 0) {
       return _Bar(color: AppColors.gold, icon: Icons.sync, text: l10n.syncPending);
     }
-    return const SizedBox.shrink();
+    return SizedBox.shrink();
   }
 }
 
@@ -51,11 +51,11 @@ class _Bar extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 7),
           child: Row(
             children: [
               Icon(icon, size: 14, color: color),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 child: Text(
                   text,

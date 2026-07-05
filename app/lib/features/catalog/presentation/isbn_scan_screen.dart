@@ -77,11 +77,11 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Color(0xFFEFE6C8)),
+                      icon: Icon(Icons.arrow_back, color: Color(0xFFEFE6C8)),
                       onPressed: () => context.pop(),
                     ),
                   ],
@@ -89,21 +89,21 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
               ),
               Text(
                 l10n.scanTitle,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFFEFE6C8),
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
                 l10n.scanSubtitle,
-                style: const TextStyle(color: Color(0xFFA08D6E), fontSize: 12),
+                style: TextStyle(color: Color(0xFFA08D6E), fontSize: 12),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 14),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
@@ -116,10 +116,10 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                         onDetect: _onDetect,
                         errorBuilder: (context, error, child) => Center(
                           child: Padding(
-                            padding: const EdgeInsets.all(24),
+                            padding: EdgeInsets.all(24),
                             child: Text(
                               '${error.errorDetails?.message ?? error.errorCode}',
-                              style: const TextStyle(color: Color(0xFFEFE6C8)),
+                              style: TextStyle(color: Color(0xFFEFE6C8)),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -129,29 +129,29 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               if (_detectedIsbn != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 14),
                   child: Text(
                     l10n.scanDetected(_detectedIsbn!),
-                    style: const TextStyle(color: Color(0xFFCBB897), fontSize: 12),
+                    style: TextStyle(color: Color(0xFFCBB897), fontSize: 12),
                   ),
                 ),
-              const SizedBox(height: 10),
-              if (_loading) const CircularProgressIndicator(color: AppColors.gold),
+              SizedBox(height: 10),
+              if (_loading) CircularProgressIndicator(color: AppColors.gold),
               if (_error != null) _ScanFooter(error: _error!, onReset: _reset, l10n: l10n),
               if (_work != null) _ConfirmCard(work: _work!, l10n: l10n),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: EdgeInsets.symmetric(horizontal: 14),
                 child: Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFCBB897)),
-                          foregroundColor: const Color(0xFFCBB897),
+                          side: BorderSide(color: Color(0xFFCBB897)),
+                          foregroundColor: Color(0xFFCBB897),
                         ),
                         onPressed: () {
                           context.pop();
@@ -160,12 +160,12 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                         child: Text(l10n.scanSearchInstead),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFCBB897)),
-                          foregroundColor: const Color(0xFFCBB897),
+                          side: BorderSide(color: Color(0xFFCBB897)),
+                          foregroundColor: Color(0xFFCBB897),
                         ),
                         onPressed: () {
                           context.pop();
@@ -177,7 +177,7 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
             ],
           ),
         ),
@@ -196,13 +196,13 @@ class _ScanFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.symmetric(horizontal: 14),
       child: Column(
         children: [
-          Text(error, style: const TextStyle(color: Color(0xFFEFE6C8))),
+          Text(error, style: TextStyle(color: Color(0xFFEFE6C8))),
           TextButton(
             onPressed: onReset,
-            child: const Text('Scan again', style: TextStyle(color: AppColors.gold)),
+            child: Text('Scan again', style: TextStyle(color: AppColors.gold)),
           ),
         ],
       ),
@@ -244,11 +244,11 @@ class _ConfirmCard extends ConsumerWidget {
     final authorNames = authors.map((a) => a['name'] as String).join(', ');
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.symmetric(horizontal: 14),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF2A2115),
+          color: Color(0xFF2A2115),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -260,7 +260,7 @@ class _ConfirmCard extends ConsumerWidget {
               width: 26,
               height: 38,
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,7 +269,7 @@ class _ConfirmCard extends ConsumerWidget {
                     work['title'] as String,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Color(0xFFEFE6C8),
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -280,7 +280,7 @@ class _ConfirmCard extends ConsumerWidget {
                       authorNames,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Color(0xFFA08D6E), fontSize: 11),
+                      style: TextStyle(color: Color(0xFFA08D6E), fontSize: 11),
                     ),
                 ],
               ),
@@ -288,7 +288,7 @@ class _ConfirmCard extends ConsumerWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
-                foregroundColor: const Color(0xFF241811),
+                foregroundColor: Color(0xFF241811),
               ),
               onPressed: edition == null ? null : () => _add(context, ref, edition),
               child: Text(l10n.scanConfirmAdd),

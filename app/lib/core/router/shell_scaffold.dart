@@ -25,12 +25,12 @@ class ShellScaffold extends StatelessWidget {
       backgroundColor: AppColors.paper,
       body: Column(
         children: [
-          const SyncStatusBar(),
+          SyncStatusBar(),
           Expanded(child: navigationShell),
         ],
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.card,
           border: Border(top: BorderSide(color: AppColors.line)),
         ),
@@ -103,7 +103,7 @@ class _NavItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(selected ? activeIcon : icon, size: 22, color: color),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
@@ -140,12 +140,12 @@ class _AddButton extends StatelessWidget {
                 color: AppColors.oxblood,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.add, size: 20, color: AppColors.paper),
+              child: Icon(Icons.add, size: 20, color: AppColors.paper),
             ),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 color: AppColors.inkSoft,
                 fontWeight: FontWeight.w500,

@@ -15,7 +15,7 @@ class Shimmer extends StatefulWidget {
 
 class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+      AnimationController(vsync: this, duration: Duration(milliseconds: 1200))..repeat();
 
   @override
   void dispose() {
@@ -34,8 +34,8 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
           return LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
-            colors: const [AppColors.paperDeep, AppColors.card, AppColors.paperDeep],
-            stops: const [0.35, 0.5, 0.65],
+            colors: [AppColors.paperDeep, AppColors.card, AppColors.paperDeep],
+            stops: [0.35, 0.5, 0.65],
             transform: _SlideGradient(dx),
           ).createShader(bounds);
         },
@@ -86,8 +86,8 @@ class CoverGridSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Shimmer(
       child: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
+        physics: NeverScrollableScrollPhysics(),
         shrinkWrap: true,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
@@ -96,7 +96,7 @@ class CoverGridSkeleton extends StatelessWidget {
           childAspectRatio: 0.62,
         ),
         itemCount: count,
-        itemBuilder: (_, _) => const Column(
+        itemBuilder: (_, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(child: SkeletonBox(radius: 6)),
@@ -119,11 +119,11 @@ class ListSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Shimmer(
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
+        physics: NeverScrollableScrollPhysics(),
         shrinkWrap: true,
         itemCount: count,
-        itemBuilder: (_, _) => const Padding(
+        itemBuilder: (_, _) => Padding(
           padding: EdgeInsets.symmetric(vertical: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,22 +160,22 @@ class ErrorRetry extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, size: 40, color: AppColors.inkSoft),
-            const SizedBox(height: 14),
+            Icon(Icons.cloud_off_outlined, size: 40, color: AppColors.inkSoft),
+            SizedBox(height: 14),
             Text(
               message ?? l10n.commonError,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 18),
+                icon: Icon(Icons.refresh, size: 18),
                 label: Text(l10n.commonRetry),
               ),
             ],
@@ -205,24 +205,24 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 72,
               height: 72,
-              decoration: const BoxDecoration(color: AppColors.goldSoft, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AppColors.goldSoft, shape: BoxShape.circle),
               child: Icon(icon, size: 34, color: AppColors.gold),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             Text(
               title,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.ink),
             ),
             if (body != null) ...[
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 body!,
                 textAlign: TextAlign.center,
@@ -230,7 +230,7 @@ class EmptyState extends StatelessWidget {
               ),
             ],
             if (action != null) ...[
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               action!,
             ],
           ],

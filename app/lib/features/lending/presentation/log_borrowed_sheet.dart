@@ -21,7 +21,7 @@ Future<void> showLogBorrowedSheet(BuildContext context) {
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.card,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (_) => const _LogBorrowedSheet(),
@@ -88,7 +88,7 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _borrowedOn,
-      firstDate: now.subtract(const Duration(days: 3650)),
+      firstDate: now.subtract(Duration(days: 3650)),
       lastDate: now,
     );
     if (picked != null) setState(() => _borrowedOn = picked);
@@ -98,9 +98,9 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _remindOn ?? now.add(const Duration(days: 14)),
+      initialDate: _remindOn ?? now.add(Duration(days: 14)),
       firstDate: now,
-      lastDate: now.add(const Duration(days: 3650)),
+      lastDate: now.add(Duration(days: 3650)),
     );
     if (picked != null) setState(() => _remindOn = picked);
   }
@@ -120,9 +120,9 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SheetGrabber(),
+            SheetGrabber(),
             Text(l10n.logBorrowedTitle, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             SheetLabel(l10n.logBorrowedBookLabel),
             if (_selected != null)
               _SelectedBook(work: _selected!, onClear: () => setState(() => _selected = null))
@@ -137,14 +137,14 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
                   _searchController.clear();
                 }),
               ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             SheetLabel(l10n.logBorrowedFromLabel),
             TextField(
               controller: _lender,
               onChanged: (_) => setState(() {}),
               decoration: sheetInputDecoration(l10n.logBorrowedFromHint),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -154,7 +154,7 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
                     onTap: _pickBorrowedOn,
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: SheetDateField(
                     label: l10n.logBorrowedRemindLabel,
@@ -164,20 +164,20 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             SheetLabel(l10n.logBorrowedNoteLabel),
             TextField(
               controller: _note,
               maxLines: 2,
               decoration: sheetInputDecoration(''),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _canSave ? _save : null,
                 child: _saving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
@@ -217,12 +217,12 @@ class _BookSearch extends ConsumerWidget {
           controller: controller,
           onChanged: onQuery,
           decoration: sheetInputDecoration(l10n.logBorrowedSearchHint).copyWith(
-            prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.inkSoft),
+            prefixIcon: Icon(Icons.search, size: 18, color: AppColors.inkSoft),
           ),
         ),
         if (query.trim().isNotEmpty)
           results.when(
-            loading: () => const Padding(
+            loading: () => Padding(
               padding: EdgeInsets.all(12),
               child: Center(child: SizedBox(
                 width: 18,
@@ -230,12 +230,12 @@ class _BookSearch extends ConsumerWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )),
             ),
-            error: (err, _) => Padding(padding: const EdgeInsets.all(8), child: Text('$err')),
+            error: (err, _) => Padding(padding: EdgeInsets.all(8), child: Text('$err')),
             data: (works) => Column(
               children: [
                 for (final work in works.take(6))
                   ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 4),
                     dense: true,
                     leading: TypesetCover(
                       title: work['title'] as String? ?? '',
@@ -248,7 +248,7 @@ class _BookSearch extends ConsumerWidget {
                       work['title'] as String? ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     subtitle: _firstAuthor(work) == null
                         ? null
@@ -256,7 +256,7 @@ class _BookSearch extends ConsumerWidget {
                             _firstAuthor(work)!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                            style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
                           ),
                     onTap: (work['edition'] as Map?)?['id'] == null ? null : () => onPick(work),
                   ),
@@ -283,7 +283,7 @@ class _SelectedBook extends StatelessWidget {
   Widget build(BuildContext context) {
     final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: AppColors.paper,
         borderRadius: BorderRadius.circular(10),
@@ -298,17 +298,17 @@ class _SelectedBook extends StatelessWidget {
             width: 26,
             height: 38,
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Text(
               work['title'] as String? ?? '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, size: 18, color: AppColors.inkSoft),
+            icon: Icon(Icons.close, size: 18, color: AppColors.inkSoft),
             onPressed: onClear,
           ),
         ],

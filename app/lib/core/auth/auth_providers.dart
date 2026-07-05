@@ -6,7 +6,7 @@ import 'auth_service.dart';
 import 'supabase_auth_service.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) {
-  if (!supabaseConfigured) return const UnconfiguredAuthService();
+  if (!supabaseConfigured) return UnconfiguredAuthService();
   return SupabaseAuthService(Supabase.instance.client);
 });
 

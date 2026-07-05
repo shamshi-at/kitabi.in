@@ -94,7 +94,7 @@ class LibraryRepository extends Repo {
       LibraryEntriesCompanion(
         status: Value(status),
         updatedAt: Value(DateTime.now()),
-        syncStatus: const Value('pending'),
+        syncStatus: Value('pending'),
       ),
     );
     await enqueue(
@@ -120,11 +120,11 @@ class LibraryRepository extends Repo {
     await db.libraryEntriesDao.patch(
       id,
       LibraryEntriesCompanion(
-        currentPage: currentPage != null ? Value(currentPage) : const Value.absent(),
-        startDate: startDate != null ? Value(startDate) : const Value.absent(),
-        finishDate: finishDate != null ? Value(finishDate) : const Value.absent(),
+        currentPage: currentPage != null ? Value(currentPage) : Value.absent(),
+        startDate: startDate != null ? Value(startDate) : Value.absent(),
+        finishDate: finishDate != null ? Value(finishDate) : Value.absent(),
         updatedAt: Value(DateTime.now()),
-        syncStatus: const Value('pending'),
+        syncStatus: Value('pending'),
       ),
     );
     await enqueue(entity: 'library_entries', entityId: id, opType: 'update', data: changes);
@@ -136,7 +136,7 @@ class LibraryRepository extends Repo {
       LibraryEntriesCompanion(
         isFavorite: Value(isFavorite),
         updatedAt: Value(DateTime.now()),
-        syncStatus: const Value('pending'),
+        syncStatus: Value('pending'),
       ),
     );
     await enqueue(
@@ -153,7 +153,7 @@ class LibraryRepository extends Repo {
       LibraryEntriesCompanion(
         notes: Value(notes),
         updatedAt: Value(DateTime.now()),
-        syncStatus: const Value('pending'),
+        syncStatus: Value('pending'),
       ),
     );
     await enqueue(entity: 'library_entries', entityId: id, opType: 'update', data: {'notes': notes});
@@ -162,7 +162,7 @@ class LibraryRepository extends Repo {
   Future<void> remove(String id) async {
     await db.libraryEntriesDao.patch(
       id,
-      LibraryEntriesCompanion(deletedAt: Value(DateTime.now()), syncStatus: const Value('pending')),
+      LibraryEntriesCompanion(deletedAt: Value(DateTime.now()), syncStatus: Value('pending')),
     );
     await enqueue(entity: 'library_entries', entityId: id, opType: 'delete', data: {});
   }
@@ -182,7 +182,7 @@ class RatingsRepository extends Repo {
         RatingsCompanion(
           value: Value(value),
           updatedAt: Value(DateTime.now()),
-          syncStatus: const Value('pending'),
+          syncStatus: Value('pending'),
         ),
       );
       await enqueue(
@@ -221,7 +221,7 @@ class ReviewsRepository extends Repo {
           body: Value(body),
           visible: Value(visible),
           updatedAt: Value(DateTime.now()),
-          syncStatus: const Value('pending'),
+          syncStatus: Value('pending'),
         ),
       );
       await enqueue(
@@ -292,7 +292,7 @@ class TagsRepository extends Repo {
       assignmentId,
       LibraryEntryTagsCompanion(
         deletedAt: Value(DateTime.now()),
-        syncStatus: const Value('pending'),
+        syncStatus: Value('pending'),
       ),
     );
     await enqueue(
@@ -365,7 +365,7 @@ class LendingRepository extends Repo {
       LendingRecordsCompanion.insert(
         id: id,
         userId: session.userId,
-        direction: const Value('borrowed'),
+        direction: Value('borrowed'),
         editionId: Value(editionId),
         borrowerName: lenderName,
         lentDate: borrowedDate,
@@ -395,7 +395,7 @@ class LendingRepository extends Repo {
       LendingRecordsCompanion(
         returnedDate: Value(returnedDate),
         updatedAt: Value(DateTime.now()),
-        syncStatus: const Value('pending'),
+        syncStatus: Value('pending'),
       ),
     );
     await enqueue(

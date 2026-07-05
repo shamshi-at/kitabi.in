@@ -30,7 +30,7 @@ class LendingLedgerScreen extends ConsumerWidget {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: ledger.when(
-          loading: () => const ListSkeleton(),
+          loading: () => ListSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(allLendingProvider)),
           data: (all) {
             final lent = all.where((r) => r.record.direction != 'borrowed').toList();
@@ -41,7 +41,7 @@ class LendingLedgerScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                    padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(l10n.lendingLedgerTitle,
@@ -52,7 +52,7 @@ class LendingLedgerScreen extends ConsumerWidget {
                     labelColor: AppColors.oxblood,
                     unselectedLabelColor: AppColors.inkSoft,
                     indicatorColor: AppColors.oxblood,
-                    labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                     tabs: [
                       Tab(text: l10n.lendingLentOutTab(lent.length)),
                       Tab(text: l10n.lendingBorrowedTab(borrowed.length)),
@@ -91,7 +91,7 @@ class _LentView extends StatelessWidget {
       return _EmptyState(text: l10n.lendingEmpty);
     }
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         if (outNow.isNotEmpty) ...[
           _SectionLabel(l10n.lendingOutNowSection),
@@ -99,7 +99,7 @@ class _LentView extends StatelessWidget {
             _LoanCard(item: item, borrowed: false),
         ],
         if (returned.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _SectionLabel(l10n.lendingReturnedSection),
           for (final item in returned) _ReturnedCard(item: item),
         ],
@@ -120,11 +120,11 @@ class _BorrowedView extends StatelessWidget {
     final returned = records.where((r) => r.record.returnedDate != null).toList();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         if (records.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 40, bottom: 20),
+            padding: EdgeInsets.only(top: 40, bottom: 20),
             child: Text(
               l10n.lendingBorrowedEmpty,
               textAlign: TextAlign.center,
@@ -137,18 +137,18 @@ class _BorrowedView extends StatelessWidget {
             for (final item in withYou) _LoanCard(item: item, borrowed: true),
           ],
           if (returned.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _SectionLabel(l10n.lendingReturnedSection),
             for (final item in returned) _ReturnedCard(item: item),
           ],
         ],
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Center(
           child: TextButton(
             onPressed: () => showLogBorrowedSheet(context),
             child: Text(
               l10n.lendingLogBorrowed,
-              style: const TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+              style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -166,7 +166,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(28),
         child: Text(
           text,
           textAlign: TextAlign.center,
@@ -185,10 +185,10 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 6),
+      padding: EdgeInsets.only(top: 8, bottom: 6),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 9,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
@@ -208,7 +208,7 @@ class _Stamp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(6),
@@ -246,8 +246,8 @@ class _LoanCard extends ConsumerWidget {
     final book = item.book;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(12),
@@ -265,7 +265,7 @@ class _LoanCard extends ConsumerWidget {
                 width: 34,
                 height: 50,
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +274,7 @@ class _LoanCard extends ConsumerWidget {
                       book?.title ?? '…',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                     Text(
                       borrowed
@@ -282,24 +282,24 @@ class _LoanCard extends ConsumerWidget {
                           : l10n.lendingToPersonSince(r.borrowerName, fmtLendingDate(r.lentDate)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               _dueStamp(context, r.dueDate),
             ],
           ),
           if (borrowed)
             Padding(
-              padding: const EdgeInsets.only(top: 6, left: 44),
+              padding: EdgeInsets.only(top: 6, left: 44),
               child: Text(
                 l10n.lendingSelfLogged,
-                style: const TextStyle(color: AppColors.inkSoft, fontSize: 10, height: 1.2),
+                style: TextStyle(color: AppColors.inkSoft, fontSize: 10, height: 1.2),
               ),
             ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
@@ -311,12 +311,12 @@ class _LoanCard extends ConsumerWidget {
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.moss,
-                side: const BorderSide(color: AppColors.line),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                side: BorderSide(color: AppColors.line),
+                padding: EdgeInsets.symmetric(vertical: 8),
               ),
               child: Text(
                 borrowed ? l10n.lendingReturnedIt : l10n.lendingMarkReturned,
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: 12),
               ),
             ),
           ),
@@ -340,8 +340,8 @@ class _ReturnedCard extends StatelessWidget {
     return Opacity(
       opacity: 0.72,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.all(9),
+        margin: EdgeInsets.only(bottom: 6),
+        padding: EdgeInsets.all(9),
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(12),
@@ -357,7 +357,7 @@ class _ReturnedCard extends StatelessWidget {
                     book?.title ?? '…',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                   ),
                   Text(
                     l10n.lendingReturnedRange(
@@ -367,12 +367,12 @@ class _ReturnedCard extends StatelessWidget {
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             _Stamp(label: l10n.lendingReturnedStamp, color: AppColors.moss),
           ],
         ),

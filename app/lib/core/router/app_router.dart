@@ -115,22 +115,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.splash,
         name: 'splash',
-        builder: (context, state) => const SplashScreen(),
+        builder: (context, state) => SplashScreen(),
       ),
       GoRoute(
         path: Routes.signIn,
         name: 'sign-in',
-        builder: (context, state) => const SignInScreen(),
+        builder: (context, state) => SignInScreen(),
       ),
       GoRoute(
         path: Routes.update,
         name: 'update',
-        builder: (context, state) => const UpdateScreen(),
+        builder: (context, state) => UpdateScreen(),
       ),
       GoRoute(
         path: Routes.welcome,
         name: 'welcome',
-        builder: (context, state) => const WelcomeScreen(),
+        builder: (context, state) => WelcomeScreen(),
       ),
       // The four tabs live in a persistent bottom-nav shell (S3). Each is its
       // own branch so tab state (scroll position, etc.) is preserved.
@@ -143,7 +143,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.home,
                 name: 'home',
-                builder: (context, state) => const HomeScreen(),
+                builder: (context, state) => HomeScreen(),
               ),
             ],
           ),
@@ -152,7 +152,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.library,
                 name: 'library',
-                builder: (context, state) => const LibraryGridScreen(),
+                builder: (context, state) => LibraryGridScreen(),
               ),
             ],
           ),
@@ -161,7 +161,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.lendingLedger,
                 name: 'lending-ledger',
-                builder: (context, state) => const LendingLedgerScreen(),
+                builder: (context, state) => LendingLedgerScreen(),
               ),
             ],
           ),
@@ -170,7 +170,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.insights,
                 name: 'insights',
-                builder: (context, state) => const InsightsScreen(),
+                builder: (context, state) => InsightsScreen(),
               ),
             ],
           ),
@@ -180,32 +180,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.profile,
         name: 'profile',
-        builder: (context, state) => const ProfileScreen(),
+        builder: (context, state) => ProfileScreen(),
       ),
       GoRoute(
         path: Routes.recommendations,
         name: 'recommendations',
-        builder: (context, state) => const RecommendationsScreen(),
+        builder: (context, state) => RecommendationsScreen(),
       ),
       GoRoute(
         path: Routes.importBooks,
         name: 'import',
-        builder: (context, state) => const ImportScreen(),
+        builder: (context, state) => ImportScreen(),
       ),
       GoRoute(
         path: Routes.activity,
         name: 'activity',
-        builder: (context, state) => const ActivityScreen(),
+        builder: (context, state) => ActivityScreen(),
       ),
       GoRoute(
         path: Routes.catalogSearch,
         name: 'catalog-search',
-        builder: (context, state) => const CatalogSearchScreen(),
+        builder: (context, state) => CatalogSearchScreen(),
       ),
       GoRoute(
         path: Routes.catalogScan,
         name: 'catalog-scan',
-        builder: (context, state) => const IsbnScanScreen(),
+        builder: (context, state) => IsbnScanScreen(),
       ),
       GoRoute(
         path: Routes.catalogAdd,

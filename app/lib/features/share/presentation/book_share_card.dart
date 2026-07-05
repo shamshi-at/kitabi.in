@@ -43,7 +43,7 @@ class BookShareCard extends StatelessWidget {
 
     return Container(
       width: 320,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 13),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 13),
       decoration: BoxDecoration(
         color: AppColors.paper,
         borderRadius: BorderRadius.circular(16),
@@ -55,19 +55,19 @@ class BookShareCard extends StatelessWidget {
         children: [
           Text(
             l10n.shareEyebrow,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 8,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.6,
               color: AppColors.oxblood,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TypesetCover(title: title, author: author, coverUrl: coverUrl, width: 54, height: 80),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,15 +81,15 @@ class BookShareCard extends StatelessWidget {
                           .titleMedium
                           ?.copyWith(color: AppColors.ink, height: 1.2),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
                       author,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                      style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
                     ),
                     if (rating != null) ...[
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       _Stars(
                         value: rating,
                         caption: personalRating != null
@@ -103,7 +103,7 @@ class BookShareCard extends StatelessWidget {
             ],
           ),
           if (body != null && body.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Text(
               body,
               maxLines: 4,
@@ -116,9 +116,9 @@ class BookShareCard extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 11),
+          SizedBox(height: 11),
           Container(height: 1, color: AppColors.line),
-          const SizedBox(height: 9),
+          SizedBox(height: 9),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -131,10 +131,10 @@ class BookShareCard extends StatelessWidget {
                       color: AppColors.oxblood,
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Icon(Icons.menu_book, size: 10, color: AppColors.paper),
+                    child: Icon(Icons.menu_book, size: 10, color: AppColors.paper),
                   ),
-                  const SizedBox(width: 5),
-                  const Text(
+                  SizedBox(width: 5),
+                  Text(
                     'kitabi.in',
                     style: TextStyle(
                       fontSize: 9,
@@ -146,7 +146,7 @@ class BookShareCard extends StatelessWidget {
               ),
               Text(
                 l10n.shareTagline,
-                style: const TextStyle(fontSize: 8, color: AppColors.inkSoft),
+                style: TextStyle(fontSize: 8, color: AppColors.inkSoft),
               ),
             ],
           ),
@@ -174,8 +174,8 @@ class _Stars extends StatelessWidget {
             size: 14,
             color: AppColors.gold,
           ),
-        const SizedBox(width: 5),
-        Text(caption, style: const TextStyle(fontSize: 8, color: AppColors.inkSoft)),
+        SizedBox(width: 5),
+        Text(caption, style: TextStyle(fontSize: 8, color: AppColors.inkSoft)),
       ],
     );
   }

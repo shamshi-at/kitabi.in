@@ -120,59 +120,59 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   Widget _picker(AppLocalizations l10n) {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       children: [
         Text(
           l10n.importSubtitle,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: _busy ? null : _pickFile,
-            icon: const Icon(Icons.file_open_outlined, size: 18),
+            icon: Icon(Icons.file_open_outlined, size: 18),
             label: Text(l10n.importPickFile),
           ),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         Text(
           l10n.importPasteHint,
-          style: const TextStyle(fontSize: 11, color: AppColors.inkSoft),
+          style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         TextField(
           controller: _csvController,
           maxLines: 10,
           minLines: 6,
-          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+          style: TextStyle(fontSize: 12, fontFamily: 'monospace'),
           decoration: InputDecoration(
             hintText: 'Title,Author,ISBN,My Rating,Exclusive Shelf…',
-            hintStyle: const TextStyle(fontSize: 11, color: AppColors.inkSoft),
+            hintStyle: TextStyle(fontSize: 11, color: AppColors.inkSoft),
             filled: true,
             fillColor: AppColors.card,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.line),
+              borderSide: BorderSide(color: AppColors.line),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.line),
+              borderSide: BorderSide(color: AppColors.line),
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: _busy ? null : _parse,
             icon: _busy
-                ? const SizedBox(
+                ? SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
                   )
-                : const Icon(Icons.search, size: 18),
+                : Icon(Icons.search, size: 18),
             label: Text(l10n.importPreviewButton),
           ),
         ),
@@ -188,7 +188,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     if (total == 0) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Text(l10n.importEmpty,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft)),
         ),
@@ -198,32 +198,32 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l10n.importMatched(matched, total),
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               Text(l10n.importUnmatchedNote,
-                  style: const TextStyle(fontSize: 11, color: AppColors.inkSoft)),
+                  style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
             ],
           ),
         ),
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+            padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
             itemCount: rows.length,
             itemBuilder: (context, i) => _ImportRowTile(row: rows[i]),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+          padding: EdgeInsets.fromLTRB(20, 4, 20, 16),
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: (_busy || matched == 0) ? null : _import,
               child: _busy
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
@@ -254,11 +254,11 @@ class _ImportRowTile extends StatelessWidget {
     return Opacity(
       opacity: matched ? 1 : 0.45,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
             TypesetCover(title: title, author: author, coverUrl: coverUrl, width: 28, height: 40),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,20 +266,20 @@ class _ImportRowTile extends StatelessWidget {
                   Text(title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5)),
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5)),
                   if (author != null)
                     Text(author,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.inkSoft, fontSize: 11)),
+                        style: TextStyle(color: AppColors.inkSoft, fontSize: 11)),
                 ],
               ),
             ),
             if (matched && status != null) ...[
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               StatusPill(status: status),
             ] else if (!matched)
-              const Icon(Icons.help_outline, size: 16, color: AppColors.inkSoft),
+              Icon(Icons.help_outline, size: 16, color: AppColors.inkSoft),
           ],
         ),
       ),

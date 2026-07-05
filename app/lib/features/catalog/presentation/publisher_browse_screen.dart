@@ -25,7 +25,7 @@ class PublisherBrowseScreen extends ConsumerWidget {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: data.when(
-          loading: () => const ListSkeleton(),
+          loading: () => ListSkeleton(),
           error: (err, _) =>
               ErrorRetry(onRetry: () => ref.invalidate(publisherWorksProvider(publisherId))),
           data: (body) {
@@ -35,12 +35,12 @@ class PublisherBrowseScreen extends ConsumerWidget {
             final logoUrl = publisher['logo_url'] as String?;
 
             return ListView(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               children: [
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back, color: AppColors.ink),
+                      icon: Icon(Icons.arrow_back, color: AppColors.ink),
                       onPressed: () => context.pop(),
                     ),
                     Text(
@@ -52,14 +52,14 @@ class PublisherBrowseScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   children: [
                     if (logoUrl != null) ...[
                       Container(
                         width: 52,
                         height: 52,
-                        padding: const EdgeInsets.all(6),
+                        padding: EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: AppColors.card,
                           borderRadius: BorderRadius.circular(10),
@@ -69,10 +69,10 @@ class PublisherBrowseScreen extends ConsumerWidget {
                           logoUrl,
                           fit: BoxFit.contain,
                           errorBuilder: (_, _, _) =>
-                              const Icon(Icons.business, color: AppColors.inkSoft),
+                              Icon(Icons.business, color: AppColors.inkSoft),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                     ],
                     Expanded(
                       child: Column(
@@ -91,10 +91,10 @@ class PublisherBrowseScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 if (works.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    padding: EdgeInsets.symmetric(vertical: 24),
                     child: Text(
                       l10n.browseEmpty,
                       textAlign: TextAlign.center,

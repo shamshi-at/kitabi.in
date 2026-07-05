@@ -37,7 +37,7 @@ class BookDetailScreen extends ConsumerWidget {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: work.when(
-          loading: () => const ListSkeleton(),
+          loading: () => ListSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId))),
           data: (body) => _BookDetailBody(work: body, editionId: editionId),
         ),
@@ -69,16 +69,16 @@ class _BookDetailBody extends ConsumerWidget {
       children: [
         Container(
           color: AppColors.paperDeep,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.ink),
+                icon: Icon(Icons.arrow_back, color: AppColors.ink),
                 onPressed: () => context.pop(),
                 padding: EdgeInsets.zero,
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: 4),
               _CoverUploader(
                 editionId: editionId,
                 title: work['title'] as String,
@@ -86,7 +86,7 @@ class _BookDetailBody extends ConsumerWidget {
                 coverUrl: edition?['cover_url'] as String?,
                 workId: work['id'] as String,
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +97,7 @@ class _BookDetailBody extends ConsumerWidget {
                         onTap: () =>
                             context.push(Routes.authorBrowsePath(authors.first['id'] as String)),
                         child: Padding(
-                          padding: const EdgeInsets.only(top: 2),
+                          padding: EdgeInsets.only(top: 2),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -108,14 +108,14 @@ class _BookDetailBody extends ConsumerWidget {
                                   foregroundImage:
                                       NetworkImage(authors.first['image_url'] as String),
                                 ),
-                                const SizedBox(width: 6),
+                                SizedBox(width: 6),
                               ],
                               Flexible(
                                 child: Text(
                                   authors.first['name'] as String,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppColors.oxblood,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -128,7 +128,7 @@ class _BookDetailBody extends ConsumerWidget {
                     if (work['first_publish_year'] != null)
                       Text(
                         '${work['first_publish_year']}',
-                        style: const TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                        style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
                       ),
                     if (publisher != null)
                       GestureDetector(
@@ -136,20 +136,20 @@ class _BookDetailBody extends ConsumerWidget {
                             .push(Routes.publisherBrowsePath(publisher['id'] as String)),
                         child: Text(
                           publisher['name'] as String,
-                          style: const TextStyle(color: AppColors.oxblood, fontSize: 12),
+                          style: TextStyle(color: AppColors.oxblood, fontSize: 12),
                         ),
                       ),
                     if (edition?['page_count'] != null)
                       Text(
                         '${edition!['page_count']} pp',
-                        style: const TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                        style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
                       ),
                     if (edition?['language'] != null)
                       Text(
                         edition!['language'] as String,
-                        style: const TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                        style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
                       ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     _RatingRow(workId: work['id'] as String),
                   ],
                 ),
@@ -160,9 +160,9 @@ class _BookDetailBody extends ConsumerWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(13, 10, 13, 24),
+          padding: EdgeInsets.fromLTRB(13, 10, 13, 24),
           child: entry.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => Center(child: CircularProgressIndicator()),
             error: (err, _) => Center(child: Text('$err')),
             data: (libraryEntry) => libraryEntry == null
                 ? _AddToLibraryButton(work: work, edition: edition ?? {'id': editionId})
@@ -170,7 +170,7 @@ class _BookDetailBody extends ConsumerWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 13),
+          padding: EdgeInsets.symmetric(horizontal: 13),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -181,9 +181,9 @@ class _BookDetailBody extends ConsumerWidget {
                   children: [
                     for (final genre in genres)
                       Chip(
-                        label: Text(genre['name'] as String, style: const TextStyle(fontSize: 10)),
+                        label: Text(genre['name'] as String, style: TextStyle(fontSize: 10)),
                         backgroundColor: AppColors.card,
-                        side: const BorderSide(color: AppColors.line),
+                        side: BorderSide(color: AppColors.line),
                         visualDensity: VisualDensity.compact,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
@@ -193,12 +193,12 @@ class _BookDetailBody extends ConsumerWidget {
               if (edition?['isbn'] != null)
                 Text(
                   AppLocalizations.of(context)!.bookIsbnLabel(edition!['isbn'] as String),
-                  style: const TextStyle(color: AppColors.inkSoft, fontSize: 10),
+                  style: TextStyle(color: AppColors.inkSoft, fontSize: 10),
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
       ],
     );
   }
@@ -265,15 +265,15 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
             right: 2,
             bottom: 2,
             child: Container(
-              padding: const EdgeInsets.all(3),
-              decoration: const BoxDecoration(color: AppColors.oxblood, shape: BoxShape.circle),
+              padding: EdgeInsets.all(3),
+              decoration: BoxDecoration(color: AppColors.oxblood, shape: BoxShape.circle),
               child: _busy
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 11,
                       height: 11,
                       child: CircularProgressIndicator(strokeWidth: 1.6, color: AppColors.paper),
                     )
-                  : const Icon(Icons.photo_camera, size: 11, color: AppColors.paper),
+                  : Icon(Icons.photo_camera, size: 11, color: AppColors.paper),
             ),
           ),
         ],
@@ -309,8 +309,8 @@ class _RatingRow extends ConsumerWidget {
               color: AppColors.gold,
             ),
           ),
-        const SizedBox(width: 6),
-        Text(l10n.bookYourRating, style: const TextStyle(color: AppColors.inkSoft, fontSize: 10)),
+        SizedBox(width: 6),
+        Text(l10n.bookYourRating, style: TextStyle(color: AppColors.inkSoft, fontSize: 10)),
       ],
     );
   }
@@ -326,7 +326,7 @@ class _ShareButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final workId = work['id'] as String;
     return IconButton(
-      icon: const Icon(Icons.ios_share, color: AppColors.oxblood),
+      icon: Icon(Icons.ios_share, color: AppColors.oxblood),
       onPressed: () {
         final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
         final rating = ref.read(ratingProvider(workId)).valueOrNull;
@@ -367,7 +367,7 @@ class _LibraryEntryMenu extends ConsumerWidget {
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               l10n.bookRemoveFromLibrary,
-              style: const TextStyle(color: AppColors.oxbloodDeep),
+              style: TextStyle(color: AppColors.oxbloodDeep),
             ),
           ),
         ],
@@ -384,7 +384,7 @@ class _LibraryEntryMenu extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entry = ref.watch(libraryEntryProvider(editionId));
     final current = entry.valueOrNull;
-    if (current == null) return const SizedBox.shrink();
+    if (current == null) return SizedBox.shrink();
 
     return Column(
       children: [
@@ -401,7 +401,7 @@ class _LibraryEntryMenu extends ConsumerWidget {
           },
         ),
         IconButton(
-          icon: const Icon(Icons.delete_outline, color: AppColors.inkSoft),
+          icon: Icon(Icons.delete_outline, color: AppColors.inkSoft),
           onPressed: () => _confirmRemove(context, ref, current.id),
         ),
       ],
@@ -447,10 +447,10 @@ class _OwnedBookSections extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 8, left: 2),
+          padding: EdgeInsets.only(bottom: 8, left: 2),
           child: Text(
             AppLocalizations.of(context)!.bookYourCopy.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,
@@ -459,15 +459,15 @@ class _OwnedBookSections extends ConsumerWidget {
           ),
         ),
         _StatusPicker(entry: entry),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _ProgressCard(entry: entry),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _ReviewCard(entry: entry, workId: workId),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _NotesCard(entry: entry),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _LendingCard(entry: entry),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _TagsSection(entry: entry),
       ],
     );
@@ -497,7 +497,7 @@ class _StatusPicker extends ConsumerWidget {
               ref.invalidate(libraryEntryProvider(entry.editionId));
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: entry.status == status ? AppColors.oxblood : AppColors.card,
                 borderRadius: BorderRadius.circular(8),
@@ -532,7 +532,7 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(10),
+      padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color ?? AppColors.card,
         borderRadius: BorderRadius.circular(12),
@@ -598,13 +598,13 @@ class _ProgressCard extends ConsumerWidget {
               children: [
                 Text(
                   l10n.bookProgressLabel,
-                  style: const TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+                  style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
                 ),
                 Text(
                   entry.currentPage != null
                       ? l10n.bookProgressValue(entry.currentPage!, entry.currentPage!)
                       : '—',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 ),
               ],
             ),
@@ -615,19 +615,19 @@ class _ProgressCard extends ConsumerWidget {
               children: [
                 Text(
                   l10n.bookStartedLabel,
-                  style: const TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+                  style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
                 ),
                 Text(
                   entry.startDate != null
                       ? '${entry.startDate!.day}/${entry.startDate!.month}/${entry.startDate!.year}'
                       : l10n.bookNotStarted,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.edit, size: 16, color: AppColors.oxblood),
+            icon: Icon(Icons.edit, size: 16, color: AppColors.oxblood),
             onPressed: () => _edit(context, ref),
           ),
         ],
@@ -699,7 +699,7 @@ class _ReviewCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     l10n.bookReviewLabel,
-                    style: const TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+                    style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
                   ),
                 ),
                 if (current != null)
@@ -707,11 +707,11 @@ class _ReviewCard extends ConsumerWidget {
                     current.visible
                         ? l10n.bookReviewVisibilityPublic
                         : l10n.bookReviewVisibilityPrivate,
-                    style: const TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                    style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
                   ),
               ],
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(
               current?.body ?? l10n.bookReviewEmpty,
               style: TextStyle(
@@ -761,22 +761,22 @@ class _NotesCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => _edit(context, ref),
       child: _Card(
-        color: const Color(0xFFF6EEDC),
-        borderColor: const Color(0xFFE8DCC0),
+        color: Color(0xFFF6EEDC),
+        borderColor: Color(0xFFE8DCC0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.lock, size: 10, color: AppColors.inkSoft),
-                const SizedBox(width: 4),
+                Icon(Icons.lock, size: 10, color: AppColors.inkSoft),
+                SizedBox(width: 4),
                 Text(
                   l10n.bookNotesLabel,
-                  style: const TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 0.5),
+                  style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 0.5),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(
               (entry.notes?.isNotEmpty ?? false) ? entry.notes! : l10n.bookNotesEmpty,
               style: TextStyle(
@@ -840,9 +840,9 @@ class _TagsSection extends ConsumerWidget {
       children: [
         Text(
           l10n.bookTagsLabel,
-          style: const TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+          style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Wrap(
           spacing: 6,
           runSpacing: 6,
@@ -850,7 +850,7 @@ class _TagsSection extends ConsumerWidget {
             for (final assignment in assignments.valueOrNull ?? <LibraryEntryTag>[])
               if (tagNames[assignment.tagId] != null)
                 Chip(
-                  label: Text(tagNames[assignment.tagId]!, style: const TextStyle(fontSize: 11)),
+                  label: Text(tagNames[assignment.tagId]!, style: TextStyle(fontSize: 11)),
                   onDeleted: () async {
                     final repo = await ref.read(tagsRepositoryProvider.future);
                     await repo.unassign(assignment.id);
@@ -861,10 +861,10 @@ class _TagsSection extends ConsumerWidget {
                   visualDensity: VisualDensity.compact,
                 ),
             ActionChip(
-              label: Text(l10n.bookAddTag, style: const TextStyle(fontSize: 11)),
+              label: Text(l10n.bookAddTag, style: TextStyle(fontSize: 11)),
               onPressed: () => _addTag(context, ref),
               backgroundColor: AppColors.card,
-              side: const BorderSide(color: AppColors.line),
+              side: BorderSide(color: AppColors.line),
               visualDensity: VisualDensity.compact,
             ),
           ],
@@ -914,8 +914,8 @@ class _LendingCard extends ConsumerWidget {
       leftBorder: AppColors.gold,
       child: Row(
         children: [
-          const Icon(Icons.swap_horiz, size: 16, color: AppColors.gold),
-          const SizedBox(width: 8),
+          Icon(Icons.swap_horiz, size: 16, color: AppColors.gold),
+          SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -924,12 +924,12 @@ class _LendingCard extends ConsumerWidget {
                   current != null
                       ? l10n.bookLendingWithSomeone(current.borrowerName)
                       : l10n.bookLendingNotLentOut,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                 ),
                 if (pastCount > 0)
                   Text(
                     l10n.bookLendingPastCount(pastCount),
-                    style: const TextStyle(color: AppColors.inkSoft, fontSize: 10),
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 10),
                   ),
               ],
             ),
@@ -939,7 +939,7 @@ class _LendingCard extends ConsumerWidget {
                 current != null ? () => _markReturned(ref, current.id) : () => _lend(context, ref),
             child: Text(
               current != null ? l10n.bookMarkReturnedAction : l10n.bookLendAction,
-              style: const TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+              style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
             ),
           ),
         ],

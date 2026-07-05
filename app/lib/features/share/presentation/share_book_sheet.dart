@@ -26,7 +26,7 @@ Future<void> showShareBookSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.card,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (_) => _ShareSheet(
@@ -122,7 +122,7 @@ class _ShareSheetState extends State<_ShareSheet> {
               child: Container(
                 width: 32,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
                   color: AppColors.line,
                   borderRadius: BorderRadius.circular(99),
@@ -130,7 +130,7 @@ class _ShareSheetState extends State<_ShareSheet> {
               ),
             ),
             Text(l10n.shareTitle, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             Center(
               child: RepaintBoundary(
                 key: _cardKey,
@@ -146,7 +146,7 @@ class _ShareSheetState extends State<_ShareSheet> {
               ),
             ),
             if (_hasPersonal) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.shareIncludeRating),
@@ -155,27 +155,27 @@ class _ShareSheetState extends State<_ShareSheet> {
                 onChanged: (v) => setState(() => _includePersonal = v),
               ),
             ] else
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _copyLink,
-                    icon: const Icon(Icons.link, size: 18),
+                    icon: Icon(Icons.link, size: 18),
                     label: Text(l10n.shareCopyLink),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _sharing ? null : _shareCard,
                     icon: _sharing
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
                           )
-                        : const Icon(Icons.ios_share, size: 18),
+                        : Icon(Icons.ios_share, size: 18),
                     label: Text(l10n.shareCardButton),
                   ),
                 ),

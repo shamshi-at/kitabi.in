@@ -3,7 +3,7 @@ import '../../data/db/database.dart';
 /// Reading stats derived from the library — pure and unit-testable (no widgets,
 /// no clock). `year == null` means "all time".
 class InsightsStats {
-  const InsightsStats({
+  InsightsStats({
     required this.booksRead,
     required this.pagesRead,
     required this.currentlyReading,

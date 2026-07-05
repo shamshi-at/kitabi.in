@@ -3,7 +3,7 @@
 /// boot and render offline-appropriate UI before real Supabase credentials
 /// exist — see [supabaseConfigured] in supabase_auth_service.dart.
 class KitabiAuthUser {
-  const KitabiAuthUser({required this.id, this.email, this.fullName, this.avatarUrl});
+  KitabiAuthUser({required this.id, this.email, this.fullName, this.avatarUrl});
 
   final String id;
   final String? email;
@@ -21,7 +21,7 @@ abstract class AuthService {
 }
 
 class UnconfiguredAuthService implements AuthService {
-  const UnconfiguredAuthService();
+  UnconfiguredAuthService();
 
   @override
   Stream<KitabiAuthUser?> get authStateChanges => Stream<KitabiAuthUser?>.value(null);

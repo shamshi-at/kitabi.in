@@ -36,14 +36,14 @@ class AddEditBookScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (workId == null) {
-      return const Scaffold(backgroundColor: AppColors.paper, body: SafeArea(child: _BookForm()));
+      return Scaffold(backgroundColor: AppColors.paper, body: SafeArea(child: _BookForm()));
     }
     final work = ref.watch(workProvider(workId!));
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: work.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('$err')),
           data: (body) => _BookForm(initialWork: body),
         ),
@@ -189,12 +189,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.ink),
+                icon: Icon(Icons.arrow_back, color: AppColors.ink),
                 onPressed: () => context.pop(),
               ),
               Expanded(
@@ -217,7 +217,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             children: [
               TypesetCover(
@@ -227,33 +227,33 @@ class _BookFormState extends ConsumerState<_BookForm> {
                 width: 40,
                 height: 60,
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Text(
                   l10n.formCoverTypeset,
-                  style: const TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                  style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           _Field(
             label: l10n.formFieldTitle,
             controller: _title,
             validator: (v) => (v == null || v.trim().isEmpty) ? l10n.formTitleRequired : null,
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _AuthorField(
             authors: _authorNames,
             onAdd: _addAuthor,
             onRemove: (name) => setState(() => _authorNames.remove(name)),
             fetch: (q) => ref.read(apiClientProvider).searchAuthors(q),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Row(
             children: [
               Expanded(flex: 14, child: _Field(label: l10n.formFieldSeries, controller: _series)),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 flex: 10,
                 child: _Field(
@@ -264,11 +264,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Row(
             children: [
               Expanded(flex: 14, child: _Field(label: l10n.formFieldLanguage, controller: _language)),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 flex: 10,
                 child: _Field(
@@ -279,7 +279,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _TypeaheadField(
             label: l10n.formFieldPublisher,
             controller: _publisher,
@@ -287,11 +287,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
             fetch: (q) => ref.read(apiClientProvider).searchPublishers(q),
             onSelected: (_) {},
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Row(
             children: [
               Expanded(flex: 14, child: _Field(label: l10n.formFieldIsbn, controller: _isbn)),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 flex: 10,
                 child: _DropdownField(
@@ -303,24 +303,24 @@ class _BookFormState extends ConsumerState<_BookForm> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Text(
             l10n.formFieldGenres,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               letterSpacing: 1,
               color: AppColors.inkSoft,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
               for (final genre in _commonGenres)
                 FilterChip(
-                  label: Text(genre, style: const TextStyle(fontSize: 11)),
+                  label: Text(genre, style: TextStyle(fontSize: 11)),
                   selected: _selectedGenres.contains(genre),
                   onSelected: (sel) => setState(() {
                     if (sel) {
@@ -334,17 +334,17 @@ class _BookFormState extends ConsumerState<_BookForm> {
                   labelStyle: TextStyle(
                     color: _selectedGenres.contains(genre) ? AppColors.paper : AppColors.ink,
                   ),
-                  side: const BorderSide(color: AppColors.line),
+                  side: BorderSide(color: AppColors.line),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           _Field(label: '+ ${l10n.formFieldGenres}', controller: _customGenres),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           ElevatedButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
@@ -357,12 +357,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
   }
 }
 
-const _fieldLabelStyle = TextStyle(
-  fontSize: 10,
-  letterSpacing: 1,
-  color: AppColors.inkSoft,
-  fontWeight: FontWeight.w600,
-);
+// Runtime (not const): AppColors.inkSoft resolves per active theme.
+TextStyle get _fieldLabelStyle => TextStyle(
+      fontSize: 10,
+      letterSpacing: 1,
+      color: AppColors.inkSoft,
+      fontWeight: FontWeight.w600,
+    );
 
 /// Author input (S7b) — a "dropdown cum add new" chip field: existing catalog
 /// authors are suggested as you type (so you pick the canonical one rather
@@ -401,17 +402,17 @@ class _AuthorFieldState extends State<_AuthorField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(l10n.formFieldAuthor, style: _fieldLabelStyle),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         if (widget.authors.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+            padding: EdgeInsets.only(bottom: 6),
             child: Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
                 for (final name in widget.authors)
                   Chip(
-                    label: Text(name, style: const TextStyle(fontSize: 12)),
+                    label: Text(name, style: TextStyle(fontSize: 12)),
                     onDeleted: () => widget.onRemove(name),
                     backgroundColor: AppColors.goldSoft,
                     side: BorderSide.none,
@@ -478,7 +479,7 @@ class _TypeaheadFieldState extends State<_TypeaheadField> {
       setState(() => _suggestions = []);
       return;
     }
-    _debounce = Timer(const Duration(milliseconds: 250), () => _fetch(query));
+    _debounce = Timer(Duration(milliseconds: 250), () => _fetch(query));
   }
 
   Future<void> _fetch(String query) async {
@@ -517,34 +518,34 @@ class _TypeaheadFieldState extends State<_TypeaheadField> {
       children: [
         if (widget.label != null) ...[
           Text(widget.label!, style: _fieldLabelStyle),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
         ],
         TextField(
           controller: widget.controller,
           textInputAction: TextInputAction.done,
           onChanged: _onChanged,
           onSubmitted: _select,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
             fillColor: AppColors.card,
             hintText: widget.hintText,
-            hintStyle: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            hintStyle: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.line),
+              borderSide: BorderSide(color: AppColors.line),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.line),
+              borderSide: BorderSide(color: AppColors.line),
             ),
           ),
         ),
         if (_suggestions.isNotEmpty || showAddNew)
           Container(
-            margin: const EdgeInsets.only(top: 4),
+            margin: EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
               color: AppColors.paper,
               borderRadius: BorderRadius.circular(10),
@@ -557,10 +558,10 @@ class _TypeaheadFieldState extends State<_TypeaheadField> {
                     onTap: () => _select(name),
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       child: Text(
                         name,
-                        style: const TextStyle(fontSize: 13, color: AppColors.ink),
+                        style: TextStyle(fontSize: 13, color: AppColors.ink),
                       ),
                     ),
                   ),
@@ -569,15 +570,15 @@ class _TypeaheadFieldState extends State<_TypeaheadField> {
                     onTap: () => _select(_query),
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       child: Row(
                         children: [
-                          const Icon(Icons.add, size: 15, color: AppColors.oxblood),
-                          const SizedBox(width: 6),
+                          Icon(Icons.add, size: 15, color: AppColors.oxblood),
+                          SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               l10n.formAddNew(_query),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 color: AppColors.oxblood,
                                 fontWeight: FontWeight.w600,
@@ -611,31 +612,31 @@ class _Field extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10,
             letterSpacing: 1,
             color: AppColors.inkSoft,
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         TextFormField(
           controller: controller,
           validator: validator,
           keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
             fillColor: AppColors.card,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.line),
+              borderSide: BorderSide(color: AppColors.line),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.line),
+              borderSide: BorderSide(color: AppColors.line),
             ),
           ),
         ),
@@ -664,16 +665,16 @@ class _DropdownField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10,
             letterSpacing: 1,
             color: AppColors.inkSoft,
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: AppColors.card,
             borderRadius: BorderRadius.circular(10),
@@ -683,7 +684,7 @@ class _DropdownField extends StatelessWidget {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppColors.ink,

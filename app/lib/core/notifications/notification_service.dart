@@ -60,7 +60,7 @@ class NotificationService {
       title,
       body,
       tz.TZDateTime.from(when, tz.local),
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           'Lending reminders',

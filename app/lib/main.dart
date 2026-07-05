@@ -8,6 +8,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'data/sync/background_sync.dart';
 import 'data/sync/connectivity_sync.dart';
+import 'features/settings/theme_mode_provider.dart';
 import 'l10n/app_localizations.dart';
 
 Future<void> main() async {
@@ -22,7 +23,7 @@ Future<void> main() async {
     await Workmanager().initialize(syncCallbackDispatcher);
     registerBackgroundSync();
   }
-  runApp(const ProviderScope(child: KitabiApp()));
+  runApp(ProviderScope(child: KitabiApp()));
 }
 
 class KitabiApp extends ConsumerWidget {
@@ -32,9 +33,10 @@ class KitabiApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(connectivitySyncProvider); // activates the listener once
     final router = ref.watch(routerProvider);
+    final dark = ref.watch(themeModeControllerProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
-      theme: buildAppTheme(),
+      theme: buildAppTheme(dark: dark),
       routerConfig: router,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,

@@ -27,7 +27,7 @@ Future<String?> pickAndUploadCover(WidgetRef ref, {required String editionId}) a
   await storage.uploadBinary(
     objectPath,
     bytes,
-    fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+    fileOptions: FileOptions(upsert: true, contentType: 'image/jpeg'),
   );
 
   // Cache-bust so a re-upload of the same edition shows immediately.

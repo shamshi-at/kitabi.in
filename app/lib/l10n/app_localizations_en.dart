@@ -59,6 +59,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'VISIBILITY · everything starts private';
 
   @override
+  String get profileDarkMode => 'Night reading';
+
+  @override
+  String get profileDarkModeDesc => 'A warm dark theme for low light';
+
+  @override
   String get profileVisibilityProfileTitle => 'Profile';
 
   @override

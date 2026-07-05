@@ -25,7 +25,7 @@ Future<void> showLendSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.card,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (_) => _LendSheet(
@@ -100,7 +100,7 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _lentOn,
-      firstDate: now.subtract(const Duration(days: 3650)),
+      firstDate: now.subtract(Duration(days: 3650)),
       lastDate: now,
     );
     if (picked != null) setState(() => _lentOn = picked);
@@ -110,9 +110,9 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dueOn ?? now.add(const Duration(days: 14)),
+      initialDate: _dueOn ?? now.add(Duration(days: 14)),
       firstDate: now,
-      lastDate: now.add(const Duration(days: 3650)),
+      lastDate: now.add(Duration(days: 3650)),
     );
     if (picked != null) setState(() => _dueOn = picked);
   }
@@ -132,7 +132,7 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SheetGrabber(),
+            SheetGrabber(),
             Row(
               children: [
                 TypesetCover(
@@ -142,13 +142,13 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
                   width: 30,
                   height: 44,
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: Text(l10n.lendSheetTitle, style: Theme.of(context).textTheme.titleLarge),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             SheetLabel(l10n.lendSheetToLabel),
             TextField(
               controller: _borrower,
@@ -156,7 +156,7 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
               onChanged: (_) => setState(() {}),
               decoration: sheetInputDecoration(l10n.lendSheetToHint),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -166,7 +166,7 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
                     onTap: _pickLentOn,
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: SheetDateField(
                     label: l10n.lendSheetDueLabel,
@@ -176,20 +176,20 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             SheetLabel(l10n.logBorrowedNoteLabel),
             TextField(
               controller: _note,
               maxLines: 2,
               decoration: sheetInputDecoration(''),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _canSave ? _save : null,
                 child: _saving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),

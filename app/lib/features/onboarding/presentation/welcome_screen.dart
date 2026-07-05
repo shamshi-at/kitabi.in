@@ -52,7 +52,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
-                padding: const EdgeInsets.only(right: 12, top: 4),
+                padding: EdgeInsets.only(right: 12, top: 4),
                 child: TextButton(onPressed: _finish, child: Text(l10n.welcomeSkip)),
               ),
             ),
@@ -64,7 +64,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 itemBuilder: (context, i) {
                   final (icon, title, body) = pages[i];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: EdgeInsets.symmetric(horizontal: 32),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -72,10 +72,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           width: 96,
                           height: 96,
                           decoration:
-                              const BoxDecoration(color: AppColors.goldSoft, shape: BoxShape.circle),
+                              BoxDecoration(color: AppColors.goldSoft, shape: BoxShape.circle),
                           child: Icon(icon, size: 44, color: AppColors.oxblood),
                         ),
-                        const SizedBox(height: 28),
+                        SizedBox(height: 28),
                         Text(
                           title,
                           textAlign: TextAlign.center,
@@ -84,7 +84,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                                 fontWeight: FontWeight.w700,
                               ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         Text(
                           body,
                           textAlign: TextAlign.center,
@@ -104,8 +104,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               children: [
                 for (var i = 0; i < pages.length; i++)
                   AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    duration: Duration(milliseconds: 200),
+                    margin: EdgeInsets.symmetric(horizontal: 3),
                     width: i == _page ? 20 : 7,
                     height: 7,
                     decoration: BoxDecoration(
@@ -116,14 +116,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              padding: EdgeInsets.fromLTRB(24, 20, 24, 24),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: isLast
                       ? _finish
                       : () => _controller.nextPage(
-                            duration: const Duration(milliseconds: 250),
+                            duration: Duration(milliseconds: 250),
                             curve: Curves.easeOut,
                           ),
                   child: Text(isLast ? l10n.welcomeGetStarted : l10n.welcomeNext),

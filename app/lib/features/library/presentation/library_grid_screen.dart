@@ -23,7 +23,7 @@ class LibraryGridScreen extends ConsumerStatefulWidget {
 }
 
 class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
-  LibraryFilter _filter = const LibraryFilter();
+  LibraryFilter _filter = LibraryFilter();
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: hits.when(
-          loading: () => const CoverGridSkeleton(),
+          loading: () => CoverGridSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryHitsProvider)),
           data: (all) {
             final filtered = all.where(_filter.matches).toList();
@@ -44,7 +44,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
               child: CustomScrollView(
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
                   sliver: SliverToBoxAdapter(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -90,7 +90,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                             body: l10n.libraryEmpty,
                             action: ElevatedButton.icon(
                               onPressed: () => context.push(Routes.catalogSearch),
-                              icon: const Icon(Icons.add, size: 18),
+                              icon: Icon(Icons.add, size: 18),
                               label: Text(l10n.homeAddBook),
                             ),
                           )
@@ -101,9 +101,9 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
                     sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         mainAxisSpacing: 9,
                         crossAxisSpacing: 8,
@@ -137,7 +137,7 @@ class _FilterButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: active ? AppColors.ink : AppColors.card,
           borderRadius: BorderRadius.circular(20),
@@ -148,10 +148,10 @@ class _FilterButton extends StatelessWidget {
           children: [
             Icon(Icons.tune, size: 15, color: active ? AppColors.paper : AppColors.ink),
             if (active) ...[
-              const SizedBox(width: 5),
+              SizedBox(width: 5),
               Text(
                 '$activeCount',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: AppColors.paper,
@@ -210,14 +210,14 @@ class _LibraryGridItem extends ConsumerWidget {
                     right: 0,
                     bottom: 0,
                     child: Container(
-                      color: const Color(0xEBB8862B),
-                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      color: Color(0xEBB8862B),
+                      padding: EdgeInsets.symmetric(vertical: 2),
                       child: Text(
                         'WITH ${activeLending.borrowerName.toUpperCase()}',
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Color(0xFF241811),
                           fontSize: 6.5,
                           fontWeight: FontWeight.w700,
@@ -229,7 +229,7 @@ class _LibraryGridItem extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           StatusPill(status: entry.status),
         ],
       ),
