@@ -646,6 +646,12 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get libraryFilterLanguage;
 
+  /// Filter sheet section header for genre
+  ///
+  /// In en, this message translates to:
+  /// **'Genre'**
+  String get libraryFilterGenre;
+
   /// Filter sheet toggle to show only favourited books
   ///
   /// In en, this message translates to:
@@ -1251,6 +1257,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Books per month'**
   String get insightsPerMonth;
+
+  /// Section header for the language donut
+  ///
+  /// In en, this message translates to:
+  /// **'Languages'**
+  String get insightsLanguages;
+
+  /// Section header for the pages-per-month line
+  ///
+  /// In en, this message translates to:
+  /// **'Pages per month'**
+  String get insightsPagesPerMonth;
 
   /// Empty state on the insights screen
   ///

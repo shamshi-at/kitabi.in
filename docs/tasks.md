@@ -207,15 +207,16 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       offline from Drift (`LibraryEntriesDao.search` over the cached-book mirror, by title or
       author) with a status pill → book detail; "In the catalog" from the API. Reached via the
       "+" nav / the search field
-- [~] Filter sheet: language, genre, status, year, author/publisher + live count — S4b. Library
-      grid (S5) now has a filter sheet: **status**, **language** (distinct langs in your library),
-      and **favourites-only**, with a **live count** ("Show N books") and an active-filter badge.
-      The grid reads a reactive entries⋈books stream (`watchAllWithBooks`) so language filtering
-      works offline. Genre/year/author-publisher facets are a follow-up
-- [~] Stats: books/month bars, language donut, pages/month line, status counts — S10. Insights
-      screen built (dependency-free): books-read + pages-read + reading-now stats and a
-      **books-per-month bar chart** from a pure, unit-tested `computeInsights`. The language
-      donut + pages/month line are a follow-up
+- [x] Filter sheet: language, genre, status, year, author/publisher + live count — S4b. Library
+      grid (S5) filter sheet: **status**, **language**, **genre** (distinct facets from your
+      library), and **favourites-only**, with a **live count** ("Show N books") and an
+      active-filter badge; reads a reactive entries⋈books stream (`watchAllWithBooks`) so it
+      works offline. Year + author/publisher facets deferred (author/publisher have their own
+      browse screens)
+- [x] Stats: books/month bars, language donut, pages/month line, status counts — S10. Insights
+      screen (dependency-free custom charts): books-read + pages-read + reading-now stats, a
+      **books-per-month bar chart**, a **pages-per-month line**, and a **language donut** with
+      legend — all from a pure, unit-tested `computeInsights`
 - [x] Reading goal ring (personal, e.g. 30 books/year) — S10. Progress ring (read ÷ goal),
       goal stored device-local in `key_values` (default 30, tap to edit)
 - [x] Year selector (2026 / 2025 / all time) — S10

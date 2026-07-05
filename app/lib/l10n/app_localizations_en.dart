@@ -340,6 +340,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryFilterLanguage => 'Language';
 
   @override
+  String get libraryFilterGenre => 'Genre';
+
+  @override
   String get libraryFilterFavouritesOnly => 'Favourites only';
 
   @override
@@ -683,6 +686,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightsPerMonth => 'Books per month';
+
+  @override
+  String get insightsLanguages => 'Languages';
+
+  @override
+  String get insightsPagesPerMonth => 'Pages per month';
 
   @override
   String get insightsNoData =>

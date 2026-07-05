@@ -10,14 +10,17 @@ class LibraryFilter {
   const LibraryFilter({
     this.statuses = const {},
     this.languages = const {},
+    this.genres = const {},
     this.favouritesOnly = false,
   });
 
   final Set<String> statuses;
   final Set<String> languages;
+  final Set<String> genres;
   final bool favouritesOnly;
 
-  int get activeCount => statuses.length + languages.length + (favouritesOnly ? 1 : 0);
+  int get activeCount =>
+      statuses.length + languages.length + genres.length + (favouritesOnly ? 1 : 0);
 
   bool matches(LibraryHit hit) {
     if (statuses.isNotEmpty && !statuses.contains(hit.entry.status)) return false;
@@ -25,9 +28,16 @@ class LibraryFilter {
       final lang = hit.book.language;
       if (lang == null || !languages.contains(lang)) return false;
     }
+    if (genres.isNotEmpty && _genresOf(hit).intersection(genres).isEmpty) return false;
     if (favouritesOnly && !hit.entry.isFavorite) return false;
     return true;
   }
+
+  static Set<String> _genresOf(LibraryHit hit) => (hit.book.genreNames ?? '')
+      .split(',')
+      .map((g) => g.trim())
+      .where((g) => g.isNotEmpty)
+      .toSet();
 }
 
 Future<LibraryFilter?> showLibraryFilterSheet(
@@ -59,11 +69,13 @@ class _FilterSheet extends StatefulWidget {
 class _FilterSheetState extends State<_FilterSheet> {
   late Set<String> _statuses = {...widget.current.statuses};
   late Set<String> _languages = {...widget.current.languages};
+  late Set<String> _genres = {...widget.current.genres};
   late bool _favouritesOnly = widget.current.favouritesOnly;
 
   LibraryFilter get _working => LibraryFilter(
         statuses: _statuses,
         languages: _languages,
+        genres: _genres,
         favouritesOnly: _favouritesOnly,
       );
 
@@ -72,6 +84,17 @@ class _FilterSheetState extends State<_FilterSheet> {
     for (final h in widget.hits) {
       final lang = h.book.language;
       if (lang != null && lang.trim().isNotEmpty) set.add(lang);
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
+  List<String> get _availableGenres {
+    final set = <String>{};
+    for (final h in widget.hits) {
+      for (final g in (h.book.genreNames ?? '').split(',')) {
+        if (g.trim().isNotEmpty) set.add(g.trim());
+      }
     }
     final list = set.toList()..sort();
     return list;
@@ -86,6 +109,7 @@ class _FilterSheetState extends State<_FilterSheet> {
     final l10n = AppLocalizations.of(context)!;
     final count = widget.hits.where(_working.matches).length;
     final languages = _availableLanguages;
+    final genres = _availableGenres;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -121,6 +145,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                     onPressed: () => setState(() {
                       _statuses = {};
                       _languages = {};
+                      _genres = {};
                       _favouritesOnly = false;
                     }),
                     child: Text(l10n.libraryFilterClear),
@@ -153,6 +178,22 @@ class _FilterSheetState extends State<_FilterSheet> {
                       label: lang,
                       selected: _languages.contains(lang),
                       onTap: () => _toggle(_languages, lang),
+                    ),
+                ],
+              ),
+            ],
+            if (genres.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _Label(l10n.libraryFilterGenre),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final genre in genres)
+                    _Chip(
+                      label: genre,
+                      selected: _genres.contains(genre),
+                      onTap: () => _toggle(_genres, genre),
                     ),
                 ],
               ),

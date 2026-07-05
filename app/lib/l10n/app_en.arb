@@ -410,6 +410,10 @@
   "@libraryFilterLanguage": {
     "description": "Filter sheet section header for language"
   },
+  "libraryFilterGenre": "Genre",
+  "@libraryFilterGenre": {
+    "description": "Filter sheet section header for genre"
+  },
   "libraryFilterFavouritesOnly": "Favourites only",
   "@libraryFilterFavouritesOnly": {
     "description": "Filter sheet toggle to show only favourited books"
@@ -867,6 +871,14 @@
   "insightsPerMonth": "Books per month",
   "@insightsPerMonth": {
     "description": "Section header for the books-per-month bars"
+  },
+  "insightsLanguages": "Languages",
+  "@insightsLanguages": {
+    "description": "Section header for the language donut"
+  },
+  "insightsPagesPerMonth": "Pages per month",
+  "@insightsPagesPerMonth": {
+    "description": "Section header for the pages-per-month line"
   },
   "insightsNoData": "Finish a book and your reading stats will grow here.",
   "@insightsNoData": {

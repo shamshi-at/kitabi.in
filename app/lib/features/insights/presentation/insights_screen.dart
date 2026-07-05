@@ -111,17 +111,21 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                 ),
                 if (_year != null && stats.busiestMonthCount > 0) ...[
                   const SizedBox(height: 18),
-                  Text(
-                    l10n.insightsPerMonth.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                      color: AppColors.inkSoft,
-                    ),
-                  ),
+                  _ChartLabel(l10n.insightsPerMonth),
                   const SizedBox(height: 10),
                   _MonthBars(counts: stats.booksPerMonth, max: stats.busiestMonthCount),
+                ],
+                if (_year != null && stats.peakPagesMonth > 0) ...[
+                  const SizedBox(height: 18),
+                  _ChartLabel(l10n.insightsPagesPerMonth),
+                  const SizedBox(height: 10),
+                  _PagesLine(pages: stats.pagesPerMonth, max: stats.peakPagesMonth),
+                ],
+                if (stats.languageMix.length > 1) ...[
+                  const SizedBox(height: 18),
+                  _ChartLabel(l10n.insightsLanguages),
+                  const SizedBox(height: 10),
+                  _LanguageDonut(mix: stats.languageMix),
                 ],
               ],
             );
@@ -331,6 +335,189 @@ class _MonthBars extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ChartLabel extends StatelessWidget {
+  const _ChartLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 9,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+        color: AppColors.inkSoft,
+      ),
+    );
+  }
+}
+
+const _chartPalette = [
+  AppColors.oxblood,
+  AppColors.gold,
+  AppColors.slate,
+  AppColors.moss,
+  AppColors.ink,
+  AppColors.stampGrey,
+];
+
+class _PagesLine extends StatelessWidget {
+  const _PagesLine({required this.pages, required this.max});
+
+  final List<int> pages;
+  final int max;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 70,
+          width: double.infinity,
+          child: CustomPaint(painter: _LinePainter(pages, max)),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            for (final letter in _monthLetters)
+              Expanded(
+                child: Text(
+                  letter,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LinePainter extends CustomPainter {
+  _LinePainter(this.pages, this.max);
+
+  final List<int> pages;
+  final int max;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final baseline = Paint()
+      ..color = AppColors.line
+      ..strokeWidth = 1;
+    canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), baseline);
+
+    final points = <Offset>[
+      for (var i = 0; i < 12; i++)
+        Offset(
+          size.width * (i / 11),
+          size.height - (max == 0 ? 0 : (pages[i] / max) * size.height * 0.9),
+        ),
+    ];
+    final line = Paint()
+      ..color = AppColors.oxblood
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path()..addPolygon(points, false);
+    canvas.drawPath(path, line);
+
+    final dot = Paint()..color = AppColors.oxblood;
+    for (var i = 0; i < 12; i++) {
+      if (pages[i] > 0) canvas.drawCircle(points[i], 2.5, dot);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LinePainter old) => old.pages != pages || old.max != max;
+}
+
+class _LanguageDonut extends StatelessWidget {
+  const _LanguageDonut({required this.mix});
+
+  final Map<String, int> mix;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = mix.entries.toList();
+    final total = entries.fold<int>(0, (s, e) => s + e.value);
+    return Row(
+      children: [
+        SizedBox(
+          width: 78,
+          height: 78,
+          child: CustomPaint(painter: _DonutPainter(entries.map((e) => e.value).toList(), total)),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final (i, entry) in entries.indexed)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: _chartPalette[i % _chartPalette.length],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          entry.key,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12, color: AppColors.ink),
+                        ),
+                      ),
+                      Text(
+                        '${entry.value}',
+                        style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DonutPainter extends CustomPainter {
+  _DonutPainter(this.values, this.total);
+
+  final List<int> values;
+  final int total;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (total == 0) return;
+    final rect = Rect.fromLTWH(6, 6, size.width - 12, size.height - 12);
+    var start = -1.5708; // -90° — start at top
+    for (var i = 0; i < values.length; i++) {
+      final sweep = (values[i] / total) * 6.28319;
+      final paint = Paint()
+        ..color = _chartPalette[i % _chartPalette.length]
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 12;
+      canvas.drawArc(rect, start, sweep - 0.03, false, paint);
+      start += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutPainter old) => old.values != values;
 }
 
 class _Empty extends StatelessWidget {
