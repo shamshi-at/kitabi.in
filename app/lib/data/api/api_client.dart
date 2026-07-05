@@ -24,8 +24,31 @@ class ApiClient {
           }
           handler.next(options);
         },
-        onError: (error, handler) {
-          if (error.response?.statusCode == 426) onUpdateRequired?.call();
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 426) {
+            onUpdateRequired?.call();
+            return handler.next(error);
+          }
+          // Retry transient network failures with exponential backoff (300ms,
+          // 600ms, 1.2s). Only connection/timeout errors — never a real HTTP
+          // response (4xx/5xx). Sync ops carry op UUIDs, so a retried POST is
+          // idempotent server-side.
+          const retryable = {
+            DioExceptionType.connectionError,
+            DioExceptionType.connectionTimeout,
+            DioExceptionType.receiveTimeout,
+            DioExceptionType.sendTimeout,
+          };
+          final attempt = (error.requestOptions.extra['retry_attempt'] as int?) ?? 0;
+          if (retryable.contains(error.type) && attempt < 3) {
+            await Future<void>.delayed(Duration(milliseconds: 300 * (1 << attempt)));
+            final opts = error.requestOptions..extra['retry_attempt'] = attempt + 1;
+            try {
+              return handler.resolve(await _dio.fetch<dynamic>(opts));
+            } on DioException catch (e) {
+              return handler.next(e);
+            }
+          }
           handler.next(error);
         },
       ),
