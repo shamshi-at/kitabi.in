@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
+import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
+import '../../recommendations/providers/recommendations_providers.dart';
 
 /// S3 — the home dashboard. Currently reading (progress in pages), the lending
 /// nudge as a gold-edged slip, and plain-number shelf cards. The AI pick card
@@ -222,7 +225,17 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                       style: const TextStyle(color: AppColors.inkSoft, fontSize: 11),
                     ),
                   if (page != null && total != null && percent != null) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: (page / total).clamp(0.0, 1.0),
+                        minHeight: 4,
+                        backgroundColor: AppColors.line,
+                        valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
                     Text(
                       l10n.homeProgressLine(page, total, percent),
                       style: const TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
@@ -231,10 +244,45 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.oxblood),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline, color: AppColors.oxblood, size: 22),
+              tooltip: l10n.homeUpdateProgress,
+              onPressed: () => _updateProgress(context, ref, l10n),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _updateProgress(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+    final controller = TextEditingController(text: entry.currentPage?.toString() ?? '');
+    final newPage = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.homeUpdateProgress),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: InputDecoration(labelText: l10n.bookCurrentPage),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text)),
+            child: Text(l10n.bookSave),
+          ),
+        ],
+      ),
+    );
+    if (newPage == null) return;
+    Haptics.selection();
+    final repo = await ref.read(libraryRepositoryProvider.future);
+    await repo.updateProgress(
+      entry.id,
+      currentPage: newPage,
+      startDate: entry.startDate == null ? DateTime.now() : null,
     );
   }
 }
@@ -315,14 +363,16 @@ class _ShelfGrid extends StatelessWidget {
 }
 
 /// The quiet AI-pick entry (S3) — a dark, clearly-labelled card, never a feed.
-/// Opens the opt-in recommendations screen (S11).
-class _RecsEntryCard extends StatelessWidget {
+/// Only shown once the reader has opted into recommendations (discovered via
+/// the profile), so a first-time user is never led to a dormant feature.
+class _RecsEntryCard extends ConsumerWidget {
   const _RecsEntryCard({required this.l10n});
 
   final AppLocalizations l10n;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(recsOptInProvider).valueOrNull != true) return const SizedBox.shrink();
     return GestureDetector(
       onTap: () => context.push(Routes.recommendations),
       child: Container(

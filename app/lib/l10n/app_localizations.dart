@@ -1324,6 +1324,12 @@ abstract class AppLocalizations {
   /// **'Recommendations run on your ratings only.'**
   String get recsFooter;
 
+  /// Profile entry point to recommendations
+  ///
+  /// In en, this message translates to:
+  /// **'Recommendations'**
+  String get recsProfileEntry;
+
   /// Badge on the home dashboard AI-pick card
   ///
   /// In en, this message translates to:
@@ -1359,6 +1365,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'of {goal} books'**
   String insightsGoalRing(int goal);
+
+  /// Reading pace: on track
+  ///
+  /// In en, this message translates to:
+  /// **'On track 🎯'**
+  String get insightsOnTrack;
+
+  /// Reading pace: ahead
+  ///
+  /// In en, this message translates to:
+  /// **'{count} ahead of pace'**
+  String insightsAhead(int count);
+
+  /// Reading pace: behind
+  ///
+  /// In en, this message translates to:
+  /// **'{count} behind pace'**
+  String insightsBehind(int count);
 
   /// Caption under the all-time books-read number
   ///
@@ -1419,6 +1443,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Books per year'**
   String get insightsGoalDialogHint;
+
+  /// Quick page-update action on the currently-reading card
+  ///
+  /// In en, this message translates to:
+  /// **'Update progress'**
+  String get homeUpdateProgress;
 
   /// Section header above the shelf-count cards on the home dashboard
   ///

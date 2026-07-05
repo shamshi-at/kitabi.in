@@ -52,6 +52,16 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     ref.invalidate(readingGoalProvider);
   }
 
+  /// Where the reader is vs. an even pace through the year.
+  String _paceNote(AppLocalizations l10n, int read, int goal) {
+    final now = DateTime.now();
+    final dayOfYear = now.difference(DateTime(now.year)).inDays + 1;
+    final expected = (goal * dayOfYear / 365).floor();
+    final diff = read - expected;
+    if (diff == 0) return l10n.insightsOnTrack;
+    return diff > 0 ? l10n.insightsAhead(diff) : l10n.insightsBehind(-diff);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -88,6 +98,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   showTarget: _year != null,
                   targetCaption: l10n.insightsGoalRing(goal),
                   totalCaption: l10n.insightsBooksReadTotal,
+                  paceNote: _year == thisYear ? _paceNote(l10n, stats.booksRead, goal) : null,
                   onTap: () => _editGoal(goal),
                 ),
                 const SizedBox(height: 14),
@@ -195,6 +206,7 @@ class _GoalRing extends StatelessWidget {
     required this.targetCaption,
     required this.totalCaption,
     required this.onTap,
+    this.paceNote,
   });
 
   final int booksRead;
@@ -202,6 +214,7 @@ class _GoalRing extends StatelessWidget {
   final bool showTarget;
   final String targetCaption;
   final String totalCaption;
+  final String? paceNote;
   final VoidCallback onTap;
 
   @override
@@ -246,9 +259,27 @@ class _GoalRing extends StatelessWidget {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                showTarget ? targetCaption : totalCaption,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    showTarget ? targetCaption : totalCaption,
+                    style:
+                        Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
+                  ),
+                  if (showTarget && paceNote != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      paceNote!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.moss,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             if (showTarget) const Icon(Icons.edit, size: 16, color: AppColors.oxblood),

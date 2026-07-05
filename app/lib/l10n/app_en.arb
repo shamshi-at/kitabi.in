@@ -878,6 +878,8 @@
   "@recsFooter": {
     "description": "Footer reassurance on the recommendations screen"
   },
+  "recsProfileEntry": "Recommendations",
+  "@recsProfileEntry": {"description": "Profile entry point to recommendations"},
   "recsForYou": "For you",
   "@recsForYou": {
     "description": "Badge on the home dashboard AI-pick card"
@@ -904,6 +906,18 @@
     "placeholders": {
       "goal": {"type": "int"}
     }
+  },
+  "insightsOnTrack": "On track 🎯",
+  "@insightsOnTrack": {"description": "Reading pace: on track"},
+  "insightsAhead": "{count} ahead of pace",
+  "@insightsAhead": {
+    "description": "Reading pace: ahead",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "insightsBehind": "{count} behind pace",
+  "@insightsBehind": {
+    "description": "Reading pace: behind",
+    "placeholders": {"count": {"type": "int"}}
   },
   "insightsBooksReadTotal": "books read",
   "@insightsBooksReadTotal": {
@@ -945,6 +959,8 @@
   "@insightsGoalDialogHint": {
     "description": "Hint in the reading-goal input"
   },
+  "homeUpdateProgress": "Update progress",
+  "@homeUpdateProgress": {"description": "Quick page-update action on the currently-reading card"},
   "homeYourShelves": "Your shelves",
   "@homeYourShelves": {
     "description": "Section header above the shelf-count cards on the home dashboard"

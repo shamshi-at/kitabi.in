@@ -124,6 +124,12 @@ class _ProfileBody extends ConsumerWidget {
           child: Column(
             children: [
               OutlinedButton.icon(
+                onPressed: () => context.push(Routes.recommendations),
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: Text(l10n.recsProfileEntry),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
                 onPressed: () => context.push(Routes.importBooks),
                 icon: const Icon(Icons.upload_file_outlined, size: 18),
                 label: Text(l10n.importEntry),

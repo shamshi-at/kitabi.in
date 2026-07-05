@@ -1,22 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/db/catalog_cache.dart';
+import '../../../data/repositories/repository_providers.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../library/providers/library_providers.dart';
 
 /// One row for a catalog work — shared by search results and author/publisher
 /// browse lists. Author and publisher names are tappable (oxblood tint)
-/// everywhere they appear, per feature-map.md.
-class CatalogResultTile extends StatelessWidget {
+/// everywhere they appear, per feature-map.md. A quick "＋" adds it straight to
+/// the library (or shows a check once owned).
+class CatalogResultTile extends ConsumerWidget {
   const CatalogResultTile({super.key, required this.work});
 
   final Map<String, dynamic> work;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+  Widget build(BuildContext context, WidgetRef ref) {
     final title = work['title'] as String? ?? '';
     final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final edition = work['edition'] as Map<String, dynamic>?;
@@ -117,15 +123,41 @@ class CatalogResultTile extends StatelessWidget {
               ),
             ),
           ),
-          TextButton(
-            onPressed: () => context.push(Routes.catalogAdd, extra: work['id'] as String),
-            child: Text(
-              l10n.catalogEditAction,
-              style: const TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
-            ),
-          ),
+          if (editionId != null) _QuickAdd(work: work, editionId: editionId),
         ],
       ),
+    );
+  }
+}
+
+/// Trailing quick-add on a catalog result — "＋" to add to the library, a moss
+/// check once owned (offline-first: writes to Drift + the sync queue).
+class _QuickAdd extends ConsumerWidget {
+  const _QuickAdd({required this.work, required this.editionId});
+
+  final Map<String, dynamic> work;
+  final String editionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final owned = ref.watch(libraryEntryProvider(editionId)).valueOrNull != null;
+    if (owned) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        child: Icon(Icons.check_circle, color: AppColors.moss, size: 22),
+      );
+    }
+    return IconButton(
+      icon: const Icon(Icons.add_circle_outline, color: AppColors.oxblood),
+      tooltip: AppLocalizations.of(context)!.bookAddToLibrary,
+      onPressed: () async {
+        Haptics.success();
+        final edition = work['edition'] as Map<String, dynamic>;
+        await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+        final repo = await ref.read(libraryRepositoryProvider.future);
+        await repo.add(editionId: editionId);
+        ref.invalidate(libraryEntryProvider(editionId));
+      },
     );
   }
 }

@@ -95,11 +95,32 @@ class _BookDetailBody extends ConsumerWidget {
                       GestureDetector(
                         onTap: () =>
                             context.push(Routes.authorBrowsePath(authors.first['id'] as String)),
-                        child: Text(
-                          authors.first['name'] as String,
-                          style: const TextStyle(
-                            color: AppColors.oxblood,
-                            fontWeight: FontWeight.w600,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (authors.first['image_url'] != null) ...[
+                                CircleAvatar(
+                                  radius: 9,
+                                  backgroundColor: AppColors.goldSoft,
+                                  foregroundImage:
+                                      NetworkImage(authors.first['image_url'] as String),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  authors.first['name'] as String,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.oxblood,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

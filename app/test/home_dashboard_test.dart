@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/features/home/presentation/home_screen.dart';
 import 'package:kitabi/features/library/providers/library_providers.dart';
+import 'package:kitabi/features/recommendations/providers/recommendations_providers.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
 void main() {
@@ -36,6 +37,7 @@ void main() {
         overrides: [
           libraryEntriesProvider.overrideWith((ref) => Stream.value(entries!)),
           allLendingProvider.overrideWith((ref) => Stream.value(const <LendingWithBook>[])),
+          recsOptInProvider.overrideWith((ref) async => false),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

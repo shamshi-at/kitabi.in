@@ -739,6 +739,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recsFooter => 'Recommendations run on your ratings only.';
 
   @override
+  String get recsProfileEntry => 'Recommendations';
+
+  @override
   String get recsForYou => 'For you';
 
   @override
@@ -757,6 +760,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String insightsGoalRing(int goal) {
     return 'of $goal books';
+  }
+
+  @override
+  String get insightsOnTrack => 'On track 🎯';
+
+  @override
+  String insightsAhead(int count) {
+    return '$count ahead of pace';
+  }
+
+  @override
+  String insightsBehind(int count) {
+    return '$count behind pace';
   }
 
   @override
@@ -789,6 +805,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightsGoalDialogHint => 'Books per year';
+
+  @override
+  String get homeUpdateProgress => 'Update progress';
 
   @override
   String get homeYourShelves => 'Your shelves';
