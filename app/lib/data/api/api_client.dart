@@ -93,6 +93,13 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Reasoned recommendations (S11). Returns `{enabled, picks}`; `enabled` is
+  /// false when the server has no LLM key configured (feature dormant).
+  Future<Map<String, dynamic>> getRecommendations() async {
+    final res = await _dio.get('/recommendations');
+    return res.data as Map<String, dynamic>;
+  }
+
   /// Sync engine wire calls — see data/sync/sync_engine.dart.
   Future<List<Map<String, dynamic>>> syncPush(List<Map<String, dynamic>> ops) async {
     final res = await _dio.post('/sync/push', data: {'ops': ops});

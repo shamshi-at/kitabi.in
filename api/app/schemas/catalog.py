@@ -119,6 +119,19 @@ class TranslationLinkIn(BaseModel):
     other_work_id: uuid.UUID
 
 
+class RecommendationOut(BaseModel):
+    work: WorkSummaryOut
+    why: str
+
+
+class RecommendationsOut(BaseModel):
+    """`enabled` is False when no LLM key is configured — the app shows the
+    opt-in/off state accordingly (feature-map.md: always-visible off switch)."""
+
+    enabled: bool
+    picks: list[RecommendationOut]
+
+
 class AuthorWorksOut(BaseModel):
     author: AuthorOut
     works: list[WorkSummaryOut]

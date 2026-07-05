@@ -205,7 +205,7 @@ Full spec in [feature-map.md](feature-map.md); phase-by-phase checklist in
 | 4 — Lending | Lend/borrow records, linked vs self-logged, due reminders | **In progress** — Slices A–C: Lending ledger (S8) with **Lent out** and **Borrowed** tabs (Out now / With-you-now / Returned, computed due stamps, mark-returned / "I've returned it"). Borrowed side via migration `000005` (`direction`/`edition_id`/`linked_loan_id`/`note`, nullable `library_entry_id`); log-borrowed sheet (S8c, inline catalog search); S9 lend bottom sheet; **due-date local reminders** (`flutter_local_notifications`, on-device, scheduled 9am on the due date, cancelled on return — firing not yet device-verified). Still to build: cross-user match/mirror `[WIRED]` (Slice D) |
 | 5 — Import | Goodreads/CSV import | Not started |
 | 6 — Insights & search | Dashboard, stats, filters, author/publisher browse | **Core done** — **bottom-nav shell** (Home · Library · [+] · Lending · Insights, `StatefulShellRoute`) + the real **S3 home dashboard** (currently-reading with page progress, gold-edged lending nudge, 2×2 shelf-count cards). AI pick deferred to Phase 7. **global search (S4)** — library-first (offline Drift) then catalog (API); **Insights/stats (S10)** — reading-goal ring (device-local goal), year selector, books/pages/reading-now stats, and a dependency-free books-per-month bar chart from a pure `computeInsights`. **filter sheet (S4b)** — library grid filters by status/language/favourites with a live count. Phase 6 core complete; follow-ups: S10 language donut + pages/month line, S4b genre/year facets |
-| 7 — Recommendations & share | LLM recs, per-book + personal share cards | **In progress** — **share cards (S6c/S13)** done: `BookShareCard` (cover, title, catalog-avg or your rating, blurb or your review, kitabi.in mark) rendered to PNG via `RepaintBoundary` + `share_plus`, from a share sheet with an "include my rating & note" toggle + copy-link, reachable from the book page. LLM recommendations (S11) still to build |
+| 7 — Recommendations & share | LLM recs, per-book + personal share cards | **Core done** — **share cards (S6c/S13)** (`BookShareCard` → PNG via `RepaintBoundary` + `share_plus`, include-my-rating toggle, from the book page) and **LLM recommendations (S11)**: `GET /recommendations` reasons picks from the reader's ratings via Claude (gated behind an optional `ANTHROPIC_API_KEY` — dormant/no bill when unset), opt-in S11 screen with a "why" per pick, always-visible off switch, + Wishlist / Not-for-me, and a quiet "For you" home card. Live LLM output not yet verified (no key set) |
 | 8 — Launch plumbing | Version gate, backups, app icons, store listings, privacy policy | Not started (Railway deploy + custom domain items already done ✅) |
 
 All 19 v1 screen mockups exist in [docs/kitabi_screens.html](docs/kitabi_screens.html),
@@ -214,6 +214,17 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 ---
 
 ## Recent milestones
+
+- **6 Jul 2026** — Phase 7 — recommendations & share. **Share cards (S6c/S13)**: `BookShareCard`
+  (cover, title, catalog-avg or your rating, blurb or your review, kitabi.in mark) rasterised via
+  `RepaintBoundary` and handed to the OS share sheet with `share_plus`, from a sheet with an
+  "include my rating & note" toggle. **LLM recommendations (S11)**: `GET /recommendations` gathers
+  the reader's ratings + catalog candidates and asks Claude for reasoned picks with a plain-words
+  "why" — gated behind an optional `ANTHROPIC_API_KEY` so it's dormant with no external call/bill
+  until the owner opts in (rule 8). Opt-in, off-by-default S11 screen with an always-visible off
+  switch and + Wishlist / Not-for-me; a quiet "For you" card on home. API 43 tests + app 26 tests
+  green, lint clean, Android build verified with `share_plus`. Live LLM output not yet verified
+  (no key configured).
 
 - **6 Jul 2026** — Phase 6 continued — global search + insights. **Global search (S4)**: the
   search screen now shows an "In your library" section (offline Drift match by title/author,

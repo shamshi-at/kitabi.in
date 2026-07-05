@@ -23,6 +23,17 @@ class Settings(BaseSettings):
 
     scheduler_enabled: bool = False
 
+    # LLM-reasoned recommendations (the opt-in "quiet delight" — feature-map.md).
+    # Optional: unset means the feature is dormant and no external call is made
+    # (CLAUDE.md rule 8 — the owner opts in by providing a key, so there's no
+    # mandatory bill/credential). Recs are cheap, so default to a small model.
+    anthropic_api_key: str = ""
+    recs_model: str = "claude-haiku-4-5-20251001"
+
+    @property
+    def recommendations_enabled(self) -> bool:
+        return bool(self.anthropic_api_key)
+
     @property
     def jwks_url(self) -> str:
         return f"{self.supabase_url}/auth/v1/.well-known/jwks.json"

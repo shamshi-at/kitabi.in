@@ -14,6 +14,7 @@ import '../../features/lending/presentation/lending_ledger_screen.dart';
 import '../../features/library/presentation/book_detail_screen.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/recommendations/presentation/recommendations_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../auth/auth_providers.dart';
 import 'shell_scaffold.dart';
@@ -32,6 +33,7 @@ abstract final class Routes {
   static const library = '/library';
   static const lendingLedger = '/lending';
   static const insights = '/insights';
+  static const recommendations = '/recommendations';
   // Top-level (not under a nav branch) so it covers the bottom nav full-screen.
   static const bookDetail = '/book/:workId/:editionId';
 
@@ -143,6 +145,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.profile,
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: Routes.recommendations,
+        name: 'recommendations',
+        builder: (context, state) => const RecommendationsScreen(),
       ),
       GoRoute(
         path: Routes.catalogSearch,

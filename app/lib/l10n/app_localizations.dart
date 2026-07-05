@@ -1114,6 +1114,84 @@ abstract class AppLocalizations {
   /// **'{title} by {author} — on Kitabi, kitabi.in'**
   String shareBookText(String title, String author);
 
+  /// Title of the recommendations screen (S11)
+  ///
+  /// In en, this message translates to:
+  /// **'Picked for your shelf'**
+  String get recsTitle;
+
+  /// Subtitle on the recommendations screen
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoned from your ratings — never from ads.'**
+  String get recsSubtitle;
+
+  /// Explainer shown before the reader opts into recommendations
+  ///
+  /// In en, this message translates to:
+  /// **'Opt in and Kitabi suggests books from your ratings, each with a plain-words \"why\". Off by default — turn it off anytime.'**
+  String get recsOptInBody;
+
+  /// Button that opts into recommendations
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on recommendations'**
+  String get recsEnable;
+
+  /// Action that opts out of recommendations
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off recommendations'**
+  String get recsTurnOff;
+
+  /// Eyebrow above the reasoned explanation on a recommendation card
+  ///
+  /// In en, this message translates to:
+  /// **'WHY THIS?'**
+  String get recsWhy;
+
+  /// Adds a recommended book to the wishlist
+  ///
+  /// In en, this message translates to:
+  /// **'+ Wishlist'**
+  String get recsWishlist;
+
+  /// Dismisses a recommendation
+  ///
+  /// In en, this message translates to:
+  /// **'Not for me'**
+  String get recsNotForMe;
+
+  /// Shown when the server has no recommendation engine configured
+  ///
+  /// In en, this message translates to:
+  /// **'Recommendations aren\'t switched on yet — check back soon.'**
+  String get recsUnavailable;
+
+  /// Shown when there are no ratings to reason from yet
+  ///
+  /// In en, this message translates to:
+  /// **'Rate a few books and Kitabi will start suggesting what to read next.'**
+  String get recsColdStart;
+
+  /// Footer reassurance on the recommendations screen
+  ///
+  /// In en, this message translates to:
+  /// **'Recommendations run on your ratings only.'**
+  String get recsFooter;
+
+  /// Badge on the home dashboard AI-pick card
+  ///
+  /// In en, this message translates to:
+  /// **'For you'**
+  String get recsForYou;
+
+  /// Label on the home dashboard entry point to recommendations
+  ///
+  /// In en, this message translates to:
+  /// **'A pick for your shelf'**
+  String get recsHomePick;
+
   /// Title of the insights/stats screen
   ///
   /// In en, this message translates to:

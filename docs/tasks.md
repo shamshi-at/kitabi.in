@@ -222,8 +222,16 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 
 ## Phase 7 — Recommendations & share
 
-- [ ] LLM recommendation service: reasoned from user's ratings, plain-words "why" — S11
-- [ ] Recs UX: opt-in, visible off switch, + Wishlist / Not for me feedback — S11/S12
+- [x] LLM recommendation service: reasoned from user's ratings, plain-words "why" — S11.
+      `GET /recommendations` (auth) → gathers the reader's ratings + catalog candidates
+      (excluding owned/rated), asks Claude for picks + a one-line "why", returns `{enabled, picks}`.
+      Gated behind an optional `ANTHROPIC_API_KEY` (rule 8: dormant/no external call when unset;
+      the owner opts in). LLM call isolated in `_generate_picks`; disabled-path + JSON parsing
+      unit-tested. **Live LLM output not yet verified** (no key configured)
+- [x] Recs UX: opt-in, visible off switch, + Wishlist / Not for me feedback — S11/S12. Opt-in
+      stored device-local (off by default); S11 screen shows picks with a "WHY THIS?" box, an
+      always-visible "Turn off", + Wishlist (adds as wishlist) / Not for me (dismiss). Home has
+      a quiet "For you" entry card
 - [x] Per-book share card generator (any book: cover, title, rating — catalog average if
       you haven't rated it — short blurb, mark, kitabi.in), reachable from the book page
       share icon — S6c. `BookShareCard` rendered to PNG via `RepaintBoundary` + `share_plus`

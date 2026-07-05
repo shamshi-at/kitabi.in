@@ -608,6 +608,48 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get recsTitle => 'Picked for your shelf';
+
+  @override
+  String get recsSubtitle => 'Reasoned from your ratings — never from ads.';
+
+  @override
+  String get recsOptInBody =>
+      'Opt in and Kitabi suggests books from your ratings, each with a plain-words \"why\". Off by default — turn it off anytime.';
+
+  @override
+  String get recsEnable => 'Turn on recommendations';
+
+  @override
+  String get recsTurnOff => 'Turn off recommendations';
+
+  @override
+  String get recsWhy => 'WHY THIS?';
+
+  @override
+  String get recsWishlist => '+ Wishlist';
+
+  @override
+  String get recsNotForMe => 'Not for me';
+
+  @override
+  String get recsUnavailable =>
+      'Recommendations aren\'t switched on yet — check back soon.';
+
+  @override
+  String get recsColdStart =>
+      'Rate a few books and Kitabi will start suggesting what to read next.';
+
+  @override
+  String get recsFooter => 'Recommendations run on your ratings only.';
+
+  @override
+  String get recsForYou => 'For you';
+
+  @override
+  String get recsHomePick => 'A pick for your shelf';
+
+  @override
   String get insightsTitle => 'Insights';
 
   @override

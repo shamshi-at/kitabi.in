@@ -770,6 +770,58 @@
       "author": {"type": "String"}
     }
   },
+  "recsTitle": "Picked for your shelf",
+  "@recsTitle": {
+    "description": "Title of the recommendations screen (S11)"
+  },
+  "recsSubtitle": "Reasoned from your ratings — never from ads.",
+  "@recsSubtitle": {
+    "description": "Subtitle on the recommendations screen"
+  },
+  "recsOptInBody": "Opt in and Kitabi suggests books from your ratings, each with a plain-words \"why\". Off by default — turn it off anytime.",
+  "@recsOptInBody": {
+    "description": "Explainer shown before the reader opts into recommendations"
+  },
+  "recsEnable": "Turn on recommendations",
+  "@recsEnable": {
+    "description": "Button that opts into recommendations"
+  },
+  "recsTurnOff": "Turn off recommendations",
+  "@recsTurnOff": {
+    "description": "Action that opts out of recommendations"
+  },
+  "recsWhy": "WHY THIS?",
+  "@recsWhy": {
+    "description": "Eyebrow above the reasoned explanation on a recommendation card"
+  },
+  "recsWishlist": "+ Wishlist",
+  "@recsWishlist": {
+    "description": "Adds a recommended book to the wishlist"
+  },
+  "recsNotForMe": "Not for me",
+  "@recsNotForMe": {
+    "description": "Dismisses a recommendation"
+  },
+  "recsUnavailable": "Recommendations aren't switched on yet — check back soon.",
+  "@recsUnavailable": {
+    "description": "Shown when the server has no recommendation engine configured"
+  },
+  "recsColdStart": "Rate a few books and Kitabi will start suggesting what to read next.",
+  "@recsColdStart": {
+    "description": "Shown when there are no ratings to reason from yet"
+  },
+  "recsFooter": "Recommendations run on your ratings only.",
+  "@recsFooter": {
+    "description": "Footer reassurance on the recommendations screen"
+  },
+  "recsForYou": "For you",
+  "@recsForYou": {
+    "description": "Badge on the home dashboard AI-pick card"
+  },
+  "recsHomePick": "A pick for your shelf",
+  "@recsHomePick": {
+    "description": "Label on the home dashboard entry point to recommendations"
+  },
   "insightsTitle": "Insights",
   "@insightsTitle": {
     "description": "Title of the insights/stats screen"

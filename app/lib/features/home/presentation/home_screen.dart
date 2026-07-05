@@ -111,6 +111,8 @@ class _Dashboard extends ConsumerWidget {
         const SizedBox(height: 14),
         _SectionLabel(l10n.homeYourShelves),
         _ShelfGrid(counts: counts, l10n: l10n),
+        const SizedBox(height: 14),
+        _RecsEntryCard(l10n: l10n),
       ],
     );
   }
@@ -303,6 +305,55 @@ class _ShelfGrid extends StatelessWidget {
         _ShelfCard(value: counts.lentOut, label: l10n.homeShelfLentOut, color: AppColors.oxblood),
         _ShelfCard(value: counts.wishlist, label: l10n.homeShelfWishlist, color: AppColors.slate),
       ],
+    );
+  }
+}
+
+/// The quiet AI-pick entry (S3) — a dark, clearly-labelled card, never a feed.
+/// Opens the opt-in recommendations screen (S11).
+class _RecsEntryCard extends StatelessWidget {
+  const _RecsEntryCard({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push(Routes.recommendations),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.night,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.auto_awesome, size: 16, color: AppColors.gold),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l10n.recsHomePick,
+                style: const TextStyle(color: Color(0xFFEFE3C8), fontSize: 12, height: 1.4),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.gold,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                l10n.recsForYou,
+                style: const TextStyle(
+                  color: AppColors.night,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
