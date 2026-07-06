@@ -240,6 +240,43 @@ async def search_local(db: AsyncSession, query: str, limit: int = 20) -> list[Wo
     return list((await db.execute(stmt)).scalars().all())
 
 
+async def browse_works(db: AsyncSession, limit: int, offset: int) -> list[Work]:
+    """The Discover/browse screen — every catalog work, alphabetical, paged.
+    Layer 1 is server-authoritative, so this reads straight from our catalog."""
+    stmt = (
+        select(Work)
+        .options(*_WORK_OPTIONS)
+        .where(Work.deleted_at.is_(None))
+        .order_by(Work.title)
+        .limit(limit)
+        .offset(offset)
+        .execution_options(populate_existing=True)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def browse_authors(db: AsyncSession, limit: int, offset: int) -> list[Author]:
+    stmt = (
+        select(Author)
+        .where(Author.deleted_at.is_(None))
+        .order_by(Author.name)
+        .limit(limit)
+        .offset(offset)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def browse_publishers(db: AsyncSession, limit: int, offset: int) -> list[Publisher]:
+    stmt = (
+        select(Publisher)
+        .where(Publisher.deleted_at.is_(None))
+        .order_by(Publisher.name)
+        .limit(limit)
+        .offset(offset)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
 async def search_authors(db: AsyncSession, query: str, limit: int = 10) -> list[Author]:
     """Typeahead for the add/edit form's author field — case-insensitive
     prefix-ish match, so "dropdown cum add new" can suggest existing catalog

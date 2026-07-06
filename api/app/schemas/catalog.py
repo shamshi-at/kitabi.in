@@ -66,6 +66,9 @@ class EditionOut(BaseModel):
     pub_date: date | None
     format: str | None
     cover_url: str | None
+    # [WIRED] external buy link — null until store links are populated; the app
+    # only shows a "Buy" affordance when it's set.
+    buy_url: str | None = None
     series_number: int | None
     publisher: PublisherOut | None
     series: SeriesOut | None
@@ -150,6 +153,7 @@ class EditionUpdate(BaseModel):
     pub_date: date | None = None
     format: str | None = None
     cover_url: str | None = None
+    buy_url: str | None = None
 
 
 class TranslationLinkIn(BaseModel):

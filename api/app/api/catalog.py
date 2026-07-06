@@ -72,6 +72,39 @@ async def search_all(db: DbSession, q: str = Query(min_length=1)) -> GlobalSearc
     )
 
 
+@router.get("/browse/works", response_model=list[WorkSummaryOut])
+async def browse_works(
+    db: DbSession,
+    limit: int = Query(default=40, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> list[WorkSummaryOut]:
+    """Discover screen — every catalog book, alphabetical, paged (S4/browse)."""
+    works = await catalog_service.browse_works(db, limit, offset)
+    return [_summary(w) for w in works]
+
+
+@router.get("/browse/authors", response_model=list[AuthorOut])
+async def browse_authors(
+    db: DbSession,
+    limit: int = Query(default=40, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> list[AuthorOut]:
+    """Discover screen — every catalog author, alphabetical, paged."""
+    authors = await catalog_service.browse_authors(db, limit, offset)
+    return [AuthorOut.model_validate(a) for a in authors]
+
+
+@router.get("/browse/publishers", response_model=list[PublisherOut])
+async def browse_publishers(
+    db: DbSession,
+    limit: int = Query(default=40, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> list[PublisherOut]:
+    """Discover screen — every catalog publisher, alphabetical, paged."""
+    publishers = await catalog_service.browse_publishers(db, limit, offset)
+    return [PublisherOut.model_validate(p) for p in publishers]
+
+
 @router.get("/isbn/{isbn}", response_model=WorkOut)
 async def lookup_isbn(isbn: str, db: DbSession, ol_client: OlClient) -> WorkOut:
     """Scan flow (S7): local match first, else OpenLibrary — and whatever's

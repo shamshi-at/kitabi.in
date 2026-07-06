@@ -236,6 +236,53 @@ async def test_global_search_returns_all_sections(client):
     assert any(w["title"] == "Aadujeevitham" for w in body["works"])
 
 
+async def test_browse_works_authors_publishers_paged(client):
+    # Seed a few works spanning authors + publishers.
+    for i in range(3):
+        await client.post(
+            "/catalog/works",
+            json={
+                "title": f"Browse Title {i}",
+                "author_names": [f"Browse Author {i}"],
+                "publisher_name": f"Browse House {i}",
+            },
+        )
+
+    works = await client.get("/catalog/browse/works", params={"limit": 2, "offset": 0})
+    assert works.status_code == 200
+    assert len(works.json()) == 2
+    # Alphabetical ordering — page 2 continues where page 1 left off.
+    page2 = await client.get("/catalog/browse/works", params={"limit": 2, "offset": 2})
+    assert page2.status_code == 200
+    first_page_titles = {w["title"] for w in works.json()}
+    assert all(w["title"] not in first_page_titles for w in page2.json())
+
+    authors = await client.get("/catalog/browse/authors", params={"limit": 100})
+    assert authors.status_code == 200
+    assert any(a["name"] == "Browse Author 0" for a in authors.json())
+
+    publishers = await client.get("/catalog/browse/publishers", params={"limit": 100})
+    assert publishers.status_code == 200
+    assert any(p["name"] == "Browse House 1" for p in publishers.json())
+
+
+async def test_edition_buy_url_wired_and_patchable(client):
+    created = await client.post(
+        "/catalog/works", json={"title": "Buyable", "isbn": "9789999999999"}
+    )
+    edition = created.json()["editions"][0]
+    # [WIRED] — the field exists and defaults to null.
+    assert "buy_url" in edition
+    assert edition["buy_url"] is None
+
+    patched = await client.patch(
+        f"/catalog/editions/{edition['id']}",
+        json={"buy_url": "https://example.com/buy/9789999999999"},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["buy_url"] == "https://example.com/buy/9789999999999"
+
+
 async def test_link_translation(client):
     a = await client.post("/catalog/works", json={"title": "Mayyazhippuzhayude Theerangalil"})
     b = await client.post("/catalog/works", json={"title": "On the Banks of the Mayyazhi"})

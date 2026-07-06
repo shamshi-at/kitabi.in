@@ -38,6 +38,11 @@ class Edition(CatalogMixin, Base):
     pub_date: Mapped[date | None] = mapped_column(Date, default=None)
     format: Mapped[str | None] = mapped_column(String, default=None)  # paperback/hardcover/ebook
     cover_url: Mapped[str | None] = mapped_column(String, default=None)
+    # [WIRED] External buy link for this specific edition (ISBN → an ecommerce
+    # product page). Dormant until populated: the app shows a "Buy" affordance
+    # only when this is set, so the feature is invisible until we wire real
+    # store links. Per-edition, not per-Work, since it's a specific printing.
+    buy_url: Mapped[str | None] = mapped_column(String, default=None)
 
     external_source: Mapped[str | None] = mapped_column(String, default=None)
     external_id: Mapped[str | None] = mapped_column(String, default=None, index=True)
