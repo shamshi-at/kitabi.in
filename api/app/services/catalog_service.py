@@ -2,7 +2,7 @@ import re
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -17,9 +17,22 @@ _ISBN_RE = re.compile(r"^[0-9]{9}[0-9X]$|^[0-9]{13}$")
 # async SQLAlchemy — whether it actually eager-loads depends on the access
 # path (get() vs select() vs refresh()), and a plain attribute access that
 # falls through to a lazy load outside an awaited call raises MissingGreenlet.
-_WORK_OPTIONS = (
+# For fetching ONE work (book detail, add/edit, ISBN lookup): a single joined
+# query instead of selectinload's four round-trips. On a high-latency DB link
+# that's ~4x faster; the cartesian product is trivial for one work, and
+# result.unique() dedupes it. Use _WORK_OPTIONS for LISTS, where a cross-join
+# would multiply rows.
+_WORK_JOINED = (
+    joinedload(Work.authors),
+    joinedload(Work.genres),
+    joinedload(Work.editions).options(joinedload(Edition.publisher), joinedload(Edition.series)),
+)
+
+# For summary LISTS (browse/search) — WorkSummaryOut needs authors and a
+# representative edition, but not genres, so skip that relationship to save a
+# round-trip per list query.
+_SUMMARY_OPTIONS = (
     selectinload(Work.authors),
-    selectinload(Work.genres),
     selectinload(Work.editions).options(joinedload(Edition.publisher), joinedload(Edition.series)),
 )
 
@@ -182,9 +195,9 @@ async def _load_work(db: AsyncSession, work_id: uuid.UUID) -> Work | None:
     `options=`) if it's already attached to this session — e.g. right after
     `db.add(work)` in the same request. `populate_existing()` forces a real
     reload with the eager-load options applied, every time."""
-    stmt = select(Work).where(Work.id == work_id).options(*_WORK_OPTIONS)
+    stmt = select(Work).where(Work.id == work_id).options(*_WORK_JOINED)
     result = await db.execute(stmt.execution_options(populate_existing=True))
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def get_work_or_404(db: AsyncSession, work_id: uuid.UUID) -> Work:
@@ -227,7 +240,7 @@ async def search_local(db: AsyncSession, query: str, limit: int = 20) -> list[Wo
 
     stmt = (
         select(Work)
-        .options(*_WORK_OPTIONS)
+        .options(*_SUMMARY_OPTIONS)
         .outerjoin(Work.authors)
         .where(
             Work.deleted_at.is_(None),
@@ -240,19 +253,48 @@ async def search_local(db: AsyncSession, query: str, limit: int = 20) -> list[Wo
     return list((await db.execute(stmt)).scalars().all())
 
 
-async def browse_works(db: AsyncSession, limit: int, offset: int) -> list[Work]:
-    """The Discover/browse screen — every catalog work, alphabetical, paged.
-    Layer 1 is server-authoritative, so this reads straight from our catalog."""
-    stmt = (
-        select(Work)
-        .options(*_WORK_OPTIONS)
-        .where(Work.deleted_at.is_(None))
-        .order_by(Work.title)
-        .limit(limit)
-        .offset(offset)
-        .execution_options(populate_existing=True)
-    )
+async def browse_works(
+    db: AsyncSession,
+    limit: int,
+    offset: int,
+    language: str | None = None,
+    sort: str = "title",
+) -> list[Work]:
+    """The Discover/browse screen — catalog works, paged, with optional
+    language filter and sort (title / newest / oldest / author). Layer 1 is
+    server-authoritative, so this reads straight from our catalog."""
+    stmt = select(Work).options(*_SUMMARY_OPTIONS).where(Work.deleted_at.is_(None))
+    if language:
+        stmt = stmt.where(Work.language == language)
+
+    if sort == "author":
+        # One row per work, ordered by its earliest author name. group_by the
+        # PK collapses the M2M join without a DISTINCT-vs-ORDER-BY conflict.
+        stmt = (
+            stmt.outerjoin(Work.authors)
+            .group_by(Work.id)
+            .order_by(func.min(Author.name).asc().nullslast(), Work.title.asc())
+        )
+    elif sort == "year_desc":
+        stmt = stmt.order_by(Work.first_publish_year.desc().nullslast(), Work.title.asc())
+    elif sort == "year_asc":
+        stmt = stmt.order_by(Work.first_publish_year.asc().nullslast(), Work.title.asc())
+    else:
+        stmt = stmt.order_by(Work.title.asc())
+
+    stmt = stmt.limit(limit).offset(offset).execution_options(populate_existing=True)
     return list((await db.execute(stmt)).scalars().all())
+
+
+async def catalog_languages(db: AsyncSession) -> list[str]:
+    """Distinct non-null work languages — powers the browse language filter."""
+    stmt = (
+        select(Work.language)
+        .where(Work.deleted_at.is_(None), Work.language.is_not(None))
+        .distinct()
+        .order_by(Work.language)
+    )
+    return [row for row in (await db.execute(stmt)).scalars().all() if row]
 
 
 async def browse_authors(db: AsyncSession, limit: int, offset: int) -> list[Author]:
@@ -374,7 +416,7 @@ async def translation_group_rating(db: AsyncSession, work: Work) -> float | None
 async def author_works(db: AsyncSession, author_id: uuid.UUID) -> list[Work]:
     stmt = (
         select(Work)
-        .options(*_WORK_OPTIONS)
+        .options(*_SUMMARY_OPTIONS)
         .join(Work.authors)
         .where(Author.id == author_id, Work.deleted_at.is_(None))
         .order_by(Work.first_publish_year)
@@ -386,7 +428,7 @@ async def author_works(db: AsyncSession, author_id: uuid.UUID) -> list[Work]:
 async def publisher_works(db: AsyncSession, publisher_id: uuid.UUID) -> list[Work]:
     stmt = (
         select(Work)
-        .options(*_WORK_OPTIONS)
+        .options(*_SUMMARY_OPTIONS)
         .join(Edition, Edition.work_id == Work.id)
         .where(Edition.publisher_id == publisher_id, Work.deleted_at.is_(None))
         .distinct()

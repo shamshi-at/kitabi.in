@@ -7,10 +7,15 @@ from app.core.config import get_settings
 
 
 def _normalize(url: str) -> str:
-    """Force the asyncpg driver explicitly — a plain postgresql:// URL would
-    silently pick asyncpg while skipping our pooler-safety connect_args."""
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    """Force the asyncpg driver explicitly. A plain `postgresql://` URL would
+    pick asyncpg but skip our pooler-safety connect_args; a `postgres://` URL
+    (what Railway/Supabase often hand out) would skip the driver AND the pool
+    config in `_engine_kwargs`, silently leaving connections un-pooled and slow
+    (every request pays a full cross-region reconnect). Normalize every Postgres
+    scheme to postgresql+asyncpg so the pool + connect args always apply."""
+    for scheme in ("postgresql+asyncpg://", "postgresql://", "postgres://"):
+        if url.startswith(scheme):
+            return "postgresql+asyncpg://" + url[len(scheme) :]
     return url
 
 
@@ -19,11 +24,14 @@ def _engine_kwargs(url: str) -> dict:
         # Supavisor TRANSACTION-mode pooler: no client-side statement caching,
         # and prepared-statement names must be unique per connection attempt or
         # pooled connections collide with DuplicatePreparedStatementError
-        # (bit rupee-diary in production, Jun 2026).
+        # (bit rupee-diary in production, Jun 2026). Keep a warm pool and recycle
+        # before Supavisor's idle timeout so requests reuse connections instead
+        # of reconnecting across regions on every call.
         return {
-            "pool_size": 5,
-            "max_overflow": 5,
+            "pool_size": 10,
+            "max_overflow": 10,
             "pool_pre_ping": True,
+            "pool_recycle": 280,
             "connect_args": {
                 "statement_cache_size": 0,
                 "prepared_statement_cache_size": 0,

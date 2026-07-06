@@ -266,6 +266,62 @@ async def test_browse_works_authors_publishers_paged(client):
     assert any(p["name"] == "Browse House 1" for p in publishers.json())
 
 
+async def test_browse_works_filter_and_sort(client):
+    await client.post(
+        "/catalog/works",
+        json={"title": "Older Book", "language": "Malayalam", "first_publish_year": 1970},
+    )
+    await client.post(
+        "/catalog/works",
+        json={"title": "Newer Book", "language": "Malayalam", "first_publish_year": 2010},
+    )
+    await client.post(
+        "/catalog/works",
+        json={"title": "Tamil Book", "language": "Tamil", "first_publish_year": 1990},
+    )
+
+    # Language filter.
+    mal = await client.get("/catalog/browse/works", params={"language": "Malayalam", "limit": 100})
+    titles = [w["title"] for w in mal.json()]
+    assert "Older Book" in titles and "Newer Book" in titles
+    assert "Tamil Book" not in titles
+
+    # Sort by newest first.
+    newest = await client.get(
+        "/catalog/browse/works", params={"language": "Malayalam", "sort": "year_desc", "limit": 100}
+    )
+    ny = [w["title"] for w in newest.json()]
+    assert ny.index("Newer Book") < ny.index("Older Book")
+
+    # Sort by oldest first.
+    oldest = await client.get(
+        "/catalog/browse/works", params={"language": "Malayalam", "sort": "year_asc", "limit": 100}
+    )
+    oy = [w["title"] for w in oldest.json()]
+    assert oy.index("Older Book") < oy.index("Newer Book")
+
+
+async def test_browse_works_sort_by_author(client):
+    await client.post("/catalog/works", json={"title": "Zeta Work", "author_names": ["Anand"]})
+    await client.post("/catalog/works", json={"title": "Alpha Work", "author_names": ["Zacharia"]})
+    resp = await client.get("/catalog/browse/works", params={"sort": "author", "limit": 100})
+    assert resp.status_code == 200
+    titles = [w["title"] for w in resp.json()]
+    # Sorted by author name (Anand before Zacharia), not by title.
+    assert titles.index("Zeta Work") < titles.index("Alpha Work")
+
+
+async def test_browse_languages_lists_distinct(client):
+    await client.post("/catalog/works", json={"title": "L1", "language": "Malayalam"})
+    await client.post("/catalog/works", json={"title": "L2", "language": "Tamil"})
+    await client.post("/catalog/works", json={"title": "L3", "language": "Malayalam"})
+    resp = await client.get("/catalog/browse/languages")
+    assert resp.status_code == 200
+    langs = resp.json()
+    assert "Malayalam" in langs and "Tamil" in langs
+    assert langs == sorted(langs)  # distinct + ordered
+
+
 async def test_edition_buy_links_wired_and_patchable(client):
     created = await client.post(
         "/catalog/works", json={"title": "Buyable", "isbn": "9789999999999"}

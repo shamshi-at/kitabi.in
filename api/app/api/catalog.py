@@ -59,9 +59,9 @@ async def search(db: DbSession, q: str = Query(min_length=1)) -> list[WorkSummar
 
 @router.get("/search/all", response_model=GlobalSearchOut)
 async def search_all(db: DbSession, q: str = Query(min_length=1)) -> GlobalSearchOut:
-    """Global search (S4) — books, authors, and publishers in one round-trip so
-    the app's search screen fills all three sections from a single request. The
-    personal-library section is searched locally on-device (Drift), not here."""
+    """Global search (S4) — books, authors, and publishers for the app's search
+    screen, in one request. The personal-library section is searched on-device
+    (Drift), not here."""
     works = await catalog_service.search_local(db, q)
     authors = await catalog_service.search_authors(db, q)
     publishers = await catalog_service.search_publishers(db, q)
@@ -77,10 +77,19 @@ async def browse_works(
     db: DbSession,
     limit: int = Query(default=40, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    language: str | None = Query(default=None),
+    sort: str = Query(default="title", pattern="^(title|year_desc|year_asc|author)$"),
 ) -> list[WorkSummaryOut]:
-    """Discover screen — every catalog book, alphabetical, paged (S4/browse)."""
-    works = await catalog_service.browse_works(db, limit, offset)
+    """Discover screen — catalog books, paged, filterable by language and
+    sortable by title / newest / oldest / author (S4/browse)."""
+    works = await catalog_service.browse_works(db, limit, offset, language=language, sort=sort)
     return [_summary(w) for w in works]
+
+
+@router.get("/browse/languages", response_model=list[str])
+async def browse_languages(db: DbSession) -> list[str]:
+    """Distinct catalog languages for the browse language filter."""
+    return await catalog_service.catalog_languages(db)
 
 
 @router.get("/browse/authors", response_model=list[AuthorOut])
