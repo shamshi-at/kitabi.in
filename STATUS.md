@@ -220,9 +220,11 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   selectinload's four round-trips (`_WORK_JOINED`); summary lists dropped the unused
   genres load; the engine now normalizes any `postgres://`/`postgresql://` scheme to
   asyncpg so the pool + pooler-safe connect args always apply, and keeps a warmer,
-  recycled pool. **Root cause of the remaining slowness is geographic** — even a warm
-  `SELECT 1` to the Supabase pooler is ~585ms because the API and DB aren't co-located
-  (see gaps). **Covers**: fixed the `TypesetCover` infinity bug (library-grid covers
+  recycled pool. **The remaining ~2s was geographic and is now fixed** — the Railway
+  service was running in `sfo` (US) while Supabase is in Singapore; pinning a single
+  Singapore replica via `railway.json` `multiRegionConfig` co-located them and took
+  every endpoint from ~2s to **~0.2–0.3s** (verified live). See the resolved gap below.
+  **Covers**: fixed the `TypesetCover` infinity bug (library-grid covers
   rendered blank because font/padding were computed off `width: infinity`; now via
   `LayoutBuilder`), and a `scripts/backfill_covers.py` filled real OpenLibrary covers
   for editions that have them (5/82 — regional titles have sparse coverage, the rest
@@ -421,20 +423,18 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Open decisions / known gaps
 
-- **⚠️ API ↔ DB are not co-located — this is the API-latency cause, and the fix
-  is a Railway dashboard action, not code.** Measured live: every request to
-  `api.kitabi.in` is ~2s, and **four rapid back-to-back requests are all ~2s** —
-  so it is NOT an idle-reconnect (that would only hit the first). It is the
-  per-query round-trip cost (pre-ping + asyncpg's Parse/Bind/Execute/Close with
-  the Supavisor-required statement cache off = several round-trips) multiplied by
-  a high Railway→Supabase RTT. From a machine nearer Singapore the same warm query
-  is ~0.19–0.59s; through Railway it's ~2s, so Railway is far from Supabase
-  (Supabase is in **Singapore**; Railway defaults to US). **Fix: set the Railway
-  service region to Singapore (`asia-southeast1`)** in the Railway dashboard so it
-  sits next to Supabase — that collapses the RTT to single-digit ms and takes every
-  endpoint well under the 1s target. The code round-trip reductions that landed
-  (single joined work fetch → book detail ~0.19s locally, lighter summary loads)
-  compound with co-location but can't beat the cross-region RTT on their own.
+- ~~**API ↔ DB not co-located**~~ — **RESOLVED 6 Jul 2026.** The ~2s-per-request
+  latency was the Railway service running in **`sfo` (US)** while Supabase is in
+  **Singapore** — every query paid the cross-region RTT. Root cause found via
+  `railway status --json`: a leftover dashboard `multiRegionConfig` pinned the
+  replica to `sfo`, so setting `deploy.region` alone didn't move it. Fixed in
+  config-as-code (`api/railway.json`) by declaring
+  `deploy.multiRegionConfig: {"asia-southeast1-eqsg3a": {numReplicas: 1}}`, which
+  replaced the US placement with a single Singapore replica next to the DB.
+  **Verified live: 2s → ~0.2–0.3s on every catalog endpoint** (book detail 2.0→0.2s,
+  browse 4.7→0.23s, search 5.7→0.24s). The code round-trip reductions (single joined
+  work fetch, lighter summary loads) compound on top. If a second region/replica is
+  ever added, keep at least one replica co-located with Supabase's region.
 
 - **No Apple Distribution certificate in this local environment** — only an Apple
   Development identity exists in this Keychain, so IPAs built here via
