@@ -944,4 +944,105 @@ class AppLocalizationsEn extends AppLocalizations {
   String homeNudgeNoDue(String title, String name) {
     return '$title is with $name';
   }
+
+  @override
+  String get searchTitle => 'Search';
+
+  @override
+  String get catalogSearchSectionAuthors => 'AUTHORS';
+
+  @override
+  String get catalogSearchSectionPublishers => 'PUBLISHERS';
+
+  @override
+  String searchAuthorWorks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'works',
+      one: 'work',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String get formAuthorAddButton => '＋ Add or choose an author';
+
+  @override
+  String get formPublisherChoose => 'Choose a publisher';
+
+  @override
+  String get authorPickerTitle => 'Author';
+
+  @override
+  String get authorPickerSearchHint => 'Search authors by name';
+
+  @override
+  String get authorPickerEmpty => 'No authors match — add a new one below.';
+
+  @override
+  String get authorPickerAddNew => 'Add a new author';
+
+  @override
+  String authorPickerLanguage(String language) {
+    return 'Writes in $language';
+  }
+
+  @override
+  String get publisherPickerTitle => 'Publisher';
+
+  @override
+  String get publisherPickerSearchHint => 'Search publishers by name';
+
+  @override
+  String get publisherPickerEmpty =>
+      'No publishers match — add a new one below.';
+
+  @override
+  String get publisherPickerAddNew => 'Add a new publisher';
+
+  @override
+  String get pickerFieldName => 'NAME';
+
+  @override
+  String get pickerFieldLanguage => 'PRIMARY LANGUAGE · optional';
+
+  @override
+  String get pickerFieldImageUrl => 'IMAGE URL · optional';
+
+  @override
+  String get pickerFieldLogoUrl => 'LOGO URL · optional';
+
+  @override
+  String get pickerFieldBio => 'BIO · optional';
+
+  @override
+  String get pickerNameRequired => 'A name is required';
+
+  @override
+  String get pickerSaveAuthor => 'Add this author';
+
+  @override
+  String get pickerSavePublisher => 'Add this publisher';
+
+  @override
+  String get shareAction => 'Share';
+
+  @override
+  String shareBookLinkText(String title, String author, String url) {
+    return '$title by $author — on Kitabi\n$url';
+  }
+
+  @override
+  String shareAuthorLinkText(String name, String url) {
+    return '$name on Kitabi\n$url';
+  }
+
+  @override
+  String sharePublisherLinkText(String name, String url) {
+    return '$name on Kitabi\n$url';
+  }
+
+  @override
+  String get shareFailed => 'Couldn\'t open the share sheet. Try again.';
 }

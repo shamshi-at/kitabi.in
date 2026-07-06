@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../l10n/app_localizations.dart';
@@ -49,6 +51,14 @@ class PublisherBrowseScreen extends ConsumerWidget {
                           .textTheme
                           .labelMedium
                           ?.copyWith(color: AppColors.inkSoft),
+                    ),
+                    Spacer(),
+                    IconButton(
+                      icon: Icon(Icons.ios_share, color: AppColors.oxblood),
+                      tooltip: l10n.shareAction,
+                      onPressed: () => Share.share(
+                        l10n.sharePublisherLinkText(name, publisherShareUrl(publisherId)),
+                      ),
                     ),
                   ],
                 ),

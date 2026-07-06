@@ -29,13 +29,20 @@ class HomeScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                icon: Icon(Icons.person_outline, color: AppColors.oxblood),
-                tooltip: l10n.profileEntry,
-                onPressed: () => context.push(Routes.profile),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.search, color: AppColors.oxblood),
+                  tooltip: l10n.searchTitle,
+                  onPressed: () => context.push(Routes.catalogSearch),
+                ),
+                IconButton(
+                  icon: Icon(Icons.person_outline, color: AppColors.oxblood),
+                  tooltip: l10n.profileEntry,
+                  onPressed: () => context.push(Routes.profile),
+                ),
+              ],
             ),
             Expanded(
               child: RefreshIndicator(

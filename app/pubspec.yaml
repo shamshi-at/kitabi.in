@@ -41,6 +41,11 @@ dependencies:
   # Share a book — render a card to an image and hand it to the OS share sheet
   share_plus: ^10.1.2
 
+  # Incoming universal/app links (kitabi.in/b|a|p/:id) → open the right screen.
+  # Already present transitively (supabase uses it for the OAuth callback);
+  # declared directly here for the content deep-link listener.
+  app_links: ^6.3.2
+
   # CSV import — pick a file (S2). file_selector is the Flutter-team plugin.
   file_selector: ^1.0.3
 

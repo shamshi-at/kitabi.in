@@ -83,6 +83,14 @@ class ApiClient {
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
+  /// Global search (S4) — books, authors, and publishers in one round-trip.
+  /// Returns `{works, authors, publishers}`. The personal-library section is
+  /// searched separately on-device (Drift), not here.
+  Future<Map<String, dynamic>> searchAll(String query) async {
+    final res = await _dio.get('/catalog/search/all', queryParameters: {'q': query});
+    return res.data as Map<String, dynamic>;
+  }
+
   /// ISBN scan flow (S7) — local match first, else OpenLibrary, cached
   /// server-side either way.
   Future<Map<String, dynamic>> lookupIsbn(String isbn) async {
@@ -115,6 +123,19 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> searchPublishers(String query) async {
     final res = await _dio.get('/catalog/publishers', queryParameters: {'q': query});
     return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Author picker "add new" — create a catalog author with details
+  /// (name, image, primary language, bio). Idempotent on name server-side.
+  Future<Map<String, dynamic>> createAuthor(Map<String, dynamic> payload) async {
+    final res = await _dio.post('/catalog/authors', data: payload);
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Publisher picker "add new" — create a catalog publisher with details.
+  Future<Map<String, dynamic>> createPublisher(Map<String, dynamic> payload) async {
+    final res = await _dio.post('/catalog/publishers', data: payload);
+    return res.data as Map<String, dynamic>;
   }
 
   /// Update an edition's fields (e.g. a user-uploaded cover URL) — S7b.

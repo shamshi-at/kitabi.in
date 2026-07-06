@@ -1079,5 +1079,86 @@
       "title": {"type": "String"},
       "name": {"type": "String"}
     }
-  }
+  },
+  "searchTitle": "Search",
+  "@searchTitle": {"description": "Title/tooltip for the global search entry point"},
+  "catalogSearchSectionAuthors": "AUTHORS",
+  "@catalogSearchSectionAuthors": {"description": "Section header above author search results"},
+  "catalogSearchSectionPublishers": "PUBLISHERS",
+  "@catalogSearchSectionPublishers": {"description": "Section header above publisher search results"},
+  "searchAuthorWorks": "{count} {count, plural, one{work} other{works}}",
+  "@searchAuthorWorks": {
+    "description": "Trailing count on an author search result",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "formAuthorAddButton": "＋ Add or choose an author",
+  "@formAuthorAddButton": {"description": "Button on the add-book form that opens the author picker"},
+  "formPublisherChoose": "Choose a publisher",
+  "@formPublisherChoose": {"description": "Placeholder on the add-book form's publisher field before one is chosen"},
+  "authorPickerTitle": "Author",
+  "@authorPickerTitle": {"description": "Title of the author picker page"},
+  "authorPickerSearchHint": "Search authors by name",
+  "@authorPickerSearchHint": {"description": "Search field hint on the author picker"},
+  "authorPickerEmpty": "No authors match — add a new one below.",
+  "@authorPickerEmpty": {"description": "Empty state on the author picker"},
+  "authorPickerAddNew": "Add a new author",
+  "@authorPickerAddNew": {"description": "Expands the add-new-author form on the picker"},
+  "authorPickerLanguage": "Writes in {language}",
+  "@authorPickerLanguage": {
+    "description": "Primary-language line under an author in the picker",
+    "placeholders": {"language": {"type": "String"}}
+  },
+  "publisherPickerTitle": "Publisher",
+  "@publisherPickerTitle": {"description": "Title of the publisher picker page"},
+  "publisherPickerSearchHint": "Search publishers by name",
+  "@publisherPickerSearchHint": {"description": "Search field hint on the publisher picker"},
+  "publisherPickerEmpty": "No publishers match — add a new one below.",
+  "@publisherPickerEmpty": {"description": "Empty state on the publisher picker"},
+  "publisherPickerAddNew": "Add a new publisher",
+  "@publisherPickerAddNew": {"description": "Expands the add-new-publisher form on the picker"},
+  "pickerFieldName": "NAME",
+  "@pickerFieldName": {"description": "Name field label on the author/publisher picker add-new form"},
+  "pickerFieldLanguage": "PRIMARY LANGUAGE · optional",
+  "@pickerFieldLanguage": {"description": "Primary-language field label on the picker add-new form"},
+  "pickerFieldImageUrl": "IMAGE URL · optional",
+  "@pickerFieldImageUrl": {"description": "Image-URL field label on the author picker add-new form"},
+  "pickerFieldLogoUrl": "LOGO URL · optional",
+  "@pickerFieldLogoUrl": {"description": "Logo-URL field label on the publisher picker add-new form"},
+  "pickerFieldBio": "BIO · optional",
+  "@pickerFieldBio": {"description": "Bio field label on the author picker add-new form"},
+  "pickerNameRequired": "A name is required",
+  "@pickerNameRequired": {"description": "Validation message for the picker name field"},
+  "pickerSaveAuthor": "Add this author",
+  "@pickerSaveAuthor": {"description": "Submit button on the author picker add-new form"},
+  "pickerSavePublisher": "Add this publisher",
+  "@pickerSavePublisher": {"description": "Submit button on the publisher picker add-new form"},
+  "shareAction": "Share",
+  "@shareAction": {"description": "Generic share button tooltip/label"},
+  "shareBookLinkText": "{title} by {author} — on Kitabi\n{url}",
+  "@shareBookLinkText": {
+    "description": "Text put on the clipboard / share sheet with a real book link",
+    "placeholders": {
+      "title": {"type": "String"},
+      "author": {"type": "String"},
+      "url": {"type": "String"}
+    }
+  },
+  "shareAuthorLinkText": "{name} on Kitabi\n{url}",
+  "@shareAuthorLinkText": {
+    "description": "Share text for an author link",
+    "placeholders": {
+      "name": {"type": "String"},
+      "url": {"type": "String"}
+    }
+  },
+  "sharePublisherLinkText": "{name} on Kitabi\n{url}",
+  "@sharePublisherLinkText": {
+    "description": "Share text for a publisher link",
+    "placeholders": {
+      "name": {"type": "String"},
+      "url": {"type": "String"}
+    }
+  },
+  "shareFailed": "Couldn't open the share sheet. Try again.",
+  "@shareFailed": {"description": "Snackbar when the OS share sheet fails to open"}
 }

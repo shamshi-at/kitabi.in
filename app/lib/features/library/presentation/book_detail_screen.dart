@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/haptics.dart';
+import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
@@ -338,6 +339,7 @@ class _ShareButton extends ConsumerWidget {
           context,
           title: work['title'] as String,
           author: authors.isNotEmpty ? authors.first['name'] as String : '',
+          shareUrl: bookShareUrl(workId),
           coverUrl: edition?['cover_url'] as String?,
           blurb: work['description'] as String?,
           catalogRating: catalog,

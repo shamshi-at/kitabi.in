@@ -1677,6 +1677,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{title} is with {name}'**
   String homeNudgeNoDue(String title, String name);
+
+  /// Title/tooltip for the global search entry point
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchTitle;
+
+  /// Section header above author search results
+  ///
+  /// In en, this message translates to:
+  /// **'AUTHORS'**
+  String get catalogSearchSectionAuthors;
+
+  /// Section header above publisher search results
+  ///
+  /// In en, this message translates to:
+  /// **'PUBLISHERS'**
+  String get catalogSearchSectionPublishers;
+
+  /// Trailing count on an author search result
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, one{work} other{works}}'**
+  String searchAuthorWorks(int count);
+
+  /// Button on the add-book form that opens the author picker
+  ///
+  /// In en, this message translates to:
+  /// **'＋ Add or choose an author'**
+  String get formAuthorAddButton;
+
+  /// Placeholder on the add-book form's publisher field before one is chosen
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a publisher'**
+  String get formPublisherChoose;
+
+  /// Title of the author picker page
+  ///
+  /// In en, this message translates to:
+  /// **'Author'**
+  String get authorPickerTitle;
+
+  /// Search field hint on the author picker
+  ///
+  /// In en, this message translates to:
+  /// **'Search authors by name'**
+  String get authorPickerSearchHint;
+
+  /// Empty state on the author picker
+  ///
+  /// In en, this message translates to:
+  /// **'No authors match — add a new one below.'**
+  String get authorPickerEmpty;
+
+  /// Expands the add-new-author form on the picker
+  ///
+  /// In en, this message translates to:
+  /// **'Add a new author'**
+  String get authorPickerAddNew;
+
+  /// Primary-language line under an author in the picker
+  ///
+  /// In en, this message translates to:
+  /// **'Writes in {language}'**
+  String authorPickerLanguage(String language);
+
+  /// Title of the publisher picker page
+  ///
+  /// In en, this message translates to:
+  /// **'Publisher'**
+  String get publisherPickerTitle;
+
+  /// Search field hint on the publisher picker
+  ///
+  /// In en, this message translates to:
+  /// **'Search publishers by name'**
+  String get publisherPickerSearchHint;
+
+  /// Empty state on the publisher picker
+  ///
+  /// In en, this message translates to:
+  /// **'No publishers match — add a new one below.'**
+  String get publisherPickerEmpty;
+
+  /// Expands the add-new-publisher form on the picker
+  ///
+  /// In en, this message translates to:
+  /// **'Add a new publisher'**
+  String get publisherPickerAddNew;
+
+  /// Name field label on the author/publisher picker add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'NAME'**
+  String get pickerFieldName;
+
+  /// Primary-language field label on the picker add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'PRIMARY LANGUAGE · optional'**
+  String get pickerFieldLanguage;
+
+  /// Image-URL field label on the author picker add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'IMAGE URL · optional'**
+  String get pickerFieldImageUrl;
+
+  /// Logo-URL field label on the publisher picker add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'LOGO URL · optional'**
+  String get pickerFieldLogoUrl;
+
+  /// Bio field label on the author picker add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'BIO · optional'**
+  String get pickerFieldBio;
+
+  /// Validation message for the picker name field
+  ///
+  /// In en, this message translates to:
+  /// **'A name is required'**
+  String get pickerNameRequired;
+
+  /// Submit button on the author picker add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'Add this author'**
+  String get pickerSaveAuthor;
+
+  /// Submit button on the publisher picker add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'Add this publisher'**
+  String get pickerSavePublisher;
+
+  /// Generic share button tooltip/label
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get shareAction;
+
+  /// Text put on the clipboard / share sheet with a real book link
+  ///
+  /// In en, this message translates to:
+  /// **'{title} by {author} — on Kitabi\n{url}'**
+  String shareBookLinkText(String title, String author, String url);
+
+  /// Share text for an author link
+  ///
+  /// In en, this message translates to:
+  /// **'{name} on Kitabi\n{url}'**
+  String shareAuthorLinkText(String name, String url);
+
+  /// Share text for a publisher link
+  ///
+  /// In en, this message translates to:
+  /// **'{name} on Kitabi\n{url}'**
+  String sharePublisherLinkText(String name, String url);
+
+  /// Snackbar when the OS share sheet fails to open
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the share sheet. Try again.'**
+  String get shareFailed;
 }
 
 class _AppLocalizationsDelegate

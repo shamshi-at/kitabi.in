@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/data/api/api_client.dart';
 import 'package:kitabi/features/catalog/presentation/add_edit_book_screen.dart';
 import 'package:kitabi/features/catalog/presentation/author_browse_screen.dart';
+import 'package:kitabi/features/catalog/presentation/author_picker_screen.dart';
 import 'package:kitabi/features/catalog/presentation/catalog_search_screen.dart';
 import 'package:kitabi/features/catalog/presentation/publisher_browse_screen.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
@@ -59,6 +60,20 @@ class _FakeApiClient extends ApiClient {
         'edition': (work['editions'] as List).first,
       },
     ];
+  }
+
+  @override
+  Future<Map<String, dynamic>> searchAll(String query) async {
+    return {
+      'works': await searchCatalog(query),
+      'authors': <Map<String, dynamic>>[],
+      'publishers': <Map<String, dynamic>>[],
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> createAuthor(Map<String, dynamic> payload) async {
+    return {'id': _authorId, ...payload};
   }
 
   @override
@@ -197,32 +212,22 @@ void main() {
     expect(fake.lastCreatePayload?['title'], 'Oru Deshathinte Katha');
   });
 
-  testWidgets('author field suggests an existing author and adds it as a chip', (tester) async {
+  testWidgets('author picker searches and surfaces an existing author', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     final fake = _FakeApiClient();
-    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpWidget(_wrap(const AuthorPickerScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextFormField).first, 'Ente Katha');
-    // Target the author input by its hint (TextFormField also wraps a TextField,
-    // so byType(TextField) alone would match the title field too).
-    final authorField = find.byWidgetPredicate(
-      (w) => w is TextField && w.decoration?.hintText == 'Type to search or add an author',
-    );
-    await tester.enterText(authorField, 'Kam');
+    await tester.enterText(find.byType(TextField).first, 'Kam');
     await tester.pump(const Duration(milliseconds: 300)); // clear the debounce
     await tester.pumpAndSettle();
 
-    expect(find.text('Kamala Das'), findsOneWidget); // the suggestion tile
-    await tester.tap(find.text('Kamala Das'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Save to catalog'));
-    await tester.pumpAndSettle();
-
-    expect(fake.lastCreatePayload?['author_names'], contains('Kamala Das'));
+    // The catalog author appears as a selectable result tile.
+    expect(find.text('Kamala Das'), findsOneWidget);
+    // …and the "add a new author" affordance is offered alongside.
+    expect(find.text('Add a new author'), findsOneWidget);
   });
 
   testWidgets('edit form pre-fills from the existing work', (tester) async {

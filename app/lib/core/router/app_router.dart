@@ -6,9 +6,12 @@ import '../../features/activity/presentation/activity_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/catalog/presentation/add_edit_book_screen.dart';
 import '../../features/catalog/presentation/author_browse_screen.dart';
+import '../../features/catalog/presentation/author_picker_screen.dart';
+import '../../features/catalog/presentation/book_link_resolver_screen.dart';
 import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
 import '../../features/catalog/presentation/publisher_browse_screen.dart';
+import '../../features/catalog/presentation/publisher_picker_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/import_books/presentation/import_screen.dart';
 import '../../features/insights/presentation/insights_screen.dart';
@@ -36,8 +39,16 @@ abstract final class Routes {
   static const catalogSearch = '/catalog/search';
   static const catalogScan = '/catalog/scan';
   static const catalogAdd = '/catalog/add';
+  static const authorPicker = '/catalog/author-picker';
+  static const publisherPicker = '/catalog/publisher-picker';
   static const authorBrowse = '/catalog/authors/:authorId';
   static const publisherBrowse = '/catalog/publishers/:publisherId';
+  // Short, shareable/deep-link paths that mirror the landing page's public
+  // pages (kitabi.in/b/:id, /a/:id, /p/:id). Registering them here means an
+  // opened universal link lands on the right screen in-app.
+  static const bookLink = '/b/:workId';
+  static const authorLink = '/a/:authorId';
+  static const publisherLink = '/p/:publisherId';
   static const library = '/library';
   static const lendingLedger = '/lending';
   static const insights = '/insights';
@@ -213,6 +224,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => AddEditBookScreen(workId: state.extra as String?),
       ),
       GoRoute(
+        path: Routes.authorPicker,
+        name: 'author-picker',
+        builder: (context, state) => AuthorPickerScreen(),
+      ),
+      GoRoute(
+        path: Routes.publisherPicker,
+        name: 'publisher-picker',
+        builder: (context, state) => PublisherPickerScreen(),
+      ),
+      GoRoute(
         path: Routes.authorBrowse,
         name: 'author-browse',
         builder: (context, state) =>
@@ -221,6 +242,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.publisherBrowse,
         name: 'publisher-browse',
+        builder: (context, state) =>
+            PublisherBrowseScreen(publisherId: state.pathParameters['publisherId']!),
+      ),
+      // Deep-link / share-link targets — short paths that mirror kitabi.in.
+      GoRoute(
+        path: Routes.bookLink,
+        name: 'book-link',
+        builder: (context, state) =>
+            BookLinkResolverScreen(workId: state.pathParameters['workId']!),
+      ),
+      GoRoute(
+        path: Routes.authorLink,
+        name: 'author-link',
+        builder: (context, state) =>
+            AuthorBrowseScreen(authorId: state.pathParameters['authorId']!),
+      ),
+      GoRoute(
+        path: Routes.publisherLink,
+        name: 'publisher-link',
         builder: (context, state) =>
             PublisherBrowseScreen(publisherId: state.pathParameters['publisherId']!),
       ),

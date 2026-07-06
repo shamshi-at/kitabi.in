@@ -12,6 +12,17 @@ final catalogSearchProvider =
   return ref.watch(apiClientProvider).searchCatalog(query.trim());
 });
 
+/// Global search (S4) — books, authors, and publishers from the catalog in one
+/// request. Returns `{works, authors, publishers}` (each a `List<Map>`); the
+/// personal-library section is searched separately on-device (Drift).
+final globalSearchProvider =
+    FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, query) async {
+  if (query.trim().isEmpty) {
+    return const {'works': [], 'authors': [], 'publishers': []};
+  }
+  return ref.watch(apiClientProvider).searchAll(query.trim());
+});
+
 final authorWorksProvider =
     FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, authorId) {
   return ref.watch(apiClientProvider).getAuthorWorks(authorId);

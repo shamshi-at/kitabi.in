@@ -41,6 +41,18 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="in.kitabi.kitabi" android:host="login-callback"/>
             </intent-filter>
+            <!-- Shareable content links (kitabi.in/b|a|p/:id) → open in-app.
+                 autoVerify uses the assetlinks.json at kitabi.in/.well-known;
+                 the real signing SHA-256 must be filled in there first. Handled
+                 by the content deep-link listener (core/deep_links.dart). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/b/"/>
+                <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/a/"/>
+                <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/p/"/>
+            </intent-filter>
         </activity>
         <!-- flutter_local_notifications: reschedule reminders after a reboot. -->
         <receiver

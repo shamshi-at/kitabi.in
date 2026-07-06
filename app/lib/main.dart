@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'core/auth/supabase_auth_service.dart';
+import 'core/deep_links.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'data/sync/background_sync.dart';
@@ -32,6 +33,7 @@ class KitabiApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(connectivitySyncProvider); // activates the listener once
+    ref.watch(deepLinkListenerProvider); // routes kitabi.in share links into the app
     final router = ref.watch(routerProvider);
     final dark = ref.watch(themeModeControllerProvider);
     return MaterialApp.router(

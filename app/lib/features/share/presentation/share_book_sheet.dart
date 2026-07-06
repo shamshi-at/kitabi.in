@@ -16,6 +16,7 @@ Future<void> showShareBookSheet(
   BuildContext context, {
   required String title,
   required String author,
+  required String shareUrl,
   String? coverUrl,
   String? blurb,
   double? catalogRating,
@@ -32,6 +33,7 @@ Future<void> showShareBookSheet(
     builder: (_) => _ShareSheet(
       title: title,
       author: author,
+      shareUrl: shareUrl,
       coverUrl: coverUrl,
       blurb: blurb,
       catalogRating: catalogRating,
@@ -45,6 +47,7 @@ class _ShareSheet extends StatefulWidget {
   const _ShareSheet({
     required this.title,
     required this.author,
+    required this.shareUrl,
     required this.coverUrl,
     required this.blurb,
     required this.catalogRating,
@@ -54,6 +57,7 @@ class _ShareSheet extends StatefulWidget {
 
   final String title;
   final String author;
+  final String shareUrl;
   final String? coverUrl;
   final String? blurb;
   final double? catalogRating;
@@ -72,30 +76,59 @@ class _ShareSheetState extends State<_ShareSheet> {
   bool get _hasPersonal => widget.personalRating != null;
 
   Future<void> _shareCard() async {
-    final text = AppLocalizations.of(context)!.shareBookText(widget.title, widget.author);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    // The share text carries the real link, so even when a recipient can't see
+    // the image they still get a tappable book URL.
+    final text = l10n.shareBookLinkText(widget.title, widget.author, widget.shareUrl);
     setState(() => _sharing = true);
     try {
       final boundary =
-          _cardKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+          _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw StateError('share card not ready');
+      }
+      // The card can still be mid-paint on the first frame after the sheet
+      // opens; wait a frame so the capture isn't blank/partial.
+      if (boundary.debugNeedsPaint) {
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+      }
       final image = await boundary.toImage(pixelRatio: 3);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (bytes == null) return;
+      if (bytes == null) {
+        throw StateError('could not encode card');
+      }
       final file = XFile.fromData(
         bytes.buffer.asUint8List(),
         name: 'kitabi.png',
         mimeType: 'image/png',
       );
-      await Share.shareXFiles([file], text: text);
+      // sharePositionOrigin is required for the iPad popover; harmless on phones.
+      await Share.shareXFiles(
+        [file],
+        text: text,
+        sharePositionOrigin: _originRect(),
+      );
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.shareFailed)));
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
   }
 
+  /// iPad requires an anchor rect for the share popover — use the sheet's own
+  /// bounds, falling back to a sane default if the box isn't laid out.
+  Rect _originRect() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box != null && box.hasSize) {
+      return box.localToGlobal(Offset.zero) & box.size;
+    }
+    return const Rect.fromLTWH(0, 0, 1, 1);
+  }
+
   Future<void> _copyLink() async {
     final l10n = AppLocalizations.of(context)!;
-    await Clipboard.setData(
-      ClipboardData(text: l10n.shareBookText(widget.title, widget.author)),
-    );
+    await Clipboard.setData(ClipboardData(text: widget.shareUrl));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.shareLinkCopied)),

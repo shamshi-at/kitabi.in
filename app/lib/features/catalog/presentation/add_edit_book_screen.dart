@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
@@ -67,15 +66,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
   late final TextEditingController _language;
   late final TextEditingController _series;
   late final TextEditingController _seriesNumber;
-  late final TextEditingController _publisher;
   late final TextEditingController _pages;
   late final TextEditingController _isbn;
   late final TextEditingController _customGenres;
   late String _format;
   late final Set<String> _selectedGenres;
-  // Authors are now a chip list (dropdown-cum-add-new) rather than a raw
-  // comma-separated string, so each author is a discrete, de-duplicatable token.
-  final List<String> _authorNames = [];
+  // Authors and publisher are chosen via the dedicated picker pages, so each
+  // carries its canonical catalog id (falling back to name for legacy data).
+  final List<Map<String, dynamic>> _authors = [];
+  Map<String, dynamic>? _publisher;
   bool _saving = false;
 
   Map<String, dynamic>? get _edition {
@@ -91,9 +90,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final genreNames =
         (work?['genres'] as List?)?.map((g) => (g as Map)['name'] as String).toSet() ?? <String>{};
 
-    _authorNames.addAll(
-      (work?['authors'] as List?)?.map((a) => (a as Map)['name'] as String) ?? const <String>[],
+    _authors.addAll(
+      (work?['authors'] as List?)?.map((a) => Map<String, dynamic>.from(a as Map)) ??
+          const <Map<String, dynamic>>[],
     );
+    final publisher = edition?['publisher'] as Map?;
+    if (publisher != null) _publisher = Map<String, dynamic>.from(publisher);
     _title = TextEditingController(text: work?['title'] as String? ?? '');
     // Live cover preview (S7b): the typeset cover mirrors the title/author as
     // they're typed, so a keystroke redraws it.
@@ -102,8 +104,6 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _series = TextEditingController(text: (edition?['series'] as Map?)?['name'] as String? ?? '');
     _seriesNumber =
         TextEditingController(text: edition?['series_number']?.toString() ?? '');
-    _publisher =
-        TextEditingController(text: (edition?['publisher'] as Map?)?['name'] as String? ?? '');
     _pages = TextEditingController(text: edition?['page_count']?.toString() ?? '');
     _isbn = TextEditingController(text: edition?['isbn'] as String? ?? '');
     _format = edition?['format'] as String? ?? _formats.first;
@@ -124,7 +124,6 @@ class _BookFormState extends ConsumerState<_BookForm> {
       _language,
       _series,
       _seriesNumber,
-      _publisher,
       _pages,
       _isbn,
       _customGenres,
@@ -137,11 +136,24 @@ class _BookFormState extends ConsumerState<_BookForm> {
   List<String> _splitNames(String raw) =>
       raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
-  void _addAuthor(String name) {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return;
-    if (_authorNames.any((a) => a.toLowerCase() == trimmed.toLowerCase())) return;
-    setState(() => _authorNames.add(trimmed));
+  Future<void> _pickAuthor() async {
+    final result = await context.push<Map<String, dynamic>>(Routes.authorPicker);
+    if (result == null) return;
+    final id = result['id'] as String?;
+    final name = (result['name'] as String? ?? '').trim();
+    if (name.isEmpty) return;
+    // De-dupe by id when present, else by case-insensitive name.
+    final already = _authors.any(
+      (a) => id != null ? a['id'] == id : (a['name'] as String).toLowerCase() == name.toLowerCase(),
+    );
+    if (already) return;
+    setState(() => _authors.add(result));
+  }
+
+  Future<void> _pickPublisher() async {
+    final result = await context.push<Map<String, dynamic>>(Routes.publisherPicker);
+    if (result == null) return;
+    setState(() => _publisher = result);
   }
 
   Future<void> _save() async {
@@ -149,12 +161,23 @@ class _BookFormState extends ConsumerState<_BookForm> {
     setState(() => _saving = true);
 
     final genres = {..._selectedGenres, ..._splitNames(_customGenres.text)}.toList();
+    final publisherId = _publisher?['id'] as String?;
     final payload = {
       'title': _title.text.trim(),
       'language': _language.text.trim().isEmpty ? null : _language.text.trim(),
-      'author_names': _authorNames,
+      // Ids for picker-chosen authors; names only for anything without one.
+      'author_ids': [
+        for (final a in _authors)
+          if (a['id'] != null) a['id'] as String,
+      ],
+      'author_names': [
+        for (final a in _authors)
+          if (a['id'] == null) a['name'] as String,
+      ],
       'genre_names': genres,
-      'publisher_name': _publisher.text.trim().isEmpty ? null : _publisher.text.trim(),
+      'publisher_id': publisherId,
+      'publisher_name':
+          publisherId == null ? (_publisher?['name'] as String?) : null,
       'series_name': _series.text.trim().isEmpty ? null : _series.text.trim(),
       'series_number': int.tryParse(_seriesNumber.text.trim()),
       'isbn': _isbn.text.trim().isEmpty ? null : _isbn.text.trim(),
@@ -222,7 +245,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
             children: [
               TypesetCover(
                 title: _title.text.isEmpty ? '…' : _title.text,
-                author: _authorNames.isEmpty ? null : _authorNames.first,
+                author: _authors.isEmpty ? null : _authors.first['name'] as String?,
                 coverUrl: _edition?['cover_url'] as String?,
                 width: 40,
                 height: 60,
@@ -244,10 +267,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
           ),
           SizedBox(height: 10),
           _AuthorField(
-            authors: _authorNames,
-            onAdd: _addAuthor,
-            onRemove: (name) => setState(() => _authorNames.remove(name)),
-            fetch: (q) => ref.read(apiClientProvider).searchAuthors(q),
+            authors: _authors,
+            onAdd: _pickAuthor,
+            onRemove: (author) => setState(() => _authors.remove(author)),
           ),
           SizedBox(height: 10),
           Row(
@@ -280,12 +302,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
             ],
           ),
           SizedBox(height: 10),
-          _TypeaheadField(
+          _PickerButtonField(
             label: l10n.formFieldPublisher,
-            controller: _publisher,
-            hintText: l10n.formPublisherHint,
-            fetch: (q) => ref.read(apiClientProvider).searchPublishers(q),
-            onSelected: (_) {},
+            value: _publisher?['name'] as String?,
+            placeholder: l10n.formPublisherChoose,
+            onTap: _pickPublisher,
+            onClear: _publisher == null ? null : () => setState(() => _publisher = null),
           ),
           SizedBox(height: 10),
           Row(
@@ -368,35 +390,19 @@ TextStyle get _fieldLabelStyle => TextStyle(
       fontWeight: FontWeight.w600,
     );
 
-/// Author input (S7b) — a "dropdown cum add new" chip field: existing catalog
-/// authors are suggested as you type (so you pick the canonical one rather
-/// than coining a near-duplicate), and anything you type is addable as-is.
-/// Multiple authors are kept as discrete chips instead of a comma string.
-class _AuthorField extends StatefulWidget {
+/// Author input (S7b) — chips for the authors already chosen (each carries its
+/// catalog id) plus a button that opens the full author picker page, where you
+/// search existing authors (with portrait + language) or add a new one.
+class _AuthorField extends StatelessWidget {
   const _AuthorField({
     required this.authors,
     required this.onAdd,
     required this.onRemove,
-    required this.fetch,
   });
 
-  final List<String> authors;
-  final void Function(String) onAdd;
-  final void Function(String) onRemove;
-  final Future<List<Map<String, dynamic>>> Function(String) fetch;
-
-  @override
-  State<_AuthorField> createState() => _AuthorFieldState();
-}
-
-class _AuthorFieldState extends State<_AuthorField> {
-  final _input = TextEditingController();
-
-  @override
-  void dispose() {
-    _input.dispose();
-    super.dispose();
-  }
+  final List<Map<String, dynamic>> authors;
+  final VoidCallback onAdd;
+  final void Function(Map<String, dynamic>) onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -406,17 +412,17 @@ class _AuthorFieldState extends State<_AuthorField> {
       children: [
         Text(l10n.formFieldAuthor, style: _fieldLabelStyle),
         SizedBox(height: 4),
-        if (widget.authors.isNotEmpty)
+        if (authors.isNotEmpty)
           Padding(
             padding: EdgeInsets.only(bottom: 6),
             child: Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
-                for (final name in widget.authors)
+                for (final author in authors)
                   Chip(
-                    label: Text(name, style: TextStyle(fontSize: 12)),
-                    onDeleted: () => widget.onRemove(name),
+                    label: Text(author['name'] as String, style: TextStyle(fontSize: 12)),
+                    onDeleted: () => onRemove(author),
                     backgroundColor: AppColors.goldSoft,
                     side: BorderSide.none,
                     visualDensity: VisualDensity.compact,
@@ -424,177 +430,80 @@ class _AuthorFieldState extends State<_AuthorField> {
               ],
             ),
           ),
-        _TypeaheadField(
-          controller: _input,
-          hintText: l10n.formAuthorAddHint,
-          fetch: widget.fetch,
-          clearOnSelect: true,
-          onSelected: widget.onAdd,
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: onAdd,
+            icon: Icon(Icons.person_add_alt, size: 18),
+            label: Text(l10n.formAuthorAddButton),
+          ),
         ),
       ],
     );
   }
 }
 
-/// A text field backed by server-side typeahead suggestions, with an
-/// "Add …" affordance so the typed value is always usable even when nothing
-/// matches — the reusable half of the dropdown-cum-add-new pattern.
-class _TypeaheadField extends StatefulWidget {
-  const _TypeaheadField({
-    required this.controller,
-    required this.fetch,
-    required this.onSelected,
-    this.label,
-    this.hintText,
-    this.clearOnSelect = false,
+/// A labelled, tappable field that opens a picker page and shows the chosen
+/// value (or a placeholder) — used for the publisher field on the add-book
+/// form. A clear button removes the current selection.
+class _PickerButtonField extends StatelessWidget {
+  const _PickerButtonField({
+    required this.label,
+    required this.value,
+    required this.placeholder,
+    required this.onTap,
+    this.onClear,
   });
 
-  final TextEditingController controller;
-  final Future<List<Map<String, dynamic>>> Function(String) fetch;
-  final void Function(String) onSelected;
-  final String? label;
-  final String? hintText;
-
-  /// Author mode: commit clears the input (ready for the next chip). Publisher
-  /// mode (false): commit fills the field with the chosen value.
-  final bool clearOnSelect;
-
-  @override
-  State<_TypeaheadField> createState() => _TypeaheadFieldState();
-}
-
-class _TypeaheadFieldState extends State<_TypeaheadField> {
-  Timer? _debounce;
-  List<String> _suggestions = [];
-  String _query = '';
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    super.dispose();
-  }
-
-  void _onChanged(String value) {
-    final query = value.trim();
-    setState(() => _query = query);
-    _debounce?.cancel();
-    if (query.isEmpty) {
-      setState(() => _suggestions = []);
-      return;
-    }
-    _debounce = Timer(Duration(milliseconds: 250), () => _fetch(query));
-  }
-
-  Future<void> _fetch(String query) async {
-    try {
-      final rows = await widget.fetch(query);
-      if (!mounted || query != _query) return;
-      setState(() => _suggestions = rows.map((r) => r['name'] as String).toList());
-    } catch (_) {
-      if (mounted) setState(() => _suggestions = []);
-    }
-  }
-
-  void _select(String name) {
-    final value = name.trim();
-    if (value.isEmpty) return;
-    widget.onSelected(value);
-    if (widget.clearOnSelect) {
-      widget.controller.clear();
-    } else {
-      widget.controller.text = value;
-    }
-    setState(() {
-      _suggestions = [];
-      _query = '';
-    });
-  }
+  final String label;
+  final String? value;
+  final String placeholder;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final showAddNew =
-        _query.isNotEmpty && !_suggestions.any((s) => s.toLowerCase() == _query.toLowerCase());
-
+    final hasValue = value != null && value!.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.label != null) ...[
-          Text(widget.label!, style: _fieldLabelStyle),
-          SizedBox(height: 4),
-        ],
-        TextField(
-          controller: widget.controller,
-          textInputAction: TextInputAction.done,
-          onChanged: _onChanged,
-          onSubmitted: _select,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: AppColors.card,
-            hintText: widget.hintText,
-            hintStyle: TextStyle(fontSize: 13, color: AppColors.inkSoft),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppColors.line),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppColors.line),
-            ),
-          ),
-        ),
-        if (_suggestions.isNotEmpty || showAddNew)
-          Container(
-            margin: EdgeInsets.only(top: 4),
+        Text(label, style: _fieldLabelStyle),
+        SizedBox(height: 4),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.paper,
+              color: AppColors.card,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppColors.line),
             ),
-            child: Column(
+            child: Row(
               children: [
-                for (final name in _suggestions)
-                  InkWell(
-                    onTap: () => _select(name),
-                    child: Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      child: Text(
-                        name,
-                        style: TextStyle(fontSize: 13, color: AppColors.ink),
-                      ),
+                Expanded(
+                  child: Text(
+                    hasValue ? value! : placeholder,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: hasValue ? AppColors.ink : AppColors.inkSoft,
                     ),
                   ),
-                if (showAddNew)
-                  InkWell(
-                    onTap: () => _select(_query),
-                    child: Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      child: Row(
-                        children: [
-                          Icon(Icons.add, size: 15, color: AppColors.oxblood),
-                          SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              l10n.formAddNew(_query),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.oxblood,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                ),
+                if (hasValue && onClear != null)
+                  GestureDetector(
+                    onTap: onClear,
+                    child: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
+                  )
+                else
+                  Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
               ],
             ),
           ),
+        ),
       ],
     );
   }
