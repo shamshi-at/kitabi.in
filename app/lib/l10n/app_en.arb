@@ -340,6 +340,19 @@
       "total": {"type": "int"}
     }
   },
+  "bookProgressPage": "p. {page}",
+  "@bookProgressPage": {
+    "description": "Progress card value when the total page count is unknown",
+    "placeholders": {
+      "page": {"type": "int"}
+    }
+  },
+  "lendReadingWarnTitle": "You're reading this",
+  "@lendReadingWarnTitle": {"description": "Title of the warning when lending a book that's currently being read"},
+  "lendReadingWarnBody": "This book is on your Reading shelf. Lend it out anyway?",
+  "@lendReadingWarnBody": {"description": "Body of the reading-state lend warning"},
+  "lendReadingWarnConfirm": "Lend anyway",
+  "@lendReadingWarnConfirm": {"description": "Confirm lending a book that's being read"},
   "bookStartedLabel": "STARTED",
   "@bookStartedLabel": {
     "description": "Eyebrow label for the start date on the progress card"
@@ -440,6 +453,15 @@
   "libraryTitle": "My Library",
   "@libraryTitle": {
     "description": "Title on the personal library grid screen"
+  },
+  "libraryBorrowedSection": "Borrowed",
+  "@libraryBorrowedSection": {
+    "description": "Header for the borrowed-books section in the library"
+  },
+  "libraryBorrowedFrom": "FROM {name}",
+  "@libraryBorrowedFrom": {
+    "description": "Band on a borrowed book cover naming the lender",
+    "placeholders": {"name": {"type": "String"}}
   },
   "libraryBookCount": "{count} {count, plural, one{book} other{books}}",
   "@libraryBookCount": {
@@ -717,6 +739,14 @@
   "@connectionsAcceptedSection": {
     "description": "Section header for accepted connections"
   },
+  "connectionLoansLent": "Lent to them",
+  "@connectionLoansLent": {"description": "Section header — books lent to this connection"},
+  "connectionLoansBorrowed": "Borrowed from them",
+  "@connectionLoansBorrowed": {"description": "Section header — books borrowed from this connection"},
+  "connectionLoansEmpty": "No books lent or borrowed with them yet.",
+  "@connectionLoansEmpty": {"description": "Empty state on the per-connection loans screen"},
+  "connectionLoanReturned": "Returned",
+  "@connectionLoanReturned": {"description": "Marks a loan that's been returned"},
   "connectionsRejectedSection": "Declined — you can resend",
   "@connectionsRejectedSection": {
     "description": "Section header for requests the other person declined"
@@ -1335,6 +1365,10 @@
   "@pickerImageUploadFailed": {"description": "Snackbar when an author/publisher image upload fails"},
   "formSeriesHelp": "Leave blank if it's a standalone book",
   "@formSeriesHelp": {"description": "Helper text under the Series field on the add-book form"},
+  "formSeriesToggle": "Part of a series",
+  "@formSeriesToggle": {"description": "Toggle that reveals the series fields on the add-book form"},
+  "formSeriesHint": "Add the series name and this book's place in it — e.g. “Malgudi Days” · 2.",
+  "@formSeriesHint": {"description": "Help text shown when the series fields are revealed"},
   "formBookNumberHelp": "Its place in the series, e.g. 2",
   "@formBookNumberHelp": {"description": "Helper text under the Book № field on the add-book form"},
   "formAuthorAddAnother": "＋ Add another author",

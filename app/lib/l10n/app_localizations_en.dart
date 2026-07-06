@@ -298,6 +298,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String bookProgressPage(int page) {
+    return 'p. $page';
+  }
+
+  @override
+  String get lendReadingWarnTitle => 'You\'re reading this';
+
+  @override
+  String get lendReadingWarnBody =>
+      'This book is on your Reading shelf. Lend it out anyway?';
+
+  @override
+  String get lendReadingWarnConfirm => 'Lend anyway';
+
+  @override
   String get bookStartedLabel => 'STARTED';
 
   @override
@@ -378,6 +393,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryTitle => 'My Library';
+
+  @override
+  String get libraryBorrowedSection => 'Borrowed';
+
+  @override
+  String libraryBorrowedFrom(String name) {
+    return 'FROM $name';
+  }
 
   @override
   String libraryBookCount(int count) {
@@ -594,6 +617,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connectionsAcceptedSection => 'Connected';
+
+  @override
+  String get connectionLoansLent => 'Lent to them';
+
+  @override
+  String get connectionLoansBorrowed => 'Borrowed from them';
+
+  @override
+  String get connectionLoansEmpty => 'No books lent or borrowed with them yet.';
+
+  @override
+  String get connectionLoanReturned => 'Returned';
 
   @override
   String get connectionsRejectedSection => 'Declined — you can resend';
@@ -1243,6 +1278,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get formSeriesHelp => 'Leave blank if it\'s a standalone book';
+
+  @override
+  String get formSeriesToggle => 'Part of a series';
+
+  @override
+  String get formSeriesHint =>
+      'Add the series name and this book\'s place in it — e.g. “Malgudi Days” · 2.';
 
   @override
   String get formBookNumberHelp => 'Its place in the series, e.g. 2';

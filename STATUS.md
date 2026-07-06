@@ -150,6 +150,18 @@ user auto-link. **No push notifications yet** — approvals surface via the pull
 FCM-send from the API would need a new Firebase service-account credential (CLAUDE.md rule 8);
 push is the natural follow-up.
 
+**Cross-user lending** (added 7 Jul 2026): loans now flow between connected readers.
+When you lend to an **accepted connection**, the server **mirrors** it onto the borrower's
+account — a linked `direction='borrowed'` record (`lend_mirror_service`, correlated by
+`linked_loan_id`, gated on `connection_service.are_connected`, run *after* the lender's sync
+op commits so a mirror failure never rejects the loan; tracks returns/soft-deletes; 3 tests).
+It pulls to the borrower via the normal cursor and appears on their **Borrowed** shelf. New
+`GET /catalog/editions/{id}` → the Work for an edition, so the borrower's app can hydrate a
+borrowed book it never added (`cacheBorrowedBooks`). App: a separate **Borrowed section** in
+the library (slate "FROM X" band), and tapping a connection opens a **per-connection loans**
+screen (lent to / borrowed from them). Also this session: progress card page-count fix
+("p. 50 of 109", not "of 50"), and a warning before lending a book you're currently Reading.
+
 **Reader languages** (added 7 Jul 2026): `profiles.preferred_languages` (JSONB list, migration
 `000015`) on `/me`. Captured in a one-time onboarding step after sign-in (router gates on it —
 re-asks until ≥1 is set, server-side so it follows the account across devices), editable in the

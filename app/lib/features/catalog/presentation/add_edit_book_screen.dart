@@ -78,6 +78,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
   // Optional; null when unset. A dropdown, not free text — so the catalog stays
   // consistent ("Malayalam", not "malayalam"/"mal"/"Malyalam").
   String? _language;
+  // Series fields are hidden behind a toggle (most books are standalone); on by
+  // default only when editing a book that already has a series.
+  bool _hasSeries = false;
   late final Set<String> _selectedGenres;
   // Authors and publisher are chosen via the dedicated picker pages, so each
   // carries its canonical catalog id (falling back to name for legacy data).
@@ -121,6 +124,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _title.addListener(_onCoverChanged);
     _language = work?['language'] as String?;
     _series = TextEditingController(text: (edition?['series'] as Map?)?['name'] as String? ?? '');
+    _hasSeries = (edition?['series'] as Map?)?['name'] != null;
     _seriesNumber =
         TextEditingController(text: edition?['series_number']?.toString() ?? '');
     _pages = TextEditingController(text: edition?['page_count']?.toString() ?? '');
@@ -219,7 +223,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
 
       if (edition != null) {
         final series = (edition['series'] as Map?)?['name'] as String?;
-        if (series != null && series.isNotEmpty) _series.text = series;
+        if (series != null && series.isNotEmpty) {
+          _series.text = series;
+          _hasSeries = true; // a scanned series reveals the fields
+        }
         final seriesNumber = edition['series_number'];
         if (seriesNumber != null) _seriesNumber.text = seriesNumber.toString();
         final pages = edition['page_count'];
@@ -293,8 +300,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
       'publisher_id': publisherId,
       'publisher_name':
           publisherId == null ? (_publisher?['name'] as String?) : null,
-      'series_name': _series.text.trim().isEmpty ? null : _series.text.trim(),
-      'series_number': int.tryParse(_seriesNumber.text.trim()),
+      'series_name': _hasSeries && _series.text.trim().isNotEmpty ? _series.text.trim() : null,
+      'series_number': _hasSeries ? int.tryParse(_seriesNumber.text.trim()) : null,
       'isbn': _isbn.text.trim().isEmpty ? null : _isbn.text.trim(),
       'page_count': int.tryParse(_pages.text.trim()),
       'format': _format,
@@ -411,29 +418,38 @@ class _BookFormState extends ConsumerState<_BookForm> {
             onRemove: (author) => setState(() => _authors.remove(author)),
           ),
           SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 14,
-                child: _Field(
-                  label: l10n.formFieldSeries,
-                  controller: _series,
-                  helper: l10n.formSeriesHelp,
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                flex: 10,
-                child: _Field(
-                  label: l10n.formFieldBookNumber,
-                  controller: _seriesNumber,
-                  keyboardType: TextInputType.number,
-                  helper: l10n.formBookNumberHelp,
-                ),
-              ),
-            ],
+          _SeriesToggle(
+            label: l10n.formSeriesToggle,
+            value: _hasSeries,
+            onChanged: (v) => setState(() => _hasSeries = v),
           ),
+          if (_hasSeries) ...[
+            SizedBox(height: 8),
+            Text(
+              l10n.formSeriesHint,
+              style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.3),
+            ),
+            SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 14,
+                  child: _Field(label: l10n.formFieldSeries, controller: _series),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  flex: 10,
+                  child: _Field(
+                    label: l10n.formFieldBookNumber,
+                    controller: _seriesNumber,
+                    keyboardType: TextInputType.number,
+                    helper: l10n.formBookNumberHelp,
+                  ),
+                ),
+              ],
+            ),
+          ],
           SizedBox(height: 10),
           Row(
             children: [
@@ -894,6 +910,41 @@ class _IsbnScanField extends StatelessWidget {
   }
 }
 
+/// The "Part of a series" toggle that reveals/hides the series fields.
+class _SeriesToggle extends StatelessWidget {
+  const _SeriesToggle({required this.label, required this.value, required this.onChanged});
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onChanged(!value),
+      child: Row(
+        children: [
+          Icon(Icons.collections_bookmark_outlined, size: 16, color: AppColors.inkSoft),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+            ),
+          ),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: AppColors.paper,
+            activeTrackColor: AppColors.oxblood,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DropdownField extends StatelessWidget {
   const _DropdownField({
     required this.label,
@@ -933,6 +984,9 @@ class _DropdownField extends StatelessWidget {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
+              // Trims ~8px so the dropdown matches the dense text fields beside
+              // it (e.g. Language ↔ Pages, Format ↔ ISBN).
+              isDense: true,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -1004,6 +1058,9 @@ class _LanguageField extends StatelessWidget {
             child: DropdownButton<String?>(
               value: value,
               isExpanded: true,
+              // Trims ~8px so the dropdown matches the dense text fields beside
+              // it (e.g. Language ↔ Pages, Format ↔ ISBN).
+              isDense: true,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,

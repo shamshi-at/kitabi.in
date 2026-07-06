@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/haptics.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../data/api/api_client.dart';
@@ -112,6 +114,10 @@ class ConnectionsScreen extends ConsumerWidget {
                     _ConnectionCard(
                       user: c.other,
                       subtitle: c.other.username != null ? '@${c.other.username}' : null,
+                      onTap: () => context.push(
+                        Routes.connectionLoans,
+                        extra: {'userId': c.other.id, 'name': c.other.display},
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -171,25 +177,33 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _ConnectionCard extends StatelessWidget {
-  const _ConnectionCard({required this.user, required this.subtitle, required this.trailing});
+  const _ConnectionCard({
+    required this.user,
+    required this.subtitle,
+    required this.trailing,
+    this.onTap,
+  });
 
   final ConnectionUser user;
   final String? subtitle;
   final Widget trailing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final name = user.display.replaceAll('@', '');
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    return Container(
-      margin: EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Row(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Row(
         children: [
           Container(
             width: 40,
@@ -232,6 +246,7 @@ class _ConnectionCard extends StatelessWidget {
           SizedBox(width: 8),
           trailing,
         ],
+        ),
       ),
     );
   }

@@ -172,6 +172,21 @@ class LendingRecordsDao extends DatabaseAccessor<AppDatabase> with _$LendingReco
   Future<void> patch(String id, LendingRecordsCompanion patch) =>
       (update(lendingRecords)..where((t) => t.id.equals(id))).write(patch);
 
+  /// Edition ids of active borrowed books — used to hydrate their catalog data
+  /// (a borrowed book was never added by this reader, so it isn't cached).
+  Future<List<String>> activeBorrowedEditionIds() async {
+    final rows = await (selectOnly(lendingRecords, distinct: true)
+          ..addColumns([lendingRecords.editionId])
+          ..where(
+            lendingRecords.direction.equals('borrowed') &
+                lendingRecords.deletedAt.isNull() &
+                lendingRecords.editionId.isNotNull(),
+          ))
+        .map((r) => r.read(lendingRecords.editionId))
+        .get();
+    return rows.whereType<String>().toList();
+  }
+
   /// Distinct counterparties this reader has lent to / borrowed from before —
   /// their private contacts, offered as quick-pick suggestions when logging a
   /// new loan. Newest-used first.

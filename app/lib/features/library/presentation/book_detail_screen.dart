@@ -1011,6 +1011,10 @@ class _ProgressCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    // Total pages come from the edition (via the offline cache), not the current
+    // page — the old code passed currentPage as both, so it read "p. 50 of 50".
+    final total = ref.watch(cachedBookProvider(entry.editionId)).valueOrNull?.pageCount;
+    final page = entry.currentPage;
     return _Card(
       child: Row(
         children: [
@@ -1023,9 +1027,11 @@ class _ProgressCard extends ConsumerWidget {
                   style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
                 ),
                 Text(
-                  entry.currentPage != null
-                      ? l10n.bookProgressValue(entry.currentPage!, entry.currentPage!)
-                      : '—',
+                  page == null
+                      ? '—'
+                      : (total != null
+                          ? l10n.bookProgressValue(page, total)
+                          : l10n.bookProgressPage(page)),
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 ),
               ],
@@ -1302,8 +1308,29 @@ class _LendingCard extends ConsumerWidget {
   final LibraryEntry entry;
 
   Future<void> _lend(BuildContext context, WidgetRef ref) async {
+    // Warn before lending a book you're still reading — an easy way to lose your
+    // spot / your copy mid-read.
+    if (entry.status == 'reading') {
+      final l10n = AppLocalizations.of(context)!;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.lendReadingWarnTitle),
+          content: Text(l10n.lendReadingWarnBody),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.lendReadingWarnConfirm),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
     // The lend flow (S9) is a bottom sheet; pull the cached book so it can show
     // the cover + title the same way the ledger does.
+    if (!context.mounted) return;
     final book = await ref.read(cachedBookProvider(entry.editionId).future);
     if (!context.mounted) return;
     await showLendSheet(

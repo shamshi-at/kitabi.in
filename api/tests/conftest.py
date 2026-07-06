@@ -119,6 +119,11 @@ def user() -> dict:
     return {"id": str(uuid.uuid4()), "email": "tester@example.com"}
 
 
+@pytest.fixture
+def user_b() -> dict:
+    return {"id": str(uuid.uuid4()), "email": "second@example.com"}
+
+
 class FakeOpenLibraryClient:
     """Never touches the network — tests supply canned responses so the
     catalog suite is fast and deterministic. A real lookup was verified

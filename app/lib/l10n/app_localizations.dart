@@ -598,6 +598,30 @@ abstract class AppLocalizations {
   /// **'p. {page} of {total}'**
   String bookProgressValue(int page, int total);
 
+  /// Progress card value when the total page count is unknown
+  ///
+  /// In en, this message translates to:
+  /// **'p. {page}'**
+  String bookProgressPage(int page);
+
+  /// Title of the warning when lending a book that's currently being read
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re reading this'**
+  String get lendReadingWarnTitle;
+
+  /// Body of the reading-state lend warning
+  ///
+  /// In en, this message translates to:
+  /// **'This book is on your Reading shelf. Lend it out anyway?'**
+  String get lendReadingWarnBody;
+
+  /// Confirm lending a book that's being read
+  ///
+  /// In en, this message translates to:
+  /// **'Lend anyway'**
+  String get lendReadingWarnConfirm;
+
   /// Eyebrow label for the start date on the progress card
   ///
   /// In en, this message translates to:
@@ -735,6 +759,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My Library'**
   String get libraryTitle;
+
+  /// Header for the borrowed-books section in the library
+  ///
+  /// In en, this message translates to:
+  /// **'Borrowed'**
+  String get libraryBorrowedSection;
+
+  /// Band on a borrowed book cover naming the lender
+  ///
+  /// In en, this message translates to:
+  /// **'FROM {name}'**
+  String libraryBorrowedFrom(String name);
 
   /// Book count subtitle on the library grid screen
   ///
@@ -1089,6 +1125,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connected'**
   String get connectionsAcceptedSection;
+
+  /// Section header — books lent to this connection
+  ///
+  /// In en, this message translates to:
+  /// **'Lent to them'**
+  String get connectionLoansLent;
+
+  /// Section header — books borrowed from this connection
+  ///
+  /// In en, this message translates to:
+  /// **'Borrowed from them'**
+  String get connectionLoansBorrowed;
+
+  /// Empty state on the per-connection loans screen
+  ///
+  /// In en, this message translates to:
+  /// **'No books lent or borrowed with them yet.'**
+  String get connectionLoansEmpty;
+
+  /// Marks a loan that's been returned
+  ///
+  /// In en, this message translates to:
+  /// **'Returned'**
+  String get connectionLoanReturned;
 
   /// Section header for requests the other person declined
   ///
@@ -2211,6 +2271,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leave blank if it\'s a standalone book'**
   String get formSeriesHelp;
+
+  /// Toggle that reveals the series fields on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Part of a series'**
+  String get formSeriesToggle;
+
+  /// Help text shown when the series fields are revealed
+  ///
+  /// In en, this message translates to:
+  /// **'Add the series name and this book\'s place in it — e.g. “Malgudi Days” · 2.'**
+  String get formSeriesHint;
 
   /// Helper text under the Book № field on the add-book form
   ///

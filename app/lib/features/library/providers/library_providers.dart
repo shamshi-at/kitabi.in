@@ -40,6 +40,16 @@ final libraryHitsProvider = StreamProvider.autoDispose<List<LibraryHit>>((ref) a
   yield* repo.watchWithBooks();
 });
 
+/// Books currently borrowed from others (active, not returned) — their own
+/// section in the library. Derived from the lending ledger; each carries the
+/// cached book (once hydrated) and the lender's name on the record.
+final borrowedBooksProvider = Provider.autoDispose<List<LendingWithBook>>((ref) {
+  final all = ref.watch(allLendingProvider).valueOrNull ?? const <LendingWithBook>[];
+  return all
+      .where((r) => r.record.direction == 'borrowed' && r.record.returnedDate == null)
+      .toList();
+});
+
 /// Global search over the personal library (S4) — the "in your library" section.
 final librarySearchProvider =
     FutureProvider.autoDispose.family<List<LibraryHit>, String>((ref, query) async {

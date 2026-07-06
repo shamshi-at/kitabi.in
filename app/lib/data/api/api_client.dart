@@ -221,6 +221,13 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// The Work containing an edition — used to hydrate a borrowed book the reader
+  /// never added themselves (their loan record only has the edition id).
+  Future<Map<String, dynamic>> getWorkByEdition(String editionId) async {
+    final res = await _dio.get('/catalog/editions/$editionId');
+    return (res.data as Map<String, dynamic>);
+  }
+
   Future<Map<String, dynamic>> getWork(String workId) async {
     final res = await _dio.get('/catalog/works/$workId');
     return res.data as Map<String, dynamic>;

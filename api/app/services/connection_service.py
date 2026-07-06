@@ -95,6 +95,13 @@ async def status_with(db: AsyncSession, me: uuid.UUID, other_id: uuid.UUID) -> C
     return to_status(await _pair(db, me, other_id), me)
 
 
+async def are_connected(db: AsyncSession, a: uuid.UUID, b: uuid.UUID) -> bool:
+    """True iff a and b have an accepted connection — the gate for mirroring a
+    loan onto the counterparty's account."""
+    conn = await _pair(db, a, b)
+    return conn is not None and conn.status == "accepted"
+
+
 async def list_for(db: AsyncSession, me: uuid.UUID) -> ConnectionsOut:
     rows = list(
         (

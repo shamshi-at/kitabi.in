@@ -23,6 +23,7 @@ import '../../features/library/presentation/book_detail_screen.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
 import '../../features/onboarding/onboarding_providers.dart';
 import '../../features/onboarding/presentation/welcome_screen.dart';
+import '../../features/connections/presentation/connection_loans_screen.dart';
 import '../../features/connections/presentation/connections_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/recommendations/presentation/recommendations_screen.dart';
@@ -67,6 +68,7 @@ abstract final class Routes {
   static const library = '/library';
   static const lendingLedger = '/lending';
   static const connections = '/connections';
+  static const connectionLoans = '/connections/loans';
   static const insights = '/insights';
   static const recommendations = '/recommendations';
   static const importBooks = '/import';
@@ -230,6 +232,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.profile,
         name: 'profile',
         builder: (context, state) => ProfileScreen(),
+      ),
+      GoRoute(
+        path: Routes.connectionLoans,
+        name: 'connection-loans',
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>? ?? const {};
+          return ConnectionLoansScreen(
+            userId: args['userId'] as String,
+            name: args['name'] as String? ?? '',
+          );
+        },
       ),
       GoRoute(
         path: Routes.connections,

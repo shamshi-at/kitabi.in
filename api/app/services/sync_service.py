@@ -38,6 +38,7 @@ from app.schemas.sync import (
     SyncOpResult,
     SyncPullOut,
 )
+from app.services import lend_mirror_service
 
 CONFLICT_RETENTION = timedelta(days=30)
 
@@ -225,6 +226,9 @@ async def apply_ops(
     db: AsyncSession, user_id: uuid.UUID, ops: list[SyncOpIn]
 ) -> list[SyncOpResult]:
     results: list[SyncOpResult] = []
+    # Lending records that applied — mirrored onto the borrower's account after
+    # the main commit (so a mirror failure can't reject the lender's own op).
+    lending_applied: list[uuid.UUID] = []
 
     for op in ops:
         existing_op = await db.get(SyncOp, op.op_id)
@@ -266,10 +270,21 @@ async def apply_ops(
             await _persist_conflict(db, user_id, conflict)
         if activity is not None:
             await _log_activity(db, user_id, activity)
+        if op.entity == "lending_records" and result.status == "applied":
+            lending_applied.append(op.entity_id)
 
         results.append(result)
 
     await db.commit()
+
+    # Mirror outgoing loans onto linked borrowers' accounts — best-effort, each
+    # isolated so one failure never affects the lender's committed ops.
+    for record_id in lending_applied:
+        try:
+            await lend_mirror_service.mirror_lending(db, user_id, record_id)
+        except Exception:  # noqa: BLE001 — mirroring is a side effect, never fatal
+            await db.rollback()
+
     return results
 
 

@@ -38,11 +38,19 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   // re-trigger it in a loop.
   bool _coverRefreshTried = false;
 
+  bool _borrowedCacheTried = false;
+
   Future<void> _refreshMissingCovers() async {
     await refreshMissingCovers(
       ref.read(appDatabaseProvider),
       ref.read(apiClientProvider),
     );
+  }
+
+  /// Hydrate the catalog data for borrowed books (they were never added by this
+  /// reader, so aren't cached) so the Borrowed section can render them.
+  Future<void> _cacheBorrowed() async {
+    await cacheBorrowedBooks(ref.read(appDatabaseProvider), ref.read(apiClientProvider));
   }
 
   @override
@@ -78,12 +86,20 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
               _coverRefreshTried = true;
               WidgetsBinding.instance.addPostFrameCallback((_) => _refreshMissingCovers());
             }
+            final borrowed = ref.watch(borrowedBooksProvider);
+            // Hydrate any borrowed book missing its catalog data, once per mount.
+            if (!_borrowedCacheTried && borrowed.any((b) => b.book == null)) {
+              _borrowedCacheTried = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) => _cacheBorrowed());
+            }
             final filtered = all.where(_filter.matches).toList();
             return RefreshIndicator(
               color: AppColors.oxblood,
               onRefresh: () async {
                 ref.invalidate(libraryHitsProvider);
+                ref.invalidate(allLendingProvider);
                 await _refreshMissingCovers();
+                await _cacheBorrowed();
               },
               child: CustomScrollView(
               slivers: [
@@ -124,7 +140,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                     ),
                   ),
                 ),
-                if (filtered.isEmpty)
+                if (filtered.isEmpty && borrowed.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: all.isEmpty
@@ -143,9 +159,9 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                             title: l10n.libraryNoMatches,
                           ),
                   )
-                else
+                else if (filtered.isNotEmpty)
                   SliverPadding(
-                    padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    padding: EdgeInsets.fromLTRB(20, 8, 20, 16),
                     sliver: SliverGrid(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
@@ -159,6 +175,39 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                       ),
                     ),
                   ),
+                // A distinct "Borrowed" section — books lent to you by others,
+                // kept separate from what you own.
+                if (borrowed.isNotEmpty) ...[
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
+                    sliver: SliverToBoxAdapter(
+                      child: Text(
+                        l10n.libraryBorrowedSection.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                          color: AppColors.inkSoft,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(20, 4, 20, 24),
+                    sliver: SliverGrid(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 9,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 0.62,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _BorrowedGridItem(item: borrowed[index]),
+                        childCount: borrowed.length,
+                      ),
+                    ),
+                  ),
+                ],
               ],
               ),
             );
@@ -275,6 +324,80 @@ class _LibraryGridItem extends ConsumerWidget {
           ),
           SizedBox(height: 4),
           StatusPill(status: entry.status),
+        ],
+      ),
+    );
+  }
+}
+
+/// A borrowed book in the library's Borrowed section — the counterpart to
+/// [_LibraryGridItem], banded with who it's from and a slate "Borrowed" pill.
+class _BorrowedGridItem extends StatelessWidget {
+  const _BorrowedGridItem({required this.item});
+
+  final LendingWithBook item;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final book = item.book;
+    return GestureDetector(
+      onTap: book == null
+          ? null
+          : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                TypesetCover(
+                  title: book?.title ?? '…',
+                  author: book?.authorNames,
+                  coverUrl: book?.coverUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    color: const Color(0xEB43617E),
+                    padding: EdgeInsets.symmetric(vertical: 2),
+                    child: Text(
+                      l10n.libraryBorrowedFrom(item.record.borrowerName.toUpperCase()),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.paper,
+                        fontSize: 6.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.slate.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                l10n.libraryBorrowedSection,
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.slate),
+              ),
+            ),
+          ),
         ],
       ),
     );

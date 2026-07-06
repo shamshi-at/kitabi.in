@@ -195,6 +195,16 @@ async def create_edition(
     return EditionOut.model_validate(edition)
 
 
+@router.get("/editions/{edition_id}", response_model=WorkOut)
+async def get_edition_work(edition_id: uuid.UUID, db: DbSession) -> WorkOut:
+    """The Work that contains this edition — how a borrower's app hydrates a
+    borrowed book (its loan record carries only an edition id, and the reader
+    never added the book themselves so it isn't cached yet)."""
+    edition = await catalog_service.get_edition_or_404(db, edition_id)
+    work = await catalog_service.get_work_or_404(db, edition.work_id)
+    return await _work_out(db, work)
+
+
 @router.patch("/editions/{edition_id}", response_model=EditionOut)
 async def patch_edition(
     edition_id: uuid.UUID, payload: EditionUpdate, user: CurrentUser, db: DbSession

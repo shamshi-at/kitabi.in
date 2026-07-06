@@ -39,6 +39,33 @@ Future<void> cacheBookForOffline(
   );
 }
 
+/// Hydrate the catalog data for borrowed books so they can render (cover, title,
+/// author). A borrowed book was never added by this reader — it arrived as a
+/// mirrored loan record carrying only an edition id — so it isn't in the cache.
+/// Fetches the Work by edition and caches it. Online-only; failures are skipped.
+Future<int> cacheBorrowedBooks(AppDatabase db, ApiClient api) async {
+  final editionIds = await db.lendingRecordsDao.activeBorrowedEditionIds();
+  var cached = 0;
+  for (final editionId in editionIds) {
+    if (await db.cachedBooksDao.getByEditionId(editionId) != null) continue;
+    try {
+      final work = await api.getWorkByEdition(editionId);
+      final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final edition = editions.firstWhere(
+        (e) => e['id'] == editionId,
+        orElse: () => editions.isNotEmpty ? editions.first : <String, dynamic>{},
+      );
+      if (edition.isNotEmpty) {
+        await cacheBookForOffline(db, work, edition);
+        cached++;
+      }
+    } catch (_) {
+      // offline or gone — try again next refresh
+    }
+  }
+  return cached;
+}
+
 /// Re-fetch catalog data for every cached book that still has no cover and
 /// refresh its cache row — so covers added upstream after a book was cached
 /// (e.g. a metadata backfill) show up in the grid/home without re-adding the
