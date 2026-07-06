@@ -94,6 +94,16 @@ class ApiClient {
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
+  // --- Push notifications (FCM device tokens) ---
+
+  /// Register this install's FCM token for the signed-in user.
+  Future<void> registerDevice(String token, String platform) =>
+      _dio.post('/devices', data: {'token': token, 'platform': platform});
+
+  /// Drop this token on sign-out.
+  Future<void> unregisterDevice(String token) =>
+      _dio.delete('/devices', data: {'token': token});
+
   // --- Lending connections (peer-to-peer consent layer) ---
 
   /// The connections screen in one call: `{incoming, outgoing, accepted}`, each

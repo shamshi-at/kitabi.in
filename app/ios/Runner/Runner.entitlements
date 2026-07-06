@@ -6,6 +6,10 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<!-- Push notifications (FCM). "production" matches App Store / TestFlight
+	     builds; Firebase's .p8 APNs key delivers to both APNs environments. -->
+	<key>aps-environment</key>
+	<string>production</string>
 	<!-- Universal links for the shareable kitabi.in book/author/publisher pages.
 	     Requires the apple-app-site-association file hosted at kitabi.in with the
 	     app's Team ID filled in (landing-page/.well-known). -->

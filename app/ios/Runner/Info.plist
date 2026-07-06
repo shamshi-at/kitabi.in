@@ -16,6 +16,11 @@
 		<string>6.0</string>
 		<key>CFBundleName</key>
 		<string>kitabi</string>
+		<!-- FCM: allow background processing of remote notifications. -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+		</array>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>

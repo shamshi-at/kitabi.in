@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "42594718309",
+    "project_id": "kitabi-in",
+    "storage_bucket": "kitabi-in.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:42594718309:android:f6221c12bb338dd4726c8c",
+        "android_client_info": {
+          "package_name": "in.kitabi.kitabi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHYhv8pXZv2LSlVxTNNNJ0IOPHTI5WQSY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

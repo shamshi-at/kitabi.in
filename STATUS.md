@@ -128,7 +128,21 @@ not synced** (like `Profile`; the offline sync engine stays strictly per-user La
 disconnect — either party, resendable), `POST /{id}/block` + `/unblock` (migration
 `000013` adds `blocked_by`). A declined request can be **re-sent** (reopens to pending)
 until the recipient **blocks** it (terminal); mutual requests **auto-accept**. Auth
-required on all (`connection_service`, 9 tests). App: lending
+required on all (`connection_service`, 9 tests).
+
+**Push notifications (FCM)** (added 7 Jul 2026): first push pipeline. `device_tokens`
+table (migration `000014`, RLS) + `POST/DELETE /devices`. A tiny FCM HTTP v1 sender
+(`fcm_client`) using only PyJWT + httpx — **no firebase-admin dependency** — mints a
+service-account JWT, caches the access token, and POSTs `messages:send`; dead tokens
+auto-pruned. Fires (via FastAPI `BackgroundTasks`, off the response path) on connection
+request received + accepted. **Opt-in like recs** (CLAUDE.md rule 8): dormant unless
+`FIREBASE_CREDENTIALS` (the Firebase Admin service-account JSON) is set in the API env —
+now set in Railway. Firebase project `kitabi-in`; iOS + Android apps (bundle/package
+`in.kitabi.kitabi`); APNs `.p8` key uploaded. App: `firebase_core`/`firebase_messaging`,
+token registered with `/devices` on sign-in (cleared on sign-out), taps open the
+connections inbox; `GoogleService-Info.plist` added to the Runner target, `google-services`
+Gradle plugin, `aps-environment`/`remote-notification` wired. **Follow-up:** book
+returned/due pushes (need sync-engine hooks + a scheduler job) — infra is ready. App: lending
 to a Kitabi user fires a connection request on save (best-effort, offline-safe); the ledger
 shows a **Request pending → Linked** pill per lent card and a badged connections inbox
 (`ConnectionsScreen`, `/connections`) to approve/deny; once accepted, future lends to that

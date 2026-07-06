@@ -30,6 +30,7 @@ LOCAL_URL = "postgresql+asyncpg://postgres:test@localhost:55443/test"
 TABLES: list[str] = [
     "profiles",
     "connections",
+    "device_tokens",
     "conflict_history",
     "sync_ops",
     "activity_log_entries",

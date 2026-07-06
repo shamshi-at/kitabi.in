@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, BackgroundTasks, status
 
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.connection import (
@@ -8,7 +8,7 @@ from app.schemas.connection import (
     ConnectionsOut,
     ConnectionStatusOut,
 )
-from app.services import connection_service
+from app.services import connection_service, push_service
 
 router = APIRouter(prefix="/connections", tags=["connections"])
 
@@ -31,18 +31,36 @@ async def connection_status(
 
 @router.post("", response_model=ConnectionStatusOut, status_code=status.HTTP_201_CREATED)
 async def request_connection(
-    payload: ConnectionRequestIn, user: CurrentUser, db: DbSession
+    payload: ConnectionRequestIn,
+    user: CurrentUser,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
 ) -> ConnectionStatusOut:
     """Ask to connect (or, if they already asked you, this accepts). Idempotent:
     re-requesting an existing pending/accepted connection just returns it."""
     me = uuid.UUID(user["id"])
     conn = await connection_service.request(db, me, payload.addressee_id)
+    if conn.status == "pending" and conn.requester_id == me:
+        # I asked → let the addressee know (this is also the lend-to-a-user case).
+        background_tasks.add_task(push_service.notify_connection_request, me, conn.addressee_id)
+    elif conn.status == "accepted":
+        # Mutual request auto-accepted → tell the other side it's confirmed.
+        other = conn.requester_id if conn.addressee_id == me else conn.addressee_id
+        background_tasks.add_task(push_service.notify_connection_accepted, me, other)
     return connection_service.to_status(conn, me)
 
 
 @router.post("/{connection_id}/accept", status_code=status.HTTP_204_NO_CONTENT)
-async def accept_connection(connection_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
-    await connection_service.accept(db, uuid.UUID(user["id"]), connection_id)
+async def accept_connection(
+    connection_id: uuid.UUID,
+    user: CurrentUser,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+) -> None:
+    me = uuid.UUID(user["id"])
+    conn = await connection_service.accept(db, me, connection_id)
+    # Tell the original requester their request was accepted.
+    background_tasks.add_task(push_service.notify_connection_accepted, me, conn.requester_id)
 
 
 @router.post("/{connection_id}/decline", status_code=status.HTTP_204_NO_CONTENT)

@@ -37,9 +37,19 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     recs_model: str = "claude-haiku-4-5-20251001"
 
+    # Push notifications (FCM HTTP v1). Optional, opt-in like recs (rule 8): the
+    # owner pastes a Firebase Admin service-account JSON here (one string). Unset
+    # → push is dormant and every notify call is a no-op, no external request.
+    # project_id is read from the JSON, so no separate setting.
+    firebase_credentials: str = ""
+
     @property
     def recommendations_enabled(self) -> bool:
         return bool(self.anthropic_api_key)
+
+    @property
+    def push_enabled(self) -> bool:
+        return bool(self.firebase_credentials)
 
     @property
     def jwks_url(self) -> str:

@@ -1,7 +1,7 @@
 name: kitabi
 description: Kitabi — personal library, lending, and book discovery. Beyond the bookshelf.
 publish_to: "none"
-version: 0.1.0+8
+version: 0.1.0+9
 
 environment:
   sdk: ^3.12.2
@@ -34,9 +34,14 @@ dependencies:
   # Background sync drain
   workmanager: ^0.9.0
 
-  # Local due-date reminders for lending (all on-device — no server, no push)
+  # Local due-date reminders for lending (all on-device)
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4
+
+  # Push notifications (FCM) — connection requests/accepts. Dormant on a device
+  # until the user grants permission; the whole feature is gated server-side.
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
 
   # Share a book — render a card to an image and hand it to the OS share sheet
   share_plus: ^10.1.2
