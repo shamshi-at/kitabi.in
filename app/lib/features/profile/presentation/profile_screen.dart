@@ -11,6 +11,7 @@ import '../../../core/auth/auth_providers.dart';
 import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/language_chips.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../import_books/csv_export.dart';
@@ -93,6 +94,20 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     if (saved == true) ref.invalidate(meProvider);
   }
 
+  Future<void> _editLanguages() async {
+    final current = (widget.profile['preferred_languages'] as List?)?.cast<String>() ?? const [];
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _LanguagesSheet(current: current.toSet()),
+    );
+    if (saved == true) ref.invalidate(meProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -101,6 +116,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
     final createdAt = DateTime.tryParse(profile['created_at'] as String? ?? '');
     final username = profile['username'] as String?;
+    final langs = (profile['preferred_languages'] as List?)?.cast<String>() ?? const <String>[];
 
     return ListView(
       padding: EdgeInsets.all(20),
@@ -193,6 +209,37 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                   onChanged: (v) => _toggle('reviews_visible_default', v),
                 ),
               ],
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        Card(
+          child: InkWell(
+            onTap: _editLanguages,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Icon(Icons.translate, size: 18, color: AppColors.oxblood),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l10n.profileLanguagesTitle,
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        SizedBox(height: 2),
+                        Text(
+                          langs.isEmpty ? l10n.profileLanguagesEmpty : langs.join(' · '),
+                          style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
+                ],
+              ),
             ),
           ),
         ),
@@ -735,6 +782,74 @@ class _QuoteCardState extends State<_QuoteCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Edit the reader's languages — a multi-select over [kLanguages]. At least one
+/// must stay selected (an empty set would re-trigger the onboarding gate).
+class _LanguagesSheet extends ConsumerStatefulWidget {
+  const _LanguagesSheet({required this.current});
+
+  final Set<String> current;
+
+  @override
+  ConsumerState<_LanguagesSheet> createState() => _LanguagesSheetState();
+}
+
+class _LanguagesSheetState extends ConsumerState<_LanguagesSheet> {
+  late final Set<String> _sel = {...widget.current};
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (_sel.isEmpty) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(apiClientProvider).updateMe({'preferred_languages': _sel.toList()});
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.profileLanguagesSheetTitle, style: Theme.of(context).textTheme.titleLarge),
+          SizedBox(height: 16),
+          LanguageChips(
+            selected: _sel,
+            onToggle: (lang) => setState(
+              () => _sel.contains(lang) ? _sel.remove(lang) : _sel.add(lang),
+            ),
+          ),
+          SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (_sel.isEmpty || _saving) ? null : _save,
+              child: _saving
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+                    )
+                  : Text(l10n.profileLanguagesSave),
+            ),
+          ),
+        ],
       ),
     );
   }

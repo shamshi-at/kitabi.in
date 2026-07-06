@@ -5,17 +5,16 @@ import '../../data/sync/sync_providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
-/// A slim, global banner (in the nav shell) that makes offline-first sync
-/// visible: a quiet "Syncing…" while queued ops drain, and a tappable
-/// "some changes haven't synced" when ops have exhausted their retries.
-/// Invisible when everything is synced.
+/// A slim, global banner (in the nav shell) shown ONLY when sync has actually
+/// failed — a tappable "some changes haven't synced" after ops exhaust their
+/// retries. Routine syncing is silent/background: the transient "Syncing…"
+/// pill was removed (it read as noise for a background process).
 class SyncStatusBar extends ConsumerWidget {
   const SyncStatusBar({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final pending = ref.watch(unsyncedCountProvider).valueOrNull ?? 0;
     final errored = ref.watch(syncErrorCountProvider).valueOrNull ?? 0;
 
     if (errored > 0) {
@@ -28,9 +27,6 @@ class SyncStatusBar extends ConsumerWidget {
           ref.read(syncTriggerProvider)();
         },
       );
-    }
-    if (pending > 0) {
-      return _Bar(color: AppColors.gold, icon: Icons.sync, text: l10n.syncPending);
     }
     return SizedBox.shrink();
   }

@@ -246,6 +246,38 @@
   "@formLanguageUnset": {
     "description": "Placeholder option in the language dropdown when no language is chosen"
   },
+  "formLanguageProfileNote": "Add more languages in your profile to see them here.",
+  "@formLanguageProfileNote": {
+    "description": "Note under the book language dropdown pointing to profile settings"
+  },
+  "langPickerTitle": "Which languages do you read?",
+  "@langPickerTitle": {
+    "description": "Title of the onboarding reading-languages picker"
+  },
+  "langPickerSubtitle": "Pick one or more. We'll list these first when you add a book — you can change them anytime in your profile.",
+  "@langPickerSubtitle": {
+    "description": "Subtitle of the onboarding reading-languages picker"
+  },
+  "langPickerContinue": "Continue",
+  "@langPickerContinue": {
+    "description": "Button to save the picked reading languages and continue"
+  },
+  "profileLanguagesTitle": "Reading languages",
+  "@profileLanguagesTitle": {
+    "description": "Profile section header for the reader's languages"
+  },
+  "profileLanguagesEmpty": "Not set — tap to choose",
+  "@profileLanguagesEmpty": {
+    "description": "Shown in profile when no reading languages are set"
+  },
+  "profileLanguagesSheetTitle": "Languages you read",
+  "@profileLanguagesSheetTitle": {
+    "description": "Title of the profile reading-languages edit sheet"
+  },
+  "profileLanguagesSave": "Save",
+  "@profileLanguagesSave": {
+    "description": "Save reading languages"
+  },
   "formFieldSeries": "SERIES",
   "@formFieldSeries": {
     "description": "Form field label"

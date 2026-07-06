@@ -30,10 +30,18 @@ class ProfileOut(BaseModel):
     profile_visible: bool
     library_visible: bool
     reviews_visible_default: bool
+    # The reader's languages (e.g. ["Malayalam", "English"]) — set at onboarding,
+    # editable in profile; drives the add-book language dropdown.
+    preferred_languages: list[str] = []
     # Reputation total, computed at read time from contributions + activity.
     score: int = 0
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("preferred_languages", mode="before")
+    @classmethod
+    def _null_langs_to_empty(cls, v: object) -> object:
+        return v if v is not None else []
 
 
 class ProfileUpdate(BaseModel):
@@ -42,11 +50,25 @@ class ProfileUpdate(BaseModel):
     profile_visible: bool | None = None
     library_visible: bool | None = None
     reviews_visible_default: bool | None = None
+    preferred_languages: list[str] | None = None
 
     @field_validator("username")
     @classmethod
     def _validate_username(cls, v: str | None) -> str | None:
         return normalize_username(v)
+
+    @field_validator("preferred_languages")
+    @classmethod
+    def _clean_langs(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return None
+        # Trim, drop blanks, de-duplicate while preserving order.
+        seen: dict[str, None] = {}
+        for lang in v:
+            name = lang.strip()
+            if name:
+                seen.setdefault(name, None)
+        return list(seen.keys())
 
 
 class UsernameAvailableOut(BaseModel):

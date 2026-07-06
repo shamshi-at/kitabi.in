@@ -29,6 +29,8 @@ import '../../features/recommendations/presentation/recommendations_screen.dart'
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/update_gate/presentation/update_screen.dart';
 import '../../data/api/api_client.dart';
+import '../../features/onboarding/presentation/language_picker_screen.dart';
+import '../../features/profile/providers/profile_providers.dart';
 import '../auth/auth_providers.dart';
 import 'shell_scaffold.dart';
 
@@ -38,6 +40,7 @@ abstract final class Routes {
   static const signIn = '/sign-in';
   static const update = '/update';
   static const welcome = '/welcome';
+  static const languages = '/languages';
   static const home = '/home';
   static const profile = '/profile';
   static const catalogSearch = '/catalog/search';
@@ -85,6 +88,7 @@ class _RouterRefreshNotifier extends ChangeNotifier {
     ref.listen(bootstrapProvider, (_, _) => notifyListeners());
     ref.listen(updateRequiredProvider, (_, _) => notifyListeners());
     ref.listen(onboardingSeenProvider, (_, _) => notifyListeners());
+    ref.listen(meProvider, (_, _) => notifyListeners()); // preferred-languages gate
   }
 }
 
@@ -130,7 +134,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (onboarding.valueOrNull == false) {
         return loc == Routes.welcome ? null : Routes.welcome;
       }
-      if (loc == Routes.splash || loc == Routes.signIn || loc == Routes.welcome) {
+
+      // Ask for reading languages once (after the welcome). Server-side, so it
+      // re-asks on any device until at least one is set.
+      final me = ref.read(meProvider);
+      if (!me.hasValue && !me.hasError) {
+        return loc == Routes.splash ? null : Routes.splash;
+      }
+      final langs = (me.valueOrNull?['preferred_languages'] as List?) ?? const [];
+      if (langs.isEmpty) {
+        return loc == Routes.languages ? null : Routes.languages;
+      }
+
+      if (loc == Routes.splash ||
+          loc == Routes.signIn ||
+          loc == Routes.welcome ||
+          loc == Routes.languages) {
         return Routes.home;
       }
       return null;
@@ -155,6 +174,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.welcome,
         name: 'welcome',
         builder: (context, state) => WelcomeScreen(),
+      ),
+      GoRoute(
+        path: Routes.languages,
+        name: 'languages',
+        builder: (context, state) => LanguagePickerScreen(),
       ),
       // The four tabs live in a persistent bottom-nav shell (S3). Each is its
       // own branch so tab state (scroll position, etc.) is preserved.

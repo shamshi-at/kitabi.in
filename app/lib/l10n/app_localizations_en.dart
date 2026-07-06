@@ -222,6 +222,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formLanguageUnset => 'Not set';
 
   @override
+  String get formLanguageProfileNote =>
+      'Add more languages in your profile to see them here.';
+
+  @override
+  String get langPickerTitle => 'Which languages do you read?';
+
+  @override
+  String get langPickerSubtitle =>
+      'Pick one or more. We\'ll list these first when you add a book — you can change them anytime in your profile.';
+
+  @override
+  String get langPickerContinue => 'Continue';
+
+  @override
+  String get profileLanguagesTitle => 'Reading languages';
+
+  @override
+  String get profileLanguagesEmpty => 'Not set — tap to choose';
+
+  @override
+  String get profileLanguagesSheetTitle => 'Languages you read';
+
+  @override
+  String get profileLanguagesSave => 'Save';
+
+  @override
   String get formFieldSeries => 'SERIES';
 
   @override

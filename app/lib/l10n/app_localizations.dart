@@ -454,6 +454,54 @@ abstract class AppLocalizations {
   /// **'Not set'**
   String get formLanguageUnset;
 
+  /// Note under the book language dropdown pointing to profile settings
+  ///
+  /// In en, this message translates to:
+  /// **'Add more languages in your profile to see them here.'**
+  String get formLanguageProfileNote;
+
+  /// Title of the onboarding reading-languages picker
+  ///
+  /// In en, this message translates to:
+  /// **'Which languages do you read?'**
+  String get langPickerTitle;
+
+  /// Subtitle of the onboarding reading-languages picker
+  ///
+  /// In en, this message translates to:
+  /// **'Pick one or more. We\'ll list these first when you add a book — you can change them anytime in your profile.'**
+  String get langPickerSubtitle;
+
+  /// Button to save the picked reading languages and continue
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get langPickerContinue;
+
+  /// Profile section header for the reader's languages
+  ///
+  /// In en, this message translates to:
+  /// **'Reading languages'**
+  String get profileLanguagesTitle;
+
+  /// Shown in profile when no reading languages are set
+  ///
+  /// In en, this message translates to:
+  /// **'Not set — tap to choose'**
+  String get profileLanguagesEmpty;
+
+  /// Title of the profile reading-languages edit sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Languages you read'**
+  String get profileLanguagesSheetTitle;
+
+  /// Save reading languages
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get profileLanguagesSave;
+
   /// Form field label
   ///
   /// In en, this message translates to:

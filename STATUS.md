@@ -150,6 +150,14 @@ user auto-link. **No push notifications yet** — approvals surface via the pull
 FCM-send from the API would need a new Firebase service-account credential (CLAUDE.md rule 8);
 push is the natural follow-up.
 
+**Reader languages** (added 7 Jul 2026): `profiles.preferred_languages` (JSONB list, migration
+`000015`) on `/me`. Captured in a one-time onboarding step after sign-in (router gates on it —
+re-asks until ≥1 is set, server-side so it follows the account across devices), editable in the
+profile. The add-book language dropdown now lists the reader's languages first (falls back to the
+full list) with a "manage in profile" note. Also this session: the transient "Syncing…" pill was
+removed (routine sync is silent; only the *error* banner remains), and the full-screen book page
+got a back button that falls back to Home when there's nothing to pop.
+
 ---
 
 ## Tech stack

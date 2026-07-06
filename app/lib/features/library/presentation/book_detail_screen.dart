@@ -40,10 +40,39 @@ class BookDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: SafeArea(
-        child: work.when(
-          loading: () => ListSkeleton(),
-          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId))),
-          data: (body) => _BookDetailBody(work: body, editionId: editionId),
+        child: Stack(
+          children: [
+            work.when(
+              loading: () => ListSkeleton(),
+              error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId))),
+              data: (body) => _BookDetailBody(work: body, editionId: editionId),
+            ),
+            Positioned(top: 4, left: 8, child: _BackButton()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A floating back control for the full-screen book page (it has no app bar).
+/// Pops when there's a screen to return to; otherwise — e.g. the page was opened
+/// straight from a share link — goes Home so the reader is never stranded.
+class _BackButton extends StatelessWidget {
+  const _BackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.card,
+      shape: const CircleBorder(),
+      elevation: 1,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => context.canPop() ? context.pop() : context.go(Routes.home),
+        child: Padding(
+          padding: const EdgeInsets.all(7),
+          child: Icon(Icons.arrow_back, size: 20, color: AppColors.ink),
         ),
       ),
     );

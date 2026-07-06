@@ -3,34 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/image_crop.dart';
+import '../../../core/languages.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../profile/providers/profile_providers.dart';
 import '../catalog_image_upload.dart';
 import '../providers/catalog_providers.dart';
 
 const _formats = ['Paperback', 'Hardcover', 'eBook', 'Audiobook'];
 
-/// Languages offered in the add/edit form's dropdown. Malayalam leads (the app's
-/// regional wedge); the rest cover India's major languages plus a few common in
-/// its catalogs. Full names, matching what the catalog already stores.
-const _languages = [
-  'Malayalam',
-  'English',
-  'Hindi',
-  'Tamil',
-  'Kannada',
-  'Telugu',
-  'Marathi',
-  'Bengali',
-  'Gujarati',
-  'Urdu',
-  'Sanskrit',
-  'Arabic',
-];
 const _commonGenres = [
   'Fiction',
   'Non-fiction',
@@ -458,6 +443,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
                   label: l10n.formFieldLanguage,
                   value: _language,
                   unsetLabel: l10n.formLanguageUnset,
+                  // The reader's own languages first; note points to profile to
+                  // manage the list. Falls back to all if none set yet.
+                  languages: (ref.watch(meProvider).valueOrNull?['preferred_languages'] as List?)
+                          ?.cast<String>() ??
+                      const [],
+                  note: l10n.formLanguageProfileNote,
                   onChanged: (v) => setState(() => _language = v),
                 ),
               ),
@@ -961,26 +952,33 @@ class _DropdownField extends StatelessWidget {
 }
 
 /// The language picker — a nullable dropdown (language is optional) with a
-/// leading "not set" item. Tolerates a legacy value outside [_languages] by
-/// showing it as an extra option, so editing an old book never drops it.
+/// leading "not set" item. Lists the reader's [languages] (their profile
+/// preferences; falls back to all of [kLanguages] if none are set), and always
+/// keeps the current value even if it's outside that list, so editing an old
+/// book never drops its language. A [note] points the reader to their profile.
 class _LanguageField extends StatelessWidget {
   const _LanguageField({
     required this.label,
     required this.value,
     required this.unsetLabel,
+    required this.languages,
+    required this.note,
     required this.onChanged,
   });
 
   final String label;
   final String? value;
   final String unsetLabel;
+  final List<String> languages;
+  final String note;
   final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final base = languages.isNotEmpty ? languages : kLanguages;
     final options = [
-      ..._languages,
-      if (value != null && !_languages.contains(value)) value!,
+      ...base,
+      if (value != null && !base.contains(value)) value!,
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1022,6 +1020,11 @@ class _LanguageField extends StatelessWidget {
               onChanged: onChanged,
             ),
           ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          note,
+          style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.3),
         ),
       ],
     );

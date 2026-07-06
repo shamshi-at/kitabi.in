@@ -29,6 +29,18 @@ async def test_set_username_lowercases_and_shows_on_me(client):
     assert (await client.get("/me")).json()["username"] == "shamshi_k"
 
 
+async def test_preferred_languages_default_empty_then_set(client):
+    await client.post("/auth/bootstrap")
+    assert (await client.get("/me")).json()["preferred_languages"] == []
+    # Set, with dedupe + blank-trimming applied.
+    resp = await client.patch(
+        "/me", json={"preferred_languages": ["Malayalam", "English", "Malayalam", " "]}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["preferred_languages"] == ["Malayalam", "English"]
+    assert (await client.get("/me")).json()["preferred_languages"] == ["Malayalam", "English"]
+
+
 async def test_username_validation_rejects_bad_handles(client):
     await client.post("/auth/bootstrap")
     for bad in ["ab", "1nope", "has space", "waytoolongusername1234"]:

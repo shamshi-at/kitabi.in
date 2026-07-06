@@ -49,15 +49,22 @@ Future<Uint8List?> cropPickedImage(String sourcePath, CropRatio ratio) async {
         toolbarWidgetColor: AppColors.paper,
         activeControlsWidgetColor: AppColors.oxblood,
         backgroundColor: AppColors.night,
+        // Keep the shape locked (covers stay 2:3, portraits 1:1) but show the
+        // rotate/scale controls so a hand-held photo can be straightened and
+        // reframed — that's the "adjust" step, beyond just pan/zoom.
         lockAspectRatio: true,
-        hideBottomControls: true,
+        hideBottomControls: false,
+        showCropGrid: true,
       ),
       IOSUiSettings(
         title: ratio.title,
         aspectRatioLockEnabled: true,
         resetAspectRatioEnabled: false,
         aspectRatioPickerButtonHidden: true,
-        rotateButtonsHidden: true,
+        // Allow rotation so a tilted cover photo can be straightened; the aspect
+        // stays locked to the render shape.
+        rotateButtonsHidden: false,
+        rotateClockwiseButtonHidden: false,
       ),
     ],
   );

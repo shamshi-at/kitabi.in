@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -30,6 +31,10 @@ class Profile(Base):
     # (feature-map.md: real user reference for lending). Stored lowercased so a
     # plain unique constraint is case-insensitive. Null until the user sets one.
     username: Mapped[str | None] = mapped_column(String, unique=True, default=None)
+
+    # The reader's languages (list of names, e.g. ["Malayalam", "English"]) —
+    # captured at onboarding, editable in profile; drives the add-book dropdown.
+    preferred_languages: Mapped[list | None] = mapped_column(JSONB, default=None)
 
     profile_visible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     library_visible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
