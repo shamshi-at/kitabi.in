@@ -83,15 +83,13 @@ class _ShareSheetState extends State<_ShareSheet> {
     final text = l10n.shareBookLinkText(widget.title, widget.author, widget.shareUrl);
     setState(() => _sharing = true);
     try {
+      // Let the current frame finish painting before we rasterise — capturing
+      // mid-paint is the usual cause of a blank/failed card grab on device.
+      await WidgetsBinding.instance.endOfFrame;
       final boundary =
           _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) {
+      if (boundary == null || boundary.debugNeedsPaint) {
         throw StateError('share card not ready');
-      }
-      // The card can still be mid-paint on the first frame after the sheet
-      // opens; wait a frame so the capture isn't blank/partial.
-      if (boundary.debugNeedsPaint) {
-        await Future<void>.delayed(const Duration(milliseconds: 40));
       }
       final image = await boundary.toImage(pixelRatio: 3);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -110,7 +108,13 @@ class _ShareSheetState extends State<_ShareSheet> {
         sharePositionOrigin: _originRect(),
       );
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.shareFailed)));
+      // If the image capture/share fails for any reason, still share the book —
+      // fall back to the text + link so the button never dead-ends.
+      try {
+        await Share.share(text, sharePositionOrigin: _originRect());
+      } catch (_) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.shareFailed)));
+      }
     } finally {
       if (mounted) setState(() => _sharing = false);
     }

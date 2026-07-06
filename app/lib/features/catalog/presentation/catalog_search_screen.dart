@@ -130,11 +130,20 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                                   .bodySmall
                                   ?.copyWith(color: AppColors.inkSoft),
                             ),
-                            SizedBox(height: 16),
-                            OutlinedButton.icon(
+                            SizedBox(height: 20),
+                            ElevatedButton.icon(
                               icon: Icon(Icons.auto_stories_outlined, size: 18),
                               label: Text(l10n.browseEntry),
                               onPressed: () => context.push(Routes.catalogBrowse),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.oxblood,
+                                foregroundColor: AppColors.paper,
+                                padding: EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                              ),
                             ),
                           ],
                         ),

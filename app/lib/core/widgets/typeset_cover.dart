@@ -49,28 +49,38 @@ class TypesetCover extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (coverUrl != null)
-            Image.network(
-              coverUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => _typeset(),
-            )
-          else
-            _typeset(),
-          // Spine shade — left edge, every cover in the app carries this.
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(width: width * 0.09, color: Color(0x38000000)),
-          ),
-        ],
+      // The grid passes width/height: infinity (fill the cell), so text and
+      // padding sizes must come from the REAL laid-out size — width * 0.24 on
+      // an infinite width renders no text at all (this is why library covers
+      // were blank). LayoutBuilder gives the actual pixels.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth.isFinite ? constraints.maxWidth : width;
+          final h = constraints.maxHeight.isFinite ? constraints.maxHeight : height;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              if (coverUrl != null)
+                Image.network(
+                  coverUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => _typeset(w, h),
+                )
+              else
+                _typeset(w, h),
+              // Spine shade — left edge, every cover in the app carries this.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(width: w * 0.09, color: Color(0x38000000)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _typeset() {
+  Widget _typeset(double w, double h) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -85,7 +95,7 @@ class TypesetCover extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(width * 0.18, height * 0.1, width * 0.1, 0),
+            padding: EdgeInsets.fromLTRB(w * 0.14, h * 0.09, w * 0.1, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -95,27 +105,30 @@ class TypesetCover extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.fraunces(
                     color: AppColors.goldSoft,
-                    fontSize: width * 0.24,
-                    height: 1.15,
+                    // Scale with width; the max clamp keeps a big grid cover
+                    // from a giant title, the min keeps a tiny chip legible
+                    // without overflowing its 44px box.
+                    fontSize: (w * 0.16).clamp(6.0, 22.0),
+                    height: 1.18,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                SizedBox(height: height * 0.05),
+                SizedBox(height: h * 0.04),
                 // A gold hairline — the "one line that stays with you".
-                Container(width: width * 0.34, height: 1, color: AppColors.gold),
+                Container(width: w * 0.34, height: 1, color: AppColors.gold),
               ],
             ),
           ),
           if (author != null)
             Padding(
-              padding: EdgeInsets.fromLTRB(width * 0.18, 0, width * 0.1, height * 0.06),
+              padding: EdgeInsets.fromLTRB(w * 0.14, 0, w * 0.1, h * 0.06),
               child: Text(
                 author!.toUpperCase(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: AppColors.goldSoft.withValues(alpha: 0.85),
-                  fontSize: width * 0.15,
+                  fontSize: (w * 0.1).clamp(6.0, 12.0),
                   letterSpacing: 0.4,
                 ),
               ),

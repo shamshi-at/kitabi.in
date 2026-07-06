@@ -94,12 +94,28 @@ class ApiClient {
   /// Discover/browse — every catalog book / author / publisher, alphabetical
   /// and paged (offset pagination). Layer 1 is server-authoritative, so these
   /// read straight from the catalog API.
-  Future<List<Map<String, dynamic>>> browseWorks({int limit = 40, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> browseWorks({
+    int limit = 40,
+    int offset = 0,
+    String? language,
+    String sort = 'title',
+  }) async {
     final res = await _dio.get(
       '/catalog/browse/works',
-      queryParameters: {'limit': limit, 'offset': offset},
+      queryParameters: {
+        'limit': limit,
+        'offset': offset,
+        'sort': sort,
+        'language': ?language,
+      },
     );
     return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Distinct catalog languages — powers the browse language filter.
+  Future<List<String>> browseLanguages() async {
+    final res = await _dio.get('/catalog/browse/languages');
+    return (res.data as List).cast<String>();
   }
 
   Future<List<Map<String, dynamic>>> browseAuthors({int limit = 40, int offset = 0}) async {

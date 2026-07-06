@@ -78,10 +78,18 @@ class _FakeApiClient extends ApiClient {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> browseWorks({int limit = 40, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> browseWorks({
+    int limit = 40,
+    int offset = 0,
+    String? language,
+    String sort = 'title',
+  }) async {
     if (offset > 0) return []; // one page, then end
     return searchCatalog('chemmeen');
   }
+
+  @override
+  Future<List<String>> browseLanguages() async => ['Malayalam', 'Tamil'];
 
   @override
   Future<List<Map<String, dynamic>>> browseAuthors({int limit = 40, int offset = 0}) async {

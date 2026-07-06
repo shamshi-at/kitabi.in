@@ -16,14 +16,30 @@ import 'library_filter_sheet.dart';
 /// ribbon, lending band; a filter sheet (S4b) narrows by status, language, and
 /// favourites with a live count.
 class LibraryGridScreen extends ConsumerStatefulWidget {
-  const LibraryGridScreen({super.key});
+  const LibraryGridScreen({super.key, this.initialStatus});
+
+  /// A status to pre-filter by (from the home "Read"/"Wishlist" shelf cards,
+  /// which deep-link here as /library?status=read).
+  final String? initialStatus;
 
   @override
   ConsumerState<LibraryGridScreen> createState() => _LibraryGridScreenState();
 }
 
 class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
-  LibraryFilter _filter = LibraryFilter();
+  late LibraryFilter _filter = widget.initialStatus == null
+      ? const LibraryFilter()
+      : LibraryFilter(statuses: {widget.initialStatus!});
+
+  @override
+  void didUpdateWidget(LibraryGridScreen old) {
+    super.didUpdateWidget(old);
+    // The library tab keeps its state alive, so a fresh deep-link from home
+    // (a different status) must re-apply on the same widget instance.
+    if (widget.initialStatus != old.initialStatus && widget.initialStatus != null) {
+      setState(() => _filter = LibraryFilter(statuses: {widget.initialStatus!}));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

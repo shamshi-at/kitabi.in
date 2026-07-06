@@ -1174,5 +1174,17 @@
   "bookBuySection": "Where to buy",
   "@bookBuySection": {"description": "Header above the list of external retailer buy links on the book page"},
   "bookBuyFailed": "Couldn't open the store link.",
-  "@bookBuyFailed": {"description": "Snackbar when the external buy link fails to open"}
+  "@bookBuyFailed": {"description": "Snackbar when the external buy link fails to open"},
+  "browseSortLabel": "Sort",
+  "@browseSortLabel": {"description": "Label on the browse sort control"},
+  "browseSortTitle": "Title (A–Z)",
+  "@browseSortTitle": {"description": "Browse sort option: alphabetical by title"},
+  "browseSortNewest": "Newest first",
+  "@browseSortNewest": {"description": "Browse sort option: newest publication year first"},
+  "browseSortOldest": "Oldest first",
+  "@browseSortOldest": {"description": "Browse sort option: oldest publication year first"},
+  "browseSortAuthor": "Author (A–Z)",
+  "@browseSortAuthor": {"description": "Browse sort option: alphabetical by author"},
+  "browseFilterAllLanguages": "All languages",
+  "@browseFilterAllLanguages": {"description": "Browse language filter: no language filter"}
 }

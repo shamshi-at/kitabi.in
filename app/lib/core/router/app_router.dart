@@ -165,7 +165,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.library,
                 name: 'library',
-                builder: (context, state) => LibraryGridScreen(),
+                builder: (context, state) =>
+                    LibraryGridScreen(initialStatus: state.uri.queryParameters['status']),
               ),
             ],
           ),

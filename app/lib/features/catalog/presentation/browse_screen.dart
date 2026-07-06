@@ -59,11 +59,7 @@ class BrowseScreen extends ConsumerWidget {
               Expanded(
                 child: TabBarView(
                   children: [
-                    _PaginatedList(
-                      fetch: (limit, offset) => api.browseWorks(limit: limit, offset: offset),
-                      emptyText: l10n.browseEmpty,
-                      itemBuilder: (work) => CatalogResultTile(work: work),
-                    ),
+                    _BooksBrowseTab(api: api),
                     _PaginatedList(
                       fetch: (limit, offset) => api.browseAuthors(limit: limit, offset: offset),
                       emptyText: l10n.browseEmpty,
@@ -93,12 +89,167 @@ class BrowseScreen extends ConsumerWidget {
   }
 }
 
+/// The Books tab — a sort control (title / newest / oldest / author) and a
+/// language filter above the paged list. Changing either re-keys the list so
+/// it reloads cleanly from the first page with the new query.
+class _BooksBrowseTab extends StatefulWidget {
+  const _BooksBrowseTab({required this.api});
+
+  final ApiClient api;
+
+  @override
+  State<_BooksBrowseTab> createState() => _BooksBrowseTabState();
+}
+
+class _BooksBrowseTabState extends State<_BooksBrowseTab> {
+  String _sort = 'title';
+  String? _language;
+  List<String> _languages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    widget.api.browseLanguages().then((langs) {
+      if (mounted) setState(() => _languages = langs);
+    }).catchError((_) {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sorts = {
+      'title': l10n.browseSortTitle,
+      'year_desc': l10n.browseSortNewest,
+      'year_asc': l10n.browseSortOldest,
+      'author': l10n.browseSortAuthor,
+    };
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: _FilterChipDropdown<String>(
+                  icon: Icons.sort,
+                  value: _sort,
+                  label: sorts[_sort]!,
+                  items: [
+                    for (final e in sorts.entries)
+                      DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  ],
+                  onChanged: (v) => setState(() => _sort = v ?? 'title'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _FilterChipDropdown<String?>(
+                  icon: Icons.translate,
+                  value: _language,
+                  label: _language ?? l10n.browseFilterAllLanguages,
+                  items: [
+                    DropdownMenuItem(value: null, child: Text(l10n.browseFilterAllLanguages)),
+                    for (final lang in _languages)
+                      DropdownMenuItem(value: lang, child: Text(lang)),
+                  ],
+                  onChanged: (v) => setState(() => _language = v),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _PaginatedList(
+            // Re-key on filter/sort so pagination resets to page 1.
+            key: ValueKey('$_sort|$_language'),
+            fetch: (limit, offset) => widget.api.browseWorks(
+              limit: limit,
+              offset: offset,
+              sort: _sort,
+              language: _language,
+            ),
+            emptyText: AppLocalizations.of(context)!.browseEmpty,
+            itemBuilder: (work) => CatalogResultTile(work: work),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A compact pill that opens a dropdown — used for the browse sort/language
+/// controls. Styled to match the Reading Room chips rather than a bare
+/// Material dropdown.
+class _FilterChipDropdown<T> extends StatelessWidget {
+  const _FilterChipDropdown({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final T value;
+  final String label;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 15, color: AppColors.inkSoft),
+          const SizedBox(width: 6),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<T>(
+                value: value,
+                isExpanded: true,
+                isDense: true,
+                icon: Icon(Icons.arrow_drop_down, color: AppColors.inkSoft),
+                selectedItemBuilder: (context) => [
+                  for (final _ in items)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
+                ],
+                items: items,
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// An offset-paged, infinite-scroll list: loads the first page on mount and
 /// the next page as the user nears the bottom, until a short page signals the
 /// end. Kept alive across tab switches so scroll position and loaded pages
 /// survive.
 class _PaginatedList extends StatefulWidget {
   const _PaginatedList({
+    super.key,
     required this.fetch,
     required this.itemBuilder,
     required this.emptyText,

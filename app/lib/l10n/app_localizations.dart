@@ -1887,6 +1887,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open the store link.'**
   String get bookBuyFailed;
+
+  /// Label on the browse sort control
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get browseSortLabel;
+
+  /// Browse sort option: alphabetical by title
+  ///
+  /// In en, this message translates to:
+  /// **'Title (A–Z)'**
+  String get browseSortTitle;
+
+  /// Browse sort option: newest publication year first
+  ///
+  /// In en, this message translates to:
+  /// **'Newest first'**
+  String get browseSortNewest;
+
+  /// Browse sort option: oldest publication year first
+  ///
+  /// In en, this message translates to:
+  /// **'Oldest first'**
+  String get browseSortOldest;
+
+  /// Browse sort option: alphabetical by author
+  ///
+  /// In en, this message translates to:
+  /// **'Author (A–Z)'**
+  String get browseSortAuthor;
+
+  /// Browse language filter: no language filter
+  ///
+  /// In en, this message translates to:
+  /// **'All languages'**
+  String get browseFilterAllLanguages;
 }
 
 class _AppLocalizationsDelegate

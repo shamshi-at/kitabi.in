@@ -1066,4 +1066,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookBuyFailed => 'Couldn\'t open the store link.';
+
+  @override
+  String get browseSortLabel => 'Sort';
+
+  @override
+  String get browseSortTitle => 'Title (A–Z)';
+
+  @override
+  String get browseSortNewest => 'Newest first';
+
+  @override
+  String get browseSortOldest => 'Oldest first';
+
+  @override
+  String get browseSortAuthor => 'Author (A–Z)';
+
+  @override
+  String get browseFilterAllLanguages => 'All languages';
 }

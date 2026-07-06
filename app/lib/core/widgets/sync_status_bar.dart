@@ -46,24 +46,35 @@ class _Bar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: color.withValues(alpha: 0.12),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-          child: Row(
-            children: [
-              Icon(icon, size: 14, color: color),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  text,
-                  style: TextStyle(fontSize: 11.5, color: color, fontWeight: FontWeight.w600),
-                ),
+    // A slim, centered pill with margin — reads as an intentional status chip,
+    // not a full-bleed alert band.
+    return Padding(
+      padding: EdgeInsets.fromLTRB(0, 6, 0, 2),
+      child: Center(
+        child: Material(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 13, color: color),
+                  SizedBox(width: 7),
+                  Text(
+                    text,
+                    style: TextStyle(fontSize: 11.5, color: color, fontWeight: FontWeight.w600),
+                  ),
+                  if (onTap != null) ...[
+                    SizedBox(width: 4),
+                    Icon(Icons.chevron_right, size: 15, color: color),
+                  ],
+                ],
               ),
-              if (onTap != null) Icon(Icons.chevron_right, size: 16, color: color),
-            ],
+            ),
           ),
         ),
       ),

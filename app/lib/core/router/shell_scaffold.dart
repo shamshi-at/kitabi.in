@@ -23,11 +23,17 @@ class ShellScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.paper,
-      body: Column(
-        children: [
-          SyncStatusBar(),
-          Expanded(child: navigationShell),
-        ],
+      // The sync bar sat above the notch (over the clock). Consume the top
+      // inset here so it renders just below the notch; branch screens' own
+      // SafeArea then sees a zero top inset (nested SafeArea doesn't double up).
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            SyncStatusBar(),
+            Expanded(child: navigationShell),
+          ],
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

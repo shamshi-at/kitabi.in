@@ -29,25 +29,31 @@ class HomeScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.auto_stories_outlined, color: AppColors.oxblood),
-                  tooltip: l10n.browseEntry,
-                  onPressed: () => context.push(Routes.catalogBrowse),
-                ),
-                IconButton(
-                  icon: Icon(Icons.search, color: AppColors.oxblood),
-                  tooltip: l10n.searchTitle,
-                  onPressed: () => context.push(Routes.catalogSearch),
-                ),
-                IconButton(
-                  icon: Icon(Icons.person_outline, color: AppColors.oxblood),
-                  tooltip: l10n.profileEntry,
-                  onPressed: () => context.push(Routes.profile),
-                ),
-              ],
+            // Title and actions share one row — removes the dead space that
+            // used to sit between an icons-only row and the heading below.
+            Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 4, 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(child: _Header(l10n: l10n)),
+                  IconButton(
+                    icon: Icon(Icons.auto_stories_outlined, color: AppColors.oxblood),
+                    tooltip: l10n.browseEntry,
+                    onPressed: () => context.push(Routes.catalogBrowse),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.search, color: AppColors.oxblood),
+                    tooltip: l10n.searchTitle,
+                    onPressed: () => context.push(Routes.catalogSearch),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.person_outline, color: AppColors.oxblood),
+                    tooltip: l10n.profileEntry,
+                    onPressed: () => context.push(Routes.profile),
+                  ),
+                ],
+              ),
             ),
             Expanded(
               child: RefreshIndicator(
@@ -122,10 +128,8 @@ class _Dashboard extends ConsumerWidget {
     );
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 6, 20, 24),
       children: [
-        _Header(l10n: l10n),
-        SizedBox(height: 16),
         if (reading.isNotEmpty) ...[
           _SectionLabel(l10n.homeCurrentlyReading),
           for (final entry in reading) _CurrentlyReadingCard(entry: entry),
@@ -369,10 +373,30 @@ class _ShelfGrid extends StatelessWidget {
       crossAxisSpacing: 8,
       childAspectRatio: 2.9,
       children: [
-        _ShelfCard(value: counts.owned, label: l10n.homeShelfOwned, color: AppColors.ink),
-        _ShelfCard(value: counts.read, label: l10n.homeShelfRead, color: AppColors.moss),
-        _ShelfCard(value: counts.lentOut, label: l10n.homeShelfLentOut, color: AppColors.oxblood),
-        _ShelfCard(value: counts.wishlist, label: l10n.homeShelfWishlist, color: AppColors.slate),
+        _ShelfCard(
+          value: counts.owned,
+          label: l10n.homeShelfOwned,
+          color: AppColors.ink,
+          onTap: () => context.go(Routes.library),
+        ),
+        _ShelfCard(
+          value: counts.read,
+          label: l10n.homeShelfRead,
+          color: AppColors.moss,
+          onTap: () => context.go('${Routes.library}?status=read'),
+        ),
+        _ShelfCard(
+          value: counts.lentOut,
+          label: l10n.homeShelfLentOut,
+          color: AppColors.oxblood,
+          onTap: () => context.go(Routes.lendingLedger),
+        ),
+        _ShelfCard(
+          value: counts.wishlist,
+          label: l10n.homeShelfWishlist,
+          color: AppColors.slate,
+          onTap: () => context.go('${Routes.library}?status=wishlist'),
+        ),
       ],
     );
   }
@@ -430,33 +454,52 @@ class _RecsEntryCard extends ConsumerWidget {
 }
 
 class _ShelfCard extends StatelessWidget {
-  const _ShelfCard({required this.value, required this.label, required this.color});
+  const _ShelfCard({
+    required this.value,
+    required this.label,
+    required this.color,
+    this.onTap,
+  });
 
   final int value;
   final String label;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.card,
+    return Material(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Row(
-        children: [
-          Text(
-            '$value',
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(color: color, fontWeight: FontWeight.w700),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.line),
           ),
-          SizedBox(width: 10),
-          Text(label, style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
-        ],
+          child: Row(
+            children: [
+              Text(
+                '$value',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(color: color, fontWeight: FontWeight.w700),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 15, color: AppColors.inkSoft),
+            ],
+          ),
+        ),
       ),
     );
   }
