@@ -1876,11 +1876,11 @@ abstract class AppLocalizations {
   /// **'Publishers'**
   String get browseTabPublishers;
 
-  /// Button that opens the external ecommerce buy link for the edition
+  /// Header above the list of external retailer buy links on the book page
   ///
   /// In en, this message translates to:
-  /// **'Buy this edition'**
-  String get bookBuy;
+  /// **'Where to buy'**
+  String get bookBuySection;
 
   /// Snackbar when the external buy link fails to open
   ///

@@ -171,13 +171,15 @@ class _BookDetailBody extends ConsumerWidget {
                 : _OwnedBookSections(entry: libraryEntry, workId: work['id'] as String),
           ),
         ),
-        // [WIRED] Buy this edition — dormant until an edition carries a buy_url
-        // (external ecommerce). Invisible otherwise, so no rewrite when store
+        // [WIRED] Where to buy — dormant until an edition carries buy_links
+        // (external retailers). Invisible otherwise, so no rewrite when store
         // links are populated.
-        if ((edition?['buy_url'] as String?)?.isNotEmpty ?? false)
+        if (((edition?['buy_links'] as List?) ?? const []).isNotEmpty)
           Padding(
-            padding: EdgeInsets.fromLTRB(13, 0, 13, 4),
-            child: _BuyButton(url: edition!['buy_url'] as String),
+            padding: EdgeInsets.fromLTRB(13, 0, 13, 8),
+            child: _BuySection(
+              links: (edition!['buy_links'] as List).cast<Map<String, dynamic>>(),
+            ),
           ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 13),
@@ -360,14 +362,15 @@ class _ShareButton extends ConsumerWidget {
   }
 }
 
-/// [WIRED] external-ecommerce buy link for the current edition. Opens the store
-/// URL in the browser; shows a snackbar if it can't be launched.
-class _BuyButton extends StatelessWidget {
-  const _BuyButton({required this.url});
+/// [WIRED] "Where to buy" — lists every external retailer an edition is
+/// available at (Amazon, Flipkart, …), each opening its store link in the
+/// browser. Shown only when the edition carries buy_links.
+class _BuySection extends StatelessWidget {
+  const _BuySection({required this.links});
 
-  final String url;
+  final List<Map<String, dynamic>> links;
 
-  Future<void> _open(BuildContext context) async {
+  Future<void> _open(BuildContext context, String url) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final uri = Uri.tryParse(url);
@@ -379,17 +382,45 @@ class _BuyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () => _open(context),
-        icon: Icon(Icons.shopping_bag_outlined, size: 18, color: AppColors.oxblood),
-        label: Text(
-          AppLocalizations.of(context)!.bookBuy,
-          style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+    final l10n = AppLocalizations.of(context)!;
+    final valid = [
+      for (final link in links)
+        if ((link['url'] as String?)?.isNotEmpty ?? false) link,
+    ];
+    if (valid.isEmpty) return SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.bookBuySection.toUpperCase(),
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            color: AppColors.inkSoft,
+          ),
         ),
-        style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.gold)),
-      ),
+        SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final link in valid)
+              OutlinedButton.icon(
+                onPressed: () => _open(context, link['url'] as String),
+                icon: Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.oxblood),
+                label: Text(
+                  (link['retailer'] as String?)?.trim().isNotEmpty ?? false
+                      ? link['retailer'] as String
+                      : l10n.bookBuySection,
+                  style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.gold)),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

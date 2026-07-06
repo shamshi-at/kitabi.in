@@ -1062,7 +1062,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseTabPublishers => 'Publishers';
 
   @override
-  String get bookBuy => 'Buy this edition';
+  String get bookBuySection => 'Where to buy';
 
   @override
   String get bookBuyFailed => 'Couldn\'t open the store link.';

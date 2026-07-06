@@ -221,12 +221,14 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   infinite-scroll tabs — **Books · Authors · Publishers** — backed by new paginated
   `GET /catalog/browse/{works,authors,publishers}` endpoints (alphabetical, offset
   paging, keep-alive per tab). Author/publisher rows tap through to their browse pages;
-  book rows to book detail. **Buy links wired but dormant** (`[WIRED]`): a `buy_url`
-  column on Edition (migration `000008`), threaded through `EditionOut`/`EditionUpdate`,
-  with a "Buy this edition" button on the book page that appears **only when a `buy_url`
-  is set** (via `url_launcher`) — so integrating external-ecommerce links later is just
-  populating the field, no rewrite. API 61 tests + app 28 tests green, ruff/black +
-  analyze clean, Docker builds.
+  book rows to book detail. **Buy links wired but dormant** (`[WIRED]`): a `buy_links`
+  JSONB column on Edition (a list of `{retailer, url}` — Amazon, Flipkart, … — so a book
+  page lists every store it's available at; migrations `000008` added a single `buy_url`,
+  `000009` replaced it with the list), threaded through `EditionOut`/`EditionUpdate`, with
+  a **"Where to buy"** section on the book page (app) and the public landing book page that
+  appears **only when `buy_links` is non-empty** (via `url_launcher` in-app) — so
+  integrating external-ecommerce links later is just populating the field, no rewrite. API
+  62 tests + app 28 tests green, ruff/black + analyze clean, Docker builds.
 
 - **6 Jul 2026** — Search, author/publisher pickers, and shareable links (feedback pass).
   **Global search (S4)** now spans four things in one screen — the offline library (Drift)

@@ -1171,8 +1171,8 @@
   "@browseTabAuthors": {"description": "Browse screen tab for all authors"},
   "browseTabPublishers": "Publishers",
   "@browseTabPublishers": {"description": "Browse screen tab for all publishers"},
-  "bookBuy": "Buy this edition",
-  "@bookBuy": {"description": "Button that opens the external ecommerce buy link for the edition"},
+  "bookBuySection": "Where to buy",
+  "@bookBuySection": {"description": "Header above the list of external retailer buy links on the book page"},
   "bookBuyFailed": "Couldn't open the store link.",
   "@bookBuyFailed": {"description": "Snackbar when the external buy link fails to open"}
 }
