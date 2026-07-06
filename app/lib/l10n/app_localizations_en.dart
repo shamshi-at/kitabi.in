@@ -219,6 +219,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formFieldLanguage => 'LANGUAGE';
 
   @override
+  String get formLanguageUnset => 'Not set';
+
+  @override
   String get formFieldSeries => 'SERIES';
 
   @override
@@ -550,6 +553,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lendingLogBorrowed => '+ Log a borrowed book';
+
+  @override
+  String get lendingLendBook => 'Lend a book';
+
+  @override
+  String get lendingPickTitle => 'Which book?';
+
+  @override
+  String get lendingPickEmpty =>
+      'Add a book to your library first, then lend it from here.';
 
   @override
   String get logBorrowedTitle => 'Log a borrowed book';

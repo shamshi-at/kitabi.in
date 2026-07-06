@@ -12,6 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
 import '../lending_format.dart';
 import '../reminder.dart';
+import 'lend_pick_book_sheet.dart';
 import 'log_borrowed_sheet.dart';
 
 /// S8 — the lending ledger, "the wedge styled as what it is: a ledger."
@@ -28,6 +29,13 @@ class LendingLedgerScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.paper,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => showLendPickBookSheet(context),
+        backgroundColor: AppColors.oxblood,
+        foregroundColor: AppColors.paper,
+        icon: Icon(Icons.add, size: 20),
+        label: Text(l10n.lendingLendBook),
+      ),
       body: SafeArea(
         child: ledger.when(
           loading: () => ListSkeleton(),

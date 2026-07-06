@@ -7,7 +7,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/api/api_client.dart';
+import '../../../data/db/catalog_cache.dart';
 import '../../../data/db/database.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../providers/library_providers.dart';
 import 'library_filter_sheet.dart';
@@ -31,13 +34,28 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
       ? const LibraryFilter()
       : LibraryFilter(statuses: {widget.initialStatus!});
 
+  // Guards the one-shot cover backfill so the stream re-emit it causes doesn't
+  // re-trigger it in a loop.
+  bool _coverRefreshTried = false;
+
+  Future<void> _refreshMissingCovers() async {
+    await refreshMissingCovers(
+      ref.read(appDatabaseProvider),
+      ref.read(apiClientProvider),
+    );
+  }
+
   @override
   void didUpdateWidget(LibraryGridScreen old) {
     super.didUpdateWidget(old);
     // The library tab keeps its state alive, so a fresh deep-link from home
-    // (a different status) must re-apply on the same widget instance.
-    if (widget.initialStatus != old.initialStatus && widget.initialStatus != null) {
-      setState(() => _filter = LibraryFilter(statuses: {widget.initialStatus!}));
+    // (a different status) must re-apply on the same widget instance — including
+    // back to *no* status, so tapping "Owned" (no status) after "Read" clears
+    // the read filter instead of leaving it stuck selected.
+    if (widget.initialStatus != old.initialStatus) {
+      setState(() => _filter = widget.initialStatus == null
+          ? const LibraryFilter()
+          : LibraryFilter(statuses: {widget.initialStatus!}));
     }
   }
 
@@ -53,10 +71,20 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
           loading: () => CoverGridSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryHitsProvider)),
           data: (all) {
+            // Opportunistically pull covers that were added upstream after these
+            // books were cached (e.g. a catalog backfill). Once per screen mount;
+            // the reactive join re-shows them as the cache rows update.
+            if (!_coverRefreshTried && all.any((h) => h.book.coverUrl == null)) {
+              _coverRefreshTried = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) => _refreshMissingCovers());
+            }
             final filtered = all.where(_filter.matches).toList();
             return RefreshIndicator(
               color: AppColors.oxblood,
-              onRefresh: () async => ref.invalidate(libraryHitsProvider),
+              onRefresh: () async {
+                ref.invalidate(libraryHitsProvider);
+                await _refreshMissingCovers();
+              },
               child: CustomScrollView(
               slivers: [
                 SliverPadding(

@@ -242,6 +242,10 @@
   "@formFieldLanguage": {
     "description": "Form field label"
   },
+  "formLanguageUnset": "Not set",
+  "@formLanguageUnset": {
+    "description": "Placeholder option in the language dropdown when no language is chosen"
+  },
   "formFieldSeries": "SERIES",
   "@formFieldSeries": {
     "description": "Form field label"
@@ -660,6 +664,18 @@
   "lendingLogBorrowed": "+ Log a borrowed book",
   "@lendingLogBorrowed": {
     "description": "Opens the log-a-borrowed-book sheet"
+  },
+  "lendingLendBook": "Lend a book",
+  "@lendingLendBook": {
+    "description": "Floating action button on the lending ledger to start a new lend"
+  },
+  "lendingPickTitle": "Which book?",
+  "@lendingPickTitle": {
+    "description": "Title of the sheet that picks which owned book to lend"
+  },
+  "lendingPickEmpty": "Add a book to your library first, then lend it from here.",
+  "@lendingPickEmpty": {
+    "description": "Empty state when there are no lendable books to pick"
   },
   "logBorrowedTitle": "Log a borrowed book",
   "@logBorrowedTitle": {

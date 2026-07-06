@@ -448,6 +448,12 @@ abstract class AppLocalizations {
   /// **'LANGUAGE'**
   String get formFieldLanguage;
 
+  /// Placeholder option in the language dropdown when no language is chosen
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get formLanguageUnset;
+
   /// Form field label
   ///
   /// In en, this message translates to:
@@ -1005,6 +1011,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'+ Log a borrowed book'**
   String get lendingLogBorrowed;
+
+  /// Floating action button on the lending ledger to start a new lend
+  ///
+  /// In en, this message translates to:
+  /// **'Lend a book'**
+  String get lendingLendBook;
+
+  /// Title of the sheet that picks which owned book to lend
+  ///
+  /// In en, this message translates to:
+  /// **'Which book?'**
+  String get lendingPickTitle;
+
+  /// Empty state when there are no lendable books to pick
+  ///
+  /// In en, this message translates to:
+  /// **'Add a book to your library first, then lend it from here.'**
+  String get lendingPickEmpty;
 
   /// Title of the log-borrowed bottom sheet (S8c)
   ///

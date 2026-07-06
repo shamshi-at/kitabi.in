@@ -13,6 +13,24 @@ import '../catalog_image_upload.dart';
 import '../providers/catalog_providers.dart';
 
 const _formats = ['Paperback', 'Hardcover', 'eBook', 'Audiobook'];
+
+/// Languages offered in the add/edit form's dropdown. Malayalam leads (the app's
+/// regional wedge); the rest cover India's major languages plus a few common in
+/// its catalogs. Full names, matching what the catalog already stores.
+const _languages = [
+  'Malayalam',
+  'English',
+  'Hindi',
+  'Tamil',
+  'Kannada',
+  'Telugu',
+  'Marathi',
+  'Bengali',
+  'Gujarati',
+  'Urdu',
+  'Sanskrit',
+  'Arabic',
+];
 const _commonGenres = [
   'Fiction',
   'Non-fiction',
@@ -66,13 +84,15 @@ class _BookForm extends ConsumerStatefulWidget {
 class _BookFormState extends ConsumerState<_BookForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _title;
-  late final TextEditingController _language;
   late final TextEditingController _series;
   late final TextEditingController _seriesNumber;
   late final TextEditingController _pages;
   late final TextEditingController _isbn;
   late final TextEditingController _customGenres;
   late String _format;
+  // Optional; null when unset. A dropdown, not free text — so the catalog stays
+  // consistent ("Malayalam", not "malayalam"/"mal"/"Malyalam").
+  String? _language;
   late final Set<String> _selectedGenres;
   // Authors and publisher are chosen via the dedicated picker pages, so each
   // carries its canonical catalog id (falling back to name for legacy data).
@@ -114,7 +134,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     // Live cover preview (S7b): the typeset cover mirrors the title/author as
     // they're typed, so a keystroke redraws it.
     _title.addListener(_onCoverChanged);
-    _language = TextEditingController(text: work?['language'] as String? ?? '');
+    _language = work?['language'] as String?;
     _series = TextEditingController(text: (edition?['series'] as Map?)?['name'] as String? ?? '');
     _seriesNumber =
         TextEditingController(text: edition?['series_number']?.toString() ?? '');
@@ -139,7 +159,6 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _title.removeListener(_onCoverChanged);
     for (final c in [
       _title,
-      _language,
       _series,
       _seriesNumber,
       _pages,
@@ -204,7 +223,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     setState(() {
       _title.text = work['title'] as String? ?? _title.text;
       final language = work['language'] as String?;
-      if (language != null && language.isNotEmpty) _language.text = language;
+      if (language != null && language.isNotEmpty) _language = language;
 
       _authors
         ..clear()
@@ -275,7 +294,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final publisherId = _publisher?['id'] as String?;
     final payload = {
       'title': _title.text.trim(),
-      'language': _language.text.trim().isEmpty ? null : _language.text.trim(),
+      'language': _language,
       // Ids for picker-chosen authors; names only for anything without one.
       'author_ids': [
         for (final a in _authors)
@@ -433,7 +452,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
           SizedBox(height: 10),
           Row(
             children: [
-              Expanded(flex: 14, child: _Field(label: l10n.formFieldLanguage, controller: _language)),
+              Expanded(
+                flex: 14,
+                child: _LanguageField(
+                  label: l10n.formFieldLanguage,
+                  value: _language,
+                  unsetLabel: l10n.formLanguageUnset,
+                  onChanged: (v) => setState(() => _language = v),
+                ),
+              ),
               SizedBox(width: 8),
               Expanded(
                 flex: 10,
@@ -925,6 +952,74 @@ class _DropdownField extends StatelessWidget {
                   DropdownMenuItem(value: option, child: Text(option)),
               ],
               onChanged: (v) => v != null ? onChanged(v) : null,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The language picker — a nullable dropdown (language is optional) with a
+/// leading "not set" item. Tolerates a legacy value outside [_languages] by
+/// showing it as an extra option, so editing an old book never drops it.
+class _LanguageField extends StatelessWidget {
+  const _LanguageField({
+    required this.label,
+    required this.value,
+    required this.unsetLabel,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String? value;
+  final String unsetLabel;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = [
+      ..._languages,
+      if (value != null && !_languages.contains(value)) value!,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            letterSpacing: 1,
+            color: AppColors.inkSoft,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 4),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              value: value,
+              isExpanded: true,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.ink,
+              ),
+              items: [
+                DropdownMenuItem(
+                  value: null,
+                  child: Text(unsetLabel, style: TextStyle(color: AppColors.inkSoft)),
+                ),
+                for (final option in options)
+                  DropdownMenuItem(value: option, child: Text(option)),
+              ],
+              onChanged: onChanged,
             ),
           ),
         ),

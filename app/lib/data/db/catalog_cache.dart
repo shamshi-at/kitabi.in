@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../api/api_client.dart';
 import 'database.dart';
 
 /// Writes the catalog fields a library-grid card needs into the local
@@ -36,4 +37,39 @@ Future<void> cacheBookForOffline(
       genreNames: Value(genres.map((g) => g['name'] as String).join(', ')),
     ),
   );
+}
+
+/// Re-fetch catalog data for every cached book that still has no cover and
+/// refresh its cache row — so covers added upstream after a book was cached
+/// (e.g. a metadata backfill) show up in the grid/home without re-adding the
+/// book. Online-only: each fetch that fails (offline, not found) is skipped, so
+/// this is safe to call opportunistically. Returns how many gained a cover.
+///
+/// Bounded by design: it only touches cover-less rows, so once a book has a
+/// cover it's never re-fetched. Works are de-duplicated so a multi-edition Work
+/// is fetched once. SCALE: fine for a personal library; if it ever grows large,
+/// batch the fetch behind one endpoint.
+Future<int> refreshMissingCovers(AppDatabase db, ApiClient api) async {
+  final missing = await db.cachedBooksDao.withoutCover();
+  if (missing.isEmpty) return 0;
+
+  final missingEditionIds = {for (final b in missing) b.editionId};
+  final workIds = {for (final b in missing) b.workId};
+  var gained = 0;
+
+  for (final workId in workIds) {
+    Map<String, dynamic> work;
+    try {
+      work = await api.getWork(workId);
+    } catch (_) {
+      continue; // offline or gone — leave the cache as-is
+    }
+    final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    for (final edition in editions) {
+      if (!missingEditionIds.contains(edition['id'])) continue;
+      await cacheBookForOffline(db, work, edition);
+      if (edition['cover_url'] != null) gained++;
+    }
+  }
+  return gained;
 }
