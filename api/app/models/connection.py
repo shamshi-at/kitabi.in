@@ -32,8 +32,11 @@ class Connection(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     requester_id: Mapped[uuid.UUID] = mapped_column(Uuid, index=True, nullable=False)
     addressee_id: Mapped[uuid.UUID] = mapped_column(Uuid, index=True, nullable=False)
-    # 'pending' | 'accepted' | 'denied'
+    # 'pending' | 'accepted' | 'denied' | 'blocked'
     status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
+    # Who blocked, when status == 'blocked'. A denied request can be re-sent
+    # (reopens to pending); a blocked one can't — only the blocker can unblock.
+    blocked_by: Mapped[uuid.UUID | None] = mapped_column(Uuid, default=None)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

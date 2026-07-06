@@ -570,6 +570,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionsAcceptedSection => 'Connected';
 
   @override
+  String get connectionsRejectedSection => 'Declined — you can resend';
+
+  @override
+  String get connectionsBlockedSection => 'Blocked';
+
+  @override
+  String get connectionsDeclinedYou => 'Declined your request';
+
+  @override
+  String get connectionsResend => 'Resend';
+
+  @override
+  String get connectionsBlock => 'Block';
+
+  @override
+  String get connectionsUnblock => 'Unblock';
+
+  @override
   String get connectionsEmpty =>
       'No connections yet. When you lend a book to a Kitabi user, a connection request goes out here.';
 

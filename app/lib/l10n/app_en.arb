@@ -685,6 +685,30 @@
   "@connectionsAcceptedSection": {
     "description": "Section header for accepted connections"
   },
+  "connectionsRejectedSection": "Declined — you can resend",
+  "@connectionsRejectedSection": {
+    "description": "Section header for requests the other person declined"
+  },
+  "connectionsBlockedSection": "Blocked",
+  "@connectionsBlockedSection": {
+    "description": "Section header for users you've blocked"
+  },
+  "connectionsDeclinedYou": "Declined your request",
+  "@connectionsDeclinedYou": {
+    "description": "Subtitle under a declined (resendable) request"
+  },
+  "connectionsResend": "Resend",
+  "@connectionsResend": {
+    "description": "Resend a previously declined connection request"
+  },
+  "connectionsBlock": "Block",
+  "@connectionsBlock": {
+    "description": "Block a user so they can't resend requests"
+  },
+  "connectionsUnblock": "Unblock",
+  "@connectionsUnblock": {
+    "description": "Unblock a previously blocked user"
+  },
   "connectionsEmpty": "No connections yet. When you lend a book to a Kitabi user, a connection request goes out here.",
   "@connectionsEmpty": {
     "description": "Empty state on the connections screen"

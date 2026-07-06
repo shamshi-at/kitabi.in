@@ -125,7 +125,10 @@ status pending/accepted/denied, unique pair, RLS enabled) — cross-user and **o
 not synced** (like `Profile`; the offline sync engine stays strictly per-user Layer 2).
 `/connections` API: `POST` (request, or auto-accept if the other already asked — idempotent),
 `GET` (incoming/outgoing/accepted), `POST /{id}/accept`, `POST /{id}/decline` (deny/cancel/
-disconnect — either party). Auth required on all (`connection_service`, 6 tests). App: lending
+disconnect — either party, resendable), `POST /{id}/block` + `/unblock` (migration
+`000013` adds `blocked_by`). A declined request can be **re-sent** (reopens to pending)
+until the recipient **blocks** it (terminal); mutual requests **auto-accept**. Auth
+required on all (`connection_service`, 9 tests). App: lending
 to a Kitabi user fires a connection request on save (best-effort, offline-safe); the ledger
 shows a **Request pending → Linked** pill per lent card and a badged connections inbox
 (`ConnectionsScreen`, `/connections`) to approve/deny; once accepted, future lends to that

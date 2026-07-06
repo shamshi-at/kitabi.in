@@ -60,10 +60,19 @@ async def request(db: AsyncSession, me: uuid.UUID, addressee_id: uuid.UUID) -> C
                 await db.commit()
                 await db.refresh(existing)
             return existing
-        # Previously denied — reopen as a fresh request from me.
+        if existing.status == "blocked" and existing.blocked_by != me:
+            # The other party blocked me — a denied request can be re-sent, a
+            # blocked one can't (that's the whole point of blocking).
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "blocked", "message": "You can't send this request"},
+            )
+        # Denied (re-send), or blocked-by-me (I change my mind → unblock): reopen
+        # as a fresh pending request from me.
         existing.requester_id = me
         existing.addressee_id = addressee_id
         existing.status = "pending"
+        existing.blocked_by = None
         await db.commit()
         await db.refresh(existing)
         return existing
@@ -124,6 +133,10 @@ async def list_for(db: AsyncSession, me: uuid.UUID) -> ConnectionsOut:
         incoming=[to_out(r) for r in rows if r.status == "pending" and r.addressee_id == me],
         outgoing=[to_out(r) for r in rows if r.status == "pending" and r.requester_id == me],
         accepted=[to_out(r) for r in rows if r.status == "accepted"],
+        # Requests I sent that were denied — I can re-send these (until blocked).
+        rejected=[to_out(r) for r in rows if r.status == "denied" and r.requester_id == me],
+        # People I've blocked — I can unblock them.
+        blocked=[to_out(r) for r in rows if r.status == "blocked" and r.blocked_by == me],
     )
 
 
@@ -153,9 +166,36 @@ async def accept(db: AsyncSession, me: uuid.UUID, conn_id: uuid.UUID) -> Connect
 
 async def decline(db: AsyncSession, me: uuid.UUID, conn_id: uuid.UUID) -> Connection:
     """Deny an incoming request, cancel an outgoing one, or disconnect an
-    accepted connection — any party, any status, always lands on 'denied'."""
+    accepted connection — any party, lands on 'denied' (the other side may still
+    re-send). Use `block` to make it terminal."""
     conn = await _owned(db, me, conn_id)
     conn.status = "denied"
+    conn.blocked_by = None
+    await db.commit()
+    await db.refresh(conn)
+    return conn
+
+
+async def block(db: AsyncSession, me: uuid.UUID, conn_id: uuid.UUID) -> Connection:
+    """Block the other party — a terminal 'denied' they can't re-send past. Only
+    the blocker can undo it (`unblock`)."""
+    conn = await _owned(db, me, conn_id)
+    conn.status = "blocked"
+    conn.blocked_by = me
+    await db.commit()
+    await db.refresh(conn)
+    return conn
+
+
+async def unblock(db: AsyncSession, me: uuid.UUID, conn_id: uuid.UUID) -> Connection:
+    conn = await _owned(db, me, conn_id)
+    if conn.blocked_by != me:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "not_blocker", "message": "Only the blocker can unblock"},
+        )
+    conn.status = "denied"
+    conn.blocked_by = None
     await db.commit()
     await db.refresh(conn)
     return conn

@@ -46,7 +46,13 @@ class Connection {
 }
 
 class ConnectionsData {
-  ConnectionsData({required this.incoming, required this.outgoing, required this.accepted});
+  ConnectionsData({
+    required this.incoming,
+    required this.outgoing,
+    required this.accepted,
+    this.rejected = const [],
+    this.blocked = const [],
+  });
 
   factory ConnectionsData.fromJson(Map<String, dynamic> json) {
     List<Connection> parse(String key) =>
@@ -57,6 +63,8 @@ class ConnectionsData {
       incoming: parse('incoming'),
       outgoing: parse('outgoing'),
       accepted: parse('accepted'),
+      rejected: parse('rejected'),
+      blocked: parse('blocked'),
     );
   }
 
@@ -68,6 +76,12 @@ class ConnectionsData {
 
   /// Confirmed both-ways connections.
   final List<Connection> accepted;
+
+  /// Requests I sent that were declined — I can re-send these (until blocked).
+  final List<Connection> rejected;
+
+  /// People I've blocked — I can unblock them.
+  final List<Connection> blocked;
 
   /// My standing with a specific user id, or null if there's no connection —
   /// drives the ledger's pending/linked pill. 'accepted' | 'pending_out' |

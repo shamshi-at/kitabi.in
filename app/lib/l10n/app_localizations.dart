@@ -1042,6 +1042,42 @@ abstract class AppLocalizations {
   /// **'Connected'**
   String get connectionsAcceptedSection;
 
+  /// Section header for requests the other person declined
+  ///
+  /// In en, this message translates to:
+  /// **'Declined — you can resend'**
+  String get connectionsRejectedSection;
+
+  /// Section header for users you've blocked
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get connectionsBlockedSection;
+
+  /// Subtitle under a declined (resendable) request
+  ///
+  /// In en, this message translates to:
+  /// **'Declined your request'**
+  String get connectionsDeclinedYou;
+
+  /// Resend a previously declined connection request
+  ///
+  /// In en, this message translates to:
+  /// **'Resend'**
+  String get connectionsResend;
+
+  /// Block a user so they can't resend requests
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get connectionsBlock;
+
+  /// Unblock a previously blocked user
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock'**
+  String get connectionsUnblock;
+
   /// Empty state on the connections screen
   ///
   /// In en, this message translates to:

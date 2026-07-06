@@ -48,5 +48,17 @@ async def accept_connection(connection_id: uuid.UUID, user: CurrentUser, db: DbS
 @router.post("/{connection_id}/decline", status_code=status.HTTP_204_NO_CONTENT)
 async def decline_connection(connection_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
     """Deny an incoming request, cancel one you sent, or disconnect an accepted
-    connection — all land the connection on 'denied'."""
+    connection — lands on 'denied' (the other side may still re-send)."""
     await connection_service.decline(db, uuid.UUID(user["id"]), connection_id)
+
+
+@router.post("/{connection_id}/block", status_code=status.HTTP_204_NO_CONTENT)
+async def block_connection(connection_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
+    """Block the other party — terminal; they can't re-send past it."""
+    await connection_service.block(db, uuid.UUID(user["id"]), connection_id)
+
+
+@router.post("/{connection_id}/unblock", status_code=status.HTTP_204_NO_CONTENT)
+async def unblock_connection(connection_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
+    """Undo a block (blocker only) — the connection returns to 'denied'."""
+    await connection_service.unblock(db, uuid.UUID(user["id"]), connection_id)

@@ -31,9 +31,11 @@ class ConnectionsOut(BaseModel):
     """The connections screen in one call: requests to approve, requests you've
     sent, and confirmed connections."""
 
-    incoming: list[ConnectionOut]  # pending, addressed to you — approve/deny
+    incoming: list[ConnectionOut]  # pending, addressed to you — approve/deny/block
     outgoing: list[ConnectionOut]  # pending, sent by you — awaiting them
     accepted: list[ConnectionOut]
+    rejected: list[ConnectionOut]  # you sent, they denied — you can re-send
+    blocked: list[ConnectionOut]  # you blocked — you can unblock
 
 
 class ConnectionRequestIn(BaseModel):

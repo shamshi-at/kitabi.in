@@ -124,6 +124,14 @@ class ApiClient {
   Future<void> declineConnection(String connectionId) =>
       _dio.post('/connections/$connectionId/decline');
 
+  /// Block the other party — terminal; they can't re-send requests past it.
+  Future<void> blockConnection(String connectionId) =>
+      _dio.post('/connections/$connectionId/block');
+
+  /// Undo a block (blocker only).
+  Future<void> unblockConnection(String connectionId) =>
+      _dio.post('/connections/$connectionId/unblock');
+
   /// Catalog-only search (title / author / exact ISBN) — Phase 2 scope.
   /// The "in your library" merge lands once the personal library (Phase 3)
   /// and its Drift cache exist; for now every result is a catalog work.

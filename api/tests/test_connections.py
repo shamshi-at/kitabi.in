@@ -123,3 +123,46 @@ async def test_only_addressee_can_accept(db_sessionmaker, user, user_b):
         conn_id = (await b.get("/connections")).json()["incoming"][0]["id"]
         # The requester (A) cannot accept their own request.
         assert (await a.post(f"/connections/{conn_id}/accept")).status_code == 403
+
+
+async def test_denied_request_shows_as_rejected_to_sender(db_sessionmaker, user, user_b):
+    await _make_profile(db_sessionmaker, user, "alice")
+    await _make_profile(db_sessionmaker, user_b, "bob")
+    async with _client(db_sessionmaker, user) as a, _client(db_sessionmaker, user_b) as b:
+        await a.post("/connections", json={"addressee_id": user_b["id"]})
+        conn_id = (await b.get("/connections")).json()["incoming"][0]["id"]
+        await b.post(f"/connections/{conn_id}/decline")
+        rejected = (await a.get("/connections")).json()["rejected"]
+        assert len(rejected) == 1
+        assert rejected[0]["other"]["username"] == "bob"
+
+
+async def test_block_prevents_resend(db_sessionmaker, user, user_b):
+    await _make_profile(db_sessionmaker, user, "alice")
+    await _make_profile(db_sessionmaker, user_b, "bob")
+    async with _client(db_sessionmaker, user) as a, _client(db_sessionmaker, user_b) as b:
+        await a.post("/connections", json={"addressee_id": user_b["id"]})
+        conn_id = (await b.get("/connections")).json()["incoming"][0]["id"]
+        assert (await b.post(f"/connections/{conn_id}/block")).status_code == 204
+
+        # A can no longer re-send — a blocked request is terminal.
+        resp = await a.post("/connections", json={"addressee_id": user_b["id"]})
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "blocked"
+        # B sees A in the blocked bucket.
+        assert len((await b.get("/connections")).json()["blocked"]) == 1
+
+
+async def test_unblock_lets_them_resend_again(db_sessionmaker, user, user_b):
+    await _make_profile(db_sessionmaker, user, "alice")
+    await _make_profile(db_sessionmaker, user_b, "bob")
+    async with _client(db_sessionmaker, user) as a, _client(db_sessionmaker, user_b) as b:
+        await a.post("/connections", json={"addressee_id": user_b["id"]})
+        conn_id = (await b.get("/connections")).json()["incoming"][0]["id"]
+        await b.post(f"/connections/{conn_id}/block")
+        # Only the blocker can unblock.
+        assert (await a.post(f"/connections/{conn_id}/unblock")).status_code == 403
+        assert (await b.post(f"/connections/{conn_id}/unblock")).status_code == 204
+        # Now A can re-send.
+        resp = await a.post("/connections", json={"addressee_id": user_b["id"]})
+        assert resp.json()["status"] == "pending_out"

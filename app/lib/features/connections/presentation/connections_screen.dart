@@ -9,8 +9,9 @@ import '../../../l10n/app_localizations.dart';
 import '../connections_providers.dart';
 
 /// The connections inbox (S8b) — the consent layer for peer-to-peer lending.
-/// Incoming requests to approve/deny, requests you've sent, and confirmed
-/// connections you can disconnect.
+/// Requests to approve (accept / deny / block), requests you've sent, declined
+/// ones you can re-send (until the other person blocks you), confirmed
+/// connections, and people you've blocked.
 class ConnectionsScreen extends ConsumerWidget {
   const ConnectionsScreen({super.key});
 
@@ -37,8 +38,11 @@ class ConnectionsScreen extends ConsumerWidget {
         loading: () => ListSkeleton(),
         error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(connectionsProvider)),
         data: (data) {
-          final empty =
-              data.incoming.isEmpty && data.outgoing.isEmpty && data.accepted.isEmpty;
+          final empty = data.incoming.isEmpty &&
+              data.outgoing.isEmpty &&
+              data.accepted.isEmpty &&
+              data.rejected.isEmpty &&
+              data.blocked.isEmpty;
           if (empty) {
             return EmptyState(
               icon: Icons.people_outline,
@@ -58,17 +62,20 @@ class ConnectionsScreen extends ConsumerWidget {
                     _ConnectionCard(
                       user: c.other,
                       subtitle: l10n.connectionsWantsToConnect,
-                      actions: [
-                        _CardButton(
-                          label: l10n.connectionsAccept,
-                          primary: true,
-                          onTap: () => _act(ref, (api) => api.acceptConnection(c.id)),
-                        ),
-                        _CardButton(
-                          label: l10n.connectionsDeny,
-                          onTap: () => _act(ref, (api) => api.declineConnection(c.id)),
-                        ),
-                      ],
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _CardButton(
+                            label: l10n.connectionsAccept,
+                            primary: true,
+                            onTap: () => _act(ref, (api) => api.acceptConnection(c.id)),
+                          ),
+                          _Kebab(items: [
+                            (l10n.connectionsDeny, () => _act(ref, (api) => api.declineConnection(c.id))),
+                            (l10n.connectionsBlock, () => _act(ref, (api) => api.blockConnection(c.id))),
+                          ]),
+                        ],
+                      ),
                     ),
                   SizedBox(height: 14),
                 ],
@@ -78,12 +85,24 @@ class ConnectionsScreen extends ConsumerWidget {
                     _ConnectionCard(
                       user: c.other,
                       subtitle: l10n.connectionsAwaitingReply,
-                      actions: [
-                        _CardButton(
-                          label: l10n.connectionsCancel,
-                          onTap: () => _act(ref, (api) => api.declineConnection(c.id)),
-                        ),
-                      ],
+                      trailing: _CardButton(
+                        label: l10n.connectionsCancel,
+                        onTap: () => _act(ref, (api) => api.declineConnection(c.id)),
+                      ),
+                    ),
+                  SizedBox(height: 14),
+                ],
+                if (data.rejected.isNotEmpty) ...[
+                  _SectionLabel(l10n.connectionsRejectedSection),
+                  for (final c in data.rejected)
+                    _ConnectionCard(
+                      user: c.other,
+                      subtitle: l10n.connectionsDeclinedYou,
+                      trailing: _CardButton(
+                        label: l10n.connectionsResend,
+                        primary: true,
+                        onTap: () => _act(ref, (api) => api.requestConnection(c.other.id)),
+                      ),
                     ),
                   SizedBox(height: 14),
                 ],
@@ -93,12 +112,31 @@ class ConnectionsScreen extends ConsumerWidget {
                     _ConnectionCard(
                       user: c.other,
                       subtitle: c.other.username != null ? '@${c.other.username}' : null,
-                      actions: [
-                        _CardButton(
-                          label: l10n.connectionsDisconnect,
-                          onTap: () => _act(ref, (api) => api.declineConnection(c.id)),
-                        ),
-                      ],
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _CardButton(
+                            label: l10n.connectionsDisconnect,
+                            onTap: () => _act(ref, (api) => api.declineConnection(c.id)),
+                          ),
+                          _Kebab(items: [
+                            (l10n.connectionsBlock, () => _act(ref, (api) => api.blockConnection(c.id))),
+                          ]),
+                        ],
+                      ),
+                    ),
+                  SizedBox(height: 14),
+                ],
+                if (data.blocked.isNotEmpty) ...[
+                  _SectionLabel(l10n.connectionsBlockedSection),
+                  for (final c in data.blocked)
+                    _ConnectionCard(
+                      user: c.other,
+                      subtitle: c.other.username != null ? '@${c.other.username}' : null,
+                      trailing: _CardButton(
+                        label: l10n.connectionsUnblock,
+                        onTap: () => _act(ref, (api) => api.unblockConnection(c.id)),
+                      ),
                     ),
                 ],
               ],
@@ -133,11 +171,11 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _ConnectionCard extends StatelessWidget {
-  const _ConnectionCard({required this.user, required this.subtitle, required this.actions});
+  const _ConnectionCard({required this.user, required this.subtitle, required this.trailing});
 
   final ConnectionUser user;
   final String? subtitle;
-  final List<Widget> actions;
+  final Widget trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +230,7 @@ class _ConnectionCard extends StatelessWidget {
             ),
           ),
           SizedBox(width: 8),
-          ...actions,
+          trailing,
         ],
       ),
     );
@@ -208,23 +246,41 @@ class _CardButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(left: 6),
-      child: TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(
-          backgroundColor: primary ? AppColors.oxblood : Colors.transparent,
-          foregroundColor: primary ? AppColors.paper : AppColors.inkSoft,
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: primary ? BorderSide.none : BorderSide(color: AppColors.line),
-          ),
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        backgroundColor: primary ? AppColors.oxblood : Colors.transparent,
+        foregroundColor: primary ? AppColors.paper : AppColors.inkSoft,
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: primary ? BorderSide.none : BorderSide(color: AppColors.line),
         ),
-        child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
       ),
+      child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+/// Overflow menu for a card's secondary actions (deny, block…).
+class _Kebab extends StatelessWidget {
+  const _Kebab({required this.items});
+
+  final List<(String, VoidCallback)> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<int>(
+      icon: Icon(Icons.more_vert, size: 18, color: AppColors.inkSoft),
+      padding: EdgeInsets.zero,
+      splashRadius: 18,
+      onSelected: (i) => items[i].$2(),
+      itemBuilder: (_) => [
+        for (var i = 0; i < items.length; i++)
+          PopupMenuItem(value: i, height: 40, child: Text(items[i].$1)),
+      ],
     );
   }
 }
