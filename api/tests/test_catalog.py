@@ -266,21 +266,27 @@ async def test_browse_works_authors_publishers_paged(client):
     assert any(p["name"] == "Browse House 1" for p in publishers.json())
 
 
-async def test_edition_buy_url_wired_and_patchable(client):
+async def test_edition_buy_links_wired_and_patchable(client):
     created = await client.post(
         "/catalog/works", json={"title": "Buyable", "isbn": "9789999999999"}
     )
     edition = created.json()["editions"][0]
-    # [WIRED] — the field exists and defaults to null.
-    assert "buy_url" in edition
-    assert edition["buy_url"] is None
+    # [WIRED] — the field exists and defaults to an empty list (column is null).
+    assert edition["buy_links"] == []
 
     patched = await client.patch(
         f"/catalog/editions/{edition['id']}",
-        json={"buy_url": "https://example.com/buy/9789999999999"},
+        json={
+            "buy_links": [
+                {"retailer": "Amazon", "url": "https://amazon.in/dp/x"},
+                {"retailer": "Flipkart", "url": "https://flipkart.com/y"},
+            ]
+        },
     )
     assert patched.status_code == 200
-    assert patched.json()["buy_url"] == "https://example.com/buy/9789999999999"
+    links = patched.json()["buy_links"]
+    assert [b["retailer"] for b in links] == ["Amazon", "Flipkart"]
+    assert links[0]["url"] == "https://amazon.in/dp/x"
 
 
 async def test_link_translation(client):

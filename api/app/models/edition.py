@@ -3,6 +3,7 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, ForeignKey, String, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, CatalogMixin
@@ -38,11 +39,11 @@ class Edition(CatalogMixin, Base):
     pub_date: Mapped[date | None] = mapped_column(Date, default=None)
     format: Mapped[str | None] = mapped_column(String, default=None)  # paperback/hardcover/ebook
     cover_url: Mapped[str | None] = mapped_column(String, default=None)
-    # [WIRED] External buy link for this specific edition (ISBN → an ecommerce
-    # product page). Dormant until populated: the app shows a "Buy" affordance
-    # only when this is set, so the feature is invisible until we wire real
-    # store links. Per-edition, not per-Work, since it's a specific printing.
-    buy_url: Mapped[str | None] = mapped_column(String, default=None)
+    # [WIRED] Where this edition is available to buy — a list of external
+    # retailer links ([{"retailer": "Amazon", "url": ...}, {"retailer":
+    # "Flipkart", ...}]). Display-only, per-edition (ISBN-specific), populated
+    # later; the book page lists each retailer, dormant while the list is empty.
+    buy_links: Mapped[list | None] = mapped_column(JSONB, default=None)
 
     external_source: Mapped[str | None] = mapped_column(String, default=None)
     external_id: Mapped[str | None] = mapped_column(String, default=None, index=True)

@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class AuthorOut(BaseModel):
@@ -57,6 +57,15 @@ class SeriesOut(BaseModel):
     name: str
 
 
+class BuyLink(BaseModel):
+    """One external retailer link for an edition ([WIRED] — the book page lists
+    every store the book is available at)."""
+
+    model_config = ConfigDict(from_attributes=True)
+    retailer: str
+    url: str
+
+
 class EditionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
@@ -66,12 +75,18 @@ class EditionOut(BaseModel):
     pub_date: date | None
     format: str | None
     cover_url: str | None
-    # [WIRED] external buy link — null until store links are populated; the app
-    # only shows a "Buy" affordance when it's set.
-    buy_url: str | None = None
+    # [WIRED] where to buy — empty until store links are populated; the book
+    # page lists each retailer.
+    buy_links: list[BuyLink] = []
     series_number: int | None
     publisher: PublisherOut | None
     series: SeriesOut | None
+
+    @field_validator("buy_links", mode="before")
+    @classmethod
+    def _null_buy_links_to_empty(cls, v: object) -> object:
+        # The column is nullable; render null as an empty list.
+        return v if v is not None else []
 
 
 class WorkOut(BaseModel):
@@ -153,7 +168,7 @@ class EditionUpdate(BaseModel):
     pub_date: date | None = None
     format: str | None = None
     cover_url: str | None = None
-    buy_url: str | None = None
+    buy_links: list[BuyLink] | None = None
 
 
 class TranslationLinkIn(BaseModel):
