@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Book — Kitabi</title>
+<meta name="description" content="A book on Kitabi — track, lend, and share your library.">
+<meta name="theme-color" content="#241811">
+<link rel="icon" href="/logo.svg?v=3" type="image/svg+xml">
+<link rel="icon" href="/ico.png?v=3" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">
+<meta property="og:type" content="book">
+<meta property="og:site_name" content="Kitabi">
+<meta property="og:title" content="A book on Kitabi">
+<meta property="og:description" content="Track, lend, and share your library. Get Kitabi.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* Kitabi "Reading Room" tokens — see docs/screen-design.md */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E;
+  --night:#241811; --night-2:#33241A;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--paper);
+  -webkit-tap-highlight-color:transparent;overflow-x:hidden;padding-bottom:112px;
+}
+.serif{font-family:'Fraunces',Georgia,serif}
+a{color:var(--oxblood)}
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- site header ---------- */
+.site-head{display:flex;align-items:center;gap:11px;padding:16px 22px;border-bottom:1px solid var(--line);background:var(--card)}
+.site-head img{width:36px;height:36px;display:block}
+.site-head .bn{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:21px;color:var(--ink);text-decoration:none}
+.site-head .bn small{display:block;font-family:'Inter',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-top:-2px}
+
+/* ---------- page shell ---------- */
+.wrap{max-width:900px;margin:0 auto;padding:26px 22px 0}
+
+/* loading / error states */
+.state{text-align:center;padding:70px 22px;animation:up .4s ease-out both}
+.spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--oxblood);margin:0 auto 20px;animation:spin .8s linear infinite}
+.state h2{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:clamp(22px,6vw,30px);margin-bottom:10px}
+.state p{color:var(--ink-soft);font-size:15px;line-height:1.7;max-width:440px;margin:0 auto}
+
+/* ---------- book layout ---------- */
+.book{display:grid;grid-template-columns:1fr;gap:26px;animation:up .5s ease-out both}
+@media(min-width:640px){.book{grid-template-columns:200px 1fr;gap:34px}}
+.cover-col{display:flex;justify-content:center}
+.cover-lg{width:190px;aspect-ratio:2/3;border-radius:4px 9px 9px 4px;overflow:hidden;box-shadow:0 12px 30px rgba(43,33,24,.3);position:relative;background:var(--paper-deep)}
+.cover-lg::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:rgba(0,0,0,.2);z-index:2}
+.cover-lg img{width:100%;height:100%;object-fit:cover;display:block}
+/* typeset fallback tile */
+.cover-fallback{width:100%;height:100%;background:linear-gradient(150deg,var(--oxblood),var(--oxblood-deep));color:var(--gold-soft);display:flex;flex-direction:column;justify-content:center;padding:20px 16px;text-align:center}
+.cover-fallback .ft{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:600;line-height:1.25}
+.cover-fallback .fr{position:absolute;top:-2px;right:12px;width:12px;height:26px;background:var(--gold);clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
+
+.meta h1{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:clamp(26px,7vw,38px);line-height:1.15}
+.meta .sub{font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:clamp(16px,4.5vw,20px);color:var(--ink-soft);margin-top:6px}
+.meta .by{margin-top:14px;font-size:15.5px}
+.meta .by a{font-weight:600;text-decoration:none;border-bottom:1px solid rgba(126,42,51,.3)}
+.pub-line{margin-top:6px;font-size:14px;color:var(--ink-soft)}
+.pub-line a{text-decoration:none;border-bottom:1px solid rgba(126,42,51,.3)}
+
+.stars{margin-top:16px;display:flex;align-items:center;gap:9px}
+.stars .s{font-size:19px;letter-spacing:1px;color:var(--gold)}
+.stars .s .off{color:var(--line)}
+.stars .num{font-size:13.5px;color:var(--ink-soft);font-weight:600}
+
+.facts{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--ink-soft)}
+.facts .f b{color:var(--ink);font-weight:600}
+
+.chips{margin-top:18px;display:flex;flex-wrap:wrap;gap:7px}
+.chip{font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft)}
+
+.desc{margin-top:26px;grid-column:1/-1}
+.desc h3{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:19px;margin-bottom:10px}
+.desc p{font-size:15px;line-height:1.75;color:var(--ink);white-space:pre-line}
+
+/* ---------- get-kitabi banner ---------- */
+.getbar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--night);color:var(--paper);
+  border-top:3px solid var(--gold);padding:12px 18px calc(12px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.getbar .msg{font-size:13.5px;line-height:1.4;max-width:340px}
+.getbar .msg b{color:#fff;font-weight:600}
+.getbar .msg .lk{color:var(--gold);text-decoration:none;font-weight:600}
+.getbar .stores{display:flex;gap:9px;flex-wrap:wrap}
+.store{display:flex;align-items:center;gap:9px;text-align:left;background:var(--paper);color:var(--ink);
+  border-radius:12px;padding:8px 14px;text-decoration:none;border:1px solid var(--paper);min-width:150px}
+.store .ic{flex-shrink:0}
+.store small{display:block;font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--oxblood)}
+.store span{font-size:14px;font-weight:700}
+.store.ghost{background:transparent;color:var(--paper);border:1.5px solid rgba(246,240,227,.45)}
+.store.ghost small{color:var(--gold)}
+@media(max-width:560px){.getbar{flex-direction:column;gap:10px;text-align:center}.getbar .msg{max-width:none}}
+
+/* ---------- footer ---------- */
+footer{padding:38px 22px 30px;text-align:center;color:var(--ink-soft);font-size:12.5px;border-top:1px solid var(--line);margin-top:56px}
+footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
+
+@media (prefers-reduced-motion:reduce){
+  .book,.state{animation:none}
+  .spinner{animation:spin 1.4s linear infinite}
+}
+</style>
+</head>
+<body>
+
+<header class="site-head">
+  <a href="/" aria-label="Kitabi home"><img src="/logo.svg" alt="Kitabi" width="36" height="36"></a>
+  <a class="bn" href="/">Kitabi<small>Beyond the Bookshelf</small></a>
+</header>
+
+<main class="wrap" id="content">
+  <div class="state">
+    <div class="spinner" role="status" aria-label="Loading"></div>
+    <p>Opening the book…</p>
+  </div>
+</main>
+
+<!-- Get Kitabi banner — always present -->
+<div class="getbar">
+  <div class="msg">Track, lend, and share your library. <b>Get Kitabi</b> — <a class="lk" href="/#notify">kitabi.in</a></div>
+  <div class="stores">
+    <a class="store" href="/#notify" aria-label="App Store — launching soon">
+      <svg class="ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
+      <span><small>Launching soon</small><span>App Store</span></span>
+    </a>
+    <a class="store ghost" href="/#notify" aria-label="Google Play — launching soon">
+      <svg class="ic" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M4 2.3v19.4c0 .4.45.65.79.42l14.4-9.7a.5.5 0 0 0 0-.84L4.79 1.88A.5.5 0 0 0 4 2.3z"/></svg>
+      <span><small>Launching soon</small><span>Google Play</span></span>
+    </a>
+  </div>
+</div>
+
+<footer>
+  <p class="fm">Kitabi <span style="color:var(--gold)">·</span> beyond the bookshelf</p>
+  <p style="margin-top:8px">
+    <a href="/privacy.html" style="color:var(--oxblood);text-decoration:none">Privacy</a>
+    <span style="color:var(--line)">·</span>
+    <a href="/terms.html" style="color:var(--oxblood);text-decoration:none">Terms</a>
+  </p>
+  <p style="margin-top:8px">© <span id="y">2026</span> Kitabi. All rights reserved.</p>
+</footer>
+
+<script>
+document.getElementById('y').textContent = new Date().getFullYear();
+
+const API = (window.KITABI_API || 'https://api.kitabi.in');
+
+// HTML-escape any interpolated API string (XSS-safe)
+function esc(v){
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+// Read the id from the path (last non-empty segment), fall back to ?id=
+function readId(){
+  var q = new URLSearchParams(location.search).get('id');
+  if (q) return q;
+  var parts = location.pathname.split('/').filter(Boolean);
+  return parts.length ? decodeURIComponent(parts[parts.length - 1]) : '';
+}
+
+function stars(rating){
+  var r = Math.max(0, Math.min(5, Number(rating) || 0));
+  var full = Math.round(r);
+  var out = '';
+  for (var i = 1; i <= 5; i++){
+    out += i <= full ? '★' : '<span class="off">★</span>';
+  }
+  return '<span class="s">' + out + '</span><span class="num">' + r.toFixed(1) + ' / 5</span>';
+}
+
+function showError(){
+  document.getElementById('content').innerHTML =
+    '<div class="state">' +
+      '<h2>This book isn’t available yet</h2>' +
+      '<p>— but Kitabi is coming. Track, lend, and share your library when we launch. ' +
+      'In the meantime, <a href="/">explore Kitabi</a>.</p>' +
+    '</div>';
+}
+
+function render(work){
+  var editions = Array.isArray(work.editions) ? work.editions : [];
+  // prefer an edition that has a cover, else the first
+  var ed = editions.find(function(e){ return e && e.cover_url; }) || editions[0] || {};
+  var authors = Array.isArray(work.authors) ? work.authors : [];
+  var genres = Array.isArray(work.genres) ? work.genres : [];
+
+  document.title = (work.title ? work.title + ' — Kitabi' : 'Book — Kitabi');
+
+  // cover
+  var coverHtml;
+  if (ed.cover_url){
+    coverHtml = '<img src="' + esc(ed.cover_url) + '" alt="Cover of ' + esc(work.title) + '" loading="lazy">';
+  } else {
+    coverHtml = '<div class="cover-fallback"><span class="fr"></span>' +
+      '<div class="ft">' + esc(work.title || 'Untitled') + '</div></div>';
+  }
+
+  // authors
+  var byHtml = '';
+  if (authors.length){
+    byHtml = '<div class="by">by ' + authors.map(function(a){
+      var label = esc(a.pen_name || a.name || 'Unknown');
+      return a.id ? '<a href="/a/' + encodeURIComponent(a.id) + '">' + label + '</a>' : label;
+    }).join(', ') + '</div>';
+  }
+
+  // publisher (from chosen edition)
+  var pubHtml = '';
+  if (ed.publisher && ed.publisher.name){
+    var pn = esc(ed.publisher.name);
+    pubHtml = '<div class="pub-line">Published by ' +
+      (ed.publisher.id ? '<a href="/p/' + encodeURIComponent(ed.publisher.id) + '">' + pn + '</a>' : pn) +
+      '</div>';
+  }
+
+  // facts
+  var facts = [];
+  if (work.first_publish_year) facts.push('<span class="f">First published <b>' + esc(work.first_publish_year) + '</b></span>');
+  var lang = ed.language || work.language;
+  if (lang) facts.push('<span class="f">Language <b>' + esc(lang) + '</b></span>');
+  if (ed.page_count) facts.push('<span class="f"><b>' + esc(ed.page_count) + '</b> pages</span>');
+  if (ed.format) facts.push('<span class="f">Format <b>' + esc(ed.format) + '</b></span>');
+  if (ed.isbn) facts.push('<span class="f">ISBN <b>' + esc(ed.isbn) + '</b></span>');
+  if (ed.series && ed.series.name){
+    facts.push('<span class="f">Series <b>' + esc(ed.series.name) +
+      (ed.series_number ? ' #' + esc(ed.series_number) : '') + '</b></span>');
+  }
+
+  // rating
+  var ratingHtml = '';
+  if (work.aggregate_rating !== null && work.aggregate_rating !== undefined && work.aggregate_rating !== ''){
+    ratingHtml = '<div class="stars">' + stars(work.aggregate_rating) + '</div>';
+  }
+
+  // genres
+  var chipsHtml = genres.length
+    ? '<div class="chips">' + genres.map(function(g){
+        return '<span class="chip">' + esc(g.name) + '</span>';
+      }).join('') + '</div>'
+    : '';
+
+  // description
+  var descHtml = work.description
+    ? '<section class="desc"><h3>About this book</h3><p>' + esc(work.description) + '</p></section>'
+    : '';
+
+  document.getElementById('content').innerHTML =
+    '<article class="book">' +
+      '<div class="cover-col"><div class="cover-lg">' + coverHtml + '</div></div>' +
+      '<div class="meta">' +
+        '<h1>' + esc(work.title || 'Untitled') + '</h1>' +
+        (work.subtitle ? '<div class="sub">' + esc(work.subtitle) + '</div>' : '') +
+        byHtml + pubHtml + ratingHtml +
+        (facts.length ? '<div class="facts">' + facts.join('') + '</div>' : '') +
+        chipsHtml +
+      '</div>' +
+      descHtml +
+    '</article>';
+}
+
+(function(){
+  var id = readId();
+  if (!id){ showError(); return; }
+  fetch(API + '/catalog/works/' + encodeURIComponent(id), {headers:{'Accept':'application/json'}})
+    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(data){
+      if (!data || !data.id){ showError(); return; }
+      render(data);
+    })
+    .catch(function(){ showError(); });
+})();
+</script>
+</body>
+</html>

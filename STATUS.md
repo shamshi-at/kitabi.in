@@ -125,7 +125,7 @@ parts, each with their own README and CI workflow:
 |---|---|---|
 | `landing-page/` | Static "launching soon" site | **Live** at kitabi.in |
 | `api/` | FastAPI backend | **Live** at api.kitabi.in — auth/profile + shared catalog (search, ISBN lookup, add/edit, author/publisher browse) |
-| `app/` | Flutter mobile app | Auth flow + library-first home + catalog screens working (search, ISBN scan → adds to library, add/edit form with typeahead author/publisher, author/publisher browse) + personal-library grid & book detail |
+| `app/` | Flutter mobile app | Auth flow + library-first home + catalog screens working (global search across library/books/authors/publishers, ISBN scan → adds to library, add/edit form with author/publisher **picker pages**, author/publisher browse, shareable book/author/publisher links) + personal-library grid & book detail |
 | `docs/` | Mockups, design tokens, task checklist | — |
 
 ---
@@ -151,7 +151,7 @@ any paid metadata API (open decision), Redis/queues (cost rule — CLAUDE.md rul
 | What | URL | Hosted on | Notes |
 |---|---|---|---|
 | Landing page | https://kitabi.in | Cloudflare Pages, git-deploy from `landing-page/` on push to `main` | Live, public |
-| API | https://api.kitabi.in | Railway service `kitabi-api`, proxied CNAME via Cloudflare (Full strict) | Live; auth/profile + catalog endpoints |
+| API | https://api.kitabi.in | Railway service `kitabi-api`, proxied CNAME via Cloudflare (Full strict) | Live; auth/profile + catalog endpoints (incl. global search + author/publisher create). CORS now allows `kitabi.in` for the public share pages |
 | API (origin, fallback) | https://kitabi-api-production.up.railway.app | Direct Railway domain | Keep working in case the custom domain ever breaks |
 | Mobile app | — | Not store-submitted | Auth verified on iOS Simulator (Phase 1); catalog screens verified on an Android emulator against a local API (Phase 2) — `mobile_scanner`'s MLKit dependency can't build on an Apple Silicon iOS simulator (no arm64 simulator slice), so the scan screen specifically needs a real iOS device or an older x86_64-capable simulator runtime to verify there. Real app icon + splash screen now in place (see below). An IPA has been built pointed at production (`app/build/ios/ipa/kitabi.ipa`), but it's **development-signed only** — no Apple Distribution certificate exists yet, so it can only run on devices registered to the provisioning profile, not TestFlight/App Store |
 
@@ -214,6 +214,30 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 ---
 
 ## Recent milestones
+
+- **6 Jul 2026** — Search, author/publisher pickers, and shareable links (feedback pass).
+  **Global search (S4)** now spans four things in one screen — the offline library (Drift)
+  plus the catalog's **books, authors, and publishers** via a new `GET /catalog/search/all`
+  (`{works, authors, publishers}`); authors/publishers tap through to their browse pages,
+  and a search icon now sits on the home header. **Author & publisher pickers**: the add-book
+  form's author/publisher fields open dedicated picker pages (`/catalog/author-picker`,
+  `/catalog/publisher-picker`) that search existing catalog entries (showing portrait/logo +
+  **primary language**) or add a new one with details — backed by new `POST /catalog/authors`
+  and `POST /catalog/publishers` and a new `primary_language` column on both (migration
+  `000007`). Works now accept `author_ids`/`publisher_id` (canonical picks) alongside the old
+  name path. **Shareable links**: the book share sheet's "Copy link" now produces a real URL
+  (`https://kitabi.in/b/{id}`), the share-card capture was hardened (frame-wait + iPad
+  `sharePositionOrigin` + error surface), and author/publisher browse pages gained share
+  buttons. Those links land on **new public landing pages** (`book.html`/`author.html`/
+  `publisher.html`, clean-routed via `_redirects` as `/b/:id` `/a/:id` `/p/:id`) that fetch
+  the public catalog API (CORS opened to `kitabi.in`), render the details, and always show a
+  "Get Kitabi" download banner — degrading to a friendly fallback + banner when the API is
+  unreachable. **Content deep links** (`app_links` listener scoped to kitabi.in, mirrored
+  in-app routes, iOS associated-domains + Android autoVerify intent filter, landing
+  `.well-known/apple-app-site-association` + `assetlinks.json`) so a shared link can open the
+  app when installed. API 59 tests + app 27 tests green, ruff/black + analyze clean.
+  **Placeholders a human must fill before universal links verify on-device:** `TEAMID` in the
+  AASA file and the signing `SHA256` in `assetlinks.json` (both under `landing-page/.well-known`).
 
 - **6 Jul 2026** — Phase 8 launch plumbing + Phase 5 (import) + phase follow-ups. **Import
   (S2)**: `import_service.parse_csv` (Goodreads + generic) + `POST /import/preview` (catalog

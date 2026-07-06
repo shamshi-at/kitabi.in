@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.in.kitabi.kitabi",
+        "paths": [ "/b/*", "/a/*", "/p/*" ]
+      }
+    ]
+  }
+}
