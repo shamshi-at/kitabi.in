@@ -215,6 +215,28 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **6 Jul 2026** — On-device feedback pass (10 fixes). **API latency**: a single
+  fetched work went 1.7s → **0.19s** by loading one joined query instead of
+  selectinload's four round-trips (`_WORK_JOINED`); summary lists dropped the unused
+  genres load; the engine now normalizes any `postgres://`/`postgresql://` scheme to
+  asyncpg so the pool + pooler-safe connect args always apply, and keeps a warmer,
+  recycled pool. **Root cause of the remaining slowness is geographic** — even a warm
+  `SELECT 1` to the Supabase pooler is ~585ms because the API and DB aren't co-located
+  (see gaps). **Covers**: fixed the `TypesetCover` infinity bug (library-grid covers
+  rendered blank because font/padding were computed off `width: infinity`; now via
+  `LayoutBuilder`), and a `scripts/backfill_covers.py` filled real OpenLibrary covers
+  for editions that have them (5/82 — regional titles have sparse coverage, the rest
+  keep the improved typeset covers). **Home**: title merged into the top action row
+  (removed dead space); shelf cards are now tappable (Owned/Read/Wishlist → the library
+  tab, deep-linking `?status=`; Lent out → the ledger). **Sync banner**: moved below
+  the notch (was over the clock) and restyled as a slim centered pill. **Browse**:
+  bolder entry button + a **sort (title/newest/oldest/author) and language filter** on
+  the Books tab (`GET /catalog/browse/works?sort=&language=`, `GET /catalog/browse/languages`).
+  **Share**: the landing `_redirects` now rewrite `/b/:id` to the extensionless clean
+  path so shared links stop 308-redirecting to `/book` and dropping the id; the share
+  card capture waits for `endOfFrame` and falls back to sharing text+link if rasterising
+  fails. API 64 tests + app 28 tests green, lint clean, Docker builds.
+
 - **6 Jul 2026** — Discover/browse screen + `[WIRED]` buy links. A dedicated
   **Browse** surface (`/catalog/browse`, reached from a book icon on the home header
   and the search screen's empty state) lets users wander the whole catalog with three
@@ -398,6 +420,17 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 ---
 
 ## Open decisions / known gaps
+
+- **⚠️ API ↔ DB are not co-located — the main remaining latency cause.** A warm
+  pooled `SELECT 1` from a far client to the Supabase pooler is ~585ms (pure
+  network RTT); Supabase is in **Singapore**, and the Railway service is almost
+  certainly in a different region (US default). Every request pays that RTT once
+  per query round-trip. **The fix is one dashboard action: set the Railway service's
+  region to Singapore (`asia-southeast1`)** so it sits next to Supabase — that turns
+  ~585ms round-trips into single-digit ms and takes every endpoint well under the
+  1s target. Code-side round-trip reductions (single joined work fetch, lighter
+  summary loads) already landed and got book-detail to ~190ms, but they can't beat
+  physics for multi-round-trip list queries until the two services are co-located.
 
 - **No Apple Distribution certificate in this local environment** — only an Apple
   Development identity exists in this Keychain, so IPAs built here via

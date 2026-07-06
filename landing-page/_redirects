@@ -1,3 +1,8 @@
-/b/*   /book.html   200
-/a/*   /author.html   200
-/p/*   /publisher.html   200
+# 200 = rewrite (proxy), keeping the browser URL as /b/:id so the page's JS can
+# read the id from the path. Destinations are the EXTENSIONLESS clean paths —
+# pointing at /book.html triggers Cloudflare Pages' automatic .html→clean-URL
+# 308 redirect, which drops the :id (bit us: shared links landed on /book with
+# no id and showed the "not available" fallback).
+/b/*   /book   200
+/a/*   /author   200
+/p/*   /publisher   200
