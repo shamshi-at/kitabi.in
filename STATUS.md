@@ -118,6 +118,21 @@ adds `profiles.username`, `works.created_by_user_id`, `authors.created_by_user_i
 free-text **private contact** — suggested from past borrowers (`pastBorrowerNames` DAO),
 not shared, later linkable. Advances feature-map rule 14's "real user reference later".
 
+**Lending connections — the consent layer** (added 6 Jul 2026): the first cross-user
+feature, pulling forward the `[LATER]` peer-to-peer social layer (feature-map.md line 99).
+New server-side `connections` table (migration `000012`: requester_id, addressee_id,
+status pending/accepted/denied, unique pair, RLS enabled) — cross-user and **online-only,
+not synced** (like `Profile`; the offline sync engine stays strictly per-user Layer 2).
+`/connections` API: `POST` (request, or auto-accept if the other already asked — idempotent),
+`GET` (incoming/outgoing/accepted), `POST /{id}/accept`, `POST /{id}/decline` (deny/cancel/
+disconnect — either party). Auth required on all (`connection_service`, 6 tests). App: lending
+to a Kitabi user fires a connection request on save (best-effort, offline-safe); the ledger
+shows a **Request pending → Linked** pill per lent card and a badged connections inbox
+(`ConnectionsScreen`, `/connections`) to approve/deny; once accepted, future lends to that
+user auto-link. **No push notifications yet** — approvals surface via the pull inbox, because
+FCM-send from the API would need a new Firebase service-account credential (CLAUDE.md rule 8);
+push is the natural follow-up.
+
 ---
 
 ## Tech stack

@@ -94,6 +94,36 @@ class ApiClient {
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
+  // --- Lending connections (peer-to-peer consent layer) ---
+
+  /// The connections screen in one call: `{incoming, outgoing, accepted}`, each
+  /// a list of `{id, status, role, other:{id,username,full_name}, created_at}`.
+  Future<Map<String, dynamic>> getConnections() async {
+    final res = await _dio.get('/connections');
+    return (res.data as Map).cast<String, dynamic>();
+  }
+
+  /// Ask to connect with a Kitabi user (or accept, if they already asked you).
+  /// Idempotent. Returns `{status, connection_id?}`.
+  Future<Map<String, dynamic>> requestConnection(String addresseeId) async {
+    final res = await _dio.post('/connections', data: {'addressee_id': addresseeId});
+    return (res.data as Map).cast<String, dynamic>();
+  }
+
+  /// Where the caller stands with one user: `{status, connection_id?}` — status
+  /// is none/pending_out/pending_in/accepted/denied.
+  Future<Map<String, dynamic>> connectionStatus(String userId) async {
+    final res = await _dio.get('/connections/status/$userId');
+    return (res.data as Map).cast<String, dynamic>();
+  }
+
+  Future<void> acceptConnection(String connectionId) =>
+      _dio.post('/connections/$connectionId/accept');
+
+  /// Deny an incoming request, cancel one you sent, or disconnect an accepted one.
+  Future<void> declineConnection(String connectionId) =>
+      _dio.post('/connections/$connectionId/decline');
+
   /// Catalog-only search (title / author / exact ISBN) — Phase 2 scope.
   /// The "in your library" merge lands once the personal library (Phase 3)
   /// and its Drift cache exist; for now every result is a catalog work.

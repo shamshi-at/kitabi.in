@@ -23,6 +23,7 @@ import '../../features/library/presentation/book_detail_screen.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
 import '../../features/onboarding/onboarding_providers.dart';
 import '../../features/onboarding/presentation/welcome_screen.dart';
+import '../../features/connections/presentation/connections_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/recommendations/presentation/recommendations_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -62,6 +63,7 @@ abstract final class Routes {
   static const publisherLink = '/p/:publisherId';
   static const library = '/library';
   static const lendingLedger = '/lending';
+  static const connections = '/connections';
   static const insights = '/insights';
   static const recommendations = '/recommendations';
   static const importBooks = '/import';
@@ -204,6 +206,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.profile,
         name: 'profile',
         builder: (context, state) => ProfileScreen(),
+      ),
+      GoRoute(
+        path: Routes.connections,
+        name: 'connections',
+        builder: (context, state) => ConnectionsScreen(),
       ),
       GoRoute(
         path: Routes.recommendations,

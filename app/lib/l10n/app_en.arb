@@ -669,6 +669,62 @@
   "@lendingLendBook": {
     "description": "Floating action button on the lending ledger to start a new lend"
   },
+  "connectionsTitle": "Connections",
+  "@connectionsTitle": {
+    "description": "Title of the connections/requests inbox screen"
+  },
+  "connectionsIncomingSection": "Requests to approve",
+  "@connectionsIncomingSection": {
+    "description": "Section header for incoming pending connection requests"
+  },
+  "connectionsOutgoingSection": "Sent",
+  "@connectionsOutgoingSection": {
+    "description": "Section header for outgoing pending connection requests"
+  },
+  "connectionsAcceptedSection": "Connected",
+  "@connectionsAcceptedSection": {
+    "description": "Section header for accepted connections"
+  },
+  "connectionsEmpty": "No connections yet. When you lend a book to a Kitabi user, a connection request goes out here.",
+  "@connectionsEmpty": {
+    "description": "Empty state on the connections screen"
+  },
+  "connectionsWantsToConnect": "wants to connect",
+  "@connectionsWantsToConnect": {
+    "description": "Subtitle under an incoming request"
+  },
+  "connectionsAwaitingReply": "Waiting for them to accept",
+  "@connectionsAwaitingReply": {
+    "description": "Subtitle under an outgoing pending request"
+  },
+  "connectionsAccept": "Accept",
+  "@connectionsAccept": {
+    "description": "Accept an incoming connection request"
+  },
+  "connectionsDeny": "Deny",
+  "@connectionsDeny": {
+    "description": "Deny an incoming connection request"
+  },
+  "connectionsCancel": "Cancel",
+  "@connectionsCancel": {
+    "description": "Cancel an outgoing pending request"
+  },
+  "connectionsDisconnect": "Disconnect",
+  "@connectionsDisconnect": {
+    "description": "Disconnect an accepted connection"
+  },
+  "connectionsTooltip": "Connection requests",
+  "@connectionsTooltip": {
+    "description": "Tooltip for the connections icon on the lending ledger"
+  },
+  "lendingPendingLink": "Request pending",
+  "@lendingPendingLink": {
+    "description": "Pill on a lent card when the borrower is a Kitabi user who hasn't accepted the connection yet"
+  },
+  "lendingLinkedUser": "Linked",
+  "@lendingLinkedUser": {
+    "description": "Pill on a lent card when the borrower is a connected Kitabi user"
+  },
   "lendingPickTitle": "Which book?",
   "@lendingPickTitle": {
     "description": "Title of the sheet that picks which owned book to lend"
@@ -693,7 +749,7 @@
   "@logBorrowedFromLabel": {
     "description": "Field label for who lent the book"
   },
-  "logBorrowedFromHint": "Who lent it to you?",
+  "logBorrowedFromHint": "Name, or search a Kitabi user",
   "@logBorrowedFromHint": {
     "description": "Hint in the lender name field"
   },
@@ -736,6 +792,22 @@
   },
   "borrowerPrivateContact": "Private contact",
   "@borrowerPrivateContact": {"description": "Subtitle on a past free-text borrower suggestion"},
+  "borrowerUsersHeader": "KITABI USERS",
+  "@borrowerUsersHeader": {"description": "Header above matched Kitabi users in the search results"},
+  "borrowerRecentHeader": "RECENT",
+  "@borrowerRecentHeader": {"description": "Header above past-contact suggestions in the search results"},
+  "borrowerNoMatch": "No Kitabi user “{query}”. It'll be saved as a private contact.",
+  "@borrowerNoMatch": {
+    "description": "Shown when a search finds no Kitabi user",
+    "placeholders": {"query": {"type": "String"}}
+  },
+  "borrowerLinkedTo": "Linked · {handle}",
+  "@borrowerLinkedTo": {
+    "description": "Chip shown when a Kitabi user is picked/linked",
+    "placeholders": {"handle": {"type": "String"}}
+  },
+  "borrowerChange": "Change",
+  "@borrowerChange": {"description": "Button to clear a linked Kitabi user and search again"},
   "lendSheetLentOnLabel": "LENT ON",
   "@lendSheetLentOnLabel": {
     "description": "Field label for the lent-on date"

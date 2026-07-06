@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/haptics.dart';
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../connections/connections_providers.dart';
 import '../../library/providers/library_providers.dart';
 import '../lending_format.dart';
 import '../reminder.dart';
@@ -49,11 +52,15 @@ class LendingLedgerScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   Padding(
-                    padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(l10n.lendingLedgerTitle,
-                          style: Theme.of(context).textTheme.titleLarge),
+                    padding: EdgeInsets.fromLTRB(20, 16, 12, 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(l10n.lendingLedgerTitle,
+                              style: Theme.of(context).textTheme.titleLarge),
+                        ),
+                        _ConnectionsButton(),
+                      ],
                     ),
                   ),
                   TabBar(
@@ -80,6 +87,46 @@ class LendingLedgerScreen extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// The connections-inbox entry on the ledger, badged with how many requests are
+/// waiting on the reader's approval.
+class _ConnectionsButton extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final incoming = ref.watch(connectionsProvider).valueOrNull?.incoming.length ?? 0;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          icon: Icon(Icons.people_alt_outlined, color: AppColors.oxblood),
+          tooltip: l10n.connectionsTooltip,
+          onPressed: () => context.push(Routes.connections),
+        ),
+        if (incoming > 0)
+          Positioned(
+            right: 6,
+            top: 6,
+            child: Container(
+              alignment: Alignment.center,
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              constraints: BoxConstraints(minWidth: 16, minHeight: 16),
+              decoration: BoxDecoration(color: AppColors.oxblood, shape: BoxShape.circle),
+              child: Text(
+                '$incoming',
+                style: TextStyle(
+                  color: AppColors.paper,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -252,6 +299,11 @@ class _LoanCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final r = item.record;
     final book = item.book;
+    // For a lent book whose borrower is a Kitabi user, show whether that link is
+    // confirmed (accepted) or still awaiting their approval (pending).
+    final connStatus = (!borrowed && r.borrowerUserId != null)
+        ? ref.watch(connectionsProvider).valueOrNull?.statusForUser(r.borrowerUserId!)
+        : null;
 
     return Container(
       margin: EdgeInsets.only(bottom: 8),
@@ -292,6 +344,12 @@ class _LoanCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
                     ),
+                    if (connStatus != null) ...[
+                      SizedBox(height: 5),
+                      connStatus == 'accepted'
+                          ? _Stamp(label: l10n.lendingLinkedUser, color: AppColors.moss)
+                          : _Stamp(label: l10n.lendingPendingLink, color: AppColors.gold),
+                    ],
                   ],
                 ),
               ),

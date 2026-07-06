@@ -558,6 +558,49 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lendingLendBook => 'Lend a book';
 
   @override
+  String get connectionsTitle => 'Connections';
+
+  @override
+  String get connectionsIncomingSection => 'Requests to approve';
+
+  @override
+  String get connectionsOutgoingSection => 'Sent';
+
+  @override
+  String get connectionsAcceptedSection => 'Connected';
+
+  @override
+  String get connectionsEmpty =>
+      'No connections yet. When you lend a book to a Kitabi user, a connection request goes out here.';
+
+  @override
+  String get connectionsWantsToConnect => 'wants to connect';
+
+  @override
+  String get connectionsAwaitingReply => 'Waiting for them to accept';
+
+  @override
+  String get connectionsAccept => 'Accept';
+
+  @override
+  String get connectionsDeny => 'Deny';
+
+  @override
+  String get connectionsCancel => 'Cancel';
+
+  @override
+  String get connectionsDisconnect => 'Disconnect';
+
+  @override
+  String get connectionsTooltip => 'Connection requests';
+
+  @override
+  String get lendingPendingLink => 'Request pending';
+
+  @override
+  String get lendingLinkedUser => 'Linked';
+
+  @override
   String get lendingPickTitle => 'Which book?';
 
   @override
@@ -577,7 +620,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logBorrowedFromLabel => 'FROM';
 
   @override
-  String get logBorrowedFromHint => 'Who lent it to you?';
+  String get logBorrowedFromHint => 'Name, or search a Kitabi user';
 
   @override
   String get logBorrowedOnLabel => 'BORROWED ON';
@@ -610,6 +653,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get borrowerPrivateContact => 'Private contact';
+
+  @override
+  String get borrowerUsersHeader => 'KITABI USERS';
+
+  @override
+  String get borrowerRecentHeader => 'RECENT';
+
+  @override
+  String borrowerNoMatch(String query) {
+    return 'No Kitabi user “$query”. It\'ll be saved as a private contact.';
+  }
+
+  @override
+  String borrowerLinkedTo(String handle) {
+    return 'Linked · $handle';
+  }
+
+  @override
+  String get borrowerChange => 'Change';
 
   @override
   String get lendSheetLentOnLabel => 'LENT ON';

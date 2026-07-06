@@ -2,6 +2,7 @@ from app.models.activity_log_entry import ActivityLogEntry
 from app.models.author import Author
 from app.models.base import Base, CatalogMixin, SyncableMixin
 from app.models.conflict_history import ConflictHistory
+from app.models.connection import Connection
 from app.models.edition import Edition
 from app.models.genre import Genre
 from app.models.lending_record import LendingRecord
@@ -35,6 +36,7 @@ __all__ = [
     "PersonalTag",
     "LibraryEntryTag",
     "LendingRecord",
+    "Connection",
     "ActivityLogEntry",
     "SyncOp",
     "ConflictHistory",

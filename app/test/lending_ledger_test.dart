@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/data/repositories/repositories.dart';
+import 'package:kitabi/features/connections/connections_providers.dart';
 import 'package:kitabi/features/lending/presentation/lending_ledger_screen.dart';
 import 'package:kitabi/features/library/providers/library_providers.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
@@ -171,7 +172,14 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [allLendingProvider.overrideWith((ref) => Stream.value(data!))],
+        overrides: [
+          allLendingProvider.overrideWith((ref) => Stream.value(data!)),
+          // The ledger now watches connections for the inbox badge; stub it so
+          // the real Dio client doesn't leave a pending timer after teardown.
+          connectionsProvider.overrideWith(
+            (ref) async => ConnectionsData(incoming: [], outgoing: [], accepted: []),
+          ),
+        ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

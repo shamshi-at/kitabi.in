@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/api/api_client.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../connections/connections_providers.dart';
 import '../lending_format.dart';
 import '../reminder.dart';
 import 'borrower_field.dart';
@@ -86,6 +88,19 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
       dueDate: _dueOn,
       note: _note.text,
     );
+    // When lending to a Kitabi user, send (or auto-accept) a connection request
+    // so the link becomes mutually confirmed. Best-effort: an offline failure
+    // doesn't block the lend — the record keeps the borrower's id and the
+    // request can go out again later.
+    final borrowerUserId = _borrowerUserId;
+    if (borrowerUserId != null) {
+      try {
+        await ref.read(apiClientProvider).requestConnection(borrowerUserId);
+        ref.invalidate(connectionsProvider);
+      } catch (_) {
+        // ignore — link stays pending on the record
+      }
+    }
     final due = _dueOn;
     if (due != null) {
       await ref.read(notificationServiceProvider).scheduleReminder(

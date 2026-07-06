@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, catalog, health, me, recommendations, sync, users
+from app.api import auth, catalog, connections, health, me, recommendations, sync, users
 from app.api import import_ as import_api
 from app.core.config import get_settings
 from app.core.version_gate import VersionGateMiddleware
@@ -54,6 +54,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(me.router)
     app.include_router(users.router)
+    app.include_router(connections.router)
     app.include_router(catalog.router)
     app.include_router(recommendations.router)
     app.include_router(import_api.router)

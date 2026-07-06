@@ -9,11 +9,12 @@ import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import 'sheet_fields.dart';
 
-/// The "lent to / borrowed from" field. Type a name for a **private contact**
-/// (not shared — stays a free-text borrower on the record), or match an existing
-/// **Kitabi user** by their username to link the loan to them (sets
-/// `borrower_user_id`, so the record can later mirror onto their account).
-/// Past contacts are offered as quick-picks as you type.
+/// The "lent to / borrowed from" field. It reads as a **search**: a search icon,
+/// a live spinner while it queries, matched Kitabi users under a header, and a
+/// clear "Linked" chip once one is picked (sets `borrower_user_id`). Type a name
+/// that matches no user and it's kept as a free-text **private contact** — the
+/// field says so explicitly rather than looking like nothing happened. Past
+/// contacts are offered as quick-picks.
 class BorrowerField extends ConsumerStatefulWidget {
   const BorrowerField({
     super.key,
@@ -44,7 +45,9 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
   List<Map<String, dynamic>> _users = [];
   List<String> _allContacts = [];
   List<String> _contacts = [];
-  bool _picked = false;
+  bool _searching = false;
+  // The @handle of a linked Kitabi user, or null when the text is free-form.
+  String? _linkedHandle;
 
   @override
   void initState() {
@@ -72,20 +75,20 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
     widget.onUserIdChanged(null);
     widget.onChanged();
     final query = raw.trim();
+    _debounce?.cancel();
     setState(() {
-      _picked = false;
+      _linkedHandle = null;
       _contacts = query.isEmpty
           ? const []
           : _allContacts
               .where((c) => c.toLowerCase().contains(query.toLowerCase()) && c != raw)
               .take(4)
               .toList();
+      // Show the spinner immediately so the field visibly "searches".
+      _searching = query.isNotEmpty;
+      if (query.isEmpty) _users = [];
     });
-    _debounce?.cancel();
-    if (query.isEmpty) {
-      setState(() => _users = []);
-      return;
-    }
+    if (query.isEmpty) return;
     _debounce = Timer(const Duration(milliseconds: 300), () => _searchUsers(query));
   }
 
@@ -93,10 +96,18 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
     try {
       final rows = await ref.read(apiClientProvider).searchUsers(query);
       if (mounted && widget.controller.text.trim() == query) {
-        setState(() => _users = rows);
+        setState(() {
+          _users = rows;
+          _searching = false;
+        });
       }
     } catch (_) {
-      if (mounted) setState(() => _users = []);
+      if (mounted) {
+        setState(() {
+          _users = [];
+          _searching = false;
+        });
+      }
     }
   }
 
@@ -107,10 +118,12 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
     widget.onUserIdChanged(user['id'] as String?);
     widget.onChanged();
     setState(() {
-      _picked = true;
+      _linkedHandle = username != null ? '@$username' : null;
       _users = [];
       _contacts = [];
+      _searching = false;
     });
+    FocusScope.of(context).unfocus();
   }
 
   void _pickContact(String name) {
@@ -118,16 +131,36 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
     widget.onUserIdChanged(null);
     widget.onChanged();
     setState(() {
-      _picked = true;
+      _linkedHandle = null;
       _users = [];
       _contacts = [];
+      _searching = false;
+    });
+    FocusScope.of(context).unfocus();
+  }
+
+  void _clearLink() {
+    widget.controller.clear();
+    widget.onUserIdChanged(null);
+    widget.onChanged();
+    setState(() {
+      _linkedHandle = null;
+      _users = [];
+      _contacts = [];
+      _searching = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final showResults = !_picked && (_users.isNotEmpty || _contacts.isNotEmpty);
+    final query = widget.controller.text.trim();
+    final linked = _linkedHandle != null;
+    final showResults = !linked && (_users.isNotEmpty || _contacts.isNotEmpty);
+    // No user matched a non-empty query (and we're done searching): tell the user
+    // it'll be a private contact, so the field never looks like a dead end.
+    final showNoMatch =
+        !linked && !_searching && query.isNotEmpty && _users.isEmpty && _contacts.isEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,9 +170,20 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
           controller: widget.controller,
           autofocus: widget.autofocus,
           autocorrect: false,
+          enableSuggestions: false,
           onChanged: _onChanged,
-          decoration: sheetInputDecoration(widget.hint),
+          decoration: sheetInputDecoration(widget.hint).copyWith(
+            prefixIcon: Icon(
+              linked ? Icons.verified_user : Icons.search,
+              size: 18,
+              color: linked ? AppColors.moss : AppColors.inkSoft,
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
+            suffixIcon: _suffixIcon(),
+            suffixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
+          ),
         ),
+        if (linked) _LinkedChip(handle: _linkedHandle!, onClear: _clearLink, l10n: l10n),
         if (showResults)
           Container(
             margin: const EdgeInsets.only(top: 6),
@@ -150,6 +194,7 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
             ),
             child: Column(
               children: [
+                if (_users.isNotEmpty) _ResultHeader(l10n.borrowerUsersHeader),
                 for (final u in _users)
                   _ResultRow(
                     icon: Icons.person,
@@ -160,6 +205,7 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
                     subtitle: l10n.borrowerKitabiUser('@${u['username']}'),
                     onTap: () => _pickUser(u),
                   ),
+                if (_contacts.isNotEmpty) _ResultHeader(l10n.borrowerRecentHeader),
                 for (final c in _contacts)
                   _ResultRow(
                     icon: Icons.history,
@@ -171,7 +217,117 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
               ],
             ),
           ),
+        if (showNoMatch)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 2),
+            child: Row(
+              children: [
+                Icon(Icons.person_outline, size: 14, color: AppColors.inkSoft),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.borrowerNoMatch(query),
+                    style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
+    );
+  }
+
+  Widget? _suffixIcon() {
+    if (_searching) {
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+        ),
+      );
+    }
+    if (widget.controller.text.isNotEmpty) {
+      return IconButton(
+        icon: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
+        splashRadius: 18,
+        onPressed: _clearLink,
+      );
+    }
+    return null;
+  }
+}
+
+class _LinkedChip extends StatelessWidget {
+  const _LinkedChip({required this.handle, required this.onClear, required this.l10n});
+
+  final String handle;
+  final VoidCallback onClear;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+        decoration: BoxDecoration(
+          color: AppColors.moss.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.link, size: 15, color: AppColors.moss),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                l10n.borrowerLinkedTo(handle),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.moss),
+              ),
+            ),
+            GestureDetector(
+              onTap: onClear,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Text(
+                  l10n.borrowerChange,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.oxblood,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ResultHeader extends StatelessWidget {
+  const _ResultHeader(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.1,
+          color: AppColors.inkSoft,
+        ),
+      ),
     );
   }
 }

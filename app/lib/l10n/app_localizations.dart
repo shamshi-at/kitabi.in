@@ -1018,6 +1018,90 @@ abstract class AppLocalizations {
   /// **'Lend a book'**
   String get lendingLendBook;
 
+  /// Title of the connections/requests inbox screen
+  ///
+  /// In en, this message translates to:
+  /// **'Connections'**
+  String get connectionsTitle;
+
+  /// Section header for incoming pending connection requests
+  ///
+  /// In en, this message translates to:
+  /// **'Requests to approve'**
+  String get connectionsIncomingSection;
+
+  /// Section header for outgoing pending connection requests
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get connectionsOutgoingSection;
+
+  /// Section header for accepted connections
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get connectionsAcceptedSection;
+
+  /// Empty state on the connections screen
+  ///
+  /// In en, this message translates to:
+  /// **'No connections yet. When you lend a book to a Kitabi user, a connection request goes out here.'**
+  String get connectionsEmpty;
+
+  /// Subtitle under an incoming request
+  ///
+  /// In en, this message translates to:
+  /// **'wants to connect'**
+  String get connectionsWantsToConnect;
+
+  /// Subtitle under an outgoing pending request
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for them to accept'**
+  String get connectionsAwaitingReply;
+
+  /// Accept an incoming connection request
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get connectionsAccept;
+
+  /// Deny an incoming connection request
+  ///
+  /// In en, this message translates to:
+  /// **'Deny'**
+  String get connectionsDeny;
+
+  /// Cancel an outgoing pending request
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get connectionsCancel;
+
+  /// Disconnect an accepted connection
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get connectionsDisconnect;
+
+  /// Tooltip for the connections icon on the lending ledger
+  ///
+  /// In en, this message translates to:
+  /// **'Connection requests'**
+  String get connectionsTooltip;
+
+  /// Pill on a lent card when the borrower is a Kitabi user who hasn't accepted the connection yet
+  ///
+  /// In en, this message translates to:
+  /// **'Request pending'**
+  String get lendingPendingLink;
+
+  /// Pill on a lent card when the borrower is a connected Kitabi user
+  ///
+  /// In en, this message translates to:
+  /// **'Linked'**
+  String get lendingLinkedUser;
+
   /// Title of the sheet that picks which owned book to lend
   ///
   /// In en, this message translates to:
@@ -1057,7 +1141,7 @@ abstract class AppLocalizations {
   /// Hint in the lender name field
   ///
   /// In en, this message translates to:
-  /// **'Who lent it to you?'**
+  /// **'Name, or search a Kitabi user'**
   String get logBorrowedFromHint;
 
   /// Field label for the borrowed-on date
@@ -1119,6 +1203,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Private contact'**
   String get borrowerPrivateContact;
+
+  /// Header above matched Kitabi users in the search results
+  ///
+  /// In en, this message translates to:
+  /// **'KITABI USERS'**
+  String get borrowerUsersHeader;
+
+  /// Header above past-contact suggestions in the search results
+  ///
+  /// In en, this message translates to:
+  /// **'RECENT'**
+  String get borrowerRecentHeader;
+
+  /// Shown when a search finds no Kitabi user
+  ///
+  /// In en, this message translates to:
+  /// **'No Kitabi user “{query}”. It\'ll be saved as a private contact.'**
+  String borrowerNoMatch(String query);
+
+  /// Chip shown when a Kitabi user is picked/linked
+  ///
+  /// In en, this message translates to:
+  /// **'Linked · {handle}'**
+  String borrowerLinkedTo(String handle);
+
+  /// Button to clear a linked Kitabi user and search again
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get borrowerChange;
 
   /// Field label for the lent-on date
   ///
