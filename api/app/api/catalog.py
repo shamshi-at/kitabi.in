@@ -157,14 +157,18 @@ async def get_work(work_id: uuid.UUID, db: DbSession) -> WorkOut:
 
 
 @router.patch("/works/{work_id}", response_model=WorkOut)
-async def patch_work(work_id: uuid.UUID, payload: WorkUpdate, db: DbSession) -> WorkOut:
+async def patch_work(
+    work_id: uuid.UUID, payload: WorkUpdate, user: CurrentUser, db: DbSession
+) -> WorkOut:
     work = await catalog_service.get_work_or_404(db, work_id)
     work = await catalog_service.update_work(db, work, payload)
     return await _work_out(db, work)
 
 
 @router.post("/works/{work_id}/link-translation", status_code=status.HTTP_204_NO_CONTENT)
-async def link_translation(work_id: uuid.UUID, payload: TranslationLinkIn, db: DbSession) -> None:
+async def link_translation(
+    work_id: uuid.UUID, payload: TranslationLinkIn, user: CurrentUser, db: DbSession
+) -> None:
     """Link two Works as translations of one another (shared translation_group_id)
     — e.g. the Malayalam "Dantha Simhasanam" under the English "Ivory Throne"."""
     if work_id == payload.other_work_id:
@@ -182,7 +186,9 @@ async def link_translation(work_id: uuid.UUID, payload: TranslationLinkIn, db: D
     response_model=EditionOut,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_edition(work_id: uuid.UUID, payload: EditionCreate, db: DbSession) -> EditionOut:
+async def create_edition(
+    work_id: uuid.UUID, payload: EditionCreate, user: CurrentUser, db: DbSession
+) -> EditionOut:
     """Add another edition (printing/ISBN) to an existing Work."""
     work = await catalog_service.get_work_or_404(db, work_id)
     edition = await catalog_service.create_edition(db, work, payload)
@@ -190,7 +196,9 @@ async def create_edition(work_id: uuid.UUID, payload: EditionCreate, db: DbSessi
 
 
 @router.patch("/editions/{edition_id}", response_model=EditionOut)
-async def patch_edition(edition_id: uuid.UUID, payload: EditionUpdate, db: DbSession) -> EditionOut:
+async def patch_edition(
+    edition_id: uuid.UUID, payload: EditionUpdate, user: CurrentUser, db: DbSession
+) -> EditionOut:
     edition = await catalog_service.get_edition_or_404(db, edition_id)
     edition = await catalog_service.update_edition(db, edition, payload)
     return EditionOut.model_validate(edition)
@@ -222,7 +230,9 @@ async def create_author(payload: AuthorCreate, user: CurrentUser, db: DbSession)
 
 
 @router.post("/publishers", response_model=PublisherOut, status_code=status.HTTP_201_CREATED)
-async def create_publisher(payload: PublisherCreate, db: DbSession) -> PublisherOut:
+async def create_publisher(
+    payload: PublisherCreate, user: CurrentUser, db: DbSession
+) -> PublisherOut:
     """Publisher picker "add new" — same shape as create_author."""
     publisher = await catalog_service.create_publisher(db, **payload.model_dump(exclude_none=True))
     return PublisherOut.model_validate(publisher)

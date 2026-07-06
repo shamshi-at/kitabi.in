@@ -494,3 +494,32 @@ async def test_translation_group_rating_null_without_a_link(client):
     created = await client.post("/catalog/works", json={"title": "Standalone"})
     body = (await client.get(f"/catalog/works/{created.json()['id']}")).json()
     assert body["translation_group_rating"] is None
+
+
+async def test_catalog_mutations_require_auth(client, unauthenticated_client):
+    """The shared catalog is server-authoritative: every mutation route rejects
+    anonymous writes (they need any signed-in user, matching create_work). Reads
+    stay open. Regression guard — these five were unauthenticated in production."""
+    # Seed real ids with the authenticated client so the 401 is about auth, not
+    # a missing resource (auth runs before the handler either way).
+    work = (await client.post("/catalog/works", json={"title": "Guarded"})).json()
+    work_id = work["id"]
+    edition_id = work["editions"][0]["id"]
+    other = (await client.post("/catalog/works", json={"title": "Guarded Other"})).json()
+
+    anon_writes = [
+        unauthenticated_client.patch(f"/catalog/works/{work_id}", json={"title": "Hacked"}),
+        unauthenticated_client.post(
+            f"/catalog/works/{work_id}/link-translation", json={"other_work_id": other["id"]}
+        ),
+        unauthenticated_client.post(
+            f"/catalog/works/{work_id}/editions", json={"format": "Paperback"}
+        ),
+        unauthenticated_client.patch(
+            f"/catalog/editions/{edition_id}", json={"cover_url": "https://evil.example/x.jpg"}
+        ),
+        unauthenticated_client.post("/catalog/publishers", json={"name": "Rogue Press"}),
+    ]
+    for coro in anon_writes:
+        resp = await coro
+        assert resp.status_code == 401, resp.request.url
