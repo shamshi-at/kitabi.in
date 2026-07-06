@@ -75,6 +75,25 @@ class ApiClient {
 
   Future<void> deleteMe() => _dio.delete('/me');
 
+  /// Reputation breakdown — `{total, books_added, authors_added, …}`.
+  Future<Map<String, dynamic>> getScore() async {
+    final res = await _dio.get('/me/score');
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Live username availability check — `{username, available}`.
+  Future<bool> usernameAvailable(String username) async {
+    final res = await _dio.get('/me/username-available', queryParameters: {'username': username});
+    return (res.data as Map<String, dynamic>)['available'] as bool? ?? false;
+  }
+
+  /// Find Kitabi users by username handle (lending) — each `{id, username,
+  /// full_name?, avatar_url?}`.
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    final res = await _dio.get('/users/search', queryParameters: {'q': query});
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
   /// Catalog-only search (title / author / exact ISBN) — Phase 2 scope.
   /// The "in your library" merge lands once the personal library (Phase 3)
   /// and its Drift cache exist; for now every result is a catalog work.
@@ -118,18 +137,26 @@ class ApiClient {
     return (res.data as List).cast<String>();
   }
 
-  Future<List<Map<String, dynamic>>> browseAuthors({int limit = 40, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> browseAuthors({
+    int limit = 40,
+    int offset = 0,
+    String sort = 'name',
+  }) async {
     final res = await _dio.get(
       '/catalog/browse/authors',
-      queryParameters: {'limit': limit, 'offset': offset},
+      queryParameters: {'limit': limit, 'offset': offset, 'sort': sort},
     );
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
-  Future<List<Map<String, dynamic>>> browsePublishers({int limit = 40, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> browsePublishers({
+    int limit = 40,
+    int offset = 0,
+    String sort = 'name',
+  }) async {
     final res = await _dio.get(
       '/catalog/browse/publishers',
-      queryParameters: {'limit': limit, 'offset': offset},
+      queryParameters: {'limit': limit, 'offset': offset, 'sort': sort},
     );
     return (res.data as List).cast<Map<String, dynamic>>();
   }
@@ -185,6 +212,24 @@ class ApiClient {
   Future<Map<String, dynamic>> updateEdition(String editionId, Map<String, dynamic> patch) async {
     final res = await _dio.patch('/catalog/editions/$editionId', data: patch);
     return res.data as Map<String, dynamic>;
+  }
+
+  /// Add another edition (printing/ISBN) to an existing Work — returns the new
+  /// edition.
+  Future<Map<String, dynamic>> createEdition(
+    String workId,
+    Map<String, dynamic> payload,
+  ) async {
+    final res = await _dio.post('/catalog/works/$workId/editions', data: payload);
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Link two Works as translations of one another (shared translation group).
+  Future<void> linkTranslation(String workId, String otherWorkId) async {
+    await _dio.post(
+      '/catalog/works/$workId/link-translation',
+      data: {'other_work_id': otherWorkId},
+    );
   }
 
   Future<Map<String, dynamic>> getAuthorWorks(String authorId) async {

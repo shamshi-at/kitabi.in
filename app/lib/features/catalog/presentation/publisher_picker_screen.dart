@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/image_source_sheet.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
+import '../catalog_image_upload.dart';
 import 'picker_widgets.dart';
 
 /// S7b publisher picker — the publisher counterpart to the author picker.
@@ -25,8 +27,24 @@ class _PublisherPickerScreenState extends ConsumerState<PublisherPickerScreen> {
   Timer? _debounce;
   String _query = '';
   List<Map<String, dynamic>> _results = [];
+  List<Map<String, dynamic>> _suggestions = [];
   bool _loading = false;
   bool _adding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSuggestions();
+  }
+
+  Future<void> _loadSuggestions() async {
+    try {
+      final rows = await ref.read(apiClientProvider).browsePublishers(sort: 'popular', limit: 8);
+      if (mounted) setState(() => _suggestions = rows);
+    } catch (_) {
+      // Suggestions are a nicety; a blank list is a fine fallback.
+    }
+  }
 
   @override
   void dispose() {
@@ -93,6 +111,26 @@ class _PublisherPickerScreenState extends ConsumerState<PublisherPickerScreen> {
                         ),
                       ),
                     ),
+                  if (_query.isEmpty && _suggestions.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 2),
+                      child: Text(
+                        l10n.pickerSuggestedPublishers,
+                        style: TextStyle(
+                          fontSize: 10,
+                          letterSpacing: 1,
+                          color: AppColors.inkSoft,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    for (final publisher in _suggestions)
+                      _PublisherResultTile(
+                        publisher: publisher,
+                        onTap: () => context.pop(publisher),
+                      ),
+                    const SizedBox(height: 4),
+                  ],
                   for (final publisher in _results)
                     _PublisherResultTile(
                       publisher: publisher,
@@ -205,8 +243,9 @@ class _AddNewPublisherSection extends ConsumerStatefulWidget {
 class _AddNewPublisherSectionState extends ConsumerState<_AddNewPublisherSection> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _language = TextEditingController();
-  final _logoUrl = TextEditingController();
+  String? _language;
+  String? _logoUrl;
+  bool _uploading = false;
   bool _saving = false;
 
   @override
@@ -219,10 +258,26 @@ class _AddNewPublisherSectionState extends ConsumerState<_AddNewPublisherSection
 
   @override
   void dispose() {
-    for (final c in [_name, _language, _logoUrl]) {
-      c.dispose();
-    }
+    _name.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickLogo() async {
+    final source = await showImageSourceSheet(context);
+    if (source == null || !mounted) return;
+    setState(() => _uploading = true);
+    try {
+      final url = await pickAndUploadCatalogImage(folder: 'publishers', source: source);
+      if (mounted && url != null) setState(() => _logoUrl = url);
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.pickerImageUploadFailed)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   Future<void> _save() async {
@@ -230,8 +285,8 @@ class _AddNewPublisherSectionState extends ConsumerState<_AddNewPublisherSection
     setState(() => _saving = true);
     final payload = <String, dynamic>{
       'name': _name.text.trim(),
-      if (_language.text.trim().isNotEmpty) 'primary_language': _language.text.trim(),
-      if (_logoUrl.text.trim().isNotEmpty) 'logo_url': _logoUrl.text.trim(),
+      if (_language != null) 'primary_language': _language,
+      if (_logoUrl != null) 'logo_url': _logoUrl,
     };
     try {
       final publisher = await ref.read(apiClientProvider).createPublisher(payload);
@@ -277,9 +332,22 @@ class _AddNewPublisherSectionState extends ConsumerState<_AddNewPublisherSection
               validator: (v) => (v == null || v.trim().isEmpty) ? l10n.pickerNameRequired : null,
             ),
             const SizedBox(height: 8),
-            PickerField(label: l10n.pickerFieldLanguage, controller: _language),
+            PickerLanguageDropdown(
+              label: l10n.pickerFieldLanguage,
+              value: _language,
+              hint: l10n.pickerLanguageHint,
+              onChanged: (v) => setState(() => _language = v),
+            ),
             const SizedBox(height: 8),
-            PickerField(label: l10n.pickerFieldLogoUrl, controller: _logoUrl),
+            PickerImageField(
+              label: l10n.pickerFieldLogo,
+              imageUrl: _logoUrl,
+              busy: _uploading,
+              pickLabel: _logoUrl == null ? l10n.pickerLogoAdd : l10n.pickerLogoReplace,
+              onPick: _pickLogo,
+              onClear: _logoUrl == null ? null : () => setState(() => _logoUrl = null),
+              circular: false,
+            ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,

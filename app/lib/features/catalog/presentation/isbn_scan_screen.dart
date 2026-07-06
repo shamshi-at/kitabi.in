@@ -15,8 +15,17 @@ import '../../../l10n/app_localizations.dart';
 /// S7 — point the camera at a barcode; on a decode, resolve it through
 /// `GET /catalog/isbn/{isbn}` (local match, else OpenLibrary, cached either
 /// way) and show a confirm card before handing back to the caller.
+///
+/// Two modes:
+/// - default (`returnResult == false`): the confirm card's "Add" creates a
+///   library entry and opens the book — the standalone scan-to-shelf flow.
+/// - `returnResult == true`: opened from the manual add-book form. The confirm
+///   card instead pops with the looked-up work map so the form can prefill
+///   itself; if nothing is found, the user can still pop with just the raw ISBN.
 class IsbnScanScreen extends ConsumerStatefulWidget {
-  const IsbnScanScreen({super.key});
+  const IsbnScanScreen({super.key, this.returnResult = false});
+
+  final bool returnResult;
 
   @override
   ConsumerState<IsbnScanScreen> createState() => _IsbnScanScreenState();
@@ -140,43 +149,55 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                 ),
               SizedBox(height: 10),
               if (_loading) CircularProgressIndicator(color: AppColors.gold),
-              if (_error != null) _ScanFooter(error: _error!, onReset: _reset, l10n: l10n),
-              if (_work != null) _ConfirmCard(work: _work!, l10n: l10n),
-              SizedBox(height: 16),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Color(0xFFCBB897)),
-                          foregroundColor: Color(0xFFCBB897),
-                        ),
-                        onPressed: () {
-                          context.pop();
-                          context.push(Routes.catalogSearch);
-                        },
-                        child: Text(l10n.scanSearchInstead),
-                      ),
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Color(0xFFCBB897)),
-                          foregroundColor: Color(0xFFCBB897),
-                        ),
-                        onPressed: () {
-                          context.pop();
-                          context.push(Routes.catalogAdd);
-                        },
-                        child: Text(l10n.scanAddManually),
-                      ),
-                    ),
-                  ],
+              if (_error != null)
+                _ScanFooter(
+                  error: _error!,
+                  onReset: _reset,
+                  l10n: l10n,
+                  // In form mode, let the user carry the scanned number back even
+                  // when the catalog has no match — they'll type the rest by hand.
+                  onUseIsbn: widget.returnResult && _detectedIsbn != null
+                      ? () => context.pop({'isbn': _detectedIsbn})
+                      : null,
                 ),
-              ),
+              if (_work != null)
+                _ConfirmCard(work: _work!, l10n: l10n, returnResult: widget.returnResult),
+              SizedBox(height: 16),
+              if (!widget.returnResult)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Color(0xFFCBB897)),
+                            foregroundColor: Color(0xFFCBB897),
+                          ),
+                          onPressed: () {
+                            context.pop();
+                            context.push(Routes.catalogSearch);
+                          },
+                          child: Text(l10n.scanSearchInstead),
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Color(0xFFCBB897)),
+                            foregroundColor: Color(0xFFCBB897),
+                          ),
+                          onPressed: () {
+                            context.pop();
+                            context.push(Routes.catalogAdd);
+                          },
+                          child: Text(l10n.scanAddManually),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               SizedBox(height: 12),
             ],
           ),
@@ -187,11 +208,17 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
 }
 
 class _ScanFooter extends StatelessWidget {
-  const _ScanFooter({required this.error, required this.onReset, required this.l10n});
+  const _ScanFooter({
+    required this.error,
+    required this.onReset,
+    required this.l10n,
+    this.onUseIsbn,
+  });
 
   final String error;
   final VoidCallback onReset;
   final AppLocalizations l10n;
+  final VoidCallback? onUseIsbn;
 
   @override
   Widget build(BuildContext context) {
@@ -202,8 +229,17 @@ class _ScanFooter extends StatelessWidget {
           Text(error, style: TextStyle(color: Color(0xFFEFE6C8))),
           TextButton(
             onPressed: onReset,
-            child: Text('Scan again', style: TextStyle(color: AppColors.gold)),
+            child: Text(l10n.scanAgain, style: TextStyle(color: AppColors.gold)),
           ),
+          if (onUseIsbn != null)
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Color(0xFFCBB897)),
+                foregroundColor: Color(0xFFCBB897),
+              ),
+              onPressed: onUseIsbn,
+              child: Text(l10n.scanUseIsbnAnyway),
+            ),
         ],
       ),
     );
@@ -211,10 +247,11 @@ class _ScanFooter extends StatelessWidget {
 }
 
 class _ConfirmCard extends ConsumerWidget {
-  const _ConfirmCard({required this.work, required this.l10n});
+  const _ConfirmCard({required this.work, required this.l10n, required this.returnResult});
 
   final Map<String, dynamic> work;
   final AppLocalizations l10n;
+  final bool returnResult;
 
   /// The scan flow's "Add" now creates a library entry (the previous version
   /// only popped the scanner, so a scanned book landed nowhere) and caches the
@@ -290,8 +327,12 @@ class _ConfirmCard extends ConsumerWidget {
                 backgroundColor: AppColors.gold,
                 foregroundColor: Color(0xFF241811),
               ),
-              onPressed: edition == null ? null : () => _add(context, ref, edition),
-              child: Text(l10n.scanConfirmAdd),
+              onPressed: edition == null
+                  ? null
+                  : returnResult
+                      ? () => context.pop(work)
+                      : () => _add(context, ref, edition),
+              child: Text(returnResult ? l10n.scanUseDetails : l10n.scanConfirmAdd),
             ),
           ],
         ),

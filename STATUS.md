@@ -99,7 +99,24 @@ Two data tiers, never conflated (feature-map.md's core principle):
 
 The `Profile` row (this session's Phase 1 work) is neither — it's the user's own
 identity row, keyed directly by the Supabase auth user id, updated via direct online
-`GET/PATCH/DELETE /me` calls, no sync queue involved.
+`GET/PATCH/DELETE /me` calls, no sync queue involved. It now also carries an optional
+unique **`username`** handle (set in the profile screen, validated `^[a-z][a-z0-9_]{2,19}$`,
+lowercased, unique) — how other readers find you to lend to (`GET /users/search?q=`).
+
+**Reputation / scoring** (added 6 Jul 2026): a StackOverflow-style score computed at
+read time (`services/scoring_service.py`, `GET /me/score`, + `score` on `/me`) from the
+rows a reader owns — books added (+10, via `works.created_by_user_id`), authors added
+(+5, `authors.created_by_user_id`), reviews (+10), books tracked (+2), finished (+5),
+lending records (+3). No ledger to keep in sync; just indexed COUNTs. Migration `000011`
+adds `profiles.username`, `works.created_by_user_id`, `authors.created_by_user_id`
+(verified upgrade+downgrade on a scratch DB — **pending deploy to Supabase**; the active
+`.env` `DATABASE_URL` points at prod, so run the migration deliberately, not casually).
+
+**Lending counterparty** (added 6 Jul 2026): the lend/borrow sheets' borrower field
+(`BorrowerField`) now searches Kitabi users by username (sets the record's dormant
+`borrower_user_id`, already accepted by the sync `LendingRecordCreate` schema) or takes a
+free-text **private contact** — suggested from past borrowers (`pastBorrowerNames` DAO),
+not shared, later linkable. Advances feature-map rule 14's "real user reference later".
 
 ---
 
@@ -107,7 +124,7 @@ identity row, keyed directly by the Supabase auth user id, updated via direct on
 
 | Part | Stack | Version notes |
 |---|---|---|
-| `app/` | Flutter — Riverpod (`flutter_riverpod` ^2.6.1, codegen not yet used), go_router ^14.6.2, **Drift ^2.22.1 (full schema: 12 tables — 7 syncable Layer 2 entities, sync_queue/sync_state/conflict_history/key_values, and a denormalized cached_books offline read cache)**, Dio ^5.7.0, supabase_flutter ^2.8.0, sign_in_with_apple ^6.1.0, flutter_secure_storage ^9.2.2, google_fonts ^6.2.1, flutter_svg ^2.0.0, **workmanager ^0.9.0 (now wired: 15-min background sync)**, mobile_scanner ^6.0.2 (ISBN scan), connectivity_plus (sync-on-reconnect trigger), **flutter_local_notifications ^18.0.1 + timezone + flutter_timezone (on-device lending due-date reminders)** | iOS deployment target **15.5** (bumped from 14.0 — `mobile_scanner`'s MLKit requirement); SDK `^3.12.2` |
+| `app/` | Flutter — Riverpod (`flutter_riverpod` ^2.6.1, codegen not yet used), go_router ^14.6.2, **Drift ^2.22.1 (full schema: 12 tables — 7 syncable Layer 2 entities, sync_queue/sync_state/conflict_history/key_values, and a denormalized cached_books offline read cache)**, Dio ^5.7.0, supabase_flutter ^2.8.0, sign_in_with_apple ^6.1.0, flutter_secure_storage ^9.2.2, google_fonts ^6.2.1, flutter_svg ^2.0.0, **workmanager ^0.9.0 (now wired: 15-min background sync)**, mobile_scanner ^6.0.2 (ISBN scan), image_picker ^1.1.2 + **image_cropper ^9.0.0 (crop picked images to grid before upload)**, connectivity_plus (sync-on-reconnect trigger), **flutter_local_notifications ^18.0.1 + timezone + flutter_timezone (on-device lending due-date reminders)** | iOS deployment target **15.5** (bumped from 14.0 — `mobile_scanner`'s MLKit requirement); SDK `^3.12.2`. `image_cropper` (UCrop) needs a `<activity com.yalantis.ucrop.UCropActivity>` in AndroidManifest.xml (added); on iOS it resolves via Swift Package Manager automatically (verified: release IPA built clean 6 Jul 2026) |
 | `api/` | FastAPI 0.115.12, Python 3.12+, fully async — SQLAlchemy 2.0.36 async + asyncpg 0.30.0, Alembic 1.14.0, Pydantic 2.10.4, PyJWT[crypto] 2.10.1, APScheduler 3.11.0, httpx (OpenLibrary client), Docker | ruff + black line length 100 |
 | `landing-page/` | Dependency-free static HTML/CSS, no build step, no frameworks | Fraunces + Inter via Google Fonts CDN |
 | Database | Supabase Postgres — RLS deny-by-default, Data API disabled | Region: Southeast Asia (Singapore) |
@@ -309,6 +326,27 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   switch and + Wishlist / Not-for-me; a quiet "For you" card on home. API 43 tests + app 26 tests
   green, lint clean, Android build verified with `share_plus`. Live LLM output not yet verified
   (no key configured).
+- **6 Jul 2026** — **Translations & multi-edition, now with UI.** The `[WIRED]` translation link
+  is live end-to-end: `POST /works/{id}/link-translation` (now rejects self-links) + a new
+  `WorkOut.translations` (sibling Works in the group, computed in `_work_out`). New
+  `POST /works/{id}/editions` (`EditionCreate`, inherits the Work's language) adds a printing to
+  an existing Work — no new DB columns. App: `linkTranslation`/`createEdition` on the API client;
+  a **Work picker** (search + pick, excludes self); an **Add-edition** screen (ISBN+scan, format,
+  pages, publisher, cover); and two new **book-page sections** — *Editions* (list + "Add another
+  edition") and *Also in other languages* (linked translations + "Link a translation"). This is
+  the Dantha Simhasanam ↔ Ivory Throne flow (a translation is its own Work, group-linked). 4 new
+  API tests; 30 app + 70 API tests green, lint clean.
+- **6 Jul 2026** — **Animated splash.** The bare-logo splash now plays a staggered Reading Room
+  intro — the mark settles in, "Kitabi" (Fraunces) rises, the gold line draws across, the
+  "Beyond the Bookshelf" tagline fades in — then a quiet three-dot loader + "Opening your reading
+  room…" status while auth/profile resolve. Honours `MediaQuery.disableAnimations` (reduced
+  motion shows the settled state). Widget test asserts name/tagline/status render.
+- **6 Jul 2026** — **Author & publisher share cards.** Sharing an author/publisher now renders
+  an image card (portrait/logo + name + works/titles count + kitabi.in mark) instead of a bare
+  text link, matching books. New `EntityShareCard` + `showEntityShareSheet`; the rasterise +
+  image-or-text-fallback capture logic is extracted to `share_capture.dart` and shared with the
+  book sheet. Both sheets now `precacheImage` the cover/portrait so the shared PNG never captures
+  a half-loaded image.
 
 - **6 Jul 2026** — Phase 6 continued — global search + insights. **Global search (S4)**: the
   search screen now shows an "In your library" section (offline Drift match by title/author,
@@ -461,9 +499,12 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   hook excludes arm64 for `sdk=iphonesimulator*` (real devices unaffected), but the
   simulator itself can't build at all without an older x86_64-capable runtime. Verified
   instead on an Android emulator; verify the scan screen on a real iPhone before launch.
-- **User-photo cover upload** — the app picks a photo (`image_picker`), uploads it to the
-  Supabase Storage bucket **`covers`** as `<editionId>.jpg` (`upsert: true`), then points the
-  edition's `cover_url` at the public URL (tap the cover on the book page). This is the one
+- **User-photo cover upload** — the app picks a photo (`image_picker`), crops it to a 2:3
+  book-cover portrait (`image_cropper`, `core/image_crop.dart`), uploads it to the Supabase
+  Storage bucket **`covers`** as `<editionId>.jpg` (`upsert: true`), then points the
+  edition's `cover_url` at the public URL (tap the cover on the book page). Every image
+  picker in the app crops before upload — covers to 2:3, author portraits and publisher
+  logos to 1:1 square — so uploads always match the shape they render in. This is the one
   place the app talks to Supabase Storage directly (via the user's auth JWT), not through
   FastAPI — separate from the deny-by-default Postgres tables, so rule 11 is untouched.
   Covers are shared (path is per-edition, and it patches the shared `Edition.cover_url`) —
@@ -475,6 +516,26 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
     with `bucket_id = 'covers'` (INSERT+UPDATE both required because the upload upserts; no
     DELETE — the app only overwrites). Until this exists the upload throws and the app shows
     "couldn't upload the cover."
+  - **Front + back covers** (added 6 Jul 2026): `Edition.back_cover_url` (migration 000010)
+    lets a user photograph both sides of a book. Every image picker now offers **camera or
+    gallery** (`showImageSourceSheet`) and crops before upload. The **add-book form** has
+    front + back cover slots (2:3 crop; new books upload to `covers/<uuid>.jpg` and carry the
+    URLs in the create payload; edits PATCH the edition); the **book page** shows a back-cover
+    thumbnail under the front and uploads to `<editionId>-back.jpg`. Only the front cover is
+    cached for the offline grid; the back shows on the book page only.
+  - **Author portraits & publisher logos reuse the same `covers` bucket** (added 6 Jul 2026):
+    the author/publisher "add new" pickers now let users pick+upload a photo instead of
+    pasting a URL (`pickAndUploadCatalogImage`, `catalog_image_upload.dart`), stored under
+    `authors/<uuid>.jpg` / `publishers/<uuid>.jpg`. The Storage policy is bucket-scoped
+    (`bucket_id = 'covers'`), so these prefixes need **no extra owner setup**.
+- **Add-book form UX pass (6 Jul 2026):** help text under Series / Book № and the author
+  field (co-authors are added one at a time via repeated picks — already multi-author);
+  the ISBN field carries a **Scan** button that opens the barcode scanner in `returnResult`
+  mode (`Routes.catalogScanResult` → `IsbnScanScreen(returnResult: true)`) and prefills the
+  whole form from the OpenLibrary lookup, every field still editable; author/publisher
+  pickers show most-used **suggestions** on a blank search via `GET /catalog/browse/{authors,
+  publishers}?sort=popular` (order by work/edition count); primary-language is now a fixed
+  dropdown (`kCatalogLanguages`) instead of free text.
 - **Phase 3 not yet verified with a real signed-in device run.** The sync engine's
   logic is thoroughly unit-tested (in-memory Drift + fake API client covering
   push/pull/conflicts/idempotency), and the app boots cleanly on an Android emulator

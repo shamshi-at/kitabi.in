@@ -11,6 +11,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../lending_format.dart';
 import '../reminder.dart';
+import 'borrower_field.dart';
 import 'sheet_fields.dart';
 
 /// S8c — log a book you've borrowed. The other entry point to the ledger:
@@ -39,6 +40,7 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
   final _lender = TextEditingController();
   final _note = TextEditingController();
   final _searchController = TextEditingController();
+  String? _lenderUserId;
   String _query = '';
   Map<String, dynamic>? _selected;
   DateTime _borrowedOn = DateTime.now();
@@ -67,6 +69,7 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
     final id = await repo.logBorrowed(
       editionId: edition['id'] as String,
       lenderName: lender,
+      borrowerUserId: _lenderUserId,
       borrowedDate: _borrowedOn,
       dueDate: _remindOn,
       note: _note.text,
@@ -138,11 +141,12 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
                 }),
               ),
             SizedBox(height: 12),
-            SheetLabel(l10n.logBorrowedFromLabel),
-            TextField(
+            BorrowerField(
               controller: _lender,
-              onChanged: (_) => setState(() {}),
-              decoration: sheetInputDecoration(l10n.logBorrowedFromHint),
+              label: l10n.logBorrowedFromLabel,
+              hint: l10n.logBorrowedFromHint,
+              onUserIdChanged: (id) => _lenderUserId = id,
+              onChanged: () => setState(() {}),
             ),
             SizedBox(height: 12),
             Row(

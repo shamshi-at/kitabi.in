@@ -11,3 +11,10 @@ final meProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   await ref.watch(bootstrapProvider.future);
   return ref.watch(apiClientProvider).getMe();
 });
+
+/// Reputation breakdown for the profile — `{total, books_added, …}`. Re-fetched
+/// via `ref.invalidate(scoreProvider)` after actions that could change it.
+final scoreProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  await ref.watch(bootstrapProvider.future);
+  return ref.watch(apiClientProvider).getScore();
+});

@@ -39,6 +39,31 @@ async def test_create_work_reuses_existing_author(client):
     assert first.json()["authors"][0]["id"] == second.json()["authors"][0]["id"]
 
 
+async def test_create_and_patch_edition_covers(client):
+    # Front + back cover captured on the add-book form flow through create...
+    created = await client.post(
+        "/catalog/works",
+        json={
+            "title": "Two-Sided",
+            "cover_url": "https://cdn.example/front.jpg",
+            "back_cover_url": "https://cdn.example/back.jpg",
+        },
+    )
+    assert created.status_code == 201
+    edition = created.json()["editions"][0]
+    assert edition["cover_url"] == "https://cdn.example/front.jpg"
+    assert edition["back_cover_url"] == "https://cdn.example/back.jpg"
+
+    # ...and a later edition patch can add/replace the back cover (book page).
+    patched = await client.patch(
+        f"/catalog/editions/{edition['id']}",
+        json={"back_cover_url": "https://cdn.example/back-v2.jpg"},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["back_cover_url"] == "https://cdn.example/back-v2.jpg"
+    assert patched.json()["cover_url"] == "https://cdn.example/front.jpg"
+
+
 async def test_get_and_patch_work(client):
     created = await client.post("/catalog/works", json={"title": "Draft Title"})
     work_id = created.json()["id"]
@@ -130,6 +155,30 @@ async def test_publisher_browse(client):
     body = resp.json()
     assert body["publisher"]["name"] == "DC Books"
     assert any(w["title"] == "Ente Katha" for w in body["works"])
+
+
+async def test_browse_authors_popular_orders_by_work_count(client):
+    # "Prolific" gets two works, "Debut" one — popular sort must front the
+    # prolific one regardless of alphabetical order.
+    await client.post("/catalog/works", json={"title": "P1", "author_names": ["Prolific Writer"]})
+    await client.post("/catalog/works", json={"title": "P2", "author_names": ["Prolific Writer"]})
+    await client.post("/catalog/works", json={"title": "D1", "author_names": ["Debut Author"]})
+
+    resp = await client.get("/catalog/browse/authors", params={"sort": "popular", "limit": 100})
+    assert resp.status_code == 200
+    names = [a["name"] for a in resp.json()]
+    assert names.index("Prolific Writer") < names.index("Debut Author")
+
+
+async def test_browse_publishers_popular_orders_by_edition_count(client):
+    await client.post("/catalog/works", json={"title": "B1", "publisher_name": "Big House"})
+    await client.post("/catalog/works", json={"title": "B2", "publisher_name": "Big House"})
+    await client.post("/catalog/works", json={"title": "S1", "publisher_name": "Small Press"})
+
+    resp = await client.get("/catalog/browse/publishers", params={"sort": "popular", "limit": 100})
+    assert resp.status_code == 200
+    names = [p["name"] for p in resp.json()]
+    assert names.index("Big House") < names.index("Small Press")
 
 
 async def test_author_typeahead(client):
@@ -359,6 +408,57 @@ async def test_link_translation(client):
     b_after = (await client.get(f"/catalog/works/{b_id}")).json()
     assert a_after["translation_group_id"] is not None
     assert a_after["translation_group_id"] == b_after["translation_group_id"]
+
+
+async def test_linked_translation_appears_in_each_works_translations(client):
+    # The Dantha Simhasanam ↔ Ivory Throne case: link two Works, each then lists
+    # the other under `translations`.
+    eng = await client.post("/catalog/works", json={"title": "Ivory Throne", "language": "English"})
+    mal = await client.post(
+        "/catalog/works", json={"title": "Dantha Simhasanam", "language": "Malayalam"}
+    )
+    eng_id, mal_id = eng.json()["id"], mal.json()["id"]
+
+    await client.post(f"/catalog/works/{mal_id}/link-translation", json={"other_work_id": eng_id})
+
+    eng_after = (await client.get(f"/catalog/works/{eng_id}")).json()
+    mal_after = (await client.get(f"/catalog/works/{mal_id}")).json()
+    assert [t["title"] for t in eng_after["translations"]] == ["Dantha Simhasanam"]
+    assert [t["title"] for t in mal_after["translations"]] == ["Ivory Throne"]
+
+
+async def test_link_translation_rejects_self(client):
+    w = await client.post("/catalog/works", json={"title": "Solo"})
+    w_id = w.json()["id"]
+    resp = await client.post(
+        f"/catalog/works/{w_id}/link-translation", json={"other_work_id": w_id}
+    )
+    assert resp.status_code == 400
+
+
+async def test_add_edition_to_existing_work(client):
+    created = await client.post(
+        "/catalog/works",
+        json={"title": "Two Printings", "language": "English", "format": "Hardcover"},
+    )
+    work_id = created.json()["id"]
+    assert len(created.json()["editions"]) == 1
+
+    resp = await client.post(
+        f"/catalog/works/{work_id}/editions",
+        json={"format": "Paperback", "isbn": "9781111111119", "page_count": 300},
+    )
+    assert resp.status_code == 201
+    edition = resp.json()
+    assert edition["format"] == "Paperback"
+    assert edition["isbn"] == "9781111111119"
+    # It inherited the Work's language (not passed on the edition).
+    assert edition["language"] == "English"
+
+    # The Work now carries both editions.
+    work = (await client.get(f"/catalog/works/{work_id}")).json()
+    formats = {e["format"] for e in work["editions"]}
+    assert formats == {"Hardcover", "Paperback"}
 
 
 async def test_translation_group_rating_aggregates_for_display_only(client, db_sessionmaker):

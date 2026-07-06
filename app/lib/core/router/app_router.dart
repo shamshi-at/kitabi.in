@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/activity/presentation/activity_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/catalog/presentation/add_edit_book_screen.dart';
+import '../../features/catalog/presentation/add_edition_screen.dart';
 import '../../features/catalog/presentation/author_browse_screen.dart';
 import '../../features/catalog/presentation/author_picker_screen.dart';
 import '../../features/catalog/presentation/book_link_resolver_screen.dart';
@@ -13,6 +14,7 @@ import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
 import '../../features/catalog/presentation/publisher_browse_screen.dart';
 import '../../features/catalog/presentation/publisher_picker_screen.dart';
+import '../../features/catalog/presentation/work_picker_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/import_books/presentation/import_screen.dart';
 import '../../features/insights/presentation/insights_screen.dart';
@@ -40,9 +42,16 @@ abstract final class Routes {
   static const catalogSearch = '/catalog/search';
   static const catalogBrowse = '/catalog/browse';
   static const catalogScan = '/catalog/scan';
+  // Same scanner, but pops with the looked-up work (or raw ISBN) so the manual
+  // add-book form can prefill itself instead of adding straight to the library.
+  static const catalogScanResult = '/catalog/scan-result';
   static const catalogAdd = '/catalog/add';
+  // Add another edition to an existing Work; workId + optional title via `extra`.
+  static const catalogAddEdition = '/catalog/add-edition';
   static const authorPicker = '/catalog/author-picker';
   static const publisherPicker = '/catalog/publisher-picker';
+  // Pick an existing Work — used when linking a translation.
+  static const workPicker = '/catalog/work-picker';
   static const authorBrowse = '/catalog/authors/:authorId';
   static const publisherBrowse = '/catalog/publishers/:publisherId';
   // Short, shareable/deep-link paths that mirror the landing page's public
@@ -227,6 +236,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => IsbnScanScreen(),
       ),
       GoRoute(
+        path: Routes.catalogScanResult,
+        name: 'catalog-scan-result',
+        builder: (context, state) => IsbnScanScreen(returnResult: true),
+      ),
+      GoRoute(
         path: Routes.catalogAdd,
         name: 'catalog-add',
         builder: (context, state) => AddEditBookScreen(workId: state.extra as String?),
@@ -240,6 +254,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.publisherPicker,
         name: 'publisher-picker',
         builder: (context, state) => PublisherPickerScreen(),
+      ),
+      GoRoute(
+        path: Routes.workPicker,
+        name: 'work-picker',
+        builder: (context, state) => WorkPickerScreen(excludeWorkId: state.extra as String?),
+      ),
+      GoRoute(
+        path: Routes.catalogAddEdition,
+        name: 'catalog-add-edition',
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>? ?? const {};
+          return AddEditionScreen(
+            workId: args['workId'] as String,
+            workTitle: args['title'] as String?,
+          );
+        },
       ),
       GoRoute(
         path: Routes.authorBrowse,

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../share/presentation/entity_share_sheet.dart';
 import '../providers/catalog_providers.dart';
 import 'catalog_result_tile.dart';
 
@@ -56,8 +56,15 @@ class PublisherBrowseScreen extends ConsumerWidget {
                     IconButton(
                       icon: Icon(Icons.ios_share, color: AppColors.oxblood),
                       tooltip: l10n.shareAction,
-                      onPressed: () => Share.share(
-                        l10n.sharePublisherLinkText(name, publisherShareUrl(publisherId)),
+                      onPressed: () => showEntityShareSheet(
+                        context,
+                        eyebrow: l10n.sharePublisherEyebrow,
+                        name: name,
+                        subtitle: l10n.publisherBrowseWorksCount(works.length),
+                        shareUrl: publisherShareUrl(publisherId),
+                        shareText: l10n.sharePublisherLinkText(name, publisherShareUrl(publisherId)),
+                        imageUrl: logoUrl,
+                        circular: false,
                       ),
                     ),
                   ],

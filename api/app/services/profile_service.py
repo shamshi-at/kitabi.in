@@ -2,6 +2,8 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.profile import Profile
@@ -42,9 +44,49 @@ async def get_profile_or_404(db: AsyncSession, user_id: uuid.UUID) -> Profile:
 async def update_profile(db: AsyncSession, profile: Profile, patch: ProfileUpdate) -> Profile:
     for field, value in patch.model_dump(exclude_unset=True).items():
         setattr(profile, field, value)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        # The only uniqueness constraint on profiles is the username handle.
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "username_taken", "message": "That username is already taken"},
+        ) from exc
     await db.refresh(profile)
     return profile
+
+
+async def is_username_available(
+    db: AsyncSession, username: str, exclude_user_id: uuid.UUID
+) -> bool:
+    """Case-insensitive availability check (usernames are stored lowercased).
+    A user's own current handle counts as available to them."""
+    stmt = select(Profile.id).where(
+        func.lower(Profile.username) == username.lower(),
+        Profile.id != exclude_user_id,
+        Profile.deleted_at.is_(None),
+    )
+    return (await db.execute(stmt)).first() is None
+
+
+async def search_users(
+    db: AsyncSession, query: str, exclude_user_id: uuid.UUID, limit: int = 10
+) -> list[Profile]:
+    """Find readers by username prefix — only users who've set one are findable
+    (username is the opt-in to being lend-to-able). Excludes the caller."""
+    stmt = (
+        select(Profile)
+        .where(
+            Profile.username.is_not(None),
+            Profile.username.ilike(f"{query.strip().lower()}%"),
+            Profile.id != exclude_user_id,
+            Profile.deleted_at.is_(None),
+        )
+        .order_by(Profile.username)
+        .limit(limit)
+    )
+    return list((await db.execute(stmt)).scalars().all())
 
 
 async def soft_delete_profile(db: AsyncSession, profile: Profile) -> None:

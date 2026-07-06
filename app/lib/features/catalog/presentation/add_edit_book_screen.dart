@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/image_crop.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
+import '../catalog_image_upload.dart';
 import '../providers/catalog_providers.dart';
 
 const _formats = ['Paperback', 'Hardcover', 'eBook', 'Audiobook'];
@@ -75,7 +78,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
   // carries its canonical catalog id (falling back to name for legacy data).
   final List<Map<String, dynamic>> _authors = [];
   Map<String, dynamic>? _publisher;
+  // The edition's front and back cover URLs — set from an ISBN scan, an existing
+  // edition (edit mode), or a photo the user captures right here.
+  String? _coverUrl;
+  String? _backCoverUrl;
+  // Snapshot at load, so on edit we only PATCH the edition for a side the user
+  // actually changed — and never null an existing cover out.
+  String? _initialCoverUrl;
+  String? _initialBackCoverUrl;
+  bool _uploadingFront = false;
+  bool _uploadingBack = false;
   bool _saving = false;
+  bool _scanning = false;
 
   Map<String, dynamic>? get _edition {
     final editions = widget.initialWork?['editions'] as List?;
@@ -107,6 +121,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _pages = TextEditingController(text: edition?['page_count']?.toString() ?? '');
     _isbn = TextEditingController(text: edition?['isbn'] as String? ?? '');
     _format = edition?['format'] as String? ?? _formats.first;
+    _coverUrl = edition?['cover_url'] as String?;
+    _backCoverUrl = edition?['back_cover_url'] as String?;
+    _initialCoverUrl = _coverUrl;
+    _initialBackCoverUrl = _backCoverUrl;
     _selectedGenres = genreNames.where(_commonGenres.contains).toSet();
     _customGenres =
         TextEditingController(text: genreNames.where((g) => !_commonGenres.contains(g)).join(', '));
@@ -156,6 +174,99 @@ class _BookFormState extends ConsumerState<_BookForm> {
     setState(() => _publisher = result);
   }
 
+  /// Scan a barcode and prefill the form from the looked-up book, so the ISBN
+  /// (and everything the catalog knows) is captured by camera rather than typed.
+  /// Every field stays editable afterwards. A not-found scan can still return
+  /// just the raw ISBN so the user only types the rest.
+  Future<void> _scanIsbn() async {
+    setState(() => _scanning = true);
+    try {
+      final result = await context.push<Map<String, dynamic>>(Routes.catalogScanResult);
+      if (result == null || !mounted) return;
+      // A full work carries a title; the ISBN-only fallback carries just 'isbn'.
+      if (result['title'] != null) {
+        _applyScannedWork(result);
+      } else if (result['isbn'] is String) {
+        setState(() => _isbn.text = result['isbn'] as String);
+      }
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
+  }
+
+  void _applyScannedWork(Map<String, dynamic> work) {
+    final editions = work['editions'] as List?;
+    final edition =
+        editions != null && editions.isNotEmpty ? editions.first as Map<String, dynamic> : null;
+    final genreNames =
+        (work['genres'] as List?)?.map((g) => (g as Map)['name'] as String).toSet() ?? <String>{};
+
+    setState(() {
+      _title.text = work['title'] as String? ?? _title.text;
+      final language = work['language'] as String?;
+      if (language != null && language.isNotEmpty) _language.text = language;
+
+      _authors
+        ..clear()
+        ..addAll(
+          (work['authors'] as List?)?.map((a) => Map<String, dynamic>.from(a as Map)) ??
+              const <Map<String, dynamic>>[],
+        );
+
+      if (edition != null) {
+        final series = (edition['series'] as Map?)?['name'] as String?;
+        if (series != null && series.isNotEmpty) _series.text = series;
+        final seriesNumber = edition['series_number'];
+        if (seriesNumber != null) _seriesNumber.text = seriesNumber.toString();
+        final pages = edition['page_count'];
+        if (pages != null) _pages.text = pages.toString();
+        final isbn = edition['isbn'] as String?;
+        if (isbn != null && isbn.isNotEmpty) _isbn.text = isbn;
+        final format = edition['format'] as String?;
+        if (format != null && _formats.contains(format)) _format = format;
+        final cover = edition['cover_url'] as String?;
+        if (cover != null) _coverUrl = cover;
+        final back = edition['back_cover_url'] as String?;
+        if (back != null) _backCoverUrl = back;
+        final publisher = edition['publisher'] as Map?;
+        if (publisher != null) _publisher = Map<String, dynamic>.from(publisher);
+      }
+
+      _selectedGenres
+        ..clear()
+        ..addAll(genreNames.where(_commonGenres.contains));
+      final custom = genreNames.where((g) => !_commonGenres.contains(g)).join(', ');
+      if (custom.isNotEmpty) _customGenres.text = custom;
+    });
+  }
+
+  /// Photograph (or pick) a cover for [back]=false front / true back, crop it to
+  /// 2:3, upload it, and hold the URL until save. New books have no edition id
+  /// yet, so the image lands under a fresh `covers/<uuid>.jpg` path.
+  Future<void> _captureCover({required bool back}) async {
+    final source = await showImageSourceSheet(context);
+    if (source == null || !mounted) return;
+    setState(() => back ? _uploadingBack = true : _uploadingFront = true);
+    try {
+      final url = await pickCropUploadImage(
+        source: source,
+        folder: 'covers',
+        ratio: CropRatio.cover,
+      );
+      if (mounted && url != null) {
+        setState(() => back ? _backCoverUrl = url : _coverUrl = url);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.coverUploadFailed)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => back ? _uploadingBack = false : _uploadingFront = false);
+    }
+  }
+
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
@@ -183,6 +294,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
       'isbn': _isbn.text.trim().isEmpty ? null : _isbn.text.trim(),
       'page_count': int.tryParse(_pages.text.trim()),
       'format': _format,
+      // On create these land on the new edition. Never null a cover out on edit.
+      if (_coverUrl != null) 'cover_url': _coverUrl,
+      if (_backCoverUrl != null) 'back_cover_url': _backCoverUrl,
     };
 
     try {
@@ -192,6 +306,17 @@ class _BookFormState extends ConsumerState<_BookForm> {
         await api.createWork(payload);
       } else {
         await api.updateWork(workId, payload);
+        // Covers live on the Edition, not the Work — patch them separately, and
+        // only the side the user actually changed.
+        final editionId = _edition?['id'] as String?;
+        if (editionId != null) {
+          final edPatch = <String, dynamic>{
+            if (_coverUrl != null && _coverUrl != _initialCoverUrl) 'cover_url': _coverUrl,
+            if (_backCoverUrl != null && _backCoverUrl != _initialBackCoverUrl)
+              'back_cover_url': _backCoverUrl,
+          };
+          if (edPatch.isNotEmpty) await api.updateEdition(editionId, edPatch);
+        }
         ref.invalidate(workProvider(workId));
       }
       if (mounted) context.pop();
@@ -242,19 +367,29 @@ class _BookFormState extends ConsumerState<_BookForm> {
           ),
           SizedBox(height: 16),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TypesetCover(
+              _CoverSlot(
+                label: l10n.formCoverFront,
+                imageUrl: _coverUrl,
+                busy: _uploadingFront,
+                // Front falls back to the live typeset preview from title/author.
                 title: _title.text.isEmpty ? '…' : _title.text,
                 author: _authors.isEmpty ? null : _authors.first['name'] as String?,
-                coverUrl: _edition?['cover_url'] as String?,
-                width: 40,
-                height: 60,
+                onTap: () => _captureCover(back: false),
+              ),
+              SizedBox(width: 12),
+              _CoverSlot(
+                label: l10n.formCoverBack,
+                imageUrl: _backCoverUrl,
+                busy: _uploadingBack,
+                onTap: () => _captureCover(back: true),
               ),
               SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  l10n.formCoverTypeset,
-                  style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                  l10n.formCoverHelp,
+                  style: TextStyle(color: AppColors.inkSoft, fontSize: 12, height: 1.3),
                 ),
               ),
             ],
@@ -273,8 +408,16 @@ class _BookFormState extends ConsumerState<_BookForm> {
           ),
           SizedBox(height: 10),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(flex: 14, child: _Field(label: l10n.formFieldSeries, controller: _series)),
+              Expanded(
+                flex: 14,
+                child: _Field(
+                  label: l10n.formFieldSeries,
+                  controller: _series,
+                  helper: l10n.formSeriesHelp,
+                ),
+              ),
               SizedBox(width: 8),
               Expanded(
                 flex: 10,
@@ -282,6 +425,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                   label: l10n.formFieldBookNumber,
                   controller: _seriesNumber,
                   keyboardType: TextInputType.number,
+                  helper: l10n.formBookNumberHelp,
                 ),
               ),
             ],
@@ -311,8 +455,16 @@ class _BookFormState extends ConsumerState<_BookForm> {
           ),
           SizedBox(height: 10),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(flex: 14, child: _Field(label: l10n.formFieldIsbn, controller: _isbn)),
+              Expanded(
+                flex: 14,
+                child: _IsbnScanField(
+                  controller: _isbn,
+                  onScan: _scanIsbn,
+                  scanning: _scanning,
+                ),
+              ),
               SizedBox(width: 8),
               Expanded(
                 flex: 10,
@@ -390,6 +542,84 @@ TextStyle get _fieldLabelStyle => TextStyle(
       fontWeight: FontWeight.w600,
     );
 
+/// A single labelled, tappable cover thumbnail (front or back) on the add-book
+/// form. Shows the captured photo when there is one; the front otherwise falls
+/// back to the live typeset preview, the back to an "add a photo" placeholder.
+/// The camera badge signals it's tappable to shoot/replace.
+class _CoverSlot extends StatelessWidget {
+  const _CoverSlot({
+    required this.label,
+    required this.imageUrl,
+    required this.busy,
+    required this.onTap,
+    this.title,
+    this.author,
+  });
+
+  final String label;
+  final String? imageUrl;
+  final bool busy;
+  final VoidCallback onTap;
+  final String? title;
+  final String? author;
+
+  @override
+  Widget build(BuildContext context) {
+    const w = 46.0;
+    const h = 69.0; // 2:3
+    Widget preview;
+    if (imageUrl != null) {
+      preview = ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Image.network(imageUrl!, width: w, height: h, fit: BoxFit.cover),
+      );
+    } else if (title != null) {
+      preview = TypesetCover(title: title!, author: author, width: w, height: h);
+    } else {
+      preview = Container(
+        width: w,
+        height: h,
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Icon(Icons.add_a_photo_outlined, size: 18, color: AppColors.inkSoft),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: _fieldLabelStyle),
+        SizedBox(height: 4),
+        GestureDetector(
+          onTap: busy ? null : onTap,
+          child: Stack(
+            children: [
+              preview,
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Container(
+                  padding: EdgeInsets.all(3),
+                  decoration: BoxDecoration(color: AppColors.oxblood, shape: BoxShape.circle),
+                  child: busy
+                      ? SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.paper),
+                        )
+                      : Icon(Icons.photo_camera, size: 10, color: AppColors.paper),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Author input (S7b) — chips for the authors already chosen (each carries its
 /// catalog id) plus a button that opens the full author picker page, where you
 /// search existing authors (with portrait + language) or add a new one.
@@ -435,7 +665,14 @@ class _AuthorField extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: onAdd,
             icon: Icon(Icons.person_add_alt, size: 18),
-            label: Text(l10n.formAuthorAddButton),
+            label: Text(authors.isEmpty ? l10n.formAuthorAddButton : l10n.formAuthorAddAnother),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 3, left: 2),
+          child: Text(
+            l10n.formAuthorHelp,
+            style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),
           ),
         ),
       ],
@@ -510,12 +747,22 @@ class _PickerButtonField extends StatelessWidget {
 }
 
 class _Field extends StatelessWidget {
-  const _Field({required this.label, required this.controller, this.validator, this.keyboardType});
+  const _Field({
+    required this.label,
+    required this.controller,
+    this.validator,
+    this.keyboardType,
+    this.helper,
+  });
 
   final String label;
   final TextEditingController controller;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
+
+  /// Optional one-line hint under the field, for the fields users hesitate on
+  /// (series, book number, …).
+  final String? helper;
 
   @override
   Widget build(BuildContext context) {
@@ -550,6 +797,78 @@ class _Field extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: AppColors.line),
             ),
+          ),
+        ),
+        if (helper != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 3, left: 2),
+            child: Text(
+              helper!,
+              style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// ISBN field with a built-in Scan button (S7b). Scanning is the primary path —
+/// the camera fills in the ISBN (and the rest of the book) — but the field stays
+/// fully editable so a user can correct or type it by hand.
+class _IsbnScanField extends StatelessWidget {
+  const _IsbnScanField({
+    required this.controller,
+    required this.onScan,
+    required this.scanning,
+  });
+
+  final TextEditingController controller;
+  final VoidCallback onScan;
+  final bool scanning;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.formFieldIsbn, style: _fieldLabelStyle),
+        SizedBox(height: 4),
+        TextFormField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: AppColors.card,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            suffixIcon: IconButton(
+              onPressed: scanning ? null : onScan,
+              tooltip: l10n.formIsbnScan,
+              icon: scanning
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.oxblood),
+                    )
+                  : Icon(Icons.qr_code_scanner, size: 20, color: AppColors.oxblood),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: AppColors.line),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: AppColors.line),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 3, left: 2),
+          child: Text(
+            l10n.formIsbnScanHelp,
+            style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),
           ),
         ),
       ],

@@ -52,6 +52,10 @@ dependencies:
   # Cover photo upload — pick from gallery/camera (S7b "⇧ upload a photo")
   image_picker: ^1.1.2
 
+  # Crop a picked image to the right grid before upload — covers to 2:3
+  # (book-spine portrait), author photos / publisher logos to 1:1 square.
+  image_cropper: ^9.0.0
+
   # Open external links — the [WIRED] "Buy this edition" ecommerce redirect
   # (dormant until an edition carries a buy_url) and any future outbound link.
   url_launcher: ^6.3.0

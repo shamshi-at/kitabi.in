@@ -54,6 +54,12 @@
                 <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/p/"/>
             </intent-filter>
         </activity>
+        <!-- image_cropper (UCrop) — the crop screen shown after picking a cover /
+             author photo / publisher logo. Needs an AppCompat theme. -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
         <!-- flutter_local_notifications: reschedule reminders after a reboot. -->
         <receiver
             android:exported="false"

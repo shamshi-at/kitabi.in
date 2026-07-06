@@ -31,6 +31,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGreeting => 'Beyond the Bookshelf';
 
   @override
+  String get splashTagline => 'Beyond the Bookshelf';
+
+  @override
+  String get splashLoading => 'Opening your reading room…';
+
+  @override
   String get signInQuote1 => 'A reader lives a thousand lives before he dies.';
 
   @override
@@ -232,9 +238,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get formFieldGenres => 'GENRES · GLOBAL';
-
-  @override
-  String get formCoverTypeset => 'Typeset cover in use';
 
   @override
   String get formSave => 'Save to catalog';
@@ -585,7 +588,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lendSheetToLabel => 'TO';
 
   @override
-  String get lendSheetToHint => 'Who are you lending it to?';
+  String get lendSheetToHint => 'Name, or search a Kitabi user';
+
+  @override
+  String borrowerKitabiUser(String handle) {
+    return 'On Kitabi · $handle';
+  }
+
+  @override
+  String get borrowerPrivateContact => 'Private contact';
 
   @override
   String get lendSheetLentOnLabel => 'LENT ON';
@@ -730,6 +741,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileTitle => 'Profile & settings';
+
+  @override
+  String get profileUsernameSet => 'Set a username';
+
+  @override
+  String get profileUsernameHint =>
+      'A handle so friends can find you to lend books.';
+
+  @override
+  String get profileScoreHeader => 'REPUTATION';
+
+  @override
+  String profileScorePoints(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'points',
+      one: 'point',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileScoreBooksAdded => 'Books added';
+
+  @override
+  String get profileScoreAuthorsAdded => 'Authors added';
+
+  @override
+  String get profileScoreReviews => 'Reviews';
+
+  @override
+  String get profileScoreTracked => 'Tracked';
+
+  @override
+  String get profileScoreFinished => 'Finished';
+
+  @override
+  String get profileScoreLending => 'Lending';
+
+  @override
+  String get usernameSheetTitle => 'Your username';
+
+  @override
+  String get usernameFieldHint => 'e.g. shamshi_reads';
+
+  @override
+  String get usernameAvailable => 'Available';
+
+  @override
+  String get usernameTaken => 'Already taken';
+
+  @override
+  String get usernameInvalid =>
+      '3–20 characters: a letter, then letters, digits or _';
+
+  @override
+  String get usernameSave => 'Save username';
+
+  @override
+  String get usernameSaved => 'Username saved';
 
   @override
   String get profileEntry => 'Profile & settings';
@@ -1008,12 +1080,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pickerFieldLanguage => 'PRIMARY LANGUAGE · optional';
 
   @override
-  String get pickerFieldImageUrl => 'IMAGE URL · optional';
-
-  @override
-  String get pickerFieldLogoUrl => 'LOGO URL · optional';
-
-  @override
   String get pickerFieldBio => 'BIO · optional';
 
   @override
@@ -1024,6 +1090,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pickerSavePublisher => 'Add this publisher';
+
+  @override
+  String get pickerSuggestedAuthors => 'SUGGESTED';
+
+  @override
+  String get pickerSuggestedPublishers => 'SUGGESTED';
+
+  @override
+  String get pickerLanguageHint => 'Not set';
+
+  @override
+  String get pickerFieldPhoto => 'PHOTO · optional';
+
+  @override
+  String get pickerFieldLogo => 'LOGO · optional';
+
+  @override
+  String get pickerPhotoAdd => 'Add a photo';
+
+  @override
+  String get pickerPhotoReplace => 'Replace photo';
+
+  @override
+  String get pickerLogoAdd => 'Add a logo';
+
+  @override
+  String get pickerLogoReplace => 'Replace logo';
+
+  @override
+  String get pickerImageUploadFailed =>
+      'Couldn\'t upload that image. Try again.';
+
+  @override
+  String get formSeriesHelp => 'Leave blank if it\'s a standalone book';
+
+  @override
+  String get formBookNumberHelp => 'Its place in the series, e.g. 2';
+
+  @override
+  String get formAuthorAddAnother => '＋ Add another author';
+
+  @override
+  String get formAuthorHelp =>
+      'Add each co-author for books with more than one';
+
+  @override
+  String get formIsbnScan => 'Scan barcode';
+
+  @override
+  String get formIsbnScanHelp =>
+      'Scan the barcode to fill this in — edit if needed';
+
+  @override
+  String get scanAgain => 'Scan again';
+
+  @override
+  String get scanUseIsbnAnyway => 'Use this ISBN anyway';
+
+  @override
+  String get scanUseDetails => 'Use these details';
+
+  @override
+  String get formCoverFront => 'FRONT';
+
+  @override
+  String get formCoverBack => 'BACK';
+
+  @override
+  String get formCoverHelp =>
+      'Tap a cover to photograph the front and back of your copy.';
+
+  @override
+  String get imageSourceCamera => 'Take a photo';
+
+  @override
+  String get imageSourceGallery => 'Choose from gallery';
+
+  @override
+  String get bookCoverBack => 'Back cover';
+
+  @override
+  String get bookAddBackCover => 'Add back';
 
   @override
   String get shareAction => 'Share';
@@ -1045,6 +1193,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareFailed => 'Couldn\'t open the share sheet. Try again.';
+
+  @override
+  String get workPickerTitle => 'Choose a book';
+
+  @override
+  String get workPickerSearchHint => 'Search the catalogue by title';
+
+  @override
+  String get workPickerEmpty =>
+      'No matches — add that book to the catalogue first, then link it.';
+
+  @override
+  String get addEditionTitle => 'Add an edition';
+
+  @override
+  String get addEditionSubtitle => 'Another printing of this book';
+
+  @override
+  String get addEditionSave => 'Add edition';
+
+  @override
+  String get bookEditionsSection => 'Editions';
+
+  @override
+  String get bookAddEdition => 'Add another edition';
+
+  @override
+  String get bookEditionAdded => 'Edition added';
+
+  @override
+  String get bookTranslationsSection => 'Also in other languages';
+
+  @override
+  String get bookLinkTranslation => 'Link a translation';
+
+  @override
+  String get bookTranslationLinked => 'Linked as a translation';
+
+  @override
+  String get shareAuthorEyebrow => 'AN AUTHOR ON KITABI';
+
+  @override
+  String get sharePublisherEyebrow => 'A PUBLISHER ON KITABI';
 
   @override
   String get browseTitle => 'Browse the catalogue';
