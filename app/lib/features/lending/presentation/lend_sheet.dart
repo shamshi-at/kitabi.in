@@ -8,6 +8,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../lending_format.dart';
 import '../reminder.dart';
+import 'borrower_field.dart';
 import 'sheet_fields.dart';
 
 /// S9 — the lend flow. A bottom sheet on the book you already own: to whom,
@@ -57,6 +58,7 @@ class _LendSheet extends ConsumerStatefulWidget {
 class _LendSheetState extends ConsumerState<_LendSheet> {
   final _borrower = TextEditingController();
   final _note = TextEditingController();
+  String? _borrowerUserId;
   DateTime _lentOn = DateTime.now();
   DateTime? _dueOn;
   bool _saving = false;
@@ -79,6 +81,7 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
     final id = await repo.lendOut(
       widget.libraryEntryId,
       borrowerName: borrower,
+      borrowerUserId: _borrowerUserId,
       lentDate: _lentOn,
       dueDate: _dueOn,
       note: _note.text,
@@ -149,12 +152,13 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
               ],
             ),
             SizedBox(height: 14),
-            SheetLabel(l10n.lendSheetToLabel),
-            TextField(
+            BorrowerField(
               controller: _borrower,
+              label: l10n.lendSheetToLabel,
+              hint: l10n.lendSheetToHint,
               autofocus: true,
-              onChanged: (_) => setState(() {}),
-              decoration: sheetInputDecoration(l10n.lendSheetToHint),
+              onUserIdChanged: (id) => _borrowerUserId = id,
+              onChanged: () => setState(() {}),
             ),
             SizedBox(height: 12),
             Row(

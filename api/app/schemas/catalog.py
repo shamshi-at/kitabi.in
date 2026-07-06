@@ -75,6 +75,7 @@ class EditionOut(BaseModel):
     pub_date: date | None
     format: str | None
     cover_url: str | None
+    back_cover_url: str | None
     # [WIRED] where to buy — empty until store links are populated; the book
     # page lists each retailer.
     buy_links: list[BuyLink] = []
@@ -106,6 +107,10 @@ class WorkOut(BaseModel):
     authors: list[AuthorOut]
     genres: list[GenreOut]
     editions: list[EditionOut]
+    # Other Works sharing this one's translation_group_id — e.g. the Malayalam
+    # "Dantha Simhasanam" listed on the English "Ivory Throne" and vice versa.
+    # Computed at read time (a translation is its own Work, only group-linked).
+    translations: list["WorkSummaryOut"] = []
     created_at: datetime
 
 
@@ -121,6 +126,11 @@ class WorkSummaryOut(BaseModel):
     aggregate_rating: float | None
     authors: list[AuthorOut]
     edition: EditionOut | None
+
+
+# WorkOut.translations forward-references WorkSummaryOut (defined just above) —
+# resolve it now that both classes exist.
+WorkOut.model_rebuild()
 
 
 class WorkCreate(BaseModel):
@@ -145,6 +155,7 @@ class WorkCreate(BaseModel):
     pub_date: date | None = None
     format: str | None = None
     cover_url: str | None = None
+    back_cover_url: str | None = None
 
 
 class WorkUpdate(BaseModel):
@@ -158,6 +169,23 @@ class WorkUpdate(BaseModel):
     genre_names: list[str] | None = None
 
 
+class EditionCreate(BaseModel):
+    """Add another printing/ISBN to an existing Work — the edition-level library
+    (a paperback of a book you own in hardcover, a regional reprint, …)."""
+
+    publisher_id: uuid.UUID | None = None
+    publisher_name: str | None = None
+    series_name: str | None = None
+    series_number: int | None = None
+    isbn: str | None = None
+    language: str | None = None
+    page_count: int | None = None
+    pub_date: date | None = None
+    format: str | None = None
+    cover_url: str | None = None
+    back_cover_url: str | None = None
+
+
 class EditionUpdate(BaseModel):
     publisher_id: uuid.UUID | None = None
     publisher_name: str | None = None
@@ -168,6 +196,7 @@ class EditionUpdate(BaseModel):
     pub_date: date | None = None
     format: str | None = None
     cover_url: str | None = None
+    back_cover_url: str | None = None
     buy_links: list[BuyLink] | None = None
 
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/features/share/presentation/book_share_card.dart';
+import 'package:kitabi/features/share/presentation/entity_share_card.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
@@ -47,5 +48,23 @@ void main() {
     expect(find.text('your rating'), findsOneWidget);
     expect(find.textContaining('rewired how I read'), findsOneWidget);
     expect(find.textContaining('neutral catalog blurb'), findsNothing); // review replaces blurb
+  });
+
+  testWidgets('entity share card shows the name, subtitle and eyebrow', (tester) async {
+    await tester.pumpWidget(
+      _wrap(const EntityShareCard(
+        eyebrow: 'AN AUTHOR ON KITABI',
+        name: 'M.T. Vasudevan Nair',
+        subtitle: '7 works in the catalog',
+        imageUrl: null, // falls back to the initial, no network in tests
+        circular: true,
+      )),
+    );
+    await tester.pump();
+
+    expect(find.text('AN AUTHOR ON KITABI'), findsOneWidget);
+    expect(find.text('M.T. Vasudevan Nair'), findsOneWidget);
+    expect(find.text('7 works in the catalog'), findsOneWidget);
+    expect(find.text('M'), findsOneWidget); // initial fallback avatar
   });
 }

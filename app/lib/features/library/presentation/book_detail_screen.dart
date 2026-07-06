@@ -7,8 +7,10 @@ import '../../../core/router/app_router.dart';
 import '../../../core/haptics.dart';
 import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/api/api_client.dart';
 import '../../../data/db/catalog_cache.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
@@ -81,12 +83,25 @@ class _BookDetailBody extends ConsumerWidget {
                 padding: EdgeInsets.zero,
               ),
               SizedBox(width: 4),
-              _CoverUploader(
-                editionId: editionId,
-                title: work['title'] as String,
-                author: authors.isNotEmpty ? authors.first['name'] as String? : null,
-                coverUrl: edition?['cover_url'] as String?,
-                workId: work['id'] as String,
+              Column(
+                children: [
+                  _CoverUploader(
+                    editionId: editionId,
+                    title: work['title'] as String,
+                    author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+                    coverUrl: edition?['cover_url'] as String?,
+                    workId: work['id'] as String,
+                  ),
+                  SizedBox(height: 8),
+                  _CoverUploader(
+                    editionId: editionId,
+                    coverUrl: edition?['back_cover_url'] as String?,
+                    workId: work['id'] as String,
+                    back: true,
+                    width: 40,
+                    height: 58,
+                  ),
+                ],
               ),
               SizedBox(width: 14),
               Expanded(
@@ -210,29 +225,291 @@ class _BookDetailBody extends ConsumerWidget {
             ],
           ),
         ),
+        SizedBox(height: 20),
+        _EditionsSection(work: work, currentEditionId: editionId),
+        _TranslationsSection(work: work),
         SizedBox(height: 24),
       ],
     );
   }
 }
 
-/// The book-detail cover — tappable to upload your own photo (S7b "⇧ upload a
-/// photo"), with a small camera badge. Uploads to Supabase Storage, points the
-/// edition's cover_url at it, and refreshes.
+/// Section header used by the editions/translations lists.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 10,
+        letterSpacing: 1,
+        color: AppColors.inkSoft,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+/// Every edition (printing/ISBN) of this Work, tappable to view, plus an
+/// "Add another edition" entry — the edition-level "real bookshelf" feel.
+class _EditionsSection extends ConsumerWidget {
+  const _EditionsSection({required this.work, required this.currentEditionId});
+
+  final Map<String, dynamic> work;
+  final String currentEditionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final workId = work['id'] as String;
+    final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(13, 0, 13, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeader(label: l10n.bookEditionsSection),
+          SizedBox(height: 4),
+          for (final e in editions)
+            _EditionRow(
+              edition: e,
+              isCurrent: e['id'] == currentEditionId,
+              onTap: e['id'] == currentEditionId
+                  ? null
+                  : () => context.push(Routes.bookDetailPath(workId, e['id'] as String)),
+            ),
+          SizedBox(height: 4),
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.oxblood,
+              padding: EdgeInsets.symmetric(vertical: 6),
+              visualDensity: VisualDensity.compact,
+            ),
+            onPressed: () async {
+              final added = await context.push<bool>(
+                Routes.catalogAddEdition,
+                extra: {'workId': workId, 'title': work['title'] as String?},
+              );
+              if (added == true && context.mounted) {
+                ref.invalidate(workProvider(workId));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.bookEditionAdded)),
+                );
+              }
+            },
+            icon: Icon(Icons.add, size: 18),
+            label: Text(l10n.bookAddEdition),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EditionRow extends StatelessWidget {
+  const _EditionRow({required this.edition, required this.isCurrent, required this.onTap});
+
+  final Map<String, dynamic> edition;
+  final bool isCurrent;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final format = edition['format'] as String?;
+    final isbn = edition['isbn'] as String?;
+    final language = edition['language'] as String?;
+    final parts = [
+      ?format,
+      ?language,
+      if (isbn != null) 'ISBN $isbn',
+    ];
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(
+              isCurrent ? Icons.bookmark : Icons.menu_book_outlined,
+              size: 16,
+              color: isCurrent ? AppColors.oxblood : AppColors.inkSoft,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                parts.isEmpty ? 'Edition' : parts.join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                  color: AppColors.ink,
+                ),
+              ),
+            ),
+            if (!isCurrent) Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Works linked to this one as translations (shared translation group), each
+/// tappable to cross-navigate, plus a "Link a translation" entry.
+class _TranslationsSection extends ConsumerWidget {
+  const _TranslationsSection({required this.work});
+
+  final Map<String, dynamic> work;
+
+  Future<void> _link(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final workId = work['id'] as String;
+    final picked = await context.push<Map<String, dynamic>>(Routes.workPicker, extra: workId);
+    if (picked == null || !context.mounted) return;
+    final otherId = picked['id'] as String?;
+    if (otherId == null) return;
+    try {
+      await ref.read(apiClientProvider).linkTranslation(workId, otherId);
+      if (!context.mounted) return;
+      ref.invalidate(workProvider(workId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.bookTranslationLinked)),
+      );
+    } catch (err) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final translations = (work['translations'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(13, 0, 13, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeader(label: l10n.bookTranslationsSection),
+          SizedBox(height: 4),
+          for (final t in translations)
+            _TranslationRow(
+              translation: t,
+              onTap: () {
+                final ed = t['edition'] as Map<String, dynamic>?;
+                if (ed != null) {
+                  context.push(Routes.bookDetailPath(t['id'] as String, ed['id'] as String));
+                }
+              },
+            ),
+          SizedBox(height: 4),
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.oxblood,
+              padding: EdgeInsets.symmetric(vertical: 6),
+              visualDensity: VisualDensity.compact,
+            ),
+            onPressed: () => _link(context, ref),
+            icon: Icon(Icons.link, size: 18),
+            label: Text(l10n.bookLinkTranslation),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TranslationRow extends StatelessWidget {
+  const _TranslationRow({required this.translation, required this.onTap});
+
+  final Map<String, dynamic> translation;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = translation['title'] as String? ?? '';
+    final edition = translation['edition'] as Map<String, dynamic>?;
+    final language = edition?['language'] as String?;
+    final authors = (translation['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final subtitle = language ?? (authors.isNotEmpty ? authors.first['name'] as String? : null);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            TypesetCover(
+              title: title,
+              author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+              coverUrl: edition?['cover_url'] as String?,
+              width: 28,
+              height: 42,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                    ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The book-detail cover — tappable to photograph your own copy (S7b "⇧ upload a
+/// photo"), with a small camera badge. Handles both the front (`back == false`,
+/// with a typeset fallback) and the back (`back == true`, an "add back" tile when
+/// empty). Uploads to Supabase Storage, points the edition's front/back cover_url
+/// at it, and refreshes.
 class _CoverUploader extends ConsumerStatefulWidget {
   const _CoverUploader({
     required this.editionId,
-    required this.title,
-    required this.author,
     required this.coverUrl,
     required this.workId,
+    this.title,
+    this.author,
+    this.back = false,
+    this.width = 58,
+    this.height = 84,
   });
 
   final String editionId;
-  final String title;
+  final String? title;
   final String? author;
   final String? coverUrl;
   final String workId;
+  final bool back;
+  final double width;
+  final double height;
 
   @override
   ConsumerState<_CoverUploader> createState() => _CoverUploaderState();
@@ -243,11 +520,18 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
 
   Future<void> _upload() async {
     if (_busy) return;
+    final source = await showImageSourceSheet(context);
+    if (source == null || !mounted) return;
     setState(() => _busy = true);
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final url = await pickAndUploadCover(ref, editionId: widget.editionId);
+      final url = await pickAndUploadCover(
+        ref,
+        editionId: widget.editionId,
+        source: source,
+        back: widget.back,
+      );
       if (url != null) {
         ref.invalidate(workProvider(widget.workId));
         ref.invalidate(cachedBookProvider(widget.editionId));
@@ -262,17 +546,50 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final Widget preview;
+    if (widget.back) {
+      // No typeset fallback for a back cover — show the photo, or an "add" tile.
+      preview = widget.coverUrl != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Image.network(
+                widget.coverUrl!,
+                width: widget.width,
+                height: widget.height,
+                fit: BoxFit.cover,
+              ),
+            )
+          : Container(
+              width: widget.width,
+              height: widget.height,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.paper,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: Text(
+                l10n.bookAddBackCover,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.inkSoft, fontSize: 9),
+              ),
+            );
+    } else {
+      preview = TypesetCover(
+        title: widget.title ?? '…',
+        author: widget.author,
+        coverUrl: widget.coverUrl,
+        width: widget.width,
+        height: widget.height,
+      );
+    }
+
     return GestureDetector(
       onTap: _upload,
       child: Stack(
         children: [
-          TypesetCover(
-            title: widget.title,
-            author: widget.author,
-            coverUrl: widget.coverUrl,
-            width: 58,
-            height: 84,
-          ),
+          preview,
           Positioned(
             right: 2,
             bottom: 2,

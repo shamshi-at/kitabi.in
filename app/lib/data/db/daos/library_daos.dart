@@ -171,6 +171,20 @@ class LendingRecordsDao extends DatabaseAccessor<AppDatabase> with _$LendingReco
 
   Future<void> patch(String id, LendingRecordsCompanion patch) =>
       (update(lendingRecords)..where((t) => t.id.equals(id))).write(patch);
+
+  /// Distinct counterparties this reader has lent to / borrowed from before —
+  /// their private contacts, offered as quick-pick suggestions when logging a
+  /// new loan. Newest-used first.
+  Future<List<String>> pastBorrowerNames({int limit = 20}) async {
+    final rows = await (selectOnly(lendingRecords, distinct: true)
+          ..addColumns([lendingRecords.borrowerName])
+          ..where(lendingRecords.deletedAt.isNull())
+          ..orderBy([OrderingTerm.desc(lendingRecords.lentDate)])
+          ..limit(limit))
+        .map((r) => r.read(lendingRecords.borrowerName))
+        .get();
+    return rows.whereType<String>().toList();
+  }
 }
 
 @DriftAccessor(tables: [ActivityLogEntries])

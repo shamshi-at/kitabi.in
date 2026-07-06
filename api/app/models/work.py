@@ -57,6 +57,10 @@ class Work(CatalogMixin, Base):
     external_source: Mapped[str | None] = mapped_column(String, default=None)
     external_id: Mapped[str | None] = mapped_column(String, default=None, index=True)
 
+    # The reader who contributed this Work to the catalog — powers their
+    # contribution score. Null for OpenLibrary-imported / seeded rows.
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, default=None, index=True)
+
     authors: Mapped[list["Author"]] = relationship(secondary=work_authors, lazy="selectin")
     genres: Mapped[list["Genre"]] = relationship(secondary=work_genres, lazy="selectin")
     editions: Mapped[list["Edition"]] = relationship(back_populates="work", lazy="selectin")

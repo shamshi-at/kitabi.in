@@ -39,6 +39,10 @@ class Edition(CatalogMixin, Base):
     pub_date: Mapped[date | None] = mapped_column(Date, default=None)
     format: Mapped[str | None] = mapped_column(String, default=None)  # paperback/hardcover/ebook
     cover_url: Mapped[str | None] = mapped_column(String, default=None)
+    # The back cover — a user can photograph both sides of a book they own. Front
+    # (`cover_url`) is what every list/grid renders; `back_cover_url` shows only on
+    # the book page. Both nullable; null front falls back to the typeset cover.
+    back_cover_url: Mapped[str | None] = mapped_column(String, default=None)
     # [WIRED] Where this edition is available to buy — a list of external
     # retailer links ([{"retailer": "Amazon", "url": ...}, {"retailer":
     # "Flipkart", ...}]). Display-only, per-edition (ISBN-specific), populated

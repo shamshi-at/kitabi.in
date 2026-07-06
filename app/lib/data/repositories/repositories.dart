@@ -319,6 +319,7 @@ class LendingRepository extends Repo {
     required DateTime lentDate,
     DateTime? dueDate,
     String? note,
+    String? borrowerUserId,
   }) async {
     final id = _uuid.v4();
     final trimmedNote = note?.trim();
@@ -328,6 +329,7 @@ class LendingRepository extends Repo {
         userId: session.userId,
         libraryEntryId: Value(libraryEntryId),
         borrowerName: borrowerName,
+        borrowerUserId: Value(borrowerUserId),
         lentDate: lentDate,
         dueDate: Value(dueDate),
         note: Value(trimmedNote),
@@ -341,6 +343,9 @@ class LendingRepository extends Repo {
         'direction': 'lent',
         'library_entry_id': libraryEntryId,
         'borrower_name': borrowerName,
+        // Set when the borrower is a Kitabi user (found by username); null for a
+        // private contact typed by hand.
+        'borrower_user_id': ?borrowerUserId,
         'lent_date': lentDate.toUtc().toIso8601String().split('T').first,
         if (dueDate != null) 'due_date': dueDate.toUtc().toIso8601String().split('T').first,
         if (trimmedNote != null && trimmedNote.isNotEmpty) 'note': trimmedNote,
@@ -358,6 +363,7 @@ class LendingRepository extends Repo {
     required DateTime borrowedDate,
     DateTime? dueDate,
     String? note,
+    String? borrowerUserId,
   }) async {
     final id = _uuid.v4();
     final trimmedNote = note?.trim();
@@ -368,6 +374,7 @@ class LendingRepository extends Repo {
         direction: Value('borrowed'),
         editionId: Value(editionId),
         borrowerName: lenderName,
+        borrowerUserId: Value(borrowerUserId),
         lentDate: borrowedDate,
         dueDate: Value(dueDate),
         note: Value(trimmedNote),
@@ -381,6 +388,8 @@ class LendingRepository extends Repo {
         'direction': 'borrowed',
         'edition_id': editionId,
         'borrower_name': lenderName,
+        // The Kitabi user I borrowed from, when matched by username.
+        'borrower_user_id': ?borrowerUserId,
         'lent_date': borrowedDate.toUtc().toIso8601String().split('T').first,
         if (dueDate != null) 'due_date': dueDate.toUtc().toIso8601String().split('T').first,
         if (trimmedNote != null && trimmedNote.isNotEmpty) 'note': trimmedNote,

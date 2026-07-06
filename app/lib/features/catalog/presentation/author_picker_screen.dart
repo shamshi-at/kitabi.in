@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/image_source_sheet.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
+import '../catalog_image_upload.dart';
 import 'picker_widgets.dart';
 
 /// S7b author picker — opened from the add-book form's author field. Search the
@@ -26,8 +28,24 @@ class _AuthorPickerScreenState extends ConsumerState<AuthorPickerScreen> {
   Timer? _debounce;
   String _query = '';
   List<Map<String, dynamic>> _results = [];
+  List<Map<String, dynamic>> _suggestions = [];
   bool _loading = false;
   bool _adding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSuggestions();
+  }
+
+  Future<void> _loadSuggestions() async {
+    try {
+      final rows = await ref.read(apiClientProvider).browseAuthors(sort: 'popular', limit: 8);
+      if (mounted) setState(() => _suggestions = rows);
+    } catch (_) {
+      // Suggestions are a nicety; a blank list is a fine fallback.
+    }
+  }
 
   @override
   void dispose() {
@@ -94,6 +112,26 @@ class _AuthorPickerScreenState extends ConsumerState<AuthorPickerScreen> {
                         ),
                       ),
                     ),
+                  if (_query.isEmpty && _suggestions.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 2),
+                      child: Text(
+                        l10n.pickerSuggestedAuthors,
+                        style: TextStyle(
+                          fontSize: 10,
+                          letterSpacing: 1,
+                          color: AppColors.inkSoft,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    for (final author in _suggestions)
+                      _AuthorResultTile(
+                        author: author,
+                        onTap: () => context.pop(author),
+                      ),
+                    const SizedBox(height: 4),
+                  ],
                   for (final author in _results)
                     _AuthorResultTile(
                       author: author,
@@ -216,9 +254,10 @@ class _AddNewAuthorSection extends ConsumerStatefulWidget {
 class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _language = TextEditingController();
-  final _imageUrl = TextEditingController();
   final _bio = TextEditingController();
+  String? _language;
+  String? _imageUrl;
+  bool _uploading = false;
   bool _saving = false;
 
   @override
@@ -232,10 +271,28 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
 
   @override
   void dispose() {
-    for (final c in [_name, _language, _imageUrl, _bio]) {
+    for (final c in [_name, _bio]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final source = await showImageSourceSheet(context);
+    if (source == null || !mounted) return;
+    setState(() => _uploading = true);
+    try {
+      final url = await pickAndUploadCatalogImage(folder: 'authors', source: source);
+      if (mounted && url != null) setState(() => _imageUrl = url);
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.pickerImageUploadFailed)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   Future<void> _save() async {
@@ -243,8 +300,8 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
     setState(() => _saving = true);
     final payload = <String, dynamic>{
       'name': _name.text.trim(),
-      if (_language.text.trim().isNotEmpty) 'primary_language': _language.text.trim(),
-      if (_imageUrl.text.trim().isNotEmpty) 'image_url': _imageUrl.text.trim(),
+      if (_language != null) 'primary_language': _language,
+      if (_imageUrl != null) 'image_url': _imageUrl,
       if (_bio.text.trim().isNotEmpty) 'bio': _bio.text.trim(),
     };
     try {
@@ -291,9 +348,21 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
               validator: (v) => (v == null || v.trim().isEmpty) ? l10n.pickerNameRequired : null,
             ),
             const SizedBox(height: 8),
-            PickerField(label: l10n.pickerFieldLanguage, controller: _language),
+            PickerLanguageDropdown(
+              label: l10n.pickerFieldLanguage,
+              value: _language,
+              hint: l10n.pickerLanguageHint,
+              onChanged: (v) => setState(() => _language = v),
+            ),
             const SizedBox(height: 8),
-            PickerField(label: l10n.pickerFieldImageUrl, controller: _imageUrl),
+            PickerImageField(
+              label: l10n.pickerFieldPhoto,
+              imageUrl: _imageUrl,
+              busy: _uploading,
+              pickLabel: _imageUrl == null ? l10n.pickerPhotoAdd : l10n.pickerPhotoReplace,
+              onPick: _pickImage,
+              onClear: _imageUrl == null ? null : () => setState(() => _imageUrl = null),
+            ),
             const SizedBox(height: 8),
             PickerField(label: l10n.pickerFieldBio, controller: _bio, maxLines: 3),
             const SizedBox(height: 12),

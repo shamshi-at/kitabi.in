@@ -26,6 +26,11 @@ class Profile(Base):
     full_name: Mapped[str | None] = mapped_column(String, default=None)
     avatar_url: Mapped[str | None] = mapped_column(String, default=None)
 
+    # Optional, unique public handle — how others find this reader to lend to
+    # (feature-map.md: real user reference for lending). Stored lowercased so a
+    # plain unique constraint is case-insensitive. Null until the user sets one.
+    username: Mapped[str | None] = mapped_column(String, unique=True, default=None)
+
     profile_visible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     library_visible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     reviews_visible_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

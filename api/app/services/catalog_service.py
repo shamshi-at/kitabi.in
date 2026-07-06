@@ -6,8 +6,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models import Author, Edition, Genre, Publisher, Series, Work
-from app.schemas.catalog import EditionUpdate, WorkCreate, WorkUpdate
+from app.models import Author, Edition, Genre, Publisher, Series, Work, work_authors
+from app.schemas.catalog import EditionCreate, EditionUpdate, WorkCreate, WorkUpdate
 from app.services.openlibrary_client import OpenLibraryClient, normalize_isbn_lookup
 
 _ISBN_RE = re.compile(r"^[0-9]{9}[0-9X]$|^[0-9]{13}$")
@@ -122,9 +122,12 @@ async def _resolve_publisher(
     return None
 
 
-async def create_work_with_edition(db: AsyncSession, payload: WorkCreate) -> Work:
+async def create_work_with_edition(
+    db: AsyncSession, payload: WorkCreate, *, created_by: uuid.UUID | None = None
+) -> Work:
     """The manual add/edit flow (S7b) — get-or-create every referenced
-    author/publisher/genre/series, then create the Work + its first Edition."""
+    author/publisher/genre/series, then create the Work + its first Edition.
+    [created_by] credits the contributing reader for their score."""
     authors = await _resolve_authors(db, payload.author_ids, payload.author_names)
     genres = [await _get_or_create(db, Genre, name) for name in payload.genre_names]
     publisher = await _resolve_publisher(db, payload.publisher_id, payload.publisher_name)
@@ -138,6 +141,7 @@ async def create_work_with_edition(db: AsyncSession, payload: WorkCreate) -> Wor
         first_publish_year=payload.first_publish_year,
         authors=authors,
         genres=genres,
+        created_by_user_id=created_by,
     )
     db.add(work)
     await db.flush()
@@ -153,6 +157,7 @@ async def create_work_with_edition(db: AsyncSession, payload: WorkCreate) -> Wor
         pub_date=payload.pub_date,
         format=payload.format,
         cover_url=payload.cover_url,
+        back_cover_url=payload.back_cover_url,
     )
     db.add(edition)
     await db.commit()
@@ -297,25 +302,41 @@ async def catalog_languages(db: AsyncSession) -> list[str]:
     return [row for row in (await db.execute(stmt)).scalars().all() if row]
 
 
-async def browse_authors(db: AsyncSession, limit: int, offset: int) -> list[Author]:
-    stmt = (
-        select(Author)
-        .where(Author.deleted_at.is_(None))
-        .order_by(Author.name)
-        .limit(limit)
-        .offset(offset)
-    )
+async def browse_authors(
+    db: AsyncSession, limit: int, offset: int, *, popular: bool = False
+) -> list[Author]:
+    stmt = select(Author).where(Author.deleted_at.is_(None))
+    if popular:
+        # Suggestions for the author picker: the authors carrying the most works
+        # first (a blank picker should surface the catalog's real regulars, not
+        # whoever happens to sort first alphabetically). Outer-join so authors
+        # with zero works still appear, just last.
+        stmt = (
+            stmt.outerjoin(work_authors, work_authors.c.author_id == Author.id)
+            .group_by(Author.id)
+            .order_by(func.count(work_authors.c.work_id).desc(), Author.name)
+        )
+    else:
+        stmt = stmt.order_by(Author.name)
+    stmt = stmt.limit(limit).offset(offset)
     return list((await db.execute(stmt)).scalars().all())
 
 
-async def browse_publishers(db: AsyncSession, limit: int, offset: int) -> list[Publisher]:
-    stmt = (
-        select(Publisher)
-        .where(Publisher.deleted_at.is_(None))
-        .order_by(Publisher.name)
-        .limit(limit)
-        .offset(offset)
-    )
+async def browse_publishers(
+    db: AsyncSession, limit: int, offset: int, *, popular: bool = False
+) -> list[Publisher]:
+    stmt = select(Publisher).where(Publisher.deleted_at.is_(None))
+    if popular:
+        # Publisher-picker suggestions — most editions first, same rationale as
+        # browse_authors above.
+        stmt = (
+            stmt.outerjoin(Edition, Edition.publisher_id == Publisher.id)
+            .group_by(Publisher.id)
+            .order_by(func.count(Edition.id).desc(), Publisher.name)
+        )
+    else:
+        stmt = stmt.order_by(Publisher.name)
+    stmt = stmt.limit(limit).offset(offset)
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -380,6 +401,51 @@ async def find_or_fetch_by_isbn(
     edition.external_id = normalized["external_id"]
     await db.commit()
     return edition
+
+
+async def create_edition(db: AsyncSession, work: Work, payload: EditionCreate) -> Edition:
+    """Attach another edition (printing/ISBN) to an existing Work — same book,
+    different physical copy. Mirrors the edition half of create_work_with_edition
+    but leaves the Work (title/authors/genres) untouched."""
+    publisher = await _resolve_publisher(db, payload.publisher_id, payload.publisher_name)
+    series = await _get_or_create(db, Series, payload.series_name) if payload.series_name else None
+
+    edition = Edition(
+        work_id=work.id,
+        publisher_id=publisher.id if publisher else None,
+        series_id=series.id if series else None,
+        series_number=payload.series_number,
+        isbn=payload.isbn,
+        # An edition inherits the Work's language unless told otherwise.
+        language=payload.language or work.language,
+        page_count=payload.page_count,
+        pub_date=payload.pub_date,
+        format=payload.format,
+        cover_url=payload.cover_url,
+        back_cover_url=payload.back_cover_url,
+    )
+    db.add(edition)
+    await db.commit()
+    return await get_edition_or_404(db, edition.id)
+
+
+async def translation_siblings(db: AsyncSession, work: Work) -> list[Work]:
+    """The *other* Works sharing this one's translation_group_id — what the book
+    page lists under "Also in other languages". Empty when the Work isn't
+    linked to any translation."""
+    if work.translation_group_id is None:
+        return []
+    stmt = (
+        select(Work)
+        .where(
+            Work.translation_group_id == work.translation_group_id,
+            Work.id != work.id,
+            Work.deleted_at.is_(None),
+        )
+        .options(*_SUMMARY_OPTIONS)
+        .order_by(Work.title)
+    )
+    return list((await db.execute(stmt)).unique().scalars().all())
 
 
 async def link_translation(db: AsyncSession, work: Work, other_work: Work) -> None:

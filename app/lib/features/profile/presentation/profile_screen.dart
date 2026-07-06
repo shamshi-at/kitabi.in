@@ -1,6 +1,6 @@
-import 'dart:math';
-
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,6 +80,19 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     }
   }
 
+  Future<void> _editUsername() async {
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _UsernameSheet(current: widget.profile['username'] as String?),
+    );
+    if (saved == true) ref.invalidate(meProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -87,6 +100,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     final fullName = profile['full_name'] as String? ?? profile['email'] as String? ?? '';
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
     final createdAt = DateTime.tryParse(profile['created_at'] as String? ?? '');
+    final username = profile['username'] as String?;
 
     return ListView(
       padding: EdgeInsets.all(20),
@@ -99,23 +113,53 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
               child: Text(initial, style: TextStyle(color: AppColors.paper)),
             ),
             SizedBox(width: 14),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(fullName, style: Theme.of(context).textTheme.titleLarge),
-                if (createdAt != null)
-                  Text(
-                    l10n.profileReadingSince(createdAt.year),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppColors.inkSoft),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(fullName, style: Theme.of(context).textTheme.titleLarge),
+                  GestureDetector(
+                    onTap: _editUsername,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (username != null)
+                            Text(
+                              '@$username',
+                              style: TextStyle(
+                                color: AppColors.oxblood,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            )
+                          else
+                            Text(
+                              l10n.profileUsernameSet,
+                              style: TextStyle(color: AppColors.oxblood, fontSize: 13),
+                            ),
+                          SizedBox(width: 4),
+                          Icon(Icons.edit, size: 12, color: AppColors.inkSoft),
+                        ],
+                      ),
+                    ),
                   ),
-              ],
+                  if (createdAt != null)
+                    Text(
+                      l10n.profileReadingSince(createdAt.year),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: AppColors.inkSoft),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
         SizedBox(height: 20),
+        const _ReputationCard(),
+        SizedBox(height: 16),
         Card(
           child: Padding(
             padding: EdgeInsets.all(12),
@@ -379,6 +423,268 @@ class _SwitchRow extends StatelessWidget {
             ),
           ),
           Switch(value: value, onChanged: onChanged, activeThumbColor: AppColors.moss),
+        ],
+      ),
+    );
+  }
+}
+
+/// StackOverflow-style reputation — the total the reader has earned, with a
+/// breakdown of where the points came from (contributions + activity).
+class _ReputationCard extends ConsumerWidget {
+  const _ReputationCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final score = ref.watch(scoreProvider);
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(14),
+        child: score.when(
+          loading: () => SizedBox(
+            height: 60,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (err, _) => SizedBox(height: 40, child: Center(child: Text('$err'))),
+          data: (s) {
+            final total = (s['total'] as num?)?.toInt() ?? 0;
+            final stats = <(String, int)>[
+              (l10n.profileScoreBooksAdded, (s['books_added'] as num?)?.toInt() ?? 0),
+              (l10n.profileScoreAuthorsAdded, (s['authors_added'] as num?)?.toInt() ?? 0),
+              (l10n.profileScoreReviews, (s['reviews_written'] as num?)?.toInt() ?? 0),
+              (l10n.profileScoreTracked, (s['books_tracked'] as num?)?.toInt() ?? 0),
+              (l10n.profileScoreFinished, (s['books_finished'] as num?)?.toInt() ?? 0),
+              (l10n.profileScoreLending, (s['lending_records'] as num?)?.toInt() ?? 0),
+            ];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.profileScoreHeader,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(color: AppColors.inkSoft, letterSpacing: 1),
+                ),
+                SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      '$total',
+                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                            color: AppColors.oxblood,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      l10n.profileScorePoints(total),
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
+                    ),
+                  ],
+                ),
+                Divider(height: 18),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final (label, value) in stats) _StatPill(label: label, value: value),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  const _StatPill({required this.label, required this.value});
+
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = value > 0;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: active ? AppColors.goldSoft : AppColors.paperDeep,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$value',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: active ? AppColors.oxblood : AppColors.inkSoft,
+              fontSize: 13,
+            ),
+          ),
+          SizedBox(width: 5),
+          Text(label, style: TextStyle(color: AppColors.inkSoft, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Set/change the optional unique username, with a live availability check.
+class _UsernameSheet extends ConsumerStatefulWidget {
+  const _UsernameSheet({required this.current});
+
+  final String? current;
+
+  @override
+  ConsumerState<_UsernameSheet> createState() => _UsernameSheetState();
+}
+
+enum _NameStatus { idle, checking, available, taken, invalid }
+
+class _UsernameSheetState extends ConsumerState<_UsernameSheet> {
+  late final TextEditingController _controller = TextEditingController(text: widget.current ?? '');
+  Timer? _debounce;
+  _NameStatus _status = _NameStatus.idle;
+  bool _saving = false;
+
+  static final _re = RegExp(r'^[a-z][a-z0-9_]{2,19}$');
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String raw) {
+    final value = raw.trim().toLowerCase();
+    _debounce?.cancel();
+    if (value == (widget.current ?? '')) {
+      setState(() => _status = _NameStatus.idle);
+      return;
+    }
+    if (!_re.hasMatch(value)) {
+      setState(() => _status = _NameStatus.invalid);
+      return;
+    }
+    setState(() => _status = _NameStatus.checking);
+    _debounce = Timer(const Duration(milliseconds: 350), () async {
+      try {
+        final available = await ref.read(apiClientProvider).usernameAvailable(value);
+        if (mounted && _controller.text.trim().toLowerCase() == value) {
+          setState(() => _status = available ? _NameStatus.available : _NameStatus.taken);
+        }
+      } catch (_) {
+        if (mounted) setState(() => _status = _NameStatus.idle);
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    final value = _controller.text.trim().toLowerCase();
+    setState(() => _saving = true);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(apiClientProvider).updateMe({'username': value});
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.usernameSaved)));
+        Navigator.of(context).pop(true);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _status = _NameStatus.taken;
+          _saving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final canSave = _status == _NameStatus.available && !_saving;
+    final (hint, hintColor) = switch (_status) {
+      _NameStatus.available => (l10n.usernameAvailable, AppColors.moss),
+      _NameStatus.taken => (l10n.usernameTaken, AppColors.oxblood),
+      _NameStatus.invalid => (l10n.usernameInvalid, AppColors.inkSoft),
+      _ => (l10n.usernameInvalid, AppColors.inkSoft),
+    };
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.usernameSheetTitle, style: Theme.of(context).textTheme.titleLarge),
+          SizedBox(height: 4),
+          Text(l10n.profileUsernameHint, style: TextStyle(color: AppColors.inkSoft, fontSize: 13)),
+          SizedBox(height: 14),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            autocorrect: false,
+            textInputAction: TextInputAction.done,
+            onChanged: _onChanged,
+            onSubmitted: (_) => canSave ? _save() : null,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.ink),
+            decoration: InputDecoration(
+              prefixText: '@',
+              hintText: l10n.usernameFieldHint,
+              filled: true,
+              fillColor: AppColors.card,
+              suffixIcon: _status == _NameStatus.checking
+                  ? Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : _status == _NameStatus.available
+                      ? Icon(Icons.check_circle, color: AppColors.moss)
+                      : _status == _NameStatus.taken
+                          ? Icon(Icons.error_outline, color: AppColors.oxblood)
+                          : null,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          if (_status != _NameStatus.idle && _status != _NameStatus.checking)
+            Padding(
+              padding: EdgeInsets.only(top: 6, left: 4),
+              child: Text(hint, style: TextStyle(color: hintColor, fontSize: 12)),
+            ),
+          SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: canSave ? _save : null,
+              child: _saving
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+                    )
+                  : Text(l10n.usernameSave),
+            ),
+          ),
         ],
       ),
     );

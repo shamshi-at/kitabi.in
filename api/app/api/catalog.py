@@ -4,12 +4,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import DbSession
+from app.api.deps import CurrentUser, DbSession
 from app.models import Author, Publisher
 from app.schemas.catalog import (
     AuthorCreate,
     AuthorOut,
     AuthorWorksOut,
+    EditionCreate,
     EditionOut,
     EditionUpdate,
     GlobalSearchOut,
@@ -44,7 +45,13 @@ def _summary(work) -> WorkSummaryOut:  # noqa: ANN001 — Work ORM instance
 
 async def _work_out(db: AsyncSession, work) -> WorkOut:  # noqa: ANN001 — Work ORM instance
     rating = await catalog_service.translation_group_rating(db, work)
-    return WorkOut.model_validate(work).model_copy(update={"translation_group_rating": rating})
+    siblings = await catalog_service.translation_siblings(db, work)
+    return WorkOut.model_validate(work).model_copy(
+        update={
+            "translation_group_rating": rating,
+            "translations": [_summary(w) for w in siblings],
+        }
+    )
 
 
 @router.get("/search", response_model=list[WorkSummaryOut])
@@ -97,9 +104,11 @@ async def browse_authors(
     db: DbSession,
     limit: int = Query(default=40, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    sort: str = Query(default="name", pattern="^(name|popular)$"),
 ) -> list[AuthorOut]:
-    """Discover screen — every catalog author, alphabetical, paged."""
-    authors = await catalog_service.browse_authors(db, limit, offset)
+    """Discover screen (alphabetical) and the author picker's blank-state
+    suggestions (`sort=popular` → most works first)."""
+    authors = await catalog_service.browse_authors(db, limit, offset, popular=sort == "popular")
     return [AuthorOut.model_validate(a) for a in authors]
 
 
@@ -108,9 +117,13 @@ async def browse_publishers(
     db: DbSession,
     limit: int = Query(default=40, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    sort: str = Query(default="name", pattern="^(name|popular)$"),
 ) -> list[PublisherOut]:
-    """Discover screen — every catalog publisher, alphabetical, paged."""
-    publishers = await catalog_service.browse_publishers(db, limit, offset)
+    """Discover screen (alphabetical) and the publisher picker's blank-state
+    suggestions (`sort=popular` → most editions first)."""
+    publishers = await catalog_service.browse_publishers(
+        db, limit, offset, popular=sort == "popular"
+    )
     return [PublisherOut.model_validate(p) for p in publishers]
 
 
@@ -129,9 +142,11 @@ async def lookup_isbn(isbn: str, db: DbSession, ol_client: OlClient) -> WorkOut:
 
 
 @router.post("/works", response_model=WorkOut, status_code=status.HTTP_201_CREATED)
-async def create_work(payload: WorkCreate, db: DbSession) -> WorkOut:
-    """Manual add/edit flow (S7b)."""
-    work = await catalog_service.create_work_with_edition(db, payload)
+async def create_work(payload: WorkCreate, user: CurrentUser, db: DbSession) -> WorkOut:
+    """Manual add/edit flow (S7b). Credits the contributor for their score."""
+    work = await catalog_service.create_work_with_edition(
+        db, payload, created_by=uuid.UUID(user["id"])
+    )
     return await _work_out(db, work)
 
 
@@ -150,10 +165,28 @@ async def patch_work(work_id: uuid.UUID, payload: WorkUpdate, db: DbSession) -> 
 
 @router.post("/works/{work_id}/link-translation", status_code=status.HTTP_204_NO_CONTENT)
 async def link_translation(work_id: uuid.UUID, payload: TranslationLinkIn, db: DbSession) -> None:
-    """[WIRED] — structure now, UI later (feature-map.md)."""
+    """Link two Works as translations of one another (shared translation_group_id)
+    — e.g. the Malayalam "Dantha Simhasanam" under the English "Ivory Throne"."""
+    if work_id == payload.other_work_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "self_link", "message": "A Work can't be a translation of itself"},
+        )
     work = await catalog_service.get_work_or_404(db, work_id)
     other = await catalog_service.get_work_or_404(db, payload.other_work_id)
     await catalog_service.link_translation(db, work, other)
+
+
+@router.post(
+    "/works/{work_id}/editions",
+    response_model=EditionOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_edition(work_id: uuid.UUID, payload: EditionCreate, db: DbSession) -> EditionOut:
+    """Add another edition (printing/ISBN) to an existing Work."""
+    work = await catalog_service.get_work_or_404(db, work_id)
+    edition = await catalog_service.create_edition(db, work, payload)
+    return EditionOut.model_validate(edition)
 
 
 @router.patch("/editions/{edition_id}", response_model=EditionOut)
@@ -177,11 +210,14 @@ async def publishers_typeahead(db: DbSession, q: str = Query(min_length=1)) -> l
 
 
 @router.post("/authors", response_model=AuthorOut, status_code=status.HTTP_201_CREATED)
-async def create_author(payload: AuthorCreate, db: DbSession) -> AuthorOut:
+async def create_author(payload: AuthorCreate, user: CurrentUser, db: DbSession) -> AuthorOut:
     """Author picker "add new" — create a catalog author with details (image,
     primary language, bio). Get-or-create by name, so re-adding an existing
-    author just returns the canonical one."""
-    author = await catalog_service.create_author(db, **payload.model_dump(exclude_none=True))
+    author just returns the canonical one (only the first contributor is
+    credited)."""
+    author = await catalog_service.create_author(
+        db, created_by_user_id=uuid.UUID(user["id"]), **payload.model_dump(exclude_none=True)
+    )
     return AuthorOut.model_validate(author)
 
 

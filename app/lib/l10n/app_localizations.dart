@@ -136,6 +136,18 @@ abstract class AppLocalizations {
   /// **'Beyond the Bookshelf'**
   String get homeGreeting;
 
+  /// Tagline under the brand name on the animated splash
+  ///
+  /// In en, this message translates to:
+  /// **'Beyond the Bookshelf'**
+  String get splashTagline;
+
+  /// Loading status line on the splash while auth and profile resolve
+  ///
+  /// In en, this message translates to:
+  /// **'Opening your reading room…'**
+  String get splashLoading;
+
   /// Rotating literary quote on the sign-in screen
   ///
   /// In en, this message translates to:
@@ -477,12 +489,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'GENRES · GLOBAL'**
   String get formFieldGenres;
-
-  /// Cover-field caption when no image has been uploaded
-  ///
-  /// In en, this message translates to:
-  /// **'Typeset cover in use'**
-  String get formCoverTypeset;
 
   /// Submit button on the add/edit catalog form
   ///
@@ -1075,8 +1081,20 @@ abstract class AppLocalizations {
   /// Hint in the borrower field on the lend sheet
   ///
   /// In en, this message translates to:
-  /// **'Who are you lending it to?'**
+  /// **'Name, or search a Kitabi user'**
   String get lendSheetToHint;
+
+  /// Subtitle on a matched Kitabi user in the borrower search
+  ///
+  /// In en, this message translates to:
+  /// **'On Kitabi · {handle}'**
+  String borrowerKitabiUser(String handle);
+
+  /// Subtitle on a past free-text borrower suggestion
+  ///
+  /// In en, this message translates to:
+  /// **'Private contact'**
+  String get borrowerPrivateContact;
 
   /// Field label for the lent-on date
   ///
@@ -1311,6 +1329,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile & settings'**
   String get profileTitle;
+
+  /// Prompt on the profile when no username is set yet
+  ///
+  /// In en, this message translates to:
+  /// **'Set a username'**
+  String get profileUsernameSet;
+
+  /// Explains why to set a username
+  ///
+  /// In en, this message translates to:
+  /// **'A handle so friends can find you to lend books.'**
+  String get profileUsernameHint;
+
+  /// Header of the reputation/score card
+  ///
+  /// In en, this message translates to:
+  /// **'REPUTATION'**
+  String get profileScoreHeader;
+
+  /// Unit label next to the score number
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{point} other{points}}'**
+  String profileScorePoints(int count);
+
+  /// Score breakdown row
+  ///
+  /// In en, this message translates to:
+  /// **'Books added'**
+  String get profileScoreBooksAdded;
+
+  /// Score breakdown row
+  ///
+  /// In en, this message translates to:
+  /// **'Authors added'**
+  String get profileScoreAuthorsAdded;
+
+  /// Score breakdown row
+  ///
+  /// In en, this message translates to:
+  /// **'Reviews'**
+  String get profileScoreReviews;
+
+  /// Score breakdown row — books added to the library
+  ///
+  /// In en, this message translates to:
+  /// **'Tracked'**
+  String get profileScoreTracked;
+
+  /// Score breakdown row — books read
+  ///
+  /// In en, this message translates to:
+  /// **'Finished'**
+  String get profileScoreFinished;
+
+  /// Score breakdown row
+  ///
+  /// In en, this message translates to:
+  /// **'Lending'**
+  String get profileScoreLending;
+
+  /// Title of the set-username sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Your username'**
+  String get usernameSheetTitle;
+
+  /// Placeholder in the username field
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. shamshi_reads'**
+  String get usernameFieldHint;
+
+  /// Username is free
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get usernameAvailable;
+
+  /// Username is taken
+  ///
+  /// In en, this message translates to:
+  /// **'Already taken'**
+  String get usernameTaken;
+
+  /// Username format rule
+  ///
+  /// In en, this message translates to:
+  /// **'3–20 characters: a letter, then letters, digits or _'**
+  String get usernameInvalid;
+
+  /// Save button on the username sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Save username'**
+  String get usernameSave;
+
+  /// Snackbar after saving a username
+  ///
+  /// In en, this message translates to:
+  /// **'Username saved'**
+  String get usernameSaved;
 
   /// Tooltip/label for the profile button on the home screen
   ///
@@ -1780,18 +1900,6 @@ abstract class AppLocalizations {
   /// **'PRIMARY LANGUAGE · optional'**
   String get pickerFieldLanguage;
 
-  /// Image-URL field label on the author picker add-new form
-  ///
-  /// In en, this message translates to:
-  /// **'IMAGE URL · optional'**
-  String get pickerFieldImageUrl;
-
-  /// Logo-URL field label on the publisher picker add-new form
-  ///
-  /// In en, this message translates to:
-  /// **'LOGO URL · optional'**
-  String get pickerFieldLogoUrl;
-
   /// Bio field label on the author picker add-new form
   ///
   /// In en, this message translates to:
@@ -1815,6 +1923,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add this publisher'**
   String get pickerSavePublisher;
+
+  /// Header above the most-used author suggestions shown when the author picker search is empty
+  ///
+  /// In en, this message translates to:
+  /// **'SUGGESTED'**
+  String get pickerSuggestedAuthors;
+
+  /// Header above the most-used publisher suggestions shown when the publisher picker search is empty
+  ///
+  /// In en, this message translates to:
+  /// **'SUGGESTED'**
+  String get pickerSuggestedPublishers;
+
+  /// Placeholder for the optional primary-language dropdown on the picker add-new forms
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get pickerLanguageHint;
+
+  /// Label for the author portrait photo picker on the author add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'PHOTO · optional'**
+  String get pickerFieldPhoto;
+
+  /// Label for the publisher logo picker on the publisher add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'LOGO · optional'**
+  String get pickerFieldLogo;
+
+  /// Button that opens the gallery to pick an author portrait
+  ///
+  /// In en, this message translates to:
+  /// **'Add a photo'**
+  String get pickerPhotoAdd;
+
+  /// Button that replaces the chosen author portrait
+  ///
+  /// In en, this message translates to:
+  /// **'Replace photo'**
+  String get pickerPhotoReplace;
+
+  /// Button that opens the gallery to pick a publisher logo
+  ///
+  /// In en, this message translates to:
+  /// **'Add a logo'**
+  String get pickerLogoAdd;
+
+  /// Button that replaces the chosen publisher logo
+  ///
+  /// In en, this message translates to:
+  /// **'Replace logo'**
+  String get pickerLogoReplace;
+
+  /// Snackbar when an author/publisher image upload fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t upload that image. Try again.'**
+  String get pickerImageUploadFailed;
+
+  /// Helper text under the Series field on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank if it\'s a standalone book'**
+  String get formSeriesHelp;
+
+  /// Helper text under the Book № field on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Its place in the series, e.g. 2'**
+  String get formBookNumberHelp;
+
+  /// Button on the add-book form to add a further co-author once one is chosen
+  ///
+  /// In en, this message translates to:
+  /// **'＋ Add another author'**
+  String get formAuthorAddAnother;
+
+  /// Helper text under the author field clarifying multiple authors are supported
+  ///
+  /// In en, this message translates to:
+  /// **'Add each co-author for books with more than one'**
+  String get formAuthorHelp;
+
+  /// Tooltip on the scan button inside the ISBN field
+  ///
+  /// In en, this message translates to:
+  /// **'Scan barcode'**
+  String get formIsbnScan;
+
+  /// Helper text under the ISBN field on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the barcode to fill this in — edit if needed'**
+  String get formIsbnScanHelp;
+
+  /// Button to restart the scanner after a miss
+  ///
+  /// In en, this message translates to:
+  /// **'Scan again'**
+  String get scanAgain;
+
+  /// On the form scanner, carries the raw scanned ISBN back to the form when no catalog match was found
+  ///
+  /// In en, this message translates to:
+  /// **'Use this ISBN anyway'**
+  String get scanUseIsbnAnyway;
+
+  /// On the form scanner, confirms the looked-up book and prefills the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Use these details'**
+  String get scanUseDetails;
+
+  /// Label above the front-cover capture slot on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'FRONT'**
+  String get formCoverFront;
+
+  /// Label above the back-cover capture slot on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'BACK'**
+  String get formCoverBack;
+
+  /// Helper text beside the cover capture slots on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a cover to photograph the front and back of your copy.'**
+  String get formCoverHelp;
+
+  /// Option in the image-source sheet to capture with the camera
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get imageSourceCamera;
+
+  /// Option in the image-source sheet to pick an existing photo
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from gallery'**
+  String get imageSourceGallery;
+
+  /// Label under the back-cover thumbnail on the book page
+  ///
+  /// In en, this message translates to:
+  /// **'Back cover'**
+  String get bookCoverBack;
+
+  /// Placeholder label prompting the user to add a back cover on the book page
+  ///
+  /// In en, this message translates to:
+  /// **'Add back'**
+  String get bookAddBackCover;
 
   /// Generic share button tooltip/label
   ///
@@ -1845,6 +2109,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open the share sheet. Try again.'**
   String get shareFailed;
+
+  /// Title of the work picker used when linking a translation
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a book'**
+  String get workPickerTitle;
+
+  /// Search hint on the work picker
+  ///
+  /// In en, this message translates to:
+  /// **'Search the catalogue by title'**
+  String get workPickerSearchHint;
+
+  /// Empty state on the work picker
+  ///
+  /// In en, this message translates to:
+  /// **'No matches — add that book to the catalogue first, then link it.'**
+  String get workPickerEmpty;
+
+  /// Title of the add-edition screen
+  ///
+  /// In en, this message translates to:
+  /// **'Add an edition'**
+  String get addEditionTitle;
+
+  /// Subtitle on the add-edition screen when the book title is unknown
+  ///
+  /// In en, this message translates to:
+  /// **'Another printing of this book'**
+  String get addEditionSubtitle;
+
+  /// Save button on the add-edition screen
+  ///
+  /// In en, this message translates to:
+  /// **'Add edition'**
+  String get addEditionSave;
+
+  /// Header for the editions list on the book page
+  ///
+  /// In en, this message translates to:
+  /// **'Editions'**
+  String get bookEditionsSection;
+
+  /// Button on the book page to add a new edition
+  ///
+  /// In en, this message translates to:
+  /// **'Add another edition'**
+  String get bookAddEdition;
+
+  /// Snackbar after an edition is added
+  ///
+  /// In en, this message translates to:
+  /// **'Edition added'**
+  String get bookEditionAdded;
+
+  /// Header for the linked-translations list on the book page
+  ///
+  /// In en, this message translates to:
+  /// **'Also in other languages'**
+  String get bookTranslationsSection;
+
+  /// Button on the book page to link another Work as a translation
+  ///
+  /// In en, this message translates to:
+  /// **'Link a translation'**
+  String get bookLinkTranslation;
+
+  /// Snackbar after two works are linked as translations
+  ///
+  /// In en, this message translates to:
+  /// **'Linked as a translation'**
+  String get bookTranslationLinked;
+
+  /// Eyebrow label on the shareable author card
+  ///
+  /// In en, this message translates to:
+  /// **'AN AUTHOR ON KITABI'**
+  String get shareAuthorEyebrow;
+
+  /// Eyebrow label on the shareable publisher card
+  ///
+  /// In en, this message translates to:
+  /// **'A PUBLISHER ON KITABI'**
+  String get sharePublisherEyebrow;
 
   /// Title of the Discover/browse screen
   ///

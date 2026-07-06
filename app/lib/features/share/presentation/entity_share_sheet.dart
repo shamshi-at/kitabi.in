@@ -3,22 +3,22 @@ import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
-import 'book_share_card.dart';
+import 'entity_share_card.dart';
 import 'share_capture.dart';
 
-/// S6c — the share sheet. Shows the card, a toggle to fold in the user's own
-/// rating & note (only when they have one), and Copy-link / Share-card actions.
-/// "Share card" rasterises the previewed card and hands it to the OS share sheet.
-Future<void> showShareBookSheet(
+/// The share sheet for an author or publisher — the counterpart to the book
+/// share sheet. Previews an [EntityShareCard] (portrait/logo + name + subtitle)
+/// and offers Copy-link / Share-card, so a shared author/publisher carries their
+/// image and name, not just a bare URL.
+Future<void> showEntityShareSheet(
   BuildContext context, {
-  required String title,
-  required String author,
+  required String eyebrow,
+  required String name,
+  required String subtitle,
   required String shareUrl,
-  String? coverUrl,
-  String? blurb,
-  double? catalogRating,
-  int? personalRating,
-  String? personalReview,
+  required String shareText,
+  String? imageUrl,
+  required bool circular,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -27,68 +27,58 @@ Future<void> showShareBookSheet(
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _ShareSheet(
-      title: title,
-      author: author,
+    builder: (_) => _EntityShareSheet(
+      eyebrow: eyebrow,
+      name: name,
+      subtitle: subtitle,
       shareUrl: shareUrl,
-      coverUrl: coverUrl,
-      blurb: blurb,
-      catalogRating: catalogRating,
-      personalRating: personalRating,
-      personalReview: personalReview,
+      shareText: shareText,
+      imageUrl: imageUrl,
+      circular: circular,
     ),
   );
 }
 
-class _ShareSheet extends StatefulWidget {
-  const _ShareSheet({
-    required this.title,
-    required this.author,
+class _EntityShareSheet extends StatefulWidget {
+  const _EntityShareSheet({
+    required this.eyebrow,
+    required this.name,
+    required this.subtitle,
     required this.shareUrl,
-    required this.coverUrl,
-    required this.blurb,
-    required this.catalogRating,
-    required this.personalRating,
-    required this.personalReview,
+    required this.shareText,
+    required this.imageUrl,
+    required this.circular,
   });
 
-  final String title;
-  final String author;
+  final String eyebrow;
+  final String name;
+  final String subtitle;
   final String shareUrl;
-  final String? coverUrl;
-  final String? blurb;
-  final double? catalogRating;
-  final int? personalRating;
-  final String? personalReview;
+  final String shareText;
+  final String? imageUrl;
+  final bool circular;
 
   @override
-  State<_ShareSheet> createState() => _ShareSheetState();
+  State<_EntityShareSheet> createState() => _EntityShareSheetState();
 }
 
-class _ShareSheetState extends State<_ShareSheet> {
+class _EntityShareSheetState extends State<_EntityShareSheet> {
   final _cardKey = GlobalKey();
-  late bool _includePersonal = widget.personalRating != null;
   bool _sharing = false;
-
-  bool get _hasPersonal => widget.personalRating != null;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Decode the cover up front so it's painted before the user taps Share —
-    // rasterising before a NetworkImage resolves leaves a blank cover.
-    final url = widget.coverUrl;
+    // Decode the portrait/logo up front so it's painted by the time the user
+    // taps Share — capturing before a NetworkImage resolves yields a blank spot.
+    final url = widget.imageUrl;
     if (url != null) precacheImage(NetworkImage(url), context);
   }
 
   Future<void> _shareCard() async {
-    final l10n = AppLocalizations.of(context)!;
-    // The share text carries the real link, so even when a recipient can't see
-    // the image they still get a tappable book URL.
-    final text = l10n.shareBookLinkText(widget.title, widget.author, widget.shareUrl);
     setState(() => _sharing = true);
     try {
-      await captureAndShareCard(context: context, cardKey: _cardKey, text: text);
+      await captureAndShareCard(context: context, cardKey: _cardKey, text: widget.shareText);
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
@@ -135,28 +125,16 @@ class _ShareSheetState extends State<_ShareSheet> {
             Center(
               child: RepaintBoundary(
                 key: _cardKey,
-                child: BookShareCard(
-                  title: widget.title,
-                  author: widget.author,
-                  coverUrl: widget.coverUrl,
-                  blurb: widget.blurb,
-                  catalogRating: widget.catalogRating,
-                  personalRating: _includePersonal ? widget.personalRating : null,
-                  personalReview: _includePersonal ? widget.personalReview : null,
+                child: EntityShareCard(
+                  eyebrow: widget.eyebrow,
+                  name: widget.name,
+                  subtitle: widget.subtitle,
+                  imageUrl: widget.imageUrl,
+                  circular: widget.circular,
                 ),
               ),
             ),
-            if (_hasPersonal) ...[
-              SizedBox(height: 12),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l10n.shareIncludeRating),
-                value: _includePersonal,
-                activeThumbColor: AppColors.moss,
-                onChanged: (v) => setState(() => _includePersonal = v),
-              ),
-            ] else
-              SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(
               children: [
                 Expanded(

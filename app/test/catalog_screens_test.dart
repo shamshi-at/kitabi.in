@@ -92,7 +92,11 @@ class _FakeApiClient extends ApiClient {
   Future<List<String>> browseLanguages() async => ['Malayalam', 'Tamil'];
 
   @override
-  Future<List<Map<String, dynamic>>> browseAuthors({int limit = 40, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> browseAuthors({
+    int limit = 40,
+    int offset = 0,
+    String sort = 'name',
+  }) async {
     if (offset > 0) return [];
     return [
       {'id': _authorId, 'name': 'Thakazhi Sivasankara Pillai', 'primary_language': 'Malayalam'},
@@ -100,7 +104,11 @@ class _FakeApiClient extends ApiClient {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> browsePublishers({int limit = 40, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> browsePublishers({
+    int limit = 40,
+    int offset = 0,
+    String sort = 'name',
+  }) async {
     if (offset > 0) return [];
     return [
       {'id': _publisherId, 'name': 'DC Books'},
