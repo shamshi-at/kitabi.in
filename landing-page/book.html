@@ -88,6 +88,12 @@ a{color:var(--oxblood)}
 .desc h3{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:19px;margin-bottom:10px}
 .desc p{font-size:15px;line-height:1.75;color:var(--ink);white-space:pre-line}
 
+.buy{margin-top:26px;grid-column:1/-1}
+.buy h3{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:19px;margin-bottom:12px}
+.buy-row{display:flex;flex-wrap:wrap;gap:10px}
+.buy-lk{font-size:13.5px;font-weight:700;padding:9px 16px;border-radius:10px;border:1px solid var(--gold);color:var(--oxblood);text-decoration:none;background:var(--card)}
+.buy-lk:hover{background:var(--gold-soft)}
+
 /* ---------- get-kitabi banner ---------- */
 .getbar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--night);color:var(--paper);
   border-top:3px solid var(--gold);padding:12px 18px calc(12px + env(safe-area-inset-bottom));
@@ -261,6 +267,17 @@ function render(work){
     ? '<section class="desc"><h3>About this book</h3><p>' + esc(work.description) + '</p></section>'
     : '';
 
+  // where to buy (external retailer links on the chosen edition)
+  var buyLinks = Array.isArray(ed.buy_links)
+    ? ed.buy_links.filter(function(b){ return b && b.url; })
+    : [];
+  var buyHtml = buyLinks.length
+    ? '<section class="buy"><h3>Where to buy</h3><div class="buy-row">' + buyLinks.map(function(b){
+        return '<a class="buy-lk" href="' + esc(b.url) + '" target="_blank" rel="noopener nofollow">' +
+          esc(b.retailer || 'Buy') + '</a>';
+      }).join('') + '</div></section>'
+    : '';
+
   document.getElementById('content').innerHTML =
     '<article class="book">' +
       '<div class="cover-col"><div class="cover-lg">' + coverHtml + '</div></div>' +
@@ -272,6 +289,7 @@ function render(work){
         chipsHtml +
       '</div>' +
       descHtml +
+      buyHtml +
     '</article>';
 }
 
