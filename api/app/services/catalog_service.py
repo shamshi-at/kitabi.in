@@ -42,16 +42,79 @@ async def _get_or_create(db: AsyncSession, model: type, name: str) -> object:
     return row
 
 
+async def create_author(db: AsyncSession, **fields: object) -> Author:
+    """Author picker's "add new" flow — get-or-create by name, populating the
+    extra detail fields (pen_name/image_url/primary_language/bio) only when we
+    actually insert a new row. Idempotent on name, so a race just returns the
+    existing canonical author rather than a duplicate."""
+    name = str(fields["name"]).strip()
+    existing = (
+        await db.execute(select(Author).where(Author.name.ilike(name)))
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    author = Author(**{**fields, "name": name})
+    db.add(author)
+    await db.commit()
+    await db.refresh(author)
+    return author
+
+
+async def create_publisher(db: AsyncSession, **fields: object) -> Publisher:
+    """Publisher picker's "add new" flow — same get-or-create-by-name shape as
+    create_author."""
+    name = str(fields["name"]).strip()
+    existing = (
+        await db.execute(select(Publisher).where(Publisher.name.ilike(name)))
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    publisher = Publisher(**{**fields, "name": name})
+    db.add(publisher)
+    await db.commit()
+    await db.refresh(publisher)
+    return publisher
+
+
+async def _resolve_authors(
+    db: AsyncSession, author_ids: list[uuid.UUID], author_names: list[str]
+) -> list[Author]:
+    """Author picker yields canonical ids; free-text / OpenLibrary yields names.
+    Resolve ids first (skipping any that don't exist), then get-or-create the
+    names, de-duplicating so an author referenced both ways isn't linked twice."""
+    resolved: list[Author] = []
+    seen: set[uuid.UUID] = set()
+    for author_id in author_ids:
+        author = await db.get(Author, author_id)
+        if author is not None and author.id not in seen:
+            resolved.append(author)
+            seen.add(author.id)
+    for name in author_names:
+        author = await _get_or_create(db, Author, name)
+        if author.id not in seen:
+            resolved.append(author)
+            seen.add(author.id)
+    return resolved
+
+
+async def _resolve_publisher(
+    db: AsyncSession, publisher_id: uuid.UUID | None, publisher_name: str | None
+) -> Publisher | None:
+    if publisher_id is not None:
+        publisher = await db.get(Publisher, publisher_id)
+        if publisher is not None:
+            return publisher
+    if publisher_name:
+        return await _get_or_create(db, Publisher, publisher_name)
+    return None
+
+
 async def create_work_with_edition(db: AsyncSession, payload: WorkCreate) -> Work:
     """The manual add/edit flow (S7b) — get-or-create every referenced
     author/publisher/genre/series, then create the Work + its first Edition."""
-    authors = [await _get_or_create(db, Author, name) for name in payload.author_names]
+    authors = await _resolve_authors(db, payload.author_ids, payload.author_names)
     genres = [await _get_or_create(db, Genre, name) for name in payload.genre_names]
-    publisher = (
-        await _get_or_create(db, Publisher, payload.publisher_name)
-        if payload.publisher_name
-        else None
-    )
+    publisher = await _resolve_publisher(db, payload.publisher_id, payload.publisher_name)
     series = await _get_or_create(db, Series, payload.series_name) if payload.series_name else None
 
     work = Work(
@@ -84,11 +147,13 @@ async def create_work_with_edition(db: AsyncSession, payload: WorkCreate) -> Wor
 
 
 async def update_work(db: AsyncSession, work: Work, patch: WorkUpdate) -> Work:
-    data = patch.model_dump(exclude_unset=True, exclude={"author_names", "genre_names"})
+    data = patch.model_dump(
+        exclude_unset=True, exclude={"author_ids", "author_names", "genre_names"}
+    )
     for field, value in data.items():
         setattr(work, field, value)
-    if patch.author_names is not None:
-        work.authors = [await _get_or_create(db, Author, name) for name in patch.author_names]
+    if patch.author_ids is not None or patch.author_names is not None:
+        work.authors = await _resolve_authors(db, patch.author_ids or [], patch.author_names or [])
     if patch.genre_names is not None:
         work.genres = [await _get_or_create(db, Genre, name) for name in patch.genre_names]
     await db.commit()
@@ -96,12 +161,15 @@ async def update_work(db: AsyncSession, work: Work, patch: WorkUpdate) -> Work:
 
 
 async def update_edition(db: AsyncSession, edition: Edition, patch: EditionUpdate) -> Edition:
-    data = patch.model_dump(exclude_unset=True, exclude={"publisher_name", "series_name"})
+    data = patch.model_dump(
+        exclude_unset=True, exclude={"publisher_id", "publisher_name", "series_name"}
+    )
     for field, value in data.items():
         setattr(edition, field, value)
-    if patch.publisher_name is not None:
-        publisher = await _get_or_create(db, Publisher, patch.publisher_name)
-        edition.publisher_id = publisher.id
+    if patch.publisher_id is not None or patch.publisher_name is not None:
+        publisher = await _resolve_publisher(db, patch.publisher_id, patch.publisher_name)
+        if publisher is not None:
+            edition.publisher_id = publisher.id
     if patch.series_name is not None:
         series = await _get_or_create(db, Series, patch.series_name)
         edition.series_id = series.id

@@ -10,6 +10,14 @@ class AuthorOut(BaseModel):
     name: str
     pen_name: str | None = None
     image_url: str | None = None
+    primary_language: str | None = None
+
+
+class AuthorDetailOut(AuthorOut):
+    """Author with the fuller fields the browse/share pages show (bio) — the
+    typeahead-lean AuthorOut stays small for suggestion lists."""
+
+    bio: str | None = None
 
 
 class PublisherOut(BaseModel):
@@ -17,6 +25,24 @@ class PublisherOut(BaseModel):
     id: uuid.UUID
     name: str
     logo_url: str | None = None
+    primary_language: str | None = None
+
+
+class AuthorCreate(BaseModel):
+    """Create a catalog author with details from the author picker's "add new"
+    flow. Get-or-create by name server-side, so this is idempotent on name."""
+
+    name: str
+    pen_name: str | None = None
+    image_url: str | None = None
+    primary_language: str | None = None
+    bio: str | None = None
+
+
+class PublisherCreate(BaseModel):
+    name: str
+    logo_url: str | None = None
+    primary_language: str | None = None
 
 
 class GenreOut(BaseModel):
@@ -85,8 +111,14 @@ class WorkCreate(BaseModel):
     description: str | None = None
     language: str | None = None
     first_publish_year: int | None = None
+    # Authors/publisher can be referenced either by their catalog id (the app's
+    # author/publisher pickers yield canonical ids) or by name (free-text /
+    # OpenLibrary import). Ids win; names get the case-insensitive
+    # get-or-create. Both are optional so either path works.
+    author_ids: list[uuid.UUID] = []
     author_names: list[str] = []
     genre_names: list[str] = []
+    publisher_id: uuid.UUID | None = None
     publisher_name: str | None = None
     series_name: str | None = None
     series_number: int | None = None
@@ -103,11 +135,13 @@ class WorkUpdate(BaseModel):
     description: str | None = None
     language: str | None = None
     first_publish_year: int | None = None
+    author_ids: list[uuid.UUID] | None = None
     author_names: list[str] | None = None
     genre_names: list[str] | None = None
 
 
 class EditionUpdate(BaseModel):
+    publisher_id: uuid.UUID | None = None
     publisher_name: str | None = None
     series_name: str | None = None
     series_number: int | None = None
@@ -161,10 +195,20 @@ class ImportPreviewOut(BaseModel):
 
 
 class AuthorWorksOut(BaseModel):
-    author: AuthorOut
+    author: AuthorDetailOut
     works: list[WorkSummaryOut]
 
 
 class PublisherWorksOut(BaseModel):
     publisher: PublisherOut
     works: list[WorkSummaryOut]
+
+
+class GlobalSearchOut(BaseModel):
+    """One call behind the app's global search — books, authors, and publishers
+    in a single round-trip so the search screen can show all three sections
+    without three separate requests."""
+
+    works: list[WorkSummaryOut]
+    authors: list[AuthorOut]
+    publishers: list[PublisherOut]

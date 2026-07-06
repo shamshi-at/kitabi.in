@@ -16,6 +16,9 @@ class Author(CatalogMixin, Base):
     # Kamala Das wrote Malayalam as "Madhavikutty").
     pen_name: Mapped[str | None] = mapped_column(String, default=None)
     image_url: Mapped[str | None] = mapped_column(String, default=None)
+    # The language they primarily write in (e.g. "Malayalam") — surfaced in the
+    # author picker so a user can tell two same-named authors apart at a glance.
+    primary_language: Mapped[str | None] = mapped_column(String, default=None)
     bio: Mapped[str | None] = mapped_column(String, default=None)
     external_source: Mapped[str | None] = mapped_column(String, default=None)
     external_id: Mapped[str | None] = mapped_column(String, default=None, index=True)

@@ -7,10 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import DbSession
 from app.models import Author, Publisher
 from app.schemas.catalog import (
+    AuthorCreate,
     AuthorOut,
     AuthorWorksOut,
     EditionOut,
     EditionUpdate,
+    GlobalSearchOut,
+    PublisherCreate,
     PublisherOut,
     PublisherWorksOut,
     TranslationLinkIn,
@@ -52,6 +55,21 @@ async def search(db: DbSession, q: str = Query(min_length=1)) -> list[WorkSummar
     keystroke — the app calls that explicitly for the "add from ISBN" flow."""
     works = await catalog_service.search_local(db, q)
     return [_summary(w) for w in works]
+
+
+@router.get("/search/all", response_model=GlobalSearchOut)
+async def search_all(db: DbSession, q: str = Query(min_length=1)) -> GlobalSearchOut:
+    """Global search (S4) — books, authors, and publishers in one round-trip so
+    the app's search screen fills all three sections from a single request. The
+    personal-library section is searched locally on-device (Drift), not here."""
+    works = await catalog_service.search_local(db, q)
+    authors = await catalog_service.search_authors(db, q)
+    publishers = await catalog_service.search_publishers(db, q)
+    return GlobalSearchOut(
+        works=[_summary(w) for w in works],
+        authors=[AuthorOut.model_validate(a) for a in authors],
+        publishers=[PublisherOut.model_validate(p) for p in publishers],
+    )
 
 
 @router.get("/isbn/{isbn}", response_model=WorkOut)
@@ -114,6 +132,22 @@ async def authors_typeahead(db: DbSession, q: str = Query(min_length=1)) -> list
 async def publishers_typeahead(db: DbSession, q: str = Query(min_length=1)) -> list[PublisherOut]:
     """Add/edit form publisher field — same as authors_typeahead."""
     return await catalog_service.search_publishers(db, q)
+
+
+@router.post("/authors", response_model=AuthorOut, status_code=status.HTTP_201_CREATED)
+async def create_author(payload: AuthorCreate, db: DbSession) -> AuthorOut:
+    """Author picker "add new" — create a catalog author with details (image,
+    primary language, bio). Get-or-create by name, so re-adding an existing
+    author just returns the canonical one."""
+    author = await catalog_service.create_author(db, **payload.model_dump(exclude_none=True))
+    return AuthorOut.model_validate(author)
+
+
+@router.post("/publishers", response_model=PublisherOut, status_code=status.HTTP_201_CREATED)
+async def create_publisher(payload: PublisherCreate, db: DbSession) -> PublisherOut:
+    """Publisher picker "add new" — same shape as create_author."""
+    publisher = await catalog_service.create_publisher(db, **payload.model_dump(exclude_none=True))
+    return PublisherOut.model_validate(publisher)
 
 
 @router.get("/authors/{author_id}", response_model=AuthorWorksOut)

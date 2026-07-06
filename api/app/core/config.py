@@ -18,8 +18,10 @@ class Settings(BaseSettings):
     supabase_url: str = ""  # e.g. https://<project-ref>.supabase.co
     jwt_audience: str = "authenticated"
 
-    # CORS: the mobile app needs none; only a web origin would go here.
-    cors_origins: list[str] = []
+    # CORS: the mobile app needs none. The landing page's public share pages
+    # (kitabi.in/b/:id, /a/:id, /p/:id) fetch the unauthenticated catalog
+    # endpoints from the browser, so that origin must be allowed.
+    cors_origins: list[str] = ["https://kitabi.in", "https://www.kitabi.in"]
 
     scheduler_enabled: bool = False
 

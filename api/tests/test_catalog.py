@@ -158,6 +158,84 @@ async def test_typeahead_no_match_is_empty(client):
     assert resp.json() == []
 
 
+async def test_create_author_with_details(client):
+    resp = await client.post(
+        "/catalog/authors",
+        json={
+            "name": "Benyamin",
+            "pen_name": "Benny Daniel",
+            "primary_language": "Malayalam",
+            "image_url": "https://example.com/benyamin.jpg",
+            "bio": "Author of Aadujeevitham.",
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["name"] == "Benyamin"
+    assert body["primary_language"] == "Malayalam"
+    assert body["image_url"] == "https://example.com/benyamin.jpg"
+
+    # Browse exposes the fuller detail (bio) too.
+    detail = (await client.get(f"/catalog/authors/{body['id']}")).json()
+    assert detail["author"]["bio"] == "Author of Aadujeevitham."
+    assert detail["author"]["primary_language"] == "Malayalam"
+
+
+async def test_create_author_is_idempotent_on_name(client):
+    first = await client.post("/catalog/authors", json={"name": "Perumal Murugan"})
+    second = await client.post(
+        "/catalog/authors", json={"name": "perumal murugan", "primary_language": "Tamil"}
+    )
+    assert first.json()["id"] == second.json()["id"]
+
+
+async def test_create_publisher_with_details(client):
+    resp = await client.post(
+        "/catalog/publishers",
+        json={"name": "Green Books", "primary_language": "Malayalam"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["name"] == "Green Books"
+    assert body["primary_language"] == "Malayalam"
+
+
+async def test_create_work_by_author_and_publisher_id(client):
+    author = (await client.post("/catalog/authors", json={"name": "O.V. Vijayan"})).json()
+    publisher = (await client.post("/catalog/publishers", json={"name": "DC Books"})).json()
+
+    created = await client.post(
+        "/catalog/works",
+        json={
+            "title": "Khasakkinte Itihasam",
+            "author_ids": [author["id"]],
+            "publisher_id": publisher["id"],
+        },
+    )
+    assert created.status_code == 201
+    body = created.json()
+    assert body["authors"][0]["id"] == author["id"]
+    assert body["editions"][0]["publisher"]["id"] == publisher["id"]
+
+
+async def test_global_search_returns_all_sections(client):
+    await client.post(
+        "/catalog/works",
+        json={
+            "title": "Aadujeevitham",
+            "author_names": ["Benyamin Global"],
+            "publisher_name": "Benyamin Publishing House",
+        },
+    )
+    resp = await client.get("/catalog/search/all", params={"q": "benyamin"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert set(body) == {"works", "authors", "publishers"}
+    assert any(a["name"] == "Benyamin Global" for a in body["authors"])
+    assert any(p["name"] == "Benyamin Publishing House" for p in body["publishers"])
+    assert any(w["title"] == "Aadujeevitham" for w in body["works"])
+
+
 async def test_link_translation(client):
     a = await client.post("/catalog/works", json={"title": "Mayyazhippuzhayude Theerangalil"})
     b = await client.post("/catalog/works", json={"title": "On the Banks of the Mayyazhi"})
