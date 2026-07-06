@@ -1045,4 +1045,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareFailed => 'Couldn\'t open the share sheet. Try again.';
+
+  @override
+  String get browseTitle => 'Browse the catalogue';
+
+  @override
+  String get browseEntry => 'Browse the catalogue';
+
+  @override
+  String get browseTabBooks => 'Books';
+
+  @override
+  String get browseTabAuthors => 'Authors';
+
+  @override
+  String get browseTabPublishers => 'Publishers';
+
+  @override
+  String get bookBuy => 'Buy this edition';
+
+  @override
+  String get bookBuyFailed => 'Couldn\'t open the store link.';
 }

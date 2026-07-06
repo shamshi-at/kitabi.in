@@ -52,6 +52,10 @@ dependencies:
   # Cover photo upload — pick from gallery/camera (S7b "⇧ upload a photo")
   image_picker: ^1.1.2
 
+  # Open external links — the [WIRED] "Buy this edition" ecommerce redirect
+  # (dormant until an edition carries a buy_url) and any future outbound link.
+  url_launcher: ^6.3.0
+
   # Utilities
   uuid: ^4.5.1
   intl: ^0.20.0

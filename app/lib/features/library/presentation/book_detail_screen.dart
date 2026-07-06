@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/haptics.dart';
@@ -170,6 +171,14 @@ class _BookDetailBody extends ConsumerWidget {
                 : _OwnedBookSections(entry: libraryEntry, workId: work['id'] as String),
           ),
         ),
+        // [WIRED] Buy this edition — dormant until an edition carries a buy_url
+        // (external ecommerce). Invisible otherwise, so no rewrite when store
+        // links are populated.
+        if ((edition?['buy_url'] as String?)?.isNotEmpty ?? false)
+          Padding(
+            padding: EdgeInsets.fromLTRB(13, 0, 13, 4),
+            child: _BuyButton(url: edition!['buy_url'] as String),
+          ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 13),
           child: Row(
@@ -347,6 +356,40 @@ class _ShareButton extends ConsumerWidget {
           personalReview: review?.body,
         );
       },
+    );
+  }
+}
+
+/// [WIRED] external-ecommerce buy link for the current edition. Opens the store
+/// URL in the browser; shows a snackbar if it can't be launched.
+class _BuyButton extends StatelessWidget {
+  const _BuyButton({required this.url});
+
+  final String url;
+
+  Future<void> _open(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final uri = Uri.tryParse(url);
+    final ok = uri != null && await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.bookBuyFailed)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _open(context),
+        icon: Icon(Icons.shopping_bag_outlined, size: 18, color: AppColors.oxblood),
+        label: Text(
+          AppLocalizations.of(context)!.bookBuy,
+          style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+        ),
+        style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.gold)),
+      ),
     );
   }
 }

@@ -1160,5 +1160,19 @@
     }
   },
   "shareFailed": "Couldn't open the share sheet. Try again.",
-  "@shareFailed": {"description": "Snackbar when the OS share sheet fails to open"}
+  "@shareFailed": {"description": "Snackbar when the OS share sheet fails to open"},
+  "browseTitle": "Browse the catalogue",
+  "@browseTitle": {"description": "Title of the Discover/browse screen"},
+  "browseEntry": "Browse the catalogue",
+  "@browseEntry": {"description": "Entry-point label/tooltip that opens the browse screen"},
+  "browseTabBooks": "Books",
+  "@browseTabBooks": {"description": "Browse screen tab for all books"},
+  "browseTabAuthors": "Authors",
+  "@browseTabAuthors": {"description": "Browse screen tab for all authors"},
+  "browseTabPublishers": "Publishers",
+  "@browseTabPublishers": {"description": "Browse screen tab for all publishers"},
+  "bookBuy": "Buy this edition",
+  "@bookBuy": {"description": "Button that opens the external ecommerce buy link for the edition"},
+  "bookBuyFailed": "Couldn't open the store link.",
+  "@bookBuyFailed": {"description": "Snackbar when the external buy link fails to open"}
 }

@@ -6,6 +6,7 @@ import 'package:kitabi/data/api/api_client.dart';
 import 'package:kitabi/features/catalog/presentation/add_edit_book_screen.dart';
 import 'package:kitabi/features/catalog/presentation/author_browse_screen.dart';
 import 'package:kitabi/features/catalog/presentation/author_picker_screen.dart';
+import 'package:kitabi/features/catalog/presentation/browse_screen.dart';
 import 'package:kitabi/features/catalog/presentation/catalog_search_screen.dart';
 import 'package:kitabi/features/catalog/presentation/publisher_browse_screen.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
@@ -74,6 +75,28 @@ class _FakeApiClient extends ApiClient {
   @override
   Future<Map<String, dynamic>> createAuthor(Map<String, dynamic> payload) async {
     return {'id': _authorId, ...payload};
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> browseWorks({int limit = 40, int offset = 0}) async {
+    if (offset > 0) return []; // one page, then end
+    return searchCatalog('chemmeen');
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> browseAuthors({int limit = 40, int offset = 0}) async {
+    if (offset > 0) return [];
+    return [
+      {'id': _authorId, 'name': 'Thakazhi Sivasankara Pillai', 'primary_language': 'Malayalam'},
+    ];
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> browsePublishers({int limit = 40, int offset = 0}) async {
+    if (offset > 0) return [];
+    return [
+      {'id': _publisherId, 'name': 'DC Books'},
+    ];
   }
 
   @override
@@ -228,6 +251,21 @@ void main() {
     expect(find.text('Kamala Das'), findsOneWidget);
     // …and the "add a new author" affordance is offered alongside.
     expect(find.text('Add a new author'), findsOneWidget);
+  });
+
+  testWidgets('browse screen lists catalog books on the Books tab', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const BrowseScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // The three tabs and the first page of books render.
+    expect(find.text('Books'), findsOneWidget);
+    expect(find.text('Authors'), findsOneWidget);
+    expect(find.text('Publishers'), findsOneWidget);
+    expect(find.text('Chemmeen'), findsWidgets);
   });
 
   testWidgets('edit form pre-fills from the existing work', (tester) async {

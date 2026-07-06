@@ -1845,6 +1845,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open the share sheet. Try again.'**
   String get shareFailed;
+
+  /// Title of the Discover/browse screen
+  ///
+  /// In en, this message translates to:
+  /// **'Browse the catalogue'**
+  String get browseTitle;
+
+  /// Entry-point label/tooltip that opens the browse screen
+  ///
+  /// In en, this message translates to:
+  /// **'Browse the catalogue'**
+  String get browseEntry;
+
+  /// Browse screen tab for all books
+  ///
+  /// In en, this message translates to:
+  /// **'Books'**
+  String get browseTabBooks;
+
+  /// Browse screen tab for all authors
+  ///
+  /// In en, this message translates to:
+  /// **'Authors'**
+  String get browseTabAuthors;
+
+  /// Browse screen tab for all publishers
+  ///
+  /// In en, this message translates to:
+  /// **'Publishers'**
+  String get browseTabPublishers;
+
+  /// Button that opens the external ecommerce buy link for the edition
+  ///
+  /// In en, this message translates to:
+  /// **'Buy this edition'**
+  String get bookBuy;
+
+  /// Snackbar when the external buy link fails to open
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the store link.'**
+  String get bookBuyFailed;
 }
 
 class _AppLocalizationsDelegate

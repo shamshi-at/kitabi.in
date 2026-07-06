@@ -11,6 +11,7 @@ import '../../../data/db/database.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
 import '../providers/catalog_providers.dart';
+import 'catalog_entity_tiles.dart';
 import 'catalog_result_tile.dart';
 
 /// S4 — global search. One screen searches four things: the personal library
@@ -118,13 +119,24 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                   ? Center(
                       child: Padding(
                         padding: EdgeInsets.all(24),
-                        child: Text(
-                          l10n.catalogSearchHelp,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: AppColors.inkSoft),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              l10n.catalogSearchHelp,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: AppColors.inkSoft),
+                            ),
+                            SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              icon: Icon(Icons.auto_stories_outlined, size: 18),
+                              label: Text(l10n.browseEntry),
+                              onPressed: () => context.push(Routes.catalogBrowse),
+                            ),
+                          ],
                         ),
                       ),
                     )
@@ -206,142 +218,23 @@ class _SearchResults extends ConsumerWidget {
         if (authors.isNotEmpty) ...[
           _SectionHeader(l10n.catalogSearchSectionAuthors),
           SizedBox(height: 8),
-          for (final author in authors) _AuthorHitTile(author: author),
+          for (final author in authors)
+            AuthorRowTile(
+              author: author,
+              onTap: () => context.push(Routes.authorBrowsePath(author['id'] as String)),
+            ),
           SizedBox(height: 16),
         ],
         if (publishers.isNotEmpty) ...[
           _SectionHeader(l10n.catalogSearchSectionPublishers),
           SizedBox(height: 8),
-          for (final publisher in publishers) _PublisherHitTile(publisher: publisher),
+          for (final publisher in publishers)
+            PublisherRowTile(
+              publisher: publisher,
+              onTap: () => context.push(Routes.publisherBrowsePath(publisher['id'] as String)),
+            ),
         ],
       ],
-    );
-  }
-}
-
-/// An author row in global search — portrait/monogram, name, primary language.
-/// Tapping opens the author browse page (everything they've written).
-class _AuthorHitTile extends StatelessWidget {
-  const _AuthorHitTile({required this.author});
-
-  final Map<String, dynamic> author;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = author['name'] as String? ?? '';
-    final imageUrl = author['image_url'] as String?;
-    final language = author['primary_language'] as String?;
-    final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => context.push(Routes.authorBrowsePath(author['id'] as String)),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 7),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.goldSoft,
-              foregroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
-              child: imageUrl == null
-                  ? Text(
-                      initials,
-                      style: TextStyle(
-                        color: Color(0xFF8F681E),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    )
-                  : null,
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                  if (language != null && language.isNotEmpty)
-                    Text(
-                      language,
-                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
-                    ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A publisher row in global search — logo/icon, name, language. Tapping opens
-/// the publisher browse page.
-class _PublisherHitTile extends StatelessWidget {
-  const _PublisherHitTile({required this.publisher});
-
-  final Map<String, dynamic> publisher;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = publisher['name'] as String? ?? '';
-    final logoUrl = publisher['logo_url'] as String?;
-    final language = publisher['primary_language'] as String?;
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => context.push(Routes.publisherBrowsePath(publisher['id'] as String)),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 7),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              padding: EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.line),
-              ),
-              child: logoUrl != null
-                  ? Image.network(
-                      logoUrl,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => Icon(Icons.business, color: AppColors.inkSoft, size: 16),
-                    )
-                  : Icon(Icons.business, color: AppColors.inkSoft, size: 16),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                  if (language != null && language.isNotEmpty)
-                    Text(
-                      language,
-                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
-                    ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
-          ],
-        ),
-      ),
     );
   }
 }

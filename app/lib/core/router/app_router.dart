@@ -8,6 +8,7 @@ import '../../features/catalog/presentation/add_edit_book_screen.dart';
 import '../../features/catalog/presentation/author_browse_screen.dart';
 import '../../features/catalog/presentation/author_picker_screen.dart';
 import '../../features/catalog/presentation/book_link_resolver_screen.dart';
+import '../../features/catalog/presentation/browse_screen.dart';
 import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
 import '../../features/catalog/presentation/publisher_browse_screen.dart';
@@ -37,6 +38,7 @@ abstract final class Routes {
   static const home = '/home';
   static const profile = '/profile';
   static const catalogSearch = '/catalog/search';
+  static const catalogBrowse = '/catalog/browse';
   static const catalogScan = '/catalog/scan';
   static const catalogAdd = '/catalog/add';
   static const authorPicker = '/catalog/author-picker';
@@ -212,6 +214,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.catalogSearch,
         name: 'catalog-search',
         builder: (context, state) => CatalogSearchScreen(),
+      ),
+      GoRoute(
+        path: Routes.catalogBrowse,
+        name: 'catalog-browse',
+        builder: (context, state) => BrowseScreen(),
       ),
       GoRoute(
         path: Routes.catalogScan,

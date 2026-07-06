@@ -91,6 +91,33 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Discover/browse — every catalog book / author / publisher, alphabetical
+  /// and paged (offset pagination). Layer 1 is server-authoritative, so these
+  /// read straight from the catalog API.
+  Future<List<Map<String, dynamic>>> browseWorks({int limit = 40, int offset = 0}) async {
+    final res = await _dio.get(
+      '/catalog/browse/works',
+      queryParameters: {'limit': limit, 'offset': offset},
+    );
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> browseAuthors({int limit = 40, int offset = 0}) async {
+    final res = await _dio.get(
+      '/catalog/browse/authors',
+      queryParameters: {'limit': limit, 'offset': offset},
+    );
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> browsePublishers({int limit = 40, int offset = 0}) async {
+    final res = await _dio.get(
+      '/catalog/browse/publishers',
+      queryParameters: {'limit': limit, 'offset': offset},
+    );
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
   /// ISBN scan flow (S7) — local match first, else OpenLibrary, cached
   /// server-side either way.
   Future<Map<String, dynamic>> lookupIsbn(String isbn) async {

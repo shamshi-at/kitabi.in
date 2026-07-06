@@ -33,6 +33,11 @@ class HomeScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 IconButton(
+                  icon: Icon(Icons.auto_stories_outlined, color: AppColors.oxblood),
+                  tooltip: l10n.browseEntry,
+                  onPressed: () => context.push(Routes.catalogBrowse),
+                ),
+                IconButton(
                   icon: Icon(Icons.search, color: AppColors.oxblood),
                   tooltip: l10n.searchTitle,
                   onPressed: () => context.push(Routes.catalogSearch),
