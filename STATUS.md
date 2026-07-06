@@ -421,16 +421,20 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Open decisions / known gaps
 
-- **⚠️ API ↔ DB are not co-located — the main remaining latency cause.** A warm
-  pooled `SELECT 1` from a far client to the Supabase pooler is ~585ms (pure
-  network RTT); Supabase is in **Singapore**, and the Railway service is almost
-  certainly in a different region (US default). Every request pays that RTT once
-  per query round-trip. **The fix is one dashboard action: set the Railway service's
-  region to Singapore (`asia-southeast1`)** so it sits next to Supabase — that turns
-  ~585ms round-trips into single-digit ms and takes every endpoint well under the
-  1s target. Code-side round-trip reductions (single joined work fetch, lighter
-  summary loads) already landed and got book-detail to ~190ms, but they can't beat
-  physics for multi-round-trip list queries until the two services are co-located.
+- **⚠️ API ↔ DB are not co-located — this is the API-latency cause, and the fix
+  is a Railway dashboard action, not code.** Measured live: every request to
+  `api.kitabi.in` is ~2s, and **four rapid back-to-back requests are all ~2s** —
+  so it is NOT an idle-reconnect (that would only hit the first). It is the
+  per-query round-trip cost (pre-ping + asyncpg's Parse/Bind/Execute/Close with
+  the Supavisor-required statement cache off = several round-trips) multiplied by
+  a high Railway→Supabase RTT. From a machine nearer Singapore the same warm query
+  is ~0.19–0.59s; through Railway it's ~2s, so Railway is far from Supabase
+  (Supabase is in **Singapore**; Railway defaults to US). **Fix: set the Railway
+  service region to Singapore (`asia-southeast1`)** in the Railway dashboard so it
+  sits next to Supabase — that collapses the RTT to single-digit ms and takes every
+  endpoint well under the 1s target. The code round-trip reductions that landed
+  (single joined work fetch → book detail ~0.19s locally, lighter summary loads)
+  compound with co-location but can't beat the cross-region RTT on their own.
 
 - **No Apple Distribution certificate in this local environment** — only an Apple
   Development identity exists in this Keychain, so IPAs built here via

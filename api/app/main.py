@@ -1,43 +1,22 @@
-import asyncio
-import contextlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
 
 from app.api import auth, catalog, health, me, recommendations, sync
 from app.api import import_ as import_api
 from app.core.config import get_settings
-from app.core.db import engine
 from app.core.version_gate import VersionGateMiddleware
 from app.jobs import scheduler
-
-
-async def _keep_pool_warm() -> None:
-    """Ping the DB every 30s to keep a pooled connection alive. When the API and
-    Supabase aren't co-located, an idle-dropped connection costs a ~2s
-    cross-region reconnect on the NEXT request — so we pay that reconnect here,
-    in the background, and real requests find a warm connection. (The real fix
-    is co-locating the API with the DB region — see STATUS.md.)"""
-    while True:
-        with contextlib.suppress(Exception):
-            async with engine.connect() as conn:
-                await conn.execute(text("SELECT 1"))
-        await asyncio.sleep(30)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     if get_settings().scheduler_enabled:
         scheduler.start()
-    warm = asyncio.create_task(_keep_pool_warm())
     yield
-    warm.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await warm
     scheduler.shutdown()
 
 
