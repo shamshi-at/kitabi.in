@@ -220,6 +220,29 @@ class RecommendationsOut(BaseModel):
     picks: list[RecommendationOut]
 
 
+class CoverExtractIn(BaseModel):
+    """Cover photo URL(s) already uploaded to the public covers bucket by the
+    add-book form. At least one side must be given (validated in the router,
+    which also restricts the URLs to our own bucket)."""
+
+    front_url: str | None = None
+    back_url: str | None = None
+
+
+class CoverExtractOut(BaseModel):
+    """What the vision model could read off the photographs — every field
+    optional; the form prefills only what it received and only into empty
+    fields. Never persisted server-side."""
+
+    title: str | None = None
+    authors: list[str] = []
+    publisher: str | None = None
+    description: str | None = None
+    series_name: str | None = None
+    series_number: int | None = None
+    language: str | None = None
+
+
 class ImportPreviewIn(BaseModel):
     csv: str
 

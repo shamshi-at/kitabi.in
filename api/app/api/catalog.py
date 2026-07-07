@@ -4,15 +4,19 @@ OpenLibrary, browse/add/edit works, editions, authors, and publishers."""
 import uuid
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.config import get_settings
 from app.models import Author, Publisher
 from app.schemas.catalog import (
     AuthorCreate,
     AuthorOut,
     AuthorWorksOut,
+    CoverExtractIn,
+    CoverExtractOut,
     EditionCreate,
     EditionOut,
     EditionUpdate,
@@ -26,7 +30,7 @@ from app.schemas.catalog import (
     WorkSummaryOut,
     WorkUpdate,
 )
-from app.services import catalog_service
+from app.services import catalog_service, extraction_service
 from app.services.openlibrary_client import OpenLibraryClient, get_openlibrary_client
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
@@ -142,6 +146,44 @@ async def lookup_isbn(isbn: str, db: DbSession, ol_client: OlClient) -> WorkOut:
         )
     work = await catalog_service.get_work_or_404(db, edition.work_id)
     return await _work_out(db, work)
+
+
+@router.post("/cover-extract", response_model=CoverExtractOut)
+async def cover_extract(payload: CoverExtractIn, user: CurrentUser) -> CoverExtractOut:
+    """Prefill the add-book form from cover photographs — the rescue path when
+    a scan finds nothing anywhere. Reads the photo URLs the form has already
+    uploaded (our covers bucket only), returns whatever fields the vision
+    model could read; nothing is persisted. Dormant without an LLM key."""
+    settings = get_settings()
+    if not settings.extraction_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "extraction_disabled",
+                "message": "Cover extraction isn't available right now",
+            },
+        )
+    urls = [u for u in (payload.front_url, payload.back_url) if u]
+    if not urls:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "no_images", "message": "Provide at least one cover photo"},
+        )
+    if not all(extraction_service.allowed_image_url(settings, u) for u in urls):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "bad_image_url", "message": "Only uploaded cover photos can be read"},
+        )
+    try:
+        fields = await extraction_service.extract_from_covers(
+            settings, front_url=payload.front_url, back_url=payload.back_url
+        )
+    except httpx.HTTPError as err:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"code": "extraction_failed", "message": "Couldn't read the photos"},
+        ) from err
+    return CoverExtractOut(**fields)
 
 
 @router.post("/works", response_model=WorkOut, status_code=status.HTTP_201_CREATED)

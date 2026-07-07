@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # mandatory bill/credential). Recs are cheap, so default to a small model.
     anthropic_api_key: str = ""
     recs_model: str = "claude-haiku-4-5-20251001"
+    # Cover-photo extraction (prefill the add-book form from photographs of a
+    # book the catalog doesn't know). Same key/gate as recs; a vision-capable
+    # small model, pennies per call, dormant when the key is unset.
+    extraction_model: str = "claude-haiku-4-5-20251001"
 
     # Push notifications (FCM HTTP v1). Optional, opt-in like recs (rule 8): the
     # owner pastes a Firebase Admin service-account JSON here (one string). Unset
@@ -48,6 +52,10 @@ class Settings(BaseSettings):
 
     @property
     def recommendations_enabled(self) -> bool:
+        return bool(self.anthropic_api_key)
+
+    @property
+    def extraction_enabled(self) -> bool:
         return bool(self.anthropic_api_key)
 
     @property
