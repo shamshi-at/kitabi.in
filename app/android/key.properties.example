@@ -1,0 +1,9 @@
+# Release signing for the Play Store. Copy to android/key.properties (gitignored)
+# and fill in from the upload keystore you generate (see scripts/build_aab.sh
+# header for the keytool command). Keep the .jks file OUTSIDE the repo.
+#
+# storeFile can be absolute (recommended) or relative to android/app/.
+storeFile=/Users/you/keys/kitabi-upload.jks
+storePassword=CHANGE_ME
+keyAlias=upload
+keyPassword=CHANGE_ME
