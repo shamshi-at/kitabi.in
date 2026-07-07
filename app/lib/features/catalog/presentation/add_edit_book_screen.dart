@@ -307,6 +307,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
     return filled;
   }
 
+  /// A one-line, human-ish reason from an exception for a diagnostic snackbar —
+  /// the Supabase Storage message ("bucket not found", "new row violates
+  /// policy"), a Dio status, or the exception's own string.
+  String _briefError(Object err) {
+    final s = err.toString();
+    return s.length > 140 ? '${s.substring(0, 140)}…' : s;
+  }
+
   void _applyScannedWork(Map<String, dynamic> work) {
     final editions = work['editions'] as List?;
     final edition =
@@ -389,13 +397,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
       if (mounted && url != null) {
         setState(() => back ? _backCoverUrl = url : _coverUrl = url);
       }
-    } catch (_) {
+    } catch (err) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
+        final base = action == CoverAction.adjust ? l10n.coverAdjustFailed : l10n.coverUploadFailed;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-            action == CoverAction.adjust ? l10n.coverAdjustFailed : l10n.coverUploadFailed,
-          ),
+          duration: const Duration(seconds: 6),
+          // Include a concise real reason — cover upload/crop couldn't be tested
+          // on a real device before shipping, so surface what actually failed.
+          content: Text('$base\n${_briefError(err)}'),
         ));
       }
     } finally {

@@ -21,15 +21,27 @@ enum CropRatio {
 }
 
 /// Take a photo (or pick from the gallery) and crop it to [ratio] in one step,
-/// returning the cropped JPEG bytes ready to upload. Null if the user cancels
-/// either the capture or the crop.
+/// returning the JPEG bytes ready to upload. Null if the user cancels the
+/// capture, or cancels the crop.
+///
+/// Resilience: if the cropper itself *fails to run* (image_cropper has
+/// device-specific iOS runtime failures under Swift Package Manager that don't
+/// reproduce in CI), we do NOT discard the capture — the original photo is
+/// returned uncropped so the upload still happens and the photo isn't lost. The
+/// user can re-crop later via "Adjust". Only a genuine user-cancel (crop UI
+/// shown, then dismissed) returns null.
 Future<Uint8List?> pickAndCropImage({
   required ImageSource source,
   required CropRatio ratio,
 }) async {
   final picked = await ImagePicker().pickImage(source: source);
-  if (picked == null) return null;
-  return cropPickedImage(picked.path, ratio);
+  if (picked == null) return null; // capture/pick cancelled
+  try {
+    return await cropPickedImage(picked.path, ratio);
+  } catch (_) {
+    // Cropper couldn't present on this device — keep the photo, upload as-is.
+    return picked.readAsBytes();
+  }
 }
 
 /// Open the cropper on a just-picked image, locked to [ratio], and return the
