@@ -56,7 +56,9 @@ SUPABASE_URL=https://<project-ref>.supabase.co
 ```
 
 Optional/feature-gated env (dormant when unset — CLAUDE.md rule 8):
-- `ANTHROPIC_API_KEY` — enables LLM recommendations (`GET /recommendations`).
+- `ANTHROPIC_API_KEY` — enables LLM recommendations (`GET /recommendations`) **and**
+  cover-photo extraction (`POST /catalog/cover-extract` — prefill the add-book form
+  from photographed covers when a scan finds nothing).
 - `FIREBASE_CREDENTIALS` — the Firebase Admin service-account JSON; enables FCM push.
 - `SCHEDULER_ENABLED=true` — turns on APScheduler jobs (Supabase keep-warm).
 

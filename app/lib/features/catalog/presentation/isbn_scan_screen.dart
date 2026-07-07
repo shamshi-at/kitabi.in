@@ -194,8 +194,15 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                             foregroundColor: Color(0xFFCBB897),
                           ),
                           onPressed: () {
+                            // Carry a scanned-but-unmatched ISBN into the blank
+                            // form — the number was already read, don't make the
+                            // user type it.
+                            final isbn = _detectedIsbn;
                             context.pop();
-                            context.push(Routes.catalogAdd);
+                            context.push(
+                              Routes.catalogAdd,
+                              extra: <String, dynamic>{'isbn': ?isbn},
+                            );
                           },
                           child: Text(l10n.scanAddManually),
                         ),

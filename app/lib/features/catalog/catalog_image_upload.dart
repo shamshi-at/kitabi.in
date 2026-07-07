@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -35,6 +37,35 @@ Future<String?> pickAndUploadCatalogImage({
   required ImageSource source,
 }) =>
     pickCropUploadImage(source: source, folder: folder, ratio: CropRatio.square);
+
+/// Re-open the cropper on an image that's *already* uploaded (its public [url]),
+/// letting the user re-crop/rotate/reframe it, then upload the result as a new
+/// object and return its URL. Used by "Adjust" on the add-book cover slots, so a
+/// captured cover can be reframed without retaking the photo. Downloads to a
+/// temp file (the cropper needs a local path), crops, uploads. Returns null if
+/// the crop is cancelled; throws if the image can't be fetched or uploaded.
+Future<String?> recropUploadImage({
+  required String url,
+  required String folder,
+  required CropRatio ratio,
+}) async {
+  final response = await Dio().get<List<int>>(
+    url,
+    options: Options(responseType: ResponseType.bytes),
+  );
+  final data = response.data;
+  if (data == null) throw Exception('empty image response');
+
+  final tmp = File('${Directory.systemTemp.path}/recrop_${_uuid.v4()}.jpg');
+  await tmp.writeAsBytes(data, flush: true);
+  try {
+    final bytes = await cropPickedImage(tmp.path, ratio);
+    if (bytes == null) return null;
+    return _uploadJpeg(bytes, folder);
+  } finally {
+    if (await tmp.exists()) await tmp.delete();
+  }
+}
 
 Future<String> _uploadJpeg(Uint8List bytes, String folder) async {
   final objectPath = '$folder/${_uuid.v4()}.jpg';

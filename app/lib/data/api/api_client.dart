@@ -230,6 +230,18 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Cover-photo extraction (S7b rescue path) — reads title/authors/publisher/
+  /// blurb off the already-uploaded cover photo URL(s) so the add-book form can
+  /// prefill itself for a book no catalog knows. 503 (`extraction_disabled`)
+  /// when the server has no LLM key; the form shows a quiet "unavailable".
+  Future<Map<String, dynamic>> extractFromCovers({String? frontUrl, String? backUrl}) async {
+    final res = await _dio.post('/catalog/cover-extract', data: {
+      'front_url': ?frontUrl,
+      'back_url': ?backUrl,
+    });
+    return res.data as Map<String, dynamic>;
+  }
+
   /// The Work containing an edition — used to hydrate a borrowed book the reader
   /// never added themselves (their loan record only has the edition id).
   Future<Map<String, dynamic>> getWorkByEdition(String editionId) async {

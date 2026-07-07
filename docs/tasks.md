@@ -80,7 +80,15 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       **Enhanced (6 Jul 2026):** author & publisher are now dropdown-cum-add-new
       typeaheads backed by `GET /catalog/authors?q=` / `GET /catalog/publishers?q=`
       (authors kept as removable chips, not a comma string); the typeset cover preview
-      redraws live as title/author are typed
+      redraws live as title/author are typed.
+      **UX polish (8 Jul 2026, owner feedback):** Format/Language pickers replaced the
+      Material `DropdownButton` with a Reading Room bottom-sheet picker (`_SelectField`
+      + `_openSelectSheet`), boxes matched to the adjacent text-field height; series
+      section grouped into a labelled well with clearer copy ("SERIES NAME" / "WHICH
+      BOOK?" + examples); cover slots now open an options sheet (`showCoverActionSheet`)
+      — capture has a visible Cancel, and an existing cover can be **adjusted**
+      (re-crop/rotate/reframe via `recropUploadImage`, which downloads → re-crops →
+      re-uploads) or **removed**, so a mis-tap never forces a capture
 - [x] ISBN barcode scanner in app (`mobile_scanner`) — S7; iOS needs 15.5+ deployment
       target (bumped from 14.0) and an `EXCLUDED_ARCHS[sdk=iphonesimulator*]=arm64`
       Podfile `post_install` hook since Google's MLKit pods ship no arm64 simulator
@@ -105,6 +113,15 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       results (S4, catalog-only slice — the personal-library merge is Phase 3/6),
       add/edit form isn't itself a browse source but routes correctly; book page (S6)
       doesn't exist yet (Phase 3), so that leg lands with S6
+- [x] Cover-photo extraction for scan-misses (8 Jul 2026, owner request): scan finds
+      nothing → "Add manually" now carries the scanned ISBN into the form; once the
+      user photographs the covers, a "Fill in from photos" button sends the uploaded
+      URLs to `POST /catalog/cover-extract` (Claude vision via the same optional
+      `ANTHROPIC_API_KEY` gate as recs — dormant when unset, reads any script incl.
+      Malayalam) and prefills **only empty** fields: title, authors, publisher,
+      description (new editable form field, persisted on the Work), series, language.
+      URL allow-list = our covers bucket only; `extraction_service.py` unit-tested
+      with a mocked LLM; live output pending a real key (same standing gap as recs)
 
 ## Phase 3 — Personal library + sync engine (Layer 2)
 

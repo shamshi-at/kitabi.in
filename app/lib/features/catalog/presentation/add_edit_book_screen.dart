@@ -1,6 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/image_crop.dart';
 import '../../../core/languages.dart';
@@ -38,14 +40,21 @@ const _commonGenres = [
 /// Edition (CLAUDE.md rule 17: series/ISBN/format/pages live on the
 /// Edition, everything else on the Work).
 class AddEditBookScreen extends ConsumerWidget {
-  const AddEditBookScreen({super.key, this.workId});
+  const AddEditBookScreen({super.key, this.workId, this.initialIsbn});
 
   final String? workId;
+
+  /// A scanned-but-unmatched ISBN carried in from the scanner's not-found
+  /// state, so the form starts with the number already filled.
+  final String? initialIsbn;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (workId == null) {
-      return Scaffold(backgroundColor: AppColors.paper, body: SafeArea(child: _BookForm()));
+      return Scaffold(
+        backgroundColor: AppColors.paper,
+        body: SafeArea(child: _BookForm(initialIsbn: initialIsbn)),
+      );
     }
     final work = ref.watch(workProvider(workId!));
     return Scaffold(
@@ -62,9 +71,10 @@ class AddEditBookScreen extends ConsumerWidget {
 }
 
 class _BookForm extends ConsumerStatefulWidget {
-  const _BookForm({this.initialWork});
+  const _BookForm({this.initialWork, this.initialIsbn});
 
   final Map<String, dynamic>? initialWork;
+  final String? initialIsbn;
 
   @override
   ConsumerState<_BookForm> createState() => _BookFormState();
@@ -73,6 +83,7 @@ class _BookForm extends ConsumerStatefulWidget {
 class _BookFormState extends ConsumerState<_BookForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _title;
+  late final TextEditingController _description;
   late final TextEditingController _series;
   late final TextEditingController _seriesNumber;
   late final TextEditingController _pages;
@@ -102,6 +113,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
   bool _uploadingBack = false;
   bool _saving = false;
   bool _scanning = false;
+  bool _extracting = false;
 
   Map<String, dynamic>? get _edition {
     final editions = widget.initialWork?['editions'] as List?;
@@ -126,13 +138,16 @@ class _BookFormState extends ConsumerState<_BookForm> {
     // Live cover preview (S7b): the typeset cover mirrors the title/author as
     // they're typed, so a keystroke redraws it.
     _title.addListener(_onCoverChanged);
+    _description = TextEditingController(text: work?['description'] as String? ?? '');
     _language = work?['language'] as String?;
     _series = TextEditingController(text: (edition?['series'] as Map?)?['name'] as String? ?? '');
     _hasSeries = (edition?['series'] as Map?)?['name'] != null;
     _seriesNumber =
         TextEditingController(text: edition?['series_number']?.toString() ?? '');
     _pages = TextEditingController(text: edition?['page_count']?.toString() ?? '');
-    _isbn = TextEditingController(text: edition?['isbn'] as String? ?? '');
+    _isbn = TextEditingController(
+      text: edition?['isbn'] as String? ?? widget.initialIsbn ?? '',
+    );
     _format = edition?['format'] as String? ?? _formats.first;
     _coverUrl = edition?['cover_url'] as String?;
     _backCoverUrl = edition?['back_cover_url'] as String?;
@@ -152,6 +167,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _title.removeListener(_onCoverChanged);
     for (final c in [
       _title,
+      _description,
       _series,
       _seriesNumber,
       _pages,
@@ -206,6 +222,91 @@ class _BookFormState extends ConsumerState<_BookForm> {
     }
   }
 
+  /// Only photos the user uploaded through this app (our covers bucket) can be
+  /// sent for extraction — an OpenLibrary cover URL, say, would be rejected by
+  /// the server anyway, so the button never lights up for one.
+  bool _isOwnUpload(String? url) =>
+      url != null && url.contains('/storage/v1/object/public/covers/');
+
+  /// The "read the covers" rescue path (S7b): send the photographed cover
+  /// URL(s) to `POST /catalog/cover-extract` and prefill whatever came back —
+  /// but only into fields that are still empty. The user's own typing always
+  /// wins, and everything stays editable.
+  Future<void> _fillFromPhotos() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _extracting = true);
+    try {
+      final fields = await ref.read(apiClientProvider).extractFromCovers(
+            frontUrl: _isOwnUpload(_coverUrl) ? _coverUrl : null,
+            backUrl: _isOwnUpload(_backCoverUrl) ? _backCoverUrl : null,
+          );
+      if (!mounted) return;
+      if (!_applyExtracted(fields)) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractNothing)));
+      }
+    } on DioException catch (err) {
+      final data = err.response?.data;
+      final code = data is Map ? data['code'] : null;
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+          code == 'extraction_disabled' ? l10n.formExtractUnavailable : l10n.formExtractFailed,
+        ),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractFailed)));
+    } finally {
+      if (mounted) setState(() => _extracting = false);
+    }
+  }
+
+  /// Prefill empty fields from the extraction result. Returns whether anything
+  /// was actually filled (nothing readable → the caller says so).
+  bool _applyExtracted(Map<String, dynamic> fields) {
+    var filled = false;
+    setState(() {
+      final title = fields['title'] as String?;
+      if (title != null && _title.text.trim().isEmpty) {
+        _title.text = title;
+        filled = true;
+      }
+      final authors = (fields['authors'] as List?)?.cast<String>() ?? const <String>[];
+      if (_authors.isEmpty && authors.isNotEmpty) {
+        // Name-only entries — the save payload already routes id-less authors
+        // through `author_names` (server get-or-creates them).
+        _authors.addAll([for (final name in authors) {'name': name}]);
+        filled = true;
+      }
+      final publisher = fields['publisher'] as String?;
+      if (publisher != null && _publisher == null) {
+        _publisher = {'name': publisher};
+        filled = true;
+      }
+      final description = fields['description'] as String?;
+      if (description != null && _description.text.trim().isEmpty) {
+        _description.text = description;
+        filled = true;
+      }
+      final seriesName = fields['series_name'] as String?;
+      if (seriesName != null && _series.text.trim().isEmpty) {
+        _series.text = seriesName;
+        _hasSeries = true;
+        filled = true;
+      }
+      final seriesNumber = fields['series_number'];
+      if (_hasSeries && seriesNumber is int && _seriesNumber.text.trim().isEmpty) {
+        _seriesNumber.text = '$seriesNumber';
+        filled = true;
+      }
+      final language = fields['language'] as String?;
+      if (language != null && _language == null && kLanguages.contains(language)) {
+        _language = language;
+        filled = true;
+      }
+    });
+    return filled;
+  }
+
   void _applyScannedWork(Map<String, dynamic> work) {
     final editions = work['editions'] as List?;
     final edition =
@@ -255,27 +356,47 @@ class _BookFormState extends ConsumerState<_BookForm> {
     });
   }
 
-  /// Photograph (or pick) a cover for [back]=false front / true back, crop it to
-  /// 2:3, upload it, and hold the URL until save. New books have no edition id
-  /// yet, so the image lands under a fresh `covers/<uuid>.jpg` path.
-  Future<void> _captureCover({required bool back}) async {
-    final source = await showImageSourceSheet(context);
-    if (source == null || !mounted) return;
+  /// Tapping a cover slot opens the options sheet (adapts to whether a photo is
+  /// already set). Camera/gallery capture → crop → upload; "adjust" re-crops the
+  /// existing photo; "remove" clears it. Cancelling anywhere — the sheet, the
+  /// camera, or the crop — is a clean no-op, so a mis-tap never forces a capture.
+  /// New books have no edition id yet, so images land under `covers/<uuid>.jpg`.
+  Future<void> _onCoverTap({required bool back}) async {
+    final current = back ? _backCoverUrl : _coverUrl;
+    final action = await showCoverActionSheet(context, hasImage: current != null);
+    if (action == null || !mounted) return;
+
+    if (action == CoverAction.remove) {
+      setState(() => back ? _backCoverUrl = null : _coverUrl = null);
+      return;
+    }
+
     setState(() => back ? _uploadingBack = true : _uploadingFront = true);
     try {
-      final url = await pickCropUploadImage(
-        source: source,
-        folder: 'covers',
-        ratio: CropRatio.cover,
-      );
+      final String? url;
+      switch (action) {
+        case CoverAction.camera:
+          url = await pickCropUploadImage(
+              source: ImageSource.camera, folder: 'covers', ratio: CropRatio.cover);
+        case CoverAction.gallery:
+          url = await pickCropUploadImage(
+              source: ImageSource.gallery, folder: 'covers', ratio: CropRatio.cover);
+        case CoverAction.adjust:
+          url = await recropUploadImage(url: current!, folder: 'covers', ratio: CropRatio.cover);
+        case CoverAction.remove:
+          url = null; // handled above
+      }
       if (mounted && url != null) {
         setState(() => back ? _backCoverUrl = url : _coverUrl = url);
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.coverUploadFailed)),
-        );
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            action == CoverAction.adjust ? l10n.coverAdjustFailed : l10n.coverUploadFailed,
+          ),
+        ));
       }
     } finally {
       if (mounted) setState(() => back ? _uploadingBack = false : _uploadingFront = false);
@@ -290,6 +411,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final publisherId = _publisher?['id'] as String?;
     final payload = {
       'title': _title.text.trim(),
+      'description': _description.text.trim().isEmpty ? null : _description.text.trim(),
       'language': _language,
       // Ids for picker-chosen authors; names only for anything without one.
       'author_ids': [
@@ -391,14 +513,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
                 // Front falls back to the live typeset preview from title/author.
                 title: _title.text.isEmpty ? '…' : _title.text,
                 author: _authors.isEmpty ? null : _authors.first['name'] as String?,
-                onTap: () => _captureCover(back: false),
+                onTap: () => _onCoverTap(back: false),
               ),
               SizedBox(width: 12),
               _CoverSlot(
                 label: l10n.formCoverBack,
                 imageUrl: _backCoverUrl,
                 busy: _uploadingBack,
-                onTap: () => _captureCover(back: true),
+                onTap: () => _onCoverTap(back: true),
               ),
               SizedBox(width: 12),
               Expanded(
@@ -409,6 +531,32 @@ class _BookFormState extends ConsumerState<_BookForm> {
               ),
             ],
           ),
+          // Once a photo is up, offer to read the details off it — the rescue
+          // path for books no catalog knows. Prefills only empty fields.
+          if (_isOwnUpload(_coverUrl) || _isOwnUpload(_backCoverUrl)) ...[
+            SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: _extracting ? null : _fillFromPhotos,
+                icon: _extracting
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.oxblood,
+                        ),
+                      )
+                    : Icon(Icons.auto_awesome, size: 16, color: AppColors.oxblood),
+                label: Text(l10n.formFillFromPhotos),
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  textStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
           SizedBox(height: 16),
           _Field(
             label: l10n.formFieldTitle,
@@ -424,34 +572,56 @@ class _BookFormState extends ConsumerState<_BookForm> {
           SizedBox(height: 10),
           _SeriesToggle(
             label: l10n.formSeriesToggle,
+            sublabel: l10n.formSeriesToggleSub,
             value: _hasSeries,
             onChanged: (v) => setState(() => _hasSeries = v),
           ),
           if (_hasSeries) ...[
             SizedBox(height: 8),
-            Text(
-              l10n.formSeriesHint,
-              style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.3),
-            ),
-            SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 14,
-                  child: _Field(label: l10n.formFieldSeries, controller: _series),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  flex: 10,
-                  child: _Field(
-                    label: l10n.formFieldBookNumber,
-                    controller: _seriesNumber,
-                    keyboardType: TextInputType.number,
-                    helper: l10n.formBookNumberHelp,
+            // A grouped well so the two series fields read as one unit that
+            // belongs to the toggle above them, not as two loose inputs.
+            Container(
+              padding: EdgeInsets.fromLTRB(12, 10, 12, 12),
+              decoration: BoxDecoration(
+                color: AppColors.paperDeep,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.formSeriesHint,
+                    style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.3),
                   ),
-                ),
-              ],
+                  SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 14,
+                        child: _Field(
+                          label: l10n.formFieldSeries,
+                          controller: _series,
+                          fillColor: AppColors.card,
+                          helper: l10n.formSeriesNameHelp,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        flex: 9,
+                        child: _Field(
+                          label: l10n.formFieldBookNumber,
+                          controller: _seriesNumber,
+                          keyboardType: TextInputType.number,
+                          fillColor: AppColors.card,
+                          helper: l10n.formBookNumberHelp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
           SizedBox(height: 10),
@@ -514,6 +684,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
                 ),
               ),
             ],
+          ),
+          SizedBox(height: 10),
+          _Field(
+            label: l10n.formFieldDescription,
+            controller: _description,
+            maxLines: 4,
+            helper: l10n.formDescriptionHelp,
           ),
           SizedBox(height: 14),
           Text(
@@ -605,26 +782,34 @@ class _CoverSlot extends StatelessWidget {
   Widget build(BuildContext context) {
     const w = 46.0;
     const h = 69.0; // 2:3
-    Widget preview;
-    if (imageUrl != null) {
-      preview = ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: Image.network(imageUrl!, width: w, height: h, fit: BoxFit.cover),
-      );
-    } else if (title != null) {
-      preview = TypesetCover(title: title!, author: author, width: w, height: h);
-    } else {
-      preview = Container(
-        width: w,
-        height: h,
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: Icon(Icons.add_a_photo_outlined, size: 18, color: AppColors.inkSoft),
-      );
-    }
+    // What the slot shows without (or instead of) a photo — the front falls
+    // back to the live typeset preview, the back to an "add a photo" tile.
+    Widget fallback() => title != null
+        ? TypesetCover(title: title!, author: author, width: w, height: h)
+        : Container(
+            width: w,
+            height: h,
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Icon(Icons.add_a_photo_outlined, size: 18, color: AppColors.inkSoft),
+          );
+    final preview = imageUrl != null
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Image.network(
+              imageUrl!,
+              width: w,
+              height: h,
+              fit: BoxFit.cover,
+              // A dead URL degrades to the typeset/placeholder tile, never a
+              // broken-image error box.
+              errorBuilder: (_, _, _) => fallback(),
+            ),
+          )
+        : fallback();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -791,16 +976,23 @@ class _Field extends StatelessWidget {
     this.validator,
     this.keyboardType,
     this.helper,
+    this.fillColor,
+    this.maxLines = 1,
   });
 
   final String label;
   final TextEditingController controller;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
+  final int maxLines;
 
   /// Optional one-line hint under the field, for the fields users hesitate on
   /// (series, book number, …).
   final String? helper;
+
+  /// Override the fill — e.g. `card` when the field sits inside a `paperDeep`
+  /// well (the series group) so it still reads as an input.
+  final Color? fillColor;
 
   @override
   Widget build(BuildContext context) {
@@ -821,11 +1013,12 @@ class _Field extends StatelessWidget {
           controller: controller,
           validator: validator,
           keyboardType: keyboardType,
+          maxLines: maxLines,
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: AppColors.card,
+            fillColor: fillColor ?? AppColors.card,
             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -914,11 +1107,18 @@ class _IsbnScanField extends StatelessWidget {
   }
 }
 
-/// The "Part of a series" toggle that reveals/hides the series fields.
+/// The "Part of a series" toggle that reveals/hides the series fields, with a
+/// one-line sub-label so it's clear when to switch it on.
 class _SeriesToggle extends StatelessWidget {
-  const _SeriesToggle({required this.label, required this.value, required this.onChanged});
+  const _SeriesToggle({
+    required this.label,
+    required this.sublabel,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String label;
+  final String sublabel;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -932,11 +1132,22 @@ class _SeriesToggle extends StatelessWidget {
           Icon(Icons.collections_bookmark_outlined, size: 16, color: AppColors.inkSoft),
           SizedBox(width: 8),
           Expanded(
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+                ),
+                SizedBox(height: 1),
+                Text(
+                  sublabel,
+                  style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.2),
+                ),
+              ],
             ),
           ),
+          SizedBox(width: 8),
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
@@ -949,6 +1160,9 @@ class _SeriesToggle extends StatelessWidget {
   }
 }
 
+/// A non-null option field (e.g. Format). Tapping it opens a themed bottom-sheet
+/// picker instead of the platform Material dropdown, and its box matches the
+/// height of the text fields it sits beside.
 class _DropdownField extends StatelessWidget {
   const _DropdownField({
     required this.label,
@@ -964,49 +1178,177 @@ class _DropdownField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return _SelectField(
+      label: label,
+      displayValue: value,
+      isPlaceholder: false,
+      onTap: () => _openSelectSheet(
+        context,
+        title: l10n.pickerChoose(label.toLowerCase()),
+        options: [for (final o in options) _SelectOption(o, o)],
+        current: value,
+        onChanged: (v) {
+          if (v != null) onChanged(v);
+        },
+      ),
+    );
+  }
+}
+
+/// The shared look for every "tap to choose" field on the form (Format,
+/// Language, and the publisher picker's cousin): a labelled box, matching the
+/// text fields' height, with a chevron — never the raw Material dropdown.
+class _SelectField extends StatelessWidget {
+  const _SelectField({
+    required this.label,
+    required this.displayValue,
+    required this.isPlaceholder,
+    required this.onTap,
+    this.note,
+  });
+
+  final String label;
+  final String displayValue;
+  final bool isPlaceholder;
+  final VoidCallback onTap;
+  final String? note;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            letterSpacing: 1,
-            color: AppColors.inkSoft,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        Text(label, style: _fieldLabelStyle),
         SizedBox(height: 4),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.line),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              // Trims ~8px so the dropdown matches the dense text fields beside
-              // it (e.g. Language ↔ Pages, Format ↔ ISBN).
-              isDense: true,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.ink,
-              ),
-              items: [
-                for (final option in options)
-                  DropdownMenuItem(value: option, child: Text(option)),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            // vertical: 10 matches _Field's dense TextFormField height, so a
+            // select aligns with the text field beside it (Format↔ISBN,
+            // Language↔Pages) — the dropdown-height gripe.
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    displayValue,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isPlaceholder ? AppColors.inkSoft : AppColors.ink,
+                    ),
+                  ),
+                ),
+                Icon(Icons.expand_more, size: 18, color: AppColors.inkSoft),
               ],
-              onChanged: (v) => v != null ? onChanged(v) : null,
             ),
           ),
         ),
+        if (note != null) ...[
+          SizedBox(height: 4),
+          Text(note!, style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.3)),
+        ],
       ],
     );
   }
+}
+
+/// One row in the option-picker sheet. [value] is null only for a "not set"
+/// entry (Language), which renders subdued.
+class _SelectOption {
+  const _SelectOption(this.value, this.label, {this.subdued = false});
+  final String? value;
+  final String label;
+  final bool subdued;
+}
+
+class _SelectResult {
+  const _SelectResult(this.value);
+  final String? value;
+}
+
+/// Opens the Reading Room option-picker sheet. Fires [onChanged] only when the
+/// user actually picks something; a dismiss (scrim tap / swipe down) leaves the
+/// value untouched — which is how "not set" (a real null pick) stays distinct
+/// from cancelling.
+Future<void> _openSelectSheet(
+  BuildContext context, {
+  required String title,
+  required List<_SelectOption> options,
+  required String? current,
+  required ValueChanged<String?> onChanged,
+}) async {
+  final result = await showModalBottomSheet<_SelectResult>(
+    context: context,
+    backgroundColor: AppColors.paper,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 4),
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.line,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
+                ),
+              ),
+            ),
+          ),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final opt in options)
+                  ListTile(
+                    dense: true,
+                    title: Text(
+                      opt.label,
+                      style: TextStyle(
+                        color: opt.subdued ? AppColors.inkSoft : AppColors.ink,
+                        fontWeight: opt.value == current ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                    trailing: opt.value == current
+                        ? Icon(Icons.check, size: 18, color: AppColors.oxblood)
+                        : null,
+                    onTap: () => Navigator.of(context).pop(_SelectResult(opt.value)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+  if (result != null) onChanged(result.value);
 }
 
 /// The language picker — a nullable dropdown (language is optional) with a
@@ -1033,61 +1375,27 @@ class _LanguageField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final base = languages.isNotEmpty ? languages : kLanguages;
     final options = [
       ...base,
       if (value != null && !base.contains(value)) value!,
     ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            letterSpacing: 1,
-            color: AppColors.inkSoft,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 4),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.line),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String?>(
-              value: value,
-              isExpanded: true,
-              // Trims ~8px so the dropdown matches the dense text fields beside
-              // it (e.g. Language ↔ Pages, Format ↔ ISBN).
-              isDense: true,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.ink,
-              ),
-              items: [
-                DropdownMenuItem(
-                  value: null,
-                  child: Text(unsetLabel, style: TextStyle(color: AppColors.inkSoft)),
-                ),
-                for (final option in options)
-                  DropdownMenuItem(value: option, child: Text(option)),
-              ],
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          note,
-          style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.3),
-        ),
-      ],
+    return _SelectField(
+      label: label,
+      displayValue: value ?? unsetLabel,
+      isPlaceholder: value == null,
+      note: note,
+      onTap: () => _openSelectSheet(
+        context,
+        title: l10n.pickerChoose(label.toLowerCase()),
+        current: value,
+        options: [
+          _SelectOption(null, unsetLabel, subdued: true),
+          for (final option in options) _SelectOption(option, option),
+        ],
+        onChanged: onChanged,
+      ),
     );
   }
 }

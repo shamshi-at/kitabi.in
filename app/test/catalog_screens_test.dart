@@ -46,6 +46,16 @@ Map<String, dynamic> _work({String? id}) => {
 
 class _FakeApiClient extends ApiClient {
   Map<String, dynamic>? lastCreatePayload;
+  Map<String, dynamic> extractResult = const {};
+  String? lastExtractFront;
+  String? lastExtractBack;
+
+  @override
+  Future<Map<String, dynamic>> extractFromCovers({String? frontUrl, String? backUrl}) async {
+    lastExtractFront = frontUrl;
+    lastExtractBack = backUrl;
+    return extractResult;
+  }
 
   @override
   Future<List<Map<String, dynamic>>> searchCatalog(String query) async {
@@ -159,8 +169,16 @@ class _FakeApiClient extends ApiClient {
     ];
   }
 
+  /// Optional cover URL injected into the work's edition — lets tests light up
+  /// the fill-from-photos button (it only shows for our own uploads).
+  String? workCoverUrl;
+
   @override
-  Future<Map<String, dynamic>> getWork(String workId) async => _work(id: workId);
+  Future<Map<String, dynamic>> getWork(String workId) async {
+    final work = _work(id: workId);
+    ((work['editions'] as List).first as Map<String, dynamic>)['cover_url'] = workCoverUrl;
+    return work;
+  }
 
   @override
   Future<Map<String, dynamic>> createWork(Map<String, dynamic> payload) async {
@@ -249,6 +267,94 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fake.lastCreatePayload?['title'], 'Oru Deshathinte Katha');
+  });
+
+  testWidgets('format field opens a themed picker sheet and applies the choice', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // Default format shows in the select box (no Material dropdown).
+    expect(find.byType(DropdownButton<String>), findsNothing);
+    expect(find.text('Paperback'), findsOneWidget);
+
+    // Tapping opens the bottom-sheet picker with all options.
+    await tester.tap(find.text('Paperback'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose format'), findsOneWidget);
+    expect(find.text('Hardcover'), findsOneWidget);
+
+    await tester.tap(find.text('Hardcover'));
+    await tester.pumpAndSettle();
+    // The pick sticks and the sheet is gone.
+    expect(find.text('Hardcover'), findsOneWidget);
+    expect(find.text('Paperback'), findsNothing);
+  });
+
+  testWidgets('series toggle reveals the grouped series fields', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // Hidden by default (standalone book).
+    expect(find.text('SERIES NAME'), findsNothing);
+    expect(find.text('WHICH BOOK?'), findsNothing);
+
+    await tester.tap(find.text('Part of a series'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SERIES NAME'), findsOneWidget);
+    expect(find.text('WHICH BOOK?'), findsOneWidget);
+  });
+
+  testWidgets('a scanned-but-unmatched ISBN carries into the blank form', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(
+      _wrap(const AddEditBookScreen(initialIsbn: '9788126415419'), apiClient: fake),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('9788126415419'), findsOneWidget);
+  });
+
+  testWidgets('fill-from-photos prefills only the empty fields', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient()
+      ..workCoverUrl = 'https://proj.supabase.co/storage/v1/object/public/covers/x.jpg'
+      ..extractResult = {
+        'title': 'Wrong Title Must Not Overwrite',
+        'authors': ['Ignored Author'],
+        'publisher': null,
+        'description': 'A love story on the Kerala coast.',
+        'series_name': null,
+        'series_number': null,
+        'language': null,
+      };
+    // Edit mode: title/author/publisher already filled, description empty.
+    await tester.pumpWidget(_wrap(AddEditBookScreen(workId: _workId), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Fill in from photos'));
+    await tester.pumpAndSettle();
+
+    // The uploaded-bucket URL was what got sent for reading.
+    expect(fake.lastExtractFront, contains('/covers/x.jpg'));
+    // Empty description filled; existing title/author untouched.
+    expect(find.text('A love story on the Kerala coast.'), findsOneWidget);
+    expect(find.text('Wrong Title Must Not Overwrite'), findsNothing);
+    expect(find.text('Ignored Author'), findsNothing);
+    expect(find.text('Chemmeen'), findsWidgets);
   });
 
   testWidgets('author picker searches and surfaces an existing author', (tester) async {

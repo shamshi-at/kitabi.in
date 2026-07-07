@@ -294,7 +294,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.catalogAdd,
         name: 'catalog-add',
-        builder: (context, state) => AddEditBookScreen(workId: state.extra as String?),
+        builder: (context, state) {
+          // extra is historically a bare workId String (edit mode); the scan
+          // flow's not-found path hands over a map so the typed ISBN survives
+          // into the blank form.
+          final extra = state.extra;
+          final map = extra is Map<String, dynamic> ? extra : const <String, dynamic>{};
+          return AddEditBookScreen(
+            workId: extra is String ? extra : map['workId'] as String?,
+            initialIsbn: map['isbn'] as String?,
+          );
+        },
       ),
       GoRoute(
         path: Routes.authorPicker,

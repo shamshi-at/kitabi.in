@@ -517,13 +517,13 @@ abstract class AppLocalizations {
   /// Form field label
   ///
   /// In en, this message translates to:
-  /// **'SERIES'**
+  /// **'SERIES NAME'**
   String get formFieldSeries;
 
   /// Form field label — position within a series
   ///
   /// In en, this message translates to:
-  /// **'BOOK №'**
+  /// **'WHICH BOOK?'**
   String get formFieldBookNumber;
 
   /// Form field label
@@ -2416,16 +2416,28 @@ abstract class AppLocalizations {
   /// **'Part of a series'**
   String get formSeriesToggle;
 
+  /// Sub-label under the series toggle explaining when to use it
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on for a book that belongs to a series'**
+  String get formSeriesToggleSub;
+
   /// Help text shown when the series fields are revealed
   ///
   /// In en, this message translates to:
-  /// **'Add the series name and this book\'s place in it — e.g. “Malgudi Days” · 2.'**
+  /// **'Name the series, then which book this is in it.'**
   String get formSeriesHint;
+
+  /// Helper text under the series name field
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Harry Potter'**
+  String get formSeriesNameHelp;
 
   /// Helper text under the Book № field on the add-book form
   ///
   /// In en, this message translates to:
-  /// **'Its place in the series, e.g. 2'**
+  /// **'e.g. 3'**
   String get formBookNumberHelp;
 
   /// Button on the add-book form to add a further co-author once one is chosen
@@ -2451,6 +2463,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Scan the barcode to fill this in — edit if needed'**
   String get formIsbnScanHelp;
+
+  /// Form field label — the work's blurb/synopsis
+  ///
+  /// In en, this message translates to:
+  /// **'DESCRIPTION'**
+  String get formFieldDescription;
+
+  /// Helper text under the description field on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'The back-cover blurb — appears on share cards'**
+  String get formDescriptionHelp;
+
+  /// Button under the cover slots: read title/author/publisher/blurb off the photographed covers and prefill the empty fields
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in from photos'**
+  String get formFillFromPhotos;
+
+  /// Snackbar when extraction returned nothing usable (or every field was already filled)
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read any details from the photos.'**
+  String get formExtractNothing;
+
+  /// Snackbar when the server has no LLM key (extraction dormant)
+  ///
+  /// In en, this message translates to:
+  /// **'Reading details from photos isn\'t available right now.'**
+  String get formExtractUnavailable;
+
+  /// Snackbar when the extraction call failed
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read the photos. Try again.'**
+  String get formExtractFailed;
 
   /// Button to restart the scanner after a miss
   ///
@@ -2499,6 +2547,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose from gallery'**
   String get imageSourceGallery;
+
+  /// Dismisses the image-source / cover-options sheet without changing anything
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get imageSourceCancel;
+
+  /// Cover-options sheet: re-open the cropper on the current cover photo
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust — crop, rotate, reframe'**
+  String get coverActionAdjust;
+
+  /// Cover-options sheet: replace the current cover by taking a new photo
+  ///
+  /// In en, this message translates to:
+  /// **'Retake photo'**
+  String get coverActionReplaceCamera;
+
+  /// Cover-options sheet: replace the current cover from the gallery
+  ///
+  /// In en, this message translates to:
+  /// **'Replace from gallery'**
+  String get coverActionReplaceGallery;
+
+  /// Cover-options sheet: clear the current cover photo
+  ///
+  /// In en, this message translates to:
+  /// **'Remove photo'**
+  String get coverActionRemove;
+
+  /// Snackbar when re-cropping an existing cover fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open that image to adjust. Try replacing it instead.'**
+  String get coverAdjustFailed;
+
+  /// Title of the option-picker bottom sheet (e.g. Choose format)
+  ///
+  /// In en, this message translates to:
+  /// **'Choose {label}'**
+  String pickerChoose(String label);
 
   /// Label under the back-cover thumbnail on the book page
   ///

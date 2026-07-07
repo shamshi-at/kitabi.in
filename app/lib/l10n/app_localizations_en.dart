@@ -256,10 +256,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileLanguagesSave => 'Save';
 
   @override
-  String get formFieldSeries => 'SERIES';
+  String get formFieldSeries => 'SERIES NAME';
 
   @override
-  String get formFieldBookNumber => 'BOOK №';
+  String get formFieldBookNumber => 'WHICH BOOK?';
 
   @override
   String get formFieldPublisher => 'PUBLISHER';
@@ -1367,11 +1367,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formSeriesToggle => 'Part of a series';
 
   @override
-  String get formSeriesHint =>
-      'Add the series name and this book\'s place in it — e.g. “Malgudi Days” · 2.';
+  String get formSeriesToggleSub =>
+      'Turn on for a book that belongs to a series';
 
   @override
-  String get formBookNumberHelp => 'Its place in the series, e.g. 2';
+  String get formSeriesHint =>
+      'Name the series, then which book this is in it.';
+
+  @override
+  String get formSeriesNameHelp => 'e.g. Harry Potter';
+
+  @override
+  String get formBookNumberHelp => 'e.g. 3';
 
   @override
   String get formAuthorAddAnother => '＋ Add another author';
@@ -1386,6 +1393,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get formIsbnScanHelp =>
       'Scan the barcode to fill this in — edit if needed';
+
+  @override
+  String get formFieldDescription => 'DESCRIPTION';
+
+  @override
+  String get formDescriptionHelp =>
+      'The back-cover blurb — appears on share cards';
+
+  @override
+  String get formFillFromPhotos => 'Fill in from photos';
+
+  @override
+  String get formExtractNothing =>
+      'Couldn\'t read any details from the photos.';
+
+  @override
+  String get formExtractUnavailable =>
+      'Reading details from photos isn\'t available right now.';
+
+  @override
+  String get formExtractFailed => 'Couldn\'t read the photos. Try again.';
 
   @override
   String get scanAgain => 'Scan again';
@@ -1411,6 +1439,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get imageSourceGallery => 'Choose from gallery';
+
+  @override
+  String get imageSourceCancel => 'Cancel';
+
+  @override
+  String get coverActionAdjust => 'Adjust — crop, rotate, reframe';
+
+  @override
+  String get coverActionReplaceCamera => 'Retake photo';
+
+  @override
+  String get coverActionReplaceGallery => 'Replace from gallery';
+
+  @override
+  String get coverActionRemove => 'Remove photo';
+
+  @override
+  String get coverAdjustFailed =>
+      'Couldn\'t open that image to adjust. Try replacing it instead.';
+
+  @override
+  String pickerChoose(String label) {
+    return 'Choose $label';
+  }
 
   @override
   String get bookCoverBack => 'Back cover';
