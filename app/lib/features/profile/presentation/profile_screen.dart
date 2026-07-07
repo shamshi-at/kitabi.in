@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -916,14 +917,20 @@ class _PushDiagnosticsTile extends ConsumerWidget {
                 row('Firebase', d.firebaseAvailable ? 'ready' : 'unavailable',
                     ok: d.firebaseAvailable),
                 row('Permission', d.permission, ok: permOk),
-                if (d.apnsToken != null)
-                  row('APNs token', d.apnsToken! ? 'present' : 'MISSING', ok: d.apnsToken!),
+                if (Platform.isIOS)
+                  row(
+                    'APNs token',
+                    d.apnsToken == null ? 'checking…' : (d.apnsToken! ? 'present' : 'MISSING'),
+                    ok: d.apnsToken ?? true,
+                  ),
                 row(
                   'FCM token',
-                  fcm == null ? 'none' : '${fcm.substring(0, fcm.length < 12 ? fcm.length : 12)}…',
-                  ok: fcm != null,
+                  fcm != null
+                      ? '${fcm.substring(0, fcm.length < 12 ? fcm.length : 12)}…'
+                      : (d.checking ? 'checking…' : 'none'),
+                  ok: fcm != null || d.checking,
                 ),
-                row('Registered', d.registered ? 'yes' : 'no', ok: d.registered),
+                row('Registered', d.registered ? 'yes' : 'no', ok: d.registered || d.checking),
                 if (d.lastError != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),

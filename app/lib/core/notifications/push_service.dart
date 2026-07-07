@@ -24,6 +24,7 @@ class PushDiagnostics {
   const PushDiagnostics({
     this.firebaseAvailable = false,
     this.permission = 'unknown',
+    this.checking = false,
     this.apnsToken,
     this.fcmToken,
     this.registered = false,
@@ -32,6 +33,7 @@ class PushDiagnostics {
 
   final bool firebaseAvailable;
   final String permission; // authorized | denied | provisional | notDetermined
+  final bool checking; // token acquisition (incl. the iOS APNs poll) in progress
   final bool? apnsToken; // iOS only: null = not yet checked, true/false = present
   final String? fcmToken;
   final bool registered; // token accepted by POST /devices
@@ -42,6 +44,7 @@ class PushDiagnostics {
   PushDiagnostics copyWith({
     bool? firebaseAvailable,
     String? permission,
+    bool? checking,
     bool? apnsToken,
     Object? fcmToken = _keep,
     bool? registered,
@@ -50,6 +53,7 @@ class PushDiagnostics {
       PushDiagnostics(
         firebaseAvailable: firebaseAvailable ?? this.firebaseAvailable,
         permission: permission ?? this.permission,
+        checking: checking ?? this.checking,
         apnsToken: apnsToken ?? this.apnsToken,
         fcmToken: fcmToken == _keep ? this.fcmToken : fcmToken as String?,
         registered: registered ?? this.registered,
@@ -125,6 +129,7 @@ class PushService {
   }
 
   Future<void> _acquireAndRegister(FirebaseMessaging messaging) async {
+    _set((d) => d.copyWith(checking: true, lastError: null));
     try {
       // On iOS the FCM token exists only *after* the APNs token is set, which
       // arrives asynchronously (after registerForRemoteNotifications, which
@@ -141,6 +146,7 @@ class PushService {
         _set((d) => d.copyWith(apnsToken: apns != null));
         if (apns == null) {
           _set((d) => d.copyWith(
+              checking: false,
               lastError: 'APNs token never arrived — check the App ID "Push '
                   'Notifications" capability / provisioning profile.'));
           return; // getToken() would just throw apns-token-not-set
@@ -151,6 +157,8 @@ class PushService {
     } catch (e) {
       _set((d) => d.copyWith(lastError: 'token fetch failed: $e'));
       _token = null;
+    } finally {
+      _set((d) => d.copyWith(checking: false));
     }
     if (_token != null) await _register(_token!);
   }
