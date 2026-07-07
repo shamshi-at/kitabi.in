@@ -29,9 +29,12 @@ class _LanguagePickerScreenState extends ConsumerState<LanguagePickerScreen> {
     setState(() => _saving = true);
     try {
       await ref.read(apiClientProvider).updateMe({'preferred_languages': _selected.toList()});
+      // Wait until /me actually reflects the saved languages BEFORE navigating —
+      // otherwise the router's redirect can run while meProvider is still
+      // reloading (empty languages) and bounce us straight back here, leaving the
+      // screen stuck even though the save succeeded server-side.
       ref.invalidate(meProvider);
-      // The router's redirect (watching meProvider) now sends us Home; nudge it
-      // explicitly too so navigation feels immediate.
+      await ref.read(meProvider.future);
       if (mounted) context.go(Routes.home);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
