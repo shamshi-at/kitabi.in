@@ -633,7 +633,11 @@ class _RemindButtonState extends ConsumerState<_RemindButton> {
     final title = widget.item.book?.title ?? 'a book';
     setState(() => _sending = true);
     try {
-      await ref.read(apiClientProvider).remindToReturn(r.borrowerUserId!, title);
+      await ref.read(apiClientProvider).remindToReturn(
+            r.borrowerUserId!,
+            title,
+            bookCoverUrl: widget.item.book?.coverUrl,
+          );
       Haptics.success();
       messenger.showSnackBar(SnackBar(content: Text(l10n.lendingReminderSent(r.borrowerName))));
     } catch (_) {

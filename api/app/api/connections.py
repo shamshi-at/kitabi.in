@@ -71,7 +71,11 @@ async def remind_to_return(
             detail={"code": "not_connected", "message": "You aren't connected to this reader."},
         )
     background_tasks.add_task(
-        push_service.notify_return_reminder, me, payload.user_id, payload.book_title
+        push_service.notify_return_reminder,
+        me,
+        payload.user_id,
+        payload.book_title,
+        payload.book_cover_url,
     )
 
 

@@ -98,14 +98,18 @@ async def mirror_lending(db: AsyncSession, lender_id: uuid.UUID, record_id: uuid
     # Push the borrower about a new loan / its return (best-effort, off the
     # committed transaction). Skip deleted loans.
     if lent.deleted_at is None:
-        book_title = await _book_title(db, edition_id)
+        book_title, book_cover = await _book_title_cover(db, edition_id)
         if is_new:
-            await push_service.notify_book_lent(lender_id, borrower_id, book_title)
+            await push_service.notify_book_lent(lender_id, borrower_id, book_title, book_cover)
         elif just_returned:
-            await push_service.notify_book_returned(lender_id, borrower_id, book_title)
+            await push_service.notify_book_returned(lender_id, borrower_id, book_title, book_cover)
 
 
-async def _book_title(db: AsyncSession, edition_id: uuid.UUID) -> str:
+async def _book_title_cover(db: AsyncSession, edition_id: uuid.UUID) -> tuple[str, str | None]:
+    """The Work title (for the message) and the Edition cover URL (for the rich
+    notification image), resolved from the borrower's mirrored edition."""
     edition = await db.get(Edition, edition_id)
     work = await db.get(Work, edition.work_id) if edition is not None else None
-    return work.title if work is not None and work.title else "a book"
+    title = work.title if work is not None and work.title else "a book"
+    cover = edition.cover_url if edition is not None else None
+    return title, cover

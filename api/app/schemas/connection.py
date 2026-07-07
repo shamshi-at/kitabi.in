@@ -46,10 +46,12 @@ class ConnectionRequestIn(BaseModel):
 
 
 class RemindIn(BaseModel):
-    """Nudge a connected borrower to return a book. `book_title` is display-only."""
+    """Nudge a connected borrower to return a book. `book_title`/`book_cover_url`
+    are display-only (the cover rides along as the rich-notification image)."""
 
     user_id: uuid.UUID
     book_title: str = "a book"
+    book_cover_url: str | None = None
 
 
 class ConnectionStatusOut(BaseModel):

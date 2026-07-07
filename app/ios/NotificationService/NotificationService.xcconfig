@@ -1,0 +1,5 @@
+// Pulls in FLUTTER_BUILD_NAME / FLUTTER_BUILD_NUMBER so the extension's version
+// stays in lockstep with the app (App Store rejects a version mismatch between an
+// app and its embedded extension). Deliberately does NOT include the Pods xcconfig
+// — the extension links nothing from the app's pods.
+#include "../Flutter/Generated.xcconfig"

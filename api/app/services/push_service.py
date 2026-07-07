@@ -26,7 +26,13 @@ def _display_name(p: Profile | None) -> str:
     return "Someone"
 
 
-async def _push(target_id: uuid.UUID, title: str, body: str, data: dict[str, str]) -> None:
+async def _push(
+    target_id: uuid.UUID,
+    title: str,
+    body: str,
+    data: dict[str, str],
+    image: str | None = None,
+) -> None:
     async with SessionLocal() as db:
         tokens = await device_service.tokens_for_user(db, target_id)
         if not tokens:
@@ -35,7 +41,7 @@ async def _push(target_id: uuid.UUID, title: str, body: str, data: dict[str, str
         async with httpx.AsyncClient(timeout=10) as client:
             for token in tokens:
                 try:
-                    result = await fcm_client.send(client, token, title, body, data)
+                    result = await fcm_client.send(client, token, title, body, data, image)
                 except Exception:  # noqa: BLE001 — a bad token must not sink the rest
                     result = fcm_client.ERROR
                 if result == fcm_client.UNREGISTERED:
@@ -44,7 +50,12 @@ async def _push(target_id: uuid.UUID, title: str, body: str, data: dict[str, str
 
 
 async def _notify_from_actor(
-    actor_id: uuid.UUID, target_id: uuid.UUID, title: str, body_suffix: str, data: dict[str, str]
+    actor_id: uuid.UUID,
+    target_id: uuid.UUID,
+    title: str,
+    body_suffix: str,
+    data: dict[str, str],
+    image: str | None = None,
 ) -> None:
     """Look up the actor's name and push `{name} {body_suffix}` to the target."""
     if not get_settings().push_enabled:
@@ -52,7 +63,7 @@ async def _notify_from_actor(
     async with SessionLocal() as db:
         actor = await db.get(Profile, actor_id)
     name = _display_name(actor)
-    await _push(target_id, title, f"{name} {body_suffix}", data)
+    await _push(target_id, title, f"{name} {body_suffix}", data, image)
 
 
 async def notify_connection_request(actor_id: uuid.UUID, target_id: uuid.UUID) -> None:
@@ -75,7 +86,9 @@ async def notify_connection_accepted(actor_id: uuid.UUID, target_id: uuid.UUID) 
     )
 
 
-async def notify_book_lent(actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str) -> None:
+async def notify_book_lent(
+    actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str, book_cover: str | None = None
+) -> None:
     """Someone lent a book to the target (a connected reader)."""
     await _notify_from_actor(
         actor_id,
@@ -83,10 +96,13 @@ async def notify_book_lent(actor_id: uuid.UUID, target_id: uuid.UUID, book_title
         title="A book's on its way to you",
         body_suffix=f"lent you “{book_title}” on Kitabi",
         data={"type": "lend_new"},
+        image=book_cover,
     )
 
 
-async def notify_book_returned(actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str) -> None:
+async def notify_book_returned(
+    actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str, book_cover: str | None = None
+) -> None:
     """The lender marked a loan returned."""
     await _notify_from_actor(
         actor_id,
@@ -94,65 +110,12 @@ async def notify_book_returned(actor_id: uuid.UUID, target_id: uuid.UUID, book_t
         title="Loan marked returned",
         body_suffix=f"marked “{book_title}” returned",
         data={"type": "lend_returned"},
+        image=book_cover,
     )
 
 
-async def send_test(user_id: uuid.UUID) -> dict[str, object]:
-    """Push a test notification to the caller's own devices — powers the in-app
-    "Send test" button so a solo user can verify push end-to-end without a second
-    account. Returns counts so the app can show a precise result."""
-    if not get_settings().push_enabled:
-        return {"push_enabled": False, "tokens": 0, "sent": 0}
-    async with SessionLocal() as db:
-        tokens = await device_service.tokens_for_user(db, user_id)
-        sent = 0
-        dead: list[str] = []
-        error: str | None = None
-        async with httpx.AsyncClient(timeout=10) as client:
-            for token in tokens:
-                try:
-                    result, status_code, detail = await fcm_client.send_verbose(
-                        client,
-                        token,
-                        "Kitabi test 🔔",
-                        "Push notifications are working — you're all set.",
-                        {"type": "test"},
-                    )
-                except Exception as exc:  # noqa: BLE001 — a bad token must not sink the rest
-                    result, status_code, detail = fcm_client.ERROR, 0, str(exc)
-                if result == fcm_client.SENT:
-                    sent += 1
-                elif result == fcm_client.UNREGISTERED:
-                    dead.append(token)
-                if result != fcm_client.SENT and error is None:
-                    # Surface FCM's error status (e.g. THIRD_PARTY_AUTH_ERROR =
-                    # missing/invalid APNs key) so the cause is legible in-app.
-                    error = _fcm_error_summary(status_code, detail)
-        await device_service.prune(db, dead)
-        result_out: dict[str, object] = {"push_enabled": True, "tokens": len(tokens), "sent": sent}
-        if error is not None:
-            result_out["error"] = error
-        return result_out
-
-
-def _fcm_error_summary(status_code: int, detail: str) -> str:
-    """Pull FCM's machine status out of the error body for a compact message."""
-    for marker in (
-        "THIRD_PARTY_AUTH_ERROR",
-        "SENDER_ID_MISMATCH",
-        "UNREGISTERED",
-        "INVALID_ARGUMENT",
-        "QUOTA_EXCEEDED",
-        "UNAVAILABLE",
-        "INTERNAL",
-    ):
-        if marker in detail:
-            return f"{status_code} {marker}"
-    return f"{status_code}: {detail[:120]}"
-
-
 async def notify_return_reminder(
-    actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str
+    actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str, book_cover: str | None = None
 ) -> None:
     """The lender nudges a connected borrower to return a book."""
     await _notify_from_actor(
@@ -161,4 +124,5 @@ async def notify_return_reminder(
         title="A gentle nudge",
         body_suffix=f"would like “{book_title}” back",
         data={"type": "lend_reminder"},
+        image=book_cover,
     )
