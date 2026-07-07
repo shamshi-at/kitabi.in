@@ -1,10 +1,12 @@
-"""Backfill edition cover images from OpenLibrary.
+"""Backfill edition cover images from OpenLibrary, then Wikipedia.
 
-For every edition with no cover_url, tries the OpenLibrary cover by ISBN first
-(exact, no mismatch risk), then falls back to an OpenLibrary title(+author)
-search — accepting that cover only when the returned title overlaps ours, so we
-don't paste the wrong book's cover on. Idempotent: re-running only touches
-editions still missing a cover.
+For every edition with no cover_url, tries in order: the OpenLibrary cover by
+ISBN (exact, no mismatch risk), an OpenLibrary title(+author) search, then a
+Wikipedia article-image lookup (keyless — better coverage for famous regional /
+Malayalam titles). Each fallback is guarded against a wrong match: OpenLibrary by
+shared title word, Wikipedia by requiring a book-ish category (and rejecting
+film/album pages) so we never paste a film poster on a novel. Idempotent:
+re-running only touches editions still missing a cover.
 
 Run from the api/ directory:
 
@@ -34,7 +36,13 @@ from app.models import Edition, Work  # noqa: E402
 
 COVERS = "https://covers.openlibrary.org"
 SEARCH = "https://openlibrary.org/search.json"
+WIKI = "https://en.wikipedia.org/w/api.php"
 _STOP = {"the", "a", "an", "of", "and", "de", "la"}
+# Wikipedia's lead image is the book cover only when the article is about a book —
+# require a book-ish category and reject films/albums/disambiguation so we never
+# paste a film poster on a novel.
+_BOOKISH = ("novel", "book", "short stor", "story collect", "poetry", "memoir", "play")
+_NOT_BOOK = ("film", "album", "song", "disambiguation", "television")
 
 
 def _words(text: str) -> set[str]:
@@ -74,6 +82,62 @@ async def _cover_by_search(http: httpx.AsyncClient, title: str, author: str | No
     return f"{COVERS}/b/id/{docs[0]['cover_i']}-L.jpg"
 
 
+async def _cover_by_wikipedia(
+    http: httpx.AsyncClient, title: str, author: str | None
+) -> str | None:
+    ours = _words(title) - _STOP
+    if not ours:
+        return None
+    try:
+        r = await http.get(
+            WIKI,
+            params={
+                "action": "query",
+                "list": "search",
+                "srsearch": f"{title} {author}" if author else title,
+                "srlimit": 3,
+                "format": "json",
+            },
+            timeout=20,
+        )
+        hits = r.json().get("query", {}).get("search", [])
+    except (httpx.HTTPError, ValueError):
+        return None
+    for hit in hits:
+        page = hit.get("title", "")
+        # The article title must share a significant word with ours.
+        if ours.isdisjoint(_words(page) - _STOP):
+            continue
+        try:
+            r2 = await http.get(
+                WIKI,
+                params={
+                    "action": "query",
+                    "titles": page,
+                    "prop": "pageimages|categories",
+                    "piprop": "thumbnail",
+                    "pithumbsize": 600,
+                    "cllimit": "max",
+                    "clshow": "!hidden",
+                    "format": "json",
+                },
+                timeout=20,
+            )
+            pages = r2.json().get("query", {}).get("pages", {})
+        except (httpx.HTTPError, ValueError):
+            continue
+        for pg in pages.values():
+            cats = " ".join(c.get("title", "").lower() for c in pg.get("categories", []))
+            if any(bad in cats for bad in _NOT_BOOK):
+                continue
+            if not any(good in cats for good in _BOOKISH):
+                continue
+            thumb = (pg.get("thumbnail") or {}).get("source")
+            if thumb:
+                return thumb
+    return None
+
+
 async def backfill(isbn_only: bool) -> None:
     settings = get_settings()
     url = _normalize(settings.database_url)
@@ -95,6 +159,8 @@ async def backfill(isbn_only: bool) -> None:
                 if cover is None and not isbn_only and ed.work is not None:
                     author = ed.work.authors[0].name if ed.work.authors else None
                     cover = await _cover_by_search(http, ed.work.title, author)
+                    if cover is None:
+                        cover = await _cover_by_wikipedia(http, ed.work.title, author)
                 if cover:
                     ed.cover_url = cover
                     updated += 1
