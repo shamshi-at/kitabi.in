@@ -32,8 +32,12 @@ _SYSTEM = (
     "review quotes, price, or barcode text; keep it under 150 words. "
     "`series_number` is the book's position if the cover shows one (e.g. "
     "'Book 3'). `language` is the language the book itself is written in, as "
-    "an English word (e.g. 'Malayalam'). Use null for anything not visible — "
-    "never guess or invent. Respond with ONLY a JSON object exactly like: "
+    "an English word (e.g. 'Malayalam'). "
+    "CRITICAL: transcribe ONLY text that is actually printed and legible in the "
+    "image. Do NOT guess, translate, or invent a plausible-sounding title or "
+    "name — if a field is not clearly readable, return null for it. It is far "
+    "better to return null than a made-up value. "
+    "Respond with ONLY a JSON object exactly like: "
     '{"title": null, "authors": [], "publisher": null, "description": null, '
     '"series_name": null, "series_number": null, "language": null}'
 )

@@ -40,9 +40,13 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     recs_model: str = "claude-haiku-4-5-20251001"
     # Cover-photo extraction (prefill the add-book form from photographs of a
-    # book the catalog doesn't know). Same key/gate as recs; a vision-capable
-    # small model, pennies per call, dormant when the key is unset.
-    extraction_model: str = "claude-haiku-4-5-20251001"
+    # book the catalog doesn't know). Same key/gate as recs. Uses a STRONGER
+    # model than recs: extraction is rare (only for books no catalog knows,
+    # disproportionately regional-language) and reads stylised regional scripts
+    # off a photo — Haiku hallucinated Malayalam titles (verified on device
+    # 8 Jul 2026), Sonnet reads them. Still pennies per call given how rarely
+    # this path runs.
+    extraction_model: str = "claude-sonnet-5"
 
     # Push notifications (FCM HTTP v1). Optional, opt-in like recs (rule 8): the
     # owner pastes a Firebase Admin service-account JSON here (one string). Unset
