@@ -41,15 +41,33 @@ class PushService {
     );
 
     try {
-      // iOS resolves the FCM token only once the APNs token is set, which can
-      // lag; getToken may return null/throw until then. onTokenRefresh below
-      // registers it the moment it's ready, so a null first attempt is fine.
-      if (Platform.isIOS) await messaging.getAPNSToken();
+      // On iOS the FCM token exists only *after* the APNs token is set, which
+      // arrives asynchronously (a second or two after registerForRemoteNotifications,
+      // which requestPermission triggers). Calling getToken() before then throws
+      // `apns-token-not-set` — and onTokenRefresh does NOT fire for the *initial*
+      // token, only on rotation, so a swallowed first failure means the token is
+      // lost until the app is reinstalled. That's why iOS never registered while
+      // Android (no APNs dependency) did. Poll for the APNs token first.
+      if (Platform.isIOS) {
+        var apns = await messaging.getAPNSToken();
+        for (var i = 0; i < 20 && apns == null; i++) {
+          await Future<void>.delayed(const Duration(seconds: 1));
+          apns = await messaging.getAPNSToken();
+        }
+        if (apns == null && kDebugMode) {
+          debugPrint('PushService: APNs token never arrived — check the app\'s '
+              'Push Notifications capability / provisioning profile.');
+        }
+      }
       _token = await messaging.getToken();
-    } catch (_) {
+      if (kDebugMode) debugPrint('PushService: FCM token ${_token == null ? "null" : "acquired"}');
+    } catch (e) {
+      if (kDebugMode) debugPrint('PushService: token fetch failed: $e');
       _token = null;
     }
     if (_token != null) await _register(_token!);
+    // Belt-and-braces: also catch the token if it only becomes available later
+    // (e.g. APNs was slow past the poll window, or it rotates).
     messaging.onTokenRefresh.listen((t) {
       _token = t;
       _register(t);
