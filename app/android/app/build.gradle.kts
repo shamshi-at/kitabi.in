@@ -21,10 +21,11 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "in.kitabi.kitabi"
-    // Pinned to 35 (not flutter.compileSdkVersion, which lags at 33): image_cropper's
-    // AndroidX deps require compiling against API 34+, and Play requires targetSdk 35
-    // for new apps. compileSdk must be >= targetSdk.
-    compileSdk = 35
+    // Pinned to 36 (not flutter.compileSdkVersion, which lags at 33): the bundled
+    // Flutter plugins (mobile_scanner, app_links, image_picker…) are compiled
+    // against API 36, so the app must compile against at least that. Backward-
+    // compatible; targetSdk stays at Play's required 35.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
