@@ -121,7 +121,18 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       Malayalam) and prefills **only empty** fields: title, authors, publisher,
       description (new editable form field, persisted on the Work), series, language.
       URL allow-list = our covers bucket only; `extraction_service.py` unit-tested
-      with a mocked LLM; live output pending a real key (same standing gap as recs)
+      with a mocked LLM. **Verified live on a real iPhone 8 Jul 2026** (build 38): full
+      pipeline works — capture → freely-resizable crop (aspect lock removed) → upload →
+      "Fill in from photos" → prefill. Haiku hallucinated Malayalam titles so
+      extraction now uses **Sonnet** (`extraction_model`), which read title/author/
+      publisher/back-cover description off a stylised Malayalam cover accurately.
+  - [ ] Follow-up: **ISBN-from-photo** (best-effort) — ask the model for the 13-digit
+        ISBN near the back-cover barcode, validate the checksum server-side, prefill
+        only if valid (barcode Scan stays the exact path). New `CoverExtractOut` field
+        + `_applyExtracted`.
+  - [ ] Follow-up: **attractive extraction loader** — the "Fill in from photos" action
+        takes a few seconds on Sonnet; replace the small spinner with a Reading Room
+        loading state (e.g. shimmer over the fields being read / "Reading your cover…").
 
 ## Phase 3 — Personal library + sync engine (Layer 2)
 
