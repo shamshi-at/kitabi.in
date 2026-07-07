@@ -21,7 +21,10 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "in.kitabi.kitabi"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned to 35 (not flutter.compileSdkVersion, which lags at 33): image_cropper's
+    // AndroidX deps require compiling against API 34+, and Play requires targetSdk 35
+    // for new apps. compileSdk must be >= targetSdk.
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -38,7 +41,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
