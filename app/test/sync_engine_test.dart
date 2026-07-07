@@ -132,6 +132,57 @@ void main() {
     expect(await db.syncStateDao.cursorFor('user-1'), 42);
   });
 
+  test('pull applies a borrowed mirror record (null library_entry_id, has edition_id)', () async {
+    // A book lent to me by a connected reader arrives as a borrowed mirror:
+    // library_entry_id is null (I don't own it) and the book rides on edition_id.
+    // The old apply cast library_entry_id to a non-null String and threw, failing
+    // the whole pull; and it dropped direction/edition_id so the Borrowed shelf
+    // stayed empty. This locks in the fix.
+    api.nextPull = {
+      'changes': [
+        {
+          'entity': 'lending_records',
+          'data': {
+            'id': 'mirror-1',
+            'user_id': 'user-1',
+            'direction': 'borrowed',
+            'library_entry_id': null,
+            'edition_id': 'edition-borrowed-1',
+            'borrower_name': 'Alice',
+            'borrower_user_id': 'lender-1',
+            'linked_loan_id': 'loan-1',
+            'lent_date': '2026-07-06',
+            'due_date': null,
+            'returned_date': null,
+            'note': null,
+            'created_at': '2026-07-06T10:00:00+00:00',
+            'updated_at': '2026-07-06T10:00:00+00:00',
+            'deleted_at': null,
+            'server_seq': 50,
+          },
+        },
+      ],
+      'next_cursor': 50,
+      'has_more': false,
+    };
+
+    await engine.syncNow('user-1');
+
+    final records = await db.select(db.lendingRecords).get();
+    expect(records, hasLength(1));
+    final r = records.first;
+    expect(r.id, 'mirror-1');
+    expect(r.direction, 'borrowed');
+    expect(r.libraryEntryId, isNull);
+    expect(r.editionId, 'edition-borrowed-1');
+    expect(r.borrowerName, 'Alice');
+    expect(r.linkedLoanId, 'loan-1');
+    // The pull committed (cursor advanced) — i.e. it didn't crash and roll back.
+    expect(await db.syncStateDao.cursorFor('user-1'), 50);
+    // And it's queued for cover hydration (no owned entry, so edition-carried).
+    expect(await db.lendingRecordsDao.activeBorrowedEditionIds(), ['edition-borrowed-1']);
+  });
+
   test('a row with a pending local op is not clobbered by an in-flight pull', () async {
     final repo = LibraryRepository(db, session);
     await repo.add(editionId: 'edition-1', status: 'reading');

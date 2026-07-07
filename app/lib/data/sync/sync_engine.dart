@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../api/api_client.dart';
+import '../db/catalog_cache.dart';
 import '../db/database.dart';
 
 /// Outcome of one sync run — ops pushed and deltas pulled — surfaced to the UI.
@@ -46,6 +47,15 @@ class SyncEngine {
     } catch (_) {
       // Network/parse failure on pull — next sync resumes from the same
       // saved cursor, so nothing is lost.
+    }
+    // A book lent to me arrives as a borrowed mirror record carrying only an
+    // edition id (I never added it), so its catalog data isn't cached — fetch it
+    // now, right after the pull, so the Borrowed shelf renders it without waiting
+    // for a specific screen to trigger the hydration. No-op when nothing's new.
+    try {
+      await cacheBorrowedBooks(db, api);
+    } catch (_) {
+      // Offline / catalog fetch failed — the next sync (or the grid) retries.
     }
     return SyncReport(pushedOps: pushed, pulledChanges: pulled);
   }
@@ -278,6 +288,12 @@ class SyncEngine {
               ),
             );
       case 'lending_records':
+        // A borrowed *mirror* record (lent to me by a connected reader) carries a
+        // null library_entry_id and its book via edition_id — so every nullable
+        // field must be read as such (the old `library_entry_id as String` cast
+        // threw on a mirror, failing the whole pull transaction), and direction/
+        // edition_id/linked_loan_id/note must be applied or the Borrowed shelf
+        // stays empty.
         await db.into(db.lendingRecords).insertOnConflictUpdate(
               LendingRecordsCompanion(
                 id: Value(d['id'] as String),
@@ -288,12 +304,16 @@ class SyncEngine {
                 syncStatus: synced.syncStatus,
                 lastSyncedAt: synced.lastSyncedAt,
                 serverSeq: synced.serverSeq,
-                libraryEntryId: Value(d['library_entry_id'] as String),
+                direction: Value(d['direction'] as String? ?? 'lent'),
+                libraryEntryId: Value(d['library_entry_id'] as String?),
+                editionId: Value(d['edition_id'] as String?),
                 borrowerName: Value(d['borrower_name'] as String),
                 borrowerUserId: Value(d['borrower_user_id'] as String?),
+                linkedLoanId: Value(d['linked_loan_id'] as String?),
                 lentDate: Value(ts('lent_date')!),
                 dueDate: Value(ts('due_date')),
                 returnedDate: Value(ts('returned_date')),
+                note: Value(d['note'] as String?),
               ),
             );
       case 'activity_log_entries':

@@ -12,6 +12,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'data/sync/background_sync.dart';
 import 'data/sync/connectivity_sync.dart';
+import 'data/sync/sync_providers.dart';
 import 'features/settings/theme_mode_provider.dart';
 import 'l10n/app_localizations.dart';
 
@@ -43,11 +44,38 @@ Future<void> main() async {
   runApp(ProviderScope(child: KitabiApp()));
 }
 
-class KitabiApp extends ConsumerWidget {
+class KitabiApp extends ConsumerStatefulWidget {
   const KitabiApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<KitabiApp> createState() => _KitabiAppState();
+}
+
+class _KitabiAppState extends ConsumerState<KitabiApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Coming back to the foreground: pull down anything that landed while we were
+    // away — most importantly a book a connected reader lent us, so the Borrowed
+    // shelf is up to date the moment the user looks at it.
+    if (state == AppLifecycleState.resumed) {
+      ref.read(syncTriggerProvider)();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.watch(connectivitySyncProvider); // activates the listener once
     ref.watch(deepLinkListenerProvider); // routes kitabi.in share links into the app
     ref.watch(pushLifecycleProvider); // registers FCM token on sign-in, clears on sign-out

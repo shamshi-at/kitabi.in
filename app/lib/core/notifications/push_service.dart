@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/api/api_client.dart';
+import '../../data/sync/sync_providers.dart';
 import '../auth/auth_providers.dart';
 import '../auth/auth_service.dart';
 import '../router/app_router.dart';
@@ -28,7 +29,10 @@ class PushService {
 
   bool get _available => !kIsWeb && Firebase.apps.isNotEmpty;
 
-  Future<void> start({void Function(RemoteMessage message)? onOpen}) async {
+  Future<void> start({
+    void Function(RemoteMessage message)? onOpen,
+    void Function()? onLendEvent,
+  }) async {
     if (_started || !_available) return;
     _started = true;
     final messaging = FirebaseMessaging.instance;
@@ -54,6 +58,17 @@ class PushService {
       final initial = await messaging.getInitialMessage();
       if (initial != null) onOpen(initial);
       FirebaseMessaging.onMessageOpenedApp.listen(onOpen);
+    }
+
+    // A lending push arriving while the app is foregrounded → pull immediately so
+    // a book just lent to me appears on the Borrowed shelf without waiting.
+    if (onLendEvent != null) {
+      FirebaseMessaging.onMessage.listen((m) {
+        final type = m.data['type'];
+        if (type == 'lend_new' || type == 'lend_returned' || type == 'lend_reminder') {
+          onLendEvent();
+        }
+      });
     }
   }
 
@@ -129,16 +144,19 @@ final pushLifecycleProvider = Provider<void>((ref) {
       final was = prev?.valueOrNull;
       final now = next.valueOrNull;
       if (now != null && was == null) {
-        push.start(onOpen: (message) {
-          final router = ref.read(routerProvider);
-          final type = message.data['type'];
-          // Route the tap to where the event lives.
-          if (type == 'lend_new' || type == 'lend_returned' || type == 'lend_reminder') {
-            router.go(Routes.lendingLedger);
-          } else {
-            router.push(Routes.connections);
-          }
-        });
+        push.start(
+          onOpen: (message) {
+            final router = ref.read(routerProvider);
+            final type = message.data['type'];
+            // Route the tap to where the event lives.
+            if (type == 'lend_new' || type == 'lend_returned' || type == 'lend_reminder') {
+              router.go(Routes.lendingLedger);
+            } else {
+              router.push(Routes.connections);
+            }
+          },
+          onLendEvent: () => ref.read(syncTriggerProvider)(),
+        );
       } else if (now == null && was != null) {
         push.stop();
       }
