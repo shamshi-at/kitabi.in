@@ -16,6 +16,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Locate flutter — on PATH if set up, else the known SDK location (CLAUDE.md:
+# SDK at ~/development/flutter, not on the default PATH).
+FLUTTER="$(command -v flutter || true)"
+if [[ -z "$FLUTTER" && -x "$HOME/development/flutter/bin/flutter" ]]; then
+  FLUTTER="$HOME/development/flutter/bin/flutter"
+fi
+if [[ -z "$FLUTTER" ]]; then
+  echo "error: flutter not found on PATH or at ~/development/flutter/bin." >&2
+  exit 1
+fi
+
 ENV_FILE="dart_defines.env"
 REQUIRED_KEYS="API_BASE_URL SUPABASE_URL SUPABASE_PUBLISHABLE_KEY"
 
@@ -36,4 +47,4 @@ for key in $REQUIRED_KEYS; do
 done
 
 echo "Building IPA with: $REQUIRED_KEYS"
-flutter build ipa "${define_args[@]}" "$@"
+"$FLUTTER" build ipa "${define_args[@]}" "$@"
