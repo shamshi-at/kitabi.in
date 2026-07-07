@@ -5,7 +5,7 @@ httpx.MockTransport, mirroring the recommendations tests."""
 import httpx
 import pytest
 
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
 from app.services.extraction_service import (
     _clean,
     _extract_object,
@@ -16,7 +16,12 @@ from app.services.extraction_service import (
 _BUCKET = "https://proj.supabase.co/storage/v1/object/public/covers"
 
 
-async def test_cover_extract_disabled_without_key(client):
+async def test_cover_extract_disabled_without_key(client, monkeypatch):
+    """Forced disabled regardless of the ambient .env (a developer may have a
+    real key set locally) — the endpoint reads get_settings() directly."""
+    disabled = get_settings().model_copy(update={"anthropic_api_key": ""})
+    monkeypatch.setattr("app.api.catalog.get_settings", lambda: disabled)
+
     resp = await client.post("/catalog/cover-extract", json={"front_url": f"{_BUCKET}/x.jpg"})
     assert resp.status_code == 503
     # The global handler flattens structured detail to the top level.

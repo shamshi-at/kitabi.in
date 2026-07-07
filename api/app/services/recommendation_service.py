@@ -25,7 +25,11 @@ _SYSTEM = (
     "of candidate books, choose the ones they are most likely to love. For each "
     "pick, write one warm, plain-language sentence explaining why, referencing "
     "their actual ratings or reading patterns — never marketing language. "
-    'Respond with ONLY a JSON array like [{"work_id": "<id>", "why": "<sentence>"}], '
+    # Braces in the JSON example are doubled so str.format() emits them
+    # literally and only substitutes {limit} — a single brace here makes
+    # .format() read the example as a field and raise KeyError at call time
+    # (never caught by tests, which only exercise the disabled path).
+    'Respond with ONLY a JSON array like [{{"work_id": "<id>", "why": "<sentence>"}}], '
     "using work_id values from the candidates. Pick at most {limit}; fewer is fine."
 )
 
