@@ -1054,6 +1054,90 @@ abstract class AppLocalizations {
   /// **'Borrowed · {count}'**
   String lendingBorrowedTab(int count);
 
+  /// Rejected tab label with count — lent books whose borrower declined the connection
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected · {count}'**
+  String lendingRejectedTab(int count);
+
+  /// Intro text on the Rejected tab of the lending ledger
+  ///
+  /// In en, this message translates to:
+  /// **'These readers declined your connection request. The book is still with them — re-send the request, or make them a private contact you track yourself.'**
+  String get lendingRejectedIntro;
+
+  /// Empty state on the Rejected tab
+  ///
+  /// In en, this message translates to:
+  /// **'No declined loans.\nIf someone declines your connection, the loan shows here.'**
+  String get lendingRejectedEmpty;
+
+  /// Stamp on a lent card whose borrower declined the connection
+  ///
+  /// In en, this message translates to:
+  /// **'Declined'**
+  String get lendingDeclinedStamp;
+
+  /// Button to re-send a declined connection request
+  ///
+  /// In en, this message translates to:
+  /// **'Resend request'**
+  String get lendingResendRequest;
+
+  /// Snackbar after re-sending a connection request
+  ///
+  /// In en, this message translates to:
+  /// **'Request re-sent.'**
+  String get lendingResendSent;
+
+  /// Button to unlink a Kitabi user from a loan and keep them as a private contact
+  ///
+  /// In en, this message translates to:
+  /// **'Make private contact'**
+  String get lendingMakePrivate;
+
+  /// Confirm-dialog title for unlinking a Kitabi user from a loan
+  ///
+  /// In en, this message translates to:
+  /// **'Make a private contact?'**
+  String get lendingMakePrivateTitle;
+
+  /// Confirm-dialog body for unlinking a Kitabi user from a loan
+  ///
+  /// In en, this message translates to:
+  /// **'This unlinks {name}\'s Kitabi account from the loan. It stays on your ledger as a private contact you track yourself — they won\'t see it or get reminders.'**
+  String lendingMakePrivateBody(String name);
+
+  /// Confirm button for unlinking a Kitabi user from a loan
+  ///
+  /// In en, this message translates to:
+  /// **'Unlink'**
+  String get lendingMakePrivateConfirm;
+
+  /// Text field label for the private contact name when unlinking
+  ///
+  /// In en, this message translates to:
+  /// **'Contact name'**
+  String get lendingContactNameLabel;
+
+  /// Button to nudge a connected borrower to return a book
+  ///
+  /// In en, this message translates to:
+  /// **'Remind'**
+  String get lendingRemind;
+
+  /// Snackbar after sending a return reminder
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder sent to {name}.'**
+  String lendingReminderSent(String name);
+
+  /// Snackbar when a return reminder fails to send
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the reminder. You may not be connected.'**
+  String get lendingReminderFailed;
+
   /// Section header for books currently borrowed
   ///
   /// In en, this message translates to:

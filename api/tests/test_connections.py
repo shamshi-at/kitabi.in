@@ -137,6 +137,27 @@ async def test_denied_request_shows_as_rejected_to_sender(db_sessionmaker, user,
         assert rejected[0]["other"]["username"] == "bob"
 
 
+async def test_remind_requires_connection(db_sessionmaker, user, user_b):
+    await _make_profile(db_sessionmaker, user, "alice")
+    await _make_profile(db_sessionmaker, user_b, "bob")
+    async with _client(db_sessionmaker, user) as a, _client(db_sessionmaker, user_b) as b:
+        # Not connected yet — a reminder is refused.
+        resp = await a.post(
+            "/connections/remind", json={"user_id": user_b["id"], "book_title": "Aadujeevitham"}
+        )
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_connected"
+
+        # Connect, then the reminder is accepted (push itself no-ops in tests).
+        await a.post("/connections", json={"addressee_id": user_b["id"]})
+        conn_id = (await b.get("/connections")).json()["incoming"][0]["id"]
+        await b.post(f"/connections/{conn_id}/accept")
+        resp = await a.post(
+            "/connections/remind", json={"user_id": user_b["id"], "book_title": "Aadujeevitham"}
+        )
+        assert resp.status_code == 204
+
+
 async def test_block_prevents_resend(db_sessionmaker, user, user_b):
     await _make_profile(db_sessionmaker, user, "alice")
     await _make_profile(db_sessionmaker, user_b, "bob")

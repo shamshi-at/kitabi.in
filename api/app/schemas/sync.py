@@ -135,6 +135,9 @@ class LendingRecordCreate(BaseModel):
 
 class LendingRecordUpdate(BaseModel):
     borrower_name: str | None = None
+    # Sent (possibly as null) when a rejected loan is unlinked to a private
+    # contact — clearing the Kitabi user reference. Explicit-null clears it.
+    borrower_user_id: uuid.UUID | None = None
     due_date: date | None = None
     returned_date: date | None = None
     note: str | None = None

@@ -579,6 +579,57 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String lendingRejectedTab(int count) {
+    return 'Rejected · $count';
+  }
+
+  @override
+  String get lendingRejectedIntro =>
+      'These readers declined your connection request. The book is still with them — re-send the request, or make them a private contact you track yourself.';
+
+  @override
+  String get lendingRejectedEmpty =>
+      'No declined loans.\nIf someone declines your connection, the loan shows here.';
+
+  @override
+  String get lendingDeclinedStamp => 'Declined';
+
+  @override
+  String get lendingResendRequest => 'Resend request';
+
+  @override
+  String get lendingResendSent => 'Request re-sent.';
+
+  @override
+  String get lendingMakePrivate => 'Make private contact';
+
+  @override
+  String get lendingMakePrivateTitle => 'Make a private contact?';
+
+  @override
+  String lendingMakePrivateBody(String name) {
+    return 'This unlinks $name\'s Kitabi account from the loan. It stays on your ledger as a private contact you track yourself — they won\'t see it or get reminders.';
+  }
+
+  @override
+  String get lendingMakePrivateConfirm => 'Unlink';
+
+  @override
+  String get lendingContactNameLabel => 'Contact name';
+
+  @override
+  String get lendingRemind => 'Remind';
+
+  @override
+  String lendingReminderSent(String name) {
+    return 'Reminder sent to $name.';
+  }
+
+  @override
+  String get lendingReminderFailed =>
+      'Couldn\'t send the reminder. You may not be connected.';
+
+  @override
   String get lendingWithYouNowSection => 'With you now';
 
   @override

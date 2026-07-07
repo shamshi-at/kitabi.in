@@ -95,3 +95,16 @@ async def notify_book_returned(actor_id: uuid.UUID, target_id: uuid.UUID, book_t
         body_suffix=f"marked “{book_title}” returned",
         data={"type": "lend_returned"},
     )
+
+
+async def notify_return_reminder(
+    actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str
+) -> None:
+    """The lender nudges a connected borrower to return a book."""
+    await _notify_from_actor(
+        actor_id,
+        target_id,
+        title="A gentle nudge",
+        body_suffix=f"would like “{book_title}” back",
+        data={"type": "lend_reminder"},
+    )

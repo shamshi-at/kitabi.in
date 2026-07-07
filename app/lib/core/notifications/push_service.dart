@@ -109,7 +109,7 @@ final pushLifecycleProvider = Provider<void>((ref) {
           final router = ref.read(routerProvider);
           final type = message.data['type'];
           // Route the tap to where the event lives.
-          if (type == 'lend_new' || type == 'lend_returned') {
+          if (type == 'lend_new' || type == 'lend_returned' || type == 'lend_reminder') {
             router.go(Routes.lendingLedger);
           } else {
             router.push(Routes.connections);

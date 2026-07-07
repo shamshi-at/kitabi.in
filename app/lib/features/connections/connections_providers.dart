@@ -90,8 +90,14 @@ class ConnectionsData {
     if (accepted.any((c) => c.other.id == userId)) return 'accepted';
     if (outgoing.any((c) => c.other.id == userId)) return 'pending_out';
     if (incoming.any((c) => c.other.id == userId)) return 'pending_in';
+    if (rejected.any((c) => c.other.id == userId)) return 'rejected';
     return null;
   }
+
+  /// The borrower declined the lender's connection request — the loan stands, but
+  /// it can't link to their account until they accept (or it's made a private
+  /// contact instead).
+  bool isRejected(String userId) => rejected.any((c) => c.other.id == userId);
 }
 
 /// The connections inbox + status source. autoDispose so it refetches each time

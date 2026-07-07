@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/api/api_client.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
@@ -44,11 +45,21 @@ class LendingLedgerScreen extends ConsumerWidget {
           loading: () => ListSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(allLendingProvider)),
           data: (all) {
+            final conn = ref.watch(connectionsProvider).valueOrNull;
             final lent = all.where((r) => r.record.direction != 'borrowed').toList();
             final borrowed = all.where((r) => r.record.direction == 'borrowed').toList();
+            // The "Lent out" count is active loans only (still out) — a returned
+            // book is no longer lent. Rejected loans are the still-out ones whose
+            // borrower declined the connection (the book stands, the link doesn't).
+            final activeLent = lent.where((r) => r.record.returnedDate == null).toList();
+            final rejected = activeLent
+                .where((r) =>
+                    r.record.borrowerUserId != null &&
+                    (conn?.isRejected(r.record.borrowerUserId!) ?? false))
+                .toList();
 
             return DefaultTabController(
-              length: 2,
+              length: 3,
               child: Column(
                 children: [
                   Padding(
@@ -64,12 +75,15 @@ class LendingLedgerScreen extends ConsumerWidget {
                     ),
                   ),
                   TabBar(
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
                     labelColor: AppColors.oxblood,
                     unselectedLabelColor: AppColors.inkSoft,
                     indicatorColor: AppColors.oxblood,
                     labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                     tabs: [
-                      Tab(text: l10n.lendingLentOutTab(lent.length)),
+                      Tab(text: l10n.lendingLentOutTab(activeLent.length)),
+                      Tab(text: l10n.lendingRejectedTab(rejected.length)),
                       Tab(text: l10n.lendingBorrowedTab(borrowed.length)),
                     ],
                   ),
@@ -77,6 +91,7 @@ class LendingLedgerScreen extends ConsumerWidget {
                     child: TabBarView(
                       children: [
                         _LentView(records: lent),
+                        _RejectedView(records: rejected),
                         _BorrowedView(records: borrowed),
                       ],
                     ),
@@ -208,6 +223,201 @@ class _BorrowedView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Lent books whose borrower declined the connection request. The loan still
+/// stands (the book's still out) — this tab is where the lender re-sends the
+/// request or makes the borrower a private contact they track themselves.
+class _RejectedView extends StatelessWidget {
+  const _RejectedView({required this.records});
+
+  final List<LendingWithBook> records;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (records.isEmpty) {
+      return _EmptyState(text: l10n.lendingRejectedEmpty);
+    }
+    return ListView(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
+      children: [
+        Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Text(
+            l10n.lendingRejectedIntro,
+            style: TextStyle(color: AppColors.inkSoft, fontSize: 11, height: 1.35),
+          ),
+        ),
+        for (final item in records) _RejectedCard(item: item),
+      ],
+    );
+  }
+}
+
+class _RejectedCard extends ConsumerStatefulWidget {
+  const _RejectedCard({required this.item});
+
+  final LendingWithBook item;
+
+  @override
+  ConsumerState<_RejectedCard> createState() => _RejectedCardState();
+}
+
+class _RejectedCardState extends ConsumerState<_RejectedCard> {
+  bool _busy = false;
+
+  Future<void> _resend() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await ref.read(apiClientProvider).requestConnection(widget.item.record.borrowerUserId!);
+      ref.invalidate(connectionsProvider);
+      Haptics.success();
+      messenger.showSnackBar(SnackBar(content: Text(l10n.lendingResendSent)));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.lendingReminderFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _makePrivate() async {
+    final l10n = AppLocalizations.of(context)!;
+    final r = widget.item.record;
+    final controller = TextEditingController(text: r.borrowerName);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.paper,
+        title: Text(l10n.lendingMakePrivateTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.lendingMakePrivateBody(r.borrowerName),
+              style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.inkSoft),
+            ),
+            SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                labelText: l10n.lendingContactNameLabel,
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.oxblood),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.lendingMakePrivateConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final name = controller.text.trim().isEmpty ? r.borrowerName : controller.text.trim();
+    final repo = await ref.read(lendingRepositoryProvider.future);
+    await repo.updateBorrower(r.id, borrowerName: name, borrowerUserId: null);
+    Haptics.success();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final r = widget.item.record;
+    final book = widget.item.book;
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              TypesetCover(
+                title: book?.title ?? '…',
+                author: book?.authorNames,
+                coverUrl: book?.coverUrl,
+                width: 34,
+                height: 50,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      book?.title ?? '…',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                    Text(
+                      l10n.lendingToPersonSince(r.borrowerName, fmtLendingDate(r.lentDate)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                    ),
+                    SizedBox(height: 5),
+                    _Stamp(label: l10n.lendingDeclinedStamp, color: AppColors.oxblood),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _busy ? null : _resend,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.oxblood,
+                    side: BorderSide(color: AppColors.line),
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  child: _busy
+                      ? SizedBox(
+                          height: 14,
+                          width: 14,
+                          child:
+                              CircularProgressIndicator(strokeWidth: 2, color: AppColors.oxblood),
+                        )
+                      : Text(l10n.lendingResendRequest, style: TextStyle(fontSize: 12)),
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _busy ? null : _makePrivate,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.inkSoft,
+                    side: BorderSide(color: AppColors.line),
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  child: Text(l10n.lendingMakePrivate, style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -366,28 +576,90 @@ class _LoanCard extends ConsumerWidget {
               ),
             ),
           SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () async {
-                Haptics.success();
-                final repo = await ref.read(lendingRepositoryProvider.future);
-                await repo.markReturned(r.id, DateTime.now());
-                await ref.read(notificationServiceProvider).cancel(reminderIdForRecord(r.id));
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.moss,
-                side: BorderSide(color: AppColors.line),
-                padding: EdgeInsets.symmetric(vertical: 8),
+          Row(
+            children: [
+              // Nudge a *connected* borrower to return the book (push). Only for
+              // an outgoing loan whose link is accepted — a pending/private
+              // contact can't be reached.
+              if (!borrowed && connStatus == 'accepted') ...[
+                Expanded(child: _RemindButton(item: item)),
+                SizedBox(width: 8),
+              ],
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    Haptics.success();
+                    final repo = await ref.read(lendingRepositoryProvider.future);
+                    await repo.markReturned(r.id, DateTime.now());
+                    await ref.read(notificationServiceProvider).cancel(reminderIdForRecord(r.id));
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.moss,
+                    side: BorderSide(color: AppColors.line),
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  child: Text(
+                    borrowed ? l10n.lendingReturnedIt : l10n.lendingMarkReturned,
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
               ),
-              child: Text(
-                borrowed ? l10n.lendingReturnedIt : l10n.lendingMarkReturned,
-                style: TextStyle(fontSize: 12),
-              ),
-            ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Remind" action on a lent card — fires a return-nudge push to a connected
+/// borrower via the API, with in-flight and result feedback.
+class _RemindButton extends ConsumerStatefulWidget {
+  const _RemindButton({required this.item});
+
+  final LendingWithBook item;
+
+  @override
+  ConsumerState<_RemindButton> createState() => _RemindButtonState();
+}
+
+class _RemindButtonState extends ConsumerState<_RemindButton> {
+  bool _sending = false;
+
+  Future<void> _remind() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final r = widget.item.record;
+    final title = widget.item.book?.title ?? 'a book';
+    setState(() => _sending = true);
+    try {
+      await ref.read(apiClientProvider).remindToReturn(r.borrowerUserId!, title);
+      Haptics.success();
+      messenger.showSnackBar(SnackBar(content: Text(l10n.lendingReminderSent(r.borrowerName))));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.lendingReminderFailed)));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return OutlinedButton(
+      onPressed: _sending ? null : _remind,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.oxblood,
+        side: BorderSide(color: AppColors.line),
+        padding: EdgeInsets.symmetric(vertical: 8),
+      ),
+      child: _sending
+          ? SizedBox(
+              height: 14,
+              width: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.oxblood),
+            )
+          : Text(l10n.lendingRemind, style: TextStyle(fontSize: 12)),
     );
   }
 }

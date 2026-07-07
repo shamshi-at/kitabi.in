@@ -142,6 +142,10 @@ class ApiClient {
   Future<void> unblockConnection(String connectionId) =>
       _dio.post('/connections/$connectionId/unblock');
 
+  /// Nudge a connected borrower to return a book (push). 403 if not connected.
+  Future<void> remindToReturn(String userId, String bookTitle) =>
+      _dio.post('/connections/remind', data: {'user_id': userId, 'book_title': bookTitle});
+
   /// Catalog-only search (title / author / exact ISBN) — Phase 2 scope.
   /// The "in your library" merge lands once the personal library (Phase 3)
   /// and its Drift cache exist; for now every result is a catalog work.

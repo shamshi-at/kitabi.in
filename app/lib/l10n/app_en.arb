@@ -682,6 +682,71 @@
       "count": {"type": "int"}
     }
   },
+  "lendingRejectedTab": "Rejected · {count}",
+  "@lendingRejectedTab": {
+    "description": "Rejected tab label with count — lent books whose borrower declined the connection",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "lendingRejectedIntro": "These readers declined your connection request. The book is still with them — re-send the request, or make them a private contact you track yourself.",
+  "@lendingRejectedIntro": {
+    "description": "Intro text on the Rejected tab of the lending ledger"
+  },
+  "lendingRejectedEmpty": "No declined loans.\nIf someone declines your connection, the loan shows here.",
+  "@lendingRejectedEmpty": {
+    "description": "Empty state on the Rejected tab"
+  },
+  "lendingDeclinedStamp": "Declined",
+  "@lendingDeclinedStamp": {
+    "description": "Stamp on a lent card whose borrower declined the connection"
+  },
+  "lendingResendRequest": "Resend request",
+  "@lendingResendRequest": {
+    "description": "Button to re-send a declined connection request"
+  },
+  "lendingResendSent": "Request re-sent.",
+  "@lendingResendSent": {
+    "description": "Snackbar after re-sending a connection request"
+  },
+  "lendingMakePrivate": "Make private contact",
+  "@lendingMakePrivate": {
+    "description": "Button to unlink a Kitabi user from a loan and keep them as a private contact"
+  },
+  "lendingMakePrivateTitle": "Make a private contact?",
+  "@lendingMakePrivateTitle": {
+    "description": "Confirm-dialog title for unlinking a Kitabi user from a loan"
+  },
+  "lendingMakePrivateBody": "This unlinks {name}'s Kitabi account from the loan. It stays on your ledger as a private contact you track yourself — they won't see it or get reminders.",
+  "@lendingMakePrivateBody": {
+    "description": "Confirm-dialog body for unlinking a Kitabi user from a loan",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "lendingMakePrivateConfirm": "Unlink",
+  "@lendingMakePrivateConfirm": {
+    "description": "Confirm button for unlinking a Kitabi user from a loan"
+  },
+  "lendingContactNameLabel": "Contact name",
+  "@lendingContactNameLabel": {
+    "description": "Text field label for the private contact name when unlinking"
+  },
+  "lendingRemind": "Remind",
+  "@lendingRemind": {
+    "description": "Button to nudge a connected borrower to return a book"
+  },
+  "lendingReminderSent": "Reminder sent to {name}.",
+  "@lendingReminderSent": {
+    "description": "Snackbar after sending a return reminder",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "lendingReminderFailed": "Couldn't send the reminder. You may not be connected.",
+  "@lendingReminderFailed": {
+    "description": "Snackbar when a return reminder fails to send"
+  },
   "lendingWithYouNowSection": "With you now",
   "@lendingWithYouNowSection": {
     "description": "Section header for books currently borrowed"

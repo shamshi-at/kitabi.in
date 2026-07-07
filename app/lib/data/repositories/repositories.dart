@@ -414,4 +414,34 @@ class LendingRepository extends Repo {
       data: {'returned_date': returnedDate.toUtc().toIso8601String().split('T').first},
     );
   }
+
+  /// Re-point who a loan is to. Used to "make private contact" — dropping the
+  /// Kitabi user link (pass `borrowerUserId: null`) after they declined, keeping
+  /// the loan as a plain free-text borrower. Explicit-null clears the link both
+  /// locally and (via the sync op) server-side.
+  Future<void> updateBorrower(
+    String id, {
+    required String borrowerName,
+    String? borrowerUserId,
+  }) async {
+    await db.lendingRecordsDao.patch(
+      id,
+      LendingRecordsCompanion(
+        borrowerName: Value(borrowerName),
+        borrowerUserId: Value(borrowerUserId),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'lending_records',
+      entityId: id,
+      opType: 'update',
+      data: {
+        'borrower_name': borrowerName,
+        // Present-and-null clears the link server-side (LendingRecordUpdate).
+        'borrower_user_id': borrowerUserId,
+      },
+    );
+  }
 }

@@ -1,12 +1,13 @@
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.connection import (
     ConnectionRequestIn,
     ConnectionsOut,
     ConnectionStatusOut,
+    RemindIn,
 )
 from app.services import connection_service, push_service
 
@@ -48,6 +49,27 @@ async def request_connection(
         other = conn.requester_id if conn.addressee_id == me else conn.addressee_id
         background_tasks.add_task(push_service.notify_connection_accepted, me, other)
     return connection_service.to_status(conn, me)
+
+
+@router.post("/remind", status_code=status.HTTP_204_NO_CONTENT)
+async def remind_to_return(
+    payload: RemindIn,
+    user: CurrentUser,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+) -> None:
+    """Send a connected borrower a gentle "please return this book" push. Only
+    works between accepted connections — a private (unlinked) contact can't be
+    reached this way."""
+    me = uuid.UUID(user["id"])
+    if not await connection_service.are_connected(db, me, payload.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "not_connected", "message": "You aren't connected to this reader."},
+        )
+    background_tasks.add_task(
+        push_service.notify_return_reminder, me, payload.user_id, payload.book_title
+    )
 
 
 @router.post("/{connection_id}/accept", status_code=status.HTTP_204_NO_CONTENT)

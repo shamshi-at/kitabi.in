@@ -42,6 +42,13 @@ class ConnectionRequestIn(BaseModel):
     addressee_id: uuid.UUID
 
 
+class RemindIn(BaseModel):
+    """Nudge a connected borrower to return a book. `book_title` is display-only."""
+
+    user_id: uuid.UUID
+    book_title: str = "a book"
+
+
 class ConnectionStatusOut(BaseModel):
     """Where the caller stands with one specific user — drives the lend flow's
     auto-link vs request decision, and the pending pill on the ledger.
