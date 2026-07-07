@@ -1,3 +1,5 @@
+"""Author model — a server-authoritative Layer-1 catalog entity linkable to Works."""
+
 import uuid
 
 from sqlalchemy import String, Uuid

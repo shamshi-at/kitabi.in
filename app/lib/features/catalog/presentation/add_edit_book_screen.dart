@@ -14,6 +14,10 @@ import '../../profile/providers/profile_providers.dart';
 import '../catalog_image_upload.dart';
 import '../providers/catalog_providers.dart';
 
+/// S4d — form to add a new catalog Work + first Edition, or edit an existing one:
+/// title, authors, publisher, genres, and edition-level fields (ISBN, format,
+/// cover). Contributions flow through the API when online (catalog is
+/// server-authoritative, CLAUDE.md rule 2).
 const _formats = ['Paperback', 'Hardcover', 'eBook', 'Audiobook'];
 
 const _commonGenres = [

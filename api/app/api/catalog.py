@@ -1,3 +1,6 @@
+"""Catalog router (server-authoritative Layer 1): search, ISBN lookup via
+OpenLibrary, browse/add/edit works, editions, authors, and publishers."""
+
 import uuid
 from typing import Annotated
 

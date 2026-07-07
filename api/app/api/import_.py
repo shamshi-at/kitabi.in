@@ -1,3 +1,6 @@
+"""Import router: preview and commit CSV library imports (e.g. Goodreads),
+matching rows against the shared catalog."""
+
 import csv
 import io
 

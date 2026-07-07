@@ -5,6 +5,8 @@ import 'package:uuid/uuid.dart';
 
 import '../db/database.dart';
 
+/// Shared UUID generator for client-side ids (rule 4: the client assigns ids
+/// for offline-created rows).
 const _uuid = Uuid();
 
 /// Who's making this edit — `userId` scopes ownership, `deviceId` is the

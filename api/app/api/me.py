@@ -1,3 +1,6 @@
+"""Current-user router: read/update the signed-in user's own profile, username
+availability, and score."""
+
 import uuid
 
 from fastapi import APIRouter, Query, status

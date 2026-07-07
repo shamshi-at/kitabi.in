@@ -11,6 +11,7 @@ import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../catalog_image_upload.dart';
 
+/// The edition formats offered in the add-edition form's dropdown.
 const _formats = ['Paperback', 'Hardcover', 'eBook', 'Audiobook'];
 
 /// Add another edition (printing/ISBN) to an existing Work — same book, a

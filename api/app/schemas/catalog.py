@@ -1,3 +1,6 @@
+"""Pydantic request/response schemas for the catalog: works, editions, authors,
+publishers, ISBN lookup, CSV import rows, and recommendations."""
+
 import uuid
 from datetime import date, datetime
 

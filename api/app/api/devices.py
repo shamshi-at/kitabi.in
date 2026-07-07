@@ -1,3 +1,6 @@
+"""Devices router: register/unregister an install's FCM push token for the
+signed-in user."""
+
 import uuid
 
 from fastapi import APIRouter, status

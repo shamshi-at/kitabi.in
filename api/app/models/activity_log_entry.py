@@ -1,3 +1,6 @@
+"""ActivityLogEntry model — a syncable (Layer-2), pull-only log of the user's own
+events, structurally identical to the future community feed (wired now, dormant)."""
+
 import uuid
 from datetime import datetime
 

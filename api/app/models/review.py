@@ -1,3 +1,6 @@
+"""Review model — a syncable (Layer-2) text review on a Work + user, with its own
+visibility flag; kept separate from the Work's rating and the entry's notes."""
+
 import uuid
 
 from sqlalchemy import Boolean, ForeignKey, String, Uuid

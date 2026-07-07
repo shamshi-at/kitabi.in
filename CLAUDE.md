@@ -103,6 +103,11 @@ Kitabi's own wiring rules (from the feature map — expensive to reverse):
 
 ## Commands
 
+> Full build/run/ship guide (prerequisites, exact commands, release paths for
+> API, app IPA + AAB, landing) lives in [docs/build.md](docs/build.md). The deep
+> technical reference (data tiers, sync engine, cross-user layer, push, auth/RLS,
+> and a file-by-file map of the whole tree) is [docs/architecture.md](docs/architecture.md).
+
 Local ports are deliberately offset from rupee-diary so both projects run side
 by side: dev Postgres on **55442**, throwaway test Postgres on **55443**
 (rupee-diary uses 55432/55433).

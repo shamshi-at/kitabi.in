@@ -1,3 +1,6 @@
+"""Health router: liveness plus DB-reachability probe for deploy health
+checks."""
+
 from fastapi import APIRouter, Response
 from sqlalchemy import text
 

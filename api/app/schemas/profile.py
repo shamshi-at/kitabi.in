@@ -1,3 +1,6 @@
+"""Pydantic request/response schemas for user profiles: profile read/update,
+username validation, public user search, and scoring."""
+
 import re
 import uuid
 from datetime import datetime

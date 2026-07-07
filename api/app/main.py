@@ -1,3 +1,6 @@
+"""FastAPI app factory: mounts routers, the version gate, CORS, structured
+errors, and the APScheduler lifespan (keep-warm / notify jobs)."""
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 

@@ -1,3 +1,8 @@
+"""Reader-to-reader connections — request / accept / block over a single deduped
+Connection row per pair, resolved to a directional status (pending_in/out) for the
+viewer. Wired now to back linked lending (feature-map.md); the future community graph
+grows from the same table."""
+
 import uuid
 
 from fastapi import HTTPException, status

@@ -1,3 +1,6 @@
+"""Series model — a named ordering of Works (Layer-1 catalog); the per-book
+sequence number lives on Edition, not here."""
+
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 

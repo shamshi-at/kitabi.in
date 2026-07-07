@@ -1,3 +1,6 @@
+"""Connections router: request/accept/list user-to-user connections and send
+lending reminders (with optional FCM push)."""
+
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status

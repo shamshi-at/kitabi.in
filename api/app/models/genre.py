@@ -1,3 +1,6 @@
+"""Genre model — a global, catalog-owned Layer-1 label on a book, kept distinct
+from a user's PersonalTag."""
+
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 

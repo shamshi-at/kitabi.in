@@ -1,3 +1,7 @@
+"""User profile business logic — bootstrap a profile on first login from the auth
+JWT, then update username/display fields with visibility toggles wired throughout
+(CLAUDE.md rule 16), enforcing case-insensitive username uniqueness."""
+
 import uuid
 from datetime import UTC, datetime
 

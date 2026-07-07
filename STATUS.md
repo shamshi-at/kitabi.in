@@ -11,27 +11,31 @@
 > tokens. This document summarizes and cross-links all of them plus the live/deployed state
 > those docs don't cover.
 
-**Last updated:** 6 Jul 2026
+**Last updated:** 7 Jul 2026
 
 ---
 
 ## Snapshot
 
-Solo-built personal library app, pre-launch. **Phases 1–3 (auth & profile, shared
-catalog, personal library + sync engine) are complete** — real Google + Apple sign-in,
-a real Supabase project, a real Railway deployment at a real custom domain, a full
-shared-catalog backend (works/editions/authors/publishers/genres/series) backed by
-OpenLibrary with cache-on-first-use, and now a full offline-first personal library:
-Drift schema, a sync engine ported from rupee-diary (push/pull, idempotent, conflict
-rules), and the S5 library grid + S6 book detail screens (reading status, progress,
-notes, ratings, reviews, lending, personal tags). Phases 4–8 (dedicated lending flows,
-import, insights, recommendations, launch plumbing) are not started. The landing page
-is live and public; the mobile app is not yet store-submitted. **Not yet verified: a
-real end-to-end run with a signed-in user and real airplane-mode testing** — the sync
-engine is thoroughly unit-tested (in-memory Drift + fake API client) and the app boots
-cleanly with all the new plumbing wired in, but no session in this repo has driven it
-through a real Google sign-in to see the library screens live (would need the owner's
-own account).
+Solo-built personal library app, pre-launch but feature-complete on the v1 slice.
+**Phases 1–8 are all built** — real Google + Apple sign-in on a real Supabase project,
+a real Railway deployment at a custom domain co-located with the DB in Singapore
+(~0.2s/request), a full OpenLibrary-backed shared catalog (works/editions/authors/
+publishers/genres/series) with cache-on-first-use, and a full offline-first personal
+library (Drift source of truth, a sync engine ported from rupee-diary: push/pull,
+idempotent, delete-wins/LWW conflicts). On top of that: the **lending ledger** (lent +
+borrowed, due reminders, rejected-loan handling, return reminders), **cross-user
+connections + loan mirroring** (the first social layer), **FCM push** (connection +
+lending events, opt-in), **CSV import/export**, **insights/stats**, **opt-in LLM
+recommendations**, **share cards**, and **launch plumbing** (version gate, backups,
+icons/splash, privacy/terms). The landing page is live and public.
+
+**Shipping state:** the mobile app now has release builds — an iOS **IPA (build 26)**
+and an Android **AAB (build 26)** — and is in **Play Store internal testing**; a
+TestFlight build exists in App Store Connect. **Still worth a real device pass:** a
+literal airplane-mode Layer-2 check and on-device verification of FCM push + the ISBN
+scanner (the scanner can't build on an Apple Silicon iOS Simulator). The sync engine is
+thoroughly unit-tested (in-memory Drift + fake API client).
 
 ---
 
@@ -210,8 +214,10 @@ parts, each with their own README and CI workflow:
 | **Cloudflare** | DNS (kitabi.in), landing page hosting | `api` CNAME → Railway target (proxied), SSL/TLS Full (strict); Pages project `kitabi-in` for the landing page | DNS: Cloudflare dashboard (manual). Pages deploy: `.github/workflows/deploy.yml`, secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` |
 | **GitHub Actions** | CI (lint/test/build checks only — not deployment) | `shamshi-at/kitabi.in` | `.github/workflows/api-ci.yml`, `app-ci.yml`, `deploy.yml` (landing only) |
 
-Deliberately **not** using: Firebase (not yet needed — no push notifications built),
-any paid metadata API (open decision), Redis/queues (cost rule — CLAUDE.md rule 8).
+| **Firebase (FCM)** | Push notifications only (no other Firebase product) | Project `kitabi-in`; iOS + Android apps, bundle/package `in.kitabi.kitabi`; APNs `.p8` **Production** key uploaded | `GoogleService-Info.plist` (iOS) + `google-services.json` (Android) in the app; API sends via FCM HTTP v1 with `FIREBASE_CREDENTIALS` (service-account JSON) set in Railway — no `firebase-admin` dependency |
+
+Deliberately **not** using: any paid metadata API (open decision), Redis/queues
+(cost rule — CLAUDE.md rule 8), and no Firebase product beyond FCM push.
 
 ---
 
@@ -222,7 +228,8 @@ any paid metadata API (open decision), Redis/queues (cost rule — CLAUDE.md rul
 | Landing page | https://kitabi.in | Cloudflare Pages, git-deploy from `landing-page/` on push to `main` | Live, public. `/b/:id`, `/a/:id`, `/p/:id` are served by Cloudflare **Pages Functions** (`landing-page/functions/`) that inject real Open Graph tags (cover/title/blurb) server-side, so shared links preview richly in iMessage/WhatsApp/Slack — bots don't run the pages' client JS. Humans still get the JS-rendered page |
 | API | https://api.kitabi.in | Railway service `kitabi-api`, proxied CNAME via Cloudflare (Full strict) | Live; auth/profile + catalog endpoints (incl. global search + author/publisher create). CORS now allows `kitabi.in` for the public share pages |
 | API (origin, fallback) | https://kitabi-api-production.up.railway.app | Direct Railway domain | Keep working in case the custom domain ever breaks |
-| Mobile app | — | Not store-submitted | Auth verified on iOS Simulator (Phase 1); catalog screens verified on an Android emulator against a local API (Phase 2) — `mobile_scanner`'s MLKit dependency can't build on an Apple Silicon iOS simulator (no arm64 simulator slice), so the scan screen specifically needs a real iOS device or an older x86_64-capable simulator runtime to verify there. Real app icon + splash screen now in place (see below). An IPA has been built pointed at production (`app/build/ios/ipa/kitabi.ipa`), but it's **development-signed only** — no Apple Distribution certificate exists yet, so it can only run on devices registered to the provisioning profile, not TestFlight/App Store |
+| Mobile app (iOS) | — | TestFlight | Release **IPA build 26** (`app/build/ios/ipa/kitabi.ipa`, App Store distribution) built via `scripts/build_ipa.sh`; a TestFlight build exists in App Store Connect. Deployment target 15.5. `mobile_scanner`'s MLKit can't build on an Apple Silicon iOS Simulator (no arm64 slice) — verify the scan screen on a real iPhone/Android. APNs **Production** key required for TestFlight push |
+| Mobile app (Android) | — | Play Store internal testing | Release **AAB build 26** (`app/build/app/outputs/bundle/release/app-release.aab`) via `scripts/build_aab.sh`, uploaded to Play Console internal testing. Google-managed app signing (upload key local at `~/keys/kitabi-upload.jks`, gitignored). R8 minification off (was stripping WorkManager/Firebase registrars) |
 
 Redeploy the API by pushing to `main` (Railway auto-deploys); no manual `railway up`
 needed anymore. Redeploy the landing page the same way (push to `main` touching
@@ -283,6 +290,31 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 ---
 
 ## Recent milestones
+
+- **7 Jul 2026** — **Full documentation pass.** Every source file (61 API `.py`,
+  91 app `.dart`) now carries a module-level docstring/header; three new/refreshed docs:
+  [docs/build.md](docs/build.md) (build/run/ship steps for all three parts),
+  [docs/architecture.md](docs/architecture.md) (deep technical architecture + a
+  file-by-file map of the whole tree), and this STATUS refresh. No code changed.
+- **7 Jul 2026** — **Lending ledger filter + return reminders** (release **build 26**).
+  The "Lent out" count is now active-loans-only (returned books drop out). A new
+  **Rejected** tab surfaces still-out loans whose borrower declined the connection —
+  the lender can **re-send** the request or **make private contact** (unlink the Kitabi
+  user via `LendingRepository.updateBorrower` → a sync op that clears `borrower_user_id`;
+  `LendingRecordUpdate` now accepts it). Connected borrowers can be nudged with a
+  **Remind** push: `POST /connections/remind` (gated on an accepted connection) →
+  `notify_return_reminder`. 3-tab ledger (Lent/Rejected/Borrowed). API 97 + app 30 tests
+  green; both IPA + AAB built at build 26.
+- **7 Jul 2026** — **Android Play Store internal testing.** First AAB release build
+  (`scripts/build_aab.sh`, upload keystore + `key.properties`, Google-managed signing);
+  fixed a launch crash from R8 stripping WorkManager/Room + Firebase/MLKit registrars
+  (minification off), and a chain of compileSdk bumps (→36) with a plugin override.
+- **7 Jul 2026** — **FCM push + cross-user lending.** First push pipeline (`fcm_client`,
+  no `firebase-admin`; `device_tokens` + `/devices`; opt-in via `FIREBASE_CREDENTIALS`)
+  firing on connection request/accept and book lent/returned/reminder. Loans now
+  **mirror** onto a connected borrower's Borrowed shelf (`lend_mirror_service`). Reader
+  **preferred languages** (`profiles.preferred_languages`, onboarding gate). See the
+  Architecture section above for the full write-ups.
 
 - **6 Jul 2026** — On-device feedback pass (10 fixes). **API latency**: a single
   fetched work went 1.7s → **0.19s** by loading one joined query instead of

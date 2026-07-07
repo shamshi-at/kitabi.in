@@ -1,3 +1,7 @@
+"""Declarative base and the two column mixins every table builds on:
+`SyncableMixin` for Layer-2 personal data (client-side UUIDs, `server_seq` pull
+cursor, soft delete) and `CatalogMixin` for server-authoritative Layer-1 catalog."""
+
 import uuid
 from datetime import datetime
 

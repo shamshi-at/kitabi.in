@@ -1,3 +1,6 @@
+"""Device FCM token registry — upsert a push token, (re)binding it to the signed-in
+user so a stale row can never push to a prior account, and unregister on sign-out."""
+
 import uuid
 
 from sqlalchemy import delete, select

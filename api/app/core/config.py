@@ -1,3 +1,6 @@
+"""Settings loaded from env via pydantic-settings: DB URL, Supabase JWKS/JWT
+verification config, CORS, version gate, and opt-in recs/push credentials."""
+
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict

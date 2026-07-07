@@ -7,6 +7,9 @@ import '../repositories/repositories.dart';
 import 'device_id.dart';
 import 'sync_engine.dart';
 
+/// Riverpod wiring for the sync layer: the singleton Drift database, the
+/// per-install [SessionContext], the [SyncEngine], and the [syncTriggerProvider]
+/// callback other code fires to drain the queue.
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(db.close);

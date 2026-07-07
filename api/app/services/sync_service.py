@@ -1,3 +1,9 @@
+"""Sync push/pull for Layer 2 (personal) data — the only path user records take to
+the server. Idempotent op application keyed by client op UUID, delete-wins then
+last-write-wins conflict resolution (losers written to ConflictHistory), and a
+server_seq bigserial pull cursor bumped on every mutation. Lending ops fan out to
+lend_mirror_service after commit (CLAUDE.md rules 1, 6, sync-engine notes)."""
+
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta

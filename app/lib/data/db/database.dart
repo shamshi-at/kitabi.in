@@ -12,6 +12,9 @@ export 'daos/library_daos.dart' show LendingWithBook, LibraryHit;
 
 part 'database.g.dart';
 
+/// The app's local Drift database — the offline source of truth (CLAUDE.md
+/// rule 1). Wires up every Layer-2 syncable table plus the read-only catalog
+/// cache and sync bookkeeping tables, and their DAOs.
 @DriftDatabase(
   tables: [
     LibraryEntries,

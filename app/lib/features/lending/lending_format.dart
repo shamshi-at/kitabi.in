@@ -1,3 +1,4 @@
+/// Date formatting helper shared across the lending ledger and its sheets.
 const _months = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',

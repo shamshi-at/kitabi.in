@@ -1,3 +1,6 @@
+"""Pydantic request/response schemas for user-to-user connections and lending
+reminders."""
+
 import uuid
 from datetime import datetime
 

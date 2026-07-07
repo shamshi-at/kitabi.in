@@ -7,6 +7,7 @@ import '../api/api_client.dart';
 import '../db/database.dart';
 import 'sync_engine.dart';
 
+/// workmanager task identifiers for the periodic background sync drain.
 const _kTaskName = 'kitabi.backgroundSync';
 const _kTaskTag = 'sync';
 

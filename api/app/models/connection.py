@@ -1,3 +1,6 @@
+"""Connection model — a directed, consented lending link between two Kitabi users;
+cross-user and online-only, so it is not a syncable Layer-2 table."""
+
 import uuid
 from datetime import datetime
 

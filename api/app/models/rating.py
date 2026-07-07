@@ -1,3 +1,6 @@
+"""Rating model — a syncable (Layer-2) 1-5 star rating that attaches to a Work,
+so it is shared across every Edition of the same book."""
+
 import uuid
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, Uuid

@@ -1,3 +1,6 @@
+"""Pydantic request/response schemas for the sync push/pull protocol
+(per-op push payloads, results, and server_seq-cursored pull deltas)."""
+
 import uuid
 from datetime import date
 from typing import Any, Literal

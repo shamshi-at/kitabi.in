@@ -1,3 +1,6 @@
+"""Recommendations router: the opt-in LLM-reasoned book recs (dormant unless an
+Anthropic key is configured)."""
+
 import uuid
 
 from fastapi import APIRouter

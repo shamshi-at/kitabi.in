@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/sync/sync_providers.dart';
 
+/// Device-local flag + provider for whether the first-run welcome has been seen.
 const _seenKey = 'onboarding_seen';
 
 /// Whether the first-run welcome has been shown. Device-local.

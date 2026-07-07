@@ -1,3 +1,6 @@
+"""SQLAlchemy model package — re-exports every ORM model and the shared mixins
+so Alembic autogenerate and callers can import them from one place."""
+
 from app.models.activity_log_entry import ActivityLogEntry
 from app.models.author import Author
 from app.models.base import Base, CatalogMixin, SyncableMixin

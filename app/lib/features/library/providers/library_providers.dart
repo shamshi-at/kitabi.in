@@ -4,6 +4,9 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 
+/// Riverpod providers for the personal library — library entries, ratings, and
+/// derived lists — reading from the Drift-backed repositories (offline-first,
+/// CLAUDE.md rule 1). Shared across the grid, book detail, lending, and insights.
 final libraryEntryProvider =
     FutureProvider.autoDispose.family<LibraryEntry?, String>((ref, editionId) async {
   final repo = await ref.watch(libraryRepositoryProvider.future);

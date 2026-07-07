@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/sync/sync_providers.dart';
 
+/// Drives the app's light/dark theme from a device-local preference.
 const _darkKey = 'dark_mode';
 
 /// Device-local dark-mode preference. Defaults to light and loads the saved

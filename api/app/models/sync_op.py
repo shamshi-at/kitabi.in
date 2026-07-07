@@ -1,3 +1,6 @@
+"""SyncOp model — the idempotency ledger keyed by client-generated `op_id`, so a
+replayed push batch is recognized as already-handled rather than applied twice."""
+
 import uuid
 from datetime import datetime
 

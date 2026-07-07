@@ -1,3 +1,6 @@
+"""Sync router: the offline-first push/pull protocol for Layer 2 personal data
+(idempotent op push, delta pull by server_seq cursor)."""
+
 import uuid
 
 from fastapi import APIRouter, Query

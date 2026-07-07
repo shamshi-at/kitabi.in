@@ -1,3 +1,9 @@
+"""Shared catalog (Layer 1) business logic — server-authoritative works, editions,
+authors, publishers, genres, series. Case-insensitive get-or-create dedupe, ISBN
+lookup with OpenLibrary cache-on-first-use, and tuned eager-loading for detail vs.
+list reads. Catalog rows carry no client-generated id; user contributions land here
+via the API when online (CLAUDE.md rule 2)."""
+
 import re
 import uuid
 

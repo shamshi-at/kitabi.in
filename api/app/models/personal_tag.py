@@ -1,3 +1,6 @@
+"""PersonalTag model — a user's own syncable (Layer-2) shelf/tag, kept distinct
+from the global, catalog-owned Genre."""
+
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 

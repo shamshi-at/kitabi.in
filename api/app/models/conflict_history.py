@@ -1,3 +1,6 @@
+"""ConflictHistory model — one row per detected sync conflict (never resolved
+silently), recording the winning and discarded payloads with 30-day retention."""
+
 import uuid
 from datetime import datetime
 

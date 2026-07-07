@@ -1,3 +1,6 @@
+"""LibraryEntry model — a user's personal, syncable (Layer-2) copy of an Edition,
+holding ownership, reading status, progress, favorite flag, and private notes."""
+
 import uuid
 from datetime import date
 

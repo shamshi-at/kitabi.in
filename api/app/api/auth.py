@@ -1,3 +1,6 @@
+"""Auth router: profile bootstrap on first login (idempotent), keyed off the
+verified Supabase JWT."""
+
 from fastapi import APIRouter
 
 from app.api.deps import CurrentUser, DbSession

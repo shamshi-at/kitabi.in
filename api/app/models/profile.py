@@ -1,3 +1,6 @@
+"""Profile model — one row per Supabase auth user (the identity row), keyed by
+auth.users.id; cross-user and online-only, so not a syncable Layer-2 table."""
+
 import uuid
 from datetime import datetime
 

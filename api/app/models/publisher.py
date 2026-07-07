@@ -1,3 +1,6 @@
+"""Publisher model — a server-authoritative Layer-1 catalog entity referenced by
+Editions."""
+
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 

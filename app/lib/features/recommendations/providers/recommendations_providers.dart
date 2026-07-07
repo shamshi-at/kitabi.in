@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/sync/sync_providers.dart';
 
+/// Device-local opt-in flag + providers for LLM recommendations (off by default).
 const _optInKey = 'recs_opt_in';
 
 /// Whether the reader has opted into recommendations. Off by default (the

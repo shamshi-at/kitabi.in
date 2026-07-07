@@ -1,3 +1,6 @@
+"""Edition model (Layer-1 catalog) — a specific printing/ISBN of a Work, carrying
+the cover, page count, format, and buy links that vary between physical copies."""
+
 import uuid
 from datetime import date
 from typing import TYPE_CHECKING

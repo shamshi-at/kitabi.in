@@ -1,3 +1,6 @@
+"""LibraryEntryTag model — a syncable (Layer-2) tag-to-entry assignment as its own
+row, so each assignment gets independent delete-wins/last-write-wins sync handling."""
+
 import uuid
 
 from sqlalchemy import ForeignKey, Uuid

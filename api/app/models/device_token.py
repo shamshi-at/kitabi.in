@@ -1,3 +1,6 @@
+"""DeviceToken model — an FCM registration token for one app install; online-only
+transport state, not a syncable Layer-2 table."""
+
 import uuid
 from datetime import datetime
 

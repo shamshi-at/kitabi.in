@@ -1,3 +1,6 @@
+"""LendingRecord model — a syncable (Layer-2) lend/borrow ledger entry ("lent to X,
+on date, returned Y/N") as its own entity, running both directions."""
+
 import uuid
 from datetime import date
 

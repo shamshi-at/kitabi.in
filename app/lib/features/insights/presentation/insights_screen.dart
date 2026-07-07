@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../insights_stats.dart';
 import '../providers/insights_providers.dart';
 
+/// Single-letter month labels for the books-per-month bar chart axis.
 const _monthLetters = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 
 /// S10 — insights. Reading goal ring, a year selector, headline stats, and a

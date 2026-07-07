@@ -1,3 +1,6 @@
+"""Work model (Layer-1 catalog) plus the work_authors / work_genres join tables —
+the abstract creative book that ratings, reviews, and translation links attach to."""
+
 import uuid
 from typing import TYPE_CHECKING
 

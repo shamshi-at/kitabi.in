@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../api/api_client.dart';
 import '../db/database.dart';
 
+/// Outcome of one sync run — ops pushed and deltas pulled — surfaced to the UI.
 class SyncReport {
   SyncReport({required this.pushedOps, required this.pulledChanges});
   final int pushedOps;

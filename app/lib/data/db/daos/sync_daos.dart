@@ -5,6 +5,8 @@ import '../tables.dart';
 
 part 'sync_daos.g.dart';
 
+/// DAOs backing the sync engine: the outbound [SyncQueue] of pending ops, the
+/// [SyncState] pull cursor, and the [ConflictHistoryEntries] audit trail.
 @DriftAccessor(tables: [SyncQueue])
 class SyncQueueDao extends DatabaseAccessor<AppDatabase> with _$SyncQueueDaoMixin {
   SyncQueueDao(super.db);

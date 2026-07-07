@@ -6,6 +6,10 @@ import '../../data/sync/sync_providers.dart';
 import 'auth_service.dart';
 import 'supabase_auth_service.dart';
 
+/// Riverpod wiring for auth: picks the real [SupabaseAuthService] when
+/// credentials are configured (else an [UnconfiguredAuthService] stub), exposes
+/// the current [KitabiAuthUser] stream, and resets local sync/DB state when the
+/// active user changes so one install never bleeds data across accounts.
 const _activeUserKey = 'active_user_id';
 
 final authServiceProvider = Provider<AuthService>((ref) {

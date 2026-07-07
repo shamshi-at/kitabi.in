@@ -5,6 +5,8 @@ import '../tables.dart';
 
 part 'cached_books_dao.g.dart';
 
+/// DAO for the read-only catalog cache — the Work/Edition fields the library
+/// grid needs, cached locally so shelves render offline (CLAUDE.md rule 2).
 @DriftAccessor(tables: [CachedBooks])
 class CachedBooksDao extends DatabaseAccessor<AppDatabase> with _$CachedBooksDaoMixin {
   CachedBooksDao(super.db);

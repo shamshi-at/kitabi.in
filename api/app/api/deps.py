@@ -1,3 +1,6 @@
+"""Shared FastAPI dependency aliases: `CurrentUser` (verified Supabase JWT
+claims) and `DbSession` (request-scoped async DB session)."""
+
 from typing import Annotated
 
 from fastapi import Depends

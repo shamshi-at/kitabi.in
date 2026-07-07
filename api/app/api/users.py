@@ -1,3 +1,5 @@
+"""Users router: search other users' public profiles (for connections/lending)."""
+
 import uuid
 
 from fastapi import APIRouter, Query

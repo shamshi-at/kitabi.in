@@ -1,3 +1,5 @@
+"""Pydantic schema for FCM device-token registration."""
+
 from pydantic import BaseModel
 
 

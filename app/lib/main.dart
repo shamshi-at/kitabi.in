@@ -15,6 +15,9 @@ import 'data/sync/connectivity_sync.dart';
 import 'features/settings/theme_mode_provider.dart';
 import 'l10n/app_localizations.dart';
 
+/// App entry point: boots Supabase (if configured), Firebase/FCM push, the
+/// workmanager background-sync isolate and connectivity listener, then runs the
+/// Riverpod-scoped [MaterialApp] wired to the go_router and Reading Room theme.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Boots fine without credentials (see supabaseConfigured) so the app is

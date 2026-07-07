@@ -1,3 +1,7 @@
+"""Async SQLAlchemy engine and session factory, tuned for the Supavisor
+transaction pooler (no statement cache, unique prepared-statement names, warm
+recycled pool). `get_db` yields the request-scoped session."""
+
 import uuid
 from collections.abc import AsyncIterator
 
