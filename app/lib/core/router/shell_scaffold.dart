@@ -60,7 +60,10 @@ class ShellScaffold extends StatelessWidget {
                   selected: index == 1,
                   onTap: () { Haptics.selection(); navigationShell.goBranch(1); },
                 ),
-                _AddButton(label: l10n.navAdd, onTap: () => context.push(Routes.catalogSearch)),
+                // Scan-first (docs/screen-design.md): the FAB opens the camera
+                // directly — one tap to the main add path. Search / manual add
+                // stay one tap away via the scanner's fallback buttons.
+                _AddButton(label: l10n.navAdd, onTap: () => context.push(Routes.catalogScan)),
                 _NavItem(
                   icon: Icons.swap_horiz,
                   activeIcon: Icons.swap_horiz,

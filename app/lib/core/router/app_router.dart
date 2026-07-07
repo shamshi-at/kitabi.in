@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -79,6 +79,13 @@ abstract final class Routes {
   static String authorBrowsePath(String authorId) => '/catalog/authors/$authorId';
   static String publisherBrowsePath(String publisherId) => '/catalog/publishers/$publisherId';
   static String bookDetailPath(String workId, String editionId) => '/book/$workId/$editionId';
+}
+
+/// Opens the loans-with-one-person page — every counterparty name in the app
+/// routes through here. Linked Kitabi users match by [userId]; self-logged
+/// free-text names match by [name].
+void openPersonLoans(BuildContext context, {String? userId, required String name}) {
+  context.push(Routes.connectionLoans, extra: {'userId': userId, 'name': name});
 }
 
 /// Re-runs the router's redirect whenever auth or bootstrap state changes
@@ -239,7 +246,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final args = state.extra as Map<String, dynamic>? ?? const {};
           return ConnectionLoansScreen(
-            userId: args['userId'] as String,
+            userId: args['userId'] as String?,
             name: args['name'] as String? ?? '',
           );
         },

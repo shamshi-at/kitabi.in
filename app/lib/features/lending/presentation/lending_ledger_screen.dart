@@ -7,10 +7,12 @@ import '../../../core/notifications/notification_service.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/person_link.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../connections/connections_providers.dart';
 import '../../library/providers/library_providers.dart';
@@ -90,9 +92,9 @@ class LendingLedgerScreen extends ConsumerWidget {
                   Expanded(
                     child: TabBarView(
                       children: [
-                        _LentView(records: lent),
-                        _RejectedView(records: rejected),
-                        _BorrowedView(records: borrowed),
+                        _RefreshableTab(child: _LentView(records: lent)),
+                        _RefreshableTab(child: _RejectedView(records: rejected)),
+                        _RefreshableTab(child: _BorrowedView(records: borrowed)),
                       ],
                     ),
                   ),
@@ -102,6 +104,28 @@ class LendingLedgerScreen extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// Pull-to-refresh on a ledger tab runs a real sync round-trip — pushes any
+/// pending local ops (a return marked seconds ago) and pulls the counterparty's
+/// changes — instead of just re-reading unchanged local rows.
+class _RefreshableTab extends ConsumerWidget {
+  const _RefreshableTab({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return RefreshIndicator(
+      color: AppColors.oxblood,
+      onRefresh: () async {
+        await ref.read(syncNowProvider)();
+        ref.invalidate(allLendingProvider);
+        ref.invalidate(connectionsProvider);
+      },
+      child: child,
     );
   }
 }
@@ -161,6 +185,8 @@ class _LentView extends StatelessWidget {
       return _EmptyState(text: l10n.lendingEmpty);
     }
     return ListView(
+      // Always scrollable so pull-to-refresh works on short lists too.
+      physics: AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         if (outNow.isNotEmpty) ...[
@@ -190,6 +216,7 @@ class _BorrowedView extends StatelessWidget {
     final returned = records.where((r) => r.record.returnedDate != null).toList();
 
     return ListView(
+      physics: AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         if (records.isEmpty)
@@ -242,6 +269,7 @@ class _RejectedView extends StatelessWidget {
       return _EmptyState(text: l10n.lendingRejectedEmpty);
     }
     return ListView(
+      physics: AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         Padding(
@@ -350,29 +378,53 @@ class _RejectedCardState extends ConsumerState<_RejectedCard> {
         children: [
           Row(
             children: [
-              TypesetCover(
-                title: book?.title ?? '…',
-                author: book?.authorNames,
-                coverUrl: book?.coverUrl,
-                width: 34,
-                height: 50,
+              GestureDetector(
+                onTap: book == null
+                    ? null
+                    : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+                child: TypesetCover(
+                  title: book?.title ?? '…',
+                  author: book?.authorNames,
+                  coverUrl: book?.coverUrl,
+                  width: 34,
+                  height: 50,
+                ),
               ),
               SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      book?.title ?? '…',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    GestureDetector(
+                      onTap: book == null
+                          ? null
+                          : () =>
+                              context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+                      child: Text(
+                        book?.title ?? '…',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
                     ),
-                    Text(
-                      l10n.lendingToPersonSince(r.borrowerName, fmtLendingDate(r.lentDate)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                    Row(
+                      children: [
+                        Text(
+                          '${l10n.lendingToFragment} ',
+                          style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                        ),
+                        Flexible(
+                          child: PersonLink(r.borrowerName, userId: r.borrowerUserId),
+                        ),
+                        Flexible(
+                          child: Text(
+                            ' ${l10n.lendingSinceFragment(fmtLendingDate(r.lentDate))}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: 5),
                     _Stamp(label: l10n.lendingDeclinedStamp, color: AppColors.oxblood),
@@ -429,14 +481,26 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(28),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
-        ),
+    // A scrollable viewport even when empty, so pull-to-refresh still works.
+    return LayoutBuilder(
+      builder: (context, constraints) => ListView(
+        physics: AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: constraints.maxHeight,
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(28),
+                child: Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style:
+                      Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -528,31 +592,55 @@ class _LoanCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              TypesetCover(
-                title: book?.title ?? '…',
-                author: book?.authorNames,
-                coverUrl: book?.coverUrl,
-                width: 34,
-                height: 50,
+              // Cover + title are doors to the book page (and its full
+              // lending history); the name is a door to the person's loans.
+              GestureDetector(
+                onTap: book == null
+                    ? null
+                    : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+                child: TypesetCover(
+                  title: book?.title ?? '…',
+                  author: book?.authorNames,
+                  coverUrl: book?.coverUrl,
+                  width: 34,
+                  height: 50,
+                ),
               ),
               SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      book?.title ?? '…',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    GestureDetector(
+                      onTap: book == null
+                          ? null
+                          : () =>
+                              context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+                      child: Text(
+                        book?.title ?? '…',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
                     ),
-                    Text(
-                      borrowed
-                          ? l10n.lendingFromPersonSince(r.borrowerName, fmtLendingDate(r.lentDate))
-                          : l10n.lendingToPersonSince(r.borrowerName, fmtLendingDate(r.lentDate)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                    Row(
+                      children: [
+                        Text(
+                          '${borrowed ? l10n.lendingFromFragment : l10n.lendingToFragment} ',
+                          style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                        ),
+                        Flexible(
+                          child: PersonLink(r.borrowerName, userId: r.borrowerUserId),
+                        ),
+                        Flexible(
+                          child: Text(
+                            ' ${l10n.lendingSinceFragment(fmtLendingDate(r.lentDate))}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                          ),
+                        ),
+                      ],
                     ),
                     if (connStatus != null) ...[
                       SizedBox(height: 5),
@@ -695,21 +783,33 @@ class _ReturnedCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    book?.title ?? '…',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                  ),
-                  Text(
-                    l10n.lendingReturnedRange(
-                      r.borrowerName,
-                      fmtLendingDate(r.lentDate),
-                      fmtLendingDate(r.returnedDate!),
+                  GestureDetector(
+                    onTap: book == null
+                        ? null
+                        : () =>
+                            context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+                    child: Text(
+                      book?.title ?? '…',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
+                  ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: PersonLink(r.borrowerName,
+                            userId: r.borrowerUserId, fontSize: 10.5),
+                      ),
+                      Flexible(
+                        child: Text(
+                          ' ${l10n.lendingRangeFragment(fmtLendingDate(r.lentDate), fmtLendingDate(r.returnedDate!))}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

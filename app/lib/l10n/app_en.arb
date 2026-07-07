@@ -206,6 +206,14 @@
   "@scanNotFound": {
     "description": "Shown when the ISBN doesn't resolve to a book"
   },
+  "scanCameraUnavailable": "Camera unavailable — you can search the catalog or add the book manually below.",
+  "@scanCameraUnavailable": {
+    "description": "Shown in place of the camera preview when the camera can't start (e.g. permission denied) and the Search/Add fallback buttons are visible"
+  },
+  "scanCameraUnavailableShort": "Camera unavailable — check the app's camera permission.",
+  "@scanCameraUnavailableShort": {
+    "description": "Camera-failure message when the scanner was opened from the add-book form (no fallback buttons on screen)"
+  },
   "scanConfirmAdd": "Add",
   "@scanConfirmAdd": {
     "description": "Confirms adding the detected book to the user's library"
@@ -332,12 +340,13 @@
   "@bookProgressLabel": {
     "description": "Eyebrow label on the progress card"
   },
-  "bookProgressValue": "p. {page} of {total}",
+  "bookProgressValue": "p. {page} of {total} · {percent}%",
   "@bookProgressValue": {
-    "description": "Progress card value — current page of total pages",
+    "description": "Progress card value — current page of total pages with percent",
     "placeholders": {
       "page": {"type": "int"},
-      "total": {"type": "int"}
+      "total": {"type": "int"},
+      "percent": {"type": "int"}
     }
   },
   "bookProgressPage": "p. {page}",
@@ -404,6 +413,18 @@
   "bookLendingNotLentOut": "Not lent out.",
   "@bookLendingNotLentOut": {
     "description": "Lending card status when the book isn't currently lent"
+  },
+  "bookLendingWithFragment": "With",
+  "@bookLendingWithFragment": {
+    "description": "Fragment before the tappable borrower name on the book page's lending header"
+  },
+  "bookLendingHistoryLabel": "Lending history",
+  "@bookLendingHistoryLabel": {
+    "description": "Section label above the per-book lending/borrowing history rows"
+  },
+  "bookLendingOutStamp": "Out now",
+  "@bookLendingOutStamp": {
+    "description": "Stamp on an active (not yet returned) row in the book's lending history"
   },
   "bookLendingWithSomeone": "With {name}",
   "@bookLendingWithSomeone": {
@@ -622,6 +643,29 @@
     "description": "Returned lending card: borrower and the lent–returned date range",
     "placeholders": {
       "name": {"type": "String"},
+      "start": {"type": "String"},
+      "end": {"type": "String"}
+    }
+  },
+  "lendingToFragment": "to",
+  "@lendingToFragment": {
+    "description": "Fragment before a tappable borrower name on a lent card ('to' + name)"
+  },
+  "lendingFromFragment": "from",
+  "@lendingFromFragment": {
+    "description": "Fragment before a tappable lender name on a borrowed card ('from' + name)"
+  },
+  "lendingSinceFragment": "· since {date}",
+  "@lendingSinceFragment": {
+    "description": "Fragment after the tappable name on an active loan card",
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "lendingRangeFragment": "· {start} – {end}",
+  "@lendingRangeFragment": {
+    "description": "Fragment after the tappable name on a returned loan card",
+    "placeholders": {
       "start": {"type": "String"},
       "end": {"type": "String"}
     }

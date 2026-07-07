@@ -192,6 +192,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanNotFound => 'No book found for that ISBN.';
 
   @override
+  String get scanCameraUnavailable =>
+      'Camera unavailable — you can search the catalog or add the book manually below.';
+
+  @override
+  String get scanCameraUnavailableShort =>
+      'Camera unavailable — check the app\'s camera permission.';
+
+  @override
   String get scanConfirmAdd => 'Add';
 
   @override
@@ -293,8 +301,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookProgressLabel => 'PROGRESS';
 
   @override
-  String bookProgressValue(int page, int total) {
-    return 'p. $page of $total';
+  String bookProgressValue(int page, int total, int percent) {
+    return 'p. $page of $total · $percent%';
   }
 
   @override
@@ -351,6 +359,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookLendingNotLentOut => 'Not lent out.';
+
+  @override
+  String get bookLendingWithFragment => 'With';
+
+  @override
+  String get bookLendingHistoryLabel => 'Lending history';
+
+  @override
+  String get bookLendingOutStamp => 'Out now';
 
   @override
   String bookLendingWithSomeone(String name) {
@@ -534,6 +551,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String lendingReturnedRange(String name, String start, String end) {
     return '$name · $start – $end';
+  }
+
+  @override
+  String get lendingToFragment => 'to';
+
+  @override
+  String get lendingFromFragment => 'from';
+
+  @override
+  String lendingSinceFragment(String date) {
+    return '· since $date';
+  }
+
+  @override
+  String lendingRangeFragment(String start, String end) {
+    return '· $start – $end';
   }
 
   @override

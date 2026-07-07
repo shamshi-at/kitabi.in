@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../data/db/database.dart';
@@ -53,7 +57,7 @@ class ActivityScreen extends ConsumerWidget {
   }
 }
 
-class _ActivityRow extends StatelessWidget {
+class _ActivityRow extends ConsumerWidget {
   const _ActivityRow({required this.entry});
 
   final ActivityLogEntry entry;
@@ -75,26 +79,72 @@ class _ActivityRow extends StatelessWidget {
     }
   }
 
+  /// Resolve the event's entity back to a book route via the local DB —
+  /// events reference the syncable rows (entries, ratings, reviews, loans),
+  /// all of which lead to an edition or a work.
+  Future<String?> _bookRoute(WidgetRef ref) async {
+    final db = ref.read(appDatabaseProvider);
+
+    Future<String?> byEdition(String? editionId) async {
+      if (editionId == null) return null;
+      final book = await db.cachedBooksDao.getByEditionId(editionId);
+      return book == null ? null : Routes.bookDetailPath(book.workId, book.editionId);
+    }
+
+    Future<String?> byEntry(String? entryId) async {
+      if (entryId == null) return null;
+      final e = await (db.select(db.libraryEntries)..where((t) => t.id.equals(entryId)))
+          .getSingleOrNull();
+      return byEdition(e?.editionId);
+    }
+
+    switch (entry.entityType) {
+      case 'library_entry':
+        return byEntry(entry.entityId);
+      case 'rating':
+        final workId = (jsonDecode(entry.payload) as Map)['work_id'] as String?;
+        return workId == null ? null : '/b/$workId';
+      case 'review':
+        final r = await (db.select(db.reviews)..where((t) => t.id.equals(entry.entityId)))
+            .getSingleOrNull();
+        return r == null ? null : '/b/${r.workId}';
+      case 'lending_record':
+        final lr = await (db.select(db.lendingRecords)..where((t) => t.id.equals(entry.entityId)))
+            .getSingleOrNull();
+        if (lr == null) return null;
+        return await byEdition(lr.editionId) ?? byEntry(lr.libraryEntryId);
+    }
+    return null;
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final (icon, label) = _describe(l10n);
     final days = DateUtils.dateOnly(DateTime.now()).difference(DateUtils.dateOnly(entry.occurredAt)).inDays;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppColors.oxblood),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
-          Text(
-            l10n.activityWhen(days),
-            style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
-          ),
-        ],
+    return InkWell(
+      onTap: () async {
+        final route = await _bookRoute(ref);
+        if (route != null && context.mounted) context.push(route);
+      },
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: AppColors.oxblood),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+            Text(
+              l10n.activityWhen(days),
+              style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+            ),
+            SizedBox(width: 6),
+            Icon(Icons.chevron_right, size: 15, color: AppColors.inkSoft),
+          ],
+        ),
       ),
     );
   }

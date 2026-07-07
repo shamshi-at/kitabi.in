@@ -394,6 +394,18 @@ abstract class AppLocalizations {
   /// **'No book found for that ISBN.'**
   String get scanNotFound;
 
+  /// Shown in place of the camera preview when the camera can't start (e.g. permission denied) and the Search/Add fallback buttons are visible
+  ///
+  /// In en, this message translates to:
+  /// **'Camera unavailable — you can search the catalog or add the book manually below.'**
+  String get scanCameraUnavailable;
+
+  /// Camera-failure message when the scanner was opened from the add-book form (no fallback buttons on screen)
+  ///
+  /// In en, this message translates to:
+  /// **'Camera unavailable — check the app\'s camera permission.'**
+  String get scanCameraUnavailableShort;
+
   /// Confirms adding the detected book to the user's library
   ///
   /// In en, this message translates to:
@@ -592,11 +604,11 @@ abstract class AppLocalizations {
   /// **'PROGRESS'**
   String get bookProgressLabel;
 
-  /// Progress card value — current page of total pages
+  /// Progress card value — current page of total pages with percent
   ///
   /// In en, this message translates to:
-  /// **'p. {page} of {total}'**
-  String bookProgressValue(int page, int total);
+  /// **'p. {page} of {total} · {percent}%'**
+  String bookProgressValue(int page, int total, int percent);
 
   /// Progress card value when the total page count is unknown
   ///
@@ -699,6 +711,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not lent out.'**
   String get bookLendingNotLentOut;
+
+  /// Fragment before the tappable borrower name on the book page's lending header
+  ///
+  /// In en, this message translates to:
+  /// **'With'**
+  String get bookLendingWithFragment;
+
+  /// Section label above the per-book lending/borrowing history rows
+  ///
+  /// In en, this message translates to:
+  /// **'Lending history'**
+  String get bookLendingHistoryLabel;
+
+  /// Stamp on an active (not yet returned) row in the book's lending history
+  ///
+  /// In en, this message translates to:
+  /// **'Out now'**
+  String get bookLendingOutStamp;
 
   /// Lending card status when the book is currently lent out
   ///
@@ -987,6 +1017,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} · {start} – {end}'**
   String lendingReturnedRange(String name, String start, String end);
+
+  /// Fragment before a tappable borrower name on a lent card ('to' + name)
+  ///
+  /// In en, this message translates to:
+  /// **'to'**
+  String get lendingToFragment;
+
+  /// Fragment before a tappable lender name on a borrowed card ('from' + name)
+  ///
+  /// In en, this message translates to:
+  /// **'from'**
+  String get lendingFromFragment;
+
+  /// Fragment after the tappable name on an active loan card
+  ///
+  /// In en, this message translates to:
+  /// **'· since {date}'**
+  String lendingSinceFragment(String date);
+
+  /// Fragment after the tappable name on a returned loan card
+  ///
+  /// In en, this message translates to:
+  /// **'· {start} – {end}'**
+  String lendingRangeFragment(String start, String end);
 
   /// Due stamp when no due date is set
   ///

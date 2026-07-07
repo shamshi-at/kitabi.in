@@ -43,6 +43,25 @@ final libraryHitsProvider = StreamProvider.autoDispose<List<LibraryHit>>((ref) a
   yield* repo.watchWithBooks();
 });
 
+/// Every lending record that touches one book, newest first — lent copies
+/// hang off the owned library entry, borrowed ones off the catalog edition,
+/// so both directions land in one history (the book page's ledger view).
+/// Derived from the reactive [allLendingProvider], so a lend/return anywhere
+/// updates the open book page live.
+final bookLendingHistoryProvider = Provider.autoDispose
+    .family<AsyncValue<List<LendingRecord>>, ({String? entryId, String editionId})>((ref, key) {
+  return ref.watch(allLendingProvider).whenData((all) {
+    final records = all
+        .map((r) => r.record)
+        .where((r) =>
+            (key.entryId != null && r.libraryEntryId == key.entryId) ||
+            r.editionId == key.editionId)
+        .toList()
+      ..sort((a, b) => b.lentDate.compareTo(a.lentDate));
+    return records;
+  });
+});
+
 /// Books currently borrowed from others (active, not returned) — their own
 /// section in the library. Derived from the lending ledger; each carries the
 /// cached book (once hydrated) and the lender's name on the record.

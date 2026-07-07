@@ -79,6 +79,13 @@ camera; everything else stays paper.
   reached from a book you've actually read) share the same gold-framed layout and
   destinations row; a toggle on the per-book card folds your rating/note in when you
   have them, so it's one mental model, not two features.
+- **Counterparty names are doors too** (added 7 Jul 2026) — any borrower/lender
+  name on a loan (ledger cards, book page lending history) is tinted oxblood and
+  tappable, opening the loans-with-that-person page. Linked Kitabi users match by
+  user id; self-logged free-text names match by name — both get a page. The book
+  page's lending card carries the full per-book history (every loan both ways,
+  newest first, with dates, notes, and Returned/Out-now stamps), including on a
+  book you only borrowed.
 - **Author/publisher names are doors, not just labels** — anywhere a name appears
   (search results, book page, add/edit form), it's tinted oxblood and tappable,
   opening a browse page for everything by that author or publisher. One list

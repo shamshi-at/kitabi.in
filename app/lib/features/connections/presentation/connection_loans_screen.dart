@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/typeset_cover.dart';
@@ -9,13 +11,15 @@ import '../../../l10n/app_localizations.dart';
 import '../../lending/lending_format.dart';
 import '../../library/providers/library_providers.dart';
 
-/// The loans you have with one connection — books you've lent them and books
+/// The loans you have with one person — books you've lent them and books
 /// you've borrowed from them. Reached by tapping a connected reader in the
-/// connections inbox.
+/// connections inbox, or any counterparty name on a loan (ledger, book page).
+/// With a [userId] it matches the linked user; without one it matches the
+/// free-text name, so self-logged counterparties get a page too.
 class ConnectionLoansScreen extends ConsumerWidget {
-  const ConnectionLoansScreen({super.key, required this.userId, required this.name});
+  const ConnectionLoansScreen({super.key, this.userId, required this.name});
 
-  final String userId;
+  final String? userId;
   final String name;
 
   @override
@@ -37,7 +41,12 @@ class ConnectionLoansScreen extends ConsumerWidget {
         data: (all) {
           // borrower_user_id is the counterparty on both directions: the borrower
           // on a lent row, the lender on a borrowed row — so this catches both.
-          final loans = all.where((r) => r.record.borrowerUserId == userId).toList();
+          final needle = name.trim().toLowerCase();
+          final loans = all
+              .where((r) => userId != null
+                  ? r.record.borrowerUserId == userId
+                  : r.record.borrowerName.trim().toLowerCase() == needle)
+              .toList();
           final lent = loans.where((r) => r.record.direction != 'borrowed').toList();
           final borrowed = loans.where((r) => r.record.direction == 'borrowed').toList();
 
@@ -98,7 +107,12 @@ class _LoanRow extends StatelessWidget {
     final book = item.book;
     final returned = r.returnedDate != null;
 
-    return Container(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: book == null
+          ? null
+          : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+      child: Container(
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -146,6 +160,7 @@ class _LoanRow extends StatelessWidget {
               ),
             ),
         ],
+        ),
       ),
     );
   }

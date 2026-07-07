@@ -218,6 +218,18 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
 
 ## Lessons learned in Kitabi
 
+- **A `_inFlight ??= run()` single-flight guard silently drops triggers that arrive
+  mid-run.** Bit the sync engine (7 Jul 2026): a mutation enqueued while a sync pass was
+  in flight returned the in-flight future and was never pushed until the next external
+  trigger — up to 15 minutes later, read as "sync is broken". Single-flight guards on
+  drain-the-queue work must coalesce (mark a follow-up pass and re-run), not just dedupe.
+  Same session: repositories must fire the sync trigger on every enqueue — offline-first
+  still means push *immediately* when online, not on the workmanager cadence.
+- **Snapshotting a SQLAlchemy row into JSONB must handle plain `date` columns, not just
+  `datetime`.** `_row_to_dict` (sync conflict history) serialized `datetime`/`UUID` but
+  passed `date` through raw, so the first cross-device conflict on a row with a date
+  column (`lent_date`, `start_date`…) crashed the whole `/sync/push` batch with a 500
+  (7 Jul 2026). Check `isinstance(value, date)` — it covers `datetime` too, subclass.
 - **Supabase's direct-connection hostname (`db.<ref>.supabase.co:5432`) resolves
   IPv6-only.** On a network without a working IPv6 route it connects painfully
   slowly or times out outright (bit us during Phase 1 auth testing, 4 Jul 2026) —

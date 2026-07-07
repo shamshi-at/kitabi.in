@@ -193,7 +193,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('Wuthering Heights'), findsWidgets);
-    expect(find.textContaining('to Anu'), findsOneWidget);
+    // The borrower name is now its own tappable "door" (PersonLink) beside a
+    // "to" fragment, not part of one subtitle string.
+    expect(find.text('Anu'), findsOneWidget);
+    expect(find.text('Divya'), findsOneWidget);
     expect(find.text('Due in 3d'), findsOneWidget);
     expect(find.text('Mark returned ✓'), findsOneWidget);
     expect(find.text('Returned ✓'), findsOneWidget);

@@ -228,11 +228,25 @@ class _RecCard extends StatelessWidget {
                         style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
                       ),
                       if (author != null)
-                        Text(
-                          author,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                        GestureDetector(
+                          // The author name is a door (oxblood, like search
+                          // results) even inside the card's book-tap area.
+                          onTap: authors.first['id'] != null
+                              ? () => context.push(
+                                  Routes.authorBrowsePath(authors.first['id'] as String))
+                              : null,
+                          child: Text(
+                            author,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: authors.first['id'] != null
+                                  ? AppColors.oxblood
+                                  : AppColors.inkSoft,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          ),
                         ),
                       if (rating != null) ...[
                         SizedBox(height: 3),

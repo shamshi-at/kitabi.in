@@ -123,11 +123,16 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                       child: MobileScanner(
                         controller: _controller,
                         onDetect: _onDetect,
+                        // The FAB lands here directly (scan-first), so a dead
+                        // camera must point at the Search/Add fallbacks below,
+                        // not print a raw error code.
                         errorBuilder: (context, error, child) => Center(
                           child: Padding(
                             padding: EdgeInsets.all(24),
                             child: Text(
-                              '${error.errorDetails?.message ?? error.errorCode}',
+                              widget.returnResult
+                                  ? l10n.scanCameraUnavailableShort
+                                  : l10n.scanCameraUnavailable,
                               style: TextStyle(color: Color(0xFFEFE6C8)),
                               textAlign: TextAlign.center,
                             ),

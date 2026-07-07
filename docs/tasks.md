@@ -140,8 +140,10 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — written server-side as a side
       effect of other syncable ops, pulled to the client; no feed UI yet (feature-map.md: "flip it
       public later")
-- [x] Library grid UI: covers-first, status pills, lent band — S5. **Ticker animation for overflowing
-      generated-cover titles deliberately not built** (polish item, plain ellipsis for now)
+- [x] Library grid UI: covers-first, status pills, lent band — S5. Ticker animation for
+      overflowing generated-cover titles built 7 Jul 2026 (`TickerText`: overflow-only, one
+      pass on first render with per-book stagger, off under reduced motion, generated
+      covers only — mockup `.tick` keyframes)
 - [~] Airplane-mode test pass: sync engine logic is thoroughly unit-tested offline (in-memory Drift +
       fake API client — push/pull/conflict/idempotency all covered), and the app boots cleanly on an
       Android emulator with all the new tables/workmanager/providers wired in. **Not yet verified on a
@@ -154,10 +156,14 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       (model + sync landed with Phase 3; `borrower_name`/`lent_date`/`due_date`/`returned_date`)
 - [ ] Optional `counterparty_user_id` on the lending record + lightweight match (search
       registered users by phone/email/username when recording a lend) `[WIRED→V1]`
-- [ ] When a lend links to a real user, server mirrors a "borrowed" record onto their
+- [x] When a lend links to a real user, server mirrors a "borrowed" record onto their
       account (own row, own sync scope, correlated by a shared `linked_loan_id` — not a
-      shared row; each side's "mark returned" only closes their own copy, V1 has no
-      realtime handshake between the two)
+      shared row). Kept in step both ways after commit (`lend_mirror_service`): the
+      lender's edits/returns/deletes re-mirror onto the borrower's copy, and the
+      borrower's "mark returned" reflects `returned_date` back onto the lender's record
+      (guarded: only the loan's named `borrower_user_id` can reflect back). Mutations
+      sync immediately (repositories fire the sync trigger on every enqueue) and the
+      counterparty is nudged by FCM (`lend_new`/`lend_returned`)
 - [x] Lending ledger screen, Lent-out tab (out now / returned) — S8. Slice A: reads the
       synced `lending_records` joined to their cached book (`LendingRecordsDao.watchAllActive`,
       reactive `allLendingProvider`), Out-now cards with a computed due stamp (Due in Nd /
@@ -173,7 +179,8 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       config: Android core-library desugaring + POST_NOTIFICATIONS/boot receiver, iOS
       UNUserNotificationCenter delegate. Pure scheduling logic (id/time) unit-tested; **firing
       not yet verified on a real device** (needs a signed-in device run, same standing gap)
-- [ ] "WITH <NAME>" band on lent covers — S5
+- [x] "WITH <NAME>" band on lent covers — S5 (landed with the library grid, see Phase 3's
+      grid item; gold band over the cover while a lend is open)
 - [~] Borrowed tab: linked entries (auto-created when a lender names you) + self-logged
       entries, in one list — S8b. Slice B: the Borrowed tab is live (With-you-now / Returned,
       self-logged), reading `direction='borrowed'` records that carry the book via `edition_id`
@@ -182,8 +189,18 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] "Log a borrowed book" flow: search/scan book, from-whom, borrowed-on, optional
       remind-me date, note — S8c. Bottom sheet with inline catalog search; scan entry deferred
       (search covers it for now)
-- [x] "I've returned it" action on borrowed entries (closes your own record; does not
-      require the lender's app state — no realtime sync between the two sides in V1)
+- [x] "I've returned it" action on borrowed entries (closes your own record; on a
+      *linked* borrow the server also reflects the return onto the lender's record —
+      no realtime handshake needed, it rides the normal push→mirror→pull loop)
+- [x] Per-book lending history on the book page (7 Jul 2026, owner request): the
+      lending card lists every loan both ways (`bookLendingHistoryProvider` — lent via
+      the entry, borrowed via the edition), newest first, with dates, notes, and
+      Returned ✓ / Out now stamps; shows on borrowed-only (unowned) books too.
+      Counterparty names everywhere (ledger cards incl. returned/rejected, book page)
+      are oxblood doors (`PersonLink`) to the loans-with-that-person page —
+      `ConnectionLoansScreen` generalized to match free-text names when there's no
+      linked user. Ledger/loan rows' covers+titles and activity-log rows now open the
+      book page (activity events resolve entity → edition/work locally).
 
 ## Phase 5 — Import (the front door)
 

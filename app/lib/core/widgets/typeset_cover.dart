@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_theme.dart';
+import 'ticker_text.dart';
 
 /// One frame for every cover in the app (docs/screen-design.md): a real
 /// cover image fills it edge-to-edge; with no `coverUrl`, this renders a
@@ -22,6 +23,13 @@ class TypesetCover extends StatelessWidget {
   final String? coverUrl;
   final double width;
   final double height;
+
+  /// Lead-in before an overflowing title/author runs its one ticker pass —
+  /// jittered per book so a shelf of long titles doesn't move in lockstep
+  /// (docs/screen-design.md: overflow-only, once on first render, never in
+  /// loops on a full grid).
+  Duration get _tickDelay =>
+      Duration(milliseconds: 1200 + ('$title${author ?? ''}'.hashCode.abs() % 5) * 180);
 
   /// A deterministic, muted 2-stop gradient derived from the book — same book
   /// always looks the same, but saturation/lightness vary a little per book so
@@ -99,10 +107,10 @@ class TypesetCover extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                TickerText(
                   title,
                   maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                  startDelay: _tickDelay,
                   style: GoogleFonts.fraunces(
                     color: AppColors.goldSoft,
                     // Scale with width; the max clamp keeps a big grid cover
@@ -122,10 +130,9 @@ class TypesetCover extends StatelessWidget {
           if (author != null)
             Padding(
               padding: EdgeInsets.fromLTRB(w * 0.14, 0, w * 0.1, h * 0.06),
-              child: Text(
+              child: TickerText(
                 author!.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                startDelay: _tickDelay,
                 style: TextStyle(
                   color: AppColors.goldSoft.withValues(alpha: 0.85),
                   fontSize: (w * 0.1).clamp(6.0, 12.0),

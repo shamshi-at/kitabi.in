@@ -174,6 +174,39 @@ full list) with a "manage in profile" note. Also this session: the transient "Sy
 removed (routine sync is silent; only the *error* banner remains), and the full-screen book page
 got a back button that falls back to Home when there's nothing to pop.
 
+**Sync correctness pass** (7 Jul 2026): lending changes now land on the other side
+promptly, both directions. App: every repository mutation fires the sync trigger the
+moment it enqueues (`Repo.onMutation` → `syncTriggerProvider`) instead of waiting up to
+15 minutes for workmanager; `SyncEngine.syncNow` coalesces a trigger that arrives
+mid-sync into a follow-up pass (the old `??=` guard silently dropped it); pull-to-refresh
+on the library grid and all three ledger tabs runs a real push+pull round trip
+(`syncNowProvider`). API: returns are now **bidirectional** — a borrower's "I've returned
+it" reflects `returned_date` onto the lender's record (guarded: only the loan's named
+`borrower_user_id` can reflect back) and pushes `lend_returned`; an existing mirror keeps
+receiving the lender's returns/edits/deletes even after the connection is dropped (the
+gate applies to *creating* a mirror, not keeping the pair in step); no born-deleted
+mirrors; mirror failures are logged instead of swallowed. Fixed a 500 that killed a whole
+push batch when a cross-device conflict snapshotted a row with plain `date` columns
+(`_row_to_dict`). New coverage: two-user HTTP round-trip tests (`test_lend_sync_e2e`),
+reverse-reflection/spoof-guard/disconnect mirror tests, and app-side coalescing +
+onMutation tests.
+
+**Sync hardening, second pass** (7 Jul 2026, same day): a full-surface defect sweep.
+App: the outbox (`sync_queue`) is now **user-scoped** (schema v3 adds `user_id`; the
+drain only pushes the signed-in reader's ops, so an account switch racing a sync can
+never push one account's edits under another's JWT); a push rejected with
+`deleted_wins` now **soft-deletes the row locally** (the pull that carried the delete
+was skipped by the pending-op guard and rejected ops bump no seq — the push result is
+the only signal); a partial/malformed push response can no longer **hang the drain
+loop** (unanswered ops cost an attempt and error out after 5). API: migration `000016`
+adds a **partial unique index** `uq_lending_mirror_pair (user_id, linked_loan_id)` —
+dedupes then makes the concurrent-push duplicate-mirror race impossible (the create
+retries into the update path on conflict); creates now **validate referenced-row
+ownership** (a lending record/tag assignment hung off another user's library entry is
+rejected `invalid_reference` — the FK alone only proves existence); unlinking a loan
+(`borrower_user_id → null`) now **retires its mirror** (soft-delete + seq bump) instead
+of leaving a frozen "with you" row on the former borrower's shelf.
+
 ---
 
 ## Tech stack

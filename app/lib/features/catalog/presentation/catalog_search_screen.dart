@@ -68,6 +68,10 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                           Expanded(
                             child: TextField(
                               controller: _controller,
+                              // Keyboard up on arrival — the screen is useless
+                              // until there's a query, so don't make the user
+                              // tap the field first.
+                              autofocus: true,
                               decoration: InputDecoration(
                                 hintText: l10n.catalogSearchHint,
                                 border: InputBorder.none,

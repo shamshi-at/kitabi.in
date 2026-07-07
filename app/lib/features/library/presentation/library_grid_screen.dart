@@ -96,6 +96,10 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
             return RefreshIndicator(
               color: AppColors.oxblood,
               onRefresh: () async {
+                // A real sync round-trip — push pending local ops, pull deltas
+                // (e.g. a loan the lender just marked returned) — not just a
+                // provider refresh of unchanged local data.
+                await ref.read(syncNowProvider)();
                 ref.invalidate(libraryHitsProvider);
                 ref.invalidate(allLendingProvider);
                 await _refreshMissingCovers();
@@ -386,15 +390,22 @@ class _BorrowedGridItem extends StatelessWidget {
           SizedBox(height: 4),
           Align(
             alignment: Alignment.centerLeft,
+            // Same pill shape/typography as StatusPill, tinted slate — borrowed
+            // books read as one shelf with the owned grid above them.
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: AppColors.slate.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                l10n.libraryBorrowedSection,
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.slate),
+                l10n.libraryBorrowedSection.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: AppColors.slate,
+                ),
               ),
             ),
           ),

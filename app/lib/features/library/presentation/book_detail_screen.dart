@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/router/app_router.dart';
@@ -9,6 +10,7 @@ import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/person_link.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/catalog_cache.dart';
@@ -18,6 +20,7 @@ import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../catalog/providers/catalog_providers.dart';
+import '../../lending/lending_format.dart';
 import '../../lending/presentation/lend_sheet.dart';
 import '../../lending/reminder.dart';
 import '../../share/presentation/share_book_sheet.dart';
@@ -137,7 +140,12 @@ class _BookDetailBody extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(work['title'] as String, style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      work['title'] as String,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     if (authors.isNotEmpty)
                       GestureDetector(
                         onTap: () =>
@@ -211,7 +219,16 @@ class _BookDetailBody extends ConsumerWidget {
             loading: () => Center(child: CircularProgressIndicator()),
             error: (err, _) => Center(child: Text('$err')),
             data: (libraryEntry) => libraryEntry == null
-                ? _AddToLibraryButton(work: work, edition: edition ?? {'id': editionId})
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _AddToLibraryButton(work: work, edition: edition ?? {'id': editionId}),
+                      // A borrowed (unowned) book still shows its history —
+                      // "from Anu · out now", close-out action and all.
+                      SizedBox(height: 8),
+                      _LendingCard(editionId: editionId),
+                    ],
+                  )
                 : _OwnedBookSections(entry: libraryEntry, workId: work['id'] as String),
           ),
         ),
@@ -888,7 +905,7 @@ class _OwnedBookSections extends ConsumerWidget {
         SizedBox(height: 8),
         _NotesCard(entry: entry),
         SizedBox(height: 8),
-        _LendingCard(entry: entry),
+        _LendingCard(entry: entry, editionId: entry.editionId),
         SizedBox(height: 8),
         _TagsSection(entry: entry),
       ],
@@ -1029,8 +1046,11 @@ class _ProgressCard extends ConsumerWidget {
                 Text(
                   page == null
                       ? '—'
-                      : (total != null
-                          ? l10n.bookProgressValue(page, total)
+                      : (total != null && total > 0
+                          // "p. 302 of 724 · 42%" — pages first, never a bare
+                          // percentage (docs/screen-design.md).
+                          ? l10n.bookProgressValue(
+                              page, total, ((page / total) * 100).round().clamp(0, 100))
                           : l10n.bookProgressPage(page)),
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 ),
@@ -1303,11 +1323,13 @@ class _TagsSection extends ConsumerWidget {
 }
 
 class _LendingCard extends ConsumerWidget {
-  const _LendingCard({required this.entry});
+  const _LendingCard({required this.editionId, this.entry});
 
-  final LibraryEntry entry;
+  /// Owned copy — enables the Lend action; null for a book you only borrowed.
+  final LibraryEntry? entry;
+  final String editionId;
 
-  Future<void> _lend(BuildContext context, WidgetRef ref) async {
+  Future<void> _lend(BuildContext context, WidgetRef ref, LibraryEntry entry) async {
     // Warn before lending a book you're still reading — an easy way to lose your
     // spot / your copy mid-read.
     if (entry.status == 'reading') {
@@ -1340,7 +1362,6 @@ class _LendingCard extends ConsumerWidget {
       author: book?.authorNames,
       coverUrl: book?.coverUrl,
     );
-    ref.invalidate(lendingRecordsProvider(entry.id));
   }
 
   Future<void> _markReturned(WidgetRef ref, String lendingId) async {
@@ -1348,50 +1369,183 @@ class _LendingCard extends ConsumerWidget {
     final repo = await ref.read(lendingRepositoryProvider.future);
     await repo.markReturned(lendingId, DateTime.now());
     await ref.read(notificationServiceProvider).cancel(reminderIdForRecord(lendingId));
-    ref.invalidate(lendingRecordsProvider(entry.id));
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final records = ref.watch(lendingRecordsProvider(entry.id));
-    final list = records.valueOrNull ?? [];
-    final current = list.where((r) => r.returnedDate == null).firstOrNull;
-    final pastCount = list.where((r) => r.returnedDate != null).length;
+    final history = ref
+        .watch(bookLendingHistoryProvider((entryId: entry?.id, editionId: editionId)))
+        .valueOrNull ??
+        const <LendingRecord>[];
+    // The active loan of the copy I own — drives the header + primary action.
+    final current = history
+        .where((r) => r.direction != 'borrowed' && r.returnedDate == null)
+        .firstOrNull;
+
+    // A book that's merely borrowed (not owned) only earns the card once it
+    // actually has history — no "Not lent out" noise on catalog pages.
+    if (entry == null && history.isEmpty) return SizedBox.shrink();
 
     return _Card(
       leftBorder: AppColors.gold,
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.swap_horiz, size: 16, color: AppColors.gold),
-          SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  current != null
-                      ? l10n.bookLendingWithSomeone(current.borrowerName)
-                      : l10n.bookLendingNotLentOut,
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                ),
-                if (pastCount > 0)
-                  Text(
-                    l10n.bookLendingPastCount(pastCount),
-                    style: TextStyle(color: AppColors.inkSoft, fontSize: 10),
+          if (entry != null)
+            Row(
+            children: [
+              Icon(Icons.swap_horiz, size: 16, color: AppColors.gold),
+              SizedBox(width: 8),
+              Expanded(
+                child: current != null
+                    ? Row(
+                        children: [
+                          Text(
+                            '${l10n.bookLendingWithFragment} ',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                          ),
+                          Flexible(
+                            child: PersonLink(
+                              current.borrowerName,
+                              userId: current.borrowerUserId,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        l10n.bookLendingNotLentOut,
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                      ),
+              ),
+              if (entry != null)
+                TextButton(
+                  onPressed: current != null
+                      ? () => _markReturned(ref, current.id)
+                      : () => _lend(context, ref, entry!),
+                  child: Text(
+                    current != null ? l10n.bookMarkReturnedAction : l10n.bookLendAction,
+                    style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
-          TextButton(
-            onPressed:
-                current != null ? () => _markReturned(ref, current.id) : () => _lend(context, ref),
-            child: Text(
-              current != null ? l10n.bookMarkReturnedAction : l10n.bookLendAction,
-              style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+          // The detailed ledger for this book — every loan either way,
+          // newest first, counterparty names as doors.
+          if (history.isNotEmpty) ...[
+            SizedBox(height: 4),
+            Text(
+              l10n.bookLendingHistoryLabel.toUpperCase(),
+              style: TextStyle(
+                fontSize: 9,
+                letterSpacing: 1,
+                fontWeight: FontWeight.w700,
+                color: AppColors.inkSoft,
+              ),
             ),
-          ),
+            SizedBox(height: 2),
+            for (final r in history) _LendingHistoryRow(record: r, onReturned: _markReturned),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// One line of the book's lending history: direction, who (tappable), when,
+/// and how it ended — a moss "Returned ✓" or a gold "Out now" stamp. Borrowed
+/// rows that are still open close out right here ("Returned it").
+class _LendingHistoryRow extends ConsumerWidget {
+  const _LendingHistoryRow({required this.record, required this.onReturned});
+
+  final LendingRecord record;
+  final Future<void> Function(WidgetRef, String) onReturned;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final borrowed = record.direction == 'borrowed';
+    final returned = record.returnedDate != null;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                borrowed ? Icons.south_west : Icons.north_east,
+                size: 11,
+                color: borrowed ? AppColors.slate : AppColors.gold,
+              ),
+              SizedBox(width: 6),
+              Text(
+                '${borrowed ? l10n.lendingFromFragment : l10n.lendingToFragment} ',
+                style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+              ),
+              Flexible(child: PersonLink(record.borrowerName, userId: record.borrowerUserId)),
+              Flexible(
+                child: Text(
+                  returned
+                      ? ' ${l10n.lendingRangeFragment(fmtLendingDate(record.lentDate), fmtLendingDate(record.returnedDate!))}'
+                      : ' ${l10n.lendingSinceFragment(fmtLendingDate(record.lentDate))}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                ),
+              ),
+              SizedBox(width: 6),
+              Spacer(),
+              if (returned)
+                _HistoryStamp(label: l10n.lendingReturnedStamp, color: AppColors.moss)
+              else if (borrowed)
+                GestureDetector(
+                  onTap: () => onReturned(ref, record.id),
+                  child: _HistoryStamp(label: l10n.lendingReturnedIt, color: AppColors.oxblood),
+                )
+              else
+                _HistoryStamp(label: l10n.bookLendingOutStamp, color: AppColors.gold),
+            ],
+          ),
+          if (record.note != null && record.note!.trim().isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(left: 17, top: 1),
+              child: Text(
+                record.note!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.fraunces(
+                  fontStyle: FontStyle.italic,
+                  fontSize: 10.5,
+                  color: AppColors.inkSoft,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryStamp extends StatelessWidget {
+  const _HistoryStamp({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color),
       ),
     );
   }
