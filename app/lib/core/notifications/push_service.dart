@@ -40,7 +40,15 @@ class PushService {
       sound: true,
     );
 
-    _token = await messaging.getToken();
+    try {
+      // iOS resolves the FCM token only once the APNs token is set, which can
+      // lag; getToken may return null/throw until then. onTokenRefresh below
+      // registers it the moment it's ready, so a null first attempt is fine.
+      if (Platform.isIOS) await messaging.getAPNSToken();
+      _token = await messaging.getToken();
+    } catch (_) {
+      _token = null;
+    }
     if (_token != null) await _register(_token!);
     messaging.onTokenRefresh.listen((t) {
       _token = t;
@@ -97,7 +105,16 @@ final pushLifecycleProvider = Provider<void>((ref) {
       final was = prev?.valueOrNull;
       final now = next.valueOrNull;
       if (now != null && was == null) {
-        push.start(onOpen: (_) => ref.read(routerProvider).push(Routes.connections));
+        push.start(onOpen: (message) {
+          final router = ref.read(routerProvider);
+          final type = message.data['type'];
+          // Route the tap to where the event lives.
+          if (type == 'lend_new' || type == 'lend_returned') {
+            router.go(Routes.lendingLedger);
+          } else {
+            router.push(Routes.connections);
+          }
+        });
       } else if (now == null && was != null) {
         push.stop();
       }

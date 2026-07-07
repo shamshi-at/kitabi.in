@@ -16,9 +16,9 @@ import uuid
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import LendingRecord, LibraryEntry
+from app.models import Edition, LendingRecord, LibraryEntry, Work
 from app.models.profile import Profile
-from app.services import connection_service
+from app.services import connection_service, push_service
 
 
 def _display_name(p: Profile | None) -> str:
@@ -59,6 +59,10 @@ async def mirror_lending(db: AsyncSession, lender_id: uuid.UUID, record_id: uuid
 
     lender_name = _display_name(await db.get(Profile, lender_id))
 
+    # What happened, so we can push the borrower the right notification below.
+    is_new = mirror is None
+    just_returned = False
+
     if mirror is None:
         mirror = LendingRecord(
             id=uuid.uuid4(),
@@ -78,6 +82,7 @@ async def mirror_lending(db: AsyncSession, lender_id: uuid.UUID, record_id: uuid
         await db.refresh(mirror, ["server_seq"])
     else:
         # Keep the mirror in step — returns, due-date edits, un/deletes.
+        just_returned = mirror.returned_date is None and lent.returned_date is not None
         mirror.lent_date = lent.lent_date
         mirror.due_date = lent.due_date
         mirror.returned_date = lent.returned_date
@@ -89,3 +94,18 @@ async def mirror_lending(db: AsyncSession, lender_id: uuid.UUID, record_id: uuid
         await db.flush()
 
     await db.commit()
+
+    # Push the borrower about a new loan / its return (best-effort, off the
+    # committed transaction). Skip deleted loans.
+    if lent.deleted_at is None:
+        book_title = await _book_title(db, edition_id)
+        if is_new:
+            await push_service.notify_book_lent(lender_id, borrower_id, book_title)
+        elif just_returned:
+            await push_service.notify_book_returned(lender_id, borrower_id, book_title)
+
+
+async def _book_title(db: AsyncSession, edition_id: uuid.UUID) -> str:
+    edition = await db.get(Edition, edition_id)
+    work = await db.get(Work, edition.work_id) if edition is not None else None
+    return work.title if work is not None and work.title else "a book"

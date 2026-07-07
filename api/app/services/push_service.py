@@ -73,3 +73,25 @@ async def notify_connection_accepted(actor_id: uuid.UUID, target_id: uuid.UUID) 
         body_suffix="accepted your connection on Kitabi",
         data={"type": "connection_accepted"},
     )
+
+
+async def notify_book_lent(actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str) -> None:
+    """Someone lent a book to the target (a connected reader)."""
+    await _notify_from_actor(
+        actor_id,
+        target_id,
+        title="A book's on its way to you",
+        body_suffix=f"lent you “{book_title}” on Kitabi",
+        data={"type": "lend_new"},
+    )
+
+
+async def notify_book_returned(actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str) -> None:
+    """The lender marked a loan returned."""
+    await _notify_from_actor(
+        actor_id,
+        target_id,
+        title="Loan marked returned",
+        body_suffix=f"marked “{book_title}” returned",
+        data={"type": "lend_returned"},
+    )
