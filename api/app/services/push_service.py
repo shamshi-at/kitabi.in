@@ -107,24 +107,48 @@ async def send_test(user_id: uuid.UUID) -> dict[str, object]:
         tokens = await device_service.tokens_for_user(db, user_id)
         sent = 0
         dead: list[str] = []
+        error: str | None = None
         async with httpx.AsyncClient(timeout=10) as client:
             for token in tokens:
                 try:
-                    result = await fcm_client.send(
+                    result, status_code, detail = await fcm_client.send_verbose(
                         client,
                         token,
                         "Kitabi test 🔔",
                         "Push notifications are working — you're all set.",
                         {"type": "test"},
                     )
-                except Exception:  # noqa: BLE001 — a bad token must not sink the rest
-                    result = fcm_client.ERROR
+                except Exception as exc:  # noqa: BLE001 — a bad token must not sink the rest
+                    result, status_code, detail = fcm_client.ERROR, 0, str(exc)
                 if result == fcm_client.SENT:
                     sent += 1
                 elif result == fcm_client.UNREGISTERED:
                     dead.append(token)
+                if result != fcm_client.SENT and error is None:
+                    # Surface FCM's error status (e.g. THIRD_PARTY_AUTH_ERROR =
+                    # missing/invalid APNs key) so the cause is legible in-app.
+                    error = _fcm_error_summary(status_code, detail)
         await device_service.prune(db, dead)
-        return {"push_enabled": True, "tokens": len(tokens), "sent": sent}
+        result_out: dict[str, object] = {"push_enabled": True, "tokens": len(tokens), "sent": sent}
+        if error is not None:
+            result_out["error"] = error
+        return result_out
+
+
+def _fcm_error_summary(status_code: int, detail: str) -> str:
+    """Pull FCM's machine status out of the error body for a compact message."""
+    for marker in (
+        "THIRD_PARTY_AUTH_ERROR",
+        "SENDER_ID_MISMATCH",
+        "UNREGISTERED",
+        "INVALID_ARGUMENT",
+        "QUOTA_EXCEEDED",
+        "UNAVAILABLE",
+        "INTERNAL",
+    ):
+        if marker in detail:
+            return f"{status_code} {marker}"
+    return f"{status_code}: {detail[:120]}"
 
 
 async def notify_return_reminder(

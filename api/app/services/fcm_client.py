@@ -70,14 +70,25 @@ async def _access_token(client: httpx.AsyncClient) -> str:
     return _token_cache["value"]
 
 
-async def send(
+def _classify(status_code: int, detail: str) -> str:
+    if status_code == 200:
+        return SENT
+    # A dead token comes back as 404 UNREGISTERED (or 400 with that status).
+    if status_code in (400, 404) and ("UNREGISTERED" in detail or "INVALID_ARGUMENT" in detail):
+        return UNREGISTERED
+    return ERROR
+
+
+async def send_verbose(
     client: httpx.AsyncClient,
     token: str,
     title: str,
     body: str,
     data: dict[str, str] | None = None,
-) -> str:
-    """Send one message. Returns SENT / UNREGISTERED (prune it) / ERROR."""
+) -> tuple[str, int, str]:
+    """Send one message, returning (result, http_status, response_body). The body
+    carries FCM's error status (e.g. THIRD_PARTY_AUTH_ERROR when the APNs key is
+    missing/invalid) — surfaced by the /devices/test diagnostic."""
     creds = _load_creds()
     access = await _access_token(client)
     message: dict[str, Any] = {
@@ -93,11 +104,16 @@ async def send(
         headers={"Authorization": f"Bearer {access}"},
         json={"message": message},
     )
-    if resp.status_code == 200:
-        return SENT
-    # A dead token comes back as 404 UNREGISTERED (or 400 with that status).
-    if resp.status_code in (400, 404):
-        detail = resp.text
-        if "UNREGISTERED" in detail or "INVALID_ARGUMENT" in detail:
-            return UNREGISTERED
-    return ERROR
+    return _classify(resp.status_code, resp.text), resp.status_code, resp.text
+
+
+async def send(
+    client: httpx.AsyncClient,
+    token: str,
+    title: str,
+    body: str,
+    data: dict[str, str] | None = None,
+) -> str:
+    """Send one message. Returns SENT / UNREGISTERED (prune it) / ERROR."""
+    result, _, _ = await send_verbose(client, token, title, body, data)
+    return result

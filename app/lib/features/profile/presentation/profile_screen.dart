@@ -953,13 +953,25 @@ class _PushDiagnosticsTile extends ConsumerWidget {
                         try {
                           final r = await ref.read(apiClientProvider).sendTestPush();
                           final sent = (r['sent'] as num?)?.toInt() ?? 0;
+                          final tokens = (r['tokens'] as num?)?.toInt() ?? 0;
                           final enabled = r['push_enabled'] == true;
+                          final err = r['error'] as String?;
+                          final String msg;
+                          if (!enabled) {
+                            msg = 'Push is disabled on the server.';
+                          } else if (tokens == 0) {
+                            msg = 'No devices registered yet — tap Retry, then try again.';
+                          } else if (sent > 0) {
+                            msg = 'Test sent to $sent device${sent == 1 ? '' : 's'}.';
+                          } else {
+                            msg = 'Send failed ($tokens device${tokens == 1 ? '' : 's'}): '
+                                '${err ?? 'unknown error'}';
+                          }
                           messenger.showSnackBar(SnackBar(
-                            content: Text(!enabled
-                                ? 'Push is disabled on the server.'
-                                : sent == 0
-                                    ? 'No devices registered yet — tap Retry, then try again.'
-                                    : 'Test sent to $sent device${sent == 1 ? '' : 's'}.'),
+                            content: Text(msg),
+                            duration: sent == 0
+                                ? const Duration(seconds: 6)
+                                : const Duration(seconds: 4),
                           ));
                         } catch (_) {
                           messenger.showSnackBar(
