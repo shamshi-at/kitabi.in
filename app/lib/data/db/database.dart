@@ -76,4 +76,23 @@ class AppDatabase extends _$AppDatabase {
           }
         },
       );
+
+  /// Wipe all per-user data (Layer 2 entities, the offline caches, and the sync
+  /// bookkeeping) when the signed-in account changes on this device — so one
+  /// reader's library/loans never leak into another's. `KeyValues` is kept
+  /// (device settings + the active-user marker); the sync cursor in `SyncState`
+  /// is cleared, so the new account re-pulls everything from server_seq 0.
+  Future<void> clearUserData() => transaction(() async {
+        await delete(libraryEntries).go();
+        await delete(ratings).go();
+        await delete(reviews).go();
+        await delete(personalTags).go();
+        await delete(libraryEntryTags).go();
+        await delete(lendingRecords).go();
+        await delete(activityLogEntries).go();
+        await delete(syncQueue).go();
+        await delete(syncState).go();
+        await delete(conflictHistoryEntries).go();
+        await delete(cachedBooks).go();
+      });
 }

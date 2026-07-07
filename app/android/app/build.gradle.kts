@@ -67,6 +67,13 @@ android {
                 // acceptable for a Play upload).
                 signingConfigs.getByName("debug")
             }
+            // R8 was stripping runtime-reflected classes (WorkManager's Room
+            // WorkDatabase_Impl, Firebase/MLKit component registrars) → release
+            // crashed on launch with NoSuchMethodException. Disable shrinking:
+            // reliability over a few MB, and it avoids endless per-plugin keep
+            // rules. (Revisit with proguard-rules.pro later if size matters.)
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

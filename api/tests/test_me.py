@@ -29,6 +29,21 @@ async def test_set_username_lowercases_and_shows_on_me(client):
     assert (await client.get("/me")).json()["username"] == "shamshi_k"
 
 
+async def test_delete_then_rebootstrap_revives_profile(client):
+    # Re-created account (same auth user): delete soft-deletes the profile; the
+    # next bootstrap must revive it so the reader can get back in.
+    await client.post("/auth/bootstrap")
+    await client.patch("/me", json={"preferred_languages": ["Malayalam"]})
+    assert (await client.delete("/me")).status_code == 204
+    assert (await client.get("/me")).status_code == 404  # deleted
+    # Sign in again → bootstrap revives it.
+    await client.post("/auth/bootstrap")
+    resp = await client.get("/me")
+    assert resp.status_code == 200
+    # And it's writable again (this is what was failing at the language step).
+    assert (await client.patch("/me", json={"preferred_languages": ["English"]})).status_code == 200
+
+
 async def test_preferred_languages_default_empty_then_set(client):
     await client.post("/auth/bootstrap")
     assert (await client.get("/me")).json()["preferred_languages"] == []

@@ -18,6 +18,15 @@ async def get_or_bootstrap_profile(db: AsyncSession, user: dict) -> Profile:
     user_id = uuid.UUID(user["id"])
     profile = await db.get(Profile, user_id)
     if profile is not None:
+        # Re-created account: a prior in-app "delete account" soft-deleted this
+        # profile (same Supabase user id). Revive it on re-bootstrap — otherwise
+        # /me and PATCH /me keep 404ing (get_profile_or_404 rejects deleted rows)
+        # and the reader is stuck at onboarding, unable to get back in.
+        if profile.deleted_at is not None:
+            profile.deleted_at = None
+            profile.email = user["email"]
+            await db.commit()
+            await db.refresh(profile)
         return profile
     profile = Profile(
         id=user_id,
