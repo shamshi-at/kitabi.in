@@ -44,10 +44,14 @@ Future<Uint8List?> pickAndCropImage({
   }
 }
 
-/// Open the cropper on a just-picked image, locked to [ratio], and return the
-/// cropped JPEG bytes ready to upload. Returns null if the user backs out of the
-/// crop step (treated the same as cancelling the pick). Themed to the Reading
-/// Room palette on both platforms.
+/// Open the cropper on a just-picked image and return the cropped JPEG bytes
+/// ready to upload. [ratio] is the *starting* frame ([ratio.x]:[ratio.y]) — but
+/// the user is free to resize, move, reshape (pick another aspect), rotate, and
+/// zoom; the crop rectangle is no longer locked (owner feedback 8 Jul 2026: the
+/// locked box read as "can't trim/resize/move"). The app renders every cover in
+/// a 2:3 frame with BoxFit.cover, so an off-ratio crop still displays cleanly.
+/// Returns null if the user backs out of the crop. Themed to the Reading Room
+/// palette on both platforms.
 Future<Uint8List?> cropPickedImage(String sourcePath, CropRatio ratio) async {
   final cropped = await ImageCropper().cropImage(
     sourcePath: sourcePath,
@@ -61,20 +65,18 @@ Future<Uint8List?> cropPickedImage(String sourcePath, CropRatio ratio) async {
         toolbarWidgetColor: AppColors.paper,
         activeControlsWidgetColor: AppColors.oxblood,
         backgroundColor: AppColors.night,
-        // Keep the shape locked (covers stay 2:3, portraits 1:1) but show the
-        // rotate/scale controls so a hand-held photo can be straightened and
-        // reframed — that's the "adjust" step, beyond just pan/zoom.
-        lockAspectRatio: true,
+        // Free-form: resize/move the crop box, plus rotate/scale.
+        lockAspectRatio: false,
         hideBottomControls: false,
         showCropGrid: true,
       ),
       IOSUiSettings(
         title: ratio.title,
-        aspectRatioLockEnabled: true,
-        resetAspectRatioEnabled: false,
-        aspectRatioPickerButtonHidden: true,
-        // Allow rotation so a tilted cover photo can be straightened; the aspect
-        // stays locked to the render shape.
+        // Unlocked so the crop rectangle can be dragged/resized; the aspect
+        // picker and reset are available for framing.
+        aspectRatioLockEnabled: false,
+        resetAspectRatioEnabled: true,
+        aspectRatioPickerButtonHidden: false,
         rotateButtonsHidden: false,
         rotateClockwiseButtonHidden: false,
       ),
