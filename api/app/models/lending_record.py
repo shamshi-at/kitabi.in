@@ -4,7 +4,7 @@ on date, returned Y/N") as its own entity, running both directions."""
 import uuid
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, String, Uuid
+from sqlalchemy import Date, ForeignKey, Index, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, SyncableMixin
@@ -27,6 +27,18 @@ class LendingRecord(SyncableMixin, Base):
     (not a shared row — each side closes its own copy)."""
 
     __tablename__ = "lending_records"
+    __table_args__ = (
+        # One mirror per (borrower, source loan) — enforced in the database so
+        # two concurrent lender pushes can't each create a mirror (the app-level
+        # select-then-insert in lend_mirror_service races without this).
+        Index(
+            "uq_lending_mirror_pair",
+            "user_id",
+            "linked_loan_id",
+            unique=True,
+            postgresql_where=text("linked_loan_id IS NOT NULL"),
+        ),
+    )
 
     direction: Mapped[str] = mapped_column(String, nullable=False, default="lent")
     library_entry_id: Mapped[uuid.UUID | None] = mapped_column(

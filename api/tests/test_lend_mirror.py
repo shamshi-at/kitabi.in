@@ -1,7 +1,7 @@
 """Server-side mirroring of an outgoing loan onto the borrower's account."""
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 
@@ -75,6 +75,144 @@ async def test_no_mirror_without_accepted_connection(db_sessionmaker, user, user
         await lend_mirror_service.mirror_lending(db, lender, rec_id)
     async with db_sessionmaker() as db:
         assert await _borrowed(db, borrower) == []
+
+
+async def test_borrower_return_reflects_onto_lender(db_sessionmaker, user, user_b):
+    """The other direction: the borrower marks the book returned on their
+    mirror — the lender's original record picks up the return (with a seq bump
+    so it re-pulls) and stays theirs otherwise."""
+    lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
+    async with db_sessionmaker() as db:
+        rec_id, _ = await _seed_lend(db, lender, borrower, connected=True)
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, lender, rec_id)
+    async with db_sessionmaker() as db:
+        lent_seq_before = (await db.get(LendingRecord, rec_id)).server_seq
+        mirror = (await _borrowed(db, borrower))[0]
+        mirror.returned_date = date(2026, 7, 21)  # what the borrower's push op applies
+        await db.commit()
+        mirror_id = mirror.id
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, borrower, mirror_id)
+    async with db_sessionmaker() as db:
+        lent = await db.get(LendingRecord, rec_id)
+    assert lent.returned_date == date(2026, 7, 21)
+    assert lent.server_seq > lent_seq_before  # re-pulls to the lender's devices
+
+
+async def test_reflection_ignores_spoofed_link(db_sessionmaker, user, user_b):
+    """linked_loan_id arrives in client payloads — a borrowed row whose target
+    loan doesn't name this user as its borrower must never mutate it."""
+    lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
+    async with db_sessionmaker() as db:
+        rec_id, edition_id = await _seed_lend(db, lender, borrower, connected=True)
+        # A crafted borrowed row from someone the loan doesn't point at.
+        intruder = uuid.uuid4()
+        db.add(Profile(id=intruder, email="i@x.com", username="intruder"))
+        fake = LendingRecord(
+            user_id=intruder,
+            direction="borrowed",
+            edition_id=edition_id,
+            borrower_name="Lena Lender",
+            linked_loan_id=rec_id,
+            lent_date=date(2026, 7, 1),
+            returned_date=date(2026, 7, 2),
+        )
+        db.add(fake)
+        await db.flush()
+        fake_id = fake.id
+        await db.commit()
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, intruder, fake_id)
+    async with db_sessionmaker() as db:
+        lent = await db.get(LendingRecord, rec_id)
+    assert lent.returned_date is None  # untouched
+
+
+async def test_existing_mirror_updates_survive_disconnect(db_sessionmaker, user, user_b):
+    """The connection gates *creating* a mirror, not keeping an existing pair
+    in step — a return marked after the readers disconnect must still flow."""
+    lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
+    async with db_sessionmaker() as db:
+        rec_id, _ = await _seed_lend(db, lender, borrower, connected=True)
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, lender, rec_id)
+    async with db_sessionmaker() as db:
+        conn = (await db.execute(select(Connection))).scalars().first()
+        conn.status = "denied"
+        lent = await db.get(LendingRecord, rec_id)
+        lent.returned_date = date(2026, 7, 22)
+        await db.commit()
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, lender, rec_id)
+    async with db_sessionmaker() as db:
+        rows = await _borrowed(db, borrower)
+    assert rows[0].returned_date == date(2026, 7, 22)
+
+
+async def test_no_born_deleted_mirror(db_sessionmaker, user, user_b):
+    """A loan already soft-deleted when it first reaches the mirror step has
+    nothing to show the borrower — no ghost row is created."""
+    lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
+    async with db_sessionmaker() as db:
+        rec_id, _ = await _seed_lend(db, lender, borrower, connected=True)
+        lent = await db.get(LendingRecord, rec_id)
+        lent.deleted_at = datetime.now(UTC)
+        await db.commit()
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, lender, rec_id)
+    async with db_sessionmaker() as db:
+        assert await _borrowed(db, borrower) == []
+
+
+async def test_unlinking_a_loan_retires_the_mirror(db_sessionmaker, user, user_b):
+    """Re-pointing a loan at a private contact clears borrower_user_id — the
+    mirror it once fanned out must soft-delete (with a seq bump) or the former
+    borrower's shelf shows a frozen "with you" row forever."""
+    lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
+    async with db_sessionmaker() as db:
+        rec_id, _ = await _seed_lend(db, lender, borrower, connected=True)
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, lender, rec_id)
+    async with db_sessionmaker() as db:
+        mirror_seq_before = (await _borrowed(db, borrower))[0].server_seq
+        lent = await db.get(LendingRecord, rec_id)
+        lent.borrower_user_id = None  # what updateBorrower(null) applies
+        lent.borrower_name = "Bob (private)"
+        await db.commit()
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, lender, rec_id)
+    async with db_sessionmaker() as db:
+        rows = await _borrowed(db, borrower)
+    assert len(rows) == 1
+    assert rows[0].deleted_at is not None
+    assert rows[0].server_seq > mirror_seq_before  # the removal re-pulls
+
+
+async def test_duplicate_mirror_insert_hits_db_constraint(db_sessionmaker, user, user_b):
+    """uq_lending_mirror_pair: the database refuses a second mirror for the same
+    (borrower, source loan) even if the app-level existence check races."""
+    lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
+    async with db_sessionmaker() as db:
+        rec_id, edition_id = await _seed_lend(db, lender, borrower, connected=True)
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, lender, rec_id)
+    import pytest
+    from sqlalchemy.exc import IntegrityError
+
+    async with db_sessionmaker() as db:
+        db.add(
+            LendingRecord(
+                user_id=borrower,
+                direction="borrowed",
+                edition_id=edition_id,
+                borrower_name="Lena Lender",
+                linked_loan_id=rec_id,
+                lent_date=date(2026, 7, 1),
+            )
+        )
+        with pytest.raises(IntegrityError):
+            await db.flush()
 
 
 async def test_mirror_is_idempotent_and_tracks_return(db_sessionmaker, user, user_b):

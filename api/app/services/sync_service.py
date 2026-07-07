@@ -4,9 +4,10 @@ last-write-wins conflict resolution (losers written to ConflictHistory), and a
 server_seq bigserial pull cursor bumped on every mutation. Lending ops fan out to
 lend_mirror_service after commit (CLAUDE.md rules 1, 6, sync-engine notes)."""
 
+import logging
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
@@ -46,6 +47,8 @@ from app.schemas.sync import (
 )
 from app.services import lend_mirror_service
 
+logger = logging.getLogger(__name__)
+
 CONFLICT_RETENTION = timedelta(days=30)
 
 # entity name -> (model, create_schema, update_schema)
@@ -78,7 +81,10 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for column in mapper.columns:
         value = getattr(row, column.key)
-        if isinstance(value, datetime):
+        # `date` covers datetime too (subclass) — both must serialize, or a
+        # conflict-history write on a row with a plain date column (lent_date,
+        # start_date…) blows up the whole push batch with a 500.
+        if isinstance(value, date):
             out[column.key] = value.isoformat()
         elif isinstance(value, uuid.UUID):
             out[column.key] = str(value)
@@ -157,6 +163,26 @@ async def _log_activity(db: AsyncSession, user_id: uuid.UUID, activity: dict) ->
     await db.refresh(entry, ["server_seq"])
 
 
+async def _refs_owned(db: AsyncSession, user_id: uuid.UUID, entity: str, data: dict) -> bool:
+    """Referenced Layer-2 rows must belong to the pusher. The FK constraint only
+    proves the row *exists* — without this check a crafted create could hang a
+    lending record or tag assignment off another user's library entry/tag."""
+    if entity == "lending_records":
+        entry_id = data.get("library_entry_id")
+        if entry_id is not None:
+            entry = await db.get(LibraryEntry, entry_id)
+            if entry is None or entry.user_id != user_id:
+                return False
+    elif entity == "library_entry_tags":
+        entry = await db.get(LibraryEntry, data["library_entry_id"])
+        if entry is None or entry.user_id != user_id:
+            return False
+        tag = await db.get(PersonalTag, data["tag_id"])
+        if tag is None or tag.user_id != user_id:
+            return False
+    return True
+
+
 async def _apply_one(
     db: AsyncSession, user_id: uuid.UUID, op: SyncOpIn
 ) -> tuple[SyncOpResult, _ConflictData | None, dict | None]:
@@ -171,6 +197,12 @@ async def _apply_one(
                 None,
             )
         data = create_schema.model_validate({**op.payload, "id": op.entity_id})
+        if not await _refs_owned(db, user_id, op.entity, data.model_dump()):
+            return (
+                SyncOpResult(op_id=op.op_id, status="rejected", code="invalid_reference"),
+                None,
+                None,
+            )
         row = model(**data.model_dump(), user_id=user_id)
         db.add(row)
         await db.flush()
@@ -283,12 +315,19 @@ async def apply_ops(
 
     await db.commit()
 
-    # Mirror outgoing loans onto linked borrowers' accounts — best-effort, each
-    # isolated so one failure never affects the lender's committed ops.
+    # Fan applied lending ops out to the counterparty (lender→borrower mirror,
+    # borrower→lender return reflection) — best-effort, each isolated so one
+    # failure never affects the pusher's committed ops. Logged loudly: a silent
+    # miss here is exactly "user B never sees the return".
     for record_id in lending_applied:
         try:
             await lend_mirror_service.mirror_lending(db, user_id, record_id)
         except Exception:  # noqa: BLE001 — mirroring is a side effect, never fatal
+            logger.exception(
+                "lend mirror failed for lending_record %s pushed by user %s",
+                record_id,
+                user_id,
+            )
             await db.rollback()
 
     return results

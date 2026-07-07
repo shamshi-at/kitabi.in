@@ -115,6 +115,69 @@ async def test_last_write_wins_applies_and_logs_conflict(client, db_sessionmaker
     assert [r[0] for r in rows] == ["last_write_wins"]
 
 
+async def test_conflict_on_row_with_date_columns_serializes(client, db_sessionmaker):
+    """The discarded payload snapshots the whole row — plain `date` columns
+    (start_date, lent_date…) must serialize into the JSONB conflict row, or the
+    entire push batch 500s. Regression: cross-device update on a dated row."""
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    create = _op(
+        "library_entries",
+        entry_id,
+        "create",
+        {"edition_id": edition_id, "start_date": "2026-07-01"},
+        DEVICE_A,
+    )
+    update = _op("library_entries", entry_id, "update", {"status": "read"}, DEVICE_B)
+
+    await client.post("/sync/push", json={"ops": [create]})
+    resp = await client.post("/sync/push", json={"ops": [update]})
+
+    assert resp.status_code == 200
+    assert resp.json()["results"][0]["status"] == "applied"
+    async with db_sessionmaker() as session:
+        rows = (
+            await session.execute(
+                text("SELECT rule FROM conflict_history WHERE entity_id = :id"), {"id": entry_id}
+            )
+        ).all()
+    assert [r[0] for r in rows] == ["last_write_wins"]
+
+
+async def test_create_referencing_another_users_entry_is_rejected(client, db_sessionmaker, user_b):
+    """The FK only proves the referenced row exists — a lending record hung off
+    ANOTHER user's library entry must be rejected, not applied."""
+    import uuid as _uuid
+
+    _, edition_id = await _seed_edition(client)
+    foreign_entry = str(_uuid.uuid4())
+    async with db_sessionmaker() as session:
+        await session.execute(
+            text(
+                "INSERT INTO library_entries (id, user_id, edition_id, status, is_favorite,"
+                " created_at, updated_at) VALUES (:id, :uid, :ed, 'pending', false, now(), now())"
+            ),
+            {"id": foreign_entry, "uid": user_b["id"], "ed": edition_id},
+        )
+        await session.commit()
+
+    op = _op(
+        "lending_records",
+        str(_uuid.uuid4()),
+        "create",
+        {
+            "direction": "lent",
+            "library_entry_id": foreign_entry,
+            "borrower_name": "Mallory",
+            "lent_date": "2026-07-01",
+        },
+    )
+    resp = await client.post("/sync/push", json={"ops": [op]})
+    result = resp.json()["results"][0]
+    assert result["status"] == "rejected"
+    assert result["code"] == "invalid_reference"
+
+
 async def test_same_device_updates_do_not_conflict(client, db_sessionmaker):
     _, edition_id = await _seed_edition(client)
     entry_id = str(uuid.uuid4())
