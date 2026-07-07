@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/haptics.dart';
+import '../../../core/notifications/push_service.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/language_chips.dart';
@@ -258,6 +260,8 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
             ),
           ),
         ),
+        SizedBox(height: 16),
+        const _PushDiagnosticsTile(),
         SizedBox(height: 24),
         _ActionButton(
           icon: Icons.history,
@@ -850,6 +854,108 @@ class _LanguagesSheetState extends ConsumerState<_LanguagesSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A live push-pipeline health readout, so an otherwise-invisible iOS push
+/// failure (permission, APNs token, FCM token, API registration) is legible on a
+/// real TestFlight device. "Retry" re-runs acquisition; "Copy token" exports the
+/// FCM token for a manual test send.
+class _PushDiagnosticsTile extends ConsumerWidget {
+  const _PushDiagnosticsTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final push = ref.watch(pushServiceProvider);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: ValueListenableBuilder<PushDiagnostics>(
+          valueListenable: push.diagnostics,
+          builder: (context, d, _) {
+            Widget row(String label, String value, {bool ok = true}) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 110,
+                        child: Text(label,
+                            style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5)),
+                      ),
+                      Expanded(
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: ok ? null : AppColors.oxblood,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+            final fcm = d.fcmToken;
+            final permOk = d.permission == 'authorized' || d.permission == 'provisional';
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.notifications_active_outlined,
+                        size: 18, color: AppColors.oxblood),
+                    const SizedBox(width: 8),
+                    const Text('Push notifications',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                  ],
+                ),
+                const Divider(height: 18),
+                row('Firebase', d.firebaseAvailable ? 'ready' : 'unavailable',
+                    ok: d.firebaseAvailable),
+                row('Permission', d.permission, ok: permOk),
+                if (d.apnsToken != null)
+                  row('APNs token', d.apnsToken! ? 'present' : 'MISSING', ok: d.apnsToken!),
+                row(
+                  'FCM token',
+                  fcm == null ? 'none' : '${fcm.substring(0, fcm.length < 12 ? fcm.length : 12)}…',
+                  ok: fcm != null,
+                ),
+                row('Registered', d.registered ? 'yes' : 'no', ok: d.registered),
+                if (d.lastError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(d.lastError!,
+                        style: TextStyle(color: AppColors.oxblood, fontSize: 11.5)),
+                  ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => push.refresh(),
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Retry'),
+                    ),
+                    if (fcm != null)
+                      TextButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: fcm));
+                          Haptics.selection();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('FCM token copied')),
+                          );
+                        },
+                        icon: const Icon(Icons.copy, size: 16),
+                        label: const Text('Copy token'),
+                      ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

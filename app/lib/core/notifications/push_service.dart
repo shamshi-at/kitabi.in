@@ -16,6 +16,47 @@ import '../router/app_router.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
 
+/// A snapshot of the push pipeline's health, surfaced by the in-app diagnostic
+/// (Profile → "Push notifications"). Makes an otherwise-invisible release/TestFlight
+/// failure legible: was Firebase available, was permission granted, did the APNs
+/// token arrive (iOS), did we get an FCM token, and did the API accept it.
+class PushDiagnostics {
+  const PushDiagnostics({
+    this.firebaseAvailable = false,
+    this.permission = 'unknown',
+    this.apnsToken,
+    this.fcmToken,
+    this.registered = false,
+    this.lastError,
+  });
+
+  final bool firebaseAvailable;
+  final String permission; // authorized | denied | provisional | notDetermined
+  final bool? apnsToken; // iOS only: null = not yet checked, true/false = present
+  final String? fcmToken;
+  final bool registered; // token accepted by POST /devices
+  final String? lastError;
+
+  static const _keep = Object();
+
+  PushDiagnostics copyWith({
+    bool? firebaseAvailable,
+    String? permission,
+    bool? apnsToken,
+    Object? fcmToken = _keep,
+    bool? registered,
+    Object? lastError = _keep,
+  }) =>
+      PushDiagnostics(
+        firebaseAvailable: firebaseAvailable ?? this.firebaseAvailable,
+        permission: permission ?? this.permission,
+        apnsToken: apnsToken ?? this.apnsToken,
+        fcmToken: fcmToken == _keep ? this.fcmToken : fcmToken as String?,
+        registered: registered ?? this.registered,
+        lastError: lastError == _keep ? this.lastError : lastError as String?,
+      );
+}
+
 /// Registers this install's FCM token with the API for the signed-in user,
 /// keeps it fresh, and routes notification taps. All Firebase calls are guarded
 /// so the app is unaffected on web or when Firebase isn't initialised (tests).
@@ -26,13 +67,25 @@ class PushService {
   String? _token;
   bool _started = false;
 
+  /// Live push state for the in-app diagnostic; watch via [diagnostics].
+  final ValueNotifier<PushDiagnostics> diagnostics =
+      ValueNotifier<PushDiagnostics>(const PushDiagnostics());
+
   bool get _available => !kIsWeb && Firebase.apps.isNotEmpty;
 
+  void _set(PushDiagnostics Function(PushDiagnostics) f) =>
+      diagnostics.value = f(diagnostics.value);
+
   Future<void> start({void Function(RemoteMessage message)? onOpen}) async {
-    if (_started || !_available) return;
+    if (_started || !_available) {
+      _set((d) => d.copyWith(firebaseAvailable: _available));
+      return;
+    }
     _started = true;
+    _set((d) => d.copyWith(firebaseAvailable: true));
     final messaging = FirebaseMessaging.instance;
-    await messaging.requestPermission();
+    final settings = await messaging.requestPermission();
+    _set((d) => d.copyWith(permission: settings.authorizationStatus.name));
     // Let notifications show while the app is foregrounded (iOS default hides them).
     await messaging.setForegroundNotificationPresentationOptions(
       alert: true,
@@ -40,36 +93,13 @@ class PushService {
       sound: true,
     );
 
-    try {
-      // On iOS the FCM token exists only *after* the APNs token is set, which
-      // arrives asynchronously (a second or two after registerForRemoteNotifications,
-      // which requestPermission triggers). Calling getToken() before then throws
-      // `apns-token-not-set` — and onTokenRefresh does NOT fire for the *initial*
-      // token, only on rotation, so a swallowed first failure means the token is
-      // lost until the app is reinstalled. That's why iOS never registered while
-      // Android (no APNs dependency) did. Poll for the APNs token first.
-      if (Platform.isIOS) {
-        var apns = await messaging.getAPNSToken();
-        for (var i = 0; i < 20 && apns == null; i++) {
-          await Future<void>.delayed(const Duration(seconds: 1));
-          apns = await messaging.getAPNSToken();
-        }
-        if (apns == null && kDebugMode) {
-          debugPrint('PushService: APNs token never arrived — check the app\'s '
-              'Push Notifications capability / provisioning profile.');
-        }
-      }
-      _token = await messaging.getToken();
-      if (kDebugMode) debugPrint('PushService: FCM token ${_token == null ? "null" : "acquired"}');
-    } catch (e) {
-      if (kDebugMode) debugPrint('PushService: token fetch failed: $e');
-      _token = null;
-    }
-    if (_token != null) await _register(_token!);
+    await _acquireAndRegister(messaging);
+
     // Belt-and-braces: also catch the token if it only becomes available later
     // (e.g. APNs was slow past the poll window, or it rotates).
     messaging.onTokenRefresh.listen((t) {
       _token = t;
+      _set((d) => d.copyWith(fcmToken: t));
       _register(t);
     });
 
@@ -81,11 +111,57 @@ class PushService {
     }
   }
 
+  /// Re-run token acquisition + registration on demand — the diagnostic's "retry",
+  /// useful when the APNs token was slow or push was only just granted in Settings.
+  Future<void> refresh() async {
+    if (!_available) {
+      _set((d) => d.copyWith(firebaseAvailable: false));
+      return;
+    }
+    final messaging = FirebaseMessaging.instance;
+    final settings = await messaging.getNotificationSettings();
+    _set((d) => d.copyWith(firebaseAvailable: true, permission: settings.authorizationStatus.name));
+    await _acquireAndRegister(messaging);
+  }
+
+  Future<void> _acquireAndRegister(FirebaseMessaging messaging) async {
+    try {
+      // On iOS the FCM token exists only *after* the APNs token is set, which
+      // arrives asynchronously (after registerForRemoteNotifications, which
+      // requestPermission triggers). getToken() throws `apns-token-not-set`
+      // until then, and onTokenRefresh does NOT fire for the *initial* token —
+      // so a swallowed first failure loses it until reinstall. That's why iOS
+      // never registered while Android (no APNs dependency) did. Poll first.
+      if (Platform.isIOS) {
+        var apns = await messaging.getAPNSToken();
+        for (var i = 0; i < 20 && apns == null; i++) {
+          await Future<void>.delayed(const Duration(seconds: 1));
+          apns = await messaging.getAPNSToken();
+        }
+        _set((d) => d.copyWith(apnsToken: apns != null));
+        if (apns == null) {
+          _set((d) => d.copyWith(
+              lastError: 'APNs token never arrived — check the App ID "Push '
+                  'Notifications" capability / provisioning profile.'));
+          return; // getToken() would just throw apns-token-not-set
+        }
+      }
+      _token = await messaging.getToken();
+      _set((d) => d.copyWith(fcmToken: _token, lastError: null));
+    } catch (e) {
+      _set((d) => d.copyWith(lastError: 'token fetch failed: $e'));
+      _token = null;
+    }
+    if (_token != null) await _register(_token!);
+  }
+
   Future<void> _register(String token) async {
     try {
       await _api.registerDevice(token, Platform.isIOS ? 'ios' : 'android');
-    } catch (_) {
+      _set((d) => d.copyWith(registered: true, lastError: null));
+    } catch (e) {
       // Best-effort; a token refresh or the next launch retries.
+      _set((d) => d.copyWith(registered: false, lastError: 'register failed: $e'));
     }
   }
 
