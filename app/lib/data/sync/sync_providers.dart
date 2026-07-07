@@ -46,6 +46,17 @@ final syncTriggerProvider = Provider<void Function()>((ref) {
   };
 });
 
+/// Awaitable variant for pull-to-refresh — pushes pending ops and pulls
+/// deltas, resolving when the pass completes so the refresh spinner reflects
+/// an actual round-trip, not just a provider invalidation.
+final syncNowProvider = Provider<Future<void> Function()>((ref) {
+  return () async {
+    final session = ref.read(sessionContextProvider).valueOrNull;
+    if (session == null) return;
+    await ref.read(syncEngineProvider).syncNow(session.userId);
+  };
+});
+
 /// Count of queued (not-yet-synced) local mutations — drives the sync bar.
 final unsyncedCountProvider = StreamProvider.autoDispose<int>((ref) {
   return ref.watch(appDatabaseProvider).syncQueueDao.watchPendingCount();

@@ -13,12 +13,17 @@ class SyncQueueDao extends DatabaseAccessor<AppDatabase> with _$SyncQueueDaoMixi
 
   Future<void> enqueue(SyncQueueCompanion row) => into(syncQueue).insert(row);
 
-  Future<List<SyncQueueData>> pending({required int limit}) => (select(
-        syncQueue,
-      )
-        ..orderBy([(t) => OrderingTerm.asc(t.queuedAt)])
-        ..limit(limit))
-          .get();
+  /// Pending ops to push. When [userId] is given, only that user's ops (plus
+  /// legacy rows queued before the column existed) — never another account's.
+  Future<List<SyncQueueData>> pending({required int limit, String? userId}) {
+    final query = select(syncQueue)
+      ..orderBy([(t) => OrderingTerm.asc(t.queuedAt)])
+      ..limit(limit);
+    if (userId != null) {
+      query.where((t) => t.userId.equals(userId) | t.userId.equals(''));
+    }
+    return query.get();
+  }
 
   Future<void> incrementAttempt(String opId) => customUpdate(
         'UPDATE sync_queue SET attempts = attempts + 1 WHERE op_id = ?',

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/data/api/api_client.dart';
@@ -8,18 +10,30 @@ import 'package:kitabi/data/sync/sync_engine.dart';
 class _FakeApiClient extends ApiClient {
   final List<Map<String, dynamic>> pushedOps = [];
   List<Map<String, dynamic>> nextPushResults = [];
+  bool autoApplyAll = false; // answer every op with applied + a fake seq
+  int _seq = 100;
   bool throwOnPush = false;
   Map<String, dynamic> nextPull = {'changes': [], 'next_cursor': 0, 'has_more': false};
+  int pullCalls = 0;
+  Future<void>? pullGate;
 
   @override
   Future<List<Map<String, dynamic>>> syncPush(List<Map<String, dynamic>> ops) async {
     if (throwOnPush) throw Exception('offline');
     pushedOps.addAll(ops);
+    if (autoApplyAll) {
+      return [
+        for (final op in ops)
+          {'op_id': op['op_id'], 'status': 'applied', 'server_seq': ++_seq},
+      ];
+    }
     return nextPushResults;
   }
 
   @override
   Future<Map<String, dynamic>> syncPull({required int cursor, int limit = 500}) async {
+    pullCalls++;
+    if (pullGate != null) await pullGate;
     return nextPull;
   }
 }
@@ -181,6 +195,94 @@ void main() {
     expect(await db.syncStateDao.cursorFor('user-1'), 50);
     // And it's queued for cover hydration (no owned entry, so edition-carried).
     expect(await db.lendingRecordsDao.activeBorrowedEditionIds(), ['edition-borrowed-1']);
+  });
+
+  test('the drain only pushes the signed-in user\'s ops', () async {
+    // An account switch racing a sync must never push the previous reader's
+    // queued ops under the new reader's JWT — the outbox is user-scoped.
+    final mine = LibraryRepository(db, session);
+    final theirs = LibraryRepository(
+      db,
+      const SessionContext(userId: 'user-2', deviceId: 'device-2'),
+    );
+    await mine.add(editionId: 'edition-mine');
+    await theirs.add(editionId: 'edition-theirs');
+    api.autoApplyAll = true;
+
+    await engine.syncNow('user-1');
+
+    expect(api.pushedOps, hasLength(1));
+    expect(api.pushedOps.single['device_id'], 'device-1');
+    // user-2's op is still queued, untouched, for their own session to push.
+    final left = await db.syncQueueDao.pending(limit: 10, userId: 'user-2');
+    expect(left, hasLength(1));
+  });
+
+  test('an op the server does not answer cannot spin the drain forever', () async {
+    // A partial/malformed push response used to leave the unanswered op
+    // untouched — pending() re-fetched it and the while-loop re-pushed it
+    // endlessly in a single drain. Now each unanswered round costs an attempt,
+    // so the op errors out after maxAttempts and the drain terminates.
+    final repo = LibraryRepository(db, session);
+    await repo.add(editionId: 'edition-1');
+    api.nextPushResults = []; // server answers nothing, every time
+
+    await engine.syncNow('user-1'); // must return, not hang
+
+    expect(api.pushedOps.length, lessThanOrEqualTo(5)); // maxAttempts rounds
+    final entry = await db.libraryEntriesDao.getByEditionId('edition-1');
+    expect(entry!.syncStatus, 'error'); // surfaced, not silent
+  });
+
+  test('a deleted_wins rejection soft-deletes the row locally', () async {
+    // While our update op sat in the queue, the pull carrying the server-side
+    // delete was skipped (pending-op guard) and the cursor advanced past it.
+    // A rejected op bumps no server_seq, so no future pull re-delivers the
+    // delete — the push result is the only signal, and it must be applied.
+    final repo = LibraryRepository(db, session);
+    await repo.add(editionId: 'edition-1');
+    final entry = await db.libraryEntriesDao.getByEditionId('edition-1');
+    final opId = (await db.syncQueueDao.pending(limit: 1)).first.opId;
+    api.nextPushResults = [
+      {'op_id': opId, 'status': 'rejected', 'code': 'deleted_wins'},
+    ];
+
+    await engine.syncNow('user-1');
+
+    expect(await db.syncQueueDao.pending(limit: 10), isEmpty);
+    final after = await db.libraryEntriesDao.getByEditionId('edition-1');
+    expect(after == null || after.deletedAt != null, isTrue,
+        reason: 'the row must be locally soft-deleted, not left alive (id ${entry!.id})');
+  });
+
+  test('a trigger during an in-flight sync coalesces into a follow-up pass', () async {
+    // A mutation enqueued mid-sync used to be silently dropped by the old
+    // `_inFlight ??=` guard — the op sat in the queue until the next external
+    // trigger (up to 15 minutes). Now the second trigger marks a follow-up
+    // pass that runs as soon as the current one finishes.
+    final gate = Completer<void>();
+    api.pullGate = gate.future;
+
+    final first = engine.syncNow('user-1'); // pass 1: parked on the pull gate
+    final second = engine.syncNow('user-1'); // mid-flight trigger — coalesced
+
+    expect(identical(first, second), isTrue); // no overlapping second pass
+    gate.complete();
+    await first;
+
+    expect(api.pullCalls, 2); // the follow-up pass actually ran
+  });
+
+  test('a repository mutation fires the onMutation sync hook', () async {
+    var fired = 0;
+    final repo = LibraryRepository(db, session, onMutation: () => fired++);
+
+    await repo.add(editionId: 'edition-1');
+    expect(fired, 1); // every enqueued op asks the engine to drain immediately
+
+    final entry = await db.libraryEntriesDao.getByEditionId('edition-1');
+    await repo.updateStatus(entry!.id, 'read');
+    expect(fired, 2);
   });
 
   test('a row with a pending local op is not clobbered by an in-flight pull', () async {

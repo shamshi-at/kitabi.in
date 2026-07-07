@@ -33,14 +33,38 @@ class SyncEngine {
   final int pullPageSize;
 
   Future<SyncReport>? _inFlight;
+  bool _runAgain = false;
 
   /// Never throws — a network failure just means "try again next time."
+  ///
+  /// Coalesces concurrent triggers: a call while a pass is already running
+  /// doesn't start a second pass, but marks a follow-up so ops enqueued
+  /// mid-sync (the old `??=` guard silently dropped these) are pushed as soon
+  /// as the current pass finishes rather than waiting for the next trigger.
   Future<SyncReport> syncNow(String userId) {
-    return _inFlight ??= _syncNow(userId).whenComplete(() => _inFlight = null);
+    final inFlight = _inFlight;
+    if (inFlight != null) {
+      _runAgain = true;
+      return inFlight;
+    }
+    return _inFlight = _syncLoop(userId).whenComplete(() => _inFlight = null);
+  }
+
+  Future<SyncReport> _syncLoop(String userId) async {
+    var report = await _syncNow(userId);
+    while (_runAgain) {
+      _runAgain = false;
+      final again = await _syncNow(userId);
+      report = SyncReport(
+        pushedOps: report.pushedOps + again.pushedOps,
+        pulledChanges: report.pulledChanges + again.pulledChanges,
+      );
+    }
+    return report;
   }
 
   Future<SyncReport> _syncNow(String userId) async {
-    final pushed = await _drainQueue();
+    final pushed = await _drainQueue(userId);
     var pulled = 0;
     try {
       pulled = await _pull(userId);
@@ -60,10 +84,12 @@ class SyncEngine {
     return SyncReport(pushedOps: pushed, pulledChanges: pulled);
   }
 
-  Future<int> _drainQueue() async {
+  Future<int> _drainQueue(String userId) async {
     var processed = 0;
     while (true) {
-      final all = await db.syncQueueDao.pending(limit: pushBatchSize);
+      // Scoped to the signed-in user: an account switch racing this drain must
+      // never push the previous reader's ops under this reader's JWT.
+      final all = await db.syncQueueDao.pending(limit: pushBatchSize, userId: userId);
       final ops = all.where((o) => o.attempts < maxAttempts).toList();
       if (ops.isEmpty) return processed;
 
@@ -95,7 +121,16 @@ class SyncEngine {
       final byId = {for (final r in results) r['op_id'] as String: r};
       for (final o in ops) {
         final result = byId[o.opId];
-        if (result == null) continue;
+        if (result == null) {
+          // The server didn't answer this op (partial/malformed response).
+          // Count it as a failed attempt — leaving it untouched would make
+          // this while-loop re-fetch and re-push it forever in one drain.
+          await db.syncQueueDao.incrementAttempt(o.opId);
+          if (o.attempts + 1 >= maxAttempts) {
+            await _setStatus(o.entity, o.entityId, 'error');
+          }
+          continue;
+        }
         final status = result['status'] as String;
         if (status == 'applied' || status == 'duplicate') {
           await _setStatus(o.entity, o.entityId, 'synced', serverSeq: result['server_seq'] as int?);
@@ -103,7 +138,15 @@ class SyncEngine {
         } else {
           // rejected
           await db.syncQueueDao.remove(o.opId);
-          if (result['code'] != 'deleted_wins') {
+          if (result['code'] == 'deleted_wins') {
+            // The server says this row was deleted (delete-wins). Apply that
+            // locally now: the pull that carried the delete was skipped while
+            // this op was pending (and the cursor moved past it), and a
+            // rejected op bumps no server_seq — so no future pull will ever
+            // bring the delete back. Without this the row stays alive on this
+            // device forever.
+            await _applyRemoteDelete(o.entity, o.entityId);
+          } else {
             await _setStatus(o.entity, o.entityId, 'error');
           }
         }
@@ -120,7 +163,7 @@ class SyncEngine {
       final changes = (page['changes'] as List).cast<Map<String, dynamic>>();
 
       final pendingIds = {
-        for (final o in await db.syncQueueDao.pending(limit: 10000)) o.entityId,
+        for (final o in await db.syncQueueDao.pending(limit: 10000, userId: userId)) o.entityId,
       };
 
       cursor = page['next_cursor'] as int;
@@ -135,6 +178,71 @@ class SyncEngine {
       });
 
       if (page['has_more'] != true) return applied;
+    }
+  }
+
+  /// Soft-delete a row the server rejected our op for with `deleted_wins` —
+  /// the server-side deletion is the truth and no pull will re-deliver it.
+  Future<void> _applyRemoteDelete(String entity, String entityId) async {
+    final companion = (
+      deletedAt: Value(DateTime.now()),
+      syncStatus: Value('synced'),
+      lastSyncedAt: Value(DateTime.now()),
+    );
+    switch (entity) {
+      case 'library_entries':
+        await db.libraryEntriesDao.patch(
+          entityId,
+          LibraryEntriesCompanion(
+            deletedAt: companion.deletedAt,
+            syncStatus: companion.syncStatus,
+            lastSyncedAt: companion.lastSyncedAt,
+          ),
+        );
+      case 'ratings':
+        await db.ratingsDao.patch(
+          entityId,
+          RatingsCompanion(
+            deletedAt: companion.deletedAt,
+            syncStatus: companion.syncStatus,
+            lastSyncedAt: companion.lastSyncedAt,
+          ),
+        );
+      case 'reviews':
+        await db.reviewsDao.patch(
+          entityId,
+          ReviewsCompanion(
+            deletedAt: companion.deletedAt,
+            syncStatus: companion.syncStatus,
+            lastSyncedAt: companion.lastSyncedAt,
+          ),
+        );
+      case 'personal_tags':
+        await (db.update(db.personalTags)..where((t) => t.id.equals(entityId))).write(
+          PersonalTagsCompanion(
+            deletedAt: companion.deletedAt,
+            syncStatus: companion.syncStatus,
+            lastSyncedAt: companion.lastSyncedAt,
+          ),
+        );
+      case 'library_entry_tags':
+        await db.tagsDao.patchAssignment(
+          entityId,
+          LibraryEntryTagsCompanion(
+            deletedAt: companion.deletedAt,
+            syncStatus: companion.syncStatus,
+            lastSyncedAt: companion.lastSyncedAt,
+          ),
+        );
+      case 'lending_records':
+        await db.lendingRecordsDao.patch(
+          entityId,
+          LendingRecordsCompanion(
+            deletedAt: companion.deletedAt,
+            syncStatus: companion.syncStatus,
+            lastSyncedAt: companion.lastSyncedAt,
+          ),
+        );
     }
   }
 

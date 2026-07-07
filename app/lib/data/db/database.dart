@@ -51,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,6 +76,12 @@ class AppDatabase extends _$AppDatabase {
                 ],
               ),
             );
+          }
+          if (from < 3) {
+            // Scope the outbox by user so a drain racing an account switch
+            // can't push one reader's ops under another's JWT. Pre-existing
+            // rows get '' and are still drained (single-user devices).
+            await m.addColumn(syncQueue, syncQueue.userId);
           }
         },
       );

@@ -18,10 +18,16 @@ class SessionContext {
 }
 
 abstract class Repo {
-  Repo(this.db, this.session);
+  Repo(this.db, this.session, {this.onMutation});
 
   final AppDatabase db;
   final SessionContext session;
+
+  /// Fired after every enqueued op so the sync engine drains immediately —
+  /// without it a mutation (e.g. marking a loan returned) sits in the queue
+  /// until the next periodic/lifecycle trigger, up to 15 minutes away, and the
+  /// counterparty sees stale state. Wired to [syncTriggerProvider].
+  final void Function()? onMutation;
 
   /// Every mutation calls this — snake_case keys, matching what the API
   /// expects on `POST /sync/push`.
@@ -30,21 +36,24 @@ abstract class Repo {
     required String entityId,
     required String opType,
     required Map<String, dynamic> data,
-  }) =>
-      db.syncQueueDao.enqueue(
-        SyncQueueCompanion.insert(
-          opId: _uuid.v4(),
-          deviceId: session.deviceId,
-          entity: entity,
-          entityId: entityId,
-          opType: opType,
-          payload: jsonEncode(data),
-        ),
-      );
+  }) async {
+    await db.syncQueueDao.enqueue(
+      SyncQueueCompanion.insert(
+        opId: _uuid.v4(),
+        userId: Value(session.userId),
+        deviceId: session.deviceId,
+        entity: entity,
+        entityId: entityId,
+        opType: opType,
+        payload: jsonEncode(data),
+      ),
+    );
+    onMutation?.call();
+  }
 }
 
 class LibraryRepository extends Repo {
-  LibraryRepository(super.db, super.session);
+  LibraryRepository(super.db, super.session, {super.onMutation});
 
   Stream<List<LibraryEntry>> watchActive() => db.libraryEntriesDao.watchActive();
 
@@ -171,7 +180,7 @@ class LibraryRepository extends Repo {
 }
 
 class RatingsRepository extends Repo {
-  RatingsRepository(super.db, super.session);
+  RatingsRepository(super.db, super.session, {super.onMutation});
 
   Stream<Rating?> watchForWork(String workId) => db.ratingsDao.watchForWork(workId);
 
@@ -210,7 +219,7 @@ class RatingsRepository extends Repo {
 }
 
 class ReviewsRepository extends Repo {
-  ReviewsRepository(super.db, super.session);
+  ReviewsRepository(super.db, super.session, {super.onMutation});
 
   Stream<Review?> watchForWork(String workId) => db.reviewsDao.watchForWork(workId);
 
@@ -255,7 +264,7 @@ class ReviewsRepository extends Repo {
 }
 
 class TagsRepository extends Repo {
-  TagsRepository(super.db, super.session);
+  TagsRepository(super.db, super.session, {super.onMutation});
 
   Stream<List<PersonalTag>> watchAll() => db.tagsDao.watchAll();
 
@@ -307,7 +316,7 @@ class TagsRepository extends Repo {
 }
 
 class LendingRepository extends Repo {
-  LendingRepository(super.db, super.session);
+  LendingRepository(super.db, super.session, {super.onMutation});
 
   Stream<List<LendingRecord>> watchForEntry(String libraryEntryId) =>
       db.lendingRecordsDao.watchForEntry(libraryEntryId);

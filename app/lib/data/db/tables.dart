@@ -88,6 +88,10 @@ class ActivityLogEntries extends Table with SyncColumns {
 /// `POST /sync/push`; `opId` is the idempotency key.
 class SyncQueue extends Table {
   TextColumn get opId => text()();
+  // Who enqueued this op — the drain only pushes the signed-in user's ops, so
+  // an account switch racing a sync can never push one reader's edits under
+  // another reader's JWT. '' on rows queued before this column existed.
+  TextColumn get userId => text().withDefault(Constant(''))();
   // Captured at enqueue time (which device made this edit), not at push
   // time — the whole point is answering "which device did this," and a
   // queued op can sit offline for a while before it's actually pushed.
