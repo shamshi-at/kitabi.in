@@ -938,12 +938,36 @@ class _PushDiagnosticsTile extends ConsumerWidget {
                         style: TextStyle(color: AppColors.oxblood, fontSize: 11.5)),
                   ),
                 const SizedBox(height: 4),
-                Row(
+                Wrap(
+                  spacing: 4,
                   children: [
                     TextButton.icon(
                       onPressed: () => push.refresh(),
                       icon: const Icon(Icons.refresh, size: 16),
                       label: const Text('Retry'),
+                    ),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        Haptics.selection();
+                        try {
+                          final r = await ref.read(apiClientProvider).sendTestPush();
+                          final sent = (r['sent'] as num?)?.toInt() ?? 0;
+                          final enabled = r['push_enabled'] == true;
+                          messenger.showSnackBar(SnackBar(
+                            content: Text(!enabled
+                                ? 'Push is disabled on the server.'
+                                : sent == 0
+                                    ? 'No devices registered yet — tap Retry, then try again.'
+                                    : 'Test sent to $sent device${sent == 1 ? '' : 's'}.'),
+                          ));
+                        } catch (_) {
+                          messenger.showSnackBar(
+                              const SnackBar(content: Text('Could not send the test.')));
+                        }
+                      },
+                      icon: const Icon(Icons.send_outlined, size: 16),
+                      label: const Text('Send test'),
                     ),
                     if (fcm != null)
                       TextButton.icon(

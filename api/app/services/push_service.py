@@ -97,6 +97,36 @@ async def notify_book_returned(actor_id: uuid.UUID, target_id: uuid.UUID, book_t
     )
 
 
+async def send_test(user_id: uuid.UUID) -> dict[str, object]:
+    """Push a test notification to the caller's own devices — powers the in-app
+    "Send test" button so a solo user can verify push end-to-end without a second
+    account. Returns counts so the app can show a precise result."""
+    if not get_settings().push_enabled:
+        return {"push_enabled": False, "tokens": 0, "sent": 0}
+    async with SessionLocal() as db:
+        tokens = await device_service.tokens_for_user(db, user_id)
+        sent = 0
+        dead: list[str] = []
+        async with httpx.AsyncClient(timeout=10) as client:
+            for token in tokens:
+                try:
+                    result = await fcm_client.send(
+                        client,
+                        token,
+                        "Kitabi test 🔔",
+                        "Push notifications are working — you're all set.",
+                        {"type": "test"},
+                    )
+                except Exception:  # noqa: BLE001 — a bad token must not sink the rest
+                    result = fcm_client.ERROR
+                if result == fcm_client.SENT:
+                    sent += 1
+                elif result == fcm_client.UNREGISTERED:
+                    dead.append(token)
+        await device_service.prune(db, dead)
+        return {"push_enabled": True, "tokens": len(tokens), "sent": sent}
+
+
 async def notify_return_reminder(
     actor_id: uuid.UUID, target_id: uuid.UUID, book_title: str
 ) -> None:

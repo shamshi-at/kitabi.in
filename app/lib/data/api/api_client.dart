@@ -146,6 +146,13 @@ class ApiClient {
   Future<void> remindToReturn(String userId, String bookTitle) =>
       _dio.post('/connections/remind', data: {'user_id': userId, 'book_title': bookTitle});
 
+  /// Send a test push to the caller's own devices. Returns `{push_enabled,
+  /// tokens, sent}` so the diagnostic can report exactly what happened.
+  Future<Map<String, dynamic>> sendTestPush() async {
+    final res = await _dio.post('/devices/test');
+    return (res.data as Map).cast<String, dynamic>();
+  }
+
   /// Catalog-only search (title / author / exact ISBN) — Phase 2 scope.
   /// The "in your library" merge lands once the personal library (Phase 3)
   /// and its Drift cache exist; for now every result is a catalog work.
