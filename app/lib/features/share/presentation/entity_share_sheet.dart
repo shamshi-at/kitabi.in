@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 import 'entity_share_card.dart';
 import 'share_capture.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// The share sheet for an author or publisher — the counterpart to the book
 /// share sheet. Previews an [EntityShareCard] (portrait/logo + name + subtitle)
@@ -72,7 +73,7 @@ class _EntityShareSheetState extends State<_EntityShareSheet> {
     // Decode the portrait/logo up front so it's painted by the time the user
     // taps Share — capturing before a NetworkImage resolves yields a blank spot.
     final url = widget.imageUrl;
-    if (url != null) precacheImage(NetworkImage(url), context);
+    if (url != null) precacheImage(netImageProvider(url), context);
   }
 
   Future<void> _shareCard() async {

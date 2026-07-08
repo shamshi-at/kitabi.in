@@ -9,6 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../share/presentation/entity_share_sheet.dart';
 import '../providers/catalog_providers.dart';
 import 'catalog_result_tile.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// S4d — every catalog work from one publisher, spanning authors. The
 /// owned/genre-chip filtering from the mockup depends on the personal
@@ -82,7 +83,7 @@ class PublisherBrowseScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: AppColors.line),
                         ),
-                        child: Image.network(
+                        child: netImage(
                           logoUrl,
                           fit: BoxFit.contain,
                           errorBuilder: (_, _, _) =>

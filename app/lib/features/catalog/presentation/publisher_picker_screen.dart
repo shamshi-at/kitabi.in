@@ -10,6 +10,7 @@ import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../catalog_image_upload.dart';
 import 'picker_widgets.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// S7b publisher picker — the publisher counterpart to the author picker.
 /// Search an existing catalog publisher (shown with logo and primary language)
@@ -191,7 +192,7 @@ class _PublisherResultTile extends StatelessWidget {
                 border: Border.all(color: AppColors.line),
               ),
               child: logoUrl != null
-                  ? Image.network(
+                  ? netImage(
                       logoUrl,
                       fit: BoxFit.contain,
                       errorBuilder: (_, _, _) => Icon(Icons.business, color: AppColors.inkSoft),

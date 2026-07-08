@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 import 'book_share_card.dart';
 import 'share_capture.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// S6c — the share sheet. Shows the card, a toggle to fold in the user's own
 /// rating & note (only when they have one), and Copy-link / Share-card actions.
@@ -78,7 +79,7 @@ class _ShareSheetState extends State<_ShareSheet> {
     // Decode the cover up front so it's painted before the user taps Share —
     // rasterising before a NetworkImage resolves leaves a blank cover.
     final url = widget.coverUrl;
-    if (url != null) precacheImage(NetworkImage(url), context);
+    if (url != null) precacheImage(netImageProvider(url), context);
   }
 
   Future<void> _shareCard() async {

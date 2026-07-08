@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_theme.dart';
+import 'net_image.dart';
 import 'ticker_text.dart';
 
 /// One frame for every cover in the app (docs/screen-design.md): a real
@@ -69,7 +70,9 @@ class TypesetCover extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (coverUrl != null)
-                Image.network(
+                // Disk-cached (net_image.dart): a cover scrolled out of the
+                // grid repaints from cache instead of re-downloading.
+                netImage(
                   coverUrl!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => _typeset(w, h),

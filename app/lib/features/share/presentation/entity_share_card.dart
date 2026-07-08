@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// The shareable card for an author or publisher — mirrors [BookShareCard] so a
 /// shared author/publisher looks the part: their portrait/logo, name, a subtitle
@@ -141,7 +142,7 @@ class _Avatar extends StatelessWidget {
         color: AppColors.goldSoft,
         borderRadius: radius,
         image: imageUrl != null
-            ? DecorationImage(image: NetworkImage(imageUrl!), fit: BoxFit.cover)
+            ? DecorationImage(image: netImageProvider(imageUrl!), fit: BoxFit.cover)
             : null,
       ),
       child: imageUrl == null

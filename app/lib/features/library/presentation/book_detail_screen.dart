@@ -28,6 +28,7 @@ import '../cover_upload.dart';
 import '../reading_status.dart';
 import '../providers/library_providers.dart';
 import 'cover_viewer.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// S6 — book detail. Reached with a Work id (shared data: title, authors,
 /// genres, aggregate rating) and an Edition id (this specific printing:
@@ -174,7 +175,7 @@ class _BookDetailBody extends ConsumerWidget {
                                   radius: 9,
                                   backgroundColor: AppColors.goldSoft,
                                   foregroundImage:
-                                      NetworkImage(authors.first['image_url'] as String),
+                                      netImageProvider(authors.first['image_url'] as String),
                                 ),
                                 SizedBox(width: 6),
                               ],
@@ -700,7 +701,7 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
       preview = widget.coverUrl != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: Image.network(
+              child: netImage(
                 widget.coverUrl!,
                 width: widget.width,
                 height: widget.height,
@@ -1024,6 +1025,12 @@ class _OwnedBookSections extends ConsumerWidget {
             ),
           ),
         ),
+        // Wishlist → owned is the wish coming true — one obvious tap, not a
+        // status-chip hunt: flips to "To read" (owned) and celebrates.
+        if (entry.status == 'wishlist') ...[
+          _GotItButton(entry: entry),
+          SizedBox(height: 8),
+        ],
         _StatusPicker(entry: entry, workId: workId, reviewExtra: _reviewExtra),
         SizedBox(height: 8),
         _ProgressCard(entry: entry),
@@ -1036,6 +1043,34 @@ class _OwnedBookSections extends ConsumerWidget {
         SizedBox(height: 8),
         _TagsSection(entry: entry),
       ],
+    );
+  }
+}
+
+/// "I got this book" — moves a wishlist entry onto the real shelf (status
+/// 'pending' / To read) in one tap.
+class _GotItButton extends ConsumerWidget {
+  const _GotItButton({required this.entry});
+
+  final LibraryEntry entry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () async {
+          Haptics.success();
+          final messenger = ScaffoldMessenger.of(context);
+          final repo = await ref.read(libraryRepositoryProvider.future);
+          await repo.updateStatus(entry.id, 'pending');
+          ref.invalidate(libraryEntryProvider(entry.editionId));
+          messenger.showSnackBar(SnackBar(content: Text(l10n.bookMovedToLibrary)));
+        },
+        icon: Icon(Icons.library_add_check_outlined, size: 18),
+        label: Text(l10n.bookGotIt),
+      ),
     );
   }
 }

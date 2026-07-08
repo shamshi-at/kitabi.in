@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// Languages offered in the author/publisher "primary language" dropdown —
 /// Indian languages first (Kitabi's regional wedge), then the wider set most
@@ -267,7 +268,7 @@ class PickerImageField extends StatelessWidget {
                 borderRadius: radius,
                 border: Border.all(color: AppColors.line),
                 image: hasImage
-                    ? DecorationImage(image: NetworkImage(imageUrl!), fit: BoxFit.cover)
+                    ? DecorationImage(image: netImageProvider(imageUrl!), fit: BoxFit.cover)
                     : null,
               ),
               child: busy

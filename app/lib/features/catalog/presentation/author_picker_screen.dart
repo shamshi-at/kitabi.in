@@ -10,6 +10,7 @@ import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../catalog_image_upload.dart';
 import 'picker_widgets.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// S7b author picker — opened from the add-book form's author field. Search the
 /// catalog for an existing author (shown with their portrait, pen name, and
@@ -187,7 +188,7 @@ class _AuthorResultTile extends StatelessWidget {
             CircleAvatar(
               radius: 20,
               backgroundColor: AppColors.goldSoft,
-              foregroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
+              foregroundImage: imageUrl != null ? netImageProvider(imageUrl) : null,
               child: imageUrl == null
                   ? Text(
                       initials,

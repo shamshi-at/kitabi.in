@@ -20,6 +20,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../catalog_image_upload.dart';
 import '../providers/catalog_providers.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// S4d — form to add a new catalog Work + first Edition, or edit an existing one:
 /// title, authors, publisher, genres, and edition-level fields (ISBN, format,
@@ -1375,7 +1376,7 @@ class _CoverSlot extends StatelessWidget {
     final preview = imageUrl != null
         ? ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: Image.network(
+            child: netImage(
               imageUrl!,
               width: w,
               height: h,

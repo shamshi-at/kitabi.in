@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// A catalog author row (portrait/monogram, name, primary language) — shared by
 /// global search and the Discover/browse screen. The caller supplies [onTap]
@@ -28,7 +29,7 @@ class AuthorRowTile extends StatelessWidget {
             CircleAvatar(
               radius: 16,
               backgroundColor: AppColors.goldSoft,
-              foregroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
+              foregroundImage: imageUrl != null ? netImageProvider(imageUrl) : null,
               child: imageUrl == null
                   ? Text(
                       initials,
@@ -95,7 +96,7 @@ class PublisherRowTile extends StatelessWidget {
                 border: Border.all(color: AppColors.line),
               ),
               child: logoUrl != null
-                  ? Image.network(
+                  ? netImage(
                       logoUrl,
                       fit: BoxFit.contain,
                       errorBuilder: (_, _, _) =>

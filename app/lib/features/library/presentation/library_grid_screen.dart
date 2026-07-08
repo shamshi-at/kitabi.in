@@ -295,9 +295,14 @@ class _LibraryGridItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entry = hit.entry;
     final book = hit.book;
-    final lending = ref.watch(lendingRecordsProvider(entry.id));
-    final activeLending = (lending.valueOrNull ?? [])
-        .where((r) => r.returnedDate == null)
+    // Derived from the reactive ledger stream (not a one-shot per-entry
+    // fetch), so lending a book anywhere shows the band here instantly.
+    final activeLending = (ref.watch(allLendingProvider).valueOrNull ?? [])
+        .map((r) => r.record)
+        .where((r) =>
+            r.libraryEntryId == entry.id &&
+            r.direction != 'borrowed' &&
+            r.returnedDate == null)
         .firstOrNull;
 
     return GestureDetector(

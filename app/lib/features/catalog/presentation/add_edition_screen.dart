@@ -10,6 +10,7 @@ import '../../../core/image_crop.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../catalog_image_upload.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// The edition formats offered in the add-edition form's dropdown.
 const _formats = ['Paperback', 'Hardcover', 'eBook', 'Audiobook'];
@@ -285,7 +286,7 @@ class _CoverSlot extends StatelessWidget {
     if (imageUrl != null) {
       preview = ClipRRect(
         borderRadius: BorderRadius.circular(4),
-        child: Image.network(imageUrl!, width: w, height: h, fit: BoxFit.cover),
+        child: netImage(imageUrl!, width: w, height: h, fit: BoxFit.cover),
       );
     } else if (title != null) {
       preview = TypesetCover(title: title!, width: w, height: h);

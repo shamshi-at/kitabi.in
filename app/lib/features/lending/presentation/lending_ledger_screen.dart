@@ -82,6 +82,11 @@ class LendingLedgerScreen extends ConsumerWidget {
                           child: Text(l10n.lendingLedgerTitle,
                               style: Theme.of(context).textTheme.titleLarge),
                         ),
+                        IconButton(
+                          icon: Icon(Icons.search, color: AppColors.oxblood),
+                          tooltip: l10n.searchTitle,
+                          onPressed: () => context.push(Routes.catalogSearch),
+                        ),
                         _ConnectionsButton(),
                       ],
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// One page of the cover viewer — an image URL plus its caption
 /// ("Front cover" / "Back cover").
@@ -93,7 +94,7 @@ class _CoverViewerState extends State<_CoverViewer> {
                   child: Center(
                     child: Padding(
                       padding: EdgeInsets.all(16),
-                      child: Image.network(
+                      child: netImage(
                         widget.pages[i].url,
                         fit: BoxFit.contain,
                         loadingBuilder: (context, child, progress) => progress == null

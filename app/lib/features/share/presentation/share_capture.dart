@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// Rasterise the widget behind [cardKey] (a `RepaintBoundary`) to a PNG and hand
 /// it to the OS share sheet together with [text] (which always carries the real
@@ -57,7 +58,7 @@ Future<void> captureAndShareCard({
 Future<void> ensureImageLoaded(BuildContext context, String? url) async {
   if (url == null) return;
   try {
-    await precacheImage(NetworkImage(url), context)
+    await precacheImage(netImageProvider(url), context)
         .timeout(const Duration(seconds: 6));
   } catch (_) {
     // Timeout / dead URL — capture proceeds with the fallback rendering.

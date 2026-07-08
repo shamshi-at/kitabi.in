@@ -68,14 +68,14 @@ class ShellScaffold extends ConsumerWidget {
                   activeIcon: Icons.home,
                   label: l10n.navHome,
                   selected: index == 0,
-                  onTap: () { Haptics.selection(); navigationShell.goBranch(0); },
+                  onTap: () { Haptics.selection(); navigationShell.goBranch(0, initialLocation: true); },
                 ),
                 _NavItem(
                   icon: Icons.auto_stories_outlined,
                   activeIcon: Icons.auto_stories,
                   label: l10n.navLibrary,
                   selected: index == 1,
-                  onTap: () { Haptics.selection(); navigationShell.goBranch(1); },
+                  onTap: () { Haptics.selection(); navigationShell.goBranch(1, initialLocation: true); },
                 ),
                 // Scan-first (docs/screen-design.md): the tile opens the camera
                 // directly — one tap to the main add path. Search / manual add
@@ -90,14 +90,14 @@ class ShellScaffold extends ConsumerWidget {
                   label: l10n.navLending,
                   selected: index == 2,
                   badgeCount: incoming,
-                  onTap: () { Haptics.selection(); navigationShell.goBranch(2); },
+                  onTap: () { Haptics.selection(); navigationShell.goBranch(2, initialLocation: true); },
                 ),
                 _NavItem(
                   icon: Icons.donut_large_outlined,
                   activeIcon: Icons.donut_large,
                   label: l10n.navInsights,
                   selected: index == 3,
-                  onTap: () { Haptics.selection(); navigationShell.goBranch(3); },
+                  onTap: () { Haptics.selection(); navigationShell.goBranch(3, initialLocation: true); },
                 ),
               ],
             ),

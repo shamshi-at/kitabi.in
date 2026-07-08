@@ -9,6 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../share/presentation/entity_share_sheet.dart';
 import '../providers/catalog_providers.dart';
 import 'catalog_result_tile.dart';
+import '../../../core/widgets/net_image.dart';
 
 /// S4c — every catalog work by one author. The owned/not-owned split from
 /// the mockup depends on the personal library (Phase 3); until then this
@@ -76,7 +77,7 @@ class AuthorBrowseScreen extends ConsumerWidget {
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: AppColors.goldSoft,
-                      foregroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
+                      foregroundImage: imageUrl != null ? netImageProvider(imageUrl) : null,
                       child: imageUrl == null
                           ? Text(
                               initials,

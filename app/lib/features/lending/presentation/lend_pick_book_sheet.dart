@@ -22,11 +22,20 @@ Future<void> showLendPickBookSheet(BuildContext context) {
   );
 }
 
-class _LendPickBookSheet extends ConsumerWidget {
+class _LendPickBookSheet extends ConsumerStatefulWidget {
   const _LendPickBookSheet();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LendPickBookSheet> createState() => _LendPickBookSheetState();
+}
+
+class _LendPickBookSheetState extends ConsumerState<_LendPickBookSheet> {
+  // Filters the list live as the user types — a big library shouldn't mean
+  // scrolling the whole shelf to lend one book.
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final hits = ref.watch(libraryHitsProvider).valueOrNull ?? const [];
     // Entries already out (a lent, not-yet-returned record) can't be lent again.
@@ -34,8 +43,13 @@ class _LendPickBookSheet extends ConsumerWidget {
         .where((r) => r.record.direction != 'borrowed' && r.record.returnedDate == null)
         .map((r) => r.record.libraryEntryId)
         .toSet();
+    final q = _query.trim().toLowerCase();
     final lendable = hits
         .where((h) => h.entry.status != 'wishlist' && !lentOutEntryIds.contains(h.entry.id))
+        .where((h) =>
+            q.isEmpty ||
+            h.book.title.toLowerCase().contains(q) ||
+            h.book.authorNames.toLowerCase().contains(q))
         .toList();
 
     return SafeArea(
@@ -62,7 +76,28 @@ class _LendPickBookSheet extends ConsumerWidget {
               ),
             ),
             Text(l10n.lendingPickTitle, style: Theme.of(context).textTheme.titleLarge),
-            SizedBox(height: 12),
+            SizedBox(height: 10),
+            TextField(
+              autofocus: false,
+              onChanged: (v) => setState(() => _query = v),
+              decoration: InputDecoration(
+                hintText: l10n.lendingPickSearchHint,
+                isDense: true,
+                prefixIcon: Icon(Icons.search, size: 18, color: AppColors.inkSoft),
+                filled: true,
+                fillColor: AppColors.paper,
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.line),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.line),
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
             if (lendable.isEmpty)
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 28),
