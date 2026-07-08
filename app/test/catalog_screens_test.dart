@@ -1,10 +1,15 @@
 import 'dart:async';
 
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:kitabi/data/api/api_client.dart';
+import 'package:kitabi/data/db/database.dart';
+import 'package:kitabi/data/repositories/repositories.dart';
+import 'package:kitabi/data/sync/sync_providers.dart';
 import 'package:kitabi/features/catalog/presentation/add_edit_book_screen.dart';
 import 'package:kitabi/features/catalog/presentation/author_browse_screen.dart';
 import 'package:kitabi/features/catalog/presentation/author_picker_screen.dart';
@@ -211,10 +216,11 @@ class _FakeApiClient extends ApiClient {
       _work(id: workId);
 }
 
-Widget _wrap(Widget child, {ApiClient? apiClient}) {
+Widget _wrap(Widget child, {ApiClient? apiClient, List<Override> overrides = const []}) {
   return ProviderScope(
     overrides: [
       if (apiClient != null) apiClientProvider.overrideWithValue(apiClient),
+      ...overrides,
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -304,6 +310,96 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fake.lastCreatePayload?['title'], 'Oru Deshathinte Katha');
+    // Create mode lands on the confirmation popup with the created book's
+    // metadata (the fake API returns Chemmeen) and the three actions.
+    expect(find.text('ADDED TO THE CATALOG'), findsOneWidget);
+    expect(find.text('Chemmeen'), findsWidgets);
+    expect(find.text('Add to library'), findsOneWidget);
+    expect(find.text('Create another'), findsOneWidget);
+    expect(find.text('Close'), findsOneWidget);
+  });
+
+  testWidgets('popup "Add to library" walks Adding → Added and writes to Drift', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    // runAsync surfaces google_fonts' async font-miss — cosmetic, filter it
+    // (same setup as review_flow_test.dart).
+    GoogleFonts.config.allowRuntimeFetching = false;
+    final reportOriginal = reportTestException;
+    reportTestException = (details, testDescription) {
+      if (details.exception.toString().contains('GoogleFonts')) return;
+      reportOriginal(details, testDescription);
+    };
+
+    // Real drift + real repositories; never closed (fake-async/close deadlock).
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+    }
+
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(
+      const AddEditBookScreen(),
+      apiClient: fake,
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        sessionContextProvider.overrideWith(
+          (ref) async => const SessionContext(userId: 'u1', deviceId: 'd1'),
+        ),
+        syncTriggerProvider.overrideWithValue(() {}),
+      ],
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Oru Deshathinte Katha');
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add to library'));
+    await settle();
+
+    expect(find.text('Added ✓'), findsOneWidget);
+    final entry = await tester.runAsync(
+      () => db.libraryEntriesDao.getByEditionId('44444444-4444-4444-4444-444444444444'),
+    );
+    expect(entry, isNotNull);
+    final cached = await tester.runAsync(
+      () => db.cachedBooksDao.getByEditionId('44444444-4444-4444-4444-444444444444'),
+    );
+    expect(cached?.title, 'Chemmeen');
+
+    // Flush drift's stream-close timers before the pending-timer check, and
+    // restore the exception reporter inside the body (the binding verifies it
+    // before teardowns run).
+    await tester.pumpWidget(const SizedBox());
+    await settle();
+    reportTestException = reportOriginal;
+  });
+
+  testWidgets('popup "Create another" clears the form for the next book', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Oru Deshathinte Katha');
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create another'));
+    await tester.pumpAndSettle();
+
+    // Popup gone, same screen, blank title field.
+    expect(find.text('ADDED TO THE CATALOG'), findsNothing);
+    expect(find.text('Save to catalog'), findsOneWidget);
+    final titleField = tester.widget<TextFormField>(find.byType(TextFormField).first);
+    expect(titleField.controller?.text, isEmpty);
   });
 
   testWidgets('description expands into a full-screen editor and carries text back',

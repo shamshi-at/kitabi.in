@@ -13,6 +13,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
+import '../../../data/db/catalog_cache.dart';
+import '../../../data/repositories/repository_providers.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../catalog_image_upload.dart';
@@ -493,11 +496,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
       if (_backCoverUrl != null) 'back_cover_url': _backCoverUrl,
     };
 
+    Map<String, dynamic>? created;
     try {
       final api = ref.read(apiClientProvider);
       final workId = widget.initialWork?['id'] as String?;
       if (workId == null) {
-        await api.createWork(payload);
+        created = await api.createWork(payload);
       } else {
         await api.updateWork(workId, payload);
         // Covers live on the Edition, not the Work — patch them separately, and
@@ -512,8 +516,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
           if (edPatch.isNotEmpty) await api.updateEdition(editionId, edPatch);
         }
         ref.invalidate(workProvider(workId));
+        if (mounted) context.pop();
       }
-      if (mounted) context.pop();
     } catch (err) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err')));
@@ -521,6 +525,227 @@ class _BookFormState extends ConsumerState<_BookForm> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+    // Create mode lands on the confirmation popup instead of silently popping:
+    // what was made, plus "Add to library" / "Create another"; the screen
+    // itself only closes on the popup's Close.
+    if (created != null && mounted) {
+      await _showCreatedDialog(created);
+    }
+  }
+
+  /// Wipes the form back to a blank create state — the popup's
+  /// "Create another".
+  void _resetForm() {
+    setState(() {
+      _formKey.currentState?.reset();
+      _title.clear();
+      _description.clear();
+      _series.clear();
+      _seriesNumber.clear();
+      _pages.clear();
+      _isbn.clear();
+      _customGenres.clear();
+      _authors.clear();
+      _publisher = null;
+      _language = null;
+      _format = _formats.first;
+      _hasSeries = false;
+      _selectedGenres.clear();
+      _coverUrl = null;
+      _backCoverUrl = null;
+      _initialCoverUrl = null;
+      _initialBackCoverUrl = null;
+      _similar = const [];
+      _similarDismissed = false;
+    });
+  }
+
+  /// The just-created book's confirmation popup: its metadata, an
+  /// "Add to library" whose label walks Add → Adding… → Added ✓, and
+  /// "Create another". Deliberately not barrier-dismissible — the screen
+  /// closes only from the Close action.
+  Future<void> _showCreatedDialog(Map<String, dynamic> work) async {
+    final l10n = AppLocalizations.of(context)!;
+    final edition =
+        ((work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? const []).firstOrNull;
+    final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final authorNames = authors.map((a) => a['name'] as String? ?? '').join(', ');
+    final publisher = (edition?['publisher'] as Map?)?['name'] as String?;
+    final metaParts = [
+      ?publisher,
+      if (edition?['page_count'] != null) '${edition!['page_count']} pp',
+      ?edition?['format'] as String?,
+    ];
+    final isbn = edition?['isbn'] as String?;
+
+    // idle → adding → added; lives outside the builder so sheet rebuilds keep it.
+    var phase = 'idle';
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          Future<void> addToLibrary() async {
+            if (phase != 'idle' || edition == null) return;
+            setDialogState(() => phase = 'adding');
+            try {
+              // Cache first so the library grid's cover tile finds the catalog
+              // data the moment the entry appears (rule 2).
+              await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+              final repo = await ref.read(libraryRepositoryProvider.future);
+              await repo.add(editionId: edition['id'] as String);
+              setDialogState(() => phase = 'added');
+            } catch (err) {
+              setDialogState(() => phase = 'idle');
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('$err')));
+              }
+            }
+          }
+
+          return Dialog(
+            backgroundColor: AppColors.card,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, size: 18, color: AppColors.moss),
+                      SizedBox(width: 8),
+                      Text(
+                        l10n.createdDialogTitle.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.inkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TypesetCover(
+                        title: work['title'] as String? ?? '',
+                        author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+                        coverUrl: edition?['cover_url'] as String?,
+                        width: 52,
+                        height: 76,
+                      ),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              work['title'] as String? ?? '',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(ctx).textTheme.titleMedium,
+                            ),
+                            if (authorNames.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(top: 2),
+                                child: Text(
+                                  authorNames,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+                                ),
+                              ),
+                            if (metaParts.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(top: 4),
+                                child: Text(
+                                  metaParts.join(' · '),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                                ),
+                              ),
+                            if (isbn != null && isbn.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(top: 2),
+                                child: Text(
+                                  'ISBN $isbn',
+                                  style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 18),
+                  if (edition != null)
+                    ElevatedButton.icon(
+                      onPressed: phase == 'idle' ? addToLibrary : null,
+                      style: ElevatedButton.styleFrom(
+                        // "Added ✓" keeps its ink on the disabled button — the
+                        // state must stay readable, not fade out.
+                        disabledBackgroundColor: phase == 'added'
+                            ? AppColors.moss.withValues(alpha: 0.14)
+                            : null,
+                        disabledForegroundColor:
+                            phase == 'added' ? AppColors.moss : null,
+                      ),
+                      icon: phase == 'adding'
+                          ? SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.inkSoft,
+                              ),
+                            )
+                          : Icon(
+                              phase == 'added' ? Icons.check : Icons.library_add_outlined,
+                              size: 16,
+                            ),
+                      label: Text(switch (phase) {
+                        'adding' => l10n.createdAdding,
+                        'added' => l10n.createdAdded,
+                        _ => l10n.createdAddToLibrary,
+                      }),
+                    ),
+                  SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _resetForm();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.oxblood,
+                      side: BorderSide(color: AppColors.line),
+                    ),
+                    icon: Icon(Icons.add, size: 16),
+                    label: Text(l10n.createdCreateAnother),
+                  ),
+                  SizedBox(height: 2),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      if (mounted) context.pop();
+                    },
+                    child: Text(
+                      l10n.createdClose,
+                      style: TextStyle(color: AppColors.inkSoft, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
