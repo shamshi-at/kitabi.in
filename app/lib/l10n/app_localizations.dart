@@ -742,6 +742,54 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get formEditorDone;
 
+  /// Caption in the full-screen cover viewer for the front photo
+  ///
+  /// In en, this message translates to:
+  /// **'Front cover'**
+  String get coverFrontLabel;
+
+  /// Caption in the full-screen cover viewer for the back photo
+  ///
+  /// In en, this message translates to:
+  /// **'Back cover'**
+  String get coverBackLabel;
+
+  /// Title of the popup after a new book is created
+  ///
+  /// In en, this message translates to:
+  /// **'Added to the catalog'**
+  String get createdDialogTitle;
+
+  /// Popup action that puts the just-created book into the user's library
+  ///
+  /// In en, this message translates to:
+  /// **'Add to library'**
+  String get createdAddToLibrary;
+
+  /// Popup action label while the add-to-library write is running
+  ///
+  /// In en, this message translates to:
+  /// **'Adding…'**
+  String get createdAdding;
+
+  /// Popup action label once the book is in the library
+  ///
+  /// In en, this message translates to:
+  /// **'Added ✓'**
+  String get createdAdded;
+
+  /// Popup action that clears the form to add one more book
+  ///
+  /// In en, this message translates to:
+  /// **'Create another'**
+  String get createdCreateAnother;
+
+  /// Popup action that dismisses the popup and leaves the add-book screen
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get createdClose;
+
   /// Eyebrow label on the personal notes card
   ///
   /// In en, this message translates to:

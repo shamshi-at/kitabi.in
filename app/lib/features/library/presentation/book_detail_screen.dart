@@ -27,6 +27,7 @@ import '../../share/presentation/share_book_sheet.dart';
 import '../cover_upload.dart';
 import '../reading_status.dart';
 import '../providers/library_providers.dart';
+import 'cover_viewer.dart';
 
 /// S6 — book detail. Reached with a Work id (shared data: title, authors,
 /// genres, aggregate rating) and an Edition id (this specific printing:
@@ -114,26 +115,40 @@ class _BookDetailBody extends ConsumerWidget {
               // _BackButton in BookDetailScreen.build (this row used to
               // carry a second, duplicate arrow_back that overlapped it).
               SizedBox(width: 48),
-              Column(
-                children: [
-                  _CoverUploader(
-                    editionId: editionId,
-                    title: work['title'] as String,
-                    author: authors.isNotEmpty ? authors.first['name'] as String? : null,
-                    coverUrl: edition?['cover_url'] as String?,
-                    workId: work['id'] as String,
-                  ),
-                  SizedBox(height: 8),
-                  _CoverUploader(
-                    editionId: editionId,
-                    coverUrl: edition?['back_cover_url'] as String?,
-                    workId: work['id'] as String,
-                    back: true,
-                    width: 40,
-                    height: 58,
-                  ),
-                ],
-              ),
+              Builder(builder: (context) {
+                final l10n = AppLocalizations.of(context)!;
+                final front = edition?['cover_url'] as String?;
+                final backCover = edition?['back_cover_url'] as String?;
+                // The viewer's pages: every side that actually has a photo.
+                final pages = <CoverPage>[
+                  if (front != null) (url: front, label: l10n.coverFrontLabel),
+                  if (backCover != null) (url: backCover, label: l10n.coverBackLabel),
+                ];
+                return Column(
+                  children: [
+                    _CoverUploader(
+                      editionId: editionId,
+                      title: work['title'] as String,
+                      author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+                      coverUrl: front,
+                      workId: work['id'] as String,
+                      viewerPages: pages,
+                      viewerIndex: 0,
+                    ),
+                    SizedBox(height: 8),
+                    _CoverUploader(
+                      editionId: editionId,
+                      coverUrl: backCover,
+                      workId: work['id'] as String,
+                      back: true,
+                      width: 40,
+                      height: 58,
+                      viewerPages: pages,
+                      viewerIndex: front != null ? 1 : 0,
+                    ),
+                  ],
+                );
+              }),
               SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -536,11 +551,14 @@ class _TranslationRow extends StatelessWidget {
   }
 }
 
-/// The book-detail cover — tappable to photograph your own copy (S7b "⇧ upload a
-/// photo"), with a small camera badge. Handles both the front (`back == false`,
-/// with a typeset fallback) and the back (`back == true`, an "add back" tile when
-/// empty). Uploads to Supabase Storage, points the edition's front/back cover_url
-/// at it, and refreshes.
+/// The book-detail cover. Tapping a cover that has a photo opens the
+/// full-screen [showCoverViewer] (front + back, swipe, pinch-zoom) — *editing*
+/// lives on the small camera badge only, so looking at your book never drops
+/// you into a photo picker. With no photo yet, a tap still starts the upload
+/// (there is nothing to view). Handles both the front (`back == false`, with a
+/// typeset fallback) and the back (`back == true`, an "add back" tile when
+/// empty). Uploads to Supabase Storage, points the edition's front/back
+/// cover_url at it, and refreshes.
 class _CoverUploader extends ConsumerStatefulWidget {
   const _CoverUploader({
     required this.editionId,
@@ -551,6 +569,8 @@ class _CoverUploader extends ConsumerStatefulWidget {
     this.back = false,
     this.width = 58,
     this.height = 84,
+    this.viewerPages = const [],
+    this.viewerIndex = 0,
   });
 
   final String editionId;
@@ -561,6 +581,11 @@ class _CoverUploader extends ConsumerStatefulWidget {
   final bool back;
   final double width;
   final double height;
+
+  /// Every cover photo of this edition (front first), for the viewer; this
+  /// slot's own page sits at [viewerIndex].
+  final List<CoverPage> viewerPages;
+  final int viewerIndex;
 
   @override
   ConsumerState<_CoverUploader> createState() => _CoverUploaderState();
@@ -636,24 +661,37 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
       );
     }
 
+    // A photo exists → tap views it; nothing yet → tap starts the upload.
+    final hasPhoto = widget.coverUrl != null && widget.viewerPages.isNotEmpty;
     return GestureDetector(
-      onTap: _upload,
+      onTap: hasPhoto
+          ? () => showCoverViewer(
+                context,
+                pages: widget.viewerPages,
+                initialIndex: widget.viewerIndex,
+              )
+          : _upload,
       child: Stack(
         children: [
           preview,
           Positioned(
             right: 2,
             bottom: 2,
-            child: Container(
-              padding: EdgeInsets.all(3),
-              decoration: BoxDecoration(color: AppColors.oxblood, shape: BoxShape.circle),
-              child: _busy
-                  ? SizedBox(
-                      width: 11,
-                      height: 11,
-                      child: CircularProgressIndicator(strokeWidth: 1.6, color: AppColors.paper),
-                    )
-                  : Icon(Icons.photo_camera, size: 11, color: AppColors.paper),
+            // The badge is the edit affordance — its own tap target so viewing
+            // the cover never opens the picker.
+            child: GestureDetector(
+              onTap: _upload,
+              child: Container(
+                padding: EdgeInsets.all(3),
+                decoration: BoxDecoration(color: AppColors.oxblood, shape: BoxShape.circle),
+                child: _busy
+                    ? SizedBox(
+                        width: 11,
+                        height: 11,
+                        child: CircularProgressIndicator(strokeWidth: 1.6, color: AppColors.paper),
+                      )
+                    : Icon(Icons.photo_camera, size: 11, color: AppColors.paper),
+              ),
             ),
           ),
         ],

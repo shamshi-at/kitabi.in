@@ -57,10 +57,25 @@ a{color:var(--oxblood)}
 /* ---------- book layout ---------- */
 .book{display:grid;grid-template-columns:1fr;gap:26px;animation:up .5s ease-out both}
 @media(min-width:640px){.book{grid-template-columns:200px 1fr;gap:34px}}
-.cover-col{display:flex;justify-content:center}
+.cover-col{display:flex;flex-direction:column;align-items:center;gap:12px}
 .cover-lg{width:190px;aspect-ratio:2/3;border-radius:4px 9px 9px 4px;overflow:hidden;box-shadow:0 12px 30px rgba(43,33,24,.3);position:relative;background:var(--paper-deep)}
 .cover-lg::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:rgba(0,0,0,.2);z-index:2}
 .cover-lg img{width:100%;height:100%;object-fit:cover;display:block}
+.cover-lg.zoomable{cursor:zoom-in}
+/* back-cover thumbnail under the front cover */
+.cover-back{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;padding:6px 12px 6px 6px;cursor:zoom-in;box-shadow:0 3px 10px rgba(43,33,24,.12)}
+.cover-back img{width:34px;height:50px;object-fit:cover;border-radius:5px;display:block}
+.cover-back span{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* ---------- cover lightbox ---------- */
+.lightbox{position:fixed;inset:0;z-index:90;background:rgba(36,24,17,.94);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:26px;animation:up .25s ease-out both;cursor:zoom-out}
+.lightbox img{max-width:92vw;max-height:78vh;border-radius:8px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.lightbox .cap{margin-top:14px;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-soft)}
+.lightbox .lx-close{position:absolute;top:14px;right:14px;width:40px;height:40px;border-radius:50%;border:0;
+  background:rgba(246,240,227,.12);color:var(--paper);font-size:20px;line-height:1;cursor:pointer}
+.lightbox .lx-close:hover{background:rgba(246,240,227,.24)}
 /* typeset fallback tile */
 .cover-fallback{width:100%;height:100%;background:linear-gradient(150deg,var(--oxblood),var(--oxblood-deep));color:var(--gold-soft);display:flex;flex-direction:column;justify-content:center;padding:20px 16px;text-align:center}
 .cover-fallback .ft{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:600;line-height:1.25}
@@ -116,7 +131,7 @@ footer{padding:38px 22px 30px;text-align:center;color:var(--ink-soft);font-size:
 footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 
 @media (prefers-reduced-motion:reduce){
-  .book,.state{animation:none}
+  .book,.state,.lightbox{animation:none}
   .spinner{animation:spin 1.4s linear infinite}
 }
 </style>
@@ -209,13 +224,21 @@ function render(work){
 
   document.title = (work.title ? work.title + ' — Kitabi' : 'Book — Kitabi');
 
-  // cover
+  // cover — a real front photo opens the lightbox; the back cover (when the
+  // owner photographed one) sits underneath as its own zoomable thumbnail.
   var coverHtml;
   if (ed.cover_url){
     coverHtml = '<img src="' + esc(ed.cover_url) + '" alt="Cover of ' + esc(work.title) + '" loading="lazy">';
   } else {
     coverHtml = '<div class="cover-fallback"><span class="fr"></span>' +
       '<div class="ft">' + esc(work.title || 'Untitled') + '</div></div>';
+  }
+  var backHtml = '';
+  if (ed.back_cover_url){
+    backHtml = '<button class="cover-back" type="button" data-lightbox="' + esc(ed.back_cover_url) +
+      '" data-caption="Back cover" aria-label="View the back cover">' +
+      '<img src="' + esc(ed.back_cover_url) + '" alt="Back cover of ' + esc(work.title) + '" loading="lazy">' +
+      '<span>Back cover</span></button>';
   }
 
   // authors
@@ -278,9 +301,14 @@ function render(work){
       }).join('') + '</div></section>'
     : '';
 
+  var coverAttrs = ed.cover_url
+    ? ' class="cover-lg zoomable" role="button" tabindex="0" aria-label="View the front cover"' +
+      ' data-lightbox="' + esc(ed.cover_url) + '" data-caption="Front cover"'
+    : ' class="cover-lg"';
+
   document.getElementById('content').innerHTML =
     '<article class="book">' +
-      '<div class="cover-col"><div class="cover-lg">' + coverHtml + '</div></div>' +
+      '<div class="cover-col"><div' + coverAttrs + '>' + coverHtml + '</div>' + backHtml + '</div>' +
       '<div class="meta">' +
         '<h1>' + esc(work.title || 'Untitled') + '</h1>' +
         (work.subtitle ? '<div class="sub">' + esc(work.subtitle) + '</div>' : '') +
@@ -292,6 +320,42 @@ function render(work){
       buyHtml +
     '</article>';
 }
+
+// ---------- cover lightbox (dependency-free) ----------
+function closeLightbox(){
+  var lb = document.getElementById('lightbox');
+  if (lb) lb.remove();
+  document.removeEventListener('keydown', onLightboxKey);
+}
+function onLightboxKey(e){ if (e.key === 'Escape') closeLightbox(); }
+function openLightbox(src, caption){
+  closeLightbox();
+  var lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.id = 'lightbox';
+  lb.setAttribute('role', 'dialog');
+  lb.setAttribute('aria-label', caption || 'Cover');
+  lb.innerHTML =
+    '<button class="lx-close" type="button" aria-label="Close">✕</button>' +
+    '<img src="' + esc(src) + '" alt="' + esc(caption || 'Cover') + '">' +
+    (caption ? '<div class="cap">' + esc(caption) + '</div>' : '');
+  lb.addEventListener('click', closeLightbox); // anywhere closes, incl. the ✕
+  document.body.appendChild(lb);
+  document.addEventListener('keydown', onLightboxKey);
+}
+// Covers are rendered after fetch — one delegated listener covers them all.
+document.addEventListener('click', function(e){
+  var t = e.target.closest ? e.target.closest('[data-lightbox]') : null;
+  if (t) openLightbox(t.getAttribute('data-lightbox'), t.getAttribute('data-caption'));
+});
+document.addEventListener('keydown', function(e){
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  var t = e.target;
+  if (t && t.getAttribute && t.getAttribute('data-lightbox')){
+    e.preventDefault();
+    openLightbox(t.getAttribute('data-lightbox'), t.getAttribute('data-caption'));
+  }
+});
 
 (function(){
   var id = readId();

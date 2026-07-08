@@ -376,6 +376,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formEditorDone => 'Done';
 
   @override
+  String get coverFrontLabel => 'Front cover';
+
+  @override
+  String get coverBackLabel => 'Back cover';
+
+  @override
+  String get createdDialogTitle => 'Added to the catalog';
+
+  @override
+  String get createdAddToLibrary => 'Add to library';
+
+  @override
+  String get createdAdding => 'Adding…';
+
+  @override
+  String get createdAdded => 'Added ✓';
+
+  @override
+  String get createdCreateAnother => 'Create another';
+
+  @override
+  String get createdClose => 'Close';
+
+  @override
   String get bookNotesLabel => 'PERSONAL NOTES · always private';
 
   @override
