@@ -94,6 +94,19 @@ class ApiClient {
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
+  /// Another reader's public profile — 404s when they've opted out.
+  Future<Map<String, dynamic>> getPublicProfile(String userId) async {
+    final res = await _dio.get('/users/$userId/profile');
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// The books on a reader's public shelf — 404s unless both their profile
+  /// and library are public.
+  Future<List<Map<String, dynamic>>> getPublicLibrary(String userId) async {
+    final res = await _dio.get('/users/$userId/library');
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
   // --- Push notifications (FCM device tokens) ---
 
   /// Register this install's FCM token for the signed-in user.

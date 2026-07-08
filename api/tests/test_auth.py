@@ -4,7 +4,7 @@ async def test_bootstrap_creates_profile(client, user):
     body = resp.json()
     assert body["id"] == user["id"]
     assert body["email"] == user["email"]
-    assert body["profile_visible"] is False
+    assert body["profile_visible"] is True  # public by default (9 Jul 2026)
     assert body["library_visible"] is False
     assert body["reviews_visible_default"] is False
 

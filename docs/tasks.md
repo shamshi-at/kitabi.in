@@ -220,6 +220,15 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] 10-item UX batch (9 Jul 2026): disk-cached covers with LRU eviction
+      (cached_network_image behind every remote image — no more re-downloads while
+      scrolling); wishlist entries get an "I got this book" one-tap move to the shelf;
+      the lend pick-book sheet is searchable; the library grid's lending band derives
+      from the reactive ledger stream (a lend shows instantly); footer tabs reset to
+      their branch root; the ledger header carries global search; global search gains
+      a READERS section; the profile screen shows the account picture; profiles are
+      public by default (migration `000022`) with public profile + public library
+      endpoints and an in-app public reader page (avatar, score, shelf, Connect)
 - [x] Home + Insights rework (8 Jul 2026): Home greets by name with a diary-style date,
       shows the newest covers standing on a gold shelf line ("Fresh on your shelf"), a
       reading-goal slip that opens Insights, and a first-run 1-2-3 Scan/Shelve/Lend intro;

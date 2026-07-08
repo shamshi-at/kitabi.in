@@ -27,6 +27,7 @@ import '../../features/onboarding/onboarding_providers.dart';
 import '../../features/onboarding/presentation/welcome_screen.dart';
 import '../../features/connections/presentation/connection_loans_screen.dart';
 import '../../features/connections/presentation/connections_screen.dart';
+import '../../features/connections/presentation/public_profile_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/recommendations/presentation/recommendations_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -81,11 +82,14 @@ abstract final class Routes {
   static const reviewEditor = '/review/:workId';
   // Approval inbox — pending edits to books this reader contributed.
   static const revisions = '/catalog/revisions';
+  // Another reader's public profile; display name via `extra`.
+  static const publicProfile = '/reader/:userId';
 
   static String authorBrowsePath(String authorId) => '/catalog/authors/$authorId';
   static String publisherBrowsePath(String publisherId) => '/catalog/publishers/$publisherId';
   static String bookDetailPath(String workId, String editionId) => '/book/$workId/$editionId';
   static String reviewEditorPath(String workId) => '/review/$workId';
+  static String publicProfilePath(String userId) => '/reader/$userId';
 }
 
 /// Opens the loans-with-one-person page — every counterparty name in the app
@@ -343,6 +347,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.revisions,
         name: 'revisions',
         builder: (context, state) => RevisionInboxScreen(),
+      ),
+      GoRoute(
+        path: Routes.publicProfile,
+        name: 'public-profile',
+        builder: (context, state) => PublicProfileScreen(
+          userId: state.pathParameters['userId']!,
+          name: state.extra as String?,
+        ),
       ),
       GoRoute(
         path: Routes.authorPicker,

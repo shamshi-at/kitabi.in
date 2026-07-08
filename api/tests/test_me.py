@@ -8,7 +8,7 @@ async def test_get_me_after_bootstrap(client):
     await client.post("/auth/bootstrap")
     resp = await client.get("/me")
     assert resp.status_code == 200
-    assert resp.json()["profile_visible"] is False
+    assert resp.json()["profile_visible"] is True  # public by default (9 Jul 2026)
 
 
 async def test_update_me_partial_patch(client):
@@ -18,7 +18,7 @@ async def test_update_me_partial_patch(client):
     body = resp.json()
     assert body["full_name"] == "Shamshi K"
     assert body["library_visible"] is True
-    assert body["profile_visible"] is False  # untouched fields stay put
+    assert body["profile_visible"] is True  # untouched fields stay put
 
 
 async def test_set_username_lowercases_and_shows_on_me(client):

@@ -7,8 +7,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/net_image.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/api/api_client.dart';
 import '../../../data/db/database.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
@@ -205,6 +207,7 @@ class _SearchResults extends ConsumerWidget {
     final works = (data['works'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     final authors = (data['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     final publishers = (data['publishers'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final readers = ref.watch(_readerSearchProvider(remoteQuery));
 
     if (library.isLoading && catalog.isLoading) {
       return ListSkeleton();
@@ -212,7 +215,13 @@ class _SearchResults extends ConsumerWidget {
     if (catalog.hasError && hits.isEmpty) {
       return ErrorRetry(onRetry: () => ref.invalidate(globalSearchProvider(remoteQuery)));
     }
-    final catalogEmpty = works.isEmpty && authors.isEmpty && publishers.isEmpty;
+    // "Nothing found" only when every section — including matching readers —
+    // came back empty; a person can be the only hit for a name query.
+    final catalogEmpty = works.isEmpty &&
+        authors.isEmpty &&
+        publishers.isEmpty &&
+        (readers.valueOrNull?.isEmpty ?? true) &&
+        !readers.isLoading;
     if (!library.isLoading && !catalog.isLoading && hits.isEmpty && catalogEmpty) {
       return Center(
         child: Padding(
@@ -270,7 +279,78 @@ class _SearchResults extends ConsumerWidget {
               publisher: publisher,
               onTap: () => context.push(Routes.publisherBrowsePath(publisher['id'] as String)),
             ),
+          SizedBox(height: 16),
         ],
+        // Kitabi readers matching the query — the connections/lending side of
+        // global search; each opens their public profile.
+        _ReadersSection(query: remoteQuery),
+      ],
+    );
+  }
+}
+
+final _readerSearchProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, query) {
+  if (query.trim().isEmpty) return Future.value(const []);
+  return ref.watch(apiClientProvider).searchUsers(query.trim());
+});
+
+class _ReadersSection extends ConsumerWidget {
+  const _ReadersSection({required this.query});
+
+  final String query;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final readers = ref.watch(_readerSearchProvider(query)).valueOrNull ?? const [];
+    if (readers.isEmpty) return SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(l10n.searchReadersHeader.toUpperCase()),
+        SizedBox(height: 8),
+        for (final r in readers)
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: CircleAvatar(
+              radius: 17,
+              backgroundColor: AppColors.goldSoft,
+              foregroundImage: (r['avatar_url'] as String?) != null
+                  ? netImageProvider(r['avatar_url'] as String)
+                  : null,
+              child: Text(
+                ((r['full_name'] as String?)?.trim().isNotEmpty ?? false
+                        ? (r['full_name'] as String).trim()[0]
+                        : (r['username'] as String? ?? '?')[0])
+                    .toUpperCase(),
+                style: TextStyle(
+                  color: Color(0xFF8F681E),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            title: Text(
+              (r['full_name'] as String?)?.trim().isNotEmpty ?? false
+                  ? (r['full_name'] as String).trim()
+                  : '@${r['username']}',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            subtitle: r['username'] != null
+                ? Text('@${r['username']}',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft))
+                : null,
+            trailing: Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
+            onTap: () => context.push(
+              Routes.publicProfilePath(r['id'] as String),
+              extra: (r['full_name'] as String?)?.trim().isNotEmpty ?? false
+                  ? (r['full_name'] as String).trim()
+                  : '@${r['username']}',
+            ),
+          ),
       ],
     );
   }

@@ -653,6 +653,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsAvgPages => 'Avg pages per book';
 
   @override
+  String get lendingPickSearchHint => 'Search your books';
+
+  @override
+  String get bookGotIt => 'I got this book — move to my library';
+
+  @override
+  String get bookMovedToLibrary => 'Moved to your library.';
+
+  @override
+  String get searchReadersHeader => 'Readers';
+
+  @override
+  String get publicProfileTitle => 'Reader';
+
+  @override
+  String get publicProfilePrivate => 'This reader keeps their profile private.';
+
+  @override
+  String get publicLibrarySection => 'Their shelf';
+
+  @override
+  String get publicLibraryPrivate => 'Their library is private.';
+
+  @override
+  String publicProfileBooks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books',
+      one: '1 book',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String publicProfileScore(int score) {
+    return 'Score $score';
+  }
+
+  @override
+  String get publicProfileConnect => 'Connect';
+
+  @override
+  String get publicProfileRequestSent => 'Connection request sent.';
+
+  @override
   String get bookNotesLabel => 'PERSONAL NOTES · always private';
 
   @override

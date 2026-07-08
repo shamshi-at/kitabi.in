@@ -102,6 +102,53 @@ async def search_users(
     return list((await db.execute(stmt)).scalars().all())
 
 
+async def get_public_profile(db: AsyncSession, target_id: uuid.UUID) -> Profile:
+    """Another reader's profile, only if they've kept it public (the default).
+    Private and non-existent look identical (404) — visibility must not leak
+    existence."""
+    profile = await db.get(Profile, target_id)
+    if profile is None or profile.deleted_at is not None or not profile.profile_visible:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "Profile not found"},
+        )
+    return profile
+
+
+async def public_library(db: AsyncSession, target_id: uuid.UUID, limit: int = 200) -> list[dict]:
+    """The books on a reader's public shelf — gated on BOTH profile and
+    library visibility (a public library behind a private profile would leak
+    it). Newest additions first, catalog identity + status per book."""
+    profile = await get_public_profile(db, target_id)
+    if not profile.library_visible:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "Library not public"},
+        )
+    from app.models import Edition, LibraryEntry, Work  # local import: avoids a module cycle
+
+    stmt = (
+        select(LibraryEntry, Edition, Work)
+        .join(Edition, Edition.id == LibraryEntry.edition_id)
+        .join(Work, Work.id == Edition.work_id)
+        .where(LibraryEntry.user_id == target_id, LibraryEntry.deleted_at.is_(None))
+        .order_by(LibraryEntry.created_at.desc())
+        .limit(limit)
+    )
+    rows = (await db.execute(stmt)).unique().all()
+    return [
+        {
+            "work_id": work.id,
+            "edition_id": edition.id,
+            "title": work.title,
+            "author_names": ", ".join(a.name for a in work.authors),
+            "cover_url": edition.cover_url,
+            "status": entry.status,
+        }
+        for entry, edition, work in rows
+    ]
+
+
 async def soft_delete_profile(db: AsyncSession, profile: Profile) -> None:
     profile.deleted_at = datetime.now(UTC)
     await db.commit()

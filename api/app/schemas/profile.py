@@ -102,3 +102,30 @@ class UserSearchOut(BaseModel):
     username: str
     full_name: str | None
     avatar_url: str | None
+
+
+class PublicProfileOut(BaseModel):
+    """Another reader's profile page — only what they've made public. Served
+    solely when `profile_visible` (the default); `library_visible` tells the
+    app whether it may fetch /users/{id}/library too."""
+
+    id: uuid.UUID
+    username: str | None
+    full_name: str | None
+    avatar_url: str | None
+    score: int
+    books_tracked: int
+    books_finished: int
+    library_visible: bool
+
+
+class PublicLibraryItemOut(BaseModel):
+    """One book on a public shelf — catalog identity plus the reading status
+    (statuses ARE the shelf; a public library without them is just a list)."""
+
+    work_id: uuid.UUID
+    edition_id: uuid.UUID
+    title: str
+    author_names: str
+    cover_url: str | None
+    status: str

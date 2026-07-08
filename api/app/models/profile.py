@@ -39,7 +39,9 @@ class Profile(Base):
     # captured at onboarding, editable in profile; drives the add-book dropdown.
     preferred_languages: Mapped[list | None] = mapped_column(JSONB, default=None)
 
-    profile_visible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Public by default (owner decision, 9 Jul 2026): a reader is findable and
+    # their profile viewable unless they opt out; library/reviews stay opt-in.
+    profile_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     library_visible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     reviews_visible_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 

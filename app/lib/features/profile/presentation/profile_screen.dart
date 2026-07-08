@@ -12,6 +12,7 @@ import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/language_chips.dart';
+import '../../../core/widgets/net_image.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../import_books/csv_export.dart';
@@ -123,9 +124,15 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
       children: [
         Row(
           children: [
+            // The account picture (from Google/Apple sign-in, stored at
+            // bootstrap); the initial stays as the fallback while it loads
+            // or when the provider gave none.
             CircleAvatar(
               radius: 26,
               backgroundColor: AppColors.oxblood,
+              foregroundImage: (profile['avatar_url'] as String?) != null
+                  ? netImageProvider(profile['avatar_url'] as String)
+                  : null,
               child: Text(initial, style: TextStyle(color: AppColors.paper)),
             ),
             SizedBox(width: 14),

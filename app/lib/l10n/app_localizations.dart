@@ -1180,6 +1180,78 @@ abstract class AppLocalizations {
   /// **'Avg pages per book'**
   String get insightsAvgPages;
 
+  /// Search field hint in the lend pick-book sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Search your books'**
+  String get lendingPickSearchHint;
+
+  /// Button on a wishlist entry's book page that makes it owned
+  ///
+  /// In en, this message translates to:
+  /// **'I got this book — move to my library'**
+  String get bookGotIt;
+
+  /// Snackbar after a wishlist entry becomes owned
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to your library.'**
+  String get bookMovedToLibrary;
+
+  /// Global search section header for Kitabi users
+  ///
+  /// In en, this message translates to:
+  /// **'Readers'**
+  String get searchReadersHeader;
+
+  /// App bar title of another reader's public profile
+  ///
+  /// In en, this message translates to:
+  /// **'Reader'**
+  String get publicProfileTitle;
+
+  /// Shown when a visited profile is not public
+  ///
+  /// In en, this message translates to:
+  /// **'This reader keeps their profile private.'**
+  String get publicProfilePrivate;
+
+  /// Section header over a public library grid
+  ///
+  /// In en, this message translates to:
+  /// **'Their shelf'**
+  String get publicLibrarySection;
+
+  /// Shown when the visited reader's library is not public
+  ///
+  /// In en, this message translates to:
+  /// **'Their library is private.'**
+  String get publicLibraryPrivate;
+
+  /// Public profile stat: tracked books
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 book} other{{count} books}}'**
+  String publicProfileBooks(int count);
+
+  /// Public profile contribution score
+  ///
+  /// In en, this message translates to:
+  /// **'Score {score}'**
+  String publicProfileScore(int score);
+
+  /// Button to send a connection request from a public profile
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get publicProfileConnect;
+
+  /// Snackbar after sending a request from a public profile
+  ///
+  /// In en, this message translates to:
+  /// **'Connection request sent.'**
+  String get publicProfileRequestSent;
+
   /// Eyebrow label on the personal notes card
   ///
   /// In en, this message translates to:
