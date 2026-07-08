@@ -862,6 +862,96 @@ abstract class AppLocalizations {
   /// **'Edit rejected.'**
   String get revisionsRejected;
 
+  /// Tappable action in the borrower field when no Kitabi user matches
+  ///
+  /// In en, this message translates to:
+  /// **'Keep “{name}” as a private contact'**
+  String borrowerKeepPrivate(String name);
+
+  /// Subtitle under the keep-as-private action
+  ///
+  /// In en, this message translates to:
+  /// **'They don\'t need Kitabi — the loan stays in your own ledger.'**
+  String get borrowerKeepPrivateHint;
+
+  /// Connections screen section for free-text lending contacts
+  ///
+  /// In en, this message translates to:
+  /// **'Private contacts'**
+  String get connectionsPrivateSection;
+
+  /// Private contact card subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No open loans} =1{1 book out} other{{count} books out}} · not on Kitabi'**
+  String connectionsPrivateLoans(int count);
+
+  /// Button that links a private contact to a Kitabi account
+  ///
+  /// In en, this message translates to:
+  /// **'Link'**
+  String get connectionsLinkAction;
+
+  /// Title of the link-contact dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Link “{name}” to a Kitabi account'**
+  String linkContactTitle(String name);
+
+  /// Explainer in the link-contact dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Their loans move onto the linked account and a connection request is sent.'**
+  String get linkContactBody;
+
+  /// Search hint in the link-contact dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or @username'**
+  String get linkContactSearchHint;
+
+  /// Empty result in the link-contact dialog
+  ///
+  /// In en, this message translates to:
+  /// **'No matching readers.'**
+  String get linkContactNoResults;
+
+  /// Snackbar after linking a private contact
+  ///
+  /// In en, this message translates to:
+  /// **'Linked — connection request sent.'**
+  String get linkContactDone;
+
+  /// Open-loan count on an accepted connection card
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 open loan} other{{count} open loans}}'**
+  String connectionsLoansWithThem(int count);
+
+  /// Ledger summary chip: books currently lent out
+  ///
+  /// In en, this message translates to:
+  /// **'{count} out'**
+  String lendingSummaryOut(int count);
+
+  /// Ledger summary chip: overdue loans
+  ///
+  /// In en, this message translates to:
+  /// **'{count} overdue'**
+  String lendingSummaryOverdue(int count);
+
+  /// Ledger summary chip: books borrowed right now
+  ///
+  /// In en, this message translates to:
+  /// **'{count} with you'**
+  String lendingSummaryBorrowed(int count);
+
+  /// Bottom-nav label for the global search
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get navSearch;
+
   /// Eyebrow label on the personal notes card
   ///
   /// In en, this message translates to:

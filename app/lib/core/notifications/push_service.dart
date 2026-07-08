@@ -148,11 +148,13 @@ final pushLifecycleProvider = Provider<void>((ref) {
           onOpen: (message) {
             final router = ref.read(routerProvider);
             final type = message.data['type'];
-            // Route the tap to where the event lives.
+            // Route the tap to where the event lives — via the external-nav
+            // helper, so a cold-start tap survives the splash/bootstrap
+            // redirect instead of being swallowed into home.
             if (type == 'lend_new' || type == 'lend_returned' || type == 'lend_reminder') {
-              router.go(Routes.lendingLedger);
+              navigateFromExternal(router, Routes.lendingLedger);
             } else {
-              router.push(Routes.connections);
+              navigateFromExternal(router, Routes.connections);
             }
           },
           onLendEvent: () => ref.read(syncTriggerProvider)(),

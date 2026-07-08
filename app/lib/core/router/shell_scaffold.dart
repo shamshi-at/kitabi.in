@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/connections/connections_providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../haptics.dart';
 import '../theme/app_theme.dart';
 import '../widgets/sync_status_bar.dart';
 import 'app_router.dart';
 
-/// The persistent bottom-nav shell (S3 mockup): Home · Library · [+] · Lending
-/// · Insights. The centre "+" is an action (opens the add flow), not a tab, so
-/// the four real tabs map to the [StatefulNavigationShell] branches and "+"
-/// pushes on top.
-class ShellScaffold extends StatelessWidget {
+/// The persistent bottom-nav shell (S3 mockup): Home · Library · Search · [+]
+/// · Lending · Insights. The centre "+" is an action (opens the add flow) and
+/// Search pushes the global search — neither is a tab, so the four real tabs
+/// map to the [StatefulNavigationShell] branches. The Lending item carries a
+/// badge when connection requests await approval (the first hop of the
+/// notification chain: footer → ledger header → connections inbox).
+class ShellScaffold extends ConsumerWidget {
   const ShellScaffold({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final index = navigationShell.currentIndex;
+    // Requests waiting on this reader's approval — the lending-side signal.
+    final incoming = ref.watch(connectionsProvider).valueOrNull?.incoming.length ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -60,6 +66,15 @@ class ShellScaffold extends StatelessWidget {
                   selected: index == 1,
                   onTap: () { Haptics.selection(); navigationShell.goBranch(1); },
                 ),
+                // Global search from anywhere (S4) — pushed above the shell,
+                // like "+", so the current tab keeps its state underneath.
+                _NavItem(
+                  icon: Icons.search,
+                  activeIcon: Icons.search,
+                  label: l10n.navSearch,
+                  selected: false,
+                  onTap: () { Haptics.selection(); context.push(Routes.catalogSearch); },
+                ),
                 // Scan-first (docs/screen-design.md): the FAB opens the camera
                 // directly — one tap to the main add path. Search / manual add
                 // stay one tap away via the scanner's fallback buttons.
@@ -69,6 +84,7 @@ class ShellScaffold extends StatelessWidget {
                   activeIcon: Icons.swap_horiz,
                   label: l10n.navLending,
                   selected: index == 2,
+                  badgeCount: incoming,
                   onTap: () { Haptics.selection(); navigationShell.goBranch(2); },
                 ),
                 _NavItem(
@@ -94,6 +110,7 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
@@ -101,6 +118,9 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+
+  /// Non-zero → a count pip on the icon (pending connection requests).
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +131,33 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(selected ? activeIcon : icon, size: 22, color: color),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(selected ? activeIcon : icon, size: 22, color: color),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -7,
+                    top: -4,
+                    child: Container(
+                      alignment: Alignment.center,
+                      padding: EdgeInsets.symmetric(horizontal: 3),
+                      constraints: BoxConstraints(minWidth: 14, minHeight: 14),
+                      decoration:
+                          BoxDecoration(color: AppColors.oxblood, shape: BoxShape.circle),
+                      child: Text(
+                        '$badgeCount',
+                        style: TextStyle(
+                          color: AppColors.paper,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             SizedBox(height: 2),
             Text(
               label,

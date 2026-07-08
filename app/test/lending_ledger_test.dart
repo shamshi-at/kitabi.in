@@ -167,6 +167,19 @@ void main() {
           returnedDate: Value(DateTime(2026, 2, 9)),
         ),
       );
+      // One returned borrow: the Borrowed tab must count ACTIVE only (0),
+      // not history — a returned book isn't "borrowed" anymore.
+      await db.lendingRecordsDao.insertOne(
+        LendingRecordsCompanion.insert(
+          id: 'lr3',
+          userId: 'u1',
+          direction: const Value('borrowed'),
+          editionId: const Value('ed1'),
+          borrowerName: 'Meera',
+          lentDate: DateTime(2026, 3, 1),
+          returnedDate: Value(DateTime(2026, 4, 1)),
+        ),
+      );
       return db.lendingRecordsDao.watchAllActive().first;
     });
 
@@ -200,5 +213,12 @@ void main() {
     expect(find.text('Due in 3d'), findsOneWidget);
     expect(find.text('Mark returned ✓'), findsOneWidget);
     expect(find.text('Returned ✓'), findsOneWidget);
+
+    // Tab counts are active loans only: one book out, and the returned
+    // borrow does NOT count as borrowed (the reported bug).
+    expect(find.text('Lent out · 1'), findsOneWidget);
+    expect(find.text('Borrowed · 0'), findsOneWidget);
+    // The at-a-glance summary chip for the one active loan.
+    expect(find.text('1 out'), findsOneWidget);
   });
 }

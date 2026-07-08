@@ -15,7 +15,7 @@ and commits on its own — so a failure here can never reject the pusher's op.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select, text
+from sqlalchemy import and_, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -148,6 +148,26 @@ async def _mirror_onto_borrower(
             await push_service.notify_book_lent(lender_id, borrower_id, book_title, book_cover)
         elif just_returned:
             await push_service.notify_book_returned(lender_id, borrower_id, book_title, book_cover)
+
+
+async def backfill_mirrors(db: AsyncSession, a: uuid.UUID, b: uuid.UUID) -> None:
+    """Fan out every loan that predates the pair's connection.
+
+    A loan lent to a not-yet-connected Kitabi user never mirrors (creation is
+    gated on an accepted connection), and nothing used to retry — so the
+    borrower approved the request and still saw an empty Borrowed shelf.
+    Called right after a connection between [a] and [b] lands on accepted;
+    `_mirror_onto_borrower` dedupes, so this is idempotent."""
+    stmt = select(LendingRecord).where(
+        LendingRecord.direction == "lent",
+        LendingRecord.deleted_at.is_(None),
+        or_(
+            and_(LendingRecord.user_id == a, LendingRecord.borrower_user_id == b),
+            and_(LendingRecord.user_id == b, LendingRecord.borrower_user_id == a),
+        ),
+    )
+    for lent in (await db.execute(stmt)).scalars().all():
+        await _mirror_onto_borrower(db, lent.user_id, lent)
 
 
 async def _retire_orphaned_mirror(db: AsyncSession, lent: LendingRecord) -> None:

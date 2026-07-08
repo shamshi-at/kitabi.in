@@ -441,6 +441,80 @@ class AppLocalizationsEn extends AppLocalizations {
   String get revisionsRejected => 'Edit rejected.';
 
   @override
+  String borrowerKeepPrivate(String name) {
+    return 'Keep “$name” as a private contact';
+  }
+
+  @override
+  String get borrowerKeepPrivateHint =>
+      'They don\'t need Kitabi — the loan stays in your own ledger.';
+
+  @override
+  String get connectionsPrivateSection => 'Private contacts';
+
+  @override
+  String connectionsPrivateLoans(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books out',
+      one: '1 book out',
+      zero: 'No open loans',
+    );
+    return '$_temp0 · not on Kitabi';
+  }
+
+  @override
+  String get connectionsLinkAction => 'Link';
+
+  @override
+  String linkContactTitle(String name) {
+    return 'Link “$name” to a Kitabi account';
+  }
+
+  @override
+  String get linkContactBody =>
+      'Their loans move onto the linked account and a connection request is sent.';
+
+  @override
+  String get linkContactSearchHint => 'Search by name or @username';
+
+  @override
+  String get linkContactNoResults => 'No matching readers.';
+
+  @override
+  String get linkContactDone => 'Linked — connection request sent.';
+
+  @override
+  String connectionsLoansWithThem(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count open loans',
+      one: '1 open loan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String lendingSummaryOut(int count) {
+    return '$count out';
+  }
+
+  @override
+  String lendingSummaryOverdue(int count) {
+    return '$count overdue';
+  }
+
+  @override
+  String lendingSummaryBorrowed(int count) {
+    return '$count with you';
+  }
+
+  @override
+  String get navSearch => 'Search';
+
+  @override
   String get bookNotesLabel => 'PERSONAL NOTES · always private';
 
   @override

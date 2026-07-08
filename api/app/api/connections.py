@@ -12,7 +12,7 @@ from app.schemas.connection import (
     ConnectionStatusOut,
     RemindIn,
 )
-from app.services import connection_service, push_service
+from app.services import connection_service, lend_mirror_service, push_service
 
 router = APIRouter(prefix="/connections", tags=["connections"])
 
@@ -48,7 +48,9 @@ async def request_connection(
         # I asked → let the addressee know (this is also the lend-to-a-user case).
         background_tasks.add_task(push_service.notify_connection_request, me, conn.addressee_id)
     elif conn.status == "accepted":
-        # Mutual request auto-accepted → tell the other side it's confirmed.
+        # Mutual request auto-accepted → fan out any loans that predate the
+        # link (the borrower's shelf fills in), then tell the other side.
+        await lend_mirror_service.backfill_mirrors(db, conn.requester_id, conn.addressee_id)
         other = conn.requester_id if conn.addressee_id == me else conn.addressee_id
         background_tasks.add_task(push_service.notify_connection_accepted, me, other)
     return connection_service.to_status(conn, me)
@@ -88,6 +90,10 @@ async def accept_connection(
 ) -> None:
     me = uuid.UUID(user["id"])
     conn = await connection_service.accept(db, me, connection_id)
+    # The link is live — fan out every loan that predates it, so the borrower's
+    # Borrowed shelf fills in the moment they approve (it used to stay empty:
+    # mirroring is gated on an accepted connection and was never retried).
+    await lend_mirror_service.backfill_mirrors(db, conn.requester_id, conn.addressee_id)
     # Tell the original requester their request was accepted.
     background_tasks.add_task(push_service.notify_connection_accepted, me, conn.requester_id)
 

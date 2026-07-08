@@ -218,19 +218,46 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
             ),
           ),
         if (showNoMatch)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 2),
-            child: Row(
-              children: [
-                Icon(Icons.person_outline, size: 14, color: AppColors.inkSoft),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    l10n.borrowerNoMatch(query),
-                    style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.3),
-                  ),
+          // Not a dead end: keeping the name as a private contact is an
+          // explicit, tappable choice — lending to someone who isn't on
+          // Kitabi is a first-class path, not a fallback.
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.person_add_alt, size: 18, color: AppColors.gold),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.borrowerKeepPrivate(query),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          Text(
+                            l10n.borrowerKeepPrivateHint,
+                            style: TextStyle(
+                                color: AppColors.inkSoft, fontSize: 11, height: 1.3),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
       ],

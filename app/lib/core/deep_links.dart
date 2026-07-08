@@ -36,13 +36,15 @@ class DeepLinkListener {
     final id = segments[1];
     if (id.isEmpty) return;
     final router = _ref.read(routerProvider);
+    // Via the external-nav helper: a cold-start link (app launched by the tap)
+    // must wait out the splash/bootstrap redirect or it's swallowed into home.
     switch (segments[0]) {
       case 'b':
-        router.go('/b/$id');
+        navigateFromExternal(router, '/b/$id');
       case 'a':
-        router.go('/a/$id');
+        navigateFromExternal(router, '/a/$id');
       case 'p':
-        router.go('/p/$id');
+        navigateFromExternal(router, '/p/$id');
       default:
         break;
     }

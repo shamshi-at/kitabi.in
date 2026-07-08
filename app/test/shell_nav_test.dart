@@ -5,11 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:kitabi/core/router/app_router.dart';
 import 'package:kitabi/core/router/shell_scaffold.dart';
 import 'package:kitabi/data/sync/sync_providers.dart';
+import 'package:kitabi/features/connections/connections_providers.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
-void main() {
-  testWidgets('the [+] FAB opens the ISBN scanner directly (scan-first)', (tester) async {
-    final router = GoRouter(
+GoRouter _shellRouter() => GoRouter(
       initialLocation: '/home',
       routes: [
         StatefulShellRoute.indexedStack(
@@ -25,26 +24,70 @@ void main() {
           path: Routes.catalogScan,
           builder: (_, _) => const Scaffold(body: Text('SCANNER')),
         ),
+        GoRoute(
+          path: Routes.catalogSearch,
+          builder: (_, _) => const Scaffold(body: Text('GLOBAL SEARCH')),
+        ),
       ],
     );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          syncErrorCountProvider.overrideWith((ref) => Stream.value(0)),
-        ],
-        child: MaterialApp.router(
-          routerConfig: router,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-        ),
+Widget _wrap(GoRouter router, {ConnectionsData? connections}) {
+  return ProviderScope(
+    overrides: [
+      syncErrorCountProvider.overrideWith((ref) => Stream.value(0)),
+      connectionsProvider.overrideWith(
+        (ref) async =>
+            connections ?? ConnectionsData(incoming: [], outgoing: [], accepted: []),
       ),
-    );
+    ],
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+    ),
+  );
+}
+
+void main() {
+  testWidgets('the [+] FAB opens the ISBN scanner directly (scan-first)', (tester) async {
+    await tester.pumpWidget(_wrap(_shellRouter()));
     await tester.pump();
 
     await tester.tap(find.byIcon(Icons.add));
     await tester.pumpAndSettle();
 
     expect(find.text('SCANNER'), findsOneWidget);
+  });
+
+  testWidgets('the Search nav item opens the global search from any tab', (tester) async {
+    await tester.pumpWidget(_wrap(_shellRouter()));
+    await tester.pump();
+
+    expect(find.text('Search'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pumpAndSettle();
+
+    expect(find.text('GLOBAL SEARCH'), findsOneWidget);
+  });
+
+  testWidgets('pending connection requests badge the Lending nav item', (tester) async {
+    final withIncoming = ConnectionsData(
+      incoming: [
+        Connection(
+          id: 'c1',
+          status: 'pending',
+          role: 'addressee',
+          other: ConnectionUser(id: 'u9', username: 'anu'),
+        ),
+      ],
+      outgoing: [],
+      accepted: [],
+    );
+    await tester.pumpWidget(_wrap(_shellRouter(), connections: withIncoming));
+    await tester.pump();
+    await tester.pump();
+
+    // The pip with the pending count sits on the Lending icon.
+    expect(find.text('1'), findsOneWidget);
   });
 }

@@ -220,6 +220,15 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Lending/connections batch (8 Jul 2026): accepting a connection now backfills the
+      loans that predate it (the borrower's shelf used to stay empty forever); Borrowed
+      tab counts active loans only; notification taps survive cold start (pending
+      external target consumed by the router redirect — also fixes kitabi.in app links);
+      Private contacts section in Connections (free-text borrowers, loan counts, "Link"
+      to a Kitabi account which re-attaches all their records + sends a request); the
+      borrower field offers "Keep as a private contact" explicitly; incoming-request
+      badge on the footer Lending item; ledger at-a-glance chips (out/overdue/with you);
+      open-loan counts on connection cards; global Search in the bottom nav
 - [x] Moderated catalog edits — the contributor's (or an unowned work's) edits apply live;
       anyone else's queue as a `work_revisions` row (migration `000021`, RLS) that the
       contributor approves/rejects from the profile's "Pending edits" inbox; the editor sees

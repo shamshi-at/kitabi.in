@@ -95,6 +95,25 @@ void openPersonLoans(BuildContext context, {String? userId, required String name
   context.push(Routes.connectionLoans, extra: {'userId': userId, 'name': name});
 }
 
+/// A navigation target that arrived before the router was usable — a
+/// notification tap or universal link on a cold start. Navigating immediately
+/// gets swallowed: the redirect below pins everything to splash until auth +
+/// bootstrap resolve, then routes splash → home, losing the target. The
+/// redirect consumes this instead of returning home once the session is ready.
+String? pendingExternalTarget;
+
+/// Route an externally-triggered navigation (push tap, app link): straight
+/// away when the app is up, or parked in [pendingExternalTarget] for the
+/// redirect to consume when the session is still booting.
+void navigateFromExternal(GoRouter router, String location) {
+  final current = router.routerDelegate.currentConfiguration.uri.path;
+  if (current == Routes.splash || current == Routes.signIn) {
+    pendingExternalTarget = location;
+  } else {
+    router.push(location);
+  }
+}
+
 /// Re-runs the router's redirect whenever auth or bootstrap state changes
 /// (pattern from rupee-diary/app: a ChangeNotifier fed by ref.listen, wired
 /// as go_router's refreshListenable).
@@ -166,6 +185,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           loc == Routes.signIn ||
           loc == Routes.welcome ||
           loc == Routes.languages) {
+        // A cold-start push tap / app link waited out the boot — honour it now
+        // instead of landing on home.
+        final target = pendingExternalTarget;
+        if (target != null) {
+          pendingExternalTarget = null;
+          return target;
+        }
         return Routes.home;
       }
       return null;

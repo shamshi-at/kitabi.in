@@ -50,15 +50,25 @@ class LendingLedgerScreen extends ConsumerWidget {
             final conn = ref.watch(connectionsProvider).valueOrNull;
             final lent = all.where((r) => r.record.direction != 'borrowed').toList();
             final borrowed = all.where((r) => r.record.direction == 'borrowed').toList();
-            // The "Lent out" count is active loans only (still out) — a returned
-            // book is no longer lent. Rejected loans are the still-out ones whose
-            // borrower declined the connection (the book stands, the link doesn't).
+            // Tab counts are ACTIVE loans only — a returned book is neither
+            // lent out nor borrowed anymore (history stays in the lists).
             final activeLent = lent.where((r) => r.record.returnedDate == null).toList();
+            final activeBorrowed =
+                borrowed.where((r) => r.record.returnedDate == null).toList();
+            // Rejected loans are the still-out ones whose borrower declined the
+            // connection (the book stands, the link doesn't).
             final rejected = activeLent
                 .where((r) =>
                     r.record.borrowerUserId != null &&
                     (conn?.isRejected(r.record.borrowerUserId!) ?? false))
                 .toList();
+
+            final overdue = activeLent
+                .where((r) =>
+                    r.record.dueDate != null &&
+                    DateUtils.dateOnly(r.record.dueDate!)
+                        .isBefore(DateUtils.dateOnly(DateTime.now())))
+                .length;
 
             return DefaultTabController(
               length: 3,
@@ -76,6 +86,34 @@ class LendingLedgerScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  // The ledger at a glance — live counts of what's out, what's
+                  // late, and what's with you.
+                  if (activeLent.isNotEmpty || activeBorrowed.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(20, 0, 20, 6),
+                      child: Row(
+                        children: [
+                          if (activeLent.isNotEmpty)
+                            _SummaryChip(
+                              icon: Icons.north_east,
+                              label: l10n.lendingSummaryOut(activeLent.length),
+                              color: AppColors.gold,
+                            ),
+                          if (overdue > 0)
+                            _SummaryChip(
+                              icon: Icons.schedule,
+                              label: l10n.lendingSummaryOverdue(overdue),
+                              color: AppColors.oxblood,
+                            ),
+                          if (activeBorrowed.isNotEmpty)
+                            _SummaryChip(
+                              icon: Icons.south_west,
+                              label: l10n.lendingSummaryBorrowed(activeBorrowed.length),
+                              color: AppColors.slate,
+                            ),
+                        ],
+                      ),
+                    ),
                   TabBar(
                     isScrollable: true,
                     tabAlignment: TabAlignment.start,
@@ -86,7 +124,7 @@ class LendingLedgerScreen extends ConsumerWidget {
                     tabs: [
                       Tab(text: l10n.lendingLentOutTab(activeLent.length)),
                       Tab(text: l10n.lendingRejectedTab(rejected.length)),
-                      Tab(text: l10n.lendingBorrowedTab(borrowed.length)),
+                      Tab(text: l10n.lendingBorrowedTab(activeBorrowed.length)),
                     ],
                   ),
                   Expanded(
@@ -523,6 +561,38 @@ class _SectionLabel extends StatelessWidget {
           letterSpacing: 1.2,
           color: AppColors.inkSoft,
         ),
+      ),
+    );
+  }
+}
+
+/// One glance-count chip in the ledger header (out / overdue / with you).
+class _SummaryChip extends StatelessWidget {
+  const _SummaryChip({required this.icon, required this.label, required this.color});
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(right: 6),
+      padding: EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: color),
+          ),
+        ],
       ),
     );
   }
