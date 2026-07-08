@@ -19,4 +19,13 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+    <!-- image_cropper's UCropActivity (a separate, legacy-AppCompat Activity outside
+         Flutter's own edge-to-edge handling) doesn't pad for window insets, so on
+         Android 15+ (targetSdk 35 forces edge-to-edge for every Activity) its toolbar
+         icons — including the confirm checkmark — drew under the status bar. This
+         opts UCrop's screen out via the API-35 attribute meant for exactly this
+         (ignored, harmless, below API 35); everything else keeps normal edge-to-edge. -->
+    <style name="UCropTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
 </resources>

@@ -55,11 +55,14 @@
             </intent-filter>
         </activity>
         <!-- image_cropper (UCrop) — the crop screen shown after picking a cover /
-             author photo / publisher logo. Needs an AppCompat theme. -->
+             author photo / publisher logo. UCropTheme (styles.xml) opts this one
+             screen out of Android 15's forced edge-to-edge — UCrop doesn't pad for
+             insets, so its toolbar (incl. the confirm tick) drew under the status
+             bar without it. -->
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+            android:theme="@style/UCropTheme"/>
         <!-- flutter_local_notifications: reschedule reminders after a reboot. -->
         <receiver
             android:exported="false"

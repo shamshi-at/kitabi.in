@@ -135,6 +135,20 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
         Room overlay (`_ExtractingOverlay`): a gold scan line sweeps the cover over a
         paper scrim, fleuron + "Reading your cover…" + subtitle; reduced-motion holds a
         static line. Verified on the emulator.
+- [x] Two field-report fixes (8 Jul 2026, build 42): **duplicate back arrow on the
+      book page** — `_BookDetailBody`'s header row carried its own inline `arrow_back`
+      IconButton on top of the screen's single floating `_BackButton`; replaced with a
+      spacer of the same width so layout is unchanged but there's one control, not two
+      (screenshotted on the emulator: confirmed a single clean circle). **Android
+      crop-screen tick icon outside the safe area** — `image_cropper`'s `UCropActivity`
+      is a legacy-AppCompat Activity that doesn't pad for window insets, and Android
+      15 (targetSdk 35) forces edge-to-edge on every Activity, so its toolbar (incl.
+      the confirm ✓) drew under the status bar. Added a `UCropTheme` style using the
+      API-35 `windowOptOutEdgeToEdgeEnforcement` attribute, scoped to just that
+      Activity in the manifest. Verified live on an Android 15 (API 35) emulator —
+      pushed a real image through the actual gallery photo picker → UCrop screen →
+      toolbar (✕ and ✓) now sit fully below the status bar. AAB build confirms the
+      manifest/theme change compiles.
 - [x] Fuzzy, ranked global search (8 Jul 2026, owner request): `search_local` /
       `search_authors` / `search_publishers` are now typo-tolerant (`_fuzzy_match`:
       ILIKE + trigram `%` + word-similarity `<%`, all GIN-served; migration `000019`

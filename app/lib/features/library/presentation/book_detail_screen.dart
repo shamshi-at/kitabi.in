@@ -109,12 +109,11 @@ class _BookDetailBody extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                icon: Icon(Icons.arrow_back, color: AppColors.ink),
-                onPressed: () => context.pop(),
-                padding: EdgeInsets.zero,
-              ),
-              SizedBox(width: 4),
+              // Reserves the space the header always had for a leading
+              // control — the actual back action is the single floating
+              // _BackButton in BookDetailScreen.build (this row used to
+              // carry a second, duplicate arrow_back that overlapped it).
+              SizedBox(width: 48),
               Column(
                 children: [
                   _CoverUploader(
