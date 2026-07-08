@@ -39,9 +39,20 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   bool _coverRefreshTried = false;
 
   bool _borrowedCacheTried = false;
+  bool _hydrateTried = false;
 
   Future<void> _refreshMissingCovers() async {
     await refreshMissingCovers(
+      ref.read(appDatabaseProvider),
+      ref.read(apiClientProvider),
+    );
+  }
+
+  /// Fresh-install self-heal: sync restores the entries but the cached-book
+  /// rows are device-local, so without this the grid's join drops every book
+  /// (home says 5 owned, library says 0). Cheap no-op when nothing is missing.
+  Future<void> _hydrateMissingBooks() async {
+    await cacheMissingLibraryBooks(
       ref.read(appDatabaseProvider),
       ref.read(apiClientProvider),
     );
@@ -79,6 +90,13 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
           loading: () => CoverGridSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryHitsProvider)),
           data: (all) {
+            // Fresh-install hydration: entries synced down without their
+            // device-local cached-book rows are invisible to the join above —
+            // rehydrate once per mount; the stream re-emits as rows land.
+            if (!_hydrateTried) {
+              _hydrateTried = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) => _hydrateMissingBooks());
+            }
             // Opportunistically pull covers that were added upstream after these
             // books were cached (e.g. a catalog backfill). Once per screen mount;
             // the reactive join re-shows them as the cache rows update.
@@ -102,6 +120,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                 await ref.read(syncNowProvider)();
                 ref.invalidate(libraryHitsProvider);
                 ref.invalidate(allLendingProvider);
+                await _hydrateMissingBooks();
                 await _refreshMissingCovers();
                 await _cacheBorrowed();
               },

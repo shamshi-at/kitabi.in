@@ -66,6 +66,37 @@ Future<int> cacheBorrowedBooks(AppDatabase db, ApiClient api) async {
   return cached;
 }
 
+/// Hydrate the catalog cache for OWNED library entries with no cached-book
+/// row — the fresh-install gap: a sync pull restores `library_entries`
+/// (Layer 2, synced) but `cached_books` is a device-local Layer-1 cache, so
+/// on a new device every entry silently vanished from the grid's inner join
+/// (home counted 5 books while the library showed 0). Fetches each missing
+/// edition's Work and caches it. Cheap when nothing is missing (local reads
+/// only); online-only for the fetches — failures skip and retry next call.
+Future<int> cacheMissingLibraryBooks(AppDatabase db, ApiClient api) async {
+  final entries = await db.libraryEntriesDao.watchActive().first;
+  final editionIds = {for (final e in entries) e.editionId};
+  var cached = 0;
+  for (final editionId in editionIds) {
+    if (await db.cachedBooksDao.getByEditionId(editionId) != null) continue;
+    try {
+      final work = await api.getWorkByEdition(editionId);
+      final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final edition = editions.firstWhere(
+        (e) => e['id'] == editionId,
+        orElse: () => editions.isNotEmpty ? editions.first : <String, dynamic>{},
+      );
+      if (edition.isNotEmpty) {
+        await cacheBookForOffline(db, work, edition);
+        cached++;
+      }
+    } catch (_) {
+      // offline or gone — try again next refresh
+    }
+  }
+  return cached;
+}
+
 /// Re-fetch catalog data for every cached book that still has no cover and
 /// refresh its cache row — so covers added upstream after a book was cached
 /// (e.g. a metadata backfill) show up in the grid/home without re-adding the
