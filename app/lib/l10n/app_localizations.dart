@@ -688,6 +688,60 @@ abstract class AppLocalizations {
   /// **'Edit review'**
   String get bookEditReview;
 
+  /// App bar title of the dedicated review/rating editor page
+  ///
+  /// In en, this message translates to:
+  /// **'Rate & review'**
+  String get reviewPageTitle;
+
+  /// Eyebrow label above the star row on the review editor page
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR RATING'**
+  String get reviewRatingLabel;
+
+  /// Placeholder inside the review text area
+  ///
+  /// In en, this message translates to:
+  /// **'What did you think?'**
+  String get reviewBodyHint;
+
+  /// Hint under the review visibility toggle explaining what public means
+  ///
+  /// In en, this message translates to:
+  /// **'Public reviews will be visible to others when Kitabi\'s community features launch.'**
+  String get reviewVisibilityHint;
+
+  /// Snackbar after the review editor saves
+  ///
+  /// In en, this message translates to:
+  /// **'Review saved'**
+  String get reviewSaved;
+
+  /// Gentle snackbar prompt after marking a book as read, inviting a review
+  ///
+  /// In en, this message translates to:
+  /// **'Finished! What did you think?'**
+  String get reviewFinishedPrompt;
+
+  /// Snackbar action that opens the review editor
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get reviewFinishedAction;
+
+  /// Tooltip on the expand icon that opens a text field full screen
+  ///
+  /// In en, this message translates to:
+  /// **'Edit full screen'**
+  String get formFieldExpand;
+
+  /// Action that closes the full-screen text editor
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get formEditorDone;
+
   /// Eyebrow label on the personal notes card
   ///
   /// In en, this message translates to:

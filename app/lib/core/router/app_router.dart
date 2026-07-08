@@ -21,6 +21,7 @@ import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/lending/presentation/lending_ledger_screen.dart';
 import '../../features/library/presentation/book_detail_screen.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
+import '../../features/library/presentation/review_editor_screen.dart';
 import '../../features/onboarding/onboarding_providers.dart';
 import '../../features/onboarding/presentation/welcome_screen.dart';
 import '../../features/connections/presentation/connection_loans_screen.dart';
@@ -75,10 +76,13 @@ abstract final class Routes {
   static const activity = '/activity';
   // Top-level (not under a nav branch) so it covers the bottom nav full-screen.
   static const bookDetail = '/book/:workId/:editionId';
+  // Dedicated rate & review page; book display data (title/author/cover) via `extra`.
+  static const reviewEditor = '/review/:workId';
 
   static String authorBrowsePath(String authorId) => '/catalog/authors/$authorId';
   static String publisherBrowsePath(String publisherId) => '/catalog/publishers/$publisherId';
   static String bookDetailPath(String workId, String editionId) => '/book/$workId/$editionId';
+  static String reviewEditorPath(String workId) => '/review/$workId';
 }
 
 /// Opens the loans-with-one-person page — every counterparty name in the app
@@ -362,6 +366,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'publisher-link',
         builder: (context, state) =>
             PublisherBrowseScreen(publisherId: state.pathParameters['publisherId']!),
+      ),
+      GoRoute(
+        path: Routes.reviewEditor,
+        name: 'review-editor',
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>? ?? const {};
+          return ReviewEditorScreen(
+            workId: state.pathParameters['workId']!,
+            title: args['title'] as String?,
+            author: args['author'] as String?,
+            coverUrl: args['coverUrl'] as String?,
+          );
+        },
       ),
       GoRoute(
         path: Routes.bookDetail,

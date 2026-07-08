@@ -306,6 +306,33 @@ void main() {
     expect(fake.lastCreatePayload?['title'], 'Oru Deshathinte Katha');
   });
 
+  testWidgets('description expands into a full-screen editor and carries text back',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Edit full screen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Done'), findsOneWidget);
+    await tester.enterText(
+      find.byType(TextField),
+      'A long back-cover blurb that deserves room to breathe.',
+    );
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    // The shared controller carried the text back into the form field.
+    expect(
+      find.text('A long back-cover blurb that deserves room to breathe.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('format field opens a themed picker sheet and applies the choice', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;

@@ -768,6 +768,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
             controller: _description,
             maxLines: 4,
             helper: l10n.formDescriptionHelp,
+            expandable: true,
           ),
           SizedBox(height: 14),
           Text(
@@ -1317,6 +1318,7 @@ class _Field extends StatelessWidget {
     this.helper,
     this.fillColor,
     this.maxLines = 1,
+    this.expandable = false,
   });
 
   final String label;
@@ -1333,19 +1335,62 @@ class _Field extends StatelessWidget {
   /// well (the series group) so it still reads as an input.
   final Color? fillColor;
 
+  /// Long-text fields (description) get an expand affordance that opens the
+  /// same controller in a full-screen editor.
+  final bool expandable;
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            letterSpacing: 1,
-            color: AppColors.inkSoft,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 1,
+                  color: AppColors.inkSoft,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (expandable)
+              InkWell(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    fullscreenDialog: true,
+                    builder: (_) => _FullScreenTextEditor(
+                      title: label,
+                      controller: controller,
+                      hint: helper,
+                    ),
+                  ),
+                ),
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.open_in_full, size: 12, color: AppColors.oxblood),
+                      SizedBox(width: 4),
+                      Text(
+                        l10n.formFieldExpand,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.oxblood,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
         SizedBox(height: 4),
         TextFormField(
@@ -1378,6 +1423,56 @@ class _Field extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Full-screen editor for long text (the description blurb) — shares the
+/// form field's controller, so everything typed here is already in the form
+/// when it pops; Done just closes it.
+class _FullScreenTextEditor extends StatelessWidget {
+  const _FullScreenTextEditor({required this.title, required this.controller, this.hint});
+
+  final String title;
+  final TextEditingController controller;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      backgroundColor: AppColors.paper,
+      appBar: AppBar(
+        title: Text(title),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              l10n.formEditorDone,
+              style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: TextField(
+            controller: controller,
+            maxLines: null,
+            expands: true,
+            autofocus: true,
+            textAlignVertical: TextAlignVertical.top,
+            keyboardType: TextInputType.multiline,
+            textCapitalization: TextCapitalization.sentences,
+            style: TextStyle(fontSize: 14, color: AppColors.ink, height: 1.5),
+            decoration: InputDecoration(
+              hintText: hint,
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

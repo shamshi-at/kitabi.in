@@ -228,7 +228,13 @@ class _BookDetailBody extends ConsumerWidget {
                       _LendingCard(editionId: editionId),
                     ],
                   )
-                : _OwnedBookSections(entry: libraryEntry, workId: work['id'] as String),
+                : _OwnedBookSections(
+                    entry: libraryEntry,
+                    workId: work['id'] as String,
+                    title: work['title'] as String?,
+                    author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+                    coverUrl: edition?['cover_url'] as String?,
+                  ),
           ),
         ),
         // [WIRED] Where to buy — dormant until an edition carries buy_links
@@ -874,10 +880,23 @@ class _AddToLibraryButton extends ConsumerWidget {
 }
 
 class _OwnedBookSections extends ConsumerWidget {
-  const _OwnedBookSections({required this.entry, required this.workId});
+  const _OwnedBookSections({
+    required this.entry,
+    required this.workId,
+    this.title,
+    this.author,
+    this.coverUrl,
+  });
 
   final LibraryEntry entry;
   final String workId;
+  final String? title;
+  final String? author;
+  final String? coverUrl;
+
+  /// The `extra` the review editor route needs to show which book it's about.
+  Map<String, dynamic> get _reviewExtra =>
+      {'title': title, 'author': author, 'coverUrl': coverUrl};
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -896,11 +915,11 @@ class _OwnedBookSections extends ConsumerWidget {
             ),
           ),
         ),
-        _StatusPicker(entry: entry),
+        _StatusPicker(entry: entry, workId: workId, reviewExtra: _reviewExtra),
         SizedBox(height: 8),
         _ProgressCard(entry: entry),
         SizedBox(height: 8),
-        _ReviewCard(entry: entry, workId: workId),
+        _ReviewCard(workId: workId, reviewExtra: _reviewExtra),
         SizedBox(height: 8),
         _NotesCard(entry: entry),
         SizedBox(height: 8),
@@ -913,9 +932,35 @@ class _OwnedBookSections extends ConsumerWidget {
 }
 
 class _StatusPicker extends ConsumerWidget {
-  const _StatusPicker({required this.entry});
+  const _StatusPicker({required this.entry, required this.workId, required this.reviewExtra});
 
   final LibraryEntry entry;
+  final String workId;
+  final Map<String, dynamic> reviewExtra;
+
+  /// One gentle, self-dismissing nudge to review a book the moment it's marked
+  /// read — and only when there's nothing to lose by ignoring it: no snackbar
+  /// at all if a review or rating already exists (don't irritate the reader).
+  Future<void> _maybePromptReview(BuildContext context, WidgetRef ref) async {
+    // Repositories directly, not the autoDispose providers' .future — a
+    // read without a listener can be disposed before it resolves.
+    final reviewsRepo = await ref.read(reviewsRepositoryProvider.future);
+    final ratingsRepo = await ref.read(ratingsRepositoryProvider.future);
+    final review = await reviewsRepo.watchForWork(workId).first;
+    final rating = await ratingsRepo.watchForWork(workId).first;
+    if (review != null || rating != null || !context.mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.reviewFinishedPrompt),
+        duration: Duration(seconds: 6),
+        action: SnackBarAction(
+          label: l10n.reviewFinishedAction,
+          onPressed: () => context.push(Routes.reviewEditorPath(workId), extra: reviewExtra),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -933,6 +978,9 @@ class _StatusPicker extends ConsumerWidget {
                 await repo.updateProgress(entry.id, finishDate: DateTime.now());
               }
               ref.invalidate(libraryEntryProvider(entry.editionId));
+              if (status == 'read' && entry.status != 'read' && context.mounted) {
+                await _maybePromptReview(context, ref);
+              }
             },
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -968,20 +1016,34 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    // A rounded Border must be uniform (non-uniform colors assert in paint),
+    // so the gold accent is a clipped strip laid over the left edge instead
+    // of a thicker left BorderSide.
+    final card = Container(
       width: double.infinity,
-      padding: EdgeInsets.all(10),
+      padding: leftBorder != null ? EdgeInsets.fromLTRB(13, 10, 10, 10) : EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color ?? AppColors.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border(
-          top: BorderSide(color: borderColor ?? AppColors.line),
-          bottom: BorderSide(color: borderColor ?? AppColors.line),
-          right: BorderSide(color: borderColor ?? AppColors.line),
-          left: BorderSide(color: leftBorder ?? borderColor ?? AppColors.line, width: leftBorder != null ? 3 : 1),
-        ),
+        border: Border.all(color: borderColor ?? AppColors.line),
       ),
       child: child,
+    );
+    if (leftBorder == null) return card;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Stack(
+        children: [
+          card,
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 3,
+            child: ColoredBox(color: leftBorder!),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1084,50 +1146,10 @@ class _ProgressCard extends ConsumerWidget {
 }
 
 class _ReviewCard extends ConsumerWidget {
-  const _ReviewCard({required this.entry, required this.workId});
+  const _ReviewCard({required this.workId, required this.reviewExtra});
 
-  final LibraryEntry entry;
   final String workId;
-
-  Future<void> _edit(BuildContext context, WidgetRef ref, Review? current) async {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(text: current?.body ?? '');
-    var visible = current?.visible ?? false;
-    final result = await showDialog<(String, bool)>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: Text(l10n.bookEditReview),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: controller, maxLines: 4, autofocus: true),
-              Row(
-                children: [
-                  Expanded(child: Text(l10n.bookReviewVisibilityPublic)),
-                  Switch(
-                    value: visible,
-                    onChanged: (v) => setState(() => visible = v),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, (controller.text, visible)),
-              child: Text(l10n.bookSave),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (result == null || result.$1.trim().isEmpty) return;
-    final repo = await ref.read(reviewsRepositoryProvider.future);
-    await repo.upsert(workId, body: result.$1.trim(), visible: result.$2);
-    ref.invalidate(reviewProvider(workId));
-  }
+  final Map<String, dynamic> reviewExtra;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1136,7 +1158,9 @@ class _ReviewCard extends ConsumerWidget {
     final current = review.valueOrNull;
 
     return GestureDetector(
-      onTap: () => _edit(context, ref, current),
+      // One tap opens the dedicated rate & review page (replaces the old
+      // cramped dialog); rating + review invalidate themselves on save.
+      onTap: () => context.push(Routes.reviewEditorPath(workId), extra: reviewExtra),
       child: _Card(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

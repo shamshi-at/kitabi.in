@@ -398,6 +398,24 @@
   "@bookEditReview": {
     "description": "Dialog title for editing a review"
   },
+  "reviewPageTitle": "Rate & review",
+  "@reviewPageTitle": {"description": "App bar title of the dedicated review/rating editor page"},
+  "reviewRatingLabel": "YOUR RATING",
+  "@reviewRatingLabel": {"description": "Eyebrow label above the star row on the review editor page"},
+  "reviewBodyHint": "What did you think?",
+  "@reviewBodyHint": {"description": "Placeholder inside the review text area"},
+  "reviewVisibilityHint": "Public reviews will be visible to others when Kitabi's community features launch.",
+  "@reviewVisibilityHint": {"description": "Hint under the review visibility toggle explaining what public means"},
+  "reviewSaved": "Review saved",
+  "@reviewSaved": {"description": "Snackbar after the review editor saves"},
+  "reviewFinishedPrompt": "Finished! What did you think?",
+  "@reviewFinishedPrompt": {"description": "Gentle snackbar prompt after marking a book as read, inviting a review"},
+  "reviewFinishedAction": "Review",
+  "@reviewFinishedAction": {"description": "Snackbar action that opens the review editor"},
+  "formFieldExpand": "Edit full screen",
+  "@formFieldExpand": {"description": "Tooltip on the expand icon that opens a text field full screen"},
+  "formEditorDone": "Done",
+  "@formEditorDone": {"description": "Action that closes the full-screen text editor"},
   "bookNotesLabel": "PERSONAL NOTES · always private",
   "@bookNotesLabel": {
     "description": "Eyebrow label on the personal notes card"

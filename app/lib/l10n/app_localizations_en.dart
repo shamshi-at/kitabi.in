@@ -348,6 +348,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookEditReview => 'Edit review';
 
   @override
+  String get reviewPageTitle => 'Rate & review';
+
+  @override
+  String get reviewRatingLabel => 'YOUR RATING';
+
+  @override
+  String get reviewBodyHint => 'What did you think?';
+
+  @override
+  String get reviewVisibilityHint =>
+      'Public reviews will be visible to others when Kitabi\'s community features launch.';
+
+  @override
+  String get reviewSaved => 'Review saved';
+
+  @override
+  String get reviewFinishedPrompt => 'Finished! What did you think?';
+
+  @override
+  String get reviewFinishedAction => 'Review';
+
+  @override
+  String get formFieldExpand => 'Edit full screen';
+
+  @override
+  String get formEditorDone => 'Done';
+
+  @override
   String get bookNotesLabel => 'PERSONAL NOTES · always private';
 
   @override

@@ -203,6 +203,10 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Favorite flag (gold ribbon) — S5 grid overlay + S6 toggle
 - [x] Star rating → attaches to **work** — S6
 - [x] Review text + per-review visibility flag (default private); edit/delete — S6
+- [x] Dedicated "Rate & review" page (stars + roomy text area + visibility, one save) — the S6
+      review card opens it in one tap; marking a book **Read** shows a one-off, self-dismissing
+      snackbar prompt ("Finished! What did you think?") only when the book has no rating/review
+      yet. Add-book description field gained an "Edit full screen" editor (8 Jul 2026)
 - [x] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — written server-side as a side
       effect of other syncable ops, pulled to the client; no feed UI yet (feature-map.md: "flip it
       public later")
