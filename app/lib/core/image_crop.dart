@@ -36,11 +36,17 @@ Future<Uint8List?> pickAndCropImage({
 }) async {
   final picked = await ImagePicker().pickImage(source: source);
   if (picked == null) return null; // capture/pick cancelled
-  // iOS race (seen on TestFlight build 39): presenting the cropper while the
-  // camera's "Use Photo" sheet is still animating its dismissal fails — the
-  // gallery picker dismisses differently, so only camera captures lost their
-  // crop step. Give the modal a beat before presenting, and retry once.
-  await Future<void>.delayed(const Duration(milliseconds: 400));
+  // iOS race, root-caused live on-device (8 Jul 2026): presenting the cropper
+  // while the camera's "Use Photo" sheet is still animating its dismissal
+  // makes the native call HANG — no throw, no return, so no fallback can
+  // fire. 400ms was not enough for the camera sheet (it was for the gallery
+  // picker); 1.5s was verified to present reliably on a real iPhone (iOS 26).
+  // Don't shorten this without re-testing on a physical device.
+  await Future<void>.delayed(
+    source == ImageSource.camera
+        ? const Duration(milliseconds: 1500)
+        : const Duration(milliseconds: 400),
+  );
   try {
     return await cropPickedImage(picked.path, ratio);
   } catch (_) {
