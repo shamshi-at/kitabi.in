@@ -303,6 +303,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
         _language = language;
         filled = true;
       }
+      // Server only returns a checksum-valid ISBN-13 (best-effort off the
+      // barcode); fill it only if the field's empty — the Scan button stays
+      // the exact path.
+      final isbn = fields['isbn'] as String?;
+      if (isbn != null && _isbn.text.trim().isEmpty) {
+        _isbn.text = isbn;
+        filled = true;
+      }
     });
     return filled;
   }
@@ -481,7 +489,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final l10n = AppLocalizations.of(context)!;
     final isEdit = widget.initialWork != null;
 
-    return Form(
+    final form = Form(
       key: _formKey,
       child: ListView(
         padding: EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -754,6 +762,147 @@ class _BookFormState extends ConsumerState<_BookForm> {
             ),
           ),
         ],
+      ),
+    );
+
+    // While the covers are being read, a full-screen "reading your cover"
+    // overlay sits above the form (the scan takes a few seconds on the vision
+    // model) — far more legible than the little button spinner.
+    return Stack(
+      children: [
+        form,
+        if (_extracting)
+          _ExtractingOverlay(
+            coverUrl: _coverUrl ?? _backCoverUrl,
+            title: _title.text.isEmpty ? '…' : _title.text,
+            author: _authors.isEmpty ? null : _authors.first['name'] as String?,
+          ),
+      ],
+    );
+  }
+}
+
+/// Full-screen "reading your cover" state shown while `POST /catalog/cover-extract`
+/// runs (a few seconds on the vision model). A gold scan line sweeps down the
+/// cover — an OCR-in-progress feel — over a paper scrim, with a literary
+/// fleuron and a plain-words subtitle. Absorbs touches so the form beneath is
+/// inert; honours reduced motion (holds a static line).
+class _ExtractingOverlay extends StatefulWidget {
+  const _ExtractingOverlay({required this.coverUrl, required this.title, this.author});
+
+  final String? coverUrl;
+  final String title;
+  final String? author;
+
+  @override
+  State<_ExtractingOverlay> createState() => _ExtractingOverlayState();
+}
+
+class _ExtractingOverlayState extends State<_ExtractingOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion) {
+      _c.stop();
+      _c.value = 0.5; // a settled line, no sweep
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    const w = 132.0;
+    const h = 198.0;
+    return Positioned.fill(
+      child: AbsorbPointer(
+        child: Container(
+          color: AppColors.paper.withValues(alpha: 0.94),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: SizedBox(
+                    width: w,
+                    height: h,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        TypesetCover(
+                          title: widget.title,
+                          author: widget.author,
+                          coverUrl: widget.coverUrl,
+                          width: w,
+                          height: h,
+                        ),
+                        // A soft ink veil so the gold scan line reads clearly
+                        // over a bright cover photo.
+                        Container(color: AppColors.ink.withValues(alpha: 0.18)),
+                        AnimatedBuilder(
+                          animation: _c,
+                          builder: (context, _) => Positioned(
+                            top: (h - 2) * _c.value,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 2,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: [
+                                  AppColors.gold.withValues(alpha: 0),
+                                  AppColors.gold,
+                                  AppColors.gold.withValues(alpha: 0),
+                                ]),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.gold.withValues(alpha: 0.7),
+                                    blurRadius: 10,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Text('❦', style: TextStyle(color: AppColors.gold, fontSize: 15)),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.formExtractingTitle,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontSize: 18, color: AppColors.ink),
+                ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Text(
+                    l10n.formExtractingSubtitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft, height: 1.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

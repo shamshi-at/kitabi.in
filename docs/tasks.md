@@ -126,13 +126,15 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       "Fill in from photos" → prefill. Haiku hallucinated Malayalam titles so
       extraction now uses **Sonnet** (`extraction_model`), which read title/author/
       publisher/back-cover description off a stylised Malayalam cover accurately.
-  - [ ] Follow-up: **ISBN-from-photo** (best-effort) — ask the model for the 13-digit
-        ISBN near the back-cover barcode, validate the checksum server-side, prefill
-        only if valid (barcode Scan stays the exact path). New `CoverExtractOut` field
-        + `_applyExtracted`.
-  - [ ] Follow-up: **attractive extraction loader** — the "Fill in from photos" action
-        takes a few seconds on Sonnet; replace the small spinner with a Reading Room
-        loading state (e.g. shimmer over the fields being read / "Reading your cover…").
+  - [x] Follow-up (8 Jul 2026): **ISBN-from-photo** (best-effort) — the model reads the
+        13-digit ISBN by the back-cover barcode; `valid_isbn13` gates on the checksum
+        (+978/979 prefix) server-side, so a misread digit is dropped rather than
+        prefilled (barcode Scan stays the exact path). New `CoverExtractOut.isbn`,
+        applied only to an empty field.
+  - [x] Follow-up (8 Jul 2026): **attractive extraction loader** — full-screen Reading
+        Room overlay (`_ExtractingOverlay`): a gold scan line sweeps the cover over a
+        paper scrim, fleuron + "Reading your cover…" + subtitle; reduced-motion holds a
+        static line. Verified on the emulator.
 
 ## Phase 3 — Personal library + sync engine (Layer 2)
 

@@ -11,6 +11,7 @@ from app.services.extraction_service import (
     _extract_object,
     allowed_image_url,
     extract_from_covers,
+    valid_isbn13,
 )
 
 _BUCKET = "https://proj.supabase.co/storage/v1/object/public/covers"
@@ -58,12 +59,33 @@ def test_clean_normalises_types_and_trims():
         "series_name": None,
         "series_number": 3,
         "language": "Malayalam",
+        "isbn": None,
     }
 
 
 def test_clean_rejects_non_numeric_series_number():
     assert _clean({"series_number": "three"})["series_number"] is None
     assert _clean({"series_number": True})["series_number"] is None
+
+
+def test_valid_isbn13_accepts_checksum_valid_and_normalises():
+    # Real ISBN-13s (checksum-valid).
+    assert valid_isbn13("978-3-16-148410-0") == "9783161484100"
+    assert valid_isbn13("9789386906366") == "9789386906366"
+
+
+def test_valid_isbn13_rejects_bad_input():
+    assert valid_isbn13("9783161484101") is None  # bad checksum (last digit off)
+    assert valid_isbn13("1234567890") is None  # 10 digits, not 13
+    assert valid_isbn13("1234567890123") is None  # 13 digits but not 978/979
+    assert valid_isbn13("not an isbn") is None
+    assert valid_isbn13(None) is None
+
+
+def test_clean_only_surfaces_a_valid_isbn():
+    assert _clean({"isbn": "978-3-16-148410-0"})["isbn"] == "9783161484100"
+    assert _clean({"isbn": "9783161484101"})["isbn"] is None  # misread digit dropped
+    assert _clean({})["isbn"] is None
 
 
 def test_allowed_image_url_is_scoped_to_our_covers_bucket():

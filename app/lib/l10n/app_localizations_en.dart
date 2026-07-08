@@ -1405,6 +1405,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formFillFromPhotos => 'Fill in from photos';
 
   @override
+  String get formExtractingTitle => 'Reading your cover…';
+
+  @override
+  String get formExtractingSubtitle =>
+      'Pulling the title, author, publisher, and blurb';
+
+  @override
   String get formExtractNothing =>
       'Couldn\'t read any details from the photos.';
 

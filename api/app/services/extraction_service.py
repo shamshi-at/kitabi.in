@@ -32,15 +32,31 @@ _SYSTEM = (
     "review quotes, price, or barcode text; keep it under 150 words. "
     "`series_number` is the book's position if the cover shows one (e.g. "
     "'Book 3'). `language` is the language the book itself is written in, as "
-    "an English word (e.g. 'Malayalam'). "
+    "an English word (e.g. 'Malayalam'). `isbn` is the 13-digit ISBN printed "
+    "next to the back-cover barcode — digits only (no hyphens/spaces), and ONLY "
+    "if you can read all 13 clearly; otherwise null (never guess a digit). "
     "CRITICAL: transcribe ONLY text that is actually printed and legible in the "
     "image. Do NOT guess, translate, or invent a plausible-sounding title or "
     "name — if a field is not clearly readable, return null for it. It is far "
     "better to return null than a made-up value. "
     "Respond with ONLY a JSON object exactly like: "
     '{"title": null, "authors": [], "publisher": null, "description": null, '
-    '"series_name": null, "series_number": null, "language": null}'
+    '"series_name": null, "series_number": null, "language": null, "isbn": null}'
 )
+
+
+def valid_isbn13(raw: str | None) -> str | None:
+    """Return the 13 digits if [raw] is a checksum-valid ISBN-13, else None.
+    Photo OCR of a 13-digit code is error-prone, so the checksum is the gate: a
+    single misread digit fails it and we drop the value rather than prefill the
+    wrong book (the barcode Scan stays the exact path)."""
+    if not isinstance(raw, str):
+        return None
+    digits = "".join(c for c in raw if c.isdigit())
+    if len(digits) != 13 or not digits.startswith(("978", "979")):
+        return None
+    checksum = sum((1 if i % 2 == 0 else 3) * int(d) for i, d in enumerate(digits))
+    return digits if checksum % 10 == 0 else None
 
 
 def _extract_object(text: str) -> dict[str, Any]:
@@ -89,6 +105,8 @@ def _clean(raw: dict[str, Any]) -> dict[str, Any]:
         "series_name": _str("series_name"),
         "series_number": number,
         "language": _str("language"),
+        # Only surfaces a checksum-valid ISBN-13; a misread digit drops it.
+        "isbn": valid_isbn13(raw.get("isbn")),
     }
 
 

@@ -2482,6 +2482,18 @@ abstract class AppLocalizations {
   /// **'Fill in from photos'**
   String get formFillFromPhotos;
 
+  /// Title of the full-screen loader shown while the cover photos are being read
+  ///
+  /// In en, this message translates to:
+  /// **'Reading your cover…'**
+  String get formExtractingTitle;
+
+  /// Subtitle under the extraction loader
+  ///
+  /// In en, this message translates to:
+  /// **'Pulling the title, author, publisher, and blurb'**
+  String get formExtractingSubtitle;
+
   /// Snackbar when extraction returned nothing usable (or every field was already filled)
   ///
   /// In en, this message translates to:

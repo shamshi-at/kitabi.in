@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,10 +52,15 @@ class _FakeApiClient extends ApiClient {
   String? lastExtractFront;
   String? lastExtractBack;
 
+  /// When set, extraction blocks on this until the test completes it — lets a
+  /// test assert the "reading your cover" overlay is visible mid-extraction.
+  Completer<void>? extractGate;
+
   @override
   Future<Map<String, dynamic>> extractFromCovers({String? frontUrl, String? backUrl}) async {
     lastExtractFront = frontUrl;
     lastExtractBack = backUrl;
+    if (extractGate != null) await extractGate!.future;
     return extractResult;
   }
 
@@ -340,6 +347,7 @@ void main() {
         'series_name': null,
         'series_number': null,
         'language': null,
+        'isbn': '9789386906366', // empty ISBN field → should fill
       };
     // Edit mode: title/author/publisher already filled, description empty.
     await tester.pumpWidget(_wrap(AddEditBookScreen(workId: _workId), apiClient: fake));
@@ -350,11 +358,61 @@ void main() {
 
     // The uploaded-bucket URL was what got sent for reading.
     expect(fake.lastExtractFront, contains('/covers/x.jpg'));
-    // Empty description filled; existing title/author untouched.
+    // Empty description filled; existing title/author/ISBN all left untouched
+    // (this edition already has an ISBN, so the extracted one must not win).
     expect(find.text('A love story on the Kerala coast.'), findsOneWidget);
+    expect(find.text('9789386906366'), findsNothing);
+    expect(find.text('9788126415419'), findsOneWidget);
     expect(find.text('Wrong Title Must Not Overwrite'), findsNothing);
     expect(find.text('Ignored Author'), findsNothing);
     expect(find.text('Chemmeen'), findsWidgets);
+  });
+
+  testWidgets('extraction fills the ISBN into a blank field', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient()
+      ..workCoverUrl = 'https://proj.supabase.co/storage/v1/object/public/covers/x.jpg'
+      ..extractResult = {'isbn': '9789386906366'};
+    // New book: every field starts empty, but we need an uploaded cover to show
+    // the button — the work loader injects one via workCoverUrl on getWork, so
+    // edit an existing work whose ISBN we first clear.
+    await tester.pumpWidget(_wrap(AddEditBookScreen(workId: _workId), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // Clear the pre-filled ISBN so the field is empty for the fill.
+    final isbnField = find.widgetWithText(TextFormField, '9788126415419');
+    await tester.enterText(isbnField, '');
+    await tester.tap(find.text('Fill in from photos'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('9789386906366'), findsOneWidget);
+  });
+
+  testWidgets('a reading-your-cover overlay shows while extraction is in flight', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final gate = Completer<void>();
+    final fake = _FakeApiClient()
+      ..workCoverUrl = 'https://proj.supabase.co/storage/v1/object/public/covers/x.jpg'
+      ..extractGate = gate
+      ..extractResult = {'title': 'കയർ'};
+    await tester.pumpWidget(_wrap(AddEditBookScreen(workId: _workId), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Fill in from photos'));
+    await tester.pump(); // start the extraction future (still gated)
+
+    // The overlay is up while the call is in flight.
+    expect(find.text('Reading your cover…'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    // Overlay gone once extraction resolves.
+    expect(find.text('Reading your cover…'), findsNothing);
   });
 
   testWidgets('author picker searches and surfaces an existing author', (tester) async {

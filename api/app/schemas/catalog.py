@@ -241,6 +241,7 @@ class CoverExtractOut(BaseModel):
     series_name: str | None = None
     series_number: int | None = None
     language: str | None = None
+    isbn: str | None = None
 
 
 class ImportPreviewIn(BaseModel):
