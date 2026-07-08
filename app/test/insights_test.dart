@@ -52,5 +52,23 @@ void main() {
     final allTime = computeInsights(hits, year: null);
     expect(allTime.booksRead, 3);
     expect(allTime.pagesRead, 650);
+
+    // The almanac superlatives: all three read books share author 'A', the
+    // longest finished one is ed2 (300 pp), and the mean rounds sensibly.
+    expect(allTime.topAuthor, 'A');
+    expect(allTime.topAuthorCount, 3);
+    expect(allTime.longestBookTitle, 'T-ed2');
+    expect(allTime.longestBookPages, 300);
+    expect(allTime.avgPagesPerBook, 217); // 650 / 3 rounded
+  });
+
+  test('a single finish never earns a most-read-author superlative', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seed(db, 'ed1', status: 'read', pages: 120, finish: DateTime(2026, 1, 5));
+
+    final stats = computeInsights(await db.libraryEntriesDao.allWithBooks(), year: null);
+    expect(stats.topAuthor, isNull); // one book is not a pattern
+    expect(stats.longestBookTitle, 'T-ed1'); // but longest is still honest
   });
 }

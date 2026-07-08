@@ -515,6 +515,144 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSearch => 'Search';
 
   @override
+  String homeGreetingMorning(String name) {
+    return 'Good morning, $name';
+  }
+
+  @override
+  String homeGreetingAfternoon(String name) {
+    return 'Good afternoon, $name';
+  }
+
+  @override
+  String homeGreetingEvening(String name) {
+    return 'Good evening, $name';
+  }
+
+  @override
+  String get homeGreetingMorningAnon => 'Good morning';
+
+  @override
+  String get homeGreetingAfternoonAnon => 'Good afternoon';
+
+  @override
+  String get homeGreetingEveningAnon => 'Good evening';
+
+  @override
+  String get homeFreshShelf => 'Fresh on your shelf';
+
+  @override
+  String get homeGoalLabel => 'Reading goal';
+
+  @override
+  String homeGoalProgress(int read, int goal) {
+    return '$read of $goal books this year';
+  }
+
+  @override
+  String homeGoalStart(int year) {
+    return 'Set a goal for $year — even a small one.';
+  }
+
+  @override
+  String get homeStepScanTitle => 'Scan';
+
+  @override
+  String get homeStepScanBody =>
+      'Point the camera at any barcode — the book fills itself in.';
+
+  @override
+  String get homeStepShelveTitle => 'Shelve';
+
+  @override
+  String get homeStepShelveBody =>
+      'Track what you own, what you\'ve read, and what you wish for.';
+
+  @override
+  String get homeStepLendTitle => 'Lend';
+
+  @override
+  String get homeStepLendBody =>
+      'Hand a book to a friend and never lose track of it again.';
+
+  @override
+  String get homeBrowseCatalogue => 'Browse the catalogue';
+
+  @override
+  String get insightsFactLabel => 'Did you know';
+
+  @override
+  String get insightsFact1 =>
+      'Reading just 20 minutes a day adds up to nearly two million words a year.';
+
+  @override
+  String get insightsFact2 =>
+      'Six minutes of reading can lower stress by more than two-thirds — faster than music or a walk.';
+
+  @override
+  String get insightsFact3 =>
+      'The average paperback is about 300 pages — a chapter a night finishes it in a month.';
+
+  @override
+  String get insightsFact4 =>
+      'Malayalam\'s first novel, Kundalatha, was published in 1887.';
+
+  @override
+  String get insightsFact5 =>
+      'Readers who set a goal finish about twice as many books as those who don\'t.';
+
+  @override
+  String get insightsFact6 =>
+      'The word \'bookworm\' predates the printing press — it first meant an actual insect.';
+
+  @override
+  String get insightsFact7 =>
+      'Re-reading a loved book is proven to feel as rewarding as the first time — comfort reads count.';
+
+  @override
+  String get insightsFact8 =>
+      'Kerala runs one of the world\'s densest library networks — over 8,000 public libraries.';
+
+  @override
+  String get insightsFreshTitle => 'Your reading year starts here';
+
+  @override
+  String get insightsFreshBody =>
+      'Finish your first book and this page becomes your personal reading almanac.';
+
+  @override
+  String get insightsGrowsLabel => 'What grows here';
+
+  @override
+  String get insightsComingBars => 'Books per month, charted';
+
+  @override
+  String get insightsComingPages => 'Pages over the year';
+
+  @override
+  String get insightsComingLangs => 'Your language mix';
+
+  @override
+  String get insightsComingAuthor => 'Your most-read author';
+
+  @override
+  String get insightsAddFirstBook => 'Add your first book';
+
+  @override
+  String insightsSetGoalHint(int year) {
+    return 'Tap to set your $year goal';
+  }
+
+  @override
+  String get insightsTopAuthor => 'Most-read author';
+
+  @override
+  String get insightsLongestBook => 'Longest book finished';
+
+  @override
+  String get insightsAvgPages => 'Avg pages per book';
+
+  @override
   String get bookNotesLabel => 'PERSONAL NOTES · always private';
 
   @override

@@ -952,6 +952,234 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get navSearch;
 
+  /// Home greeting before noon, with the reader's first name
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning, {name}'**
+  String homeGreetingMorning(String name);
+
+  /// Home greeting 12–17h
+  ///
+  /// In en, this message translates to:
+  /// **'Good afternoon, {name}'**
+  String homeGreetingAfternoon(String name);
+
+  /// Home greeting from 17h
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening, {name}'**
+  String homeGreetingEvening(String name);
+
+  /// Home greeting before noon, no name known
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning'**
+  String get homeGreetingMorningAnon;
+
+  /// Home greeting 12–17h, no name known
+  ///
+  /// In en, this message translates to:
+  /// **'Good afternoon'**
+  String get homeGreetingAfternoonAnon;
+
+  /// Home greeting from 17h, no name known
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening'**
+  String get homeGreetingEveningAnon;
+
+  /// Section label over the recently-added cover strip
+  ///
+  /// In en, this message translates to:
+  /// **'Fresh on your shelf'**
+  String get homeFreshShelf;
+
+  /// Eyebrow on the home goal slip
+  ///
+  /// In en, this message translates to:
+  /// **'Reading goal'**
+  String get homeGoalLabel;
+
+  /// Goal slip line
+  ///
+  /// In en, this message translates to:
+  /// **'{read} of {goal} books this year'**
+  String homeGoalProgress(int read, int goal);
+
+  /// Goal slip line when nothing read yet
+  ///
+  /// In en, this message translates to:
+  /// **'Set a goal for {year} — even a small one.'**
+  String homeGoalStart(int year);
+
+  /// Empty-home step 1 title
+  ///
+  /// In en, this message translates to:
+  /// **'Scan'**
+  String get homeStepScanTitle;
+
+  /// Empty-home step 1 body
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at any barcode — the book fills itself in.'**
+  String get homeStepScanBody;
+
+  /// Empty-home step 2 title
+  ///
+  /// In en, this message translates to:
+  /// **'Shelve'**
+  String get homeStepShelveTitle;
+
+  /// Empty-home step 2 body
+  ///
+  /// In en, this message translates to:
+  /// **'Track what you own, what you\'ve read, and what you wish for.'**
+  String get homeStepShelveBody;
+
+  /// Empty-home step 3 title
+  ///
+  /// In en, this message translates to:
+  /// **'Lend'**
+  String get homeStepLendTitle;
+
+  /// Empty-home step 3 body
+  ///
+  /// In en, this message translates to:
+  /// **'Hand a book to a friend and never lose track of it again.'**
+  String get homeStepLendBody;
+
+  /// Empty-home tertiary action
+  ///
+  /// In en, this message translates to:
+  /// **'Browse the catalogue'**
+  String get homeBrowseCatalogue;
+
+  /// Eyebrow on the rotating reading-fact card
+  ///
+  /// In en, this message translates to:
+  /// **'Did you know'**
+  String get insightsFactLabel;
+
+  /// Rotating reading fact
+  ///
+  /// In en, this message translates to:
+  /// **'Reading just 20 minutes a day adds up to nearly two million words a year.'**
+  String get insightsFact1;
+
+  /// Rotating reading fact
+  ///
+  /// In en, this message translates to:
+  /// **'Six minutes of reading can lower stress by more than two-thirds — faster than music or a walk.'**
+  String get insightsFact2;
+
+  /// Rotating reading fact
+  ///
+  /// In en, this message translates to:
+  /// **'The average paperback is about 300 pages — a chapter a night finishes it in a month.'**
+  String get insightsFact3;
+
+  /// Rotating reading fact
+  ///
+  /// In en, this message translates to:
+  /// **'Malayalam\'s first novel, Kundalatha, was published in 1887.'**
+  String get insightsFact4;
+
+  /// Rotating reading fact
+  ///
+  /// In en, this message translates to:
+  /// **'Readers who set a goal finish about twice as many books as those who don\'t.'**
+  String get insightsFact5;
+
+  /// Rotating reading fact
+  ///
+  /// In en, this message translates to:
+  /// **'The word \'bookworm\' predates the printing press — it first meant an actual insect.'**
+  String get insightsFact6;
+
+  /// Rotating reading fact
+  ///
+  /// In en, this message translates to:
+  /// **'Re-reading a loved book is proven to feel as rewarding as the first time — comfort reads count.'**
+  String get insightsFact7;
+
+  /// Rotating reading fact
+  ///
+  /// In en, this message translates to:
+  /// **'Kerala runs one of the world\'s densest library networks — over 8,000 public libraries.'**
+  String get insightsFact8;
+
+  /// Fresh-user insights headline
+  ///
+  /// In en, this message translates to:
+  /// **'Your reading year starts here'**
+  String get insightsFreshTitle;
+
+  /// Fresh-user insights sub-line
+  ///
+  /// In en, this message translates to:
+  /// **'Finish your first book and this page becomes your personal reading almanac.'**
+  String get insightsFreshBody;
+
+  /// Label over the fresh-user preview rows
+  ///
+  /// In en, this message translates to:
+  /// **'What grows here'**
+  String get insightsGrowsLabel;
+
+  /// Fresh-user preview row
+  ///
+  /// In en, this message translates to:
+  /// **'Books per month, charted'**
+  String get insightsComingBars;
+
+  /// Fresh-user preview row
+  ///
+  /// In en, this message translates to:
+  /// **'Pages over the year'**
+  String get insightsComingPages;
+
+  /// Fresh-user preview row
+  ///
+  /// In en, this message translates to:
+  /// **'Your language mix'**
+  String get insightsComingLangs;
+
+  /// Fresh-user preview row
+  ///
+  /// In en, this message translates to:
+  /// **'Your most-read author'**
+  String get insightsComingAuthor;
+
+  /// Fresh-user insights CTA
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first book'**
+  String get insightsAddFirstBook;
+
+  /// Goal ring caption when no goal-progress exists yet
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to set your {year} goal'**
+  String insightsSetGoalHint(int year);
+
+  /// Stat tile label
+  ///
+  /// In en, this message translates to:
+  /// **'Most-read author'**
+  String get insightsTopAuthor;
+
+  /// Stat tile label
+  ///
+  /// In en, this message translates to:
+  /// **'Longest book finished'**
+  String get insightsLongestBook;
+
+  /// Stat tile label
+  ///
+  /// In en, this message translates to:
+  /// **'Avg pages per book'**
+  String get insightsAvgPages;
+
   /// Eyebrow label on the personal notes card
   ///
   /// In en, this message translates to:

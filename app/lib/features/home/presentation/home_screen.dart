@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
@@ -11,11 +13,14 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
+import '../../profile/providers/profile_providers.dart';
 import '../../recommendations/providers/recommendations_providers.dart';
 
-/// S3 — the home dashboard. Currently reading (progress in pages), the lending
-/// nudge as a gold-edged slip, and plain-number shelf cards. The AI pick card
-/// (S3) is Phase 7 (recommendations), so it's deliberately not here yet.
+/// S3 — the home dashboard, the reader's first impression. A personal
+/// time-of-day greeting under the wordmark, the book(s) in progress, a
+/// "fresh on your shelf" strip of real covers standing on a gold shelf line,
+/// the lending nudge, a goal slip that ties into Insights, and the shelf
+/// counts. Everything reads from Drift — the whole page works offline.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -41,11 +46,6 @@ class HomeScreen extends ConsumerWidget {
                     icon: Icon(Icons.auto_stories_outlined, color: AppColors.oxblood),
                     tooltip: l10n.browseEntry,
                     onPressed: () => context.push(Routes.catalogBrowse),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.search, color: AppColors.oxblood),
-                    tooltip: l10n.searchTitle,
-                    onPressed: () => context.push(Routes.catalogSearch),
                   ),
                   IconButton(
                     icon: Icon(Icons.person_outline, color: AppColors.oxblood),
@@ -76,13 +76,32 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _Header extends StatelessWidget {
+/// The wordmark plus a *personal* line: time-of-day greeting with the
+/// reader's first name (from /me, already fetched at bootstrap) and today's
+/// date set like a diary heading — the page should feel like their reading
+/// room, not an app shell.
+class _Header extends ConsumerWidget {
   const _Header({required this.l10n});
 
   final AppLocalizations l10n;
 
+  String _greeting(WidgetRef ref) {
+    final fullName = ref.watch(meProvider).valueOrNull?['full_name'] as String?;
+    final first = fullName?.trim().split(RegExp(r'\s+')).first;
+    final hour = DateTime.now().hour;
+    if (first != null && first.isNotEmpty) {
+      if (hour < 12) return l10n.homeGreetingMorning(first);
+      if (hour < 17) return l10n.homeGreetingAfternoon(first);
+      return l10n.homeGreetingEvening(first);
+    }
+    if (hour < 12) return l10n.homeGreetingMorningAnon;
+    if (hour < 17) return l10n.homeGreetingAfternoonAnon;
+    return l10n.homeGreetingEveningAnon;
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final date = DateFormat('EEEE · d MMMM').format(DateTime.now());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -94,11 +113,21 @@ class _Header extends StatelessWidget {
               ),
         ),
         Text(
-          l10n.homeGreeting,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.gold,
-                letterSpacing: 2,
-              ),
+          _greeting(ref),
+          style: GoogleFonts.fraunces(
+            fontStyle: FontStyle.italic,
+            fontSize: 13,
+            color: AppColors.ink,
+          ),
+        ),
+        Text(
+          date,
+          style: TextStyle(
+            fontSize: 10,
+            letterSpacing: 1.4,
+            color: AppColors.gold,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -127,6 +156,9 @@ class _Dashboard extends ConsumerWidget {
       wishlist: entries.where((e) => e.status == 'wishlist').length,
     );
 
+    // Newest additions first — the shelf strip shows the library growing.
+    final recent = [...entries]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
     return ListView(
       padding: EdgeInsets.fromLTRB(20, 6, 20, 24),
       children: [
@@ -136,6 +168,11 @@ class _Dashboard extends ConsumerWidget {
           SizedBox(height: 8),
         ],
         if (activeLent.isNotEmpty) _LendingNudge(item: activeLent.first, l10n: l10n),
+        SizedBox(height: 14),
+        _SectionLabel(l10n.homeFreshShelf),
+        _CoverShelf(entries: recent.take(12).toList()),
+        SizedBox(height: 16),
+        _GoalSlip(entries: entries, l10n: l10n),
         SizedBox(height: 14),
         _SectionLabel(l10n.homeYourShelves),
         _ShelfGrid(counts: counts, l10n: l10n),
@@ -191,6 +228,154 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+/// The signature bookish moment on Home: the newest additions standing as
+/// real covers on a shelf — a gold hairline with a soft shadow underneath,
+/// like the mockups' "real bookshelf" feel. Horizontally scrollable; each
+/// cover is a door to its book page.
+class _CoverShelf extends ConsumerWidget {
+  const _CoverShelf({required this.entries});
+
+  final List<LibraryEntry> entries;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 92,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: entries.length,
+            separatorBuilder: (_, _) => SizedBox(width: 10),
+            itemBuilder: (context, i) => _ShelfCover(entry: entries[i]),
+          ),
+        ),
+        // The shelf itself: a gold edge and the shadow the books cast on it.
+        Container(height: 2.5, color: AppColors.gold.withValues(alpha: 0.65)),
+        Container(
+          height: 7,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.ink.withValues(alpha: 0.10),
+                AppColors.ink.withValues(alpha: 0.0),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ShelfCover extends ConsumerWidget {
+  const _ShelfCover({required this.entry});
+
+  final LibraryEntry entry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final book = ref.watch(cachedBookProvider(entry.editionId)).valueOrNull;
+    return GestureDetector(
+      onTap: book == null
+          ? null
+          : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+      child: TypesetCover(
+        title: book?.title ?? '…',
+        author: book?.authorNames,
+        coverUrl: book?.coverUrl,
+        width: 60,
+        height: 90,
+      ),
+    );
+  }
+}
+
+/// A slim slip tying Home to Insights: this year's finished count against the
+/// reading goal, with a hairline progress bar. With nothing finished yet it
+/// invites setting a goal instead of showing an empty zero.
+class _GoalSlip extends ConsumerWidget {
+  const _GoalSlip({required this.entries, required this.l10n});
+
+  final List<LibraryEntry> entries;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final year = DateTime.now().year;
+    final goal = ref.watch(_homeGoalProvider).valueOrNull ?? 30;
+    final read = entries
+        .where((e) =>
+            e.status == 'read' && e.finishDate != null && e.finishDate!.year == year)
+        .length;
+    final progress = goal > 0 ? (read / goal).clamp(0.0, 1.0) : 0.0;
+
+    return GestureDetector(
+      onTap: () {
+        Haptics.selection();
+        context.go(Routes.insights);
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.flag_outlined, size: 16, color: AppColors.moss),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.homeGoalLabel.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 8.5,
+                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.inkSoft,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    read > 0 ? l10n.homeGoalProgress(read, goal) : l10n.homeGoalStart(year),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  if (read > 0) ...[
+                    SizedBox(height: 5),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 3,
+                        backgroundColor: AppColors.line,
+                        valueColor: AlwaysStoppedAnimation(AppColors.moss),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The device-local reading goal (same key Insights edits).
+final _homeGoalProvider = FutureProvider.autoDispose<int>((ref) async {
+  final repo = await ref.watch(libraryRepositoryProvider.future);
+  return repo.readingGoal();
+});
+
 class _CurrentlyReadingCard extends ConsumerWidget {
   const _CurrentlyReadingCard({required this.entry});
 
@@ -235,7 +420,7 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                     book?.title ?? '…',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    style: GoogleFonts.fraunces(fontWeight: FontWeight.w600, fontSize: 14.5),
                   ),
                   if (book?.authorNames != null)
                     Text(
@@ -515,6 +700,10 @@ class _ShelfCard extends StatelessWidget {
   }
 }
 
+/// The first-run face of the app: the wordmark, what Kitabi *is* in three
+/// bookish steps (Scan · Shelve · Lend), and the two ways in. This is the
+/// very first screen a new reader judges — it should promise the product,
+/// not apologise for an empty list.
 class _EmptyHome extends StatelessWidget {
   const _EmptyHome({required this.l10n});
 
@@ -522,68 +711,136 @@ class _EmptyHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.appTitle,
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: AppColors.oxblood,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 4,
-                  ),
+    return ListView(
+      padding: EdgeInsets.fromLTRB(28, 24, 28, 32),
+      children: [
+        SizedBox(height: 12),
+        Center(
+          child: Text(
+            l10n.homeEmptyTitle,
+            style: GoogleFonts.fraunces(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: AppColors.ink,
             ),
-            SizedBox(height: 8),
-            Text(
-              l10n.homeGreeting,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.gold,
-                    letterSpacing: 3,
-                  ),
-            ),
-            SizedBox(height: 40),
-            Icon(Icons.menu_book_outlined, size: 48, color: AppColors.inkSoft),
-            SizedBox(height: 16),
-            Text(
-              l10n.homeEmptyTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.ink),
-            ),
-            SizedBox(height: 6),
-            Text(
-              l10n.homeEmptyBody,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
-            ),
-            SizedBox(height: 24),
-            SizedBox(
-              width: 240,
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => context.push(Routes.catalogSearch),
-                      icon: Icon(Icons.add),
-                      label: Text(l10n.homeAddBook),
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => context.push(Routes.catalogScan),
-                      icon: Icon(Icons.qr_code_scanner, size: 18),
-                      label: Text(l10n.homeScanBarcode),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
+        SizedBox(height: 6),
+        Center(
+          child: Text(
+            l10n.homeEmptyBody,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
+          ),
+        ),
+        SizedBox(height: 24),
+        _StepCard(
+          number: '1',
+          icon: Icons.qr_code_scanner,
+          title: l10n.homeStepScanTitle,
+          body: l10n.homeStepScanBody,
+        ),
+        _StepCard(
+          number: '2',
+          icon: Icons.auto_stories_outlined,
+          title: l10n.homeStepShelveTitle,
+          body: l10n.homeStepShelveBody,
+        ),
+        _StepCard(
+          number: '3',
+          icon: Icons.swap_horiz,
+          title: l10n.homeStepLendTitle,
+          body: l10n.homeStepLendBody,
+        ),
+        SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => context.push(Routes.catalogScan),
+            icon: Icon(Icons.qr_code_scanner, size: 18),
+            label: Text(l10n.homeScanBarcode),
+          ),
+        ),
+        SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => context.push(Routes.catalogSearch),
+            icon: Icon(Icons.add),
+            label: Text(l10n.homeAddBook),
+          ),
+        ),
+        SizedBox(height: 6),
+        Center(
+          child: TextButton(
+            onPressed: () => context.push(Routes.catalogBrowse),
+            child: Text(
+              l10n.homeBrowseCatalogue,
+              style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One numbered step on the first-run home — a big drop-cap number in the
+/// margin, like a chapter opening.
+class _StepCard extends StatelessWidget {
+  const _StepCard({
+    required this.number,
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final String number;
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: [
+          Text(
+            number,
+            style: GoogleFonts.fraunces(
+              fontSize: 30,
+              fontWeight: FontWeight.w600,
+              color: AppColors.gold,
+              height: 1,
+            ),
+          ),
+          SizedBox(width: 14),
+          Icon(icon, size: 20, color: AppColors.oxblood),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  body,
+                  style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.35),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

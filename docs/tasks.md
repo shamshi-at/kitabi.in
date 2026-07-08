@@ -220,6 +220,12 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Home + Insights rework (8 Jul 2026): Home greets by name with a diary-style date,
+      shows the newest covers standing on a gold shelf line ("Fresh on your shelf"), a
+      reading-goal slip that opens Insights, and a first-run 1-2-3 Scan/Shelve/Lend intro;
+      Insights adds avg-pages + most-read-author + longest-book superlatives, a daily
+      "Did you know" reading fact, and a fresh-user layout (settable goal ring, fact,
+      what-grows-here preview) instead of a bare "no data"
 - [x] Lending/connections batch (8 Jul 2026): accepting a connection now backfills the
       loans that predate it (the borrower's shelf used to stay empty forever); Borrowed
       tab counts active loans only; notification taps survive cold start (pending

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../data/repositories/repository_providers.dart';
@@ -11,9 +14,11 @@ import '../providers/insights_providers.dart';
 /// Single-letter month labels for the books-per-month bar chart axis.
 const _monthLetters = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 
-/// S10 — insights. Reading goal ring, a year selector, headline stats, and a
-/// books-per-month bar chart. Dependency-free (custom bars + a progress ring);
-/// the language donut / pages-per-month line from the mockup are a follow-up.
+/// S10 — insights, the reader's almanac. Reading goal ring, a year selector,
+/// headline stats, superlatives (most-read author, longest book), charts, and
+/// a daily rotating reading fact — which also makes the page worth opening on
+/// day one: a fresh reader gets the settable goal ring, the fact, and a
+/// preview of what grows here, never a bare "no data".
 class InsightsScreen extends ConsumerStatefulWidget {
   const InsightsScreen({super.key});
 
@@ -78,7 +83,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(libraryWithBooksProvider)),
           data: (hits) {
             if (hits.isEmpty) {
-              return _Empty(title: l10n.insightsTitle, body: l10n.insightsNoData);
+              return _FreshInsights(goal: goal, onEditGoal: () => _editGoal(goal));
             }
             final stats = computeInsights(hits, year: _year);
             return ListView(
@@ -120,8 +125,48 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                         color: AppColors.oxblood,
                       ),
                     ),
+                    if (stats.avgPagesPerBook > 0) ...[
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: _StatTile(
+                          value: '${stats.avgPagesPerBook}',
+                          label: l10n.insightsAvgPages,
+                          color: AppColors.moss,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
+                // The superlatives — the almanac lines readers quote.
+                if (stats.topAuthor != null || stats.longestBookPages > 0) ...[
+                  SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (stats.topAuthor != null)
+                        Expanded(
+                          child: _SuperlativeTile(
+                            icon: Icons.workspace_premium_outlined,
+                            title: stats.topAuthor!,
+                            caption:
+                                '${l10n.insightsTopAuthor} · ${stats.topAuthorCount}',
+                            color: AppColors.gold,
+                          ),
+                        ),
+                      if (stats.topAuthor != null && stats.longestBookPages > 0)
+                        SizedBox(width: 8),
+                      if (stats.longestBookPages > 0)
+                        Expanded(
+                          child: _SuperlativeTile(
+                            icon: Icons.straighten,
+                            title: stats.longestBookTitle ?? '',
+                            caption:
+                                '${l10n.insightsLongestBook} · ${stats.longestBookPages} pp',
+                            color: AppColors.slate,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
                 if (_year != null && stats.busiestMonthCount > 0) ...[
                   SizedBox(height: 18),
                   _ChartLabel(l10n.insightsPerMonth),
@@ -140,6 +185,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   SizedBox(height: 10),
                   _LanguageDonut(mix: stats.languageMix),
                 ],
+                SizedBox(height: 18),
+                _ReadingFactCard(),
               ],
             );
           },
@@ -554,44 +601,215 @@ class _DonutPainter extends CustomPainter {
   bool shouldRepaint(covariant _DonutPainter old) => old.values != values;
 }
 
-class _Empty extends StatelessWidget {
-  const _Empty({required this.title, required this.body});
+/// A small superlative card — the almanac lines ("most-read author",
+/// "longest book") with a colour-keyed icon.
+class _SuperlativeTile extends StatelessWidget {
+  const _SuperlativeTile({
+    required this.icon,
+    required this.title,
+    required this.caption,
+    required this.color,
+  });
 
+  final IconData icon;
   final String title;
-  final String body;
+  final String caption;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: Text(title, style: Theme.of(context).textTheme.titleLarge),
-        ),
-        Expanded(
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.all(28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.donut_large_outlined, size: 44, color: AppColors.inkSoft),
-                  SizedBox(height: 16),
-                  Text(
-                    body,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: AppColors.inkSoft),
-                  ),
-                ],
-              ),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.fraunces(fontSize: 13.5, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A rotating bookish fact — one per day, no repeats until the list cycles.
+/// Gives the page something worth reading even before any data exists.
+class _ReadingFactCard extends StatelessWidget {
+  const _ReadingFactCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final facts = [
+      l10n.insightsFact1,
+      l10n.insightsFact2,
+      l10n.insightsFact3,
+      l10n.insightsFact4,
+      l10n.insightsFact5,
+      l10n.insightsFact6,
+      l10n.insightsFact7,
+      l10n.insightsFact8,
+    ];
+    final now = DateTime.now();
+    final dayOfYear = now.difference(DateTime(now.year)).inDays;
+    final fact = facts[dayOfYear % facts.length];
+
+    return Container(
+      padding: EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.paperDeep,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_stories, size: 13, color: AppColors.gold),
+              SizedBox(width: 6),
+              Text(
+                l10n.insightsFactLabel.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: AppColors.inkSoft,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text(
+            fact,
+            style: GoogleFonts.fraunces(
+              fontStyle: FontStyle.italic,
+              fontSize: 14,
+              height: 1.45,
+              color: AppColors.ink,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Day-one insights: instead of "no data", the settable goal ring (a goal is
+/// the one stat you can have before any book), today's reading fact, and an
+/// honest preview of the charts this page grows into.
+class _FreshInsights extends StatelessWidget {
+  const _FreshInsights({required this.goal, required this.onEditGoal});
+
+  final int goal;
+  final VoidCallback onEditGoal;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final year = DateTime.now().year;
+    return ListView(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
+      children: [
+        Text(l10n.insightsTitle, style: Theme.of(context).textTheme.titleLarge),
+        SizedBox(height: 4),
+        Text(
+          l10n.insightsFreshTitle,
+          style: GoogleFonts.fraunces(
+            fontSize: 19,
+            fontWeight: FontWeight.w600,
+            color: AppColors.ink,
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          l10n.insightsFreshBody,
+          style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft, height: 1.4),
+        ),
+        SizedBox(height: 16),
+        _GoalRing(
+          booksRead: 0,
+          goal: goal,
+          showTarget: true,
+          targetCaption: l10n.insightsGoalRing(goal),
+          totalCaption: l10n.insightsBooksReadTotal,
+          paceNote: l10n.insightsSetGoalHint(year),
+          onTap: onEditGoal,
+        ),
+        SizedBox(height: 14),
+        _ReadingFactCard(),
+        SizedBox(height: 18),
+        _ChartLabel(l10n.insightsGrowsLabel),
+        SizedBox(height: 8),
+        _GrowsRow(icon: Icons.bar_chart, text: l10n.insightsComingBars),
+        _GrowsRow(icon: Icons.show_chart, text: l10n.insightsComingPages),
+        _GrowsRow(icon: Icons.donut_large_outlined, text: l10n.insightsComingLangs),
+        _GrowsRow(icon: Icons.workspace_premium_outlined, text: l10n.insightsComingAuthor),
+        SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => context.push(Routes.catalogSearch),
+            icon: Icon(Icons.add, size: 18),
+            label: Text(l10n.insightsAddFirstBook),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// One "what grows here" preview row — muted, honest, a little inviting.
+class _GrowsRow extends StatelessWidget {
+  const _GrowsRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.stampGrey),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
