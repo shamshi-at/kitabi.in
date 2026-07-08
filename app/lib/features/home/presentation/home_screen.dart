@@ -42,6 +42,13 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(child: _Header(l10n: l10n)),
+                  // Global search — the bottom nav no longer carries it (it broke
+                  // the FAB's exact-center docking), so it lives here instead.
+                  IconButton(
+                    icon: Icon(Icons.search, color: AppColors.oxblood),
+                    tooltip: l10n.searchTitle,
+                    onPressed: () => context.push(Routes.catalogSearch),
+                  ),
                   IconButton(
                     icon: Icon(Icons.auto_stories_outlined, color: AppColors.oxblood),
                     tooltip: l10n.browseEntry,

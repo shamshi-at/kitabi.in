@@ -9,12 +9,24 @@ import '../theme/app_theme.dart';
 import '../widgets/sync_status_bar.dart';
 import 'app_router.dart';
 
-/// The persistent bottom-nav shell (S3 mockup): Home · Library · Search · [+]
-/// · Lending · Insights. The centre "+" is an action (opens the add flow) and
-/// Search pushes the global search — neither is a tab, so the four real tabs
-/// map to the [StatefulNavigationShell] branches. The Lending item carries a
-/// badge when connection requests await approval (the first hop of the
-/// notification chain: footer → ledger header → connections inbox).
+/// The persistent bottom-nav shell (S3 mockup): Home · Library · [+] ·
+/// Lending · Insights. The four real tabs map to the [StatefulNavigationShell]
+/// branches; "+" is an action (opens the add flow), not a tab.
+///
+/// The "+" is a true [FloatingActionButton] docked via
+/// [FloatingActionButtonLocation.centerDocked] on a notched [BottomAppBar] —
+/// Flutter computes its horizontal position from the Scaffold's own width, so
+/// it sits at the *exact* pixel center regardless of how the four nav items
+/// are laid out (a plain 5th-of-N row slot only centers when the item count
+/// is odd and every slot is equal width — fragile the moment a 6th item, like
+/// the search shortcut once did, gets added). The docked/notched combo also
+/// gives it the raised, cut-out look of a proper primary action instead of
+/// just another row icon.
+///
+/// The Lending item carries a badge when connection requests await approval
+/// (the first hop of the notification chain: footer → ledger header →
+/// connections inbox). Global search lives in the Home/Library headers
+/// instead of the footer — it doesn't need permanent nav real estate.
 class ShellScaffold extends ConsumerWidget {
   const ShellScaffold({super.key, required this.navigationShell});
 
@@ -41,11 +53,25 @@ class ShellScaffold extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          border: Border(top: BorderSide(color: AppColors.line)),
-        ),
+      // Scan-first (docs/screen-design.md): the FAB opens the camera directly —
+      // one tap to the main add path. Search / manual add stay one tap away
+      // via the scanner's fallback buttons.
+      floatingActionButton: FloatingActionButton(
+        onPressed: () { Haptics.selection(); context.push(Routes.catalogScan); },
+        backgroundColor: AppColors.oxblood,
+        foregroundColor: AppColors.paper,
+        tooltip: l10n.navAdd,
+        elevation: 3,
+        child: Icon(Icons.add, size: 26),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        color: AppColors.card,
+        shape: CircularNotchedRectangle(),
+        notchMargin: 8,
+        elevation: 8,
+        shadowColor: AppColors.ink.withValues(alpha: 0.16),
+        padding: EdgeInsets.zero,
         child: SafeArea(
           top: false,
           child: SizedBox(
@@ -66,19 +92,23 @@ class ShellScaffold extends ConsumerWidget {
                   selected: index == 1,
                   onTap: () { Haptics.selection(); navigationShell.goBranch(1); },
                 ),
-                // Global search from anywhere (S4) — pushed above the shell,
-                // like "+", so the current tab keeps its state underneath.
-                _NavItem(
-                  icon: Icons.search,
-                  activeIcon: Icons.search,
-                  label: l10n.navSearch,
-                  selected: false,
-                  onTap: () { Haptics.selection(); context.push(Routes.catalogSearch); },
+                // Clearance for the notch — the FAB floats above this gap; its
+                // own label sits low enough to clear the notch's curve.
+                SizedBox(
+                  width: 64,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 38),
+                    child: Text(
+                      l10n.navAdd,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.inkSoft,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
                 ),
-                // Scan-first (docs/screen-design.md): the FAB opens the camera
-                // directly — one tap to the main add path. Search / manual add
-                // stay one tap away via the scanner's fallback buttons.
-                _AddButton(label: l10n.navAdd, onTap: () => context.push(Routes.catalogScan)),
                 _NavItem(
                   icon: Icons.swap_horiz,
                   activeIcon: Icons.swap_horiz,
@@ -174,41 +204,3 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _AddButton extends StatelessWidget {
-  const _AddButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 38,
-              height: 30,
-              decoration: BoxDecoration(
-                color: AppColors.oxblood,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(Icons.add, size: 20, color: AppColors.paper),
-            ),
-            SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: AppColors.inkSoft,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

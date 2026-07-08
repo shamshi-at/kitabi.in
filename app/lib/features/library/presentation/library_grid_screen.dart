@@ -148,6 +148,11 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                             ],
                           ),
                         ),
+                        IconButton(
+                          icon: Icon(Icons.search, color: AppColors.oxblood),
+                          tooltip: l10n.searchTitle,
+                          onPressed: () => context.push(Routes.catalogSearch),
+                        ),
                         _FilterButton(
                           activeCount: _filter.activeCount,
                           onTap: () async {

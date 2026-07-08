@@ -59,15 +59,18 @@ void main() {
     expect(find.text('SCANNER'), findsOneWidget);
   });
 
-  testWidgets('the Search nav item opens the global search from any tab', (tester) async {
+  testWidgets('the FAB is docked at the exact horizontal center of the scaffold',
+      (tester) async {
     await tester.pumpWidget(_wrap(_shellRouter()));
     await tester.pump();
 
-    expect(find.text('Search'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.search));
-    await tester.pumpAndSettle();
+    final scaffoldWidth = tester.getSize(find.byType(Scaffold).first).width;
+    final fabCenter = tester.getCenter(find.byType(FloatingActionButton));
 
-    expect(find.text('GLOBAL SEARCH'), findsOneWidget);
+    // centerDocked computes this from the Scaffold's own width — this is the
+    // property a plain "Nth of N equal-width row items" layout can't
+    // guarantee once the item count changes (the bug this replaces).
+    expect(fabCenter.dx, closeTo(scaffoldWidth / 2, 1.0));
   });
 
   testWidgets('pending connection requests badge the Lending nav item', (tester) async {
