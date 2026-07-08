@@ -21,6 +21,10 @@ from app.models.series import Series
 from app.models.sync_op import SyncOp
 from app.models.work import Work, work_authors, work_genres
 
+# Side-effect import: registers the before_insert/before_update listeners that
+# maintain the cross-script *_translit search columns.
+from app.models import translit_hooks as _translit_hooks  # noqa: E402,F401  isort:skip
+
 __all__ = [
     "Base",
     "SyncableMixin",

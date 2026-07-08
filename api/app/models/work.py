@@ -43,6 +43,10 @@ class Work(CatalogMixin, Base):
     __tablename__ = "works"
 
     title: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    # Lowercase Latin romanization of `title` for cross-script search
+    # ("Kayary" finds "കയർ"). Maintained by app/models/translit_hooks.py on
+    # every insert/update; GIN-trigram-indexed by migration 000020.
+    title_translit: Mapped[str | None] = mapped_column(String, default=None)
     subtitle: Mapped[str | None] = mapped_column(String, default=None)
     description: Mapped[str | None] = mapped_column(String, default=None)
     language: Mapped[str | None] = mapped_column(String, default=None)

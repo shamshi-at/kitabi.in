@@ -10,3 +10,6 @@ pydantic-settings==2.7.0
 PyJWT[crypto]==2.10.1
 httpx==0.28.1
 APScheduler==3.11.0
+# Cross-script search romanization (app/services/translit.py) — pure Python
+anyascii==0.3.3
+indic-transliteration==2.3.82

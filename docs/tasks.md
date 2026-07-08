@@ -207,6 +207,14 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       review card opens it in one tap; marking a book **Read** shows a one-off, self-dismissing
       snackbar prompt ("Finished! What did you think?") only when the book has no rating/review
       yet. Add-book description field gained an "Edit full screen" editor (8 Jul 2026)
+- [x] Cover viewer on the book page — tap a cover photo to *view* it full screen (front/back
+      swipe, pinch-zoom); editing lives on the camera badge only. kitabi.in/b shows the back
+      cover too, with a dependency-free lightbox (8 Jul 2026)
+- [x] Post-create confirmation popup on the add-book form — created book's metadata +
+      "Add to library" (Adding… → Added ✓) / "Create another" (form reset) / Close (8 Jul 2026)
+- [x] Cross-script catalog search — "Kayary" finds "കയർ", "ചെമ്മീൻ" finds "Chemmeen": romanized
+      `*_translit` columns (indic-transliteration + anyascii, ORM hooks, migration `000020`,
+      GIN trigram indexes), matched by search, typeaheads, and duplicate detection (8 Jul 2026)
 - [x] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — written server-side as a side
       effect of other syncable ops, pulled to the client; no feed UI yet (feature-map.md: "flip it
       public later")

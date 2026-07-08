@@ -8,13 +8,14 @@ import re
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, literal, or_, select
+from sqlalchemy import func, literal, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import Author, Edition, Genre, Publisher, Series, Work, work_authors
 from app.schemas.catalog import EditionCreate, EditionUpdate, WorkCreate, WorkUpdate
 from app.services.openlibrary_client import OpenLibraryClient, normalize_isbn_lookup
+from app.services.translit import transliterate
 
 _ISBN_RE = re.compile(r"^[0-9]{9}[0-9X]$|^[0-9]{13}$")
 
@@ -64,6 +65,17 @@ def _rank(col, q: str):  # noqa: ANN001 — SQLAlchemy column expression
     best-matching-word-span similarity, so an exact-ish hit beats a loose one
     and a short query ranks well against a long title."""
     return func.greatest(func.similarity(col, q), func.word_similarity(q, col))
+
+
+async def _relax_word_similarity(db: AsyncSession) -> None:
+    """Drop pg_trgm's `<%` threshold from its 0.6 default for this transaction
+    (SET LOCAL — transaction-scoped, so safe through the Supavisor pooler).
+
+    Cross-romanization pairs land just under the default: the user's
+    conventional "thakazhi" scores 0.56 against ITRANS's "takazhi …", so the
+    word-similarity operator would drop exactly the matches the cross-script
+    search exists for. Ranking still puts the closest hit first."""
+    await db.execute(text("SET LOCAL pg_trgm.word_similarity_threshold = 0.45"))
 
 
 async def _get_or_create(db: AsyncSession, model: type, name: str) -> object:
@@ -280,12 +292,26 @@ async def search_local(
         return []
 
     if fuzzy:
+        await _relax_word_similarity(db)
         match = or_(_fuzzy_match(Work.title, q), _fuzzy_match(Author.name, q))
+        # Cross-script: the romanized query against the stored romanized
+        # title/name, so "Kayary" finds "കയർ" and "ചെമ്മീൻ" finds "Chemmeen".
+        qt = transliterate(q)
+        if qt is not None:
+            match = or_(
+                match,
+                _fuzzy_match(Work.title_translit, qt),
+                _fuzzy_match(Author.name_translit, qt),
+            )
     else:
         match = or_(Work.title.ilike(f"%{q}%"), Author.name.ilike(f"%{q}%"))
+        qt = None
     # Postgres's greatest() ignores NULLs, so works without authors (outer
     # join) still rank by their title score.
-    score = func.max(func.greatest(_rank(Work.title, q), _rank(Author.name, q)))
+    best = [_rank(Work.title, q), _rank(Author.name, q)]
+    if qt is not None:
+        best += [_rank(Work.title_translit, qt), _rank(Author.name_translit, qt)]
+    score = func.max(func.greatest(*best))
     ranked = (
         select(Work.id, score.label("score"))
         .select_from(Work)
@@ -327,21 +353,26 @@ async def find_similar_works(db: AsyncSession, title: str, limit: int = 5) -> li
     if len(q) < 3:
         return []
 
+    # Duplicate detection is cross-script too — typing "Kayar" while "കയർ"
+    # already exists must surface the existing book.
+    await _relax_word_similarity(db)
+    qt = transliterate(q)
     score = func.greatest(
         func.similarity(Work.title, q),
         func.word_similarity(q, Work.title),
+        *([_rank(Work.title_translit, qt)] if qt is not None else []),
     )
+    match = or_(
+        Work.title.ilike(f"%{q}%"),
+        Work.title.op("%")(q),
+        literal(q).op("<%")(Work.title),
+    )
+    if qt is not None:
+        match = or_(match, _fuzzy_match(Work.title_translit, qt))
     stmt = (
         select(Work)
         .options(*_SUMMARY_OPTIONS)
-        .where(
-            Work.deleted_at.is_(None),
-            or_(
-                Work.title.ilike(f"%{q}%"),
-                Work.title.op("%")(q),
-                literal(q).op("<%")(Work.title),
-            ),
-        )
+        .where(Work.deleted_at.is_(None), match)
         .order_by(score.desc(), Work.title)
         .limit(limit)
     )
@@ -430,18 +461,28 @@ async def browse_publishers(
     return list((await db.execute(stmt)).scalars().all())
 
 
+def _name_match_and_rank(name_col, translit_col, q: str):  # noqa: ANN001
+    """Fuzzy predicate + rank over a name column and its romanized twin —
+    shared by the author/publisher searches so both are cross-script."""
+    qt = transliterate(q)
+    match = _fuzzy_match(name_col, q)
+    ranks = [_rank(name_col, q)]
+    if qt is not None:
+        match = or_(match, _fuzzy_match(translit_col, qt))
+        ranks.append(_rank(translit_col, qt))
+    return match, func.greatest(*ranks)
+
+
 async def search_authors(db: AsyncSession, query: str, limit: int = 10) -> list[Author]:
     """Author search for the global search (S4) and the add/edit form's
-    typeahead — typo-tolerant ('Thakazi' finds Thakazhi), best match first."""
+    typeahead — typo-tolerant ('Thakazi' finds Thakazhi) and cross-script
+    ('Thakazhi' finds 'തകഴി'), best match first."""
     q = query.strip()
     if not q:
         return []
-    stmt = (
-        select(Author)
-        .where(_fuzzy_match(Author.name, q))
-        .order_by(_rank(Author.name, q).desc(), Author.name)
-        .limit(limit)
-    )
+    await _relax_word_similarity(db)
+    match, rank = _name_match_and_rank(Author.name, Author.name_translit, q)
+    stmt = select(Author).where(match).order_by(rank.desc(), Author.name).limit(limit)
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -450,12 +491,9 @@ async def search_publishers(db: AsyncSession, query: str, limit: int = 10) -> li
     q = query.strip()
     if not q:
         return []
-    stmt = (
-        select(Publisher)
-        .where(_fuzzy_match(Publisher.name, q))
-        .order_by(_rank(Publisher.name, q).desc(), Publisher.name)
-        .limit(limit)
-    )
+    await _relax_word_similarity(db)
+    match, rank = _name_match_and_rank(Publisher.name, Publisher.name_translit, q)
+    stmt = select(Publisher).where(match).order_by(rank.desc(), Publisher.name).limit(limit)
     return list((await db.execute(stmt)).scalars().all())
 
 

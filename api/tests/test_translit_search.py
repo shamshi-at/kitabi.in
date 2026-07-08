@@ -1,0 +1,64 @@
+"""Cross-script search — a Latin query finds an Indic-script book and the
+reverse ("Kayary" ↔ "കയർ"), through the stored romanized columns + pg_trgm.
+Runs against real Postgres, so the trigram operators and the migration's
+backfilled indexes are what's actually exercised."""
+
+from app.services.translit import transliterate
+
+
+def test_transliterate_romanizes_indic_and_lowercases_latin():
+    assert transliterate("കയർ") == "kayar"
+    assert transliterate("Chemmeen") == "chemmeen"
+    assert transliterate("ഖസാക്കിന്റെ ഇതിഹാസം") == "khasakkinre itihasam"
+    assert transliterate(None) is None
+    assert transliterate("   ") is None
+
+
+async def _seed(client) -> None:
+    for payload in (
+        {
+            "title": "കയർ",
+            "author_names": ["തകഴി ശിവശങ്കരപ്പിള്ള"],
+            "publisher_name": "ഡിസി ബുക്സ്",
+        },
+        {
+            "title": "Chemmeen",
+            "author_names": ["Thakazhi Sivasankara Pillai"],
+            "publisher_name": "DC Books",
+        },
+    ):
+        resp = await client.post("/catalog/works", json=payload)
+        assert resp.status_code == 201
+
+
+async def test_latin_query_finds_the_malayalam_title(client):
+    await _seed(client)
+    resp = await client.get("/catalog/search", params={"q": "Kayary"})
+    titles = [w["title"] for w in resp.json()]
+    assert "കയർ" in titles
+
+
+async def test_malayalam_query_finds_the_latin_title(client):
+    await _seed(client)
+    resp = await client.get("/catalog/search", params={"q": "ചെമ്മീൻ"})
+    titles = [w["title"] for w in resp.json()]
+    assert "Chemmeen" in titles
+
+
+async def test_latin_query_finds_the_malayalam_author(client):
+    await _seed(client)
+    resp = await client.get("/catalog/search/all", params={"q": "Thakazhi"})
+    names = {a["name"] for a in resp.json()["authors"]}
+    assert "തകഴി ശിവശങ്കരപ്പിള്ള" in names
+    # …and the Malayalam author's book surfaces in the works section too.
+    titles = {w["title"] for w in resp.json()["works"]}
+    assert "കയർ" in titles
+
+
+async def test_duplicate_detection_is_cross_script(client):
+    await _seed(client)
+    # Typing the romanized title in the add-book form must surface the
+    # existing Malayalam book as a probable duplicate.
+    resp = await client.get("/catalog/works/similar", params={"title": "Kayar"})
+    titles = [w["title"] for w in resp.json()]
+    assert "കയർ" in titles
