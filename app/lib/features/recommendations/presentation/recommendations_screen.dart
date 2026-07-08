@@ -259,34 +259,48 @@ class _RecCard extends StatelessWidget {
             ),
           ),
           SizedBox(height: 9),
+          // A borderRadius is only allowed with uniform border colors, so the
+          // gold accent is an inner stripe, not a left BorderSide.
           Container(
-            padding: EdgeInsets.fromLTRB(9, 7, 9, 7),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: AppColors.paper,
               borderRadius: BorderRadius.only(
                 topRight: Radius.circular(8),
                 bottomRight: Radius.circular(8),
               ),
-              border: Border(left: BorderSide(color: AppColors.gold, width: 2)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.recsWhy,
-                  style: TextStyle(
-                    fontSize: 7.5,
-                    letterSpacing: 1,
-                    color: AppColors.inkSoft,
-                    fontWeight: FontWeight.w700,
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(width: 2, color: AppColors.gold),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(7, 7, 9, 7),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.recsWhy,
+                            style: TextStyle(
+                              fontSize: 7.5,
+                              letterSpacing: 1,
+                              color: AppColors.inkSoft,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            why,
+                            style: TextStyle(fontSize: 11.5, height: 1.4, color: AppColors.ink),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  why,
-                  style: TextStyle(fontSize: 11.5, height: 1.4, color: AppColors.ink),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           SizedBox(height: 9),

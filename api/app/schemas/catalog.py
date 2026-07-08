@@ -172,6 +172,28 @@ class WorkUpdate(BaseModel):
     genre_names: list[str] | None = None
 
 
+class WorkPatchResult(BaseModel):
+    """PATCH /works outcome. `applied` False means the edit was queued as a
+    pending revision for the Work's contributor to approve (wiki-style
+    moderation) — `work` is then the still-unchanged live entry."""
+
+    applied: bool
+    revision_id: uuid.UUID | None = None
+    work: "WorkOut"
+
+
+class WorkRevisionOut(BaseModel):
+    """One pending edit in the contributor's approval inbox."""
+
+    id: uuid.UUID
+    work_id: uuid.UUID
+    work_title: str
+    proposed_by_name: str | None = None
+    payload: dict
+    status: str
+    created_at: datetime
+
+
 class EditionCreate(BaseModel):
     """Add another printing/ISBN to an existing Work — the edition-level library
     (a paperback of a book you own in hardcover, a regional reprint, …)."""

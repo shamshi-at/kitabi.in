@@ -272,6 +272,12 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
         ),
         SizedBox(height: 8),
         _ActionButton(
+          icon: Icons.rule,
+          label: l10n.revisionsTitle,
+          onPressed: () => context.push(Routes.revisions),
+        ),
+        SizedBox(height: 8),
+        _ActionButton(
           icon: Icons.upload_file_outlined,
           label: l10n.importEntry,
           onPressed: () => context.push(Routes.importBooks),

@@ -790,6 +790,78 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get createdClose;
 
+  /// Header of the description/details section on the book page
+  ///
+  /// In en, this message translates to:
+  /// **'About this book'**
+  String get bookAboutSection;
+
+  /// Placeholder when a book has no description
+  ///
+  /// In en, this message translates to:
+  /// **'No description yet — know this book? Improve the entry.'**
+  String get bookDescriptionEmpty;
+
+  /// Encyclopedia-style edit affordance on the book page
+  ///
+  /// In en, this message translates to:
+  /// **'Improve this entry'**
+  String get bookImproveEntry;
+
+  /// Snackbar when a catalog edit is queued for the contributor's approval instead of applying live
+  ///
+  /// In en, this message translates to:
+  /// **'Edit sent — the reader who added this book will review it.'**
+  String get editPendingApproval;
+
+  /// Title of the approval inbox screen and its profile row
+  ///
+  /// In en, this message translates to:
+  /// **'Pending edits'**
+  String get revisionsTitle;
+
+  /// Profile row subtitle for the approval inbox
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested changes to books you added'**
+  String get revisionsSubtitle;
+
+  /// Empty state of the approval inbox
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to review — suggested edits to books you added will appear here.'**
+  String get revisionsEmpty;
+
+  /// Who proposed a pending edit
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested by {name}'**
+  String revisionsProposedBy(String name);
+
+  /// Apply a pending edit
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get revisionsApprove;
+
+  /// Discard a pending edit
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get revisionsReject;
+
+  /// Snackbar after approving a pending edit
+  ///
+  /// In en, this message translates to:
+  /// **'Edit approved and applied.'**
+  String get revisionsApproved;
+
+  /// Snackbar after rejecting a pending edit
+  ///
+  /// In en, this message translates to:
+  /// **'Edit rejected.'**
+  String get revisionsRejected;
+
   /// Eyebrow label on the personal notes card
   ///
   /// In en, this message translates to:

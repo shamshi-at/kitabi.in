@@ -218,6 +218,13 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Share card shows freshly photographed covers — uploads capped at 1600px/q85 at the picker
       (uncapped 12MP covers stalled the card preview and got the og:image dropped by messaging
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
+- [x] Book page "About this book" section (subtitle + description) with a wiki-style
+      "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Moderated catalog edits — the contributor's (or an unowned work's) edits apply live;
+      anyone else's queue as a `work_revisions` row (migration `000021`, RLS) that the
+      contributor approves/rejects from the profile's "Pending edits" inbox; the editor sees
+      "Edit sent … will review it". V1 approver = the reader who added the book; proper
+      moderation comes with the community layer (8 Jul 2026)
 - [x] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — written server-side as a side
       effect of other syncable ops, pulled to the client; no feed UI yet (feature-map.md: "flip it
       public later")

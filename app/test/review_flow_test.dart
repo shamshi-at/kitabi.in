@@ -20,7 +20,7 @@ Map<String, dynamic> _work() => {
       'id': _workId,
       'title': 'Chemmeen',
       'subtitle': null,
-      'description': null,
+      'description': 'A sea-salted love story of Kuttanad.',
       'language': 'Malayalam',
       'first_publish_year': 1956,
       'aggregate_rating': null,
@@ -189,6 +189,21 @@ void main() {
       ),
       findsNWidgets(5),
     );
+
+    await flushTree(tester);
+  });
+
+  testWidgets('book page shows the About section with an improve-entry action', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
+    await settle(tester);
+
+    expect(find.text('ABOUT THIS BOOK'), findsOneWidget);
+    expect(find.text('A sea-salted love story of Kuttanad.'), findsOneWidget);
+    expect(find.text('Improve this entry'), findsOneWidget);
 
     await flushTree(tester);
   });

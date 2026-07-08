@@ -262,9 +262,26 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Wiki-style edit — the response wrapper says whether the change applied
+  /// live (`applied: true`, contributor or unowned work) or was queued as a
+  /// pending revision for the contributor to approve.
   Future<Map<String, dynamic>> updateWork(String workId, Map<String, dynamic> patch) async {
     final res = await _dio.patch('/catalog/works/$workId', data: patch);
     return res.data as Map<String, dynamic>;
+  }
+
+  /// The approval inbox — pending edits to books this reader contributed.
+  Future<List<Map<String, dynamic>>> pendingRevisions() async {
+    final res = await _dio.get('/catalog/revisions/pending');
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> approveRevision(String revisionId) async {
+    await _dio.post('/catalog/revisions/$revisionId/approve');
+  }
+
+  Future<void> rejectRevision(String revisionId) async {
+    await _dio.post('/catalog/revisions/$revisionId/reject');
   }
 
   /// Typeahead for the add/edit form's author field (dropdown-cum-add-new).

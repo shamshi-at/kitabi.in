@@ -291,11 +291,82 @@ class _BookDetailBody extends ConsumerWidget {
             ],
           ),
         ),
-        SizedBox(height: 20),
+        SizedBox(height: 16),
+        _AboutSection(work: work),
+        SizedBox(height: 8),
         _EditionsSection(work: work, currentEditionId: editionId),
         _TranslationsSection(work: work),
         SizedBox(height: 24),
       ],
+    );
+  }
+}
+
+/// "About this book" — the encyclopedia face of the entry: subtitle,
+/// description, and the shared facts, with an "Improve this entry" action
+/// that opens the catalog edit form. Edits by the book's contributor apply
+/// live; anyone else's go to the contributor for approval (the form's save
+/// surfaces which happened).
+class _AboutSection extends ConsumerWidget {
+  const _AboutSection({required this.work});
+
+  final Map<String, dynamic> work;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final workId = work['id'] as String;
+    final subtitle = work['subtitle'] as String?;
+    final description = work['description'] as String?;
+    final hasDescription = description != null && description.trim().isNotEmpty;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(13, 0, 13, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _SectionHeader(label: l10n.bookAboutSection.toUpperCase())),
+              // Wiki-style: anyone can propose an improvement, right here.
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.oxblood,
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () async {
+                  await context.push(Routes.catalogAdd, extra: workId);
+                  if (context.mounted) ref.invalidate(workProvider(workId));
+                },
+                icon: Icon(Icons.edit_outlined, size: 14),
+                label: Text(l10n.bookImproveEntry, style: TextStyle(fontSize: 11.5)),
+              ),
+            ],
+          ),
+          if (subtitle != null && subtitle.trim().isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(bottom: 4),
+              child: Text(
+                subtitle,
+                style: GoogleFonts.fraunces(
+                  fontStyle: FontStyle.italic,
+                  fontSize: 13.5,
+                  color: AppColors.inkSoft,
+                ),
+              ),
+            ),
+          Text(
+            hasDescription ? description.trim() : l10n.bookDescriptionEmpty,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.55,
+              color: hasDescription ? AppColors.ink : AppColors.inkSoft,
+              fontStyle: hasDescription ? FontStyle.normal : FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

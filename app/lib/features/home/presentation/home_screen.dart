@@ -327,30 +327,40 @@ class _LendingNudge extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => context.push(Routes.lendingLedger),
+      // A borderRadius is only allowed with uniform border colors, so the
+      // gold "lending" accent is an inner stripe, not a left BorderSide.
       child: Container(
-        padding: EdgeInsets.all(11),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.all(Radius.circular(12)),
-          border: Border(
-            top: BorderSide(color: AppColors.line),
-            right: BorderSide(color: AppColors.line),
-            bottom: BorderSide(color: AppColors.line),
-            left: BorderSide(color: AppColors.gold, width: 3),
-          ),
+          border: Border.all(color: AppColors.line),
         ),
-        child: Row(
-          children: [
-            Icon(Icons.hourglass_bottom, size: 16, color: AppColors.gold),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _message(),
-                style: TextStyle(fontSize: 12, color: AppColors.ink),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 3, color: AppColors.gold),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(11),
+                  child: Row(
+                    children: [
+                      Icon(Icons.hourglass_bottom, size: 16, color: AppColors.gold),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _message(),
+                          style: TextStyle(fontSize: 12, color: AppColors.ink),
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, size: 18, color: AppColors.oxblood),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            Icon(Icons.chevron_right, size: 18, color: AppColors.oxblood),
-          ],
+            ],
+          ),
         ),
       ),
     );

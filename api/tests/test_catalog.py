@@ -77,8 +77,11 @@ async def test_get_and_patch_work(client):
         json={"title": "Final Title", "author_names": ["New Author"]},
     )
     assert patched.status_code == 200
-    assert patched.json()["title"] == "Final Title"
-    assert patched.json()["authors"][0]["name"] == "New Author"
+    # PATCH now returns the moderation wrapper; the contributor edits live.
+    body = patched.json()
+    assert body["applied"] is True
+    assert body["work"]["title"] == "Final Title"
+    assert body["work"]["authors"][0]["name"] == "New Author"
 
 
 async def test_get_work_404(client):

@@ -400,6 +400,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createdClose => 'Close';
 
   @override
+  String get bookAboutSection => 'About this book';
+
+  @override
+  String get bookDescriptionEmpty =>
+      'No description yet — know this book? Improve the entry.';
+
+  @override
+  String get bookImproveEntry => 'Improve this entry';
+
+  @override
+  String get editPendingApproval =>
+      'Edit sent — the reader who added this book will review it.';
+
+  @override
+  String get revisionsTitle => 'Pending edits';
+
+  @override
+  String get revisionsSubtitle => 'Suggested changes to books you added';
+
+  @override
+  String get revisionsEmpty =>
+      'Nothing to review — suggested edits to books you added will appear here.';
+
+  @override
+  String revisionsProposedBy(String name) {
+    return 'Suggested by $name';
+  }
+
+  @override
+  String get revisionsApprove => 'Approve';
+
+  @override
+  String get revisionsReject => 'Reject';
+
+  @override
+  String get revisionsApproved => 'Edit approved and applied.';
+
+  @override
+  String get revisionsRejected => 'Edit rejected.';
+
+  @override
   String get bookNotesLabel => 'PERSONAL NOTES · always private';
 
   @override

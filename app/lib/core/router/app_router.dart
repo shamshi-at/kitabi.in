@@ -14,6 +14,7 @@ import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
 import '../../features/catalog/presentation/publisher_browse_screen.dart';
 import '../../features/catalog/presentation/publisher_picker_screen.dart';
+import '../../features/catalog/presentation/revision_inbox_screen.dart';
 import '../../features/catalog/presentation/work_picker_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/import_books/presentation/import_screen.dart';
@@ -78,6 +79,8 @@ abstract final class Routes {
   static const bookDetail = '/book/:workId/:editionId';
   // Dedicated rate & review page; book display data (title/author/cover) via `extra`.
   static const reviewEditor = '/review/:workId';
+  // Approval inbox — pending edits to books this reader contributed.
+  static const revisions = '/catalog/revisions';
 
   static String authorBrowsePath(String authorId) => '/catalog/authors/$authorId';
   static String publisherBrowsePath(String publisherId) => '/catalog/publishers/$publisherId';
@@ -309,6 +312,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             initialIsbn: map['isbn'] as String?,
           );
         },
+      ),
+      GoRoute(
+        path: Routes.revisions,
+        name: 'revisions',
+        builder: (context, state) => RevisionInboxScreen(),
       ),
       GoRoute(
         path: Routes.authorPicker,

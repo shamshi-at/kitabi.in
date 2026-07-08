@@ -27,6 +27,8 @@ from app.schemas.catalog import (
     TranslationLinkIn,
     WorkCreate,
     WorkOut,
+    WorkPatchResult,
+    WorkRevisionOut,
     WorkSummaryOut,
     WorkUpdate,
 )
@@ -212,13 +214,53 @@ async def get_work(work_id: uuid.UUID, db: DbSession) -> WorkOut:
     return await _work_out(db, work)
 
 
-@router.patch("/works/{work_id}", response_model=WorkOut)
+@router.patch("/works/{work_id}", response_model=WorkPatchResult)
 async def patch_work(
     work_id: uuid.UUID, payload: WorkUpdate, user: CurrentUser, db: DbSession
-) -> WorkOut:
+) -> WorkPatchResult:
+    """Wiki-style edit: the contributor's changes (and any change to an
+    unowned/imported Work) apply live; anyone else's are queued as a pending
+    revision for the contributor to approve — `applied` says which happened."""
     work = await catalog_service.get_work_or_404(db, work_id)
-    work = await catalog_service.update_work(db, work, payload)
+    applied, work, revision = await catalog_service.propose_or_apply_update(
+        db, work, payload, uuid.UUID(user["id"])
+    )
+    return WorkPatchResult(
+        applied=applied,
+        revision_id=revision.id if revision else None,
+        work=await _work_out(db, work),
+    )
+
+
+@router.get("/revisions/pending", response_model=list[WorkRevisionOut])
+async def pending_revisions(user: CurrentUser, db: DbSession) -> list[WorkRevisionOut]:
+    """The approval inbox — pending edits to books this reader contributed."""
+    rows = await catalog_service.pending_revisions_for_approver(db, uuid.UUID(user["id"]))
+    return [
+        WorkRevisionOut(
+            id=rev.id,
+            work_id=rev.work_id,
+            work_title=title,
+            proposed_by_name=proposer,
+            payload=rev.payload,
+            status=rev.status,
+            created_at=rev.created_at,
+        )
+        for rev, title, proposer in rows
+    ]
+
+
+@router.post("/revisions/{revision_id}/approve", response_model=WorkOut)
+async def approve_revision(revision_id: uuid.UUID, user: CurrentUser, db: DbSession) -> WorkOut:
+    work = await catalog_service.decide_revision(
+        db, revision_id, uuid.UUID(user["id"]), approve=True
+    )
     return await _work_out(db, work)
+
+
+@router.post("/revisions/{revision_id}/reject", status_code=status.HTTP_204_NO_CONTENT)
+async def reject_revision(revision_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
+    await catalog_service.decide_revision(db, revision_id, uuid.UUID(user["id"]), approve=False)
 
 
 @router.post("/works/{work_id}/link-translation", status_code=status.HTTP_204_NO_CONTENT)

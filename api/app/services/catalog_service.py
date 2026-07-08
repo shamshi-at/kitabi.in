@@ -6,13 +6,24 @@ via the API when online (CLAUDE.md rule 2)."""
 
 import re
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, literal, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models import Author, Edition, Genre, Publisher, Series, Work, work_authors
+from app.models import (
+    Author,
+    Edition,
+    Genre,
+    Profile,
+    Publisher,
+    Series,
+    Work,
+    WorkRevision,
+    work_authors,
+)
 from app.schemas.catalog import EditionCreate, EditionUpdate, WorkCreate, WorkUpdate
 from app.services.openlibrary_client import OpenLibraryClient, normalize_isbn_lookup
 from app.services.translit import transliterate
@@ -213,6 +224,75 @@ async def update_work(db: AsyncSession, work: Work, patch: WorkUpdate) -> Work:
         work.genres = [await _get_or_create(db, Genre, name) for name in patch.genre_names]
     await db.commit()
     return await get_work_or_404(db, work.id)
+
+
+async def propose_or_apply_update(
+    db: AsyncSession, work: Work, patch: WorkUpdate, user_id: uuid.UUID
+) -> tuple[bool, Work, WorkRevision | None]:
+    """Wiki-style moderation for catalog edits: the reader who contributed the
+    Work (or anyone, for Works nobody owns — OpenLibrary imports and seeds)
+    edits live; everyone else's change is queued as a pending [WorkRevision]
+    for the contributor to approve. Returns (applied, live work, revision)."""
+    if work.created_by_user_id is None or work.created_by_user_id == user_id:
+        return True, await update_work(db, work, patch), None
+    revision = WorkRevision(
+        work_id=work.id,
+        proposed_by_user_id=user_id,
+        # mode="json" so UUIDs in author_ids serialise for the JSONB column.
+        payload=patch.model_dump(exclude_unset=True, mode="json"),
+    )
+    db.add(revision)
+    await db.commit()
+    await db.refresh(revision)
+    return False, work, revision
+
+
+async def pending_revisions_for_approver(
+    db: AsyncSession, approver_id: uuid.UUID
+) -> list[tuple[WorkRevision, str, str | None]]:
+    """The approval inbox — every pending revision to a Work this user
+    contributed, oldest first, with the work title and the proposer's name."""
+    stmt = (
+        select(WorkRevision, Work.title, Profile.full_name)
+        .join(Work, Work.id == WorkRevision.work_id)
+        .outerjoin(Profile, Profile.id == WorkRevision.proposed_by_user_id)
+        .where(
+            WorkRevision.status == "pending",
+            Work.created_by_user_id == approver_id,
+            Work.deleted_at.is_(None),
+        )
+        .order_by(WorkRevision.created_at)
+    )
+    return [tuple(row) for row in (await db.execute(stmt)).all()]
+
+
+async def decide_revision(
+    db: AsyncSession, revision_id: uuid.UUID, approver_id: uuid.UUID, *, approve: bool
+) -> Work:
+    """Approve (apply the queued WorkUpdate) or reject a pending revision.
+    Only the Work's contributor may decide. Returns the live Work either way."""
+    revision = await db.get(WorkRevision, revision_id)
+    if revision is None or revision.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "Revision not found"},
+        )
+    work = await get_work_or_404(db, revision.work_id)
+    if work.created_by_user_id != approver_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "not_approver",
+                "message": "Only the reader who added this book can review its edits",
+            },
+        )
+    revision.status = "approved" if approve else "rejected"
+    revision.decided_at = datetime.now(UTC)
+    revision.decided_by_user_id = approver_id
+    if approve:
+        return await update_work(db, work, WorkUpdate(**revision.payload))
+    await db.commit()
+    return work
 
 
 async def update_edition(db: AsyncSession, edition: Edition, patch: EditionUpdate) -> Edition:

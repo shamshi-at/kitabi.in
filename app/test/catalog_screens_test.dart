@@ -4,6 +4,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:kitabi/data/api/api_client.dart';
@@ -211,9 +212,20 @@ class _FakeApiClient extends ApiClient {
     return _work();
   }
 
+  /// When false, mirrors the API queueing the edit for the contributor's
+  /// approval instead of applying it live.
+  bool updateApplies = true;
+  int updateCalls = 0;
+
   @override
-  Future<Map<String, dynamic>> updateWork(String workId, Map<String, dynamic> patch) async =>
-      _work(id: workId);
+  Future<Map<String, dynamic>> updateWork(String workId, Map<String, dynamic> patch) async {
+    updateCalls++;
+    return {
+      'applied': updateApplies,
+      'revision_id': updateApplies ? null : 'rev-1',
+      'work': _work(id: workId),
+    };
+  }
 }
 
 Widget _wrap(Widget child, {ApiClient? apiClient, List<Override> overrides = const []}) {
@@ -675,5 +687,41 @@ void main() {
 
     expect(find.text('Edit book'), findsOneWidget);
     expect(find.text('Chemmeen'), findsWidgets);
+  });
+
+  testWidgets("editing someone else's book reports pending approval", (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient()..updateApplies = false;
+    // A real router host: the save flow pops the screen, which needs GoRouter
+    // (exactly like the app) — popping without one corrupts the flow mid-save.
+    final router = GoRouter(
+      initialLocation: '/edit',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('home'))),
+        GoRoute(path: '/edit', builder: (_, _) => AddEditBookScreen(workId: _workId)),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [apiClientProvider.overrideWithValue(fake)],
+      child: MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'ചെമ്മീൻ (revised)');
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(fake.updateCalls, 1);
+    expect(
+      find.text('Edit sent — the reader who added this book will review it.'),
+      findsOneWidget,
+    );
   });
 }

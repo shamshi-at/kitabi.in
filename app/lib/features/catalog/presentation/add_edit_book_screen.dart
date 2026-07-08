@@ -503,7 +503,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
       if (workId == null) {
         created = await api.createWork(payload);
       } else {
-        await api.updateWork(workId, payload);
+        final result = await api.updateWork(workId, payload);
         // Covers live on the Edition, not the Work — patch them separately, and
         // only the side the user actually changed.
         final editionId = _edition?['id'] as String?;
@@ -516,7 +516,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
           if (edPatch.isNotEmpty) await api.updateEdition(editionId, edPatch);
         }
         ref.invalidate(workProvider(workId));
-        if (mounted) context.pop();
+        if (mounted) {
+          // Someone else's book: the edit went to its contributor's approval
+          // queue instead of the live catalog — say so, or "saved" silence
+          // reads as the change having vanished.
+          if (result['applied'] == false) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(AppLocalizations.of(context)!.editPendingApproval),
+              duration: const Duration(seconds: 5),
+            ));
+          }
+          context.pop();
+        }
       }
     } catch (err) {
       if (mounted) {
