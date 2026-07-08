@@ -34,7 +34,19 @@ Future<Uint8List?> pickAndCropImage({
   required ImageSource source,
   required CropRatio ratio,
 }) async {
-  final picked = await ImagePicker().pickImage(source: source);
+  // Cap the capture at the source — an uncapped camera photo is 12MP+ and
+  // multi-MB, which (a) made messaging apps silently drop the og:image link
+  // preview for books with user-photographed covers (WhatsApp rejects large
+  // preview images), (b) let the share card rasterise before the huge JPEG
+  // decoded, and (c) burns Supabase free-tier storage. 1600px on the long
+  // side comfortably out-resolves every surface that renders a cover
+  // (full-screen viewer included) while keeping a 2:3 crop at ~200–400KB.
+  final picked = await ImagePicker().pickImage(
+    source: source,
+    maxWidth: 1600,
+    maxHeight: 1600,
+    imageQuality: 85,
+  );
   if (picked == null) return null; // capture/pick cancelled
   // iOS race, root-caused live on-device (8 Jul 2026): presenting the cropper
   // while the camera's "Use Photo" sheet is still animating its dismissal

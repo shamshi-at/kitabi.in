@@ -49,6 +49,21 @@ Future<void> captureAndShareCard({
   }
 }
 
+/// Wait (bounded) until [url] is decoded into the image cache, so a card
+/// capture that follows paints the real photo — tapping Share moments after
+/// opening the sheet used to rasterise before a slow/large cover resolved,
+/// shipping a card with the typeset fallback instead of the photo. A timeout
+/// or a failed load just returns: the card falls back gracefully.
+Future<void> ensureImageLoaded(BuildContext context, String? url) async {
+  if (url == null) return;
+  try {
+    await precacheImage(NetworkImage(url), context)
+        .timeout(const Duration(seconds: 6));
+  } catch (_) {
+    // Timeout / dead URL — capture proceeds with the fallback rendering.
+  }
+}
+
 /// iPad requires an anchor rect for the share popover — use the caller's own
 /// bounds, falling back to a sane default if the box isn't laid out.
 Rect _originRect(BuildContext context) {

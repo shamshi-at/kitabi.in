@@ -88,6 +88,11 @@ class _ShareSheetState extends State<_ShareSheet> {
     final text = l10n.shareBookLinkText(widget.title, widget.author, widget.shareUrl);
     setState(() => _sharing = true);
     try {
+      // Never rasterise a card whose cover hasn't decoded yet (a freshly
+      // uploaded photo may still be downloading when Share is tapped) — wait
+      // for it, bounded; on timeout the card ships with the typeset fallback.
+      await ensureImageLoaded(context, widget.coverUrl);
+      if (!mounted) return;
       await captureAndShareCard(context: context, cardKey: _cardKey, text: text);
     } finally {
       if (mounted) setState(() => _sharing = false);

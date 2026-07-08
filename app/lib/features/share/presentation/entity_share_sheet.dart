@@ -78,6 +78,9 @@ class _EntityShareSheetState extends State<_EntityShareSheet> {
   Future<void> _shareCard() async {
     setState(() => _sharing = true);
     try {
+      // Same guard as the book sheet: don't capture a still-loading portrait.
+      await ensureImageLoaded(context, widget.imageUrl);
+      if (!mounted) return;
       await captureAndShareCard(context: context, cardKey: _cardKey, text: widget.shareText);
     } finally {
       if (mounted) setState(() => _sharing = false);

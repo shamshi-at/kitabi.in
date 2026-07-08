@@ -215,6 +215,9 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Cross-script catalog search — "Kayary" finds "കയർ", "ചെമ്മീൻ" finds "Chemmeen": romanized
       `*_translit` columns (indic-transliteration + anyascii, ORM hooks, migration `000020`,
       GIN trigram indexes), matched by search, typeaheads, and duplicate detection (8 Jul 2026)
+- [x] Share card shows freshly photographed covers — uploads capped at 1600px/q85 at the picker
+      (uncapped 12MP covers stalled the card preview and got the og:image dropped by messaging
+      apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — written server-side as a side
       effect of other syncable ops, pulled to the client; no feed UI yet (feature-map.md: "flip it
       public later")
