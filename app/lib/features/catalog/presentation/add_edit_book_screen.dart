@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,6 +117,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
   bool _scanning = false;
   bool _extracting = false;
 
+  // Duplicate detection (create mode only): as the title is typed, a debounced
+  // trigram search quietly surfaces near-matches already in the catalog.
+  List<Map<String, dynamic>> _similar = const [];
+  bool _similarDismissed = false;
+  Timer? _similarDebounce;
+  int _similarSeq = 0;
+
   Map<String, dynamic>? get _edition {
     final editions = widget.initialWork?['editions'] as List?;
     return editions != null && editions.isNotEmpty ? editions.first as Map<String, dynamic> : null;
@@ -138,6 +147,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
     // Live cover preview (S7b): the typeset cover mirrors the title/author as
     // they're typed, so a keystroke redraws it.
     _title.addListener(_onCoverChanged);
+    // Duplicate check rides the same field — but only when creating (nagging
+    // about "duplicates" while editing the book itself would be noise).
+    if (work == null) _title.addListener(_onTitleChangedForSimilar);
     _description = TextEditingController(text: work?['description'] as String? ?? '');
     _language = work?['language'] as String?;
     _series = TextEditingController(text: (edition?['series'] as Map?)?['name'] as String? ?? '');
@@ -162,8 +174,35 @@ class _BookFormState extends ConsumerState<_BookForm> {
     if (mounted) setState(() {});
   }
 
+  /// Debounced duplicate lookup while the title is typed. Quiet by design:
+  /// nothing blocks, nothing pops — matches slide in below the field and a
+  /// dismiss hides them for the rest of this form.
+  void _onTitleChangedForSimilar() {
+    if (_similarDismissed) return;
+    _similarDebounce?.cancel();
+    final q = _title.text.trim();
+    if (q.length < 3) {
+      if (_similar.isNotEmpty && mounted) setState(() => _similar = const []);
+      return;
+    }
+    _similarDebounce = Timer(const Duration(milliseconds: 450), () => _fetchSimilar(q));
+  }
+
+  Future<void> _fetchSimilar(String q) async {
+    final seq = ++_similarSeq;
+    try {
+      final results = await ref.read(apiClientProvider).similarWorks(q);
+      // Drop stale responses (a newer keystroke started a newer lookup).
+      if (!mounted || seq != _similarSeq || _title.text.trim() != q) return;
+      setState(() => _similar = results);
+    } catch (_) {
+      // Best-effort suggestion — never surface an error for it.
+    }
+  }
+
   @override
   void dispose() {
+    _similarDebounce?.cancel();
     _title.removeListener(_onCoverChanged);
     for (final c in [
       _title,
@@ -581,6 +620,26 @@ class _BookFormState extends ConsumerState<_BookForm> {
             controller: _title,
             validator: (v) => (v == null || v.trim().isEmpty) ? l10n.formTitleRequired : null,
           ),
+          // Quiet duplicate check (create mode): near-matches already in the
+          // catalog slide in under the title; tap one to open it instead of
+          // adding a copy, or dismiss and carry on typing undisturbed.
+          if (!isEdit && !_similarDismissed && _similar.isNotEmpty) ...[
+            SizedBox(height: 8),
+            _SimilarWorksPanel(
+              works: _similar,
+              onDismiss: () => setState(() => _similarDismissed = true),
+              onPick: (work) {
+                final editions = work['editions'] as List?;
+                final edition = editions != null && editions.isNotEmpty
+                    ? editions.first as Map<String, dynamic>
+                    : (work['edition'] as Map<String, dynamic>?);
+                final editionId = edition?['id'] as String?;
+                if (editionId != null) {
+                  context.push(Routes.bookDetailPath(work['id'] as String, editionId));
+                }
+              },
+            ),
+          ],
           SizedBox(height: 10),
           _AuthorField(
             authors: _authors,
@@ -778,6 +837,127 @@ class _BookFormState extends ConsumerState<_BookForm> {
             author: _authors.isEmpty ? null : _authors.first['name'] as String?,
           ),
       ],
+    );
+  }
+}
+
+/// The quiet duplicate-check panel (S7b): near-matches from the catalog for
+/// the title being typed. A soft paperDeep well — no dialog, no focus steal —
+/// with compact tappable rows and an ✕ that dismisses it for this form.
+class _SimilarWorksPanel extends StatelessWidget {
+  const _SimilarWorksPanel({
+    required this.works,
+    required this.onDismiss,
+    required this.onPick,
+  });
+
+  final List<Map<String, dynamic>> works;
+  final VoidCallback onDismiss;
+  final void Function(Map<String, dynamic> work) onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: EdgeInsets.fromLTRB(12, 8, 8, 10),
+      decoration: BoxDecoration(
+        color: AppColors.paperDeep,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.menu_book_outlined, size: 14, color: AppColors.gold),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.formSimilarHeader,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: onDismiss,
+                child: Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
+                ),
+              ),
+            ],
+          ),
+          Text(
+            l10n.formSimilarHelp,
+            style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.25),
+          ),
+          SizedBox(height: 8),
+          for (final work in works) _SimilarWorkRow(work: work, onTap: () => onPick(work)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SimilarWorkRow extends StatelessWidget {
+  const _SimilarWorkRow({required this.work, required this.onTap});
+
+  final Map<String, dynamic> work;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final authorNames = authors.map((a) => a['name'] as String).join(', ');
+    final edition = work['edition'] as Map<String, dynamic>?;
+    final year = work['first_publish_year'];
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          children: [
+            TypesetCover(
+              title: work['title'] as String? ?? '',
+              author: authorNames.isEmpty ? null : authorNames,
+              coverUrl: edition?['cover_url'] as String?,
+              width: 26,
+              height: 38,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    work['title'] as String? ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                  ),
+                  if (authorNames.isNotEmpty || year != null)
+                    Text(
+                      [
+                        if (authorNames.isNotEmpty) authorNames,
+                        if (year != null) '$year',
+                      ].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
+                    ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+          ],
+        ),
+      ),
     );
   }
 }

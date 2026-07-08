@@ -1405,6 +1405,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formFillFromPhotos => 'Fill in from photos';
 
   @override
+  String get formSimilarHeader => 'Already in the catalog?';
+
+  @override
+  String get formSimilarHelp =>
+      'Tap a match to open it instead of adding a copy — or keep typing.';
+
+  @override
   String get formExtractingTitle => 'Reading your cover…';
 
   @override

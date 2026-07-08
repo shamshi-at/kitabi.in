@@ -8,7 +8,7 @@ import re
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -260,6 +260,45 @@ async def search_local(db: AsyncSession, query: str, limit: int = 20) -> list[Wo
         .distinct()
         .limit(limit)
         .execution_options(populate_existing=True)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def find_similar_works(db: AsyncSession, title: str, limit: int = 5) -> list[Work]:
+    """Typo-tolerant "is this book already in the catalog?" for the add-book
+    form (S7b). Matches by trigram similarity so 'Chemeen' still finds
+    'Chemmeen', plus containment for partial typing — every predicate here is
+    accelerated by the GIN trigram index (migration 000018):
+
+    - `title % q`   — pg_trgm similarity above the GUC threshold (default 0.3)
+    - `q <% title`  — word_similarity: the typed text vs the best-matching
+                      span, so 'Harry Pott' matches a long full title
+    - `ILIKE %q%`   — plain containment (also trigram-index-served)
+
+    Ranked by the best of similarity/word_similarity, best first. Trigrams are
+    plain character windows, so Malayalam and every other script work as-is.
+    """
+    q = title.strip()
+    if len(q) < 3:
+        return []
+
+    score = func.greatest(
+        func.similarity(Work.title, q),
+        func.word_similarity(q, Work.title),
+    )
+    stmt = (
+        select(Work)
+        .options(*_SUMMARY_OPTIONS)
+        .where(
+            Work.deleted_at.is_(None),
+            or_(
+                Work.title.ilike(f"%{q}%"),
+                Work.title.op("%")(q),
+                literal(q).op("<%")(Work.title),
+            ),
+        )
+        .order_by(score.desc(), Work.title)
+        .limit(limit)
     )
     return list((await db.execute(stmt)).scalars().all())
 

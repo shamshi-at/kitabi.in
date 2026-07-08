@@ -230,6 +230,14 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Typo-tolerant duplicate check for the add-book form: the closest catalog
+  /// matches for the title being typed (server-side trigram similarity), best
+  /// first. Empty when nothing is close.
+  Future<List<Map<String, dynamic>>> similarWorks(String title) async {
+    final res = await _dio.get('/catalog/works/similar', queryParameters: {'title': title});
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
   /// Cover-photo extraction (S7b rescue path) — reads title/authors/publisher/
   /// blurb off the already-uploaded cover photo URL(s) so the add-book form can
   /// prefill itself for a book no catalog knows. 503 (`extraction_disabled`)

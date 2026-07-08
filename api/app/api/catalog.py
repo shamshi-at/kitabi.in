@@ -186,6 +186,17 @@ async def cover_extract(payload: CoverExtractIn, user: CurrentUser) -> CoverExtr
     return CoverExtractOut(**fields)
 
 
+# NOTE: declared before /works/{work_id} — otherwise "similar" would be
+# parsed as a work id and 422.
+@router.get("/works/similar", response_model=list[WorkSummaryOut])
+async def similar_works(db: DbSession, title: str = Query(min_length=1)) -> list[WorkSummaryOut]:
+    """Typo-tolerant duplicate check for the add-book form: the closest
+    catalog matches for a title as it's being typed (trigram similarity),
+    best match first. Empty when the title is too short or nothing is close."""
+    works = await catalog_service.find_similar_works(db, title)
+    return [_summary(w) for w in works]
+
+
 @router.post("/works", response_model=WorkOut, status_code=status.HTTP_201_CREATED)
 async def create_work(payload: WorkCreate, user: CurrentUser, db: DbSession) -> WorkOut:
     """Manual add/edit flow (S7b). Credits the contributor for their score."""

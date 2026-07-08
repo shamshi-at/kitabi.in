@@ -56,6 +56,16 @@ class _FakeApiClient extends ApiClient {
   /// test assert the "reading your cover" overlay is visible mid-extraction.
   Completer<void>? extractGate;
 
+  /// Canned duplicate suggestions for the add form's typo check.
+  List<Map<String, dynamic>> similarResult = const [];
+  String? lastSimilarQuery;
+
+  @override
+  Future<List<Map<String, dynamic>>> similarWorks(String title) async {
+    lastSimilarQuery = title;
+    return similarResult;
+  }
+
   @override
   Future<Map<String, dynamic>> extractFromCovers({String? frontUrl, String? backUrl}) async {
     lastExtractFront = frontUrl;
@@ -388,6 +398,73 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('9789386906366'), findsOneWidget);
+  });
+
+  testWidgets('typing a near-duplicate title quietly suggests the existing book', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient()
+      ..similarResult = [
+        {
+          'id': _workId,
+          'title': 'Chemmeen',
+          'first_publish_year': 1956,
+          'aggregate_rating': null,
+          'authors': [
+            {'id': _authorId, 'name': 'Thakazhi Sivasankara Pillai'},
+          ],
+          'edition': {'id': 'e-1', 'cover_url': null},
+        },
+      ];
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // Type a typo'd title; the lookup is debounced 450ms.
+    await tester.enterText(find.byType(TextFormField).first, 'Chemeen');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(fake.lastSimilarQuery, 'Chemeen');
+    expect(find.text('Already in the catalog?'), findsOneWidget);
+    expect(find.text('Chemmeen'), findsWidgets);
+
+    // Dismiss → panel gone, and further typing doesn't bring it back.
+    await tester.tap(find.byIcon(Icons.close).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Already in the catalog?'), findsNothing);
+
+    await tester.enterText(find.byType(TextFormField).first, 'Chemeen again');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    expect(find.text('Already in the catalog?'), findsNothing);
+  });
+
+  testWidgets('duplicate suggestions never appear in edit mode', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient()
+      ..similarResult = [
+        {
+          'id': _workId,
+          'title': 'Chemmeen',
+          'first_publish_year': null,
+          'aggregate_rating': null,
+          'authors': const <Map<String, dynamic>>[],
+          'edition': null,
+        },
+      ];
+    await tester.pumpWidget(_wrap(AddEditBookScreen(workId: _workId), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Chemeen');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+
+    // Edit mode: no listener, no lookup, no panel.
+    expect(fake.lastSimilarQuery, isNull);
+    expect(find.text('Already in the catalog?'), findsNothing);
   });
 
   testWidgets('a reading-your-cover overlay shows while extraction is in flight', (tester) async {

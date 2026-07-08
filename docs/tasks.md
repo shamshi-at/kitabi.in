@@ -135,6 +135,17 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
         Room overlay (`_ExtractingOverlay`): a gold scan line sweeps the cover over a
         paper scrim, fleuron + "Reading your cover…" + subtitle; reduced-motion holds a
         static line. Verified on the emulator.
+- [x] Typo-tolerant duplicate detection on the add-book form (8 Jul 2026, owner
+      request): migration `000018` enables **pg_trgm** + GIN trigram indexes on
+      `works.title`/`authors.name`; `GET /catalog/works/similar?title=` ranks
+      near-matches by `greatest(similarity, word_similarity)` behind index-served
+      predicates (`%`, `<%`, `ILIKE`) — works on any script, Malayalam included.
+      App: as the title is typed (create mode only), a 450ms-debounced,
+      stale-response-guarded lookup slides a quiet "Already in the catalog?" well
+      under the title — tap a match to open that book instead, or ✕ to dismiss for
+      the rest of the form. Never a dialog, never an error. Tested end to end
+      (pytest against real pg_trgm incl. the 'Chemeen'→'Chemmeen' typo case; widget
+      tests for debounce/dismiss/edit-mode-off) and eyeballed on the emulator.
 
 ## Phase 3 — Personal library + sync engine (Layer 2)
 

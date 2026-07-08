@@ -2482,6 +2482,18 @@ abstract class AppLocalizations {
   /// **'Fill in from photos'**
   String get formFillFromPhotos;
 
+  /// Header of the quiet duplicate-suggestions panel under the title field on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Already in the catalog?'**
+  String get formSimilarHeader;
+
+  /// One-line explanation inside the duplicate-suggestions panel
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a match to open it instead of adding a copy — or keep typing.'**
+  String get formSimilarHelp;
+
   /// Title of the full-screen loader shown while the cover photos are being read
   ///
   /// In en, this message translates to:
