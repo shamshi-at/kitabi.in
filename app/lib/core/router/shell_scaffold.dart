@@ -13,15 +13,14 @@ import 'app_router.dart';
 /// Lending · Insights. The four real tabs map to the [StatefulNavigationShell]
 /// branches; "+" is an action (opens the add flow), not a tab.
 ///
-/// The "+" is a true [FloatingActionButton] docked via
-/// [FloatingActionButtonLocation.centerDocked] on a notched [BottomAppBar] —
-/// Flutter computes its horizontal position from the Scaffold's own width, so
-/// it sits at the *exact* pixel center regardless of how the four nav items
-/// are laid out (a plain 5th-of-N row slot only centers when the item count
-/// is odd and every slot is equal width — fragile the moment a 6th item, like
-/// the search shortcut once did, gets added). The docked/notched combo also
-/// gives it the raised, cut-out look of a proper primary action instead of
-/// just another row icon.
+/// The "+" is a flat tile in the middle of five equal-width slots — with an
+/// odd count of equal slots, the middle slot's centre IS the screen centre,
+/// so it needs no floating machinery to sit exactly centred (asserted in
+/// shell_nav_test). A centerDocked FloatingActionButton was tried and
+/// reverted (owner feedback, 8 Jul 2026): the FAB lives in the Scaffold's
+/// floating layer, so every modal bottom sheet (lend, log-borrowed, filters)
+/// rendered UNDER it — the "+" punched through on top of the sheet's own
+/// primary button. A row tile is ordinary content: sheets cover it.
 ///
 /// The Lending item carries a badge when connection requests await approval
 /// (the first hop of the notification chain: footer → ledger header →
@@ -53,25 +52,11 @@ class ShellScaffold extends ConsumerWidget {
           ],
         ),
       ),
-      // Scan-first (docs/screen-design.md): the FAB opens the camera directly —
-      // one tap to the main add path. Search / manual add stay one tap away
-      // via the scanner's fallback buttons.
-      floatingActionButton: FloatingActionButton(
-        onPressed: () { Haptics.selection(); context.push(Routes.catalogScan); },
-        backgroundColor: AppColors.oxblood,
-        foregroundColor: AppColors.paper,
-        tooltip: l10n.navAdd,
-        elevation: 3,
-        child: Icon(Icons.add, size: 26),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        color: AppColors.card,
-        shape: CircularNotchedRectangle(),
-        notchMargin: 8,
-        elevation: 8,
-        shadowColor: AppColors.ink.withValues(alpha: 0.16),
-        padding: EdgeInsets.zero,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          border: Border(top: BorderSide(color: AppColors.line)),
+        ),
         child: SafeArea(
           top: false,
           child: SizedBox(
@@ -92,22 +77,12 @@ class ShellScaffold extends ConsumerWidget {
                   selected: index == 1,
                   onTap: () { Haptics.selection(); navigationShell.goBranch(1); },
                 ),
-                // Clearance for the notch — the FAB floats above this gap; its
-                // own label sits low enough to clear the notch's curve.
-                SizedBox(
-                  width: 64,
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 38),
-                    child: Text(
-                      l10n.navAdd,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: AppColors.inkSoft,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                // Scan-first (docs/screen-design.md): the tile opens the camera
+                // directly — one tap to the main add path. Search / manual add
+                // stay one tap away via the scanner's fallback buttons.
+                _AddButton(
+                  label: l10n.navAdd,
+                  onTap: () { Haptics.selection(); context.push(Routes.catalogScan); },
                 ),
                 _NavItem(
                   icon: Icons.swap_horiz,
@@ -204,3 +179,44 @@ class _NavItem extends StatelessWidget {
   }
 }
 
+/// The oxblood add tile — one of the five equal slots, so its centre is the
+/// exact screen centre. Deliberately NOT a FloatingActionButton (see the
+/// class comment on [ShellScaffold]).
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 38,
+              height: 30,
+              decoration: BoxDecoration(
+                color: AppColors.oxblood,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.add, size: 20, color: AppColors.paper),
+            ),
+            SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: AppColors.inkSoft,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
