@@ -47,6 +47,25 @@ def looks_like_isbn(query: str) -> bool:
     return bool(_ISBN_RE.match(query.replace("-", "").strip()))
 
 
+def _fuzzy_match(col, q: str):  # noqa: ANN001 — SQLAlchemy column expression
+    """Typo-tolerant match predicate for one text column — plain containment
+    plus pg_trgm similarity (`%`) and word-similarity (`<%`), every branch
+    served by the GIN gin_trgm_ops indexes (migrations 000018/000019). Below
+    3 characters trigrams are pure noise, so short queries stay containment-only.
+    """
+    like = col.ilike(f"%{q}%")
+    if len(q) < 3:
+        return like
+    return or_(like, col.op("%")(q), literal(q).op("<%")(col))
+
+
+def _rank(col, q: str):  # noqa: ANN001 — SQLAlchemy column expression
+    """Relevance score for ordering: the best of whole-string similarity and
+    best-matching-word-span similarity, so an exact-ish hit beats a loose one
+    and a short query ranks well against a long title."""
+    return func.greatest(func.similarity(col, q), func.word_similarity(q, col))
+
+
 async def _get_or_create(db: AsyncSession, model: type, name: str) -> object:
     """Case-insensitive get-or-create by name — authors/publishers/genres/series
     all share this shape. Catalog entities are server-authoritative (no
@@ -237,31 +256,57 @@ async def get_edition_or_404(db: AsyncSession, edition_id: uuid.UUID) -> Edition
     return edition
 
 
-async def search_local(db: AsyncSession, query: str, limit: int = 20) -> list[Work]:
-    """Search our own cached catalog first (title, author name, or exact
-    ISBN) — cache-on-first-use means popular searches get faster and cheaper
-    over time as more of the catalog is already local."""
-    if looks_like_isbn(query):
-        stmt = select(Edition).where(Edition.isbn == query.replace("-", "").strip())
+async def search_local(
+    db: AsyncSession, query: str, limit: int = 20, *, fuzzy: bool = True
+) -> list[Work]:
+    """Search our own cached catalog (title, author name, or exact ISBN),
+    typo-tolerant and relevance-ranked — 'Chemeen' finds Chemmeen, best match
+    first. Two steps for correctness with the many-to-many author join:
+    (1) matching work ids with their best score (grouped, GIN-index-served),
+    (2) eager-load those works and keep the score order.
+
+    [fuzzy]=False narrows to plain containment — the CSV import matcher takes
+    the top hit as *the* match, so it must not be handed a merely-similar book.
+    """
+    q = query.strip()
+    if looks_like_isbn(q):
+        stmt = select(Edition).where(Edition.isbn == q.replace("-", "").strip())
         edition = (await db.execute(stmt)).scalar_one_or_none()
         if edition is None:
             return []
         work = await _load_work(db, edition.work_id)
         return [work] if work else []
+    if not q:
+        return []
+
+    if fuzzy:
+        match = or_(_fuzzy_match(Work.title, q), _fuzzy_match(Author.name, q))
+    else:
+        match = or_(Work.title.ilike(f"%{q}%"), Author.name.ilike(f"%{q}%"))
+    # Postgres's greatest() ignores NULLs, so works without authors (outer
+    # join) still rank by their title score.
+    score = func.max(func.greatest(_rank(Work.title, q), _rank(Author.name, q)))
+    ranked = (
+        select(Work.id, score.label("score"))
+        .select_from(Work)
+        .outerjoin(Work.authors)
+        .where(Work.deleted_at.is_(None), match)
+        .group_by(Work.id)
+        .order_by(score.desc())
+        .limit(limit)
+    )
+    ordered_ids = [row.id for row in (await db.execute(ranked)).all()]
+    if not ordered_ids:
+        return []
 
     stmt = (
         select(Work)
         .options(*_SUMMARY_OPTIONS)
-        .outerjoin(Work.authors)
-        .where(
-            Work.deleted_at.is_(None),
-            or_(Work.title.ilike(f"%{query}%"), Author.name.ilike(f"%{query}%")),
-        )
-        .distinct()
-        .limit(limit)
+        .where(Work.id.in_(ordered_ids))
         .execution_options(populate_existing=True)
     )
-    return list((await db.execute(stmt)).scalars().all())
+    by_id = {w.id: w for w in (await db.execute(stmt)).scalars().all()}
+    return [by_id[i] for i in ordered_ids if i in by_id]
 
 
 async def find_similar_works(db: AsyncSession, title: str, limit: int = 5) -> list[Work]:
@@ -386,25 +431,29 @@ async def browse_publishers(
 
 
 async def search_authors(db: AsyncSession, query: str, limit: int = 10) -> list[Author]:
-    """Typeahead for the add/edit form's author field — case-insensitive
-    prefix-ish match, so "dropdown cum add new" can suggest existing catalog
-    authors before the user coins a duplicate."""
+    """Author search for the global search (S4) and the add/edit form's
+    typeahead — typo-tolerant ('Thakazi' finds Thakazhi), best match first."""
+    q = query.strip()
+    if not q:
+        return []
     stmt = (
         select(Author)
-        .where(Author.name.ilike(f"%{query.strip()}%"))
-        .order_by(Author.name)
+        .where(_fuzzy_match(Author.name, q))
+        .order_by(_rank(Author.name, q).desc(), Author.name)
         .limit(limit)
     )
     return list((await db.execute(stmt)).scalars().all())
 
 
 async def search_publishers(db: AsyncSession, query: str, limit: int = 10) -> list[Publisher]:
-    """Typeahead for the add/edit form's publisher field — same shape as
-    search_authors."""
+    """Publisher search — same fuzzy + ranked shape as search_authors."""
+    q = query.strip()
+    if not q:
+        return []
     stmt = (
         select(Publisher)
-        .where(Publisher.name.ilike(f"%{query.strip()}%"))
-        .order_by(Publisher.name)
+        .where(_fuzzy_match(Publisher.name, q))
+        .order_by(_rank(Publisher.name, q).desc(), Publisher.name)
         .limit(limit)
     )
     return list((await db.execute(stmt)).scalars().all())

@@ -90,8 +90,11 @@ class _FakeApiClient extends ApiClient {
     ];
   }
 
+  int searchAllCalls = 0;
+
   @override
   Future<Map<String, dynamic>> searchAll(String query) async {
+    searchAllCalls++;
     return {
       'works': await searchCatalog(query),
       'authors': <Map<String, dynamic>>[],
@@ -226,11 +229,28 @@ void main() {
     final fake = _FakeApiClient();
     await tester.pumpWidget(_wrap(const CatalogSearchScreen(), apiClient: fake));
     await tester.enterText(find.byType(TextField), 'chemmeen');
+    await tester.pump(const Duration(milliseconds: 350)); // remote debounce
     await tester.pumpAndSettle();
 
     // Title/author appear twice — once on the typeset cover, once as tile text.
     expect(find.text('Chemmeen'), findsWidgets);
     expect(find.text('Thakazhi Sivasankara Pillai'), findsWidgets);
+  });
+
+  testWidgets('fast typing debounces to a single catalog request', (tester) async {
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const CatalogSearchScreen(), apiClient: fake));
+
+    // Six keystrokes in quick succession — under the 300ms debounce window.
+    for (final partial in ['c', 'ch', 'che', 'chem', 'chemme', 'chemmeen']) {
+      await tester.enterText(find.byType(TextField), partial);
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.pump(const Duration(milliseconds: 350)); // settle the debounce
+    await tester.pumpAndSettle();
+
+    expect(fake.searchAllCalls, 1); // one request, not six
+    expect(find.text('Chemmeen'), findsWidgets);
   });
 
   testWidgets('author browse shows the author and their works', (tester) async {

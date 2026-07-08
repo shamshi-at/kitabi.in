@@ -135,6 +135,17 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
         Room overlay (`_ExtractingOverlay`): a gold scan line sweeps the cover over a
         paper scrim, fleuron + "Reading your cover…" + subtitle; reduced-motion holds a
         static line. Verified on the emulator.
+- [x] Fuzzy, ranked global search (8 Jul 2026, owner request): `search_local` /
+      `search_authors` / `search_publishers` are now typo-tolerant (`_fuzzy_match`:
+      ILIKE + trigram `%` + word-similarity `<%`, all GIN-served; migration `000019`
+      adds the publishers index) and relevance-ranked (`_rank` = greatest of
+      similarity/word_similarity; works ranked via a grouped id+score pass, then
+      eager-loaded in order). ISBN queries stay exact; the CSV import matcher pins
+      `fuzzy=False` (it takes the top hit as THE match, so merely-similar books must
+      not qualify). App: the search screen keeps the on-device library section
+      per-keystroke but debounces the network call 300ms (one request per pause, not
+      per key — widget-tested) and `globalSearchProvider` keeps results alive per
+      query for instant back-typing; <2-char queries skip the network.
 - [x] Typo-tolerant duplicate detection on the add-book form (8 Jul 2026, owner
       request): migration `000018` enables **pg_trgm** + GIN trigram indexes on
       `works.title`/`authors.name`; `GET /catalog/works/similar?title=` ranks

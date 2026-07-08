@@ -31,7 +31,10 @@ async def preview(payload: ImportPreviewIn, user: CurrentUser, db: DbSession) ->
             found = await catalog_service.search_local(db, row.isbn)
             work = found[0] if found else None
         if work is None:
-            found = await catalog_service.search_local(db, row.title)
+            # Strict containment only: the import takes the top hit as THE
+            # match, so the fuzzy (typo-tolerant) mode could silently attach a
+            # rating/review to a merely-similar book.
+            found = await catalog_service.search_local(db, row.title, fuzzy=False)
             work = found[0] if found else None
         if work is not None:
             matched += 1

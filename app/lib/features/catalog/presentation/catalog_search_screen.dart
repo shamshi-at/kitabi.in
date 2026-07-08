@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,12 +28,28 @@ class CatalogSearchScreen extends ConsumerStatefulWidget {
 
 class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
   final _controller = TextEditingController();
+
+  /// Every keystroke — drives the on-device library section (instant).
   String _query = '';
+
+  /// Debounced 300ms — drives the network catalog search, so fast typing
+  /// costs one request per pause instead of one per keystroke.
+  String _remoteQuery = '';
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onQueryChanged(String value) {
+    setState(() => _query = value);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _remoteQuery = value);
+    });
   }
 
   @override
@@ -77,15 +95,19 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                                 border: InputBorder.none,
                                 isDense: true,
                               ),
-                              onChanged: (v) => setState(() => _query = v),
+                              onChanged: _onQueryChanged,
                             ),
                           ),
                           if (_controller.text.isNotEmpty)
                             GestureDetector(
-                              onTap: () => setState(() {
-                                _controller.clear();
-                                _query = '';
-                              }),
+                              onTap: () {
+                                _debounce?.cancel();
+                                setState(() {
+                                  _controller.clear();
+                                  _query = '';
+                                  _remoteQuery = '';
+                                });
+                              },
                               child: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
                             ),
                         ],
@@ -153,7 +175,7 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                         ),
                       ),
                     )
-                  : _SearchResults(query: _query),
+                  : _SearchResults(query: _query, remoteQuery: _remoteQuery),
             ),
           ],
         ),
@@ -162,20 +184,22 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
   }
 }
 
-/// S4 — global search results: the personal library first (offline, Drift),
-/// then the shared catalog's books, authors, and publishers (one API call). A
-/// library hit opens the book you own; a catalog book opens it to add; an
-/// author/publisher opens their browse page.
+/// S4 — global search results: the personal library first (offline, Drift,
+/// re-queried on every keystroke), then the shared catalog's books, authors,
+/// and publishers — one fuzzy, typo-tolerant, ranked API call on the
+/// debounced [remoteQuery]. A library hit opens the book you own; a catalog
+/// book opens it to add; an author/publisher opens their browse page.
 class _SearchResults extends ConsumerWidget {
-  const _SearchResults({required this.query});
+  const _SearchResults({required this.query, required this.remoteQuery});
 
   final String query;
+  final String remoteQuery;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final library = ref.watch(librarySearchProvider(query));
-    final catalog = ref.watch(globalSearchProvider(query));
+    final catalog = ref.watch(globalSearchProvider(remoteQuery));
     final hits = library.valueOrNull ?? const <LibraryHit>[];
     final data = catalog.valueOrNull ?? const <String, dynamic>{};
     final works = (data['works'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
@@ -186,7 +210,7 @@ class _SearchResults extends ConsumerWidget {
       return ListSkeleton();
     }
     if (catalog.hasError && hits.isEmpty) {
-      return ErrorRetry(onRetry: () => ref.invalidate(globalSearchProvider(query)));
+      return ErrorRetry(onRetry: () => ref.invalidate(globalSearchProvider(remoteQuery)));
     }
     final catalogEmpty = works.isEmpty && authors.isEmpty && publishers.isEmpty;
     if (!library.isLoading && !catalog.isLoading && hits.isEmpty && catalogEmpty) {
