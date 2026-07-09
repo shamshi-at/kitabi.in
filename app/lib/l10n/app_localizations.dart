@@ -796,17 +796,29 @@ abstract class AppLocalizations {
   /// **'Review saved'**
   String get reviewSaved;
 
-  /// Gentle snackbar prompt after marking a book as read, inviting a review
+  /// Title of the popup shown after marking a book as read, inviting a rating/review
   ///
   /// In en, this message translates to:
-  /// **'Finished! What did you think?'**
-  String get reviewFinishedPrompt;
+  /// **'You finished it!'**
+  String get reviewFinishedTitle;
 
-  /// Snackbar action that opens the review editor
+  /// Subtitle under the finished-reading popup's title
   ///
   /// In en, this message translates to:
-  /// **'Review'**
+  /// **'How was it? Tap a star to rate, or write a few words.'**
+  String get reviewFinishedSubtitle;
+
+  /// Primary button on the finished-reading popup that opens the full review editor
+  ///
+  /// In en, this message translates to:
+  /// **'Write a review'**
   String get reviewFinishedAction;
+
+  /// Low-emphasis dismiss action on the finished-reading popup
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get reviewFinishedSkip;
 
   /// Tooltip on the expand icon that opens a text field full screen
   ///
@@ -2673,6 +2685,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reasoned from your ratings — never from ads.'**
   String get recsSubtitle;
+
+  /// Title of the loader shown while recommendations are being reasoned
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking about your shelf…'**
+  String get recsLoadingTitle;
+
+  /// Subtitle under the recommendations loading title
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoning from your ratings — this can take a few seconds.'**
+  String get recsLoadingSubtitle;
 
   /// Explainer shown before the reader opts into recommendations
   ///

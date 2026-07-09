@@ -238,10 +238,10 @@ void main() {
 
     await changeStatus('Read');
 
-    expect(find.text('Finished! What did you think?'), findsOneWidget);
+    expect(find.text('You finished it!'), findsOneWidget);
 
-    // The snackbar action opens the editor.
-    await tester.tap(find.text('Review'));
+    // The popup's primary button opens the full editor.
+    await tester.tap(find.text('Write a review'));
     await settle(tester);
     expect(find.text('Rate & review'), findsOneWidget);
 
@@ -252,14 +252,59 @@ void main() {
     });
     await tester.pageBack();
     await settle(tester);
-    // The first prompt's snackbar has a 6s duration — let it fully expire so
-    // its overlay doesn't linger over the status card's hit-test region.
-    await tester.pump(const Duration(seconds: 7));
+    // The pop's route transition (the editor sliding away) can still be
+    // mid-flight here — its exiting tree briefly overlaps the status card's
+    // hit-test region — so give it real time to fully finish before the next
+    // tap, same reasoning as the snackbar wait this replaced.
+    await tester.pump(const Duration(milliseconds: 500));
     await settle(tester);
     await changeStatus('Reading');
     await changeStatus('Read');
 
-    expect(find.text('Finished! What did you think?'), findsNothing);
+    expect(find.text('You finished it!'), findsNothing);
+
+    await flushTree(tester);
+  });
+
+  testWidgets('finished-read popup: tapping a star rates immediately and "Not now" dismisses',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      final repo = LibraryRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await repo.add(editionId: _editionId);
+    });
+
+    await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
+    await settle(tester);
+
+    await tester.tap(find.text('Change'));
+    await settle(tester);
+    await tester.tap(find.text('Read'));
+    await settle(tester);
+
+    expect(find.text('You finished it!'), findsOneWidget);
+
+    // Tap the 4th star — saves straight to Drift without leaving the sheet.
+    // Scoped by size (32px): the Yours tab's own review card sits underneath
+    // the sheet with its own 16px star_border row, so a bare byIcon() finder
+    // matches both and .at(3) can land on the wrong one.
+    final sheetStars = find.byWidgetPredicate(
+      (w) => w is Icon && w.icon == Icons.star_border && w.size == 32,
+    );
+    await tester.tap(sheetStars.at(3));
+    await settle(tester);
+
+    final rating = await tester.runAsync(() => db.ratingsDao.watchForWork(_workId).first);
+    expect(rating?.value, 4);
+    await settle(tester);
+
+    await tester.tap(find.text('Not now'));
+    await settle(tester);
+    await settle(tester);
+    expect(find.text('You finished it!'), findsNothing);
 
     await flushTree(tester);
   });

@@ -160,8 +160,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Signed in — hold on splash until the profile bootstrap resolves, so
       // /me is guaranteed to exist by the time any other screen builds.
+      // `.isLoading` (not `!hasValue`) so a background re-run triggered by
+      // authStateProvider settling — which Riverpod exposes as "loading" but
+      // still carrying the previous build's value — still holds here instead
+      // of reading that stale value as final.
       final bootstrap = ref.read(bootstrapProvider);
-      if (!bootstrap.hasValue && !bootstrap.hasError) {
+      if (bootstrap.isLoading) {
         return loc == Routes.splash ? null : Routes.splash;
       }
 
@@ -175,9 +179,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Ask for reading languages once (after the welcome). Server-side, so it
-      // re-asks on any device until at least one is set.
+      // re-asks on any device until at least one is set. `.isLoading` (see
+      // bootstrap above) so a background re-fetch never reads a stale/empty
+      // cached value as final and flashes the language picker.
       final me = ref.read(meProvider);
-      if (!me.hasValue && !me.hasError) {
+      if (me.isLoading) {
         return loc == Routes.splash ? null : Routes.splash;
       }
       final langs = (me.valueOrNull?['preferred_languages'] as List?) ?? const [];

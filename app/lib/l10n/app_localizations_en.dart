@@ -423,10 +423,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewSaved => 'Review saved';
 
   @override
-  String get reviewFinishedPrompt => 'Finished! What did you think?';
+  String get reviewFinishedTitle => 'You finished it!';
 
   @override
-  String get reviewFinishedAction => 'Review';
+  String get reviewFinishedSubtitle =>
+      'How was it? Tap a star to rate, or write a few words.';
+
+  @override
+  String get reviewFinishedAction => 'Write a review';
+
+  @override
+  String get reviewFinishedSkip => 'Not now';
 
   @override
   String get formFieldExpand => 'Edit full screen';
@@ -1546,6 +1553,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recsSubtitle => 'Reasoned from your ratings — never from ads.';
+
+  @override
+  String get recsLoadingTitle => 'Thinking about your shelf…';
+
+  @override
+  String get recsLoadingSubtitle =>
+      'Reasoning from your ratings — this can take a few seconds.';
 
   @override
   String get recsOptInBody =>

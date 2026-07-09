@@ -12,6 +12,7 @@ import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/net_image.dart';
 import '../../../core/widgets/shelf_cover.dart';
 import '../../../data/api/api_client.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../../library/providers/library_providers.dart';
@@ -181,6 +182,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
         : (username != null ? '@$username' : (widget.fallbackName ?? l10n.publicProfileTitle));
     final libraryVisible = data?['library_visible'] == true;
     final connection = ref.watch(connectionsProvider).valueOrNull?.connectionFor(widget.userId);
+    final isSelf = ref.watch(sessionContextProvider).valueOrNull?.userId == widget.userId;
 
     // Tab counts — loans with this person, and shelf size (once fetched).
     final allLoans = ref.watch(allLendingProvider).valueOrNull;
@@ -200,6 +202,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
           avatar: avatar,
           data: data,
           connection: connection,
+          isSelf: isSelf,
         ),
         SizedBox(height: 16),
         _TabBar(
@@ -251,6 +254,7 @@ class _Bookplate extends StatelessWidget {
     required this.avatar,
     required this.data,
     required this.connection,
+    required this.isSelf,
   });
 
   final String userId;
@@ -258,6 +262,7 @@ class _Bookplate extends StatelessWidget {
   final String? avatar;
   final Map<String, dynamic>? data;
   final Connection? connection;
+  final bool isSelf;
 
   @override
   Widget build(BuildContext context) {
@@ -350,7 +355,7 @@ class _Bookplate extends StatelessWidget {
                     ],
                   ),
                 ),
-                _ConnectionActionSlot(userId: userId, connection: connection),
+                if (!isSelf) _ConnectionActionSlot(userId: userId, connection: connection),
                 if (data != null) _StatsRow(profile: data!),
               ],
             ),

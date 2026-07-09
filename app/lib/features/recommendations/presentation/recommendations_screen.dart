@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -76,6 +78,111 @@ class _OptInPrompt extends ConsumerWidget {
   }
 }
 
+/// Shown while `GET /recommendations` reasons over the reader's ratings (a
+/// few seconds on the LLM) — two out-of-phase gold rings breathing behind a
+/// sparkle, in place of a generic skeleton list that read as "still fetching
+/// a feed" rather than "an LLM call is in flight". Same literary "❦" fleuron
+/// + plain-words-subtitle treatment as the cover-extraction loader
+/// (add_edit_book_screen's `_ExtractingOverlay`), so both AI-backed waits
+/// feel like the same app. Honours reduced motion (holds a settled pulse).
+class _RecsThinkingLoader extends StatefulWidget {
+  const _RecsThinkingLoader();
+
+  @override
+  State<_RecsThinkingLoader> createState() => _RecsThinkingLoaderState();
+}
+
+class _RecsThinkingLoaderState extends State<_RecsThinkingLoader>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion) {
+      _c.stop();
+      _c.value = 0.5;
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 92,
+              height: 92,
+              child: AnimatedBuilder(
+                animation: _c,
+                builder: (context, _) {
+                  final a = 0.5 + 0.5 * math.sin(_c.value * 2 * math.pi);
+                  final b = 0.5 + 0.5 * math.sin(_c.value * 2 * math.pi + math.pi);
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 92 * (0.7 + 0.3 * a),
+                        height: 92 * (0.7 + 0.3 * a),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.gold.withValues(alpha: 0.10 * a),
+                        ),
+                      ),
+                      Container(
+                        width: 62 * (0.7 + 0.3 * b),
+                        height: 62 * (0.7 + 0.3 * b),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.gold.withValues(alpha: 0.18 * b),
+                        ),
+                      ),
+                      Icon(Icons.auto_awesome, size: 30, color: AppColors.gold),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text('❦', style: TextStyle(color: AppColors.gold, fontSize: 15)),
+            const SizedBox(height: 8),
+            Text(
+              l10n.recsLoadingTitle,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontSize: 18, color: AppColors.ink),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Text(
+                l10n.recsLoadingSubtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft, height: 1.3),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _RecsList extends ConsumerStatefulWidget {
   const _RecsList();
 
@@ -93,7 +200,7 @@ class _RecsListState extends ConsumerState<_RecsList> {
     final recs = ref.watch(recommendationsProvider);
 
     return recs.when(
-      loading: () => ListSkeleton(),
+      loading: () => const _RecsThinkingLoader(),
       error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(recommendationsProvider)),
       data: (data) {
         final enabled = data['enabled'] == true;

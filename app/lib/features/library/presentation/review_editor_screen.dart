@@ -5,7 +5,9 @@ import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/repositories/repository_providers.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../catalog/providers/catalog_providers.dart';
 import '../providers/library_providers.dart';
 
 /// Dedicated rate & review page — one place to set the star rating (Work-level,
@@ -83,6 +85,15 @@ class _ReviewEditorScreenState extends ConsumerState<ReviewEditorScreen> {
       }
       ref.invalidate(ratingProvider(widget.workId));
       ref.invalidate(reviewProvider(widget.workId));
+      // The hero's community rating cluster and the About tab's reviews list
+      // both read the *server's* aggregate (publicReviewsProvider), which
+      // only reflects this save after it's actually pushed — a bare
+      // invalidate right after the local write could refetch before the
+      // background sync trigger lands and show the same stale number.
+      // syncNowProvider awaits the real push+pull round trip (never throws,
+      // even offline) before we refetch.
+      await ref.read(syncNowProvider)();
+      ref.invalidate(publicReviewsProvider(widget.workId));
       Haptics.success();
       messenger.showSnackBar(SnackBar(content: Text(l10n.reviewSaved)));
       if (navigator.canPop()) navigator.pop(true);

@@ -966,6 +966,11 @@ class _RatingRow extends ConsumerWidget {
               final repo = await ref.read(ratingsRepositoryProvider.future);
               await repo.setRating(workId, i);
               ref.invalidate(ratingProvider(workId));
+              // Wait for the actual push (never throws, even offline) before
+              // refetching the server-computed community aggregate — an
+              // immediate invalidate could race ahead of the background sync
+              // trigger and refetch the same stale number.
+              await ref.read(syncNowProvider)();
               ref.invalidate(publicReviewsProvider(workId));
             },
             child: Icon(
@@ -1362,8 +1367,11 @@ class _StatusAndProgressCard extends ConsumerWidget {
   final Map<String, dynamic> reviewExtra;
 
   /// One gentle, self-dismissing nudge to review a book the moment it's marked
-  /// read — and only when there's nothing to lose by ignoring it: no snackbar
-  /// at all if a review or rating already exists (don't irritate the reader).
+  /// read — and only when there's nothing to lose by ignoring it: no popup at
+  /// all if a review or rating already exists (don't irritate the reader).
+  /// A bottom sheet, not a snackbar — a snackbar times out mid-decision and
+  /// its one-line text can't carry a star row, so tapping a star straight
+  /// away was never possible.
   Future<void> _maybePromptReview(BuildContext context, WidgetRef ref) async {
     // Repositories directly, not the autoDispose providers' .future — a
     // read without a listener can be disposed before it resolves.
@@ -1372,16 +1380,11 @@ class _StatusAndProgressCard extends ConsumerWidget {
     final review = await reviewsRepo.watchForWork(workId).first;
     final rating = await ratingsRepo.watchForWork(workId).first;
     if (review != null || rating != null || !context.mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.reviewFinishedPrompt),
-        duration: Duration(seconds: 6),
-        action: SnackBarAction(
-          label: l10n.reviewFinishedAction,
-          onPressed: () => context.push(Routes.reviewEditorPath(workId), extra: reviewExtra),
-        ),
-      ),
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _FinishedReviewSheet(workId: workId, reviewExtra: reviewExtra),
     );
   }
 
@@ -1517,6 +1520,109 @@ class _StatusAndProgressCard extends ConsumerWidget {
   }
 }
 
+/// The finished-reading popup — one tap on a star saves the rating right
+/// there (and syncs before refreshing the hero's aggregate, same as the
+/// review card's own rating row); "Write a review" goes deeper into the full
+/// editor; "Not now" dismisses without friction. Never re-shown once a
+/// rating or review exists for this work (see `_maybePromptReview`).
+class _FinishedReviewSheet extends ConsumerStatefulWidget {
+  const _FinishedReviewSheet({required this.workId, required this.reviewExtra});
+
+  final String workId;
+  final Map<String, dynamic> reviewExtra;
+
+  @override
+  ConsumerState<_FinishedReviewSheet> createState() => _FinishedReviewSheetState();
+}
+
+class _FinishedReviewSheetState extends ConsumerState<_FinishedReviewSheet> {
+  int _stars = 0;
+  bool _saving = false;
+
+  Future<void> _rate(int value) async {
+    Haptics.selection();
+    setState(() {
+      _stars = value;
+      _saving = true;
+    });
+    final repo = await ref.read(ratingsRepositoryProvider.future);
+    await repo.setRating(widget.workId, value);
+    ref.invalidate(ratingProvider(widget.workId));
+    await ref.read(syncNowProvider)();
+    ref.invalidate(publicReviewsProvider(widget.workId));
+    if (mounted) setState(() => _saving = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(24, 12, 24, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SheetGrabber(),
+            SizedBox(height: 10),
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.goldSoft),
+              child: Icon(Icons.auto_stories, color: Color(0xFF8F681E), size: 22),
+            ),
+            SizedBox(height: 14),
+            Text(
+              l10n.reviewFinishedTitle,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            SizedBox(height: 6),
+            Text(
+              l10n.reviewFinishedSubtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5, height: 1.4),
+            ),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 1; i <= 5; i++)
+                  GestureDetector(
+                    onTap: _saving ? null : () => _rate(i),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 5),
+                      child: Icon(
+                        i <= _stars ? Icons.star : Icons.star_border,
+                        size: 32,
+                        color: AppColors.gold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.push(Routes.reviewEditorPath(widget.workId), extra: widget.reviewExtra);
+                },
+                child: Text(l10n.reviewFinishedAction),
+              ),
+            ),
+            SizedBox(height: 4),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.reviewFinishedSkip, style: TextStyle(color: AppColors.inkSoft)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// The five reading statuses as a bottom sheet — the current one checked,
 /// tap any other to switch and close.
 class _StatusSheet extends StatelessWidget {
@@ -1597,37 +1703,46 @@ class _ReviewCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Opaque so the whole label row (not just the text glyphs) opens
+          // the editor — the rating row below keeps its own star tap targets
+          // and is deliberately left outside this detector.
           GestureDetector(
             onTap: openEditor,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.bookReviewLabel,
-                    style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.bookReviewLabel,
+                      style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+                    ),
                   ),
-                ),
-                if (current != null)
-                  Text(
-                    current.visible
-                        ? l10n.bookReviewVisibilityPublic
-                        : l10n.bookReviewVisibilityPrivate,
-                    style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
-                  ),
-              ],
+                  if (current != null)
+                    Text(
+                      current.visible
+                          ? l10n.bookReviewVisibilityPublic
+                          : l10n.bookReviewVisibilityPrivate,
+                      style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                    ),
+                ],
+              ),
             ),
           ),
-          SizedBox(height: 4),
           _RatingRow(workId: workId),
-          SizedBox(height: 6),
           GestureDetector(
             onTap: openEditor,
-            child: Text(
-              current?.body ?? l10n.bookReviewEmpty,
-              style: TextStyle(
-                fontStyle: FontStyle.italic,
-                fontSize: 12.5,
-                color: current != null ? AppColors.ink : AppColors.inkSoft,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: Text(
+                current?.body ?? l10n.bookReviewEmpty,
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                  fontSize: 12.5,
+                  color: current != null ? AppColors.ink : AppColors.inkSoft,
+                ),
               ),
             ),
           ),

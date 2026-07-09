@@ -8,9 +8,13 @@ import '../../../data/api/api_client.dart';
 /// after an update — simplest correct thing for a V1 shell; optimistic UI can
 /// come later if the round-trip ever feels slow.
 final meProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  // Signed out → no /me call (keeps the router's language gate + tests from
-  // hitting the network before there's a session).
-  if (ref.watch(authStateProvider).valueOrNull == null) return const <String, dynamic>{};
+  // `.future` waits out the auth stream's still-resolving first emission
+  // rather than reading `valueOrNull` (null both when genuinely signed out
+  // *and* while the session is still restoring) — the stale shortcut this
+  // used to take during that window briefly reported empty
+  // `preferred_languages`, which flashed the language picker on every launch.
+  final user = await ref.watch(authStateProvider.future);
+  if (user == null) return const <String, dynamic>{};
   await ref.watch(bootstrapProvider.future);
   return ref.watch(apiClientProvider).getMe();
 });

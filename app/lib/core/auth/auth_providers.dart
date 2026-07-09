@@ -27,7 +27,11 @@ final authStateProvider = StreamProvider<KitabiAuthUser?>((ref) {
 /// resolve before letting a signed-in user reach anywhere but the splash
 /// screen, so /me is guaranteed to exist by the time Home renders.
 final bootstrapProvider = FutureProvider<void>((ref) async {
-  final user = ref.watch(authStateProvider).valueOrNull;
+  // `.future` waits out the stream's still-resolving first emission (session
+  // restore from secure storage) instead of `valueOrNull`, which reads null
+  // during that split-second window — indistinguishable from "signed out" and
+  // fed straight into the router's language gate below.
+  final user = await ref.watch(authStateProvider.future);
   if (user == null) return;
   // Account switch: if a *different* reader was last signed in on this device,
   // wipe their local library/loans/caches before this account syncs — otherwise
