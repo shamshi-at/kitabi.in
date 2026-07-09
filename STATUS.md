@@ -324,6 +324,23 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **9 Jul 2026** — **Connections becomes a roster; every connection action moves onto
+  the profile page.** Follow-up to the same-day profile merge below. The Connections
+  screen no longer carries any inline action buttons (Accept/Deny/Block/Cancel/Resend/
+  Disconnect/Unblock) — every real-account row is now a plain person card (real avatar
+  photo via a new `avatar_url` on `GET /connections`'s `other` object, falling back to
+  an initial; a trailing chevron; no buttons) that opens `PublicProfileScreen`, where
+  `_ConnectionActions` renders the right action set for every connection state (not
+  just Connect/accepted like before) and keeps working even when the visited profile
+  is private — accepting a request never depended on seeing their shelf. Private/
+  unlinked contacts are the one exception (still a "Link" button; no profile to open).
+  On the profile page itself: the Score/Books/Read counts moved into a bordered,
+  icon-per-cell stat card instead of plain pills; the tab order flipped to Ledger-first
+  (that's what most visits are for) with the Shelf tab now using `Icons.shelves`; and
+  the AppBar's global-search icon was dropped in favor of a search box inside the Shelf
+  tab, filtering the already-fetched shelf locally by title/author. Verified live on
+  the emulator: accepting an incoming request from the profile page moved the person
+  from "Requests to approve" to "Connected" on the Connections list with no navigation.
 - **9 Jul 2026** — **Public profile rework: one screen, Instagram-inspired.** Merged
   `PublicProfileScreen` and the connection ledger into a single screen — previously the
   profile pushed to a second `ConnectionLoansScreen` for "Lending ledger", and the

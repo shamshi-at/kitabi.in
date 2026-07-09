@@ -4,17 +4,19 @@ import '../../data/api/api_client.dart';
 
 /// The other party in a connection — minimal public identity.
 class ConnectionUser {
-  ConnectionUser({required this.id, this.username, this.fullName});
+  ConnectionUser({required this.id, this.username, this.fullName, this.avatarUrl});
 
   factory ConnectionUser.fromJson(Map<String, dynamic> json) => ConnectionUser(
         id: json['id'] as String,
         username: json['username'] as String?,
         fullName: json['full_name'] as String?,
+        avatarUrl: json['avatar_url'] as String?,
       );
 
   final String id;
   final String? username;
   final String? fullName;
+  final String? avatarUrl;
 
   /// Prefer the real name; fall back to the @handle.
   String get display {
@@ -85,12 +87,25 @@ class ConnectionsData {
 
   /// My standing with a specific user id, or null if there's no connection —
   /// drives the ledger's pending/linked pill. 'accepted' | 'pending_out' |
-  /// 'pending_in'.
+  /// 'pending_in' | 'rejected' | 'blocked'.
   String? statusForUser(String userId) {
     if (accepted.any((c) => c.other.id == userId)) return 'accepted';
     if (outgoing.any((c) => c.other.id == userId)) return 'pending_out';
     if (incoming.any((c) => c.other.id == userId)) return 'pending_in';
     if (rejected.any((c) => c.other.id == userId)) return 'rejected';
+    if (blocked.any((c) => c.other.id == userId)) return 'blocked';
+    return null;
+  }
+
+  /// The full [Connection] record with a specific user, across every bucket
+  /// — the profile page's action row needs the connection `id` (not just a
+  /// status string) to accept/decline/block/unblock.
+  Connection? connectionFor(String userId) {
+    for (final list in [incoming, outgoing, accepted, rejected, blocked]) {
+      for (final c in list) {
+        if (c.other.id == userId) return c;
+      }
+    }
     return null;
   }
 

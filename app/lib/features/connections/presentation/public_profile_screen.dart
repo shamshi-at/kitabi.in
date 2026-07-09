@@ -16,21 +16,26 @@ import '../../library/providers/library_providers.dart';
 import '../connections_providers.dart';
 import 'connection_loans_screen.dart';
 
-/// Another reader's public face — avatar, name/@handle, contribution score
-/// and shelf counts, a Connect action, and two tabs: their shelf (if made
-/// public) and the lending ledger between you two. One screen instead of a
-/// profile screen that pushes to a second ledger screen — Instagram-style
-/// (username in the bar, name once in the body, icon tabs over a grid).
-/// Profiles are public by default; a reader who opted out shows a quiet
-/// "keeps their profile private" state (the API 404s, deliberately
-/// indistinguishable from not-found).
+/// Another reader's page — avatar, name/@handle, a styled score/shelf-count
+/// card, every connection action (Connect, Accept/Deny, Cancel, Resend,
+/// Disconnect, Block/Unblock — whatever applies to your standing with them),
+/// and two tabs: the lending ledger between you (shown first — it's the
+/// thing you're most often here to check) and their shelf, if they've made
+/// it public, with its own search. One screen, not a profile that pushes to
+/// a second ledger screen and leaves connection actions stranded on a list
+/// row elsewhere. Profiles are public by default; a reader who opted out
+/// shows a quiet "keeps their profile private" state (the API 404s,
+/// deliberately indistinguishable from not-found) — but the connection
+/// actions still work even then, since accepting a request doesn't require
+/// seeing their shelf.
 class PublicProfileScreen extends ConsumerWidget {
   const PublicProfileScreen({super.key, required this.userId, this.name});
 
   final String userId;
 
   /// Display name carried from the tapped search/connection row, so the
-  /// header renders instantly while the profile loads.
+  /// header renders instantly while the profile loads (and is all we have
+  /// if the profile turns out to be private).
   final String? name;
 
   @override
@@ -46,42 +51,10 @@ class PublicProfileScreen extends ConsumerWidget {
         // only the handle (or a generic fallback before it loads), so the
         // two never repeat the same string.
         title: Text(username != null ? '@$username' : (name ?? l10n.publicProfileTitle)),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search, color: AppColors.oxblood),
-            tooltip: l10n.searchTitle,
-            onPressed: () => context.push(Routes.catalogSearch),
-          ),
-        ],
       ),
-      body: profile.when(
-        loading: () => ListSkeleton(),
-        error: (err, _) => _isNotFound(err)
-            ? Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.lock_outline, size: 40, color: AppColors.inkSoft),
-                      SizedBox(height: 12),
-                      Text(
-                        l10n.publicProfilePrivate,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.inkSoft, fontSize: 13.5),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            : ErrorRetry(onRetry: () => ref.invalidate(_publicProfileProvider(userId))),
-        data: (p) => _ProfileBody(userId: userId, profile: p),
-      ),
+      body: _ProfileBody(userId: userId, fallbackName: name, profile: profile),
     );
   }
-
-  static bool _isNotFound(Object err) =>
-      err is DioException && err.response?.statusCode == 404;
 }
 
 final _publicProfileProvider =
@@ -94,48 +67,57 @@ final _publicLibraryProvider =
   return ref.watch(apiClientProvider).getPublicLibrary(userId);
 });
 
+bool _isNotFound(Object err) => err is DioException && err.response?.statusCode == 404;
+
 class _ProfileBody extends ConsumerStatefulWidget {
-  const _ProfileBody({required this.userId, required this.profile});
+  const _ProfileBody({required this.userId, required this.fallbackName, required this.profile});
 
   final String userId;
-  final Map<String, dynamic> profile;
+  final String? fallbackName;
+  final AsyncValue<Map<String, dynamic>> profile;
 
   @override
   ConsumerState<_ProfileBody> createState() => _ProfileBodyState();
 }
 
-/// Which tab is showing below the header — Instagram's grid/tagged split,
-/// here Shelf (their public library) vs. Ledger (the loans between you).
-enum _ProfileTab { shelf, ledger }
+/// Which tab is showing below the header. Ledger first — the loans between
+/// you are why most visits happen — with the shelf a tap away.
+enum _ProfileTab { ledger, shelf }
 
 class _ProfileBodyState extends ConsumerState<_ProfileBody> {
-  var _tab = _ProfileTab.shelf;
+  var _tab = _ProfileTab.ledger;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final profile = widget.profile;
-    final fullName = (profile['full_name'] as String?)?.trim();
-    final username = profile['username'] as String?;
-    final avatar = profile['avatar_url'] as String?;
+    final isPrivate = profile.hasError && _isNotFound(profile.error!);
+
+    if (profile.isLoading && !profile.hasValue) return ListSkeleton();
+    if (profile.hasError && !isPrivate) {
+      return ErrorRetry(onRetry: () => ref.invalidate(_publicProfileProvider(widget.userId)));
+    }
+
+    final data = profile.valueOrNull;
+    final fullName = (data?['full_name'] as String?)?.trim();
+    final username = data?['username'] as String?;
+    final avatar = data?['avatar_url'] as String?;
     final display = (fullName?.isNotEmpty ?? false)
         ? fullName!
-        : (username != null ? '@$username' : l10n.publicProfileTitle);
+        : (username != null ? '@$username' : (widget.fallbackName ?? l10n.publicProfileTitle));
     final initial = display.replaceAll('@', '').isNotEmpty
         ? display.replaceAll('@', '')[0].toUpperCase()
         : '?';
-    final libraryVisible = profile['library_visible'] == true;
-    final connStatus =
-        ref.watch(connectionsProvider).valueOrNull?.statusForUser(widget.userId);
+    final libraryVisible = data?['library_visible'] == true;
+    final connection = ref.watch(connectionsProvider).valueOrNull?.connectionFor(widget.userId);
 
     return ListView(
       padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CircleAvatar(
-              radius: 36,
+              radius: 32,
               backgroundColor: AppColors.goldSoft,
               foregroundImage: avatar != null ? netImageProvider(avatar) : null,
               child: Text(
@@ -143,85 +125,138 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                 style: TextStyle(
                   color: Color(0xFF8F681E),
                   fontWeight: FontWeight.w700,
-                  fontSize: 22,
+                  fontSize: 20,
                 ),
               ),
             ),
-            SizedBox(width: 18),
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _StatCell(
-                    value: '${profile['score'] as int? ?? 0}',
-                    label: l10n.publicProfileScoreLabel,
-                  ),
-                  _StatCell(
-                    value: '${profile['books_tracked'] as int? ?? 0}',
-                    label: l10n.publicProfileBooksLabel,
-                  ),
-                  _StatCell(
-                    value: '${profile['books_finished'] as int? ?? 0}',
-                    label: l10n.homeShelfRead,
-                  ),
-                ],
-              ),
-            ),
+            SizedBox(width: 16),
+            Expanded(child: Text(display, style: Theme.of(context).textTheme.titleLarge)),
           ],
         ),
-        SizedBox(height: 14),
-        Text(display, style: Theme.of(context).textTheme.titleLarge),
-        SizedBox(height: 12),
-        _ConnectRow(
-          userId: widget.userId,
-          status: connStatus,
-          onViewLoans: () => setState(() => _tab = _ProfileTab.ledger),
-        ),
+        if (data != null) ...[
+          SizedBox(height: 16),
+          _StatsCard(profile: data),
+        ],
+        SizedBox(height: 16),
+        _ConnectionActions(userId: widget.userId, connection: connection),
         SizedBox(height: 18),
         _TabBar(selected: _tab, onChanged: (t) => setState(() => _tab = t)),
         SizedBox(height: 14),
         switch (_tab) {
-          _ProfileTab.shelf => !libraryVisible
+          _ProfileTab.ledger => _LedgerTab(userId: widget.userId, name: display),
+          _ProfileTab.shelf => isPrivate
               ? Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
                   child: Text(
-                    l10n.publicLibraryPrivate,
+                    l10n.publicProfilePrivate,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
                   ),
                 )
-              : _PublicShelf(userId: widget.userId),
-          _ProfileTab.ledger => _LedgerTab(userId: widget.userId, name: display),
+              : !libraryVisible
+                  ? Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        l10n.publicLibraryPrivate,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+                      ),
+                    )
+                  : _PublicShelf(userId: widget.userId),
         },
       ],
     );
   }
 }
 
-/// A single Instagram-style stat: bold count over a small caption.
-class _StatCell extends StatelessWidget {
-  const _StatCell({required this.value, required this.label});
+/// The score/books/read counts, styled as their own card — a small icon
+/// over a bold number over a caption, split by hairline dividers, instead
+/// of three bare pills competing with the avatar for attention.
+class _StatsCard extends StatelessWidget {
+  const _StatsCard({required this.profile});
 
+  final Map<String, dynamic> profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatCell(
+              icon: Icons.military_tech_outlined,
+              value: '${profile['score'] as int? ?? 0}',
+              label: l10n.publicProfileScoreLabel,
+              color: AppColors.gold,
+            ),
+          ),
+          _StatDivider(),
+          Expanded(
+            child: _StatCell(
+              icon: Icons.auto_stories_outlined,
+              value: '${profile['books_tracked'] as int? ?? 0}',
+              label: l10n.publicProfileBooksLabel,
+              color: AppColors.oxblood,
+            ),
+          ),
+          _StatDivider(),
+          Expanded(
+            child: _StatCell(
+              icon: Icons.check_circle_outline,
+              value: '${profile['books_finished'] as int? ?? 0}',
+              label: l10n.homeShelfRead,
+              color: AppColors.moss,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(width: 1, height: 34, color: AppColors.line);
+}
+
+class _StatCell extends StatelessWidget {
+  const _StatCell({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
   final String value;
   final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        Icon(icon, size: 16, color: color),
+        SizedBox(height: 4),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
         SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
+          style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
         ),
       ],
     );
   }
 }
 
-/// Icon-only segmented tabs (grid / ledger), underlined when active — the
-/// same idea as Instagram's grid-vs-tagged tab strip, just two tabs deep.
+/// Icon-only segmented tabs (ledger / shelf), underlined when active.
 class _TabBar extends StatelessWidget {
   const _TabBar({required this.selected, required this.onChanged});
 
@@ -257,158 +292,327 @@ class _TabBar extends StatelessWidget {
 
     return Row(
       children: [
-        tab(_ProfileTab.shelf, Icons.grid_view_rounded, l10n.publicLibrarySection),
         tab(_ProfileTab.ledger, Icons.swap_horiz_rounded, l10n.lendingLedgerTitle),
+        tab(_ProfileTab.shelf, Icons.shelves, l10n.publicLibrarySection),
       ],
     );
   }
 }
 
-/// Connect / connection-state row: a Connect button for strangers, a quiet
-/// state pill once a request is pending, or a "Connected" pill once
-/// accepted — the ledger between you is a tab away, not a second screen.
-class _ConnectRow extends ConsumerStatefulWidget {
-  const _ConnectRow({required this.userId, required this.status, required this.onViewLoans});
+/// Every connection action, in one place: Connect for a stranger; Accept/
+/// Deny/Block for an incoming request; a pending pill + Cancel for one you
+/// sent; a status pill + Disconnect/Block once accepted; Resend for one they
+/// declined; Unblock for one you blocked. Replaces the buttons that used to
+/// live on the Connections list row.
+class _ConnectionActions extends ConsumerStatefulWidget {
+  const _ConnectionActions({required this.userId, required this.connection});
 
   final String userId;
-  final String? status;
-  final VoidCallback onViewLoans;
+  final Connection? connection;
 
   @override
-  ConsumerState<_ConnectRow> createState() => _ConnectRowState();
+  ConsumerState<_ConnectionActions> createState() => _ConnectionActionsState();
 }
 
-class _ConnectRowState extends ConsumerState<_ConnectRow> {
+class _ConnectionActionsState extends ConsumerState<_ConnectionActions> {
   bool _busy = false;
 
-  Future<void> _connect() async {
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
+  Future<void> _act(Future<void> Function(ApiClient api) action, {String? successMessage}) async {
+    Haptics.selection();
     setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(apiClientProvider).requestConnection(widget.userId);
+      await action(ref.read(apiClientProvider));
       ref.invalidate(connectionsProvider);
-      Haptics.success();
-      messenger.showSnackBar(SnackBar(content: Text(l10n.publicProfileRequestSent)));
+      if (successMessage != null && mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(successMessage)));
+      }
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.lendingReminderFailed)));
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        messenger.showSnackBar(SnackBar(content: Text(l10n.lendingReminderFailed)));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  Widget _spinner() => SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+      );
+
+  Widget _pill(String text, Color color, {IconData? icon}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[Icon(icon, size: 13, color: color), SizedBox(width: 5)],
+          Text(text, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return switch (widget.status) {
-      'accepted' => Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.moss.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check_circle, size: 13, color: AppColors.moss),
-                SizedBox(width: 5),
-                Text(
-                  l10n.connectionsAcceptedSection,
-                  style: TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.moss),
-                ),
-              ],
+    final c = widget.connection;
+
+    if (c == null) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _busy
+              ? null
+              : () => _act(
+                    (api) => api.requestConnection(widget.userId),
+                    successMessage: l10n.publicProfileRequestSent,
+                  ),
+          icon: _busy ? _spinner() : Icon(Icons.person_add_alt, size: 16),
+          label: Text(l10n.publicProfileConnect),
+        ),
+      );
+    }
+
+    if (c.status == 'pending' && c.role == 'addressee') {
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _busy ? null : () => _act((api) => api.acceptConnection(c.id)),
+              child: Text(l10n.connectionsAccept),
             ),
           ),
-        ),
-      'pending_out' => Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.gold.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              l10n.connectionsAwaitingReply,
-              style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.gold),
-            ),
+          SizedBox(width: 8),
+          _OutlinedAction(
+            label: l10n.connectionsDeny,
+            onTap: _busy ? null : () => _act((api) => api.declineConnection(c.id)),
           ),
-        ),
-      _ => SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _busy ? null : _connect,
-            icon: _busy
-                ? SizedBox(
-                    width: 14,
-                    height: 14,
-                    child:
-                        CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
-                  )
-                : Icon(Icons.person_add_alt, size: 16),
-            label: Text(l10n.publicProfileConnect),
+          SizedBox(width: 4),
+          _ActionKebab(items: [
+            (l10n.connectionsBlock, () => _act((api) => api.blockConnection(c.id))),
+          ]),
+        ],
+      );
+    }
+
+    if (c.status == 'pending' && c.role == 'requester') {
+      return Row(
+        children: [
+          _pill(l10n.connectionsAwaitingReply, AppColors.gold),
+          SizedBox(width: 8),
+          _OutlinedAction(
+            label: l10n.connectionsCancel,
+            onTap: _busy ? null : () => _act((api) => api.declineConnection(c.id)),
           ),
-        ),
-    };
+        ],
+      );
+    }
+
+    if (c.status == 'accepted') {
+      return Row(
+        children: [
+          _pill(l10n.connectionsAcceptedSection, AppColors.moss, icon: Icons.check_circle),
+          Spacer(),
+          _OutlinedAction(
+            label: l10n.connectionsDisconnect,
+            onTap: _busy ? null : () => _act((api) => api.declineConnection(c.id)),
+          ),
+          SizedBox(width: 4),
+          _ActionKebab(items: [
+            (l10n.connectionsBlock, () => _act((api) => api.blockConnection(c.id))),
+          ]),
+        ],
+      );
+    }
+
+    if (c.status == 'denied') {
+      return Row(
+        children: [
+          Expanded(child: _pill(l10n.connectionsDeclinedYou, AppColors.inkSoft)),
+          SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: _busy
+                ? null
+                : () => _act((api) => api.requestConnection(widget.userId)),
+            child: Text(l10n.connectionsResend),
+          ),
+        ],
+      );
+    }
+
+    if (c.status == 'blocked') {
+      return Row(
+        children: [
+          Expanded(child: _pill(l10n.connectionsBlockedSection, AppColors.inkSoft)),
+          SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: _busy ? null : () => _act((api) => api.unblockConnection(c.id)),
+            child: Text(l10n.connectionsUnblock),
+          ),
+        ],
+      );
+    }
+
+    return SizedBox.shrink();
   }
 }
 
-/// The public shelf — covers-first grid, each a door to the catalog book page.
-class _PublicShelf extends ConsumerWidget {
+class _OutlinedAction extends StatelessWidget {
+  const _OutlinedAction({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.inkSoft,
+        side: BorderSide(color: AppColors.line),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
+      child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+class _ActionKebab extends StatelessWidget {
+  const _ActionKebab({required this.items});
+
+  final List<(String, VoidCallback)> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<int>(
+      icon: Icon(Icons.more_vert, size: 18, color: AppColors.inkSoft),
+      padding: EdgeInsets.zero,
+      splashRadius: 18,
+      onSelected: (i) => items[i].$2(),
+      itemBuilder: (_) => [
+        for (var i = 0; i < items.length; i++)
+          PopupMenuItem(value: i, height: 40, child: Text(items[i].$1)),
+      ],
+    );
+  }
+}
+
+/// The public shelf — a search box over a covers-first grid, each cover a
+/// door to the catalog book page. The search filters locally: the whole
+/// shelf is already fetched in one call, so there's nothing to debounce.
+class _PublicShelf extends ConsumerStatefulWidget {
   const _PublicShelf({required this.userId});
 
   final String userId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final shelf = ref.watch(_publicLibraryProvider(userId));
+  ConsumerState<_PublicShelf> createState() => _PublicShelfState();
+}
+
+class _PublicShelfState extends ConsumerState<_PublicShelf> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final shelf = ref.watch(_publicLibraryProvider(widget.userId));
     return shelf.when(
       loading: () => Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
       ),
       error: (_, _) => ErrorRetry(
-        onRetry: () => ref.invalidate(_publicLibraryProvider(userId)),
+        onRetry: () => ref.invalidate(_publicLibraryProvider(widget.userId)),
       ),
-      data: (items) => GridView.builder(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.52,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, i) {
-          final b = items[i];
-          return GestureDetector(
-            onTap: () => context.push(
-              Routes.bookDetailPath(b['work_id'] as String, b['edition_id'] as String),
+      data: (items) {
+        final q = _query.trim().toLowerCase();
+        final filtered = q.isEmpty
+            ? items
+            : items
+                .where((b) =>
+                    ((b['title'] as String?) ?? '').toLowerCase().contains(q) ||
+                    ((b['author_names'] as String?) ?? '').toLowerCase().contains(q))
+                .toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              onChanged: (v) => setState(() => _query = v),
+              decoration: InputDecoration(
+                hintText: l10n.publicShelfSearchHint,
+                isDense: true,
+                prefixIcon: Icon(Icons.search, size: 18, color: AppColors.inkSoft),
+                filled: true,
+                fillColor: AppColors.paper,
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.line),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.line),
+                ),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: TypesetCover(
-                    title: b['title'] as String? ?? '',
-                    author: b['author_names'] as String?,
-                    coverUrl: b['cover_url'] as String?,
-                    width: double.infinity,
-                    height: double.infinity,
+            SizedBox(height: 12),
+            if (filtered.isEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: Text(
+                    l10n.publicShelfSearchEmpty,
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
                   ),
                 ),
-                SizedBox(height: 3),
-                StatusPill(status: b['status'] as String? ?? 'pending'),
-              ],
-            ),
-          );
-        },
-      ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 0.52,
+                ),
+                itemCount: filtered.length,
+                itemBuilder: (context, i) {
+                  final b = filtered[i];
+                  return GestureDetector(
+                    onTap: () => context.push(
+                      Routes.bookDetailPath(b['work_id'] as String, b['edition_id'] as String),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: TypesetCover(
+                            title: b['title'] as String? ?? '',
+                            author: b['author_names'] as String?,
+                            coverUrl: b['cover_url'] as String?,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        StatusPill(status: b['status'] as String? ?? 'pending'),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
+        );
+      },
     );
   }
 }

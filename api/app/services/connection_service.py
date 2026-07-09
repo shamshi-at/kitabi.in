@@ -137,6 +137,7 @@ async def list_for(db: AsyncSession, me: uuid.UUID) -> ConnectionsOut:
                 id=other_id,
                 username=p.username if p else None,
                 full_name=p.full_name if p else None,
+                avatar_url=p.avatar_url if p else None,
             ),
             created_at=r.created_at,
         )

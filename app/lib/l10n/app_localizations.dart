@@ -1228,6 +1228,18 @@ abstract class AppLocalizations {
   /// **'Their library is private.'**
   String get publicLibraryPrivate;
 
+  /// Search field placeholder inside a public shelf grid
+  ///
+  /// In en, this message translates to:
+  /// **'Search their shelf'**
+  String get publicShelfSearchHint;
+
+  /// Empty state when a public shelf search has no matches
+  ///
+  /// In en, this message translates to:
+  /// **'No books match your search.'**
+  String get publicShelfSearchEmpty;
+
   /// Caption under the tracked-books count on a public profile
   ///
   /// In en, this message translates to:

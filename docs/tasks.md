@@ -220,6 +220,22 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Connections + profile polish (9 Jul 2026): the profile's Score/Books/Read counts
+      are now a styled card (icon + bold number + caption per cell, hairline dividers)
+      instead of plain pills; the tab order flipped to Ledger-first (Shelf second, icon
+      changed to `Icons.shelves`, a real bookshelf glyph); the AppBar's global-search icon
+      was removed in favor of a search box inside the Shelf tab itself, filtering the
+      already-fetched shelf by title/author client-side. Every connection action
+      (Accept/Deny/Block, Cancel, Resend, Disconnect/Block, Unblock — not just Connect)
+      moved from the Connections list onto the profile page's action row, which now
+      renders correctly for every connection state and still works even when the
+      profile itself is private (404). The Connections screen is now a plain roster:
+      every real account shows its actual avatar photo (API's `GET /connections` gained
+      `avatar_url` on `other`) with no inline buttons, just a chevron — tapping any row
+      opens the profile where the actions live. Private/unlinked contacts are the one
+      exception (still a "Link" button + a direct ledger screen, since they have no
+      profile). Verified live on the emulator: Accept moved a request from incoming to
+      accepted with no navigation, in real time
 - [x] Public profile rework (9 Jul 2026): merged the public profile and the connection's
       lending ledger into one screen instead of a profile that pushed to a second
       ledger screen — Instagram-inspired (AppBar carries only `@username`, the full

@@ -16,6 +16,7 @@ class ConnectionUserOut(BaseModel):
     id: uuid.UUID
     username: str | None
     full_name: str | None
+    avatar_url: str | None
 
 
 class ConnectionOut(BaseModel):

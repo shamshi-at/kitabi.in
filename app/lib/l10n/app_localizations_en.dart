@@ -677,6 +677,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get publicLibraryPrivate => 'Their library is private.';
 
   @override
+  String get publicShelfSearchHint => 'Search their shelf';
+
+  @override
+  String get publicShelfSearchEmpty => 'No books match your search.';
+
+  @override
   String get publicProfileBooksLabel => 'Books';
 
   @override

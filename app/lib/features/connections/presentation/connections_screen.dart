@@ -6,6 +6,7 @@ import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/net_image.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
@@ -14,19 +15,16 @@ import '../../library/providers/library_providers.dart';
 import '../connections_providers.dart';
 import 'link_contact_dialog.dart';
 
-/// The connections inbox (S8b) — the consent layer for peer-to-peer lending.
-/// Requests to approve (accept / deny / block), requests you've sent, declined
-/// ones you can re-send (until the other person blocks you), confirmed
-/// connections, **private contacts** (people you lend to who aren't on Kitabi,
-/// linkable to an account later), and people you've blocked.
+/// The connections inbox (S8b) — a roster of people, not a form. Every real
+/// account (incoming/outgoing/rejected/accepted/blocked) is a person card
+/// that opens their [PublicProfileScreen] — that's where Accept/Deny/Block/
+/// Cancel/Resend/Disconnect/Unblock actually live now, alongside their shelf
+/// and the loans between you, so there's one place to see someone and act on
+/// them instead of buttons scattered across a list. **Private contacts**
+/// (people you lend to who aren't on Kitabi) are the one exception — they
+/// have no account to view, so "Link" still lives on the row.
 class ConnectionsScreen extends ConsumerWidget {
   const ConnectionsScreen({super.key});
-
-  Future<void> _act(WidgetRef ref, Future<void> Function(ApiClient api) action) async {
-    Haptics.selection();
-    await action(ref.read(apiClientProvider));
-    ref.invalidate(connectionsProvider);
-  }
 
   /// Attach every loan logged under this free-text [name] to the picked Kitabi
   /// account, then send them a connection request — once they accept, the API
@@ -76,6 +74,9 @@ class ConnectionsScreen extends ConsumerWidget {
         .where((i) => i.record.borrowerUserId == userId && i.record.returnedDate == null)
         .length;
 
+    void openProfile(ConnectionUser user) =>
+        context.push(Routes.publicProfilePath(user.id), extra: user.display);
+
     return Scaffold(
       backgroundColor: AppColors.paper,
       appBar: AppBar(
@@ -121,20 +122,7 @@ class ConnectionsScreen extends ConsumerWidget {
                     _ConnectionCard(
                       user: c.other,
                       subtitle: l10n.connectionsWantsToConnect,
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _CardButton(
-                            label: l10n.connectionsAccept,
-                            primary: true,
-                            onTap: () => _act(ref, (api) => api.acceptConnection(c.id)),
-                          ),
-                          _Kebab(items: [
-                            (l10n.connectionsDeny, () => _act(ref, (api) => api.declineConnection(c.id))),
-                            (l10n.connectionsBlock, () => _act(ref, (api) => api.blockConnection(c.id))),
-                          ]),
-                        ],
-                      ),
+                      onTap: () => openProfile(c.other),
                     ),
                   SizedBox(height: 14),
                 ],
@@ -144,10 +132,7 @@ class ConnectionsScreen extends ConsumerWidget {
                     _ConnectionCard(
                       user: c.other,
                       subtitle: l10n.connectionsAwaitingReply,
-                      trailing: _CardButton(
-                        label: l10n.connectionsCancel,
-                        onTap: () => _act(ref, (api) => api.declineConnection(c.id)),
-                      ),
+                      onTap: () => openProfile(c.other),
                     ),
                   SizedBox(height: 14),
                 ],
@@ -157,11 +142,7 @@ class ConnectionsScreen extends ConsumerWidget {
                     _ConnectionCard(
                       user: c.other,
                       subtitle: l10n.connectionsDeclinedYou,
-                      trailing: _CardButton(
-                        label: l10n.connectionsResend,
-                        primary: true,
-                        onTap: () => _act(ref, (api) => api.requestConnection(c.other.id)),
-                      ),
+                      onTap: () => openProfile(c.other),
                     ),
                   SizedBox(height: 14),
                 ],
@@ -171,25 +152,7 @@ class ConnectionsScreen extends ConsumerWidget {
                     _ConnectionCard(
                       user: c.other,
                       subtitle: acceptedSubtitle(c),
-                      // One screen for both their shelf and the loans
-                      // between you (tabs), not a second push straight to
-                      // the ledger — see PublicProfileScreen.
-                      onTap: () => context.push(
-                        Routes.publicProfilePath(c.other.id),
-                        extra: c.other.display,
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _CardButton(
-                            label: l10n.connectionsDisconnect,
-                            onTap: () => _act(ref, (api) => api.declineConnection(c.id)),
-                          ),
-                          _Kebab(items: [
-                            (l10n.connectionsBlock, () => _act(ref, (api) => api.blockConnection(c.id))),
-                          ]),
-                        ],
-                      ),
+                      onTap: () => openProfile(c.other),
                     ),
                   SizedBox(height: 14),
                 ],
@@ -216,10 +179,7 @@ class ConnectionsScreen extends ConsumerWidget {
                     _ConnectionCard(
                       user: c.other,
                       subtitle: c.other.username != null ? '@${c.other.username}' : null,
-                      trailing: _CardButton(
-                        label: l10n.connectionsUnblock,
-                        onTap: () => _act(ref, (api) => api.unblockConnection(c.id)),
-                      ),
+                      onTap: () => openProfile(c.other),
                     ),
                 ],
               ],
@@ -253,18 +213,22 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+/// A person, not a form row — real avatar (falling back to an initial),
+/// name, a status line, and a chevron if it opens a profile. Actions live on
+/// the profile itself now; [trailing] only exists for private contacts,
+/// whose one action ("Link") has nowhere else to go.
 class _ConnectionCard extends StatelessWidget {
   const _ConnectionCard({
     required this.user,
     required this.subtitle,
-    required this.trailing,
     this.onTap,
+    this.trailing,
   });
 
   final ConnectionUser user;
   final String? subtitle;
-  final Widget trailing;
   final VoidCallback? onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -281,48 +245,48 @@ class _ConnectionCard extends StatelessWidget {
           border: Border.all(color: AppColors.line),
         ),
         child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.goldSoft,
-              borderRadius: BorderRadius.circular(40),
-            ),
-            child: Text(
-              initial,
-              style: TextStyle(
-                color: Color(0xFF8F681E),
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.goldSoft,
+              foregroundImage:
+                  user.avatarUrl != null ? netImageProvider(user.avatarUrl!) : null,
+              child: Text(
+                initial,
+                style: TextStyle(
+                  color: Color(0xFF8F681E),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
               ),
             ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.display,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                if (subtitle != null)
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    subtitle!,
+                    user.display,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
-              ],
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                    ),
+                ],
+              ),
             ),
-          ),
-          SizedBox(width: 8),
-          trailing,
-        ],
+            SizedBox(width: 8),
+            trailing ??
+                (onTap != null
+                    ? Icon(Icons.chevron_right, size: 20, color: AppColors.inkSoft)
+                    : SizedBox.shrink()),
+          ],
         ),
       ),
     );
@@ -352,27 +316,6 @@ class _CardButton extends StatelessWidget {
         ),
       ),
       child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-    );
-  }
-}
-
-/// Overflow menu for a card's secondary actions (deny, block…).
-class _Kebab extends StatelessWidget {
-  const _Kebab({required this.items});
-
-  final List<(String, VoidCallback)> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<int>(
-      icon: Icon(Icons.more_vert, size: 18, color: AppColors.inkSoft),
-      padding: EdgeInsets.zero,
-      splashRadius: 18,
-      onSelected: (i) => items[i].$2(),
-      itemBuilder: (_) => [
-        for (var i = 0; i < items.length; i++)
-          PopupMenuItem(value: i, height: 40, child: Text(items[i].$1)),
-      ],
     );
   }
 }
