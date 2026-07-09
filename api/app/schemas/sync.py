@@ -2,7 +2,7 @@
 (per-op push payloads, results, and server_seq-cursored pull deltas)."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -16,6 +16,7 @@ PushEntity = Literal[
     "personal_tags",
     "library_entry_tags",
     "lending_records",
+    "reading_sessions",
 ]
 PullEntity = PushEntity | Literal["activity_log_entries"]
 OpType = Literal["create", "update", "delete"]
@@ -89,6 +90,23 @@ class RatingCreate(BaseModel):
 
 class RatingUpdate(BaseModel):
     value: int | None = Field(default=None, ge=1, le=5)
+
+
+class ReadingSessionCreate(BaseModel):
+    id: uuid.UUID
+    library_entry_id: uuid.UUID
+    started_at: datetime
+    ended_at: datetime
+    duration_seconds: int = Field(ge=0)
+    page_start: int | None = None
+    page_end: int | None = None
+
+
+class ReadingSessionUpdate(BaseModel):
+    ended_at: datetime | None = None
+    duration_seconds: int | None = Field(default=None, ge=0)
+    page_start: int | None = None
+    page_end: int | None = None
 
 
 class ReviewCreate(BaseModel):

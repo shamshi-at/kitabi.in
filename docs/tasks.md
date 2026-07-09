@@ -368,6 +368,38 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       Android emulator with all the new tables/workmanager/providers wired in. **Not yet verified on a
       real device with real airplane mode** — needs a real Google sign-in, which wasn't done in-session
       (see STATUS.md)
+- [x] Reading sessions — timed logs (10 Jul 2026, pulled forward from the v1.5 parking lot,
+      owner request): a new syncable `reading_sessions` table (migration `000023` API-side,
+      schema v4 Drift-side) — `library_entry_id`, `started_at`, `ended_at`, `duration_seconds`,
+      optional `page_start`/`page_end`, wired into the generic sync push/pull registry exactly
+      like ratings/reviews. The live "timer running" state itself stays device-local
+      (`ActiveSessionController`, KeyValues-backed so it survives an app restart mid-session) —
+      only ever becomes a synced row once stopped. Only one session runs app-wide at a time;
+      starting a new one auto-stops and logs whatever was running first. Book page gets a
+      "Reading Session" card (Start button + recent-sessions log) that opens a full-screen
+      pocket-watch view (a real sweeping hand via `AnimationController`, an "in the zone" badge
+      past 20 minutes); stopping shows a wax-seal confirmation (session minutes, this-week
+      total, an optional page-number field) before returning to the book page. A slim mini-bar
+      (`ShellScaffold`) follows a running session across every tab — its own quick-stop control
+      skips the wax-seal ceremony on purpose, reserved for stopping from the watch face itself.
+      Verified with dedicated unit tests (`ActiveSessionController` start/stop/auto-switch/
+      restart-hydration, `computeReadingTimeStats` bucketing) plus a full widget-test flow
+      (start → watch face → stop → wax seal → back on the book page with the session logged)
+- [x] Home screen reworked — "The Stat Wall" (10 Jul 2026, owner feedback: the previous
+      bordered-card dashboard read as "costume, not design" and "not modern enough"): the
+      reading-goal slip became an oversized editorial hero number on a gold wash; the four
+      shelf-count cards flattened from a bordered 2×2 grid into one typographic row (big serif
+      numbers, no boxes); the fresh-covers strip dropped its skeuomorphic gold shelf-line/shadow;
+      currently-reading cards went dark (mini-player styling, matching the reading-timer's own
+      language) and now show a live gold dot when their session is the one actively running —
+      same visual system the persistent mini-bar uses. Same paper/ink/oxblood/gold tokens
+      throughout; all pre-existing functionality (tap-throughs, progress editing, multi-book
+      support) carried over unchanged
+- [x] Insights gains a reading-time section (10 Jul 2026): a gradient area chart of the current
+      week's minutes per day (`CustomPainter`, matching the existing pages-per-month line
+      chart's technique), this week's total against last week's delta, and one plain-language
+      observation derived from session timestamps ("You read most on Wednesdays, often around
+      9–10 PM") — only shown once there are enough sessions (5+) to say something real
 
 ## Phase 4 — Lending (the wedge, both directions)
 

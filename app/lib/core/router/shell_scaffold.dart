@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/connections/connections_providers.dart';
+import '../../features/library/providers/reading_timer_providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../format_duration.dart';
 import '../haptics.dart';
 import '../theme/app_theme.dart';
 import '../widgets/sync_status_bar.dart';
@@ -49,6 +53,7 @@ class ShellScaffold extends ConsumerWidget {
           children: [
             SyncStatusBar(),
             Expanded(child: navigationShell),
+            _MiniTimerBar(),
           ],
         ),
       ),
@@ -173,6 +178,141 @@ class _NavItem extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A slim strip that follows a running reading session across every tab —
+/// same idea as a music mini-player. Gates on whether a session is actually
+/// running before mounting `_MiniTimerBarContent` at all, so its live-clock
+/// `Timer.periodic` only ever exists (and ticks) while there's something to
+/// show — not for the entire lifetime of the app shell.
+class _MiniTimerBar extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active = ref.watch(activeSessionProvider);
+    if (active == null) return const SizedBox.shrink();
+    return _MiniTimerBarContent(active: active);
+  }
+}
+
+class _MiniTimerBarContent extends ConsumerStatefulWidget {
+  const _MiniTimerBarContent({required this.active});
+
+  final ActiveSession active;
+
+  @override
+  ConsumerState<_MiniTimerBarContent> createState() => _MiniTimerBarContentState();
+}
+
+class _MiniTimerBarContentState extends ConsumerState<_MiniTimerBarContent> {
+  late final Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  Future<void> _quickStop(WidgetRef ref) async {
+    Haptics.success();
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final logged = await ref.read(activeSessionProvider.notifier).stop();
+    ref.invalidate(weeklyReadingSecondsProvider);
+    if (logged == null || !mounted) return;
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.timerMiniBarStopped(formatDuration(
+        Duration(seconds: logged.durationSeconds),
+      )))),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.active;
+    final activeBook = ref.watch(activeSessionBookProvider);
+    final elapsed = DateTime.now().difference(active.startedAt);
+    final title = activeBook?.book?.title;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+      child: GestureDetector(
+        onTap: () {
+          Haptics.selection();
+          context.push(
+            Routes.readingTimerPath(active.libraryEntryId),
+            extra: {
+              'title': title,
+              'author': activeBook?.book?.authorNames,
+              'currentPage': activeBook?.entry.currentPage,
+              'pageCount': activeBook?.book?.pageCount,
+            },
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.night,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 14)],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.oxblood,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title ?? '…',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      AppLocalizations.of(context)!.timerMiniBarLive(formatClock(elapsed)),
+                      style: TextStyle(color: AppColors.gold, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _quickStop(ref),
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(color: AppColors.gold, shape: BoxShape.circle),
+                  child: Center(
+                    child: Container(width: 8, height: 8, color: AppColors.night),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

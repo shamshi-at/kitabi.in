@@ -218,6 +218,86 @@ class RatingsRepository extends Repo {
   }
 }
 
+class ReadingSessionsRepository extends Repo {
+  ReadingSessionsRepository(super.db, super.session, {super.onMutation});
+
+  Stream<List<ReadingSession>> watchForEntry(String libraryEntryId) =>
+      db.readingSessionsDao.watchForEntry(libraryEntryId);
+
+  /// Every session with any minute in [since]..now — Home/Insights bucket
+  /// these by day themselves rather than pushing GROUP BY into SQL for what's
+  /// already a small, fully-loaded row set.
+  Future<List<ReadingSession>> sessionsSince(DateTime since) =>
+      db.readingSessionsDao.allSince(since);
+
+  Future<int> totalSecondsSince(DateTime since) async {
+    final sessions = await sessionsSince(since);
+    return sessions.fold<int>(0, (sum, s) => sum + s.durationSeconds);
+  }
+
+  /// Only ever called once a session has actually stopped — the live "timer
+  /// running" state is device-local (see `activeSessionProvider`), never a
+  /// row here until this is called. Returns the new session's id, so the
+  /// wax-seal confirmation can attach a page number moments later without
+  /// re-deriving which row it meant.
+  Future<String> logSession({
+    required String libraryEntryId,
+    required DateTime startedAt,
+    required DateTime endedAt,
+    required int durationSeconds,
+    int? pageStart,
+    int? pageEnd,
+  }) async {
+    final id = _uuid.v4();
+    await db.readingSessionsDao.insertOne(
+      ReadingSessionsCompanion.insert(
+        id: id,
+        userId: session.userId,
+        libraryEntryId: libraryEntryId,
+        startedAt: startedAt,
+        endedAt: endedAt,
+        durationSeconds: durationSeconds,
+        pageStart: Value(pageStart),
+        pageEnd: Value(pageEnd),
+      ),
+    );
+    await enqueue(
+      entity: 'reading_sessions',
+      entityId: id,
+      opType: 'create',
+      data: {
+        'library_entry_id': libraryEntryId,
+        'started_at': startedAt.toUtc().toIso8601String(),
+        'ended_at': endedAt.toUtc().toIso8601String(),
+        'duration_seconds': durationSeconds,
+        'page_start': ?pageStart,
+        'page_end': ?pageEnd,
+      },
+    );
+    return id;
+  }
+
+  /// The wax-seal screen's optional "read up to page ___" field — a
+  /// same-device edit moments after the session was logged, not a separate
+  /// user action worth its own confirmation.
+  Future<void> updateSessionPageEnd(String sessionId, int pageEnd) async {
+    await db.readingSessionsDao.patch(
+      sessionId,
+      ReadingSessionsCompanion(
+        pageEnd: Value(pageEnd),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'reading_sessions',
+      entityId: sessionId,
+      opType: 'update',
+      data: {'page_end': pageEnd},
+    );
+  }
+}
+
 class ReviewsRepository extends Repo {
   ReviewsRepository(super.db, super.session, {super.onMutation});
 

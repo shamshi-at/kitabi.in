@@ -90,11 +90,12 @@ void main() {
 
     // The personal greeting carries the reader's first name.
     expect(find.textContaining('Shamshi'), findsOneWidget);
-    // Shelf counts.
-    expect(find.text('Owned'), findsOneWidget);
-    expect(find.text('Read'), findsOneWidget);
-    expect(find.text('Lent out'), findsOneWidget);
-    expect(find.text('Wishlist'), findsOneWidget);
+    // Shelf counts — small-caps labels, matching the rest of Home's
+    // section-label treatment (FRESH ON YOUR SHELF, READING GOAL).
+    expect(find.text('OWNED'), findsOneWidget);
+    expect(find.text('READ'), findsOneWidget);
+    expect(find.text('LENT OUT'), findsOneWidget);
+    expect(find.text('WISHLIST'), findsOneWidget);
     expect(find.text('3'), findsOneWidget); // owned = 3 entries
     expect(find.text('2'), findsOneWidget); // read = 2
     // The cover shelf strip labels and its covers (typeset titles render).

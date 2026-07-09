@@ -55,7 +55,7 @@ not two copies — even while you're the only user filling it in.*
 | Lending record ("lent to ___, on ___, returned ✓") | `[V1]` | A *record*, not a flag — see below |
 | Borrowed-books shelf (books you borrowed from friends) | `[V1]` | Same ledger, other side — self-logged, or linked when the lender is also a Kitabi user |
 | Reading progress updates (% or page) | `[V1]` | Lightweight |
-| Reading sessions (timed logs) | `[LATER]` | Nice-to-have; skip for the thin slice |
+| Reading sessions (timed logs) | `[V1]` | Pulled forward from `[LATER]` (10 Jul 2026, owner request): a live start/stop timer per book, weekly/monthly hours surfaced on Home + Insights. Only one session runs app-wide at a time — starting a new one auto-stops any other |
 | Quote / highlight capture (OCR a page) | `[LATER]` | Great "futuristic" add for v1.5 |
 | Per-item visibility toggles (library / review) | `[WIRED]` | The dormant community switch |
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/format_duration.dart';
 import '../../../core/haptics.dart';
 import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
@@ -29,6 +32,7 @@ import '../../share/presentation/share_book_sheet.dart';
 import '../cover_upload.dart';
 import '../reading_status.dart';
 import '../providers/library_providers.dart';
+import '../providers/reading_timer_providers.dart';
 import 'cover_viewer.dart';
 import '../../../core/widgets/net_image.dart';
 
@@ -1205,6 +1209,10 @@ class _YoursTabContent extends ConsumerWidget {
         ],
         _StatusAndProgressCard(entry: entry, workId: workId, reviewExtra: _reviewExtra),
         SizedBox(height: 8),
+        if (entry.status == 'reading') ...[
+          _ReadingSessionCard(entry: entry, title: title, author: author),
+          SizedBox(height: 8),
+        ],
         _ReviewCard(workId: workId, reviewExtra: _reviewExtra),
         SizedBox(height: 8),
         _NotesCard(entry: entry),
@@ -1513,6 +1521,169 @@ class _StatusAndProgressCard extends ConsumerWidget {
                 onPressed: () => _editProgress(context, ref),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A live-timed reading session on this copy — "Start" opens the full-screen
+/// pocket-watch view (`ReadingTimerScreen`); if one's already running here
+/// (resumed from the mini-bar or a backgrounded watch face), the card shows
+/// a live clock instead and re-opens the same screen rather than starting
+/// a second one. Only shown while the book is actually being read.
+class _ReadingSessionCard extends ConsumerWidget {
+  const _ReadingSessionCard({required this.entry, this.title, this.author});
+
+  final LibraryEntry entry;
+  final String? title;
+  final String? author;
+
+  void _open(BuildContext context, WidgetRef ref, {required int? pageCount}) {
+    Haptics.selection();
+    ref.read(activeSessionProvider.notifier).start(entry.id, pageStart: entry.currentPage);
+    context.push(
+      Routes.readingTimerPath(entry.id),
+      extra: {
+        'title': title,
+        'author': author,
+        'currentPage': entry.currentPage,
+        'pageCount': pageCount,
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final book = ref.watch(cachedBookProvider(entry.editionId)).valueOrNull;
+    final active = ref.watch(activeSessionProvider);
+    final running = active?.libraryEntryId == entry.id;
+    final sessions = ref.watch(_recentSessionsProvider(entry.id)).valueOrNull ?? const [];
+
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => _open(context, ref, pageCount: book?.pageCount),
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.timerSessionLabel,
+                    style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+                  ),
+                ),
+                if (running)
+                  _LiveClock(startedAt: active!.startedAt)
+                else
+                  ElevatedButton.icon(
+                    onPressed: () => _open(context, ref, pageCount: book?.pageCount),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      textStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                    icon: Icon(Icons.play_arrow, size: 14),
+                    label: Text(l10n.timerStart),
+                  ),
+              ],
+            ),
+          ),
+          if (sessions.isNotEmpty) ...[
+            SizedBox(height: 10),
+            for (final s in sessions.take(3)) _SessionLogRow(session: s),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Newest-first, capped client-side — the DAO already orders by startedAt.
+final _recentSessionsProvider =
+    StreamProvider.autoDispose.family<List<ReadingSession>, String>((ref, entryId) {
+  return ref.watch(appDatabaseProvider).readingSessionsDao.watchForEntry(entryId);
+});
+
+class _LiveClock extends StatefulWidget {
+  const _LiveClock({required this.startedAt});
+
+  final DateTime startedAt;
+
+  @override
+  State<_LiveClock> createState() => _LiveClockState();
+}
+
+class _LiveClockState extends State<_LiveClock> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          margin: EdgeInsets.only(right: 6),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.gold),
+        ),
+        Text(
+          formatClock(DateTime.now().difference(widget.startedAt)),
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.oxblood,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SessionLogRow extends StatelessWidget {
+  const _SessionLogRow({required this.session});
+
+  final ReadingSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final date = session.startedAt;
+    final today = DateTime.now();
+    final label = DateUtils.isSameDay(date, today)
+        ? l10n.timerToday
+        : DateUtils.isSameDay(date, today.subtract(Duration(days: 1)))
+            ? l10n.timerYesterday
+            : '${date.day}/${date.month}';
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft)),
+          ),
+          Text(
+            formatDuration(Duration(seconds: session.durationSeconds)),
+            style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: AppColors.ink),
           ),
         ],
       ),

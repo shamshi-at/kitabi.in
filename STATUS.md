@@ -11,7 +11,7 @@
 > tokens. This document summarizes and cross-links all of them plus the live/deployed state
 > those docs don't cover.
 
-**Last updated:** 7 Jul 2026
+**Last updated:** 10 Jul 2026
 
 ---
 
@@ -324,6 +324,33 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **10 Jul 2026** — **Reading sessions (timed logs), pulled forward from the v1.5
+  parking lot into v1 (owner request), plus a Home + Insights rework to match.**
+  A new syncable `reading_sessions` table (API migration `000023`, Drift schema v4)
+  wired into the generic sync push/pull registry alongside ratings/reviews; the live
+  "timer running" state stays device-local (KeyValues-backed, survives an app
+  restart mid-session) and only becomes a synced row once stopped — only one session
+  runs app-wide at a time, starting a new one auto-stops and logs whatever was
+  running. The book page gets a "Reading Session" card (Start + a recent-sessions
+  log) that opens a full-screen pocket-watch view — a real sweeping hand via
+  `AnimationController`, an "in the zone" badge past 20 minutes — and stopping shows
+  a wax-seal confirmation (session minutes, this-week total, an optional page-number
+  field) before returning to the book page. A persistent mini-bar in `ShellScaffold`
+  follows a running session across every tab, with its own quick-stop (skips the
+  wax-seal ceremony on purpose — that's reserved for the watch face itself). Two
+  rounds of HTML mockups (a first pass judged "too literal/gimmicky" and "not modern
+  enough," a second modern-app-instincts pass the owner picked) led to reworking Home
+  as "The Stat Wall": the goal slip became an oversized editorial hero number, the
+  four shelf-count cards flattened from a bordered 2×2 grid into one typographic row,
+  the fresh-covers strip dropped its skeuomorphic shelf-line/shadow, and
+  currently-reading cards went dark (mini-player styling) with a live gold dot when
+  their session is the one actively running. Insights gained a gradient area chart of
+  the week's reading minutes per day, a this-week-vs-last-week delta, and one
+  plain-language observation derived from session timestamps ("You read most on
+  Wednesdays, often around 9–10 PM"). Verified with dedicated unit tests
+  (`ActiveSessionController`, `computeReadingTimeStats`) and a full widget-test flow
+  (start → watch face → stop → wax seal → back on the book page); not yet verified
+  live on an emulator (flagged explicitly rather than skipped silently)
 - **9 Jul 2026** — **Book page redesigned as "the Frontispiece"; every shelf gets one
   card system ("Grid B").** Mocked before building — three hero directions for the
   book page, then a separate card-system mock (one cover frame + a state-overlay

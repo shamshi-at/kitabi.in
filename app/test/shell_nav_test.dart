@@ -6,7 +6,16 @@ import 'package:kitabi/core/router/app_router.dart';
 import 'package:kitabi/core/router/shell_scaffold.dart';
 import 'package:kitabi/data/sync/sync_providers.dart';
 import 'package:kitabi/features/connections/connections_providers.dart';
+import 'package:kitabi/features/library/providers/reading_timer_providers.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
+
+/// Never touches the database — this suite is about nav-bar layout, not the
+/// reading timer, so hydration (which would otherwise pull in a real
+/// disk-backed AppDatabase and leave pending timers behind) is skipped.
+class _StubActiveSessionController extends ActiveSessionController {
+  @override
+  ActiveSession? build() => null;
+}
 
 GoRouter _shellRouter() => GoRouter(
       initialLocation: '/home',
@@ -39,6 +48,7 @@ Widget _wrap(GoRouter router, {ConnectionsData? connections}) {
         (ref) async =>
             connections ?? ConnectionsData(incoming: [], outgoing: [], accepted: []),
       ),
+      activeSessionProvider.overrideWith(_StubActiveSessionController.new),
     ],
     child: MaterialApp.router(
       routerConfig: router,

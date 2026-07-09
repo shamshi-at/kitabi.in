@@ -561,8 +561,11 @@
   "@homeFreshShelf": {"description": "Section label over the recently-added cover strip"},
   "homeGoalLabel": "Reading goal",
   "@homeGoalLabel": {"description": "Eyebrow on the home goal slip"},
-  "homeGoalProgress": "{read} of {goal} books this year",
-  "@homeGoalProgress": {"description": "Goal slip line", "placeholders": {"read": {"type": "int"}, "goal": {"type": "int"}}},
+  "homeGoalOf": "of {goal} books this year",
+  "@homeGoalOf": {
+    "description": "Suffix beside the hero number on the goal slip, e.g. \"of 30 books this year\"",
+    "placeholders": {"goal": {"type": "int"}}
+  },
   "homeGoalStart": "Set a goal for {year} — even a small one.",
   "@homeGoalStart": {"description": "Goal slip line when nothing read yet", "placeholders": {"year": {"type": "int"}}},
   "homeStepScanTitle": "Scan",
@@ -1511,6 +1514,74 @@
   "recsLoadingSubtitle": "Reasoning from your ratings — this can take a few seconds.",
   "@recsLoadingSubtitle": {
     "description": "Subtitle under the recommendations loading title"
+  },
+  "timerSessionLabel": "Reading Session",
+  "@timerSessionLabel": {"description": "Eyebrow label on the book page's timer card"},
+  "timerStart": "Start",
+  "@timerStart": {"description": "Button that starts a reading session"},
+  "timerInProgress": "Session in Progress",
+  "@timerInProgress": {"description": "Eyebrow label on the full-screen running-timer view"},
+  "timerElapsed": "elapsed",
+  "@timerElapsed": {"description": "Caption under the live clock on the running-timer view"},
+  "timerInTheZone": "In the zone — {minutes} min",
+  "@timerInTheZone": {
+    "description": "Badge shown once a session has run past 20 minutes",
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "timerStopAndLog": "Stop & log",
+  "@timerStopAndLog": {"description": "Button that stops the running session and logs it"},
+  "timerLoggedTitle": "{minutes, plural, =0{Under a minute, logged} =1{1 minute, well spent} other{{minutes} minutes, well spent}}",
+  "@timerLoggedTitle": {
+    "description": "Title on the wax-seal confirmation after a session is logged",
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "timerThisSession": "This session",
+  "@timerThisSession": {"description": "Stat label on the wax-seal screen"},
+  "timerThisWeek": "This week",
+  "@timerThisWeek": {"description": "Stat label on the wax-seal screen"},
+  "timerPageFieldLabel": "Read up to page",
+  "@timerPageFieldLabel": {"description": "Optional page-number field on the wax-seal screen"},
+  "timerPageFieldOf": "of {total}",
+  "@timerPageFieldOf": {
+    "description": "Suffix after the page-number field, e.g. \"of 320\"",
+    "placeholders": {"total": {"type": "int"}}
+  },
+  "timerDone": "Done",
+  "@timerDone": {"description": "Closes the wax-seal confirmation and returns to the book page"},
+  "timerRecentSessions": "Recent sessions",
+  "@timerRecentSessions": {"description": "Label over the session log on the book page's timer card"},
+  "timerNoSessionsYet": "No sessions logged yet — tap Start to begin one.",
+  "@timerNoSessionsYet": {"description": "Empty state for the session log"},
+  "timerMiniBarLive": "{elapsed} · tap to open",
+  "@timerMiniBarLive": {
+    "description": "Text on the persistent mini-timer bar",
+    "placeholders": {"elapsed": {"type": "String"}}
+  },
+  "timerToday": "Today",
+  "@timerToday": {"description": "Date label in the session log when the session was today"},
+  "timerYesterday": "Yesterday",
+  "@timerYesterday": {"description": "Date label in the session log when the session was yesterday"},
+  "insightsReadingTime": "Reading time",
+  "@insightsReadingTime": {"description": "Chart label on Insights for the weekly reading-time area chart"},
+  "insightsWeekTotal": "{duration} this week",
+  "@insightsWeekTotal": {
+    "description": "Headline total above the weekly reading-time chart",
+    "placeholders": {"duration": {"type": "String"}}
+  },
+  "insightsVsLastWeek": "{duration} vs last week",
+  "@insightsVsLastWeek": {
+    "description": "Delta caption beside the weekly reading-time total",
+    "placeholders": {"duration": {"type": "String"}}
+  },
+  "insightsReadingTimeInsight": "You read most on {day}s, often around {hourRange}.",
+  "@insightsReadingTimeInsight": {
+    "description": "Plain-language observation derived from reading-session timestamps",
+    "placeholders": {"day": {"type": "String"}, "hourRange": {"type": "String"}}
+  },
+  "timerMiniBarStopped": "Session logged — {duration}",
+  "@timerMiniBarStopped": {
+    "description": "Snackbar shown after stopping a session from the mini-bar's own quick-stop control",
+    "placeholders": {"duration": {"type": "String"}}
   },
   "recsOptInBody": "Opt in and Kitabi suggests books from your ratings, each with a plain-words \"why\". Off by default — turn it off anytime.",
   "@recsOptInBody": {

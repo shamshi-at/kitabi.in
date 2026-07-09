@@ -16,6 +16,7 @@ from app.models.personal_tag import PersonalTag
 from app.models.profile import Profile
 from app.models.publisher import Publisher
 from app.models.rating import Rating
+from app.models.reading_session import ReadingSession
 from app.models.review import Review
 from app.models.series import Series
 from app.models.sync_op import SyncOp
@@ -41,6 +42,7 @@ __all__ = [
     "work_genres",
     "LibraryEntry",
     "Rating",
+    "ReadingSession",
     "Review",
     "PersonalTag",
     "LibraryEntryTag",

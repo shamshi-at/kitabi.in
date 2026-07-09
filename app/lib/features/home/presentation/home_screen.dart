@@ -13,6 +13,7 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
+import '../../library/providers/reading_timer_providers.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../../recommendations/providers/recommendations_providers.dart';
 
@@ -235,10 +236,10 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// The signature bookish moment on Home: the newest additions standing as
-/// real covers on a shelf — a gold hairline with a soft shadow underneath,
-/// like the mockups' "real bookshelf" feel. Horizontally scrollable; each
-/// cover is a door to its book page.
+/// The newest additions as a plain marquee of real covers — deliberately no
+/// shelf-line/shadow underneath (that skeuomorphic "real bookshelf"
+/// treatment read as costume, not design — owner feedback, 10 Jul 2026); the
+/// covers carry it on their own. Each cover is a door to its book page.
 class _CoverShelf extends ConsumerWidget {
   const _CoverShelf({required this.entries});
 
@@ -246,34 +247,14 @@ class _CoverShelf extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: 92,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: entries.length,
-            separatorBuilder: (_, _) => SizedBox(width: 10),
-            itemBuilder: (context, i) => _ShelfCover(entry: entries[i]),
-          ),
-        ),
-        // The shelf itself: a gold edge and the shadow the books cast on it.
-        Container(height: 2.5, color: AppColors.gold.withValues(alpha: 0.65)),
-        Container(
-          height: 7,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.ink.withValues(alpha: 0.10),
-                AppColors.ink.withValues(alpha: 0.0),
-              ],
-            ),
-          ),
-        ),
-      ],
+    return SizedBox(
+      height: 96,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: entries.length,
+        separatorBuilder: (_, _) => SizedBox(width: 10),
+        itemBuilder: (context, i) => _ShelfCover(entry: entries[i]),
+      ),
     );
   }
 }
@@ -301,9 +282,10 @@ class _ShelfCover extends ConsumerWidget {
   }
 }
 
-/// A slim slip tying Home to Insights: this year's finished count against the
-/// reading goal, with a hairline progress bar. With nothing finished yet it
-/// invites setting a goal instead of showing an empty zero.
+/// The hero number on Home: this year's finished count against the reading
+/// goal, in oversized editorial type rather than a slim bordered slip — the
+/// one number worth spending real emphasis on. With nothing finished yet it
+/// invites setting a goal instead of showing a hero "0".
 class _GoalSlip extends ConsumerWidget {
   const _GoalSlip({required this.entries, required this.l10n});
 
@@ -326,21 +308,18 @@ class _GoalSlip extends ConsumerWidget {
         context.go(Routes.insights);
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
         decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.line),
+          color: AppColors.goldSoft,
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.flag_outlined, size: 16, color: AppColors.moss),
-            SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
                     l10n.homeGoalLabel.toUpperCase(),
                     style: TextStyle(
                       fontSize: 8.5,
@@ -349,27 +328,49 @@ class _GoalSlip extends ConsumerWidget {
                       color: AppColors.inkSoft,
                     ),
                   ),
-                  SizedBox(height: 2),
-                  Text(
-                    read > 0 ? l10n.homeGoalProgress(read, goal) : l10n.homeGoalStart(year),
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                  if (read > 0) ...[
-                    SizedBox(height: 5),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 3,
-                        backgroundColor: AppColors.line,
-                        valueColor: AlwaysStoppedAnimation(AppColors.moss),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+                Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+              ],
             ),
-            Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+            SizedBox(height: 4),
+            if (read > 0)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$read',
+                    style: GoogleFonts.fraunces(
+                      fontSize: 40,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.oxblood,
+                      height: 1,
+                    ),
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    l10n.homeGoalOf(goal),
+                    style: TextStyle(fontSize: 13, color: AppColors.inkSoft, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              )
+            else
+              Text(
+                l10n.homeGoalStart(year),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            if (read > 0) ...[
+              SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 4,
+                  backgroundColor: AppColors.card,
+                  valueColor: AlwaysStoppedAnimation(AppColors.oxblood),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -396,6 +397,7 @@ class _CurrentlyReadingCard extends ConsumerWidget {
     final total = book?.pageCount;
     final percent =
         (page != null && total != null && total > 0) ? ((page / total) * 100).round() : null;
+    final isLive = ref.watch(activeSessionProvider)?.libraryEntryId == entry.id;
 
     return GestureDetector(
       onTap: book == null
@@ -405,9 +407,8 @@ class _CurrentlyReadingCard extends ConsumerWidget {
         margin: EdgeInsets.only(bottom: 8),
         padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.line),
+          color: AppColors.night,
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           children: [
@@ -423,18 +424,36 @@ class _CurrentlyReadingCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    book?.title ?? '…',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.fraunces(fontWeight: FontWeight.w600, fontSize: 14.5),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          book?.title ?? '…',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.fraunces(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      if (isLive) ...[
+                        SizedBox(width: 6),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.gold),
+                        ),
+                      ],
+                    ],
                   ),
                   if (book?.authorNames != null)
                     Text(
                       book!.authorNames,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 11),
                     ),
                   if (page != null && total != null && percent != null) ...[
                     SizedBox(height: 5),
@@ -443,21 +462,21 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                       child: LinearProgressIndicator(
                         value: (page / total).clamp(0.0, 1.0),
                         minHeight: 4,
-                        backgroundColor: AppColors.line,
+                        backgroundColor: Colors.white.withValues(alpha: 0.15),
                         valueColor: AlwaysStoppedAnimation(AppColors.gold),
                       ),
                     ),
                     SizedBox(height: 3),
                     Text(
                       l10n.homeProgressLine(page, total, percent),
-                      style: TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 10.5),
                     ),
                   ],
                 ],
               ),
             ),
             IconButton(
-              icon: Icon(Icons.add_circle_outline, color: AppColors.oxblood, size: 22),
+              icon: Icon(Icons.add_circle_outline, color: AppColors.gold, size: 22),
               tooltip: l10n.homeUpdateProgress,
               onPressed: () => _updateProgress(context, ref, l10n),
             ),
@@ -559,6 +578,9 @@ class _LendingNudge extends StatelessWidget {
   }
 }
 
+/// Four stat columns in one typographic row instead of a bordered 2x2 grid —
+/// the numbers themselves carry it (owner feedback, 10 Jul 2026: the old
+/// boxed cards read as dashboard, not a page you'd want to look at).
 class _ShelfGrid extends StatelessWidget {
   const _ShelfGrid({required this.counts, required this.l10n});
 
@@ -567,37 +589,39 @@ class _ShelfGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      childAspectRatio: 2.9,
+    return Row(
       children: [
-        _ShelfCard(
-          value: counts.owned,
-          label: l10n.homeShelfOwned,
-          color: AppColors.ink,
-          onTap: () => context.go(Routes.library),
+        Expanded(
+          child: _ShelfStat(
+            value: counts.owned,
+            label: l10n.homeShelfOwned,
+            color: AppColors.ink,
+            onTap: () => context.go(Routes.library),
+          ),
         ),
-        _ShelfCard(
-          value: counts.read,
-          label: l10n.homeShelfRead,
-          color: AppColors.moss,
-          onTap: () => context.go('${Routes.library}?status=read'),
+        Expanded(
+          child: _ShelfStat(
+            value: counts.read,
+            label: l10n.homeShelfRead,
+            color: AppColors.moss,
+            onTap: () => context.go('${Routes.library}?status=read'),
+          ),
         ),
-        _ShelfCard(
-          value: counts.lentOut,
-          label: l10n.homeShelfLentOut,
-          color: AppColors.oxblood,
-          onTap: () => context.go(Routes.lendingLedger),
+        Expanded(
+          child: _ShelfStat(
+            value: counts.lentOut,
+            label: l10n.homeShelfLentOut,
+            color: AppColors.oxblood,
+            onTap: () => context.go(Routes.lendingLedger),
+          ),
         ),
-        _ShelfCard(
-          value: counts.wishlist,
-          label: l10n.homeShelfWishlist,
-          color: AppColors.slate,
-          onTap: () => context.go('${Routes.library}?status=wishlist'),
+        Expanded(
+          child: _ShelfStat(
+            value: counts.wishlist,
+            label: l10n.homeShelfWishlist,
+            color: AppColors.slate,
+            onTap: () => context.go('${Routes.library}?status=wishlist'),
+          ),
         ),
       ],
     );
@@ -655,8 +679,11 @@ class _RecsEntryCard extends ConsumerWidget {
   }
 }
 
-class _ShelfCard extends StatelessWidget {
-  const _ShelfCard({
+/// One typographic column — big serif number, small-caps label underneath,
+/// no border or fill. The number itself is the tap target's whole visual
+/// weight, per the row it lives in ([_ShelfGrid]).
+class _ShelfStat extends StatelessWidget {
+  const _ShelfStat({
     required this.value,
     required this.label,
     required this.color,
@@ -671,34 +698,34 @@ class _ShelfCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.card,
-      borderRadius: BorderRadius.circular(12),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.line),
-          ),
-          child: Row(
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 '$value',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(color: color, fontWeight: FontWeight.w700),
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                style: GoogleFonts.fraunces(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                  height: 1,
                 ),
               ),
-              Icon(Icons.chevron_right, size: 15, color: AppColors.inkSoft),
+              SizedBox(height: 3),
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 7.5,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.inkSoft,
+                ),
+              ),
             ],
           ),
         ),

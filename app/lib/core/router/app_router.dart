@@ -22,6 +22,7 @@ import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/lending/presentation/lending_ledger_screen.dart';
 import '../../features/library/presentation/book_detail_screen.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
+import '../../features/library/presentation/reading_timer_screen.dart';
 import '../../features/library/presentation/review_editor_screen.dart';
 import '../../features/onboarding/onboarding_providers.dart';
 import '../../features/onboarding/presentation/welcome_screen.dart';
@@ -80,6 +81,8 @@ abstract final class Routes {
   static const bookDetail = '/book/:workId/:editionId';
   // Dedicated rate & review page; book display data (title/author/cover) via `extra`.
   static const reviewEditor = '/review/:workId';
+  // Full-screen reading-session timer; display data (title/author/pages) via `extra`.
+  static const readingTimer = '/reading-timer/:libraryEntryId';
   // Approval inbox — pending edits to books this reader contributed.
   static const revisions = '/catalog/revisions';
   // Another reader's public profile; display name via `extra`.
@@ -89,6 +92,7 @@ abstract final class Routes {
   static String publisherBrowsePath(String publisherId) => '/catalog/publishers/$publisherId';
   static String bookDetailPath(String workId, String editionId) => '/book/$workId/$editionId';
   static String reviewEditorPath(String workId) => '/review/$workId';
+  static String readingTimerPath(String libraryEntryId) => '/reading-timer/$libraryEntryId';
   static String publicProfilePath(String userId) => '/reader/$userId';
 }
 
@@ -439,6 +443,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           workId: state.pathParameters['workId']!,
           editionId: state.pathParameters['editionId']!,
         ),
+      ),
+      GoRoute(
+        path: Routes.readingTimer,
+        name: 'reading-timer',
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>? ?? const {};
+          return ReadingTimerScreen(
+            libraryEntryId: state.pathParameters['libraryEntryId']!,
+            title: args['title'] as String?,
+            author: args['author'] as String?,
+            currentPage: args['currentPage'] as int?,
+            pageCount: args['pageCount'] as int?,
+          );
+        },
       ),
     ],
   );

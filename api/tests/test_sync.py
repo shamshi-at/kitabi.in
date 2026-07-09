@@ -336,3 +336,102 @@ async def test_delete_op_carries_empty_payload_and_is_idempotent(client):
     second = await client.post("/sync/push", json={"ops": [delete]})
     assert first.json()["results"][0]["status"] == "applied"
     assert second.json()["results"][0]["status"] == "duplicate"
+
+
+async def test_push_reading_session_and_pull_reflects_it(client):
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    entry_op = _op("library_entries", entry_id, "create", {"edition_id": edition_id})
+    session_id = str(uuid.uuid4())
+    session_op = _op(
+        "reading_sessions",
+        session_id,
+        "create",
+        {
+            "library_entry_id": entry_id,
+            "started_at": "2026-07-10T20:00:00Z",
+            "ended_at": "2026-07-10T20:24:00Z",
+            "duration_seconds": 1440,
+            "page_start": 184,
+            "page_end": 196,
+        },
+    )
+    resp = await client.post("/sync/push", json={"ops": [entry_op, session_op]})
+    results = resp.json()["results"]
+    assert results[0]["status"] == "applied"
+    assert results[1]["status"] == "applied"
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    session = next(c for c in pulled.json()["changes"] if c["entity"] == "reading_sessions")
+    assert session["data"]["library_entry_id"] == entry_id
+    assert session["data"]["duration_seconds"] == 1440
+    assert session["data"]["page_start"] == 184
+    assert session["data"]["page_end"] == 196
+
+
+async def test_reading_session_referencing_another_users_entry_is_rejected(
+    client, db_sessionmaker, user_b
+):
+    """Same rule as lending_records — the FK only proves the row exists, not
+    that the pusher owns it."""
+    import uuid as _uuid
+
+    _, edition_id = await _seed_edition(client)
+    foreign_entry = str(_uuid.uuid4())
+    async with db_sessionmaker() as session:
+        await session.execute(
+            text(
+                "INSERT INTO library_entries (id, user_id, edition_id, status, is_favorite,"
+                " created_at, updated_at) VALUES (:id, :uid, :ed, 'pending', false, now(), now())"
+            ),
+            {"id": foreign_entry, "uid": user_b["id"], "ed": edition_id},
+        )
+        await session.commit()
+
+    op = _op(
+        "reading_sessions",
+        str(_uuid.uuid4()),
+        "create",
+        {
+            "library_entry_id": foreign_entry,
+            "started_at": "2026-07-10T20:00:00Z",
+            "ended_at": "2026-07-10T20:10:00Z",
+            "duration_seconds": 600,
+        },
+    )
+    resp = await client.post("/sync/push", json={"ops": [op]})
+    result = resp.json()["results"][0]
+    assert result["status"] == "rejected"
+    assert result["code"] == "invalid_reference"
+
+
+async def test_reading_session_update_sets_page_end(client):
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    session_id = str(uuid.uuid4())
+    await client.post(
+        "/sync/push",
+        json={
+            "ops": [
+                _op("library_entries", entry_id, "create", {"edition_id": edition_id}),
+                _op(
+                    "reading_sessions",
+                    session_id,
+                    "create",
+                    {
+                        "library_entry_id": entry_id,
+                        "started_at": "2026-07-10T20:00:00Z",
+                        "ended_at": "2026-07-10T20:10:00Z",
+                        "duration_seconds": 600,
+                    },
+                ),
+            ]
+        },
+    )
+    update = _op("reading_sessions", session_id, "update", {"page_end": 220})
+    resp = await client.post("/sync/push", json={"ops": [update]})
+    assert resp.json()["results"][0]["status"] == "applied"
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    session = next(c for c in pulled.json()["changes"] if c["entity"] == "reading_sessions")
+    assert session["data"]["page_end"] == 220

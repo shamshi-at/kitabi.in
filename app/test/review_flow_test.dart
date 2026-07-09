@@ -10,6 +10,7 @@ import 'package:kitabi/data/repositories/repositories.dart';
 import 'package:kitabi/data/sync/sync_providers.dart';
 import 'package:kitabi/features/catalog/providers/catalog_providers.dart';
 import 'package:kitabi/features/library/presentation/book_detail_screen.dart';
+import 'package:kitabi/features/library/presentation/reading_timer_screen.dart';
 import 'package:kitabi/features/library/presentation/review_editor_screen.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
@@ -103,6 +104,19 @@ void main() {
               title: args['title'] as String?,
               author: args['author'] as String?,
               coverUrl: args['coverUrl'] as String?,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/reading-timer/:libraryEntryId',
+          builder: (context, state) {
+            final args = state.extra as Map<String, dynamic>? ?? const {};
+            return ReadingTimerScreen(
+              libraryEntryId: state.pathParameters['libraryEntryId']!,
+              title: args['title'] as String?,
+              author: args['author'] as String?,
+              currentPage: args['currentPage'] as int?,
+              pageCount: args['pageCount'] as int?,
             );
           },
         ),
@@ -305,6 +319,48 @@ void main() {
     await settle(tester);
     await settle(tester);
     expect(find.text('You finished it!'), findsNothing);
+
+    await flushTree(tester);
+  });
+
+  testWidgets('reading timer: start, stop, and the session lands in the log', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      final repo = LibraryRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      final id = await repo.add(editionId: _editionId);
+      await repo.updateStatus(id, 'reading');
+      await repo.updateProgress(id, currentPage: 50);
+    });
+
+    await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
+    await settle(tester);
+
+    expect(find.text('Start'), findsOneWidget);
+    await tester.tap(find.text('Start'));
+    await settle(tester);
+
+    expect(find.text('Session in Progress'), findsOneWidget);
+    await tester.tap(find.text('Stop & log'));
+    await settle(tester);
+    await settle(tester);
+
+    expect(find.text('Done'), findsOneWidget);
+    await tester.tap(find.text('Done'));
+    await settle(tester);
+    await settle(tester);
+
+    // Back on the book page — a fresh session sits in the log and the card
+    // offers "Start" again (nothing left running).
+    expect(find.text('Start'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
+
+    final entry = await tester.runAsync(() => db.libraryEntriesDao.getByEditionId(_editionId));
+    final sessions = await tester.runAsync(() => db.readingSessionsDao.watchForEntry(entry!.id).first);
+    expect(sessions, hasLength(1));
+    expect(sessions!.first.pageStart, 50);
 
     await flushTree(tester);
   });

@@ -19,6 +19,7 @@ part 'database.g.dart';
   tables: [
     LibraryEntries,
     Ratings,
+    ReadingSessions,
     Reviews,
     PersonalTags,
     LibraryEntryTags,
@@ -33,6 +34,7 @@ part 'database.g.dart';
   daos: [
     LibraryEntriesDao,
     RatingsDao,
+    ReadingSessionsDao,
     ReviewsDao,
     TagsDao,
     LendingRecordsDao,
@@ -51,12 +53,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 4) {
+            // Reading sessions (10 Jul 2026, pulled forward from the v1.5
+            // parking lot) — a whole new table, nothing to migrate from.
+            await m.createTable(readingSessions);
+          }
           if (from < 2) {
             // Lending runs both ways now: add direction/editionId/linkedLoanId/
             // note and make libraryEntryId nullable (borrowed books aren't owned).
@@ -94,6 +101,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> clearUserData() => transaction(() async {
         await delete(libraryEntries).go();
         await delete(ratings).go();
+        await delete(readingSessions).go();
         await delete(reviews).go();
         await delete(personalTags).go();
         await delete(libraryEntryTags).go();

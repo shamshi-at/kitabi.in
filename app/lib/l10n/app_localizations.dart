@@ -1090,11 +1090,11 @@ abstract class AppLocalizations {
   /// **'Reading goal'**
   String get homeGoalLabel;
 
-  /// Goal slip line
+  /// Suffix beside the hero number on the goal slip, e.g. "of 30 books this year"
   ///
   /// In en, this message translates to:
-  /// **'{read} of {goal} books this year'**
-  String homeGoalProgress(int read, int goal);
+  /// **'of {goal} books this year'**
+  String homeGoalOf(int goal);
 
   /// Goal slip line when nothing read yet
   ///
@@ -2697,6 +2697,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reasoning from your ratings — this can take a few seconds.'**
   String get recsLoadingSubtitle;
+
+  /// Eyebrow label on the book page's timer card
+  ///
+  /// In en, this message translates to:
+  /// **'Reading Session'**
+  String get timerSessionLabel;
+
+  /// Button that starts a reading session
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get timerStart;
+
+  /// Eyebrow label on the full-screen running-timer view
+  ///
+  /// In en, this message translates to:
+  /// **'Session in Progress'**
+  String get timerInProgress;
+
+  /// Caption under the live clock on the running-timer view
+  ///
+  /// In en, this message translates to:
+  /// **'elapsed'**
+  String get timerElapsed;
+
+  /// Badge shown once a session has run past 20 minutes
+  ///
+  /// In en, this message translates to:
+  /// **'In the zone — {minutes} min'**
+  String timerInTheZone(int minutes);
+
+  /// Button that stops the running session and logs it
+  ///
+  /// In en, this message translates to:
+  /// **'Stop & log'**
+  String get timerStopAndLog;
+
+  /// Title on the wax-seal confirmation after a session is logged
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, =0{Under a minute, logged} =1{1 minute, well spent} other{{minutes} minutes, well spent}}'**
+  String timerLoggedTitle(int minutes);
+
+  /// Stat label on the wax-seal screen
+  ///
+  /// In en, this message translates to:
+  /// **'This session'**
+  String get timerThisSession;
+
+  /// Stat label on the wax-seal screen
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get timerThisWeek;
+
+  /// Optional page-number field on the wax-seal screen
+  ///
+  /// In en, this message translates to:
+  /// **'Read up to page'**
+  String get timerPageFieldLabel;
+
+  /// Suffix after the page-number field, e.g. "of 320"
+  ///
+  /// In en, this message translates to:
+  /// **'of {total}'**
+  String timerPageFieldOf(int total);
+
+  /// Closes the wax-seal confirmation and returns to the book page
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get timerDone;
+
+  /// Label over the session log on the book page's timer card
+  ///
+  /// In en, this message translates to:
+  /// **'Recent sessions'**
+  String get timerRecentSessions;
+
+  /// Empty state for the session log
+  ///
+  /// In en, this message translates to:
+  /// **'No sessions logged yet — tap Start to begin one.'**
+  String get timerNoSessionsYet;
+
+  /// Text on the persistent mini-timer bar
+  ///
+  /// In en, this message translates to:
+  /// **'{elapsed} · tap to open'**
+  String timerMiniBarLive(String elapsed);
+
+  /// Date label in the session log when the session was today
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get timerToday;
+
+  /// Date label in the session log when the session was yesterday
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get timerYesterday;
+
+  /// Chart label on Insights for the weekly reading-time area chart
+  ///
+  /// In en, this message translates to:
+  /// **'Reading time'**
+  String get insightsReadingTime;
+
+  /// Headline total above the weekly reading-time chart
+  ///
+  /// In en, this message translates to:
+  /// **'{duration} this week'**
+  String insightsWeekTotal(String duration);
+
+  /// Delta caption beside the weekly reading-time total
+  ///
+  /// In en, this message translates to:
+  /// **'{duration} vs last week'**
+  String insightsVsLastWeek(String duration);
+
+  /// Plain-language observation derived from reading-session timestamps
+  ///
+  /// In en, this message translates to:
+  /// **'You read most on {day}s, often around {hourRange}.'**
+  String insightsReadingTimeInsight(String day, String hourRange);
+
+  /// Snackbar shown after stopping a session from the mini-bar's own quick-stop control
+  ///
+  /// In en, this message translates to:
+  /// **'Session logged — {duration}'**
+  String timerMiniBarStopped(String duration);
 
   /// Explainer shown before the reader opts into recommendations
   ///

@@ -89,6 +89,31 @@ class RatingsDao extends DatabaseAccessor<AppDatabase> with _$RatingsDaoMixin {
       (update(ratings)..where((t) => t.id.equals(id))).write(patch);
 }
 
+@DriftAccessor(tables: [ReadingSessions])
+class ReadingSessionsDao extends DatabaseAccessor<AppDatabase> with _$ReadingSessionsDaoMixin {
+  ReadingSessionsDao(super.db);
+
+  /// Newest first — feeds the "recent sessions" log on the book page.
+  Stream<List<ReadingSession>> watchForEntry(String libraryEntryId) => (select(
+        readingSessions,
+      )..where((t) => t.libraryEntryId.equals(libraryEntryId) & t.deletedAt.isNull())
+        ..orderBy([(t) => OrderingTerm.desc(t.startedAt)]))
+          .watch();
+
+  /// Every session that started on or after [since] — the Home/Insights
+  /// weekly-hours stats bucket these by day themselves rather than pushing
+  /// GROUP BY logic into SQL for what's a small, already-loaded row set.
+  Future<List<ReadingSession>> allSince(DateTime since) => (select(
+        readingSessions,
+      )..where((t) => t.startedAt.isBiggerOrEqualValue(since) & t.deletedAt.isNull()))
+          .get();
+
+  Future<void> insertOne(ReadingSessionsCompanion row) => into(readingSessions).insert(row);
+
+  Future<void> patch(String id, ReadingSessionsCompanion patch) =>
+      (update(readingSessions)..where((t) => t.id.equals(id))).write(patch);
+}
+
 @DriftAccessor(tables: [Reviews])
 class ReviewsDao extends DatabaseAccessor<AppDatabase> with _$ReviewsDaoMixin {
   ReviewsDao(super.db);

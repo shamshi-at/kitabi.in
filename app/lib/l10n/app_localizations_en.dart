@@ -611,8 +611,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGoalLabel => 'Reading goal';
 
   @override
-  String homeGoalProgress(int read, int goal) {
-    return '$read of $goal books this year';
+  String homeGoalOf(int goal) {
+    return 'of $goal books this year';
   }
 
   @override
@@ -1560,6 +1560,96 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recsLoadingSubtitle =>
       'Reasoning from your ratings — this can take a few seconds.';
+
+  @override
+  String get timerSessionLabel => 'Reading Session';
+
+  @override
+  String get timerStart => 'Start';
+
+  @override
+  String get timerInProgress => 'Session in Progress';
+
+  @override
+  String get timerElapsed => 'elapsed';
+
+  @override
+  String timerInTheZone(int minutes) {
+    return 'In the zone — $minutes min';
+  }
+
+  @override
+  String get timerStopAndLog => 'Stop & log';
+
+  @override
+  String timerLoggedTitle(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutes, well spent',
+      one: '1 minute, well spent',
+      zero: 'Under a minute, logged',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get timerThisSession => 'This session';
+
+  @override
+  String get timerThisWeek => 'This week';
+
+  @override
+  String get timerPageFieldLabel => 'Read up to page';
+
+  @override
+  String timerPageFieldOf(int total) {
+    return 'of $total';
+  }
+
+  @override
+  String get timerDone => 'Done';
+
+  @override
+  String get timerRecentSessions => 'Recent sessions';
+
+  @override
+  String get timerNoSessionsYet =>
+      'No sessions logged yet — tap Start to begin one.';
+
+  @override
+  String timerMiniBarLive(String elapsed) {
+    return '$elapsed · tap to open';
+  }
+
+  @override
+  String get timerToday => 'Today';
+
+  @override
+  String get timerYesterday => 'Yesterday';
+
+  @override
+  String get insightsReadingTime => 'Reading time';
+
+  @override
+  String insightsWeekTotal(String duration) {
+    return '$duration this week';
+  }
+
+  @override
+  String insightsVsLastWeek(String duration) {
+    return '$duration vs last week';
+  }
+
+  @override
+  String insightsReadingTimeInsight(String day, String hourRange) {
+    return 'You read most on ${day}s, often around $hourRange.';
+  }
+
+  @override
+  String timerMiniBarStopped(String duration) {
+    return 'Session logged — $duration';
+  }
 
   @override
   String get recsOptInBody =>

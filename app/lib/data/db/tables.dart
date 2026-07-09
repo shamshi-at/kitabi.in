@@ -36,6 +36,19 @@ class Ratings extends Table with SyncColumns {
   IntColumn get value => integer()();
 }
 
+/// A timed start-to-stop reading session against a library entry (a specific
+/// owned copy — progress already lives on LibraryEntries, this is the timed
+/// log). Only ever enqueued for sync once stopped; the live "timer running"
+/// state itself is device-local (KeyValues), never a row here until it ends.
+class ReadingSessions extends Table with SyncColumns {
+  TextColumn get libraryEntryId => text()();
+  DateTimeColumn get startedAt => dateTime()();
+  DateTimeColumn get endedAt => dateTime()();
+  IntColumn get durationSeconds => integer()();
+  IntColumn get pageStart => integer().nullable()();
+  IntColumn get pageEnd => integer().nullable()();
+}
+
 /// Text review — Work + user, own visibility flag (default private).
 class Reviews extends Table with SyncColumns {
   TextColumn get workId => text()();

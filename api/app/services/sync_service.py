@@ -24,6 +24,7 @@ from app.models import (
     LibraryEntryTag,
     PersonalTag,
     Rating,
+    ReadingSession,
     Review,
     SyncOp,
 )
@@ -38,6 +39,8 @@ from app.schemas.sync import (
     PersonalTagUpdate,
     RatingCreate,
     RatingUpdate,
+    ReadingSessionCreate,
+    ReadingSessionUpdate,
     ReviewCreate,
     ReviewUpdate,
     SyncChange,
@@ -59,6 +62,7 @@ ENTITIES: dict[str, tuple[type, type[BaseModel], type[BaseModel]]] = {
     "personal_tags": (PersonalTag, PersonalTagCreate, PersonalTagUpdate),
     "library_entry_tags": (LibraryEntryTag, LibraryEntryTagCreate, LibraryEntryTagUpdate),
     "lending_records": (LendingRecord, LendingRecordCreate, LendingRecordUpdate),
+    "reading_sessions": (ReadingSession, ReadingSessionCreate, ReadingSessionUpdate),
 }
 # Pull also serves activity_log_entries, which the client never pushes.
 PULL_MODELS: dict[str, type] = {
@@ -167,7 +171,7 @@ async def _refs_owned(db: AsyncSession, user_id: uuid.UUID, entity: str, data: d
     """Referenced Layer-2 rows must belong to the pusher. The FK constraint only
     proves the row *exists* — without this check a crafted create could hang a
     lending record or tag assignment off another user's library entry/tag."""
-    if entity == "lending_records":
+    if entity in ("lending_records", "reading_sessions"):
         entry_id = data.get("library_entry_id")
         if entry_id is not None:
             entry = await db.get(LibraryEntry, entry_id)

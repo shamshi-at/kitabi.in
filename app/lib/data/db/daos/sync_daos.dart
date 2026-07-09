@@ -102,4 +102,7 @@ class KeyValuesDao extends DatabaseAccessor<AppDatabase> with _$KeyValuesDaoMixi
   Future<void> setValue(String key, String value) => into(keyValues).insertOnConflictUpdate(
         KeyValuesCompanion(key: Value(key), value: Value(value)),
       );
+
+  Future<void> deleteValue(String key) =>
+      (delete(keyValues)..where((t) => t.key.equals(key))).go();
 }

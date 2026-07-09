@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
+import '../../../core/format_duration.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
@@ -10,6 +12,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../insights_stats.dart';
 import '../providers/insights_providers.dart';
+import '../reading_time_stats.dart';
 
 /// Single-letter month labels for the books-per-month bar chart axis.
 const _monthLetters = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
@@ -185,6 +188,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   SizedBox(height: 10),
                   _LanguageDonut(mix: stats.languageMix),
                 ],
+                SizedBox(height: 18),
+                _ReadingTimeSection(),
                 SizedBox(height: 18),
                 _ReadingFactCard(),
               ],
@@ -515,6 +520,167 @@ class _LinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _LinePainter old) => old.pages != pages || old.max != max;
+}
+
+/// Weekly reading-time chart, pulled forward from the v1.5 parking lot
+/// (10 Jul 2026, owner request) alongside the reading-timer feature itself.
+/// Gated on having logged at least one session, same "don't show a chart
+/// with nothing on it" convention as the rest of this screen.
+class _ReadingTimeSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final sessions = ref.watch(allReadingSessionsProvider).valueOrNull;
+    if (sessions == null || sessions.isEmpty) return const SizedBox.shrink();
+
+    final stats = computeReadingTimeStats(sessions);
+    final max = stats.secondsByDayThisWeek.reduce((a, b) => a > b ? a : b);
+    final delta = stats.thisWeekSeconds - stats.lastWeekSeconds;
+    // The real current week's Monday — used only to pull correctly-ordered
+    // weekday names out of DateFormat, never displayed as a date itself.
+    final now = DateTime.now();
+    final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ChartLabel(l10n.insightsReadingTime),
+        SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              l10n.insightsWeekTotal(formatDuration(Duration(seconds: stats.thisWeekSeconds))),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (stats.lastWeekSeconds > 0) ...[
+              SizedBox(width: 8),
+              Icon(
+                delta >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                size: 11,
+                color: delta >= 0 ? AppColors.moss : AppColors.inkSoft,
+              ),
+              Text(
+                l10n.insightsVsLastWeek(formatDuration(Duration(seconds: delta.abs()))),
+                style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+              ),
+            ],
+          ],
+        ),
+        SizedBox(height: 10),
+        SizedBox(
+          height: 80,
+          width: double.infinity,
+          child: CustomPaint(painter: _AreaPainter(stats.secondsByDayThisWeek, max)),
+        ),
+        SizedBox(height: 4),
+        Row(
+          children: [
+            for (var i = 0; i < 7; i++)
+              Expanded(
+                child: Text(
+                  DateFormat.E().format(monday.add(Duration(days: i))),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                ),
+              ),
+          ],
+        ),
+        if (stats.busiestWeekday != null && stats.busiestHour != null) ...[
+          SizedBox(height: 12),
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(color: AppColors.night, borderRadius: BorderRadius.circular(12)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.auto_awesome, size: 14, color: AppColors.gold),
+                SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    l10n.insightsReadingTimeInsight(
+                      DateFormat.EEEE().format(monday.add(Duration(days: stats.busiestWeekday! - 1))),
+                      _hourRangeLabel(stats.busiestHour!),
+                    ),
+                    style: TextStyle(color: Color(0xFFEFE3C8), fontSize: 11.5, height: 1.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// "9–10 PM" — locale-aware hour formatting either side of a plain dash.
+  String _hourRangeLabel(int hour) {
+    final start = DateFormat.j().format(DateTime(2026, 1, 1, hour));
+    final end = DateFormat.j().format(DateTime(2026, 1, 1, (hour + 1) % 24));
+    return '$start–$end';
+  }
+}
+
+class _AreaPainter extends CustomPainter {
+  _AreaPainter(this.seconds, this.max);
+
+  final List<int> seconds;
+  final int max;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final baseline = Paint()
+      ..color = AppColors.line
+      ..strokeWidth = 1;
+    canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), baseline);
+
+    if (max == 0) return;
+
+    final points = <Offset>[
+      for (var i = 0; i < 7; i++)
+        Offset(
+          size.width * (i / 6),
+          size.height - (seconds[i] / max) * size.height * 0.88,
+        ),
+    ];
+
+    final fillPath = Path()
+      ..moveTo(points.first.dx, size.height)
+      ..lineTo(points.first.dx, points.first.dy);
+    for (final p in points.skip(1)) {
+      fillPath.lineTo(p.dx, p.dy);
+    }
+    fillPath
+      ..lineTo(points.last.dx, size.height)
+      ..close();
+    final fill = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [AppColors.gold.withValues(alpha: 0.32), AppColors.gold.withValues(alpha: 0)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    canvas.drawPath(fillPath, fill);
+
+    final line = Paint()
+      ..color = AppColors.gold
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(Path()..addPolygon(points, false), line);
+
+    var peakIdx = 0;
+    for (var i = 1; i < 7; i++) {
+      if (seconds[i] > seconds[peakIdx]) peakIdx = i;
+    }
+    if (seconds[peakIdx] > 0) {
+      canvas.drawCircle(points[peakIdx], 4, Paint()..color = AppColors.oxblood);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AreaPainter old) => old.seconds != seconds || old.max != max;
 }
 
 class _LanguageDonut extends StatelessWidget {
