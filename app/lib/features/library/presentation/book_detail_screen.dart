@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/person_link.dart';
+import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/catalog_cache.dart';
@@ -22,6 +23,7 @@ import '../../../core/notifications/notification_service.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../../lending/lending_format.dart';
 import '../../lending/presentation/lend_sheet.dart';
+import '../../lending/presentation/sheet_fields.dart';
 import '../../lending/reminder.dart';
 import '../../share/presentation/share_book_sheet.dart';
 import '../cover_upload.dart';
@@ -84,24 +86,39 @@ class _BackButton extends StatelessWidget {
   }
 }
 
-class _BookDetailBody extends ConsumerWidget {
+/// Which half of the page is showing below the hero: the reader's own copy,
+/// or the shared catalogue record. Tapping the hero's rating row jumps
+/// straight to About's reviews.
+enum _BookTab { yours, about }
+
+class _BookDetailBody extends ConsumerStatefulWidget {
   const _BookDetailBody({required this.work, required this.editionId});
 
   final Map<String, dynamic> work;
   final String editionId;
 
+  @override
+  ConsumerState<_BookDetailBody> createState() => _BookDetailBodyState();
+}
+
+class _BookDetailBodyState extends ConsumerState<_BookDetailBody> {
+  var _tab = _BookTab.yours;
+
   Map<String, dynamic>? get _edition {
-    final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-    return editions.where((e) => e['id'] == editionId).firstOrNull ?? editions.firstOrNull;
+    final editions = (widget.work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    return editions.where((e) => e['id'] == widget.editionId).firstOrNull ?? editions.firstOrNull;
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final work = widget.work;
+    final editionId = widget.editionId;
     final edition = _edition;
     final entry = ref.watch(libraryEntryProvider(editionId));
     final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final genres = (work['genres'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final publisher = edition?['publisher'] as Map<String, dynamic>?;
+    final workId = work['id'] as String;
 
     return ListView(
       children: [
@@ -112,93 +129,113 @@ class _BookDetailBody extends ConsumerWidget {
           authors: authors,
           genres: genres,
           publisher: publisher,
+          onTapRating: () => setState(() => _tab = _BookTab.about),
         ),
         Padding(
-          padding: EdgeInsets.fromLTRB(13, 10, 13, 24),
-          child: entry.when(
-            loading: () => Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(child: Text('$err')),
-            data: (libraryEntry) => libraryEntry == null
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _AddToLibraryButton(work: work, edition: edition ?? {'id': editionId}),
-                      // A borrowed (unowned) book still shows its history —
-                      // "from Anu · out now", close-out action and all.
-                      SizedBox(height: 8),
-                      _LendingCard(editionId: editionId),
-                    ],
-                  )
-                : _OwnedBookSections(
-                    entry: libraryEntry,
-                    workId: work['id'] as String,
-                    title: work['title'] as String?,
-                    author: authors.isNotEmpty ? authors.first['name'] as String? : null,
-                    coverUrl: edition?['cover_url'] as String?,
-                  ),
-          ),
+          padding: EdgeInsets.fromLTRB(13, 12, 13, 0),
+          child: _TabBar(selected: _tab, onChanged: (t) => setState(() => _tab = t)),
         ),
-        // A gold rule + fleuron parts "your copy" (above) from the shared book
-        // record below — About, readers' reviews, editions, where to buy.
-        _TheBookDivider(),
-        // [WIRED] Where to buy — dormant until an edition carries buy_links
-        // (external retailers). Invisible otherwise, so no rewrite when store
-        // links are populated.
-        if (((edition?['buy_links'] as List?) ?? const []).isNotEmpty)
-          Padding(
-            padding: EdgeInsets.fromLTRB(13, 0, 13, 8),
-            child: _BuySection(
-              links: (edition!['buy_links'] as List).cast<Map<String, dynamic>>(),
-            ),
-          ),
+        SizedBox(height: 12),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 13),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  children: [
-                    for (final genre in genres)
-                      Chip(
-                        label: Text(genre['name'] as String, style: TextStyle(fontSize: 10)),
-                        backgroundColor: AppColors.card,
-                        side: BorderSide(color: AppColors.line),
-                        visualDensity: VisualDensity.compact,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: EdgeInsets.fromLTRB(13, 0, 13, 24),
+          child: switch (_tab) {
+            _BookTab.yours => entry.when(
+                loading: () => Center(child: CircularProgressIndicator()),
+                error: (err, _) => Center(child: Text('$err')),
+                data: (libraryEntry) => libraryEntry == null
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _AddToLibraryButton(work: work, edition: edition ?? {'id': editionId}),
+                          // A borrowed (unowned) book still shows its history —
+                          // "from Anu · out now", close-out action and all.
+                          SizedBox(height: 8),
+                          _LendingCard(editionId: editionId),
+                        ],
+                      )
+                    : _YoursTabContent(
+                        entry: libraryEntry,
+                        workId: workId,
+                        title: work['title'] as String?,
+                        author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+                        coverUrl: edition?['cover_url'] as String?,
                       ),
-                  ],
+              ),
+            _BookTab.about => _AboutTabContent(
+                work: work,
+                edition: edition,
+                editionId: editionId,
+                genres: genres,
+              ),
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Segmented Yours/About tabs — same visual language as the lending ledger's
+/// and the reader-profile's own segmented controls.
+class _TabBar extends StatelessWidget {
+  const _TabBar({required this.selected, required this.onChanged});
+
+  final _BookTab selected;
+  final ValueChanged<_BookTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    Widget tab(_BookTab t, String label) {
+      final active = t == selected;
+      return Expanded(
+        child: InkWell(
+          onTap: () => onChanged(t),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 9),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: active ? AppColors.oxblood : AppColors.line,
+                  width: active ? 2 : 1,
                 ),
               ),
-              if (edition?['isbn'] != null)
-                Text(
-                  AppLocalizations.of(context)!.bookIsbnLabel(edition!['isbn'] as String),
-                  style: TextStyle(color: AppColors.inkSoft, fontSize: 10),
-                ),
-            ],
+            ),
+            child: Text(
+              label.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.1,
+                color: active ? AppColors.oxblood : AppColors.inkSoft,
+              ),
+            ),
           ),
         ),
-        SizedBox(height: 16),
-        _AboutSection(work: work),
-        SizedBox(height: 8),
-        _EditionsSection(work: work, currentEditionId: editionId),
-        _TranslationsSection(work: work),
-        SizedBox(height: 24),
+      );
+    }
+
+    return Row(
+      children: [
+        tab(_BookTab.yours, l10n.bookYoursTab),
+        tab(_BookTab.about, l10n.bookAboutTab),
       ],
     );
   }
 }
 
 /// Direction A's "Frontispiece" hero — the cover stands on a wash of the
-/// book's own derived colour, with a genre eyebrow, a display-set title, the
-/// author byline (a door to their page), publisher, a tidy facts line, the
-/// community average, and the reader's own rating. The front cover carries a
+/// book's own derived colour (clamped so a muted cover still reads, and
+/// echoed as a solid spine-colour rail down the left edge), with a filled
+/// genre chip, a display-set title, the author byline (a door to their
+/// page), publisher, a tidy facts line, and the community rating — stars +
+/// numeric average + review count, the whole row one plain tap target to
+/// the About tab's reviews (no personal rating here; that lives with the
+/// reader's own review, in the Yours tab). The front cover carries a
 /// smaller back cover peeking from its corner; both remain tap-to-view /
 /// tap-to-edit. Share + favourite + remove sit as a top-right cluster (the
 /// back button floats separately, top-left).
-class _Frontispiece extends StatelessWidget {
+class _Frontispiece extends ConsumerWidget {
   const _Frontispiece({
     required this.work,
     required this.edition,
@@ -206,6 +243,7 @@ class _Frontispiece extends StatelessWidget {
     required this.authors,
     required this.genres,
     required this.publisher,
+    required this.onTapRating,
   });
 
   final Map<String, dynamic> work;
@@ -214,10 +252,12 @@ class _Frontispiece extends StatelessWidget {
   final List<Map<String, dynamic>> authors;
   final List<Map<String, dynamic>> genres;
   final Map<String, dynamic>? publisher;
+  final VoidCallback onTapRating;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final workId = work['id'] as String;
     final title = work['title'] as String;
     final authorName = authors.isNotEmpty ? authors.first['name'] as String? : null;
     final tint = TypesetCover.tintFor(title, authorName);
@@ -228,13 +268,14 @@ class _Frontispiece extends StatelessWidget {
       if (front != null) (url: front, label: l10n.coverFrontLabel),
       if (backCover != null) (url: backCover, label: l10n.coverBackLabel),
     ];
-    final aggregate = (work['aggregate_rating'] as num?)?.toDouble() ??
-        (work['translation_group_rating'] as num?)?.toDouble();
     final metaBits = <String>[
       if (work['first_publish_year'] != null) '${work['first_publish_year']}',
       if (edition?['page_count'] != null) l10n.bookPagesShort(edition!['page_count'] as int),
       if (edition?['language'] != null) edition!['language'] as String,
     ];
+    final reviewsData = ref.watch(publicReviewsProvider(workId));
+    final ratingAverage = (reviewsData.valueOrNull?['rating_average'] as num?)?.toDouble();
+    final ratingCount = reviewsData.valueOrNull?['rating_count'] as int? ?? 0;
 
     return Container(
       decoration: BoxDecoration(
@@ -244,153 +285,179 @@ class _Frontispiece extends StatelessWidget {
           colors: [tint, AppColors.paper],
         ),
       ),
-      padding: EdgeInsets.fromLTRB(16, 6, 10, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              SizedBox(width: 40), // room for the floating back button
-              Spacer(),
-              _ShareButton(work: work, edition: edition),
-              _LibraryEntryMenu(editionId: editionId),
-            ],
-          ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 112,
-                height: 162,
-                child: Stack(
-                  clipBehavior: Clip.none,
+          // A solid spine-colour rail down the left edge — a fixed accent
+          // that doesn't depend on the gradient wash reading well.
+          Positioned(left: 0, top: 0, bottom: 0, width: 5, child: ColoredBox(color: accent)),
+          Padding(
+            padding: EdgeInsets.fromLTRB(21, 6, 10, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    _CoverUploader(
-                      editionId: editionId,
-                      title: title,
-                      author: authorName,
-                      coverUrl: front,
-                      workId: work['id'] as String,
-                      width: 104,
-                      height: 156,
-                      viewerPages: pages,
-                      viewerIndex: 0,
-                    ),
-                    Positioned(
-                      right: -4,
-                      bottom: -4,
-                      child: _CoverUploader(
-                        editionId: editionId,
-                        coverUrl: backCover,
-                        workId: work['id'] as String,
-                        back: true,
-                        width: 38,
-                        height: 54,
-                        viewerPages: pages,
-                        viewerIndex: front != null ? 1 : 0,
-                      ),
-                    ),
+                    SizedBox(width: 40), // room for the floating back button
+                    Spacer(),
+                    _ShareButton(work: work, edition: edition),
+                    _LibraryEntryMenu(editionId: editionId),
                   ],
                 ),
-              ),
-              SizedBox(width: 18),
-              Expanded(
-                child: Column(
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (genres.isNotEmpty)
-                      Text(
-                        (genres.first['name'] as String).toUpperCase(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.4,
-                          color: accent,
-                        ),
+                    SizedBox(
+                      width: 112,
+                      height: 162,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          _CoverUploader(
+                            editionId: editionId,
+                            title: title,
+                            author: authorName,
+                            coverUrl: front,
+                            workId: workId,
+                            width: 104,
+                            height: 156,
+                            viewerPages: pages,
+                            viewerIndex: 0,
+                          ),
+                          Positioned(
+                            right: -4,
+                            bottom: -4,
+                            child: _CoverUploader(
+                              editionId: editionId,
+                              coverUrl: backCover,
+                              workId: workId,
+                              back: true,
+                              width: 38,
+                              height: 54,
+                              viewerPages: pages,
+                              viewerIndex: front != null ? 1 : 0,
+                            ),
+                          ),
+                        ],
                       ),
-                    SizedBox(height: 3),
-                    Text(
-                      title,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(height: 1.12),
                     ),
-                    if (authorName != null)
-                      GestureDetector(
-                        onTap: () =>
-                            context.push(Routes.authorBrowsePath(authors.first['id'] as String)),
-                        child: Padding(
-                          padding: EdgeInsets.only(top: 3),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (authors.first['image_url'] != null) ...[
-                                CircleAvatar(
-                                  radius: 9,
-                                  backgroundColor: AppColors.goldSoft,
-                                  foregroundImage:
-                                      netImageProvider(authors.first['image_url'] as String),
-                                ),
-                                SizedBox(width: 6),
-                              ],
-                              Flexible(
-                                child: Text(
-                                  l10n.bookByAuthor(authorName),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: AppColors.oxblood,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                  ),
+                    SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (genres.isNotEmpty)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              child: Text(
+                                (genres.first['name'] as String).toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    if (publisher != null)
-                      Padding(
-                        padding: EdgeInsets.only(top: 2),
-                        child: GestureDetector(
-                          onTap: () => context
-                              .push(Routes.publisherBrowsePath(publisher!['id'] as String)),
-                          child: Text(
-                            publisher!['name'] as String,
-                            style: TextStyle(color: AppColors.oxblood, fontSize: 11.5),
-                          ),
-                        ),
-                      ),
-                    if (metaBits.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(top: 7),
-                        child: Text(
-                          metaBits.join('  ·  '),
-                          style: TextStyle(color: AppColors.inkSoft, fontSize: 11.5),
-                        ),
-                      ),
-                    if (aggregate != null)
-                      Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Row(
-                          children: [
-                            _Stars(value: aggregate),
-                            SizedBox(width: 6),
-                            Text(
-                              aggregate.toStringAsFixed(1),
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
                             ),
-                          ],
-                        ),
+                          SizedBox(height: 5),
+                          Text(
+                            title,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(height: 1.12),
+                          ),
+                          if (authorName != null)
+                            GestureDetector(
+                              onTap: () => context
+                                  .push(Routes.authorBrowsePath(authors.first['id'] as String)),
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 3),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (authors.first['image_url'] != null) ...[
+                                      CircleAvatar(
+                                        radius: 9,
+                                        backgroundColor: AppColors.goldSoft,
+                                        foregroundImage: netImageProvider(
+                                            authors.first['image_url'] as String),
+                                      ),
+                                      SizedBox(width: 6),
+                                    ],
+                                    Flexible(
+                                      child: Text(
+                                        l10n.bookByAuthor(authorName),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: AppColors.oxblood,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (publisher != null)
+                            Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: GestureDetector(
+                                onTap: () => context.push(
+                                    Routes.publisherBrowsePath(publisher!['id'] as String)),
+                                child: Text(
+                                  publisher!['name'] as String,
+                                  style: TextStyle(color: AppColors.oxblood, fontSize: 11.5),
+                                ),
+                              ),
+                            ),
+                          if (metaBits.isNotEmpty)
+                            Padding(
+                              padding: EdgeInsets.only(top: 7),
+                              child: Text(
+                                metaBits.join('  ·  '),
+                                style: TextStyle(color: AppColors.inkSoft, fontSize: 11.5),
+                              ),
+                            ),
+                          if (ratingCount > 0)
+                            Padding(
+                              padding: EdgeInsets.only(top: 8),
+                              child: GestureDetector(
+                                onTap: onTapRating,
+                                behavior: HitTestBehavior.opaque,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _Stars(value: ratingAverage ?? 0),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      ratingAverage!.toStringAsFixed(1),
+                                      style:
+                                          TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+                                    ),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      l10n.bookReviewsCount(ratingCount),
+                                      style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                                    ),
+                                    Icon(Icons.chevron_right, size: 14, color: AppColors.inkSoft),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                    SizedBox(height: 8),
-                    _RatingRow(workId: work['id'] as String),
+                    ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -417,37 +484,6 @@ class _Stars extends StatelessWidget {
   }
 }
 
-/// A gold rule closed by a fleuron — the page's one editorial divider,
-/// between the reader's own copy and the shared book record.
-class _TheBookDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(13, 2, 13, 12),
-      child: Column(
-        children: [
-          Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  AppColors.goldSoft,
-                  AppColors.gold,
-                  AppColors.goldSoft,
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: 7),
-          Text('❦', style: TextStyle(color: AppColors.gold, fontSize: 13)),
-        ],
-      ),
-    );
-  }
-}
-
 /// "About this book" — the encyclopedia face of the entry: subtitle,
 /// description, and the shared facts, with an "Improve this entry" action
 /// that opens the catalog edit form. Edits by the book's contributor apply
@@ -466,53 +502,50 @@ class _AboutSection extends ConsumerWidget {
     final description = work['description'] as String?;
     final hasDescription = description != null && description.trim().isNotEmpty;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(13, 0, 13, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: _SectionHeader(label: l10n.bookAboutSection.toUpperCase())),
-              // Wiki-style: anyone can propose an improvement, right here.
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.oxblood,
-                  padding: EdgeInsets.symmetric(horizontal: 6),
-                  visualDensity: VisualDensity.compact,
-                ),
-                onPressed: () async {
-                  await context.push(Routes.catalogAdd, extra: workId);
-                  if (context.mounted) ref.invalidate(workProvider(workId));
-                },
-                icon: Icon(Icons.edit_outlined, size: 14),
-                label: Text(l10n.bookImproveEntry, style: TextStyle(fontSize: 11.5)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: _SectionHeader(label: l10n.bookAboutSection.toUpperCase())),
+            // Wiki-style: anyone can propose an improvement, right here.
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.oxblood,
+                padding: EdgeInsets.symmetric(horizontal: 6),
+                visualDensity: VisualDensity.compact,
               ),
-            ],
-          ),
-          if (subtitle != null && subtitle.trim().isNotEmpty)
-            Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: Text(
-                subtitle,
-                style: GoogleFonts.fraunces(
-                  fontStyle: FontStyle.italic,
-                  fontSize: 13.5,
-                  color: AppColors.inkSoft,
-                ),
+              onPressed: () async {
+                await context.push(Routes.catalogAdd, extra: workId);
+                if (context.mounted) ref.invalidate(workProvider(workId));
+              },
+              icon: Icon(Icons.edit_outlined, size: 14),
+              label: Text(l10n.bookImproveEntry, style: TextStyle(fontSize: 11.5)),
+            ),
+          ],
+        ),
+        if (subtitle != null && subtitle.trim().isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(bottom: 4),
+            child: Text(
+              subtitle,
+              style: GoogleFonts.fraunces(
+                fontStyle: FontStyle.italic,
+                fontSize: 13.5,
+                color: AppColors.inkSoft,
               ),
             ),
-          Text(
-            hasDescription ? description.trim() : l10n.bookDescriptionEmpty,
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.55,
-              color: hasDescription ? AppColors.ink : AppColors.inkSoft,
-              fontStyle: hasDescription ? FontStyle.normal : FontStyle.italic,
-            ),
           ),
-        ],
-      ),
+        Text(
+          hasDescription ? description.trim() : l10n.bookDescriptionEmpty,
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.55,
+            color: hasDescription ? AppColors.ink : AppColors.inkSoft,
+            fontStyle: hasDescription ? FontStyle.normal : FontStyle.italic,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -551,45 +584,42 @@ class _EditionsSection extends ConsumerWidget {
     final workId = work['id'] as String;
     final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(13, 0, 13, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionHeader(label: l10n.bookEditionsSection),
-          SizedBox(height: 4),
-          for (final e in editions)
-            _EditionRow(
-              edition: e,
-              isCurrent: e['id'] == currentEditionId,
-              onTap: e['id'] == currentEditionId
-                  ? null
-                  : () => context.push(Routes.bookDetailPath(workId, e['id'] as String)),
-            ),
-          SizedBox(height: 4),
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.oxblood,
-              padding: EdgeInsets.symmetric(vertical: 6),
-              visualDensity: VisualDensity.compact,
-            ),
-            onPressed: () async {
-              final added = await context.push<bool>(
-                Routes.catalogAddEdition,
-                extra: {'workId': workId, 'title': work['title'] as String?},
-              );
-              if (added == true && context.mounted) {
-                ref.invalidate(workProvider(workId));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.bookEditionAdded)),
-                );
-              }
-            },
-            icon: Icon(Icons.add, size: 18),
-            label: Text(l10n.bookAddEdition),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(label: l10n.bookEditionsSection),
+        SizedBox(height: 4),
+        for (final e in editions)
+          _EditionRow(
+            edition: e,
+            isCurrent: e['id'] == currentEditionId,
+            onTap: e['id'] == currentEditionId
+                ? null
+                : () => context.push(Routes.bookDetailPath(workId, e['id'] as String)),
           ),
-        ],
-      ),
+        SizedBox(height: 4),
+        TextButton.icon(
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.oxblood,
+            padding: EdgeInsets.symmetric(vertical: 6),
+            visualDensity: VisualDensity.compact,
+          ),
+          onPressed: () async {
+            final added = await context.push<bool>(
+              Routes.catalogAddEdition,
+              extra: {'workId': workId, 'title': work['title'] as String?},
+            );
+            if (added == true && context.mounted) {
+              ref.invalidate(workProvider(workId));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.bookEditionAdded)),
+              );
+            }
+          },
+          icon: Icon(Icons.add, size: 18),
+          label: Text(l10n.bookAddEdition),
+        ),
+      ],
     );
   }
 }
@@ -677,36 +707,33 @@ class _TranslationsSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final translations = (work['translations'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(13, 0, 13, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionHeader(label: l10n.bookTranslationsSection),
-          SizedBox(height: 4),
-          for (final t in translations)
-            _TranslationRow(
-              translation: t,
-              onTap: () {
-                final ed = t['edition'] as Map<String, dynamic>?;
-                if (ed != null) {
-                  context.push(Routes.bookDetailPath(t['id'] as String, ed['id'] as String));
-                }
-              },
-            ),
-          SizedBox(height: 4),
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.oxblood,
-              padding: EdgeInsets.symmetric(vertical: 6),
-              visualDensity: VisualDensity.compact,
-            ),
-            onPressed: () => _link(context, ref),
-            icon: Icon(Icons.link, size: 18),
-            label: Text(l10n.bookLinkTranslation),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(label: l10n.bookTranslationsSection),
+        SizedBox(height: 4),
+        for (final t in translations)
+          _TranslationRow(
+            translation: t,
+            onTap: () {
+              final ed = t['edition'] as Map<String, dynamic>?;
+              if (ed != null) {
+                context.push(Routes.bookDetailPath(t['id'] as String, ed['id'] as String));
+              }
+            },
           ),
-        ],
-      ),
+        SizedBox(height: 4),
+        TextButton.icon(
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.oxblood,
+            padding: EdgeInsets.symmetric(vertical: 6),
+            visualDensity: VisualDensity.compact,
+          ),
+          onPressed: () => _link(context, ref),
+          icon: Icon(Icons.link, size: 18),
+          label: Text(l10n.bookLinkTranslation),
+        ),
+      ],
     );
   }
 }
@@ -917,6 +944,8 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
   }
 }
 
+/// The reader's own 1-5 star rating for this book — lives inside the review
+/// card now (the hero only shows the community average).
 class _RatingRow extends ConsumerWidget {
   const _RatingRow({required this.workId});
 
@@ -937,6 +966,7 @@ class _RatingRow extends ConsumerWidget {
               final repo = await ref.read(ratingsRepositoryProvider.future);
               await repo.setRating(workId, i);
               ref.invalidate(ratingProvider(workId));
+              ref.invalidate(publicReviewsProvider(workId));
             },
             child: Icon(
               i <= value ? Icons.star : Icons.star_border,
@@ -1135,8 +1165,11 @@ class _AddToLibraryButton extends ConsumerWidget {
   }
 }
 
-class _OwnedBookSections extends ConsumerWidget {
-  const _OwnedBookSections({
+/// The Yours tab's content: what's yours about this specific copy — status,
+/// progress, your review (with your own rating), notes, lending, tags. The
+/// shared catalogue record lives in the About tab instead.
+class _YoursTabContent extends ConsumerWidget {
+  const _YoursTabContent({
     required this.entry,
     required this.workId,
     this.title,
@@ -1159,37 +1192,90 @@ class _OwnedBookSections extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.only(bottom: 8, left: 2),
-          child: Text(
-            AppLocalizations.of(context)!.bookYourCopy.toUpperCase(),
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-              color: AppColors.inkSoft,
-            ),
-          ),
-        ),
         // Wishlist → owned is the wish coming true — one obvious tap, not a
         // status-chip hunt: flips to "To read" (owned) and celebrates.
         if (entry.status == 'wishlist') ...[
           _GotItButton(entry: entry),
           SizedBox(height: 8),
         ],
-        _StatusPicker(entry: entry, workId: workId, reviewExtra: _reviewExtra),
-        SizedBox(height: 8),
-        _ProgressCard(entry: entry),
+        _StatusAndProgressCard(entry: entry, workId: workId, reviewExtra: _reviewExtra),
         SizedBox(height: 8),
         _ReviewCard(workId: workId, reviewExtra: _reviewExtra),
-        SizedBox(height: 8),
-        _PublicReviewsSection(workId: workId),
         SizedBox(height: 8),
         _NotesCard(entry: entry),
         SizedBox(height: 8),
         _LendingCard(entry: entry, editionId: entry.editionId),
         SizedBox(height: 8),
         _TagsSection(entry: entry),
+      ],
+    );
+  }
+}
+
+/// The About tab's content: the shared catalogue record, the same for every
+/// reader with this book — description, readers' reviews, editions,
+/// translations, where to buy.
+class _AboutTabContent extends StatelessWidget {
+  const _AboutTabContent({
+    required this.work,
+    required this.edition,
+    required this.editionId,
+    required this.genres,
+  });
+
+  final Map<String, dynamic> work;
+  final Map<String, dynamic>? edition;
+  final String editionId;
+  final List<Map<String, dynamic>> genres;
+
+  @override
+  Widget build(BuildContext context) {
+    final workId = work['id'] as String;
+    final buyLinks = (edition?['buy_links'] as List?) ?? const [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _AboutSection(work: work),
+        if (genres.isNotEmpty || edition?['isbn'] != null) ...[
+          SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    for (final genre in genres)
+                      Chip(
+                        label: Text(genre['name'] as String, style: TextStyle(fontSize: 10)),
+                        backgroundColor: AppColors.card,
+                        side: BorderSide(color: AppColors.line),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                  ],
+                ),
+              ),
+              if (edition?['isbn'] != null)
+                Text(
+                  AppLocalizations.of(context)!.bookIsbnLabel(edition!['isbn'] as String),
+                  style: TextStyle(color: AppColors.inkSoft, fontSize: 10),
+                ),
+            ],
+          ),
+        ],
+        SizedBox(height: 20),
+        _ReviewsSection(workId: workId),
+        SizedBox(height: 20),
+        _EditionsSection(work: work, currentEditionId: editionId),
+        SizedBox(height: 8),
+        _TranslationsSection(work: work),
+        if (buyLinks.isNotEmpty) ...[
+          SizedBox(height: 16),
+          _BuySection(links: buyLinks.cast<Map<String, dynamic>>()),
+        ],
       ],
     );
   }
@@ -1219,81 +1305,6 @@ class _GotItButton extends ConsumerWidget {
         icon: Icon(Icons.library_add_check_outlined, size: 18),
         label: Text(l10n.bookGotIt),
       ),
-    );
-  }
-}
-
-class _StatusPicker extends ConsumerWidget {
-  const _StatusPicker({required this.entry, required this.workId, required this.reviewExtra});
-
-  final LibraryEntry entry;
-  final String workId;
-  final Map<String, dynamic> reviewExtra;
-
-  /// One gentle, self-dismissing nudge to review a book the moment it's marked
-  /// read — and only when there's nothing to lose by ignoring it: no snackbar
-  /// at all if a review or rating already exists (don't irritate the reader).
-  Future<void> _maybePromptReview(BuildContext context, WidgetRef ref) async {
-    // Repositories directly, not the autoDispose providers' .future — a
-    // read without a listener can be disposed before it resolves.
-    final reviewsRepo = await ref.read(reviewsRepositoryProvider.future);
-    final ratingsRepo = await ref.read(ratingsRepositoryProvider.future);
-    final review = await reviewsRepo.watchForWork(workId).first;
-    final rating = await ratingsRepo.watchForWork(workId).first;
-    if (review != null || rating != null || !context.mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.reviewFinishedPrompt),
-        duration: Duration(seconds: 6),
-        action: SnackBarAction(
-          label: l10n.reviewFinishedAction,
-          onPressed: () => context.push(Routes.reviewEditorPath(workId), extra: reviewExtra),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        for (final status in readingStatuses)
-          GestureDetector(
-            onTap: () async {
-              Haptics.selection();
-              final repo = await ref.read(libraryRepositoryProvider.future);
-              await repo.updateStatus(entry.id, status);
-              if (status == 'read' && entry.finishDate == null) {
-                await repo.updateProgress(entry.id, finishDate: DateTime.now());
-              }
-              ref.invalidate(libraryEntryProvider(entry.editionId));
-              if (status == 'read' && entry.status != 'read' && context.mounted) {
-                await _maybePromptReview(context, ref);
-              }
-            },
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: entry.status == status ? AppColors.oxblood : AppColors.card,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: entry.status == status ? AppColors.oxblood : AppColors.line,
-                ),
-              ),
-              child: Text(
-                readingStatusLabel(status),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: entry.status == status ? AppColors.paper : AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
@@ -1340,12 +1351,61 @@ class _Card extends StatelessWidget {
   }
 }
 
-class _ProgressCard extends ConsumerWidget {
-  const _ProgressCard({required this.entry});
+/// Status + progress, merged into one card: a tappable status pill opens a
+/// bottom sheet to change it, sitting directly above the progress bar it
+/// governs — replaces the old five-button row + a separate progress card.
+class _StatusAndProgressCard extends ConsumerWidget {
+  const _StatusAndProgressCard({required this.entry, required this.workId, required this.reviewExtra});
 
   final LibraryEntry entry;
+  final String workId;
+  final Map<String, dynamic> reviewExtra;
 
-  Future<void> _edit(BuildContext context, WidgetRef ref) async {
+  /// One gentle, self-dismissing nudge to review a book the moment it's marked
+  /// read — and only when there's nothing to lose by ignoring it: no snackbar
+  /// at all if a review or rating already exists (don't irritate the reader).
+  Future<void> _maybePromptReview(BuildContext context, WidgetRef ref) async {
+    // Repositories directly, not the autoDispose providers' .future — a
+    // read without a listener can be disposed before it resolves.
+    final reviewsRepo = await ref.read(reviewsRepositoryProvider.future);
+    final ratingsRepo = await ref.read(ratingsRepositoryProvider.future);
+    final review = await reviewsRepo.watchForWork(workId).first;
+    final rating = await ratingsRepo.watchForWork(workId).first;
+    if (review != null || rating != null || !context.mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.reviewFinishedPrompt),
+        duration: Duration(seconds: 6),
+        action: SnackBarAction(
+          label: l10n.reviewFinishedAction,
+          onPressed: () => context.push(Routes.reviewEditorPath(workId), extra: reviewExtra),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _changeStatus(BuildContext context, WidgetRef ref) async {
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _StatusSheet(current: entry.status),
+    );
+    if (chosen == null || chosen == entry.status || !context.mounted) return;
+    Haptics.selection();
+    final repo = await ref.read(libraryRepositoryProvider.future);
+    await repo.updateStatus(entry.id, chosen);
+    if (chosen == 'read' && entry.finishDate == null) {
+      await repo.updateProgress(entry.id, finishDate: DateTime.now());
+    }
+    ref.invalidate(libraryEntryProvider(entry.editionId));
+    if (chosen == 'read' && entry.status != 'read' && context.mounted) {
+      await _maybePromptReview(context, ref);
+    }
+  }
+
+  Future<void> _editProgress(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: entry.currentPage?.toString() ?? '');
     final page = await showDialog<int>(
@@ -1381,57 +1441,136 @@ class _ProgressCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    // Total pages come from the edition (via the offline cache), not the current
-    // page — the old code passed currentPage as both, so it read "p. 50 of 50".
     final total = ref.watch(cachedBookProvider(entry.editionId)).valueOrNull?.pageCount;
     final page = entry.currentPage;
+
     return _Card(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          GestureDetector(
+            onTap: () => _changeStatus(context, ref),
+            behavior: HitTestBehavior.opaque,
+            child: Row(
               children: [
+                StatusPill(status: entry.status),
+                Spacer(),
                 Text(
-                  l10n.bookProgressLabel,
-                  style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+                  l10n.bookChangeStatus,
+                  style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
                 ),
-                Text(
-                  page == null
-                      ? '—'
-                      : (total != null && total > 0
-                          // "p. 302 of 724 · 42%" — pages first, never a bare
-                          // percentage (docs/screen-design.md).
-                          ? l10n.bookProgressValue(
-                              page, total, ((page / total) * 100).round().clamp(0, 100))
-                          : l10n.bookProgressPage(page)),
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
+                Icon(Icons.chevron_right, size: 15, color: AppColors.inkSoft),
               ],
             ),
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.bookStartedLabel,
-                  style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+          SizedBox(height: 11),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.bookProgressLabel,
+                      style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+                    ),
+                    Text(
+                      page == null
+                          ? '—'
+                          : (total != null && total > 0
+                              // "p. 302 of 724 · 42%" — pages first, never a bare
+                              // percentage (docs/screen-design.md).
+                              ? l10n.bookProgressValue(
+                                  page, total, ((page / total) * 100).round().clamp(0, 100))
+                              : l10n.bookProgressPage(page)),
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ],
                 ),
-                Text(
-                  entry.startDate != null
-                      ? '${entry.startDate!.day}/${entry.startDate!.month}/${entry.startDate!.year}'
-                      : l10n.bookNotStarted,
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.bookStartedLabel,
+                      style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+                    ),
+                    Text(
+                      entry.startDate != null
+                          ? '${entry.startDate!.day}/${entry.startDate!.month}/${entry.startDate!.year}'
+                          : l10n.bookNotStarted,
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.edit, size: 16, color: AppColors.oxblood),
-            onPressed: () => _edit(context, ref),
+              ),
+              IconButton(
+                icon: Icon(Icons.edit, size: 16, color: AppColors.oxblood),
+                onPressed: () => _editProgress(context, ref),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The five reading statuses as a bottom sheet — the current one checked,
+/// tap any other to switch and close.
+class _StatusSheet extends StatelessWidget {
+  const _StatusSheet({required this.current});
+
+  final String current;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(18, 12, 18, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SheetGrabber(),
+            Text(l10n.bookStatusSheetTitle, style: Theme.of(context).textTheme.titleLarge),
+            SizedBox(height: 6),
+            for (final status in readingStatuses)
+              InkWell(
+                onTap: () => Navigator.of(context).pop(status),
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 11, horizontal: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: status == current ? AppColors.oxblood : AppColors.line,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          readingStatusLabel(status),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: status == current ? FontWeight.w700 : FontWeight.w500,
+                            color: status == current ? AppColors.oxblood : AppColors.ink,
+                          ),
+                        ),
+                      ),
+                      if (status == current) Icon(Icons.check, size: 18, color: AppColors.oxblood),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1449,15 +1588,18 @@ class _ReviewCard extends ConsumerWidget {
     final review = ref.watch(reviewProvider(workId));
     final current = review.valueOrNull;
 
-    return GestureDetector(
-      // One tap opens the dedicated rate & review page (replaces the old
-      // cramped dialog); rating + review invalidate themselves on save.
-      onTap: () => context.push(Routes.reviewEditorPath(workId), extra: reviewExtra),
-      child: _Card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    // One tap (on the label or body — not the rating stars, which have their
+    // own tap targets) opens the dedicated rate & review page; rating + review
+    // invalidate themselves on save.
+    void openEditor() => context.push(Routes.reviewEditorPath(workId), extra: reviewExtra);
+
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: openEditor,
+            child: Row(
               children: [
                 Expanded(
                   child: Text(
@@ -1474,8 +1616,13 @@ class _ReviewCard extends ConsumerWidget {
                   ),
               ],
             ),
-            SizedBox(height: 4),
-            Text(
+          ),
+          SizedBox(height: 4),
+          _RatingRow(workId: workId),
+          SizedBox(height: 6),
+          GestureDetector(
+            onTap: openEditor,
+            child: Text(
               current?.body ?? l10n.bookReviewEmpty,
               style: TextStyle(
                 fontStyle: FontStyle.italic,
@@ -1483,6 +1630,190 @@ class _ReviewCard extends ConsumerWidget {
                 color: current != null ? AppColors.ink : AppColors.inkSoft,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The three ways to order the readers' reviews list. Sorting/pagination for
+/// display happen client-side over the already-fetched list (bounded by the
+/// API's own limit ceiling) — small enough a dataset that a second round
+/// trip per sort change would be waste, not correctness.
+enum _ReviewSort { newest, ratingDesc, ratingAsc }
+
+List<Map<String, dynamic>> _sortReviews(List<Map<String, dynamic>> reviews, _ReviewSort sort) {
+  if (sort == _ReviewSort.newest) return reviews;
+  // Index-based tie-break instead of relying on List.sort's stability (not
+  // guaranteed in Dart) — ties keep the server's newest-first relative order.
+  final indexed = reviews.asMap().entries.toList();
+  indexed.sort((a, b) {
+    final ra = a.value['rating'] as int?;
+    final rb = b.value['rating'] as int?;
+    int cmp;
+    if (ra == null && rb == null) {
+      cmp = 0;
+    } else if (ra == null) {
+      cmp = 1;
+    } else if (rb == null) {
+      cmp = -1;
+    } else {
+      cmp = sort == _ReviewSort.ratingDesc ? rb.compareTo(ra) : ra.compareTo(rb);
+    }
+    return cmp != 0 ? cmp : a.key.compareTo(b.key);
+  });
+  return [for (final e in indexed) e.value];
+}
+
+/// Every other reader's public review of this book, with sorting, a rating
+/// distribution, and a client-side "show more" reveal — a reviewer's profile
+/// may be private, in which case the server already anonymized their name to
+/// a stable "User_XXXXXX" placeholder and dropped their avatar (never trust
+/// the client to hide it). Only a public reviewer's row is tappable, opening
+/// their profile where a connection request can be sent.
+class _ReviewsSection extends ConsumerStatefulWidget {
+  const _ReviewsSection({required this.workId});
+
+  final String workId;
+
+  @override
+  ConsumerState<_ReviewsSection> createState() => _ReviewsSectionState();
+}
+
+class _ReviewsSectionState extends ConsumerState<_ReviewsSection> {
+  var _sort = _ReviewSort.newest;
+  var _visibleCount = 5;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final data = ref.watch(publicReviewsProvider(widget.workId));
+
+    return data.when(
+      loading: () => Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+      ),
+      error: (_, _) =>
+          ErrorRetry(onRetry: () => ref.invalidate(publicReviewsProvider(widget.workId))),
+      data: (page) {
+        final reviews = (page['reviews'] as List).cast<Map<String, dynamic>>();
+        final ratingCount = page['rating_count'] as int? ?? 0;
+        final ratingAverage = (page['rating_average'] as num?)?.toDouble();
+        final distributionRaw = (page['rating_distribution'] as Map?) ?? const {};
+        final distribution = {
+          for (final e in distributionRaw.entries) int.parse(e.key.toString()): e.value as int,
+        };
+        final sorted = _sortReviews(reviews, _sort);
+        final visible = sorted.take(_visibleCount).toList();
+        final remaining = sorted.length - visible.length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.bookReviewsCount(reviews.length),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                if (reviews.length > 1)
+                  _SortChip(sort: _sort, onChanged: (s) => setState(() => _sort = s)),
+              ],
+            ),
+            if (ratingCount > 0) ...[
+              SizedBox(height: 12),
+              _RatingDistribution(
+                average: ratingAverage!,
+                count: ratingCount,
+                distribution: distribution,
+              ),
+            ],
+            SizedBox(height: 10),
+            if (reviews.isEmpty)
+              _Card(
+                child: Text(
+                  l10n.bookReadersReviewsEmpty,
+                  style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+                ),
+              )
+            else ...[
+              for (final r in visible) ...[
+                _PublicReviewRow(review: r),
+                SizedBox(height: 8),
+              ],
+              if (remaining > 0)
+                Center(
+                  child: OutlinedButton(
+                    onPressed: () => setState(() => _visibleCount += 10),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.oxblood,
+                      side: BorderSide(color: AppColors.line),
+                    ),
+                    child: Text(l10n.bookShowMoreReviews(remaining)),
+                  ),
+                ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The "Newest / Highest rated / Lowest rated" chip + menu.
+class _SortChip extends StatelessWidget {
+  const _SortChip({required this.sort, required this.onChanged});
+
+  final _ReviewSort sort;
+  final ValueChanged<_ReviewSort> onChanged;
+
+  String _label(AppLocalizations l10n, _ReviewSort s) => switch (s) {
+        _ReviewSort.newest => l10n.bookSortNewest,
+        _ReviewSort.ratingDesc => l10n.bookSortRatingHigh,
+        _ReviewSort.ratingAsc => l10n.bookSortRatingLow,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return PopupMenuButton<_ReviewSort>(
+      initialValue: sort,
+      onSelected: onChanged,
+      padding: EdgeInsets.zero,
+      itemBuilder: (_) => [
+        for (final s in _ReviewSort.values)
+          PopupMenuItem(
+            value: s,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(_label(l10n, s)),
+                if (s == sort) ...[SizedBox(width: 12), Icon(Icons.check, size: 16, color: AppColors.oxblood)],
+              ],
+            ),
+          ),
+      ],
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          border: Border.all(color: AppColors.line),
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _label(l10n, sort),
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.ink),
+            ),
+            SizedBox(width: 3),
+            Icon(Icons.expand_more, size: 15, color: AppColors.inkSoft),
           ],
         ),
       ),
@@ -1490,56 +1821,89 @@ class _ReviewCard extends ConsumerWidget {
   }
 }
 
-/// Every other reader's public review of this book — a review's owner may
-/// keep their profile private, in which case the server already anonymized
-/// their name to a stable "User_XXXXXX" placeholder and dropped their avatar
-/// (never trust the client to hide it). Only a public reviewer's row is
-/// tappable, opening their profile where a connection request can be sent.
-class _PublicReviewsSection extends ConsumerWidget {
-  const _PublicReviewsSection({required this.workId});
+/// The numeric average + stars beside a 5→1 star distribution — free from
+/// data the reviews endpoint already returns, no extra request.
+class _RatingDistribution extends StatelessWidget {
+  const _RatingDistribution({required this.average, required this.count, required this.distribution});
 
-  final String workId;
+  final double average;
+  final int count;
+  final Map<int, int> distribution;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final reviews = ref.watch(publicReviewsProvider(workId));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final maxCount = distribution.values.isEmpty
+        ? 1
+        : distribution.values.reduce((a, b) => a > b ? a : b).clamp(1, 1 << 30);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Padding(
-          padding: EdgeInsets.only(bottom: 8, left: 2),
-          child: Text(
-            l10n.bookReadersReviewsLabel,
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-              color: AppColors.inkSoft,
-            ),
+        SizedBox(
+          // 5 stars at 14px each is 70px wide (mainAxisSize.min doesn't
+          // shrink an Icon below its `size`) — this must stay >= that or the
+          // star row overflows the column.
+          width: 78,
+          child: Column(
+            children: [
+              Text(
+                average.toStringAsFixed(1),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
+              ),
+              SizedBox(height: 2),
+              _Stars(value: average),
+              SizedBox(height: 2),
+              Text(
+                l10n.bookRatingsCount(count),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 8.5, color: AppColors.inkSoft),
+              ),
+            ],
           ),
         ),
-        reviews.when(
-          loading: () => Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
-          ),
-          error: (_, _) => ErrorRetry(onRetry: () => ref.invalidate(publicReviewsProvider(workId))),
-          data: (items) => items.isEmpty
-              ? _Card(
-                  child: Text(
-                    l10n.bookReadersReviewsEmpty,
-                    style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
-                  ),
-                )
-              : Column(
-                  children: [
-                    for (final r in items) ...[
-                      _PublicReviewRow(review: r),
-                      SizedBox(height: 8),
+        SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            children: [
+              for (var v = 5; v >= 1; v--)
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 1.5),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 8,
+                        child: Text(
+                          '$v',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(99),
+                          child: LinearProgressIndicator(
+                            value: (distribution[v] ?? 0) / maxCount,
+                            minHeight: 4,
+                            backgroundColor: AppColors.paperDeep,
+                            valueColor: AlwaysStoppedAnimation(AppColors.gold),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      SizedBox(
+                        width: 22,
+                        child: Text(
+                          '${distribution[v] ?? 0}',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                        ),
+                      ),
                     ],
-                  ],
+                  ),
                 ),
+            ],
+          ),
         ),
       ],
     );
@@ -1553,6 +1917,7 @@ class _PublicReviewRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final reviewer = review['reviewer'] as Map<String, dynamic>;
     final isPublic = reviewer['is_public'] == true;
     final avatar = reviewer['avatar_url'] as String?;
@@ -1613,6 +1978,11 @@ class _PublicReviewRow extends StatelessWidget {
                                 color: AppColors.gold,
                               ),
                           ],
+                        )
+                      else
+                        Text(
+                          l10n.bookNoRatingLabel,
+                          style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
                         ),
                     ],
                   ),

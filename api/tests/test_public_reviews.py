@@ -1,7 +1,9 @@
 """Public reviews on a Work: visible-only, reviewer identity resolved live
 from current profile visibility (anonymous placeholder while private, real
-name the instant they go public), and a rating attached only when its owner
-also left a public review."""
+name the instant they go public), a rating attached only when its owner
+also left a public review, and the rating_summary (average/count/
+distribution) computed from every rating on the work regardless of whether
+its owner ever wrote a review."""
 
 import uuid
 
@@ -69,7 +71,8 @@ async def test_only_visible_reviews_are_returned(two_user_client, db_sessionmake
 
     resp = await client.get(f"/catalog/works/{work['id']}/reviews")
     assert resp.status_code == 200
-    reviews = resp.json()
+    body = resp.json()
+    reviews = body["reviews"]
     assert len(reviews) == 1
     assert reviews[0]["body"] == "A quiet, devastating book."
     assert reviews[0]["reviewer"]["display_name"] == "Anu Varghese"
@@ -103,7 +106,7 @@ async def test_private_profile_review_is_anonymized_and_flips_live(
         await db.commit()
 
     resp = await client.get(f"/catalog/works/{work['id']}/reviews")
-    reviews = resp.json()
+    reviews = resp.json()["reviews"]
     assert len(reviews) == 1
     reviewer = reviews[0]["reviewer"]
     assert reviewer["display_name"].startswith("User_")
@@ -114,7 +117,7 @@ async def test_private_profile_review_is_anonymized_and_flips_live(
 
     # Same placeholder every time while private (stable, not random per call).
     resp2 = await client.get(f"/catalog/works/{work['id']}/reviews")
-    assert resp2.json()[0]["reviewer"]["display_name"] == anon_name
+    assert resp2.json()["reviews"][0]["reviewer"]["display_name"] == anon_name
 
     # They flip their profile public — the very next fetch shows the real name.
     async with db_sessionmaker() as db:
@@ -123,7 +126,7 @@ async def test_private_profile_review_is_anonymized_and_flips_live(
         await db.commit()
 
     resp3 = await client.get(f"/catalog/works/{work['id']}/reviews")
-    reviewer3 = resp3.json()[0]["reviewer"]
+    reviewer3 = resp3.json()["reviews"][0]["reviewer"]
     assert reviewer3["display_name"] == "Benyamin Fan"
     assert reviewer3["is_public"] is True
 
@@ -162,12 +165,14 @@ async def test_rating_attaches_only_alongside_a_public_review(
         await db.commit()
 
     resp = await client.get(f"/catalog/works/{work['id']}/reviews")
-    reviews = resp.json()
+    reviews = resp.json()["reviews"]
     assert len(reviews) == 1
     assert reviews[0]["rating"] == 5
 
 
-async def test_naked_rating_with_no_review_never_appears(two_user_client, db_sessionmaker, user_b):
+async def test_naked_rating_has_no_review_but_still_counts_in_the_summary(
+    two_user_client, db_sessionmaker, user_b
+):
     client = two_user_client
     work = (await client.post("/catalog/works", json={"title": "Randamoozham"})).json()
     async with db_sessionmaker() as db:
@@ -190,4 +195,62 @@ async def test_naked_rating_with_no_review_never_appears(two_user_client, db_ses
         await db.commit()
 
     resp = await client.get(f"/catalog/works/{work['id']}/reviews")
-    assert resp.json() == []
+    body = resp.json()
+    # No public review exists, so the review list stays empty...
+    assert body["reviews"] == []
+    # ...but the rating still counts toward the community summary, since that's
+    # computed from every rating on the work, not just reviewed ones.
+    assert body["rating_count"] == 1
+    assert body["rating_average"] == 4.0
+    assert body["rating_distribution"] == {"1": 0, "2": 0, "3": 0, "4": 1, "5": 0}
+
+
+async def test_rating_summary_averages_and_distributes_across_users(
+    two_user_client, db_sessionmaker, user, user_b
+):
+    client = two_user_client
+    work = (await client.post("/catalog/works", json={"title": "Mathilukal"})).json()
+    async with db_sessionmaker() as db:
+        db.add(
+            Profile(
+                id=uuid.UUID(user_b["id"]),
+                email=user_b["email"],
+                full_name="Reader B",
+                profile_visible=True,
+            )
+        )
+        db.add(
+            Rating(
+                id=uuid.uuid4(),
+                user_id=uuid.UUID(user["id"]),
+                work_id=uuid.UUID(work["id"]),
+                value=5,
+            )
+        )
+        db.add(
+            Rating(
+                id=uuid.uuid4(),
+                user_id=uuid.UUID(user_b["id"]),
+                work_id=uuid.UUID(work["id"]),
+                value=3,
+            )
+        )
+        await db.commit()
+
+    resp = await client.get(f"/catalog/works/{work['id']}/reviews")
+    body = resp.json()
+    assert body["rating_count"] == 2
+    assert body["rating_average"] == 4.0
+    assert body["rating_distribution"] == {"1": 0, "2": 0, "3": 1, "4": 0, "5": 1}
+
+
+async def test_no_ratings_yet_reports_empty_summary(two_user_client, db_sessionmaker):
+    client = two_user_client
+    work = (await client.post("/catalog/works", json={"title": "Oru Sankeerthanam Pole"})).json()
+
+    resp = await client.get(f"/catalog/works/{work['id']}/reviews")
+    body = resp.json()
+    assert body["reviews"] == []
+    assert body["rating_count"] == 0
+    assert body["rating_average"] is None
+    assert body["rating_distribution"] == {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}

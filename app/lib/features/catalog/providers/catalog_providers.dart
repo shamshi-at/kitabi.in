@@ -51,11 +51,14 @@ final workProvider =
   return ref.watch(apiClientProvider).getWork(workId);
 });
 
-/// Public reviews for a book — every other reader's visible review, each
-/// paired with their star rating if they left one. Reviewer identity is
-/// resolved server-side on every fetch, so re-opening the book page always
-/// reflects the reviewer's current profile visibility.
+/// Public reviews for a book plus the community rating picture (average,
+/// count, 1-5 distribution) — one call powers both the book page hero's
+/// rating row and the About tab's reviews section. Sorting/pagination for
+/// display are handled client-side over the fetched `reviews` list; the
+/// server always returns newest-first. Reviewer identity is resolved
+/// server-side on every fetch, so re-opening the book page always reflects
+/// the reviewer's current profile visibility.
 final publicReviewsProvider =
-    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, workId) {
+    FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, workId) {
   return ref.watch(apiClientProvider).getWorkReviews(workId);
 });

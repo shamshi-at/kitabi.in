@@ -22,6 +22,7 @@ from app.schemas.catalog import (
     EditionUpdate,
     GlobalSearchOut,
     PublicReviewOut,
+    PublicReviewsPageOut,
     PublisherCreate,
     PublisherOut,
     PublisherWorksOut,
@@ -215,16 +216,24 @@ async def get_work(work_id: uuid.UUID, db: DbSession) -> WorkOut:
     return await _work_out(db, work)
 
 
-@router.get("/works/{work_id}/reviews", response_model=list[PublicReviewOut])
+@router.get("/works/{work_id}/reviews", response_model=PublicReviewsPageOut)
 async def work_reviews(
     work_id: uuid.UUID, user: CurrentUser, db: DbSession
-) -> list[PublicReviewOut]:
+) -> PublicReviewsPageOut:
     """Every public review on this book, newest first — each reviewer's name
     and avatar are their real profile if it's public, otherwise a stable
     anonymous placeholder (flips to their real identity the moment they make
-    their profile public again, since it's resolved fresh on every read)."""
+    their profile public again, since it's resolved fresh on every read) —
+    plus the community rating picture (average, count, 1-5 distribution)
+    computed from every rating on the work, public review or not."""
     reviews = await review_service.public_reviews(db, work_id)
-    return [PublicReviewOut(**r) for r in reviews]
+    summary = await review_service.rating_summary(db, work_id)
+    return PublicReviewsPageOut(
+        reviews=[PublicReviewOut(**r) for r in reviews],
+        rating_average=summary["average"],
+        rating_count=summary["count"],
+        rating_distribution=summary["distribution"],
+    )
 
 
 @router.patch("/works/{work_id}", response_model=WorkPatchResult)

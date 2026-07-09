@@ -354,6 +354,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookReadersReviewsEmpty => 'No public reviews yet.';
 
   @override
+  String get bookYoursTab => 'Yours';
+
+  @override
+  String get bookAboutTab => 'About';
+
+  @override
+  String get bookChangeStatus => 'Change';
+
+  @override
+  String get bookStatusSheetTitle => 'Set status';
+
+  @override
+  String get bookSortNewest => 'Newest';
+
+  @override
+  String get bookSortRatingHigh => 'Highest rated';
+
+  @override
+  String get bookSortRatingLow => 'Lowest rated';
+
+  @override
+  String bookReviewsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reviews',
+      one: '1 review',
+      zero: 'No reviews yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookRatingsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ratings',
+      one: '1 rating',
+      zero: 'No ratings yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookShowMoreReviews(int count) {
+    return 'Show $count more reviews';
+  }
+
+  @override
+  String get bookNoRatingLabel => 'no rating';
+
+  @override
   String get reviewPageTitle => 'Rate & review';
 
   @override

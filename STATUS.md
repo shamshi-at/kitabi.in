@@ -346,6 +346,31 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   ledger-only screen — the ledger is still the profile's default tab, one tap away;
   an unlinked private contact still opens the old ledger screen. Verified live on
   the emulator across the library grid, the book page, and profile navigation.
+- **9 Jul 2026** — **Book page rework, round 2 (mocked and owner-approved before
+  building) — supersedes the "❦"-divider layout above.** Fixed a hero tint bug
+  (`TypesetCover.tintFor`): the old version forced lightness to a flat 0.9 while
+  halving saturation, so a muted cover (e.g. a faded photo scan) washed out to
+  nearly nothing — now clamps a saturation floor (0.32) and a lower lightness
+  ceiling (0.80). The hero gained a solid "spine rail" colour bar on its left edge
+  and a filled (solid-background) genre chip. The reader's own star rating moved
+  out of the hero entirely into the "MY REVIEW" card (above the review body); the
+  hero now shows the *community* rating instead — aggregate stars + average +
+  review count, live-computed from every `Rating` row on the Work (the old
+  `Work.aggregate_rating` column was dead — nothing ever wrote to it) — as one
+  plain (no link styling) tap target that jumps to the About tab. The "❦" divider
+  became a YOURS / ABOUT segmented tab bar. The old 5-button status row merged
+  into one status+progress card with a "Change ›" tap target opening a bottom
+  sheet to switch status. Readers' reviews rebuilt: a sort chip (Newest / Highest
+  rated / Lowest rated, client-side, no extra fetch), a rating-distribution bar
+  chart (from all ratings, not just reviewed ones — new `PublicReviewsPageOut` API
+  shape wraps `reviews` + `rating_average`/`rating_count`/`rating_distribution`), a
+  "no rating" label for star-less reviews, and a client-side "Show N more
+  reviews" reveal past the first 5. Verified via a targeted widget-test regression
+  (real Flutter layout engine, not just a smoke check) plus the full 71-test suite
+  and `flutter analyze`; the regression test caught and fixed a real
+  `_RatingDistribution` overflow (5 stars at 14px overflowed the old 62px-wide
+  label column by 8px — widened to 78px) and confirmed the rating-above-review
+  ordering in the review card.
 - **9 Jul 2026** — **Reader profile redesigned as a "bookplate" (mocked before building).**
   Three rounds of HTML phone-frame mocks (owner-reviewed) landed on the "Card Ledger"
   direction: `PublicProfileScreen`'s header is a gold-hairline-inset card (Ex Libris

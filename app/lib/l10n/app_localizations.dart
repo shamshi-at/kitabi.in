@@ -700,6 +700,72 @@ abstract class AppLocalizations {
   /// **'No public reviews yet.'**
   String get bookReadersReviewsEmpty;
 
+  /// Book page tab: the reader's own copy — status, review, notes, lending
+  ///
+  /// In en, this message translates to:
+  /// **'Yours'**
+  String get bookYoursTab;
+
+  /// Book page tab: the shared catalogue record — description, reviews, editions
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get bookAboutTab;
+
+  /// Tappable label next to the current reading status, opens the status-change sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get bookChangeStatus;
+
+  /// Title of the bottom sheet listing the five reading statuses
+  ///
+  /// In en, this message translates to:
+  /// **'Set status'**
+  String get bookStatusSheetTitle;
+
+  /// Review sort option: newest first
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get bookSortNewest;
+
+  /// Review sort option: highest star rating first
+  ///
+  /// In en, this message translates to:
+  /// **'Highest rated'**
+  String get bookSortRatingHigh;
+
+  /// Review sort option: lowest star rating first
+  ///
+  /// In en, this message translates to:
+  /// **'Lowest rated'**
+  String get bookSortRatingLow;
+
+  /// Heading over the public reviews list
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No reviews yet} =1{1 review} other{{count} reviews}}'**
+  String bookReviewsCount(int count);
+
+  /// Caption under the numeric average in the rating distribution
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No ratings yet} =1{1 rating} other{{count} ratings}}'**
+  String bookRatingsCount(int count);
+
+  /// Button revealing the next batch of already-fetched reviews
+  ///
+  /// In en, this message translates to:
+  /// **'Show {count} more reviews'**
+  String bookShowMoreReviews(int count);
+
+  /// Shown instead of stars when a public reviewer left text but no star rating
+  ///
+  /// In en, this message translates to:
+  /// **'no rating'**
+  String get bookNoRatingLabel;
+
   /// App bar title of the dedicated review/rating editor page
   ///
   /// In en, this message translates to:

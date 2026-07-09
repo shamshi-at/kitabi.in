@@ -275,12 +275,15 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
-  /// Every public review on a book, newest first — each reviewer's name is
-  /// their real profile if it's public, otherwise a stable anonymous
-  /// placeholder resolved fresh server-side on every call.
-  Future<List<Map<String, dynamic>>> getWorkReviews(String workId) async {
+  /// Every public review on a book (newest first — sorting for display
+  /// happens client-side over this list) plus the community rating picture
+  /// (`rating_average`, `rating_count`, `rating_distribution`) computed from
+  /// every rating on the work, not just reviewed ones. Reviewer identity is
+  /// resolved server-side on every fetch, so re-opening the book page always
+  /// reflects the reviewer's current profile visibility.
+  Future<Map<String, dynamic>> getWorkReviews(String workId) async {
     final res = await _dio.get('/catalog/works/$workId/reviews');
-    return (res.data as List).cast<Map<String, dynamic>>();
+    return res.data as Map<String, dynamic>;
   }
 
   /// Wiki-style edit — the response wrapper says whether the change applied

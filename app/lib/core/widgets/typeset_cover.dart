@@ -37,10 +37,17 @@ class TypesetCover extends StatelessWidget {
     return HSLColor.fromAHSL(1, hue, sat, light).toColor();
   }
 
-  /// A soft, high-lightness wash of [accentFor] — the book page's hero band.
+  /// A soft wash of [accentFor] — the book page's hero band. Clamps a
+  /// saturation *floor* (raising a muted cover's colour up, never diluting
+  /// it further) and a lightness ceiling below paper-white, so every book
+  /// gets a wash with real presence — a bug fix: the previous version forced
+  /// lightness to a flat 0.9 while also *halving* saturation, which made an
+  /// already-muted cover (e.g. a faded brown photo scan) wash out to nearly
+  /// nothing against the paper background.
   static Color tintFor(String title, String? author) {
     final base = HSLColor.fromColor(accentFor(title, author));
-    return base.withSaturation((base.saturation * 0.6).clamp(0.0, 1.0)).withLightness(0.9).toColor();
+    final sat = base.saturation.clamp(0.32, 0.6);
+    return HSLColor.fromAHSL(1, base.hue, sat, 0.80).toColor();
   }
 
   /// Lead-in before an overflowing title/author runs its one ticker pass —

@@ -9,7 +9,7 @@ public — never an anonymous rating with no accompanying text.
 
 import uuid
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Profile, Rating, Review
@@ -74,3 +74,23 @@ async def public_reviews(db: AsyncSession, work_id: uuid.UUID, limit: int = 100)
             }
         )
     return out
+
+
+async def rating_summary(db: AsyncSession, work_id: uuid.UUID) -> dict:
+    """The community rating picture for a Work — average, total count, and a
+    1-5 distribution — computed live from every rating on the work (not just
+    ones attached to a public review, and not the `Work.aggregate_rating`
+    column, which nothing in this codebase ever writes to). Cheap: one
+    grouped COUNT, same pattern as everywhere else in this service."""
+    stmt = (
+        select(Rating.value, func.count())
+        .where(Rating.work_id == work_id, Rating.deleted_at.is_(None))
+        .group_by(Rating.value)
+    )
+    rows = (await db.execute(stmt)).all()
+    distribution = {v: 0 for v in range(1, 6)}
+    for value, count in rows:
+        distribution[value] = count
+    total = sum(distribution.values())
+    average = sum(v * c for v, c in distribution.items()) / total if total else None
+    return {"average": average, "count": total, "distribution": distribution}

@@ -332,3 +332,16 @@ class PublicReviewOut(BaseModel):
     rating: int | None
     created_at: datetime
     reviewer: PublicReviewerOut
+
+
+class PublicReviewsPageOut(BaseModel):
+    """Everything the book page's reviews section needs in one call: the
+    visible reviews (newest first — the app sorts/paginates client-side over
+    this list, so there's no server-side sort/offset param to keep in sync)
+    plus the community rating picture computed from every rating on the
+    work, not just the ones attached to a public review."""
+
+    reviews: list[PublicReviewOut]
+    rating_average: float | None
+    rating_count: int
+    rating_distribution: dict[int, int]

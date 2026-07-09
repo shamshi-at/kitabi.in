@@ -201,6 +201,11 @@ void main() {
     await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
     await settle(tester);
 
+    // About is its own tab now — the Yours tab (status/review/notes/lending)
+    // shows by default.
+    await tester.tap(find.text('ABOUT'));
+    await settle(tester);
+
     expect(find.text('ABOUT THIS BOOK'), findsOneWidget);
     expect(find.text('A sea-salted love story of Kuttanad.'), findsOneWidget);
     expect(find.text('Improve this entry'), findsOneWidget);
@@ -222,8 +227,16 @@ void main() {
     await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
     await settle(tester);
 
-    await tester.tap(find.text('Read'));
-    await settle(tester);
+    // Status + progress are one merged card now: tap "Change" to open the
+    // status sheet, then the status label within it.
+    Future<void> changeStatus(String label) async {
+      await tester.tap(find.text('Change'));
+      await settle(tester);
+      await tester.tap(find.text(label));
+      await settle(tester);
+    }
+
+    await changeStatus('Read');
 
     expect(find.text('Finished! What did you think?'), findsOneWidget);
 
@@ -239,12 +252,83 @@ void main() {
     });
     await tester.pageBack();
     await settle(tester);
-    await tester.tap(find.text('Reading'));
+    // The first prompt's snackbar has a 6s duration — let it fully expire so
+    // its overlay doesn't linger over the status card's hit-test region.
+    await tester.pump(const Duration(seconds: 7));
     await settle(tester);
-    await tester.tap(find.text('Read'));
-    await settle(tester);
+    await changeStatus('Reading');
+    await changeStatus('Read');
 
     expect(find.text('Finished! What did you think?'), findsNothing);
+
+    await flushTree(tester);
+  });
+
+  testWidgets('review card shows rating above the review body; distribution does not overflow',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      final repo = LibraryRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await repo.add(editionId: _editionId);
+      final ratings = RatingsRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await ratings.setRating(_workId, 4);
+    });
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        ...overrides(),
+        publicReviewsProvider(_workId).overrideWith((ref) async => {
+              'reviews': <Map<String, dynamic>>[
+                {
+                  'reviewer': {'is_public': true, 'display_name': 'Reader One', 'avatar_url': null},
+                  'rating': 5,
+                  'body': 'Loved it.',
+                },
+              ],
+              // A high count skews maxCount up, which is what pushed the
+              // 5-star icon row past the old fixed-width column and produced
+              // the RenderFlex overflow this test guards against.
+              'rating_average': 4.2,
+              'rating_count': 128,
+              'rating_distribution': {'1': 2, '2': 3, '3': 10, '4': 40, '5': 73},
+            }),
+      ],
+      child: MaterialApp.router(
+        routerConfig: GoRouter(
+          initialLocation: '/book/$_workId/$_editionId',
+          routes: [
+            GoRoute(
+              path: '/book/:workId/:editionId',
+              builder: (context, state) => BookDetailScreen(
+                workId: state.pathParameters['workId']!,
+                editionId: state.pathParameters['editionId']!,
+              ),
+            ),
+          ],
+        ),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+      ),
+    ));
+    await settle(tester);
+
+    // Rating sits above the review body in the "My review" card, per the
+    // approved mockup — not below it.
+    final ratingTop = tester.getTopLeft(find.byIcon(Icons.star).first).dy;
+    final bodyTop = tester.getTopLeft(find.text('No review yet — tap to write one.')).dy;
+    expect(ratingTop, lessThan(bodyTop));
+
+    await tester.tap(find.text('ABOUT'));
+    await settle(tester);
+
+    // The rating-distribution column must fit its 5-star row without
+    // throwing a RenderFlex overflow. (The hero also shows "4.2", so this
+    // just confirms the distribution rendered at all.)
+    expect(find.text('4.2'), findsWidgets);
+    expect(tester.takeException(), isNull);
 
     await flushTree(tester);
   });

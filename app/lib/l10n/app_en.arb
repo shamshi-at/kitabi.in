@@ -406,6 +406,53 @@
   "@bookReadersReviewsEmpty": {
     "description": "Empty state when no other reader has left a public review"
   },
+  "bookYoursTab": "Yours",
+  "@bookYoursTab": {
+    "description": "Book page tab: the reader's own copy — status, review, notes, lending"
+  },
+  "bookAboutTab": "About",
+  "@bookAboutTab": {
+    "description": "Book page tab: the shared catalogue record — description, reviews, editions"
+  },
+  "bookChangeStatus": "Change",
+  "@bookChangeStatus": {
+    "description": "Tappable label next to the current reading status, opens the status-change sheet"
+  },
+  "bookStatusSheetTitle": "Set status",
+  "@bookStatusSheetTitle": {
+    "description": "Title of the bottom sheet listing the five reading statuses"
+  },
+  "bookSortNewest": "Newest",
+  "@bookSortNewest": {
+    "description": "Review sort option: newest first"
+  },
+  "bookSortRatingHigh": "Highest rated",
+  "@bookSortRatingHigh": {
+    "description": "Review sort option: highest star rating first"
+  },
+  "bookSortRatingLow": "Lowest rated",
+  "@bookSortRatingLow": {
+    "description": "Review sort option: lowest star rating first"
+  },
+  "bookReviewsCount": "{count, plural, =0{No reviews yet} =1{1 review} other{{count} reviews}}",
+  "@bookReviewsCount": {
+    "description": "Heading over the public reviews list",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "bookRatingsCount": "{count, plural, =0{No ratings yet} =1{1 rating} other{{count} ratings}}",
+  "@bookRatingsCount": {
+    "description": "Caption under the numeric average in the rating distribution",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "bookShowMoreReviews": "Show {count} more reviews",
+  "@bookShowMoreReviews": {
+    "description": "Button revealing the next batch of already-fetched reviews",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "bookNoRatingLabel": "no rating",
+  "@bookNoRatingLabel": {
+    "description": "Shown instead of stars when a public reviewer left text but no star rating"
+  },
   "reviewPageTitle": "Rate & review",
   "@reviewPageTitle": {"description": "App bar title of the dedicated review/rating editor page"},
   "reviewRatingLabel": "YOUR RATING",
