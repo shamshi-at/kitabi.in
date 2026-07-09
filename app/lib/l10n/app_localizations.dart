@@ -1930,6 +1930,12 @@ abstract class AppLocalizations {
   /// **'Disconnect'**
   String get connectionsDisconnect;
 
+  /// Tooltip on the accepted-connection card's icon button that opens their public profile and shelf
+  ///
+  /// In en, this message translates to:
+  /// **'View their library'**
+  String get connectionsViewLibrary;
+
   /// Tooltip for the connections icon on the lending ledger
   ///
   /// In en, this message translates to:

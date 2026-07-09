@@ -178,6 +178,8 @@ class ConnectionsScreen extends ConsumerWidget {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          _ViewLibraryButton(userId: c.other.id, name: c.other.display),
+                          SizedBox(width: 4),
                           _CardButton(
                             label: l10n.connectionsDisconnect,
                             onTap: () => _act(ref, (api) => api.declineConnection(c.id)),
@@ -349,6 +351,35 @@ class _CardButton extends StatelessWidget {
         ),
       ),
       child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+/// Explicit "view their library + lend log" entry point for an accepted
+/// connection — a labeled button rather than an overloaded row-tap, so it
+/// reads as its own action next to Disconnect instead of competing with the
+/// card's existing tap-to-open-loans behavior. Opens [PublicProfileScreen],
+/// which shows the shelf grid (if they've made it public) plus a "View
+/// loans" shortcut into the same ledger the row tap already opens.
+class _ViewLibraryButton extends StatelessWidget {
+  const _ViewLibraryButton({required this.userId, required this.name});
+
+  final String userId;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Tooltip(
+      message: l10n.connectionsViewLibrary,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => context.push(Routes.publicProfilePath(userId), extra: name),
+        child: Padding(
+          padding: EdgeInsets.all(6),
+          child: Icon(Icons.menu_book_outlined, size: 18, color: AppColors.oxblood),
+        ),
+      ),
     );
   }
 }

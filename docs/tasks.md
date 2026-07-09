@@ -220,6 +220,14 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Follow-up UX batch (9 Jul 2026): the lend pick-book sheet's search now unions its
+      local substring filter with the books-only catalog search endpoint (transliteration-
+      aware, workId-matched), so a cross-script query finds a Malayalam-titled book you own
+      the same way global search does; accepted-connection cards in Connections gained a
+      "View their library" book-icon button opening `PublicProfileScreen` (shelf grid +
+      "View loans") — previously that screen was reachable only through reader search
+      (which requires a username), so a connected friend with a public library had no way
+      to actually be seen — the missing entry point, not the visibility toggle, was the bug
 - [x] 10-item UX batch (9 Jul 2026): disk-cached covers with LRU eviction
       (cached_network_image behind every remote image — no more re-downloads while
       scrolling); wishlist entries get an "I got this book" one-tap move to the shelf;

@@ -324,6 +324,17 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **9 Jul 2026** — **Follow-up UX batch.** The lend pick-book sheet's search now unions
+  its instant local substring filter with the books-only catalog search endpoint
+  (`catalogSearchProvider`, transliteration-aware, 300ms debounced), matched by `workId`
+  — a cross-script query finds a book you own the same way global search does, without
+  ever blocking offline. Accepted-connection cards in Connections gained a **"View their
+  library"** book-icon button opening `PublicProfileScreen` (shelf grid + "View loans")
+  — previously that screen was reachable only via reader search, which requires the
+  target to have set a username, so a connected friend with a public library had no
+  discoverable path to actually be seen. The visibility toggle → API → DB chain was
+  already correct end-to-end; the missing entry point was the real bug. Verified live
+  on the Android emulator with seeded data for both flows.
 - **7 Jul 2026** — **Full documentation pass.** Every source file (61 API `.py`,
   91 app `.dart`) now carries a module-level docstring/header; three new/refreshed docs:
   [docs/build.md](docs/build.md) (build/run/ship steps for all three parts),

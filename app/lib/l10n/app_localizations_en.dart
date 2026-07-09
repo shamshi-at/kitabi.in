@@ -1106,6 +1106,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionsDisconnect => 'Disconnect';
 
   @override
+  String get connectionsViewLibrary => 'View their library';
+
+  @override
   String get connectionsTooltip => 'Connection requests';
 
   @override

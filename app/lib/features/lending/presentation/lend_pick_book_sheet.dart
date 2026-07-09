@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../catalog/providers/catalog_providers.dart';
 import '../../library/providers/library_providers.dart';
 import 'lend_sheet.dart';
 
@@ -34,6 +37,27 @@ class _LendPickBookSheetState extends ConsumerState<_LendPickBookSheet> {
   // scrolling the whole shelf to lend one book.
   String _query = '';
 
+  // Debounced 300ms — feeds the same books-only, transliteration-aware
+  // catalog search global search uses (S4/S6), so "kayar" also matches a
+  // "കയർ" title in your own library. Local substring match still runs on
+  // every keystroke, so search never blocks offline.
+  String _remoteQuery = '';
+  Timer? _debounce;
+
+  void _onChanged(String value) {
+    setState(() => _query = value);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _remoteQuery = value);
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -44,12 +68,19 @@ class _LendPickBookSheetState extends ConsumerState<_LendPickBookSheet> {
         .map((r) => r.record.libraryEntryId)
         .toSet();
     final q = _query.trim().toLowerCase();
+    final remoteQuery = _remoteQuery.trim();
+    final crossScriptWorkIds = remoteQuery.length < 2
+        ? const <String>{}
+        : (ref.watch(catalogSearchProvider(remoteQuery)).valueOrNull ?? const [])
+            .map((w) => w['id'] as String)
+            .toSet();
     final lendable = hits
         .where((h) => h.entry.status != 'wishlist' && !lentOutEntryIds.contains(h.entry.id))
         .where((h) =>
             q.isEmpty ||
             h.book.title.toLowerCase().contains(q) ||
-            h.book.authorNames.toLowerCase().contains(q))
+            h.book.authorNames.toLowerCase().contains(q) ||
+            crossScriptWorkIds.contains(h.book.workId))
         .toList();
 
     return SafeArea(
@@ -79,7 +110,7 @@ class _LendPickBookSheetState extends ConsumerState<_LendPickBookSheet> {
             SizedBox(height: 10),
             TextField(
               autofocus: false,
-              onChanged: (v) => setState(() => _query = v),
+              onChanged: _onChanged,
               decoration: InputDecoration(
                 hintText: l10n.lendingPickSearchHint,
                 isDense: true,

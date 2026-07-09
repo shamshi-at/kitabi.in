@@ -1096,6 +1096,10 @@
   "@connectionsDisconnect": {
     "description": "Disconnect an accepted connection"
   },
+  "connectionsViewLibrary": "View their library",
+  "@connectionsViewLibrary": {
+    "description": "Tooltip on the accepted-connection card's icon button that opens their public profile and shelf"
+  },
   "connectionsTooltip": "Connection requests",
   "@connectionsTooltip": {
     "description": "Tooltip for the connections icon on the lending ledger"
