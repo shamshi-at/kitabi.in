@@ -220,6 +220,18 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Reader profile redesign — "the bookplate" (9 Jul 2026, mocked first in
+      docs/reader-page-redesign approach): the public profile header is now a gold-inset-
+      framed card (Ex Libris eyebrow, gold-ringed avatar, real name) with the @handle
+      shown once, in the app bar. Connection state reads as a rotated corner stamp
+      (moss "Connected", gold "Waiting…") or, for a stranger/incoming/declined/blocked,
+      a single action button inside the plate (Connect / Accept+Deny / Resend / Unblock);
+      destructive/rare actions (Disconnect, Block, Cancel) moved into a top-right ⋮ menu.
+      Score/Books/Read/Links became a ruled stat row inside the plate; the tabs are now a
+      counted segmented control (Ledger · N / Shelf · N). The Shelf search is now
+      **advanced** — same 300ms-debounced, transliteration-aware books-only catalog search
+      the lend picker uses, unioned by work_id, so a Latin/phonetic query finds a
+      Malayalam-titled book on their shelf. Verified live across all connection states
 - [x] Lend sheet title now names the book (9 Jul 2026): "Lend this book" → "Lend
       {title}", with "Lend" set apart (italic, oxblood) from the book's own name;
       capped at 2 lines with an ellipsis so an unusually long title can't push the

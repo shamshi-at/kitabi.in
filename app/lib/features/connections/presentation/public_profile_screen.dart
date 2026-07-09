@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,22 +14,22 @@ import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../catalog/providers/catalog_providers.dart';
 import '../../library/providers/library_providers.dart';
 import '../connections_providers.dart';
 import 'connection_loans_screen.dart';
 
-/// Another reader's page — avatar, name/@handle, a styled score/shelf-count
-/// card, every connection action (Connect, Accept/Deny, Cancel, Resend,
-/// Disconnect, Block/Unblock — whatever applies to your standing with them),
-/// and two tabs: the lending ledger between you (shown first — it's the
-/// thing you're most often here to check) and their shelf, if they've made
-/// it public, with its own search. One screen, not a profile that pushes to
-/// a second ledger screen and leaves connection actions stranded on a list
-/// row elsewhere. Profiles are public by default; a reader who opted out
-/// shows a quiet "keeps their profile private" state (the API 404s,
-/// deliberately indistinguishable from not-found) — but the connection
-/// actions still work even then, since accepting a request doesn't require
-/// seeing their shelf.
+/// Another reader's page — a "bookplate": a gold-framed card holding the
+/// avatar, name, connection state (a corner stamp, or an action button), and
+/// the Score/Books/Read/Links counts, over two tabs — the lending ledger
+/// between you (shown first, it's why most visits happen) and their public
+/// shelf. The @handle lives once, in the app bar; the plate carries the real
+/// name. Destructive/rare actions (Disconnect, Block, Cancel request) hide in
+/// the app bar's ⋮ menu so the plate stays about the person, not the buttons.
+/// Profiles are public by default; a reader who opted out shows a quiet
+/// "keeps their profile private" state (the API 404s, deliberately
+/// indistinguishable from not-found) — the connection actions still work
+/// even then, since acting on a request never required seeing their shelf.
 class PublicProfileScreen extends ConsumerWidget {
   const PublicProfileScreen({super.key, required this.userId, this.name});
 
@@ -43,14 +45,18 @@ class PublicProfileScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final profile = ref.watch(_publicProfileProvider(userId));
     final username = profile.valueOrNull?['username'] as String?;
+    final fullName = (profile.valueOrNull?['full_name'] as String?)?.trim();
+    // The @handle appears exactly once — here in the bar. The plate shows the
+    // real name. Falls back to the name (then a generic title) when no handle.
+    final barTitle = username != null
+        ? '@$username'
+        : (fullName?.isNotEmpty ?? false ? fullName! : (name ?? l10n.publicProfileTitle));
 
     return Scaffold(
       backgroundColor: AppColors.paper,
       appBar: AppBar(
-        // The full name renders once, in the body below — the bar carries
-        // only the handle (or a generic fallback before it loads), so the
-        // two never repeat the same string.
-        title: Text(username != null ? '@$username' : (name ?? l10n.publicProfileTitle)),
+        title: Text(barTitle),
+        actions: [_ProfileMenu(userId: userId)],
       ),
       body: _ProfileBody(userId: userId, fallbackName: name, profile: profile),
     );
@@ -68,6 +74,75 @@ final _publicLibraryProvider =
 });
 
 bool _isNotFound(Object err) => err is DioException && err.response?.statusCode == 404;
+
+/// Fire-and-forget connection mutation shared by the plate's action buttons
+/// and the app-bar ⋮ menu — runs the call, refreshes the connections graph,
+/// and surfaces success/failure. Callers that show a spinner track their own
+/// busy flag around it.
+Future<void> _runConnectionAction(
+  BuildContext context,
+  WidgetRef ref,
+  Future<void> Function(ApiClient api) action, {
+  String? successMessage,
+}) async {
+  Haptics.selection();
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context)!;
+  try {
+    await action(ref.read(apiClientProvider));
+    ref.invalidate(connectionsProvider);
+    if (successMessage != null) {
+      messenger.showSnackBar(SnackBar(content: Text(successMessage)));
+    }
+  } catch (_) {
+    messenger.showSnackBar(SnackBar(content: Text(l10n.lendingReminderFailed)));
+  }
+}
+
+/// App-bar overflow menu — only the destructive/rare actions for the current
+/// standing (Disconnect + Block once connected, Cancel request on one you
+/// sent, Block on an incoming request). Renders nothing when there's no such
+/// action, so a stranger's bar stays clean.
+class _ProfileMenu extends ConsumerWidget {
+  const _ProfileMenu({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final c = ref.watch(connectionsProvider).valueOrNull?.connectionFor(userId);
+    if (c == null) return const SizedBox.shrink();
+
+    // (label, isDanger, action)
+    final items = <(String, bool, Future<void> Function(ApiClient))>[];
+    if (c.status == 'accepted') {
+      items.add((l10n.connectionsDisconnect, false, (api) => api.declineConnection(c.id)));
+      items.add((l10n.connectionsBlock, true, (api) => api.blockConnection(c.id)));
+    } else if (c.status == 'pending' && c.role == 'requester') {
+      items.add((l10n.connectionsCancel, false, (api) => api.declineConnection(c.id)));
+    } else if (c.status == 'pending' && c.role == 'addressee') {
+      items.add((l10n.connectionsBlock, true, (api) => api.blockConnection(c.id)));
+    }
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return PopupMenuButton<int>(
+      icon: Icon(Icons.more_vert, color: AppColors.inkSoft),
+      onSelected: (i) => _runConnectionAction(context, ref, items[i].$3),
+      itemBuilder: (_) => [
+        for (var i = 0; i < items.length; i++)
+          PopupMenuItem(
+            value: i,
+            height: 44,
+            child: Text(
+              items[i].$1,
+              style: TextStyle(color: items[i].$2 ? AppColors.oxblood : AppColors.ink),
+            ),
+          ),
+      ],
+    );
+  }
+}
 
 class _ProfileBody extends ConsumerStatefulWidget {
   const _ProfileBody({required this.userId, required this.fallbackName, required this.profile});
@@ -105,63 +180,42 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     final display = (fullName?.isNotEmpty ?? false)
         ? fullName!
         : (username != null ? '@$username' : (widget.fallbackName ?? l10n.publicProfileTitle));
-    final initial = display.replaceAll('@', '').isNotEmpty
-        ? display.replaceAll('@', '')[0].toUpperCase()
-        : '?';
     final libraryVisible = data?['library_visible'] == true;
     final connection = ref.watch(connectionsProvider).valueOrNull?.connectionFor(widget.userId);
 
+    // Tab counts — loans with this person, and shelf size (once fetched).
+    final allLoans = ref.watch(allLendingProvider).valueOrNull;
+    final loanCount = allLoans == null
+        ? null
+        : loansForCounterparty(allLoans, userId: widget.userId, name: display).length;
+    final shelfCount = (isPrivate || !libraryVisible)
+        ? null
+        : ref.watch(_publicLibraryProvider(widget.userId)).valueOrNull?.length;
+
     return ListView(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 24),
       children: [
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 32,
-              backgroundColor: AppColors.goldSoft,
-              foregroundImage: avatar != null ? netImageProvider(avatar) : null,
-              child: Text(
-                initial,
-                style: TextStyle(
-                  color: Color(0xFF8F681E),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                ),
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(child: Text(display, style: Theme.of(context).textTheme.titleLarge)),
-          ],
+        _Bookplate(
+          userId: widget.userId,
+          display: display,
+          avatar: avatar,
+          data: data,
+          connection: connection,
         ),
-        if (data != null) ...[
-          SizedBox(height: 16),
-          _StatsCard(profile: data),
-        ],
         SizedBox(height: 16),
-        _ConnectionActions(userId: widget.userId, connection: connection),
-        SizedBox(height: 18),
-        _TabBar(selected: _tab, onChanged: (t) => setState(() => _tab = t)),
+        _TabBar(
+          selected: _tab,
+          ledgerCount: loanCount,
+          shelfCount: shelfCount,
+          onChanged: (t) => setState(() => _tab = t),
+        ),
         SizedBox(height: 14),
         switch (_tab) {
           _ProfileTab.ledger => _LedgerTab(userId: widget.userId, name: display),
           _ProfileTab.shelf => isPrivate
-              ? Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text(
-                    l10n.publicProfilePrivate,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
-                  ),
-                )
+              ? _MutedNote(l10n.publicProfilePrivate)
               : !libraryVisible
-                  ? Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Text(
-                        l10n.publicLibraryPrivate,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
-                      ),
-                    )
+                  ? _MutedNote(l10n.publicLibraryPrivate)
                   : _PublicShelf(userId: widget.userId),
         },
       ],
@@ -169,11 +223,293 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
   }
 }
 
-/// The score/books/read counts, styled as their own card — a small icon
-/// over a bold number over a caption, split by hairline dividers, instead
-/// of three bare pills competing with the avatar for attention.
-class _StatsCard extends StatelessWidget {
-  const _StatsCard({required this.profile});
+class _MutedNote extends StatelessWidget {
+  const _MutedNote(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 20),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+      ),
+    );
+  }
+}
+
+/// The bookplate — a gold-inset-framed card: avatar (gold ring) + "Ex Libris"
+/// eyebrow + name, the connection action slot (Connect / Accept+Deny / Resend
+/// / Unblock, or nothing once the state is carried by a corner stamp), and the
+/// stat row. A moss/gold corner stamp marks a connected or pending standing.
+class _Bookplate extends StatelessWidget {
+  const _Bookplate({
+    required this.userId,
+    required this.display,
+    required this.avatar,
+    required this.data,
+    required this.connection,
+  });
+
+  final String userId;
+  final String display;
+  final String? avatar;
+  final Map<String, dynamic>? data;
+  final Connection? connection;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final initial = display.replaceAll('@', '').isNotEmpty
+        ? display.replaceAll('@', '')[0].toUpperCase()
+        : '?';
+
+    // Corner stamp: connected (moss) or awaiting-reply (gold). Other states
+    // put their control in the action slot instead, so there's no stamp.
+    final ({String text, Color color})? stamp = switch (connection) {
+      Connection(status: 'accepted') => (text: l10n.connectionsAcceptedSection, color: AppColors.moss),
+      Connection(status: 'pending', role: 'requester') =>
+        (text: l10n.connectionsAwaitingReply, color: AppColors.gold),
+      _ => null,
+    };
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Stack(
+        children: [
+          // Gold hairline inset frame (echoes the Kitabi logo tile).
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                margin: EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.goldSoft),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(14, 14, 14, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  // Reserve the top-right corner for the stamp so a long name
+                  // never slides under it.
+                  padding: EdgeInsets.only(right: stamp != null ? 92 : 0, bottom: 12),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 26,
+                        backgroundColor: AppColors.card,
+                        child: CircleAvatar(
+                          radius: 23,
+                          backgroundColor: AppColors.goldSoft,
+                          foregroundImage: avatar != null ? netImageProvider(avatar!) : null,
+                          child: Text(
+                            initial,
+                            style: TextStyle(
+                              color: Color(0xFF8F681E),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 13),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.publicProfileExLibris.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 2.4,
+                                color: AppColors.gold,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              display,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _ConnectionActionSlot(userId: userId, connection: connection),
+                if (data != null) _StatsRow(profile: data!),
+              ],
+            ),
+          ),
+          if (stamp != null)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Transform.rotate(
+                angle: 0.09,
+                child: _Stamp(text: stamp.text, color: stamp.color),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The little inked stamp on the plate's corner — moss for connected, gold for
+/// a request awaiting reply.
+class _Stamp extends StatelessWidget {
+  const _Stamp({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check, size: 11, color: color),
+          SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The one action slot inside the plate — a full-width Connect for a stranger,
+/// Accept/Deny for an incoming request, Resend for a declined one, Unblock for
+/// a blocked one. Accepted and awaiting-reply states show nothing here (their
+/// standing is the corner stamp; their actions live in the ⋮ menu).
+class _ConnectionActionSlot extends ConsumerStatefulWidget {
+  const _ConnectionActionSlot({required this.userId, required this.connection});
+
+  final String userId;
+  final Connection? connection;
+
+  @override
+  ConsumerState<_ConnectionActionSlot> createState() => _ConnectionActionSlotState();
+}
+
+class _ConnectionActionSlotState extends ConsumerState<_ConnectionActionSlot> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function(ApiClient api) action, {String? successMessage}) async {
+    setState(() => _busy = true);
+    await _runConnectionAction(context, ref, action, successMessage: successMessage);
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Widget _spinner() => SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final c = widget.connection;
+
+    Widget? slot;
+    if (c == null) {
+      slot = SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _busy
+              ? null
+              : () => _run(
+                    (api) => api.requestConnection(widget.userId),
+                    successMessage: l10n.publicProfileRequestSent,
+                  ),
+          icon: _busy ? _spinner() : Icon(Icons.person_add_alt, size: 16),
+          label: Text(l10n.publicProfileConnect),
+        ),
+      );
+    } else if (c.status == 'pending' && c.role == 'addressee') {
+      slot = Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _busy ? null : () => _run((api) => api.acceptConnection(c.id)),
+              child: Text(l10n.connectionsAccept),
+            ),
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _busy ? null : () => _run((api) => api.declineConnection(c.id)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.inkSoft,
+                side: BorderSide(color: AppColors.line),
+              ),
+              child: Text(l10n.connectionsDeny),
+            ),
+          ),
+        ],
+      );
+    } else if (c.status == 'denied') {
+      slot = SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _busy ? null : () => _run((api) => api.requestConnection(widget.userId)),
+          icon: _busy ? _spinner() : Icon(Icons.refresh, size: 16),
+          label: Text(l10n.connectionsResend),
+        ),
+      );
+    } else if (c.status == 'blocked') {
+      slot = SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: _busy ? null : () => _run((api) => api.unblockConnection(c.id)),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.inkSoft,
+            side: BorderSide(color: AppColors.line),
+          ),
+          child: Text(l10n.connectionsUnblock),
+        ),
+      );
+    }
+
+    if (slot == null) return const SizedBox.shrink();
+    return Padding(padding: EdgeInsets.only(bottom: 14), child: slot);
+  }
+}
+
+/// The Score/Books/Read/Links counts as a ruled row inside the plate — big
+/// serif figures over small-caps labels, hairline dividers between.
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.profile});
 
   final Map<String, dynamic> profile;
 
@@ -181,11 +517,8 @@ class _StatsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.line),
+        border: Border(top: BorderSide(color: AppColors.line)),
       ),
       child: Row(
         children: [
@@ -250,273 +583,136 @@ class _StatCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, size: 16, color: color),
-        SizedBox(height: 4),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-        SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
-        ),
-      ],
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        children: [
+          Icon(icon, size: 15, color: color),
+          SizedBox(height: 4),
+          Text(
+            value,
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
+          SizedBox(height: 1),
+          Text(
+            label,
+            style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Icon-only segmented tabs (ledger / shelf), underlined when active.
+/// Segmented Ledger / Shelf tabs with live counts — the same control the
+/// lending ledger uses, so the app keeps one segmented pattern.
 class _TabBar extends StatelessWidget {
-  const _TabBar({required this.selected, required this.onChanged});
+  const _TabBar({
+    required this.selected,
+    required this.ledgerCount,
+    required this.shelfCount,
+    required this.onChanged,
+  });
 
   final _ProfileTab selected;
+  final int? ledgerCount;
+  final int? shelfCount;
   final ValueChanged<_ProfileTab> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    Widget tab(_ProfileTab t, IconData icon, String tooltip) {
-      final active = t == selected;
-      return Expanded(
-        child: InkWell(
-          onTap: () => onChanged(t),
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: active ? AppColors.oxblood : AppColors.line,
-                  width: active ? 2 : 1,
-                ),
-              ),
-            ),
-            child: Tooltip(
-              message: tooltip,
-              child: Icon(icon, size: 20, color: active ? AppColors.oxblood : AppColors.inkSoft),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        tab(_ProfileTab.ledger, Icons.swap_horiz_rounded, l10n.lendingLedgerTitle),
-        tab(_ProfileTab.shelf, Icons.shelves, l10n.publicLibrarySection),
-      ],
-    );
-  }
-}
-
-/// Every connection action, in one place: Connect for a stranger; Accept/
-/// Deny/Block for an incoming request; a pending pill + Cancel for one you
-/// sent; a status pill + Disconnect/Block once accepted; Resend for one they
-/// declined; Unblock for one you blocked. Replaces the buttons that used to
-/// live on the Connections list row.
-class _ConnectionActions extends ConsumerStatefulWidget {
-  const _ConnectionActions({required this.userId, required this.connection});
-
-  final String userId;
-  final Connection? connection;
-
-  @override
-  ConsumerState<_ConnectionActions> createState() => _ConnectionActionsState();
-}
-
-class _ConnectionActionsState extends ConsumerState<_ConnectionActions> {
-  bool _busy = false;
-
-  Future<void> _act(Future<void> Function(ApiClient api) action, {String? successMessage}) async {
-    Haptics.selection();
-    setState(() => _busy = true);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await action(ref.read(apiClientProvider));
-      ref.invalidate(connectionsProvider);
-      if (successMessage != null && mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(successMessage)));
-      }
-    } catch (_) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        messenger.showSnackBar(SnackBar(content: Text(l10n.lendingReminderFailed)));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Widget _spinner() => SizedBox(
-        width: 14,
-        height: 14,
-        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
-      );
-
-  Widget _pill(String text, Color color, {IconData? icon}) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.paperDeep,
+        borderRadius: BorderRadius.circular(11),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[Icon(icon, size: 13, color: color), SizedBox(width: 5)],
-          Text(text, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
+          _SegTab(
+            label: l10n.publicProfileTabLedger,
+            count: ledgerCount,
+            active: selected == _ProfileTab.ledger,
+            onTap: () => onChanged(_ProfileTab.ledger),
+          ),
+          _SegTab(
+            label: l10n.publicProfileTabShelf,
+            count: shelfCount,
+            active: selected == _ProfileTab.shelf,
+            onTap: () => onChanged(_ProfileTab.shelf),
+          ),
         ],
       ),
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final c = widget.connection;
-
-    if (c == null) {
-      return SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _busy
-              ? null
-              : () => _act(
-                    (api) => api.requestConnection(widget.userId),
-                    successMessage: l10n.publicProfileRequestSent,
-                  ),
-          icon: _busy ? _spinner() : Icon(Icons.person_add_alt, size: 16),
-          label: Text(l10n.publicProfileConnect),
-        ),
-      );
-    }
-
-    if (c.status == 'pending' && c.role == 'addressee') {
-      return Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: _busy ? null : () => _act((api) => api.acceptConnection(c.id)),
-              child: Text(l10n.connectionsAccept),
-            ),
-          ),
-          SizedBox(width: 8),
-          _OutlinedAction(
-            label: l10n.connectionsDeny,
-            onTap: _busy ? null : () => _act((api) => api.declineConnection(c.id)),
-          ),
-          SizedBox(width: 4),
-          _ActionKebab(items: [
-            (l10n.connectionsBlock, () => _act((api) => api.blockConnection(c.id))),
-          ]),
-        ],
-      );
-    }
-
-    if (c.status == 'pending' && c.role == 'requester') {
-      return Row(
-        children: [
-          _pill(l10n.connectionsAwaitingReply, AppColors.gold),
-          SizedBox(width: 8),
-          _OutlinedAction(
-            label: l10n.connectionsCancel,
-            onTap: _busy ? null : () => _act((api) => api.declineConnection(c.id)),
-          ),
-        ],
-      );
-    }
-
-    if (c.status == 'accepted') {
-      return Row(
-        children: [
-          _pill(l10n.connectionsAcceptedSection, AppColors.moss, icon: Icons.check_circle),
-          Spacer(),
-          _OutlinedAction(
-            label: l10n.connectionsDisconnect,
-            onTap: _busy ? null : () => _act((api) => api.declineConnection(c.id)),
-          ),
-          SizedBox(width: 4),
-          _ActionKebab(items: [
-            (l10n.connectionsBlock, () => _act((api) => api.blockConnection(c.id))),
-          ]),
-        ],
-      );
-    }
-
-    if (c.status == 'denied') {
-      return Row(
-        children: [
-          Expanded(child: _pill(l10n.connectionsDeclinedYou, AppColors.inkSoft)),
-          SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: _busy
-                ? null
-                : () => _act((api) => api.requestConnection(widget.userId)),
-            child: Text(l10n.connectionsResend),
-          ),
-        ],
-      );
-    }
-
-    if (c.status == 'blocked') {
-      return Row(
-        children: [
-          Expanded(child: _pill(l10n.connectionsBlockedSection, AppColors.inkSoft)),
-          SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: _busy ? null : () => _act((api) => api.unblockConnection(c.id)),
-            child: Text(l10n.connectionsUnblock),
-          ),
-        ],
-      );
-    }
-
-    return SizedBox.shrink();
-  }
 }
 
-class _OutlinedAction extends StatelessWidget {
-  const _OutlinedAction({required this.label, required this.onTap});
+class _SegTab extends StatelessWidget {
+  const _SegTab({
+    required this.label,
+    required this.count,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
-  final VoidCallback? onTap;
+  final int? count;
+  final bool active;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.inkSoft,
-        side: BorderSide(color: AppColors.line),
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: active ? AppColors.card : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: active
+                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 3, offset: Offset(0, 1))]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                  color: active ? AppColors.oxblood : AppColors.inkSoft,
+                ),
+              ),
+              if (count != null)
+                Text(
+                  ' · $count',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: (active ? AppColors.oxblood : AppColors.inkSoft).withValues(alpha: 0.65),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
-      child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
     );
   }
 }
 
-class _ActionKebab extends StatelessWidget {
-  const _ActionKebab({required this.items});
-
-  final List<(String, VoidCallback)> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<int>(
-      icon: Icon(Icons.more_vert, size: 18, color: AppColors.inkSoft),
-      padding: EdgeInsets.zero,
-      splashRadius: 18,
-      onSelected: (i) => items[i].$2(),
-      itemBuilder: (_) => [
-        for (var i = 0; i < items.length; i++)
-          PopupMenuItem(value: i, height: 40, child: Text(items[i].$1)),
-      ],
-    );
-  }
-}
-
-/// The public shelf — a search box over a covers-first grid, each cover a
-/// door to the catalog book page. The search filters locally: the whole
-/// shelf is already fetched in one call, so there's nothing to debounce.
+/// The public shelf — an advanced (transliteration-aware) search over a
+/// covers-first grid, each cover a door to the catalog book page. Local
+/// substring runs on every keystroke; a 300ms-debounced books-only catalog
+/// search (the same cross-script search global search uses) unions in by
+/// work id, so "kayar" also finds a "കയർ" title on their shelf.
 class _PublicShelf extends ConsumerStatefulWidget {
   const _PublicShelf({required this.userId});
 
@@ -528,6 +724,22 @@ class _PublicShelf extends ConsumerStatefulWidget {
 
 class _PublicShelfState extends ConsumerState<_PublicShelf> {
   String _query = '';
+  String _remoteQuery = '';
+  Timer? _debounce;
+
+  void _onChanged(String value) {
+    setState(() => _query = value);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _remoteQuery = value);
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -543,18 +755,25 @@ class _PublicShelfState extends ConsumerState<_PublicShelf> {
       ),
       data: (items) {
         final q = _query.trim().toLowerCase();
+        final remoteQuery = _remoteQuery.trim();
+        final crossScriptWorkIds = remoteQuery.length < 2
+            ? const <String>{}
+            : (ref.watch(catalogSearchProvider(remoteQuery)).valueOrNull ?? const [])
+                .map((w) => w['id'] as String)
+                .toSet();
         final filtered = q.isEmpty
             ? items
             : items
                 .where((b) =>
                     ((b['title'] as String?) ?? '').toLowerCase().contains(q) ||
-                    ((b['author_names'] as String?) ?? '').toLowerCase().contains(q))
+                    ((b['author_names'] as String?) ?? '').toLowerCase().contains(q) ||
+                    crossScriptWorkIds.contains(b['work_id']))
                 .toList();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
-              onChanged: (v) => setState(() => _query = v),
+              onChanged: _onChanged,
               decoration: InputDecoration(
                 hintText: l10n.publicShelfSearchHint,
                 isDense: true,
@@ -651,14 +870,7 @@ class _LedgerTab extends ConsumerWidget {
         final lent = loans.where((r) => r.record.direction != 'borrowed').toList();
         final borrowed = loans.where((r) => r.record.direction == 'borrowed').toList();
         if (loans.isEmpty) {
-          return Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text(
-              l10n.connectionLoansEmpty,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
-            ),
-          );
+          return _MutedNote(l10n.connectionLoansEmpty);
         }
         return Column(
           children: [

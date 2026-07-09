@@ -698,6 +698,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get publicProfileConnectionsLabel => 'Links';
 
   @override
+  String get publicProfileExLibris => 'Ex Libris';
+
+  @override
+  String get publicProfileTabLedger => 'Ledger';
+
+  @override
+  String get publicProfileTabShelf => 'Shelf';
+
+  @override
   String get publicProfileConnect => 'Connect';
 
   @override

@@ -1270,6 +1270,24 @@ abstract class AppLocalizations {
   /// **'Links'**
   String get publicProfileConnectionsLabel;
 
+  /// Small eyebrow label above a reader's name on their bookplate-style profile header
+  ///
+  /// In en, this message translates to:
+  /// **'Ex Libris'**
+  String get publicProfileExLibris;
+
+  /// Profile tab: the lending ledger between you and this reader
+  ///
+  /// In en, this message translates to:
+  /// **'Ledger'**
+  String get publicProfileTabLedger;
+
+  /// Profile tab: this reader's public library
+  ///
+  /// In en, this message translates to:
+  /// **'Shelf'**
+  String get publicProfileTabShelf;
+
   /// Button to send a connection request from a public profile
   ///
   /// In en, this message translates to:

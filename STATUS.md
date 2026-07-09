@@ -324,6 +324,20 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **9 Jul 2026** — **Reader profile redesigned as a "bookplate" (mocked before building).**
+  Three rounds of HTML phone-frame mocks (owner-reviewed) landed on the "Card Ledger"
+  direction: `PublicProfileScreen`'s header is a gold-hairline-inset card (Ex Libris
+  eyebrow, gold-ringed avatar, real name), with the @handle appearing exactly once — in
+  the app bar. Connection standing reads as a rotated corner stamp (moss "Connected",
+  gold "Waiting for them to accept") or a single in-plate action button (Connect for a
+  stranger, Accept+Deny for an incoming request, Resend for a declined one, Unblock for a
+  blocked one); the destructive/rare actions (Disconnect, Block, Cancel request) moved
+  off the plate into a top-right ⋮ menu that renders only when there's such an action.
+  Score/Books/Read/Links are a ruled stat row inside the plate; the tabs are a counted
+  segmented control (Ledger · N / Shelf · N), Ledger-first. The Shelf search was upgraded
+  to the **advanced** cross-script search (the lend picker's pattern: 300ms-debounced
+  transliteration-aware books-only catalog search, unioned by work id) so a Latin query
+  finds a Malayalam-titled book on their shelf. Verified live across all connection states.
 - **9 Jul 2026** — **Public reviews + a connection count on the profile.** New
   `GET /catalog/works/{id}/reviews` (`review_service.public_reviews`) is the first
   cross-user read of Layer-2 data — every reader's review is otherwise synced only to
