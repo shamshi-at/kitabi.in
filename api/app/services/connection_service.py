@@ -6,7 +6,7 @@ grows from the same table."""
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -98,6 +98,20 @@ async def request(db: AsyncSession, me: uuid.UUID, addressee_id: uuid.UUID) -> C
 
 async def status_with(db: AsyncSession, me: uuid.UUID, other_id: uuid.UUID) -> ConnectionStatusOut:
     return to_status(await _pair(db, me, other_id), me)
+
+
+async def count_accepted(db: AsyncSession, user_id: uuid.UUID) -> int:
+    """How many accepted connections a reader has — shown as a stat on their
+    public profile."""
+    stmt = (
+        select(func.count())
+        .select_from(Connection)
+        .where(
+            Connection.status == "accepted",
+            or_(Connection.requester_id == user_id, Connection.addressee_id == user_id),
+        )
+    )
+    return (await db.execute(stmt)).scalar_one()
 
 
 async def are_connected(db: AsyncSession, a: uuid.UUID, b: uuid.UUID) -> bool:

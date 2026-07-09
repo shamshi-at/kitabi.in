@@ -74,6 +74,33 @@ async def test_public_profile_visible_and_private_is_404(
     assert (await client.get(f"/users/{uuid.uuid4()}/profile")).status_code == 404
 
 
+async def test_public_profile_shows_accepted_connections_count(
+    two_user_client, db_sessionmaker, user, user_b
+):
+    client = two_user_client
+    async with db_sessionmaker() as db:
+        db.add(
+            Profile(
+                id=uuid.UUID(user_b["id"]),
+                email=user_b["email"],
+                full_name="Anu Varghese",
+                profile_visible=True,
+            )
+        )
+        await db.commit()
+
+    assert (await client.get(f"/users/{user_b['id']}/profile")).json()["connections_count"] == 0
+
+    resp = await client.post("/connections", json={"addressee_id": user_b["id"]})
+    connection_id = resp.json()["connection_id"]
+    client.as_user(user_b)
+    await client.post(f"/connections/{connection_id}/accept")
+    client.as_user(user)
+
+    body = (await client.get(f"/users/{user_b['id']}/profile")).json()
+    assert body["connections_count"] == 1
+
+
 async def test_public_library_gated_on_library_visibility(
     two_user_client, db_sessionmaker, user, user_b
 ):

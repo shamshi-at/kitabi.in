@@ -688,6 +688,18 @@ abstract class AppLocalizations {
   /// **'Edit review'**
   String get bookEditReview;
 
+  /// Eyebrow label over the list of other readers' public reviews
+  ///
+  /// In en, this message translates to:
+  /// **'WHAT READERS ARE SAYING'**
+  String get bookReadersReviewsLabel;
+
+  /// Empty state when no other reader has left a public review
+  ///
+  /// In en, this message translates to:
+  /// **'No public reviews yet.'**
+  String get bookReadersReviewsEmpty;
+
   /// App bar title of the dedicated review/rating editor page
   ///
   /// In en, this message translates to:
@@ -1251,6 +1263,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Score'**
   String get publicProfileScoreLabel;
+
+  /// Caption under the connections count on a public profile
+  ///
+  /// In en, this message translates to:
+  /// **'Links'**
+  String get publicProfileConnectionsLabel;
 
   /// Button to send a connection request from a public profile
   ///

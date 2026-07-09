@@ -215,6 +215,15 @@ class _StatsCard extends StatelessWidget {
               color: AppColors.moss,
             ),
           ),
+          _StatDivider(),
+          Expanded(
+            child: _StatCell(
+              icon: Icons.people_alt_outlined,
+              value: '${profile['connections_count'] as int? ?? 0}',
+              label: l10n.publicProfileConnectionsLabel,
+              color: AppColors.slate,
+            ),
+          ),
         ],
       ),
     );

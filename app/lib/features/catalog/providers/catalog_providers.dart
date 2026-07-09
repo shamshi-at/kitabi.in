@@ -50,3 +50,12 @@ final workProvider =
     FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, workId) {
   return ref.watch(apiClientProvider).getWork(workId);
 });
+
+/// Public reviews for a book — every other reader's visible review, each
+/// paired with their star rating if they left one. Reviewer identity is
+/// resolved server-side on every fetch, so re-opening the book page always
+/// reflects the reviewer's current profile visibility.
+final publicReviewsProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, workId) {
+  return ref.watch(apiClientProvider).getWorkReviews(workId);
+});

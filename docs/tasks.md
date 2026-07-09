@@ -220,6 +220,18 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Public reviews + connection count (9 Jul 2026): `GET /catalog/works/{id}/reviews`
+      returns every reader's *public* review of a book (a naked rating with no public
+      review never appears — feature-map.md defers public ratings), paired with that
+      same reader's star rating for the book if they left one, and reviewer identity
+      resolved fresh on every call — real name/avatar when their profile is public,
+      otherwise a stable `User_XXXXXX` placeholder derived from their id (same
+      placeholder every time; flips to their real identity on the very next fetch
+      once they go public, since nothing is cached/denormalized). New "WHAT READERS
+      ARE SAYING" section on the book detail page lists them; a public reviewer's row
+      is tappable into `PublicProfileScreen` (send a connection request from there),
+      an anonymous one isn't. `GET /users/{id}/profile` gained `connections_count`
+      (accepted connections), now a 4th stat cell on the profile's stats card
 - [x] Connections + profile polish (9 Jul 2026): the profile's Score/Books/Read counts
       are now a styled card (icon + bold number + caption per cell, hairline dividers)
       instead of plain pills; the tab order flipped to Ledger-first (Shelf second, icon

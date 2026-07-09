@@ -398,6 +398,14 @@
   "@bookEditReview": {
     "description": "Dialog title for editing a review"
   },
+  "bookReadersReviewsLabel": "WHAT READERS ARE SAYING",
+  "@bookReadersReviewsLabel": {
+    "description": "Eyebrow label over the list of other readers' public reviews"
+  },
+  "bookReadersReviewsEmpty": "No public reviews yet.",
+  "@bookReadersReviewsEmpty": {
+    "description": "Empty state when no other reader has left a public review"
+  },
   "reviewPageTitle": "Rate & review",
   "@reviewPageTitle": {"description": "App bar title of the dedicated review/rating editor page"},
   "reviewRatingLabel": "YOUR RATING",
@@ -586,6 +594,8 @@
   "@publicProfileBooksLabel": {"description": "Caption under the tracked-books count on a public profile"},
   "publicProfileScoreLabel": "Score",
   "@publicProfileScoreLabel": {"description": "Caption under the contribution score on a public profile"},
+  "publicProfileConnectionsLabel": "Links",
+  "@publicProfileConnectionsLabel": {"description": "Caption under the connections count on a public profile"},
   "publicProfileConnect": "Connect",
   "@publicProfileConnect": {"description": "Button to send a connection request from a public profile"},
   "publicProfileRequestSent": "Connection request sent.",

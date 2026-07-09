@@ -21,6 +21,7 @@ from app.schemas.catalog import (
     EditionOut,
     EditionUpdate,
     GlobalSearchOut,
+    PublicReviewOut,
     PublisherCreate,
     PublisherOut,
     PublisherWorksOut,
@@ -32,7 +33,7 @@ from app.schemas.catalog import (
     WorkSummaryOut,
     WorkUpdate,
 )
-from app.services import catalog_service, extraction_service
+from app.services import catalog_service, extraction_service, review_service
 from app.services.openlibrary_client import OpenLibraryClient, get_openlibrary_client
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
@@ -212,6 +213,18 @@ async def create_work(payload: WorkCreate, user: CurrentUser, db: DbSession) -> 
 async def get_work(work_id: uuid.UUID, db: DbSession) -> WorkOut:
     work = await catalog_service.get_work_or_404(db, work_id)
     return await _work_out(db, work)
+
+
+@router.get("/works/{work_id}/reviews", response_model=list[PublicReviewOut])
+async def work_reviews(
+    work_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> list[PublicReviewOut]:
+    """Every public review on this book, newest first — each reviewer's name
+    and avatar are their real profile if it's public, otherwise a stable
+    anonymous placeholder (flips to their real identity the moment they make
+    their profile public again, since it's resolved fresh on every read)."""
+    reviews = await review_service.public_reviews(db, work_id)
+    return [PublicReviewOut(**r) for r in reviews]
 
 
 @router.patch("/works/{work_id}", response_model=WorkPatchResult)

@@ -324,6 +324,23 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **9 Jul 2026** — **Public reviews + a connection count on the profile.** New
+  `GET /catalog/works/{id}/reviews` (`review_service.public_reviews`) is the first
+  cross-user read of Layer-2 data — every reader's review is otherwise synced only to
+  its own owner, so this is a deliberate, narrow carve-out: visible-only
+  (`Review.visible`), each paired with that same reader's star rating for the book if
+  they left one (a naked rating with no public review never surfaces — feature-map.md
+  marks public ratings `[LATER]`, this doesn't pull that forward). Reviewer identity is
+  resolved fresh on every call, never denormalized onto the review row: a public
+  profile shows its real name and avatar, a private one shows a stable `User_XXXXXX`
+  placeholder derived from the user id (same placeholder every time, so repeat reviews
+  from an anonymous reader read as one consistent voice) — and it flips to the real
+  identity on the very next fetch the moment they make their profile public again, with
+  nothing to invalidate. The book detail page's new "WHAT READERS ARE SAYING" section
+  lists these; a public reviewer's row opens their `PublicProfileScreen` (and from
+  there, a connection request), a private one isn't tappable at all. Separately,
+  `GET /users/{id}/profile` gained `connections_count` (`connection_service
+  .count_accepted`), now a 4th cell on the profile's stats card.
 - **9 Jul 2026** — **Connections becomes a roster; every connection action moves onto
   the profile page.** Follow-up to the same-day profile merge below. The Connections
   screen no longer carries any inline action buttons (Accept/Deny/Block/Cancel/Resend/

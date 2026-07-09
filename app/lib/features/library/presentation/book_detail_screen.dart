@@ -1037,6 +1037,8 @@ class _OwnedBookSections extends ConsumerWidget {
         SizedBox(height: 8),
         _ReviewCard(workId: workId, reviewExtra: _reviewExtra),
         SizedBox(height: 8),
+        _PublicReviewsSection(workId: workId),
+        SizedBox(height: 8),
         _NotesCard(entry: entry),
         SizedBox(height: 8),
         _LendingCard(entry: entry, editionId: entry.editionId),
@@ -1333,6 +1335,147 @@ class _ReviewCard extends ConsumerWidget {
                 fontStyle: FontStyle.italic,
                 fontSize: 12.5,
                 color: current != null ? AppColors.ink : AppColors.inkSoft,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Every other reader's public review of this book — a review's owner may
+/// keep their profile private, in which case the server already anonymized
+/// their name to a stable "User_XXXXXX" placeholder and dropped their avatar
+/// (never trust the client to hide it). Only a public reviewer's row is
+/// tappable, opening their profile where a connection request can be sent.
+class _PublicReviewsSection extends ConsumerWidget {
+  const _PublicReviewsSection({required this.workId});
+
+  final String workId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final reviews = ref.watch(publicReviewsProvider(workId));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(bottom: 8, left: 2),
+          child: Text(
+            l10n.bookReadersReviewsLabel,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: AppColors.inkSoft,
+            ),
+          ),
+        ),
+        reviews.when(
+          loading: () => Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+          ),
+          error: (_, _) => ErrorRetry(onRetry: () => ref.invalidate(publicReviewsProvider(workId))),
+          data: (items) => items.isEmpty
+              ? _Card(
+                  child: Text(
+                    l10n.bookReadersReviewsEmpty,
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (final r in items) ...[
+                      _PublicReviewRow(review: r),
+                      SizedBox(height: 8),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PublicReviewRow extends StatelessWidget {
+  const _PublicReviewRow({required this.review});
+
+  final Map<String, dynamic> review;
+
+  @override
+  Widget build(BuildContext context) {
+    final reviewer = review['reviewer'] as Map<String, dynamic>;
+    final isPublic = reviewer['is_public'] == true;
+    final avatar = reviewer['avatar_url'] as String?;
+    final name = reviewer['display_name'] as String;
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final rating = review['rating'] as int?;
+
+    return _Card(
+      child: GestureDetector(
+        onTap: isPublic
+            ? () => context.push(
+                  Routes.publicProfilePath(reviewer['id'] as String),
+                  extra: name,
+                )
+            : null,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: AppColors.goldSoft,
+              foregroundImage: avatar != null ? netImageProvider(avatar) : null,
+              child: Text(
+                initial,
+                style: TextStyle(
+                  color: Color(0xFF8F681E),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12.5,
+                            color: isPublic ? AppColors.oxblood : AppColors.ink,
+                          ),
+                        ),
+                      ),
+                      if (rating != null)
+                        Row(
+                          children: [
+                            for (var i = 1; i <= 5; i++)
+                              Icon(
+                                i <= rating ? Icons.star : Icons.star_border,
+                                size: 12,
+                                color: AppColors.gold,
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    review['body'] as String,
+                    style: TextStyle(fontSize: 12.5, color: AppColors.ink),
+                  ),
+                ],
               ),
             ),
           ],

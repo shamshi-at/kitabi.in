@@ -309,3 +309,26 @@ class GlobalSearchOut(BaseModel):
     works: list[WorkSummaryOut]
     authors: list[AuthorOut]
     publishers: list[PublisherOut]
+
+
+class PublicReviewerOut(BaseModel):
+    """Who wrote a public review. `is_public` tells the client whether `id`
+    is safe to open as a profile — when false, `display_name` is an
+    anonymous placeholder and `avatar_url` is always null."""
+
+    id: uuid.UUID
+    display_name: str
+    avatar_url: str | None
+    is_public: bool
+
+
+class PublicReviewOut(BaseModel):
+    """One reader's public review of a Work, with their star rating for the
+    same book attached if they left one (a rating with no public review
+    stays out of this list entirely — feature-map.md defers public ratings)."""
+
+    id: uuid.UUID
+    body: str
+    rating: int | None
+    created_at: datetime
+    reviewer: PublicReviewerOut

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.profile import PublicLibraryItemOut, PublicProfileOut, UserSearchOut
-from app.services import profile_service, scoring_service
+from app.services import connection_service, profile_service, scoring_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -28,6 +28,7 @@ async def public_profile(user_id: uuid.UUID, user: CurrentUser, db: DbSession) -
     may be fetched too."""
     profile = await profile_service.get_public_profile(db, user_id)
     score = await scoring_service.compute_score(db, user_id)
+    connections_count = await connection_service.count_accepted(db, user_id)
     return PublicProfileOut(
         id=profile.id,
         username=profile.username,
@@ -37,6 +38,7 @@ async def public_profile(user_id: uuid.UUID, user: CurrentUser, db: DbSession) -
         books_tracked=score["books_tracked"],
         books_finished=score["books_finished"],
         library_visible=profile.library_visible,
+        connections_count=connections_count,
     )
 
 

@@ -348,6 +348,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookEditReview => 'Edit review';
 
   @override
+  String get bookReadersReviewsLabel => 'WHAT READERS ARE SAYING';
+
+  @override
+  String get bookReadersReviewsEmpty => 'No public reviews yet.';
+
+  @override
   String get reviewPageTitle => 'Rate & review';
 
   @override
@@ -687,6 +693,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publicProfileScoreLabel => 'Score';
+
+  @override
+  String get publicProfileConnectionsLabel => 'Links';
 
   @override
   String get publicProfileConnect => 'Connect';

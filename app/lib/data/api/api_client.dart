@@ -275,6 +275,14 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Every public review on a book, newest first — each reviewer's name is
+  /// their real profile if it's public, otherwise a stable anonymous
+  /// placeholder resolved fresh server-side on every call.
+  Future<List<Map<String, dynamic>>> getWorkReviews(String workId) async {
+    final res = await _dio.get('/catalog/works/$workId/reviews');
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
   /// Wiki-style edit — the response wrapper says whether the change applied
   /// live (`applied: true`, contributor or unowned work) or was queued as a
   /// pending revision for the contributor to approve.

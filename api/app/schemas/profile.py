@@ -117,6 +117,7 @@ class PublicProfileOut(BaseModel):
     books_tracked: int
     books_finished: int
     library_visible: bool
+    connections_count: int
 
 
 class PublicLibraryItemOut(BaseModel):
