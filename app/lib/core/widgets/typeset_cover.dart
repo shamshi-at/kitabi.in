@@ -25,6 +25,24 @@ class TypesetCover extends StatelessWidget {
   final double width;
   final double height;
 
+  /// The deterministic base colour a book derives from its title/author — the
+  /// same hue the generated cover uses. Exposed so the book page can wash its
+  /// hero in the book's own colour (and any cover-derived accent stays in sync
+  /// with the shelf), photo cover or not.
+  static Color accentFor(String title, String? author) {
+    final seed = '$title${author ?? ''}'.hashCode.abs();
+    final hue = (seed % 360).toDouble();
+    final sat = 0.26 + (seed % 5) * 0.035;
+    final light = 0.25 + (seed % 4) * 0.03;
+    return HSLColor.fromAHSL(1, hue, sat, light).toColor();
+  }
+
+  /// A soft, high-lightness wash of [accentFor] — the book page's hero band.
+  static Color tintFor(String title, String? author) {
+    final base = HSLColor.fromColor(accentFor(title, author));
+    return base.withSaturation((base.saturation * 0.6).clamp(0.0, 1.0)).withLightness(0.9).toColor();
+  }
+
   /// Lead-in before an overflowing title/author runs its one ticker pass —
   /// jittered per book so a shelf of long titles doesn't move in lockstep
   /// (docs/screen-design.md: overflow-only, once on first render, never in

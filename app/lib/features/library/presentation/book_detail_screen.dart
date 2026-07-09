@@ -105,128 +105,13 @@ class _BookDetailBody extends ConsumerWidget {
 
     return ListView(
       children: [
-        Container(
-          color: AppColors.paperDeep,
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Reserves the space the header always had for a leading
-              // control — the actual back action is the single floating
-              // _BackButton in BookDetailScreen.build (this row used to
-              // carry a second, duplicate arrow_back that overlapped it).
-              SizedBox(width: 48),
-              Builder(builder: (context) {
-                final l10n = AppLocalizations.of(context)!;
-                final front = edition?['cover_url'] as String?;
-                final backCover = edition?['back_cover_url'] as String?;
-                // The viewer's pages: every side that actually has a photo.
-                final pages = <CoverPage>[
-                  if (front != null) (url: front, label: l10n.coverFrontLabel),
-                  if (backCover != null) (url: backCover, label: l10n.coverBackLabel),
-                ];
-                return Column(
-                  children: [
-                    _CoverUploader(
-                      editionId: editionId,
-                      title: work['title'] as String,
-                      author: authors.isNotEmpty ? authors.first['name'] as String? : null,
-                      coverUrl: front,
-                      workId: work['id'] as String,
-                      viewerPages: pages,
-                      viewerIndex: 0,
-                    ),
-                    SizedBox(height: 8),
-                    _CoverUploader(
-                      editionId: editionId,
-                      coverUrl: backCover,
-                      workId: work['id'] as String,
-                      back: true,
-                      width: 40,
-                      height: 58,
-                      viewerPages: pages,
-                      viewerIndex: front != null ? 1 : 0,
-                    ),
-                  ],
-                );
-              }),
-              SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      work['title'] as String,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    if (authors.isNotEmpty)
-                      GestureDetector(
-                        onTap: () =>
-                            context.push(Routes.authorBrowsePath(authors.first['id'] as String)),
-                        child: Padding(
-                          padding: EdgeInsets.only(top: 2),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (authors.first['image_url'] != null) ...[
-                                CircleAvatar(
-                                  radius: 9,
-                                  backgroundColor: AppColors.goldSoft,
-                                  foregroundImage:
-                                      netImageProvider(authors.first['image_url'] as String),
-                                ),
-                                SizedBox(width: 6),
-                              ],
-                              Flexible(
-                                child: Text(
-                                  authors.first['name'] as String,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: AppColors.oxblood,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    if (work['first_publish_year'] != null)
-                      Text(
-                        '${work['first_publish_year']}',
-                        style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
-                      ),
-                    if (publisher != null)
-                      GestureDetector(
-                        onTap: () => context
-                            .push(Routes.publisherBrowsePath(publisher['id'] as String)),
-                        child: Text(
-                          publisher['name'] as String,
-                          style: TextStyle(color: AppColors.oxblood, fontSize: 12),
-                        ),
-                      ),
-                    if (edition?['page_count'] != null)
-                      Text(
-                        '${edition!['page_count']} pp',
-                        style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
-                      ),
-                    if (edition?['language'] != null)
-                      Text(
-                        edition!['language'] as String,
-                        style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
-                      ),
-                    SizedBox(height: 4),
-                    _RatingRow(workId: work['id'] as String),
-                  ],
-                ),
-              ),
-              _ShareButton(work: work, edition: edition),
-              _LibraryEntryMenu(editionId: editionId),
-            ],
-          ),
+        _Frontispiece(
+          work: work,
+          edition: edition,
+          editionId: editionId,
+          authors: authors,
+          genres: genres,
+          publisher: publisher,
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(13, 10, 13, 24),
@@ -253,6 +138,9 @@ class _BookDetailBody extends ConsumerWidget {
                   ),
           ),
         ),
+        // A gold rule + fleuron parts "your copy" (above) from the shared book
+        // record below — About, readers' reviews, editions, where to buy.
+        _TheBookDivider(),
         // [WIRED] Where to buy — dormant until an edition carries buy_links
         // (external retailers). Invisible otherwise, so no rewrite when store
         // links are populated.
@@ -299,6 +187,263 @@ class _BookDetailBody extends ConsumerWidget {
         _TranslationsSection(work: work),
         SizedBox(height: 24),
       ],
+    );
+  }
+}
+
+/// Direction A's "Frontispiece" hero — the cover stands on a wash of the
+/// book's own derived colour, with a genre eyebrow, a display-set title, the
+/// author byline (a door to their page), publisher, a tidy facts line, the
+/// community average, and the reader's own rating. The front cover carries a
+/// smaller back cover peeking from its corner; both remain tap-to-view /
+/// tap-to-edit. Share + favourite + remove sit as a top-right cluster (the
+/// back button floats separately, top-left).
+class _Frontispiece extends StatelessWidget {
+  const _Frontispiece({
+    required this.work,
+    required this.edition,
+    required this.editionId,
+    required this.authors,
+    required this.genres,
+    required this.publisher,
+  });
+
+  final Map<String, dynamic> work;
+  final Map<String, dynamic>? edition;
+  final String editionId;
+  final List<Map<String, dynamic>> authors;
+  final List<Map<String, dynamic>> genres;
+  final Map<String, dynamic>? publisher;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final title = work['title'] as String;
+    final authorName = authors.isNotEmpty ? authors.first['name'] as String? : null;
+    final tint = TypesetCover.tintFor(title, authorName);
+    final accent = TypesetCover.accentFor(title, authorName);
+    final front = edition?['cover_url'] as String?;
+    final backCover = edition?['back_cover_url'] as String?;
+    final pages = <CoverPage>[
+      if (front != null) (url: front, label: l10n.coverFrontLabel),
+      if (backCover != null) (url: backCover, label: l10n.coverBackLabel),
+    ];
+    final aggregate = (work['aggregate_rating'] as num?)?.toDouble() ??
+        (work['translation_group_rating'] as num?)?.toDouble();
+    final metaBits = <String>[
+      if (work['first_publish_year'] != null) '${work['first_publish_year']}',
+      if (edition?['page_count'] != null) l10n.bookPagesShort(edition!['page_count'] as int),
+      if (edition?['language'] != null) edition!['language'] as String,
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [tint, AppColors.paper],
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(16, 6, 10, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SizedBox(width: 40), // room for the floating back button
+              Spacer(),
+              _ShareButton(work: work, edition: edition),
+              _LibraryEntryMenu(editionId: editionId),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 112,
+                height: 162,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _CoverUploader(
+                      editionId: editionId,
+                      title: title,
+                      author: authorName,
+                      coverUrl: front,
+                      workId: work['id'] as String,
+                      width: 104,
+                      height: 156,
+                      viewerPages: pages,
+                      viewerIndex: 0,
+                    ),
+                    Positioned(
+                      right: -4,
+                      bottom: -4,
+                      child: _CoverUploader(
+                        editionId: editionId,
+                        coverUrl: backCover,
+                        workId: work['id'] as String,
+                        back: true,
+                        width: 38,
+                        height: 54,
+                        viewerPages: pages,
+                        viewerIndex: front != null ? 1 : 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (genres.isNotEmpty)
+                      Text(
+                        (genres.first['name'] as String).toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.4,
+                          color: accent,
+                        ),
+                      ),
+                    SizedBox(height: 3),
+                    Text(
+                      title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(height: 1.12),
+                    ),
+                    if (authorName != null)
+                      GestureDetector(
+                        onTap: () =>
+                            context.push(Routes.authorBrowsePath(authors.first['id'] as String)),
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 3),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (authors.first['image_url'] != null) ...[
+                                CircleAvatar(
+                                  radius: 9,
+                                  backgroundColor: AppColors.goldSoft,
+                                  foregroundImage:
+                                      netImageProvider(authors.first['image_url'] as String),
+                                ),
+                                SizedBox(width: 6),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  l10n.bookByAuthor(authorName),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppColors.oxblood,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (publisher != null)
+                      Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: GestureDetector(
+                          onTap: () => context
+                              .push(Routes.publisherBrowsePath(publisher!['id'] as String)),
+                          child: Text(
+                            publisher!['name'] as String,
+                            style: TextStyle(color: AppColors.oxblood, fontSize: 11.5),
+                          ),
+                        ),
+                      ),
+                    if (metaBits.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(top: 7),
+                        child: Text(
+                          metaBits.join('  ·  '),
+                          style: TextStyle(color: AppColors.inkSoft, fontSize: 11.5),
+                        ),
+                      ),
+                    if (aggregate != null)
+                      Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            _Stars(value: aggregate),
+                            SizedBox(width: 6),
+                            Text(
+                              aggregate.toStringAsFixed(1),
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    SizedBox(height: 8),
+                    _RatingRow(workId: work['id'] as String),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Read-only star row for an aggregate (community) rating.
+class _Stars extends StatelessWidget {
+  const _Stars({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final rounded = value.round();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 1; i <= 5; i++)
+          Icon(i <= rounded ? Icons.star : Icons.star_border, size: 14, color: AppColors.gold),
+      ],
+    );
+  }
+}
+
+/// A gold rule closed by a fleuron — the page's one editorial divider,
+/// between the reader's own copy and the shared book record.
+class _TheBookDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(13, 2, 13, 12),
+      child: Column(
+        children: [
+          Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  AppColors.goldSoft,
+                  AppColors.gold,
+                  AppColors.goldSoft,
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: 7),
+          Text('❦', style: TextStyle(color: AppColors.gold, fontSize: 13)),
+        ],
+      ),
     );
   }
 }
@@ -940,7 +1085,8 @@ class _LibraryEntryMenu extends ConsumerWidget {
     final current = entry.valueOrNull;
     if (current == null) return SizedBox.shrink();
 
-    return Column(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
           icon: Icon(

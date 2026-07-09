@@ -679,6 +679,20 @@
       "isbn": {"type": "String"}
     }
   },
+  "bookByAuthor": "by {name}",
+  "@bookByAuthor": {
+    "description": "Author byline on the book page hero",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "bookPagesShort": "{count} pp",
+  "@bookPagesShort": {
+    "description": "Page count in the book page's compact meta line",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "libraryTitle": "My Library",
   "@libraryTitle": {
     "description": "Title on the personal library grid screen"

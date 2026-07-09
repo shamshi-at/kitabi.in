@@ -324,6 +324,28 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **9 Jul 2026** — **Book page redesigned as "the Frontispiece"; every shelf gets one
+  card system ("Grid B").** Mocked before building — three hero directions for the
+  book page, then a separate card-system mock (one cover frame + a state-overlay
+  vocabulary + two grid finishes) — owner picked Direction A (Frontispiece) and Grid
+  B (pure shelf, no caption). The book page's old flat grey header is now
+  `_Frontispiece`: a gradient wash of the book's own derived colour, a large
+  front+back cover, a genre eyebrow, serif title, tappable author/publisher, one
+  compact meta line (year · pages · language), an aggregate rating cluster, then the
+  reader's own star row. A gold-rule "❦" divider (`_TheBookDivider`) now separates
+  "your copy" from the shared catalogue record — every existing section (status,
+  progress, review, public reviews, notes, tags, lending, about, editions,
+  translations, buy links) carried over unchanged, just reframed either side of the
+  divider. New shared `ShelfCover` widget puts a book's state (status pill, reading
+  sliver, favourite ribbon, lent/borrowed band) as overlays directly on the cover
+  with no caption row — wired into the library grid, its Borrowed section, and a
+  public profile's shelf, so a book looks identical everywhere it's listed;
+  `TypesetCover` gained `accentFor`/`tintFor` so the grid and the book page's hero
+  derive the same colour from a book's title/author. Also fixed: `PersonLink`
+  (lender/borrower names) now opens a linked user's public profile instead of a
+  ledger-only screen — the ledger is still the profile's default tab, one tap away;
+  an unlinked private contact still opens the old ledger screen. Verified live on
+  the emulator across the library grid, the book page, and profile navigation.
 - **9 Jul 2026** — **Reader profile redesigned as a "bookplate" (mocked before building).**
   Three rounds of HTML phone-frame mocks (owner-reviewed) landed on the "Card Ledger"
   direction: `PublicProfileScreen`'s header is a gold-hairline-inset card (Ex Libris

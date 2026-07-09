@@ -220,6 +220,26 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Book page redesign — "the Frontispiece" — and the shelf card system, "Grid B"
+      (9 Jul 2026, mocked in three directions + a card-system mockup before building,
+      owner picked Direction A and Grid B): the book page's hero (`_Frontispiece`) is
+      now a gradient wash of the book's own derived colour, a big front+back cover,
+      genre eyebrow, serif title, tappable author/publisher, one compact meta line,
+      an aggregate rating cluster, then the reader's own stars — a gold-rule "❦"
+      divider (`_TheBookDivider`) now separates "your copy" (status/progress/
+      review/notes/tags/lending) from the shared catalogue record (about/readers'
+      reviews/editions/translations/buy). Every existing section carried over intact.
+      New shared `ShelfCover` widget (`core/widgets/shelf_cover.dart`) puts every
+      book's state — status pill, reading-progress sliver, favourite ribbon, lent/
+      borrowed band — as overlays directly on the cover with no caption row below;
+      wired into the library grid (owned + Borrowed) and a public profile's shelf, so
+      a book looks identical wherever it's listed. `TypesetCover` gained
+      `accentFor`/`tintFor` so the grid and the book page's hero derive the same
+      colour from a book's title/author. Also: `PersonLink` (lender/borrower names
+      on the book page and lending ledger) now opens a linked user's public profile
+      instead of the ledger-only screen — the ledger is still one tap away as the
+      profile's default tab; an unlinked private contact still opens the old ledger
+      screen since there's no profile to show. Verified live on the emulator
 - [x] Reader profile redesign — "the bookplate" (9 Jul 2026, mocked first in
       docs/reader-page-redesign approach): the public profile header is now a gold-inset-
       framed card (Ex Libris eyebrow, gold-ringed avatar, real name) with the @handle

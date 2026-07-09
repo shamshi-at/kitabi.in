@@ -10,8 +10,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/net_image.dart';
-import '../../../core/widgets/status_pill.dart';
-import '../../../core/widgets/typeset_cover.dart';
+import '../../../core/widgets/shelf_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../catalog/providers/catalog_providers.dart';
@@ -810,7 +809,7 @@ class _PublicShelfState extends ConsumerState<_PublicShelf> {
                   crossAxisCount: 4,
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
-                  childAspectRatio: 0.52,
+                  childAspectRatio: 0.66,
                 ),
                 itemCount: filtered.length,
                 itemBuilder: (context, i) {
@@ -819,21 +818,11 @@ class _PublicShelfState extends ConsumerState<_PublicShelf> {
                     onTap: () => context.push(
                       Routes.bookDetailPath(b['work_id'] as String, b['edition_id'] as String),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: TypesetCover(
-                            title: b['title'] as String? ?? '',
-                            author: b['author_names'] as String?,
-                            coverUrl: b['cover_url'] as String?,
-                            width: double.infinity,
-                            height: double.infinity,
-                          ),
-                        ),
-                        SizedBox(height: 3),
-                        StatusPill(status: b['status'] as String? ?? 'pending'),
-                      ],
+                    child: ShelfCover(
+                      title: b['title'] as String? ?? '',
+                      author: b['author_names'] as String?,
+                      coverUrl: b['cover_url'] as String?,
+                      status: b['status'] as String? ?? 'pending',
                     ),
                   );
                 },

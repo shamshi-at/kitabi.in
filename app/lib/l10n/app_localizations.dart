@@ -1396,6 +1396,18 @@ abstract class AppLocalizations {
   /// **'ISBN {isbn}'**
   String bookIsbnLabel(String isbn);
 
+  /// Author byline on the book page hero
+  ///
+  /// In en, this message translates to:
+  /// **'by {name}'**
+  String bookByAuthor(String name);
+
+  /// Page count in the book page's compact meta line
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pp'**
+  String bookPagesShort(int count);
+
   /// Title on the personal library grid screen
   ///
   /// In en, this message translates to:

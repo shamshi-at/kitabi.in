@@ -5,8 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
-import '../../../core/widgets/status_pill.dart';
-import '../../../core/widgets/typeset_cover.dart';
+import '../../../core/widgets/shelf_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/catalog_cache.dart';
 import '../../../data/db/database.dart';
@@ -195,7 +194,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                         crossAxisCount: 3,
                         mainAxisSpacing: 9,
                         crossAxisSpacing: 8,
-                        childAspectRatio: 0.62,
+                        childAspectRatio: 0.66,
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => _LibraryGridItem(hit: filtered[index]),
@@ -227,7 +226,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                         crossAxisCount: 3,
                         mainAxisSpacing: 9,
                         crossAxisSpacing: 8,
-                        childAspectRatio: 0.62,
+                        childAspectRatio: 0.66,
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => _BorrowedGridItem(item: borrowed[index]),
@@ -304,67 +303,30 @@ class _LibraryGridItem extends ConsumerWidget {
             r.direction != 'borrowed' &&
             r.returnedDate == null)
         .firstOrNull;
+    // The reading sliver — only when actively reading and both pages are known.
+    final total = book.pageCount;
+    final page = entry.currentPage;
+    final progress = (entry.status == 'reading' && total != null && total > 0 && page != null)
+        ? page / total
+        : null;
 
     return GestureDetector(
       onTap: () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                TypesetCover(
-                  title: book.title,
-                  author: book.authorNames,
-                  coverUrl: book.coverUrl,
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
-                if (entry.isFavorite)
-                  Positioned(
-                    top: -2,
-                    right: 6,
-                    child: ClipPath(
-                      clipper: _RibbonClipper(),
-                      child: Container(width: 9, height: 20, color: AppColors.gold),
-                    ),
-                  ),
-                if (activeLending != null)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      color: Color(0xEBB8862B),
-                      padding: EdgeInsets.symmetric(vertical: 2),
-                      child: Text(
-                        'WITH ${activeLending.borrowerName.toUpperCase()}',
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Color(0xFF241811),
-                          fontSize: 6.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          SizedBox(height: 4),
-          StatusPill(status: entry.status),
-        ],
+      child: ShelfCover(
+        title: book.title,
+        author: book.authorNames,
+        coverUrl: book.coverUrl,
+        status: entry.status,
+        progress: progress,
+        favorite: entry.isFavorite,
+        lentToName: activeLending?.borrowerName,
       ),
     );
   }
 }
 
 /// A borrowed book in the library's Borrowed section — the counterpart to
-/// [_LibraryGridItem], banded with who it's from and a slate "Borrowed" pill.
+/// [_LibraryGridItem], banded with who it's from.
 class _BorrowedGridItem extends StatelessWidget {
   const _BorrowedGridItem({required this.item});
 
@@ -372,90 +334,17 @@ class _BorrowedGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final book = item.book;
     return GestureDetector(
       onTap: book == null
           ? null
           : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                TypesetCover(
-                  title: book?.title ?? '…',
-                  author: book?.authorNames,
-                  coverUrl: book?.coverUrl,
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    color: const Color(0xEB43617E),
-                    padding: EdgeInsets.symmetric(vertical: 2),
-                    child: Text(
-                      l10n.libraryBorrowedFrom(item.record.borrowerName.toUpperCase()),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.paper,
-                        fontSize: 6.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerLeft,
-            // Same pill shape/typography as StatusPill, tinted slate — borrowed
-            // books read as one shelf with the owned grid above them.
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.slate.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                l10n.libraryBorrowedSection.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                  color: AppColors.slate,
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: ShelfCover(
+        title: book?.title ?? '…',
+        author: book?.authorNames,
+        coverUrl: book?.coverUrl,
+        borrowedFromName: item.record.borrowerName,
       ),
     );
   }
-}
-
-class _RibbonClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    return Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width, size.height)
-      ..lineTo(size.width / 2, size.height * 0.78)
-      ..lineTo(0, size.height)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

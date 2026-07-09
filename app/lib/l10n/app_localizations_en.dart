@@ -774,6 +774,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String bookByAuthor(String name) {
+    return 'by $name';
+  }
+
+  @override
+  String bookPagesShort(int count) {
+    return '$count pp';
+  }
+
+  @override
   String get libraryTitle => 'My Library';
 
   @override
