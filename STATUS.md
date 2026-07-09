@@ -324,6 +324,20 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **9 Jul 2026** — **Public profile rework: one screen, Instagram-inspired.** Merged
+  `PublicProfileScreen` and the connection ledger into a single screen — previously the
+  profile pushed to a second `ConnectionLoansScreen` for "Lending ledger", and the
+  AppBar title duplicated the same full name shown in the body. Now the AppBar carries
+  only `@username`; the body shows the name once, an avatar + 3-stat header row (Score /
+  Books / Read, Instagram-style bold-number-over-caption), a Connect / pending / green
+  "Connected" status pill, and a two-icon Shelf/Ledger tab bar that swaps content inline
+  (no navigation — verified via back-stack depth on the emulator). A search icon in the
+  AppBar opens global search. `LoanRow` and the counterparty loan filter were extracted
+  from `ConnectionLoansScreen` (kept standalone only for private/unlinked contacts, who
+  have no profile) so the row UI has one implementation. Connections' accepted-card tap
+  now lands directly on the merged screen; the interim "View their library" icon button
+  (added earlier the same day) is gone — redundant once the row tap goes to the one
+  screen that has both tabs.
 - **9 Jul 2026** — **Follow-up UX batch.** The lend pick-book sheet's search now unions
   its instant local substring filter with the books-only catalog search endpoint
   (`catalogSearchProvider`, transliteration-aware, 300ms debounced), matched by `workId`

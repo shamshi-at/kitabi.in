@@ -578,10 +578,10 @@
   "@publicLibrarySection": {"description": "Section header over a public library grid"},
   "publicLibraryPrivate": "Their library is private.",
   "@publicLibraryPrivate": {"description": "Shown when the visited reader's library is not public"},
-  "publicProfileBooks": "{count, plural, =1{1 book} other{{count} books}}",
-  "@publicProfileBooks": {"description": "Public profile stat: tracked books", "placeholders": {"count": {"type": "int"}}},
-  "publicProfileScore": "Score {score}",
-  "@publicProfileScore": {"description": "Public profile contribution score", "placeholders": {"score": {"type": "int"}}},
+  "publicProfileBooksLabel": "Books",
+  "@publicProfileBooksLabel": {"description": "Caption under the tracked-books count on a public profile"},
+  "publicProfileScoreLabel": "Score",
+  "@publicProfileScoreLabel": {"description": "Caption under the contribution score on a public profile"},
   "publicProfileConnect": "Connect",
   "@publicProfileConnect": {"description": "Button to send a connection request from a public profile"},
   "publicProfileRequestSent": "Connection request sent.",
@@ -1095,10 +1095,6 @@
   "connectionsDisconnect": "Disconnect",
   "@connectionsDisconnect": {
     "description": "Disconnect an accepted connection"
-  },
-  "connectionsViewLibrary": "View their library",
-  "@connectionsViewLibrary": {
-    "description": "Tooltip on the accepted-connection card's icon button that opens their public profile and shelf"
   },
   "connectionsTooltip": "Connection requests",
   "@connectionsTooltip": {

@@ -11,11 +11,29 @@ import '../../../l10n/app_localizations.dart';
 import '../../lending/lending_format.dart';
 import '../../library/providers/library_providers.dart';
 
+/// The loans you have with one person, filtered from the local ledger —
+/// borrower_user_id is the counterparty on both directions (the borrower on
+/// a lent row, the lender on a borrowed row), so this catches both. With a
+/// [userId] it matches the linked user; without one it matches the free-text
+/// name, so self-logged counterparties are covered too.
+List<LendingWithBook> loansForCounterparty(
+  List<LendingWithBook> all, {
+  String? userId,
+  required String name,
+}) {
+  final needle = name.trim().toLowerCase();
+  return all
+      .where((r) => userId != null
+          ? r.record.borrowerUserId == userId
+          : r.record.borrowerName.trim().toLowerCase() == needle)
+      .toList();
+}
+
 /// The loans you have with one person — books you've lent them and books
-/// you've borrowed from them. Reached by tapping a connected reader in the
-/// connections inbox, or any counterparty name on a loan (ledger, book page).
-/// With a [userId] it matches the linked user; without one it matches the
-/// free-text name, so self-logged counterparties get a page too.
+/// you've borrowed from them. Reached by tapping a private (unlinked)
+/// contact's name — a linked reader's loans live as a tab inside
+/// [PublicProfileScreen] instead, so there isn't a second screen for the
+/// same data once an account exists.
 class ConnectionLoansScreen extends ConsumerWidget {
   const ConnectionLoansScreen({super.key, this.userId, required this.name});
 
@@ -39,14 +57,7 @@ class ConnectionLoansScreen extends ConsumerWidget {
         loading: () => ListSkeleton(),
         error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(allLendingProvider)),
         data: (all) {
-          // borrower_user_id is the counterparty on both directions: the borrower
-          // on a lent row, the lender on a borrowed row — so this catches both.
-          final needle = name.trim().toLowerCase();
-          final loans = all
-              .where((r) => userId != null
-                  ? r.record.borrowerUserId == userId
-                  : r.record.borrowerName.trim().toLowerCase() == needle)
-              .toList();
+          final loans = loansForCounterparty(all, userId: userId, name: name);
           final lent = loans.where((r) => r.record.direction != 'borrowed').toList();
           final borrowed = loans.where((r) => r.record.direction == 'borrowed').toList();
 
@@ -58,12 +69,12 @@ class ConnectionLoansScreen extends ConsumerWidget {
             children: [
               if (lent.isNotEmpty) ...[
                 _SectionLabel(l10n.connectionLoansLent),
-                for (final item in lent) _LoanRow(item: item),
+                for (final item in lent) LoanRow(item: item),
                 SizedBox(height: 14),
               ],
               if (borrowed.isNotEmpty) ...[
                 _SectionLabel(l10n.connectionLoansBorrowed),
-                for (final item in borrowed) _LoanRow(item: item),
+                for (final item in borrowed) LoanRow(item: item),
               ],
             ],
           );
@@ -95,8 +106,10 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _LoanRow extends StatelessWidget {
-  const _LoanRow({required this.item});
+/// One loan row (cover, title, date, returned pill) — shared by the private-
+/// contact ledger screen above and the Ledger tab in [PublicProfileScreen].
+class LoanRow extends StatelessWidget {
+  const LoanRow({super.key, required this.item});
 
   final LendingWithBook item;
 

@@ -1228,17 +1228,17 @@ abstract class AppLocalizations {
   /// **'Their library is private.'**
   String get publicLibraryPrivate;
 
-  /// Public profile stat: tracked books
+  /// Caption under the tracked-books count on a public profile
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 book} other{{count} books}}'**
-  String publicProfileBooks(int count);
+  /// **'Books'**
+  String get publicProfileBooksLabel;
 
-  /// Public profile contribution score
+  /// Caption under the contribution score on a public profile
   ///
   /// In en, this message translates to:
-  /// **'Score {score}'**
-  String publicProfileScore(int score);
+  /// **'Score'**
+  String get publicProfileScoreLabel;
 
   /// Button to send a connection request from a public profile
   ///
@@ -1929,12 +1929,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disconnect'**
   String get connectionsDisconnect;
-
-  /// Tooltip on the accepted-connection card's icon button that opens their public profile and shelf
-  ///
-  /// In en, this message translates to:
-  /// **'View their library'**
-  String get connectionsViewLibrary;
 
   /// Tooltip for the connections icon on the lending ledger
   ///

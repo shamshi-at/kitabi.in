@@ -677,20 +677,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get publicLibraryPrivate => 'Their library is private.';
 
   @override
-  String publicProfileBooks(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count books',
-      one: '1 book',
-    );
-    return '$_temp0';
-  }
+  String get publicProfileBooksLabel => 'Books';
 
   @override
-  String publicProfileScore(int score) {
-    return 'Score $score';
-  }
+  String get publicProfileScoreLabel => 'Score';
 
   @override
   String get publicProfileConnect => 'Connect';
@@ -1104,9 +1094,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connectionsDisconnect => 'Disconnect';
-
-  @override
-  String get connectionsViewLibrary => 'View their library';
 
   @override
   String get connectionsTooltip => 'Connection requests';

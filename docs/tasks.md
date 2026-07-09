@@ -220,6 +220,17 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Public profile rework (9 Jul 2026): merged the public profile and the connection's
+      lending ledger into one screen instead of a profile that pushed to a second
+      ledger screen — Instagram-inspired (AppBar carries only `@username`, the full
+      name renders once in the body, an avatar + 3-stat header row, a Connect/Connected
+      status pill, and a two-icon Shelf/Ledger tab bar that swaps content inline with
+      no navigation). Fixes the literal name duplication between the AppBar title and
+      body header. Added a search icon to the AppBar (global catalog search). The
+      Connections screen's accepted-card tap now lands directly on this merged screen;
+      the redundant separate "view library" icon button was removed. `LoanRow` and the
+      counterparty loan filter were extracted from `ConnectionLoansScreen` (still used
+      standalone for private/unlinked contacts) so both places share one implementation
 - [x] Follow-up UX batch (9 Jul 2026): the lend pick-book sheet's search now unions its
       local substring filter with the books-only catalog search endpoint (transliteration-
       aware, workId-matched), so a cross-script query finds a Malayalam-titled book you own
