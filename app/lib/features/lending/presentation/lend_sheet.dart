@@ -162,7 +162,30 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
                 ),
                 SizedBox(width: 10),
                 Expanded(
-                  child: Text(l10n.lendSheetTitle, style: Theme.of(context).textTheme.titleLarge),
+                  // "Lend" reads as a verb, italic and tinted, so the book's
+                  // own name — which can run long — carries the visual
+                  // weight; capped at 2 lines so an unusually long title
+                  // never pushes the rest of the sheet around.
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${l10n.lendSheetTitlePrefix} ',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.oxblood,
+                              ),
+                        ),
+                        TextSpan(
+                          text: widget.bookTitle,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),

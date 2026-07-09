@@ -2050,11 +2050,11 @@ abstract class AppLocalizations {
   /// **'Pick a date'**
   String get logBorrowedNoDate;
 
-  /// Title of the lend bottom sheet (S9)
+  /// Verb prefix on the lend bottom sheet's title, styled distinctly from the book name that follows it (e.g. "Lend Chemmeen")
   ///
   /// In en, this message translates to:
-  /// **'Lend this book'**
-  String get lendSheetTitle;
+  /// **'Lend'**
+  String get lendSheetTitlePrefix;
 
   /// Field label for the borrower on the lend sheet
   ///

@@ -1170,9 +1170,9 @@
   "@logBorrowedNoDate": {
     "description": "Placeholder for an unset date field"
   },
-  "lendSheetTitle": "Lend this book",
-  "@lendSheetTitle": {
-    "description": "Title of the lend bottom sheet (S9)"
+  "lendSheetTitlePrefix": "Lend",
+  "@lendSheetTitlePrefix": {
+    "description": "Verb prefix on the lend bottom sheet's title, styled distinctly from the book name that follows it (e.g. \"Lend Chemmeen\")"
   },
   "lendSheetToLabel": "TO",
   "@lendSheetToLabel": {

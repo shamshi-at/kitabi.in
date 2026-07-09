@@ -220,6 +220,10 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       apps), and Share waits for the cover to decode before rasterising (8 Jul 2026)
 - [x] Book page "About this book" section (subtitle + description) with a wiki-style
       "Improve this entry" action opening the catalog edit form (8 Jul 2026)
+- [x] Lend sheet title now names the book (9 Jul 2026): "Lend this book" → "Lend
+      {title}", with "Lend" set apart (italic, oxblood) from the book's own name;
+      capped at 2 lines with an ellipsis so an unusually long title can't push the
+      borrower/date/note fields or Save button out of view
 - [x] Public reviews + connection count (9 Jul 2026): `GET /catalog/works/{id}/reviews`
       returns every reader's *public* review of a book (a naked rating with no public
       review never appears — feature-map.md defers public ratings), paired with that

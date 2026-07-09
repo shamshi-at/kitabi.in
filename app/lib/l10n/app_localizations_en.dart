@@ -1157,7 +1157,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logBorrowedNoDate => 'Pick a date';
 
   @override
-  String get lendSheetTitle => 'Lend this book';
+  String get lendSheetTitlePrefix => 'Lend';
 
   @override
   String get lendSheetToLabel => 'TO';
