@@ -102,23 +102,76 @@ body{
   -webkit-tap-highlight-color:transparent;overflow-x:hidden;
 }
 .serif{font-family:'Fraunces',Georgia,serif}
-@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-@keyframes pop{0%{opacity:0;transform:scale(.7)}70%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes sweep{0%{top:8%}55%{top:86%}100%{top:8%}}
 
-/* ---------- hero ---------- */
-.hero{
+/* ---------- reading-progress ribbon ---------- */
+#ribbon{position:fixed;top:0;left:0;height:3px;width:0;z-index:99;pointer-events:none;
+  background:linear-gradient(90deg,var(--gold),#D9AC50)}
+#ribbon::after{content:"";position:absolute;right:-1px;top:0;border-left:7px solid #D9AC50;
+  border-top:3px solid transparent;border-bottom:8px solid transparent}
+
+/* ---------- mini sticky nav ---------- */
+.nav{position:fixed;top:0;left:0;right:0;z-index:98;display:flex;justify-content:space-between;align-items:center;
+  padding:9px max(18px,env(safe-area-inset-left));padding-top:max(9px,env(safe-area-inset-top));
+  background:rgba(36,24,17,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(184,134,43,.35);
+  transform:translateY(-105%);transition:transform .4s cubic-bezier(.22,1,.36,1)}
+.nav.show{transform:none}
+.nav .brand{display:flex;align-items:center;gap:9px;color:var(--paper);text-decoration:none}
+.nav .brand img{width:26px;height:26px;border-radius:6px}
+.nav .brand b{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:17px;letter-spacing:.4px}
+.nav .go{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--night);
+  background:var(--gold);text-decoration:none;padding:7px 14px;border-radius:999px}
+
+/* ---------- scroll reveals ---------- */
+.reveal{opacity:0;transform:translateY(26px);
+  transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1);transition-delay:var(--d,0s)}
+.reveal.left{transform:translateX(-30px)}
+.reveal.right{transform:translateX(30px)}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- cinematic scroll-scrubbed hero ----------
+   The whole opening is one "video" scrubbed by scroll: --p (0→1) is set by JS
+   as the reader moves through the 240vh .cine section while .pin stays stuck.
+   Every layer derives its own timing from --p via  clamp(0,(--p - a)/b,1). */
+.cine{height:240vh;position:relative;--p:1}
+.pin{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:0 22px;text-align:center;color:var(--paper);
   background:radial-gradient(120vw 70vh at 75% -12%,#4A3526 0%,var(--night-2) 45%,var(--night) 100%);
-  color:var(--paper);text-align:center;
-  padding:max(56px,env(safe-area-inset-top)) 22px 84px;
-  border-bottom:3px solid var(--gold);position:relative;
-}
-.badge{width:104px;height:104px;display:block;margin:0 auto 18px;animation:pop .6s cubic-bezier(.34,1.56,.64,1) both;
-  filter:drop-shadow(0 12px 30px rgba(0,0,0,.45))}
-.hero h1{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:clamp(42px,11vw,64px);letter-spacing:.5px;animation:up .5s ease-out .08s both}
-.tagline{margin-top:6px;font-size:12px;font-weight:700;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);animation:up .5s ease-out .16s both}
-.pitch{max-width:560px;margin:22px auto 0;font-size:clamp(16px,4.4vw,19px);line-height:1.65;color:#E9DCC2;animation:up .5s ease-out .24s both}
+  border-bottom:3px solid var(--gold)}
+.sky{position:absolute;inset:-20% -10%;pointer-events:none;
+  background:radial-gradient(52vw 34vh at 50% 30%,rgba(184,134,43,.22),transparent 70%);
+  opacity:calc(.25 + .75*clamp(0,var(--p)/.5,1))}
+.drift{position:absolute;inset:0;pointer-events:none}
+.drift i{position:absolute;width:14px;height:74px;border-radius:4px;opacity:0;
+  opacity:calc(.5*clamp(0,(var(--p) - .05)/.25,1)*(1 - clamp(0,(var(--p) - .7)/.3,1)));
+  transform:translateY(calc((1 - var(--p))*var(--dy)))}
+/* the drawn book */
+.bookwrap{position:relative;will-change:transform;
+  transform:translateY(calc((1 - clamp(0,(var(--p) - .5)/.3,1))*11vh))
+            scale(calc(1.45 - .45*clamp(0,(var(--p) - .5)/.3,1)))}
+.bookwrap svg{width:min(52vw,330px);height:auto;display:block;
+  filter:drop-shadow(0 14px 34px rgba(0,0,0,.45))}
+.draw{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;
+  stroke-dashoffset:calc(1 - clamp(0,(var(--p) - var(--a))/var(--b),1))}
+.ribwrap{transform:translateY(calc((clamp(0,(var(--p) - .48)/.12,1) - 1)*46px))}
+/* staged copy — each element fades/rises on its own slice of --p */
+.fx{opacity:clamp(0,(var(--p) - var(--a))/var(--b),1);
+  transform:translateY(calc((1 - clamp(0,(var(--p) - var(--a))/var(--b),1))*22px))}
+.pin h1{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:clamp(42px,11vw,64px);letter-spacing:.5px;margin-top:10px}
+.tagline{margin-top:6px;font-size:12px;font-weight:700;letter-spacing:.34em;text-transform:uppercase;color:var(--gold)}
+.pitch{max-width:560px;margin:22px auto 0;font-size:clamp(16px,4.4vw,19px);line-height:1.65;color:#E9DCC2}
 .pitch b{color:#fff;font-weight:600}
-.ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px;animation:up .5s ease-out .32s both}
+.ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+.cue1{position:absolute;bottom:max(26px,env(safe-area-inset-bottom));left:0;right:0;
+  font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#A08D6E;
+  opacity:calc(1 - clamp(0,(var(--p) - .02)/.1,1))}
+.cue1 .mouse{margin:0 auto 9px;width:26px;height:42px;border:2px solid rgba(239,227,200,.4);border-radius:14px;position:relative}
+.cue1 .mouse::after{content:"";position:absolute;left:50%;top:8px;width:4px;height:9px;margin-left:-2px;border-radius:2px;
+  background:var(--gold);animation:bob 1.6s ease-in-out infinite}
 .store{display:flex;align-items:center;gap:11px;text-align:left;background:var(--paper);color:var(--ink);
   border-radius:14px;padding:11px 18px;text-decoration:none;border:1px solid var(--paper);min-width:186px}
 .store .ic{flex-shrink:0}
@@ -126,11 +179,17 @@ body{
 .store span{font-size:15.5px;font-weight:700}
 .store.ghost{background:transparent;color:var(--paper);border:1.5px solid rgba(246,240,227,.45)}
 .store.ghost small{color:var(--gold)}
-.trust{margin-top:22px;font-size:12.5px;color:#A08D6E;animation:up .5s ease-out .4s both}
+.trust{margin-top:22px;font-size:12.5px;color:#A08D6E}
 .trust b{color:#CBB897;font-weight:600}
+.cue{margin:30px auto 0;width:26px;height:42px;border:2px solid rgba(239,227,200,.4);border-radius:14px;position:relative}
+.cue::after{content:"";position:absolute;left:50%;top:8px;width:4px;height:9px;margin-left:-2px;border-radius:2px;
+  background:var(--gold);animation:bob 1.6s ease-in-out 1s infinite}
+.cue-t{font-size:9.5px;letter-spacing:.28em;text-transform:uppercase;color:#A08D6E;margin-top:9px}
 
 /* ---------- floating phone ---------- */
-.stage{position:relative;margin:-56px auto 0;width:min(300px,82vw);animation:up .6s ease-out .45s both}
+.stage{position:relative;margin:-64px auto 0;width:min(300px,82vw);z-index:2}
+.stage.reveal{transform:translateY(46px) rotate(2.5deg)}
+.stage.reveal.in{transform:none}
 .phone{border-radius:36px;border:9px solid #1D1710;background:var(--paper);overflow:hidden;
   box-shadow:0 30px 60px rgba(43,33,24,.35),0 6px 16px rgba(43,33,24,.2)}
 .scr{padding:14px 13px 12px;background:var(--paper)}
@@ -152,23 +211,223 @@ body{
 .p-read{background:#E3EAD9;color:var(--moss)}
 .p-tbr{background:#F2E6C4;color:#8F681E}
 
-/* ---------- page sections ---------- */
-.wrap{max-width:980px;margin:0 auto;padding:0 22px}
-.sect{margin-top:72px;text-align:center}
+/* ---------- page scaffolding ---------- */
+.wrap{max-width:1020px;margin:0 auto;padding:0 22px}
+.sect{margin-top:76px;text-align:center}
 .kicker{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--oxblood);background:#F3DFDA;padding:5px 13px;border-radius:999px}
 .sect h2{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:clamp(26px,7vw,36px);margin-top:14px}
-.sect .lead{max-width:600px;margin:12px auto 0;color:var(--ink-soft);font-size:15.5px;line-height:1.7}
+.sect .lead{max-width:620px;margin:12px auto 0;color:var(--ink-soft);font-size:15.5px;line-height:1.7}
+.free{display:inline-block;margin-left:8px;font-size:9.5px;font-weight:800;letter-spacing:.1em;color:var(--moss);background:#E3EAD9;border-radius:999px;padding:3px 9px;vertical-align:3px}
+
+/* ---------- chapters ---------- */
+.chap{display:grid;gap:36px;align-items:center;padding:74px 0;border-bottom:1px solid var(--line)}
+.chap:last-of-type{border-bottom:0}
+.chap .ck{font-size:10px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:var(--gold)}
+.chap .ck::after{content:"";display:block;width:44px;height:2px;background:var(--gold);margin-top:9px;border-radius:2px}
+.chap h3{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:clamp(24px,6vw,32px);margin-top:14px;line-height:1.2}
+.chap .cp{margin-top:14px;color:var(--ink-soft);font-size:15px;line-height:1.75}
+.chap .cp b{color:var(--ink);font-weight:600}
+.chap ul{margin-top:16px;list-style:none}
+.chap li{position:relative;padding:5px 0 5px 26px;font-size:14px;color:var(--ink-soft);line-height:1.6}
+.chap li::before{content:"❧";position:absolute;left:0;top:4px;color:var(--gold);font-size:13px}
+.chap li b{color:var(--ink);font-weight:600}
+@media(min-width:880px){
+  .chap{grid-template-columns:1fr 1fr;gap:64px}
+  .chap.flip .cvis{order:-1}
+}
+.cvis{min-width:0}
+
+/* vis card shells */
+.vcard{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;
+  box-shadow:0 18px 40px rgba(43,33,24,.1)}
+.vhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.vhead .vt{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:16px}
+.vhead .vn{font-size:10px;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase}
+
+/* Chapter I — scan + shelf */
+.scan{display:flex;gap:14px;align-items:stretch;margin-bottom:18px}
+.barc{position:relative;flex:0 0 96px;background:#FFF;border:1px solid var(--line);border-radius:12px;padding:14px 12px;overflow:hidden}
+.barc .bl{display:flex;gap:2px;height:52px;align-items:stretch}
+.barc .bl i{background:var(--ink);flex:1}
+.barc .bl i:nth-child(2n){flex:.5}
+.barc .bl i:nth-child(3n){flex:1.6}
+.barc .num{font-size:8px;letter-spacing:2px;text-align:center;margin-top:7px;color:var(--ink-soft)}
+.laser{position:absolute;left:6px;right:6px;height:2px;background:var(--oxblood);border-radius:2px;
+  box-shadow:0 0 8px rgba(126,42,51,.8);top:8%}
+.in .laser{animation:sweep 2.2s ease-in-out .3s infinite}
+.scanout{flex:1;display:flex;flex-direction:column;justify-content:center;gap:7px}
+.scanout .so{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:11.5px;
+  opacity:0;transform:translateX(14px);transition:.55s cubic-bezier(.22,1,.36,1)}
+.in .scanout .so{opacity:1;transform:none}
+.scanout .so b{font-weight:600}
+.scanout .so small{display:block;font-size:9.5px;color:var(--ink-soft);margin-top:1px}
+.in .scanout .so:nth-child(1){transition-delay:.5s}
+.in .scanout .so:nth-child(2){transition-delay:.75s}
+.in .scanout .so:nth-child(3){transition-delay:1s}
+.shelfv{position:relative;padding:0 6px}
+.spines{display:flex;align-items:flex-end;gap:5px;height:118px;overflow:hidden;padding:0 8px}
+.sp{flex:1;border-radius:4px 4px 0 0;position:relative;transform:translateY(105%);
+  transition:transform .7s cubic-bezier(.22,1,.36,1) var(--d,0s);
+  writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces',Georgia,serif;font-size:8px;letter-spacing:.5px;color:rgba(246,240,227,.92);
+  padding:8px 0;text-orientation:mixed}
+.in .sp{transform:none}
+.sp i{position:absolute;left:0;right:0;top:9px;height:2px;background:rgba(184,134,43,.85)}
+.plank{height:10px;border-radius:3px;background:linear-gradient(180deg,#5C3A24,#3A2114);box-shadow:0 6px 14px rgba(43,33,24,.3)}
+
+/* Chapter II — lending ledger */
+.ledger{display:flex;flex-direction:column;gap:10px}
+.lrow{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:11px 13px;
+  opacity:0;transform:translateY(16px);transition:.6s cubic-bezier(.22,1,.36,1) var(--d,0s)}
+.in .lrow{opacity:1;transform:none}
+.lrow .bk{flex:0 0 30px;height:42px;border-radius:3px 5px 5px 3px;position:relative}
+.lrow .bk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(0,0,0,.25)}
+.lrow .lw{flex:1;min-width:0}
+.lrow .lt{font-family:'Fraunces',Georgia,serif;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .ls{font-size:11px;color:var(--ink-soft);margin-top:2px}
+.lst{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:4px 9px;white-space:nowrap}
+.lst.out{background:#F2E6C4;color:#8F681E}
+.lst.back{background:#E3EAD9;color:var(--moss)}
+.lst.borrowed{background:#DEE7EF;color:var(--slate)}
+.nudge{margin-top:4px;align-self:flex-end;background:var(--night);color:#EFE3C8;font-size:11px;border-radius:13px 13px 3px 13px;
+  padding:9px 13px;max-width:86%;line-height:1.5;box-shadow:0 8px 20px rgba(43,33,24,.25);
+  opacity:0;transform:scale(.85);transform-origin:bottom right;
+  transition:.5s cubic-bezier(.34,1.56,.64,1) 1s}
+.in .nudge{opacity:1;transform:none}
+.nudge b{color:var(--gold)}
+
+/* Chapter III — journal / sessions */
+.jbook{display:flex;gap:14px}
+.jbook .bk{flex:0 0 64px;height:92px;border-radius:4px 7px 7px 4px;background:linear-gradient(150deg,#274036,#16281F);
+  color:#EFE6C8;position:relative;overflow:hidden}
+.jbook .bk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:rgba(0,0,0,.25)}
+.jbook .bk .ct{font-family:'Fraunces',Georgia,serif;font-size:8.5px;padding:10px 7px 0 12px;line-height:1.25}
+.jbook .jw{flex:1;min-width:0}
+.jbook .jt{font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:600}
+.jbook .ja{font-size:10.5px;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.jbook .pill{font-size:8.5px;padding:4px 10px}
+.pbar{height:8px;border-radius:99px;background:var(--paper-deep);margin-top:12px;overflow:hidden}
+.pbar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--gold),#D9AC50);
+  transition:width 1.4s cubic-bezier(.22,1,.36,1) .4s}
+.in .pbar i{width:62%}
+.plab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);margin-top:6px}
+.sess{margin-top:16px;display:flex;align-items:center;gap:13px;background:var(--night);color:var(--paper);
+  border-radius:14px;padding:13px 16px}
+.sess .dot{width:9px;height:9px;border-radius:50%;background:#D9604F;animation:blink 1.4s ease-in-out infinite}
+.sess .tm{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;letter-spacing:1px}
+.sess .sl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#A08D6E}
+.sess .stop{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  border:1.5px solid rgba(239,227,200,.4);color:#EFE3C8;border-radius:999px;padding:6px 13px}
+.jdates{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.jdates span{font-size:10.5px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--ink-soft)}
+.jdates b{color:var(--ink);font-weight:600}
+
+/* Chapter IV — three places */
+.trio{display:flex;flex-direction:column;gap:10px}
+.trio .tc{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px 16px;text-align:left;
+  opacity:0;transform:translateY(16px);transition:.6s cubic-bezier(.22,1,.36,1) var(--d,0s)}
+.in .trio .tc{opacity:1;transform:none}
+.trio .th{display:flex;align-items:center;gap:9px}
+.trio .ti{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.trio h4{font-family:'Fraunces',Georgia,serif;font-size:15px;font-weight:600}
+.trio .tag{margin-left:auto;font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;border-radius:999px;padding:3.5px 9px;white-space:nowrap}
+.trio p{font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-top:7px}
+.vistog{margin-top:4px;display:flex;align-items:center;justify-content:space-between;background:var(--paper);border:1px dashed var(--gold);border-radius:13px;padding:11px 15px}
+.vistog .vl{font-size:12px;color:var(--ink-soft)}
+.vistog .vl b{color:var(--ink);font-weight:600;display:block;font-size:12.5px}
+.sw{position:relative;width:42px;height:24px;flex-shrink:0}
+.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.sw .kb{position:absolute;inset:0;border-radius:99px;background:#CFC2A6;transition:.25s;pointer-events:none}
+.sw .kb::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#FFF;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.sw input:checked+.kb{background:var(--moss)}
+.sw input:checked+.kb::after{transform:translateX(18px)}
+
+/* Chapter V — insights */
+.stats3{display:flex;gap:10px;margin-bottom:16px}
+.stat{flex:1;background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:12px 8px;text-align:center}
+.stat .sn{font-family:'Fraunces',Georgia,serif;font-size:clamp(19px,4.4vw,26px);font-weight:600;font-variant-numeric:tabular-nums}
+.stat .sl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
+.chart{display:flex;align-items:flex-end;gap:6px;height:110px;padding:0 4px;border-bottom:2px solid var(--line)}
+.bar{flex:1;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#8F3A44,var(--oxblood-deep));height:calc(var(--h)*1%);
+  transform:scaleY(0);transform-origin:bottom;transition:transform .9s cubic-bezier(.22,1,.36,1) var(--d,0s)}
+.bar.g{background:linear-gradient(180deg,#D9AC50,var(--gold))}
+.in .bar{transform:none}
+.chlab{display:flex;gap:6px;padding:6px 4px 0}
+.chlab span{flex:1;text-align:center;font-size:8px;letter-spacing:.05em;color:var(--ink-soft);text-transform:uppercase}
+.langrow{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+.langrow span{font-size:10.5px;border-radius:999px;padding:5px 12px;background:var(--paper);border:1px solid var(--line);color:var(--ink-soft)}
+.langrow b{color:var(--ink);font-weight:600}
+
+/* Chapter VI — import */
+.file{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:12px 14px}
+.file .fx{width:36px;height:44px;border-radius:6px;background:#FFF;border:1px solid var(--line);position:relative;flex-shrink:0}
+.file .fx::before{content:"CSV";position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:8px;font-weight:800;letter-spacing:.06em;color:var(--oxblood)}
+.file .fx::after{content:"";position:absolute;left:7px;right:7px;top:8px;height:2px;background:var(--line);box-shadow:0 5px 0 var(--line),0 10px 0 var(--line)}
+.file .fw{flex:1;min-width:0}
+.file .fn{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file .fs{font-size:10.5px;color:var(--ink-soft);margin-top:2px}
+.ipbar{height:7px;border-radius:99px;background:var(--paper-deep);margin-top:14px;overflow:hidden}
+.ipbar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--moss),#5E8153);transition:width 1.6s ease .35s}
+.in .ipbar i{width:100%}
+.ipdone{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--ink-soft);margin-top:8px}
+.ipdone b{color:var(--moss);font-weight:700}
+.iprow{display:flex;gap:8px;margin-top:14px}
+.iprow .mini{flex:1;height:64px;border-radius:3px 6px 6px 3px;position:relative;overflow:hidden;
+  opacity:0;transform:translateY(14px) scale(.9);transition:.5s cubic-bezier(.34,1.56,.64,1) var(--d,0s)}
+.in .iprow .mini{opacity:1;transform:none}
+.iprow .mini::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(0,0,0,.22)}
+.iprow .mini span{position:absolute;left:7px;right:4px;top:7px;font-family:'Fraunces',Georgia,serif;font-size:6.5px;line-height:1.25;color:rgba(246,240,227,.95)}
+
+/* ---------- night band: recommendations ---------- */
+.oracle{margin-top:84px;background:linear-gradient(180deg,var(--night) 0%,var(--night-2) 100%);color:#EFE3C8;
+  border-top:3px solid var(--gold);border-bottom:3px solid var(--gold);padding:78px 22px;text-align:center}
+.oracle .kicker{background:rgba(184,134,43,.16);color:var(--gold)}
+.oracle h2{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:clamp(26px,7vw,36px);margin-top:14px}
+.oracle .lead{max-width:600px;margin:12px auto 0;color:#CBB897;font-size:15.5px;line-height:1.7}
+.rec{max-width:520px;margin:34px auto 0;background:rgba(246,240,227,.06);border:1px solid rgba(184,134,43,.4);
+  border-radius:20px;padding:22px;text-align:left;transition:opacity .4s}
+.rec.off{opacity:.32}
+.rec .rk{font-size:9.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.rec .rt{display:flex;gap:14px;margin-top:13px;align-items:center}
+.rec .bk{flex:0 0 52px;height:76px;border-radius:4px 6px 6px 4px;background:linear-gradient(150deg,#7E2A33,#4A161C);position:relative;overflow:hidden}
+.rec .bk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(0,0,0,.25)}
+.rec .bk span{position:absolute;left:8px;right:5px;top:9px;font-family:'Fraunces',Georgia,serif;font-size:7.5px;line-height:1.3;color:#F0E2C2}
+.rec .rw h4{font-family:'Fraunces',Georgia,serif;font-size:18px;font-weight:600;color:#F6F0E3}
+.rec .rw .ra{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#A08D6E;margin-top:2px}
+.rec .why{margin-top:14px;font-size:13px;line-height:1.7;color:#CBB897;border-left:2px solid var(--gold);padding-left:12px}
+.rec .why b{color:#EFE3C8;font-weight:600}
+.recsw{max-width:520px;margin:14px auto 0;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:rgba(246,240,227,.05);border:1px dashed rgba(184,134,43,.5);border-radius:14px;padding:12px 16px;text-align:left}
+.recsw .vl{font-size:12px;color:#A08D6E}
+.recsw .vl b{display:block;color:#EFE3C8;font-weight:600;font-size:12.5px}
+.recsw .sw .kb{background:rgba(160,141,110,.4)}
+.recsw .sw input:checked+.kb{background:var(--gold)}
+
+/* ---------- languages ---------- */
+.thread{max-width:560px;margin:34px auto 0}
+.tpair{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tbook{flex:0 0 108px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 10px;text-align:center}
+.tbook .bk{width:44px;height:64px;margin:0 auto;border-radius:3px 6px 6px 3px;position:relative;overflow:hidden}
+.tbook .bk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(0,0,0,.22)}
+.tbook .bk span{position:absolute;left:7px;right:4px;top:8px;font-family:'Fraunces',Georgia,serif;font-size:6.5px;line-height:1.3;color:#F0E2C2;text-align:left}
+.tbook .tt{font-size:9px;color:var(--ink-soft);margin-top:8px;line-height:1.4}
+.tbook .tt b{display:block;color:var(--ink);font-weight:600;font-size:9.5px}
+.tsvg{flex:1;min-width:60px}
+.tsvg path{stroke:var(--gold);stroke-width:2;fill:none;stroke-dasharray:220;stroke-dashoffset:220;transition:stroke-dashoffset 1.4s ease .5s}
+.tsvg text{font-size:13px;fill:var(--ink-soft);font-family:'Inter',sans-serif}
+.in .tsvg path{stroke-dashoffset:0}
+
+/* ---------- marginalia grid ---------- */
 .feats{display:grid;grid-template-columns:1fr;gap:14px;margin-top:34px;text-align:left}
 @media(min-width:640px){.feats{grid-template-columns:1fr 1fr}}
-@media(min-width:920px){.feats{grid-template-columns:1fr 1fr 1fr}}
-.feat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
-.feat .fi{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:12px}
-.feat h3{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:18px}
-.feat p{margin-top:7px;font-size:13.5px;line-height:1.65;color:var(--ink-soft)}
-.feat .free{display:inline-block;margin-left:6px;font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--moss);background:#E3EAD9;border-radius:999px;padding:2px 8px;vertical-align:2px}
+@media(min-width:920px){.feats{grid-template-columns:1fr 1fr 1fr 1fr}}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.feat .fi{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:11px}
+.feat h3{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:16px}
+.feat p{margin-top:6px;font-size:12.5px;line-height:1.6;color:var(--ink-soft)}
 
 /* quote strip — swipeable, shuffled on each visit */
-.strip{position:relative;margin-top:76px;background:var(--night);color:#EFE3C8;text-align:center;padding:52px 0 44px;border-top:3px solid var(--gold);border-bottom:3px solid var(--gold)}
+.strip{position:relative;margin-top:84px;background:var(--night);color:#EFE3C8;text-align:center;padding:52px 0 44px;border-top:3px solid var(--gold);border-bottom:3px solid var(--gold)}
 .strip .q{font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:clamp(19px,5vw,26px);line-height:1.5;max-width:640px;margin:0 auto}
 .strip .a{margin-top:14px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#A08D6E}
 .strip .g{margin:10px auto 0;max-width:560px;font-size:13.5px;font-style:italic;color:#CBB897;line-height:1.55}
@@ -184,7 +443,7 @@ body{
 @media(max-width:680px){.qarrow{display:none}.qslide{padding:0 26px}}
 
 /* closing cta */
-.close{padding:70px 22px 26px;text-align:center}
+.close{padding:76px 22px 26px;text-align:center}
 .close .orn{color:var(--gold);font-size:18px;letter-spacing:8px}
 .close h2{font-family:'Fraunces',Georgia,serif;font-weight:550;font-size:clamp(24px,6.5vw,32px);margin-top:14px}
 .close p{color:var(--ink-soft);margin:10px auto 26px;max-width:460px;font-size:15px;line-height:1.7}
@@ -193,20 +452,74 @@ body{
 footer{padding:38px 22px calc(30px + env(safe-area-inset-bottom));text-align:center;color:var(--ink-soft);font-size:12.5px;border-top:1px solid var(--line);margin-top:56px}
 footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 
+/* ---------- reduced motion: everything visible, nothing moves ---------- */
 @media (prefers-reduced-motion:reduce){
-  .badge,.hero h1,.tagline,.pitch,.ctas,.trust,.stage{animation:none}
+  html{scroll-behavior:auto}
+  .cue::after,.cue1 .mouse::after,.sess .dot{animation:none}
+  .cine{height:auto;--p:1 !important}
+  .pin{position:relative;height:auto;min-height:100svh;padding:max(56px,env(safe-area-inset-top)) 22px 84px}
+  .cue1,.drift{display:none}
+  .bookwrap{will-change:auto}
+  .reveal,.reveal.left,.reveal.right{opacity:1;transform:none;transition:none}
+  .scanout .so,.lrow,.nudge,.trio .tc,.iprow .mini{opacity:1;transform:none;transition:none}
+  .sp{transform:none;transition:none}
+  .bar{transform:none;transition:none}
+  .in .laser,.laser{animation:none}
+  .pbar i{width:62%;transition:none}
+  .ipbar i{width:100%;transition:none}
+  .tsvg path{stroke-dashoffset:0;transition:none}
+  .nav{transition:none}
 }
 </style>
 </head>
 <body>
 
-<header class="hero">
-  <img class="badge" src="logo.svg" alt="Kitabi — an open book with a ribbon bookmark and one gold line" width="104" height="104">
-  <h1>Kitabi</h1>
-  <p class="tagline">Beyond the Bookshelf</p>
-  <p class="pitch">Every book you <b>own</b>, who <b>borrowed</b> what, and what to
+<div id="ribbon" aria-hidden="true"></div>
+
+<nav class="nav" id="nav" aria-label="Kitabi">
+  <a class="brand" href="#top"><img src="logo.svg" alt=""><b>Kitabi</b></a>
+  <a class="go" href="#notify">Get notified</a>
+</nav>
+
+<header class="cine" id="top">
+<div class="pin">
+  <div class="sky" aria-hidden="true"></div>
+  <div class="drift" aria-hidden="true">
+    <i style="left:9%;top:16%;--dy:34vh;background:linear-gradient(180deg,#7E2A33,#4A161C)"></i>
+    <i style="left:17%;top:58%;--dy:52vh;background:linear-gradient(180deg,#274036,#16281F);height:60px"></i>
+    <i style="right:11%;top:22%;--dy:46vh;background:linear-gradient(180deg,#43617E,#22344A);height:66px"></i>
+    <i style="right:19%;top:64%;--dy:30vh;background:linear-gradient(180deg,#8F681E,#6B4C13)"></i>
+    <i style="left:29%;top:9%;--dy:58vh;background:linear-gradient(180deg,#5C3A24,#3A2114);height:54px"></i>
+    <i style="right:31%;top:7%;--dy:40vh;background:linear-gradient(180deg,#AE3B2E,#7C2418);height:48px"></i>
+  </div>
+  <div class="bookwrap" aria-hidden="true">
+    <svg viewBox="0 0 320 230" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="ribclip"><rect x="196" y="30" width="30" height="60" rx="2"/></clipPath>
+      </defs>
+      <!-- ribbon drops behind the right page -->
+      <g clip-path="url(#ribclip)">
+        <path class="ribwrap" d="M202 30 h18 v46 l-9 -8 -9 8 Z" fill="var(--gold)"/>
+      </g>
+      <!-- book outline: pre-drawn at load so the first frame is the brand mark -->
+      <path class="draw" pathLength="1" style="--a:-1;--b:1" d="M160 62 V 196" stroke="#EFE3C8" stroke-width="5"/>
+      <path class="draw" pathLength="1" style="--a:-1;--b:1" d="M160 64 C 122 42, 76 42, 40 58 L 40 188 C 76 172, 122 172, 160 196" stroke="#EFE3C8" stroke-width="5"/>
+      <path class="draw" pathLength="1" style="--a:-1;--b:1" d="M160 64 C 198 42, 244 42, 280 58 L 280 188 C 244 172, 198 172, 160 196" stroke="#EFE3C8" stroke-width="5"/>
+      <!-- text lines, left page -->
+      <path class="draw" pathLength="1" style="--a:.1;--b:.1" d="M62 86 C 92 74, 118 74, 142 84" stroke="#A08D6E" stroke-width="4.5"/>
+      <path class="draw" pathLength="1" style="--a:.18;--b:.1" d="M62 110 C 92 98, 118 98, 142 108" stroke="#A08D6E" stroke-width="4.5"/>
+      <path class="draw" pathLength="1" style="--a:.26;--b:.1" d="M62 134 C 92 122, 118 122, 142 132" stroke="#A08D6E" stroke-width="4.5"/>
+      <!-- text lines, right page: the last one is The Gold Line -->
+      <path class="draw" pathLength="1" style="--a:.14;--b:.1" d="M178 84 C 202 74, 228 74, 258 86" stroke="#A08D6E" stroke-width="4.5"/>
+      <path class="draw" pathLength="1" style="--a:.22;--b:.1" d="M178 108 C 202 98, 228 98, 258 110" stroke="#A08D6E" stroke-width="4.5"/>
+      <path class="draw" pathLength="1" style="--a:.34;--b:.14" d="M178 132 C 202 122, 228 122, 258 134" stroke="var(--gold)" stroke-width="5"/>
+    </svg>
+  </div>
+  <h1 class="fx" style="--a:.58;--b:.16">Kitabi</h1>
+  <p class="tagline fx" style="--a:.64;--b:.16">Beyond the Bookshelf</p>
+  <p class="pitch fx" style="--a:.7;--b:.16">Every book you <b>own</b>, who <b>borrowed</b> what, and what to
   <b>read next</b> — a private library in your pocket, not another feed.</p>
-  <div class="ctas">
+  <div class="ctas fx" style="--a:.76;--b:.16">
     <a class="store" href="#notify" aria-label="App Store — launching soon">
       <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
       <span><small>Launching soon</small><span>App Store</span></span>
@@ -216,11 +529,17 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
       <span><small>Launching soon</small><span>Google Play</span></span>
     </a>
   </div>
-  <p class="trust"><b>Free</b> · <b>Your library stays private</b> · Your Goodreads list moves in, in minutes</p>
+  <p class="trust fx" style="--a:.82;--b:.15"><b>Free</b> · <b>Your library stays private</b> · Your Goodreads list moves in, in minutes</p>
+  <div class="fx" style="--a:.88;--b:.12">
+    <div class="cue" aria-hidden="true"></div>
+    <p class="cue-t" aria-hidden="true">Scroll the shelves</p>
+  </div>
+  <div class="cue1" aria-hidden="true"><div class="mouse"></div>Scroll — the book opens</div>
+</div>
 </header>
 
 <!-- floating app preview -->
-<div class="stage" aria-hidden="true">
+<div class="stage reveal" aria-hidden="true">
   <div class="phone"><div class="scr">
     <div class="mlt"><span class="t">My Library</span><span class="n">128 books</span></div>
     <div class="chips"><span class="chip on">All</span><span class="chip">Reading</span><span class="chip">Read</span><span class="chip">★ Favourites</span></div>
@@ -236,54 +555,342 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 </div>
 
 <main class="wrap">
-  <section class="sect">
+
+  <section class="sect reveal">
     <span class="kicker">Why Kitabi</span>
     <h2>A real bookshelf, finally digital</h2>
     <p class="lead">Reading apps track what you read. Cataloguing apps list what you own.
-    Kitabi does both — and remembers which friend still has your favourite paperback.</p>
+    Kitabi does both — and remembers which friend still has your favourite paperback.
+    Scroll on: the whole library, chapter by chapter.</p>
+  </section>
 
-    <div class="feats">
-      <div class="feat"><div class="fi" style="background:var(--gold-soft)">📚</div>
-        <h3>A shelf that looks like your shelf</h3>
-        <p>Cover after cover, just like the real thing. Even books without a photo get
-        a handsome cover of their own — your library always looks loved, never empty.</p></div>
-
-      <div class="feat"><div class="fi" style="background:#F2DEDA">⇄</div>
-        <h3>Never lose a lent book<span class="free">FREE</span></h3>
-        <p>“Lent to Anu, 2 June.” Kitabi remembers who has your books and gives you a
-        gentle nudge when it’s time to ask for one back. Your paperbacks come home.</p></div>
-
-      <div class="feat"><div class="fi" style="background:#E3EAD9">▦</div>
-        <h3>Move in, in minutes</h3>
-        <p>Already keep your books on Goodreads or in a spreadsheet? Bring it along —
-        your shelves, ratings and reviews arrive together, in one tap.</p></div>
-
-      <div class="feat"><div class="fi" style="background:#DEE7EF">✎</div>
-        <h3>Your reading, remembered</h3>
-        <p>Where you stopped, what you rated, what you really thought — and the little
-        notes you’d never say out loud (“signed copy, don’t lend”). All of it stays
-        yours, private until you decide otherwise.</p></div>
-
-      <div class="feat"><div class="fi" style="background:var(--gold-soft)">◔</div>
-        <h3>Your year in pages</h3>
-        <p>Watch your reading add up — books finished, pages turned, the languages on
-        your shelf. A reading journal that fills itself in.</p></div>
-
-      <div class="feat"><div class="fi" style="background:#F2DEDA">✦</div>
-        <h3>Know what to read next</h3>
-        <p>Warm suggestions drawn from the books you loved, each with an honest
-        “why this one”. Prefer to browse in peace? One switch turns them off.</p></div>
+  <!-- ═══ Chapter I — the shelf ═══ -->
+  <section class="chap">
+    <div class="ctext reveal left">
+      <span class="ck">Chapter I · The Shelf</span>
+      <h3>Every book you own, in seconds</h3>
+      <p class="cp">Point your camera at the barcode and the book arrives — cover, author,
+      publisher, pages, the lot. No barcode? Search the catalogue or add it by hand.
+      <b>Even books without a photo get a handsome cover of their own</b>, so your library
+      always looks loved, never empty.</p>
+      <ul>
+        <li><b>ISBN scanning</b> — one flash of the camera per book</li>
+        <li><b>Editions done right</b> — your 1994 paperback, not a generic listing</li>
+        <li><b>Authors, publishers &amp; series</b> — tap any name to browse everything by them</li>
+      </ul>
+    </div>
+    <div class="cvis reveal right">
+      <div class="vcard">
+        <div class="vhead"><span class="vt">Scan → shelved</span><span class="vn">Add a book</span></div>
+        <div class="scan">
+          <div class="barc" aria-hidden="true">
+            <div class="bl"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="num">9 788126 421983</div>
+            <div class="laser"></div>
+          </div>
+          <div class="scanout">
+            <div class="so"><b>Randamoozham</b><small>M.T. Vasudevan Nair · Current Books</small></div>
+            <div class="so"><b>Cover &amp; pages found</b><small>288 pp · Malayalam · 1984</small></div>
+            <div class="so"><b>Added to your shelf</b> ✓<small>Filed under “Malayalam classics”</small></div>
+          </div>
+        </div>
+        <div class="shelfv" aria-hidden="true">
+          <div class="spines">
+            <div class="sp" style="--d:.05s;background:linear-gradient(180deg,#7E2A33,#4A161C);height:96%"><i></i>രണ്ടാമൂഴം</div>
+            <div class="sp" style="--d:.15s;background:linear-gradient(180deg,#274036,#16281F);height:82%">Covenant of Water</div>
+            <div class="sp" style="--d:.25s;background:linear-gradient(180deg,#5C3A24,#3A2114);height:100%"><i></i>Khasak</div>
+            <div class="sp" style="--d:.35s;background:linear-gradient(180deg,#43617E,#22344A);height:76%">Small Things</div>
+            <div class="sp" style="--d:.45s;background:linear-gradient(180deg,#8F681E,#6B4C13);height:90%">Ponniyin Selvan</div>
+            <div class="sp" style="--d:.55s;background:linear-gradient(180deg,#4D4A45,#2E2C29);height:70%">Wuthering Heights</div>
+            <div class="sp" style="--d:.65s;background:linear-gradient(180deg,#AE3B2E,#7C2418);height:86%"><i></i>Norwegian Wood</div>
+          </div>
+          <div class="plank"></div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="sect">
+  <!-- ═══ Chapter II — the ledger ═══ -->
+  <section class="chap flip">
+    <div class="ctext reveal right">
+      <span class="ck">Chapter II · The Ledger</span>
+      <h3>Never lose a lent book again<span class="free">FREE, FOREVER</span></h3>
+      <p class="cp">“Lent to Anu, 2 June.” Kitabi keeps a proper ledger — who has it, since when,
+      returned ✓ — and gives you a <b>gentle nudge when it’s time to ask for one back</b>.
+      Other apps paywall this; here it’s the whole point.</p>
+      <ul>
+        <li><b>Lending records, not sticky notes</b> — every loan, dated and remembered</li>
+        <li><b>A Borrowed shelf too</b> — the books friends trusted you with, both sides of the ledger</li>
+        <li><b>Due-date reminders</b> — a quiet local notification, never a public shaming</li>
+      </ul>
+    </div>
+    <div class="cvis reveal left">
+      <div class="vcard" style="display:flex;flex-direction:column">
+        <div class="vhead"><span class="vt">Lending ledger</span><span class="vn">3 records</span></div>
+        <div class="ledger">
+          <div class="lrow" style="--d:.1s">
+            <div class="bk" style="background:linear-gradient(150deg,#4D4A45,#2E2C29)"></div>
+            <div class="lw"><div class="lt">Wuthering Heights</div><div class="ls">Lent to Anu · 2 June</div></div>
+            <span class="lst out">Out · 40 days</span>
+          </div>
+          <div class="lrow" style="--d:.3s">
+            <div class="bk" style="background:linear-gradient(150deg,#274036,#16281F)"></div>
+            <div class="lw"><div class="lt">The Covenant of Water</div><div class="ls">Lent to Faisal · 12 April</div></div>
+            <span class="lst back">Returned ✓</span>
+          </div>
+          <div class="lrow" style="--d:.5s">
+            <div class="bk" style="background:linear-gradient(150deg,#8F681E,#6B4C13)"></div>
+            <div class="lw"><div class="lt">Ponniyin Selvan I</div><div class="ls">Borrowed from Divya · 28 June</div></div>
+            <span class="lst borrowed">Borrowed</span>
+          </div>
+        </div>
+        <div class="nudge">📖 Gentle nudge — it’s been 40 days. Time to ask <b>Anu</b> about <b>Wuthering Heights</b>?</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Chapter III — the journal ═══ -->
+  <section class="chap">
+    <div class="ctext reveal left">
+      <span class="ck">Chapter III · The Journal</span>
+      <h3>Your reading, remembered</h3>
+      <p class="cp">Pending, reading, read, stopped, wishlist — with start and finish dates,
+      page-by-page progress, and a <b>reading timer</b> for the sessions you want to savour.
+      A reading journal that fills itself in.</p>
+      <ul>
+        <li><b>Progress in pages or percent</b> — pick up exactly where you left off</li>
+        <li><b>Timed reading sessions</b> — press start, sink in; your hours appear on Home</li>
+        <li><b>Favourites, shelves &amp; tags</b> — “beach reads”, “to lend to Dad” — yours alone</li>
+      </ul>
+    </div>
+    <div class="cvis reveal right">
+      <div class="vcard">
+        <div class="vhead"><span class="vt">Now reading</span><span class="vn">Session · today</span></div>
+        <div class="jbook">
+          <div class="bk" aria-hidden="true"><div class="ct">The Covenant of Water</div></div>
+          <div class="jw">
+            <div class="jt">The Covenant of Water</div>
+            <div class="ja">Abraham Verghese</div>
+            <span class="pill p-reading" style="margin-top:8px">Reading</span>
+            <div class="pbar" aria-hidden="true"><i></i></div>
+            <div class="plab"><span>p. 448 of 724</span><span>62%</span></div>
+          </div>
+        </div>
+        <div class="sess" aria-hidden="true">
+          <span class="dot"></span>
+          <div><div class="tm" id="sesstm">0:41:52</div><div class="sl">Reading session</div></div>
+          <span class="stop">Stop</span>
+        </div>
+        <div class="jdates">
+          <span>Started <b>14 June</b></span><span>★★★★☆ so far</span><span>#monsoon-reads</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Chapter IV — three places ═══ -->
+  <section class="chap flip">
+    <div class="ctext reveal right">
+      <span class="ck">Chapter IV · The Margins</span>
+      <h3>Stars, reviews &amp; secrets — kept apart</h3>
+      <p class="cp">A rating is public arithmetic. A review is your considered opinion.
+      A note in the margin — <b>“signed copy, don’t lend”</b> — is nobody’s business.
+      Kitabi keeps all three in their proper places, each with its own lock.</p>
+      <ul>
+        <li><b>Private by default</b> — nothing is visible to anyone unless you flip the switch</li>
+        <li><b>Per-review visibility</b> — share one opinion, keep ten to yourself</li>
+        <li><b>Notes stay yours forever</b> — no toggle, no exceptions, no fine print</li>
+      </ul>
+    </div>
+    <div class="cvis reveal left">
+      <div class="trio">
+        <div class="tc" style="--d:.1s">
+          <div class="th"><div class="ti" style="background:var(--gold-soft)">★</div><h4>Rating</h4>
+          <span class="tag" style="background:#F2E6C4;color:#8F681E">On the book</span></div>
+          <p>★★★★★ — quick, honest, attached to the book itself.</p>
+        </div>
+        <div class="tc" style="--d:.3s">
+          <div class="th"><div class="ti" style="background:#F2DEDA">❝</div><h4>Review</h4>
+          <span class="tag" style="background:#F2DEDA;color:var(--oxblood)">Yours to share</span></div>
+          <p>“The finest Malayalam novel I’ve read this decade…” — publish it, or don’t.</p>
+        </div>
+        <div class="tc" style="--d:.5s">
+          <div class="th"><div class="ti" style="background:#DEE7EF">🔒</div><h4>Private note</h4>
+          <span class="tag" style="background:#DEE7EF;color:var(--slate)">Only ever yours</span></div>
+          <p>“Signed by the author at Kochi, 2019. Do NOT lend.”</p>
+        </div>
+        <div class="vistog">
+          <div class="vl"><b>Share this review</b>Visible to no one until you say so</div>
+          <label class="sw"><input type="checkbox" aria-label="Example visibility toggle"><span class="kb"></span></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Chapter V — the study ═══ -->
+  <section class="chap">
+    <div class="ctext reveal left">
+      <span class="ck">Chapter V · The Study</span>
+      <h3>Your year in pages</h3>
+      <p class="cp">Watch your reading add up — books finished, pages turned, hours read,
+      the languages living on your shelf. <b>Search and filter everything</b>: by author,
+      language, genre, year, status, publisher, shelf.</p>
+      <ul>
+        <li><b>Dashboards &amp; charts</b> — your library, counted and drawn</li>
+        <li><b>Language-wise, year-wise, status-wise</b> — sliced any way you shelve it</li>
+        <li><b>Share cards</b> — a handsome per-book card to recommend it to a friend</li>
+      </ul>
+    </div>
+    <div class="cvis reveal right">
+      <div class="vcard">
+        <div class="vhead"><span class="vt">Insights</span><span class="vn">This year</span></div>
+        <div class="stats3">
+          <div class="stat"><div class="sn" data-count="128">0</div><div class="sl">Books</div></div>
+          <div class="stat"><div class="sn" data-count="34210">0</div><div class="sl">Pages</div></div>
+          <div class="stat"><div class="sn" data-count="96">0</div><div class="sl">Hours</div></div>
+        </div>
+        <div class="chart" aria-hidden="true">
+          <div class="bar" style="--h:34;--d:.05s"></div>
+          <div class="bar" style="--h:48;--d:.12s"></div>
+          <div class="bar g" style="--h:72;--d:.19s"></div>
+          <div class="bar" style="--h:40;--d:.26s"></div>
+          <div class="bar" style="--h:58;--d:.33s"></div>
+          <div class="bar g" style="--h:90;--d:.40s"></div>
+          <div class="bar" style="--h:64;--d:.47s"></div>
+          <div class="bar" style="--h:52;--d:.54s"></div>
+          <div class="bar g" style="--h:100;--d:.61s"></div>
+          <div class="bar" style="--h:70;--d:.68s"></div>
+          <div class="bar" style="--h:44;--d:.75s"></div>
+          <div class="bar" style="--h:80;--d:.82s"></div>
+        </div>
+        <div class="chlab" aria-hidden="true">
+          <span>J</span><span>F</span><span>M</span><span>A</span><span>M</span><span>J</span><span>J</span><span>A</span><span>S</span><span>O</span><span>N</span><span>D</span>
+        </div>
+        <div class="langrow"><span><b>62</b> മലയാളം</span><span><b>41</b> English</span><span><b>25</b> தமிழ்</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Chapter VI — the doorway ═══ -->
+  <section class="chap flip">
+    <div class="ctext reveal right">
+      <span class="ck">Chapter VI · The Doorway</span>
+      <h3>Move in, in minutes</h3>
+      <p class="cp">Already keep your books on Goodreads or in a spreadsheet? Bring the whole
+      thing — <b>shelves, ratings, reviews and dates arrive together</b>, in one tap.
+      Nobody re-types two hundred books, and with Kitabi nobody has to.</p>
+      <ul>
+        <li><b>Goodreads export</b> — drop the CSV in, done</li>
+        <li><b>Any spreadsheet</b> — your long-suffering Google Sheet retires with honours</li>
+        <li><b>Everything lands shelved</b> — statuses, ratings and reviews mapped, not dumped</li>
+      </ul>
+    </div>
+    <div class="cvis reveal left">
+      <div class="vcard">
+        <div class="vhead"><span class="vt">Import</span><span class="vn">Goodreads · CSV</span></div>
+        <div class="file">
+          <div class="fx" aria-hidden="true"></div>
+          <div class="fw"><div class="fn">goodreads_library_export.csv</div><div class="fs">214 rows · shelves, ratings, reviews</div></div>
+        </div>
+        <div class="ipbar" aria-hidden="true"><i></i></div>
+        <div class="ipdone"><span>Matching editions &amp; covers…</span><b>214 / 214 ✓</b></div>
+        <div class="iprow" aria-hidden="true">
+          <div class="mini" style="--d:.9s;background:linear-gradient(150deg,#274036,#16281F)"><span>Covenant of Water</span></div>
+          <div class="mini" style="--d:1.05s;background:linear-gradient(150deg,#7E2A33,#4A161C)"><span>രണ്ടാമൂഴം</span></div>
+          <div class="mini" style="--d:1.2s;background:linear-gradient(150deg,#43617E,#22344A)"><span>Small Things</span></div>
+          <div class="mini" style="--d:1.35s;background:linear-gradient(150deg,#8F681E,#6B4C13)"><span>Ponniyin Selvan</span></div>
+          <div class="mini" style="--d:1.5s;background:linear-gradient(150deg,#4D4A45,#2E2C29)"><span>Wuthering Heights</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ═══ night band — recommendations ═══ -->
+<section class="oracle">
+  <div class="reveal">
+    <span class="kicker">Chapter VII · The Quiet Oracle</span>
+    <h2>Know what to read next</h2>
+    <p class="lead">Warm suggestions drawn from the books you loved — each with an honest
+    “why this one”, reasoned from <em>your</em> shelf, never from an advertiser’s.
+    Prefer to browse in peace? One switch turns it all off.</p>
+  </div>
+  <div class="rec reveal" id="reccard" style="--d:.15s">
+    <div class="rk">Because you loved Khasakkinte Itihasam &amp; One Hundred Years of Solitude</div>
+    <div class="rt">
+      <div class="bk" aria-hidden="true"><span>Pedro Páramo</span></div>
+      <div class="rw"><h4>Pedro Páramo</h4><div class="ra">Juan Rulfo · 1955</div></div>
+    </div>
+    <p class="why"><b>Why this one:</b> the same dream-logic village of the dead that Vijayan
+    brought to Khasak — in fact, the book García Márquez said unlocked his own. A short,
+    haunted afternoon read.</p>
+  </div>
+  <div class="recsw reveal" style="--d:.3s">
+    <div class="vl"><b>Recommendations</b>Opt-in, explained, and yours to switch off</div>
+    <label class="sw"><input type="checkbox" id="recsw" checked aria-label="Recommendations on or off"><span class="kb"></span></label>
+  </div>
+</section>
+
+<main class="wrap">
+  <!-- ═══ languages ═══ -->
+  <section class="sect langs reveal">
     <span class="kicker">Reads your language</span>
     <h2>മലയാളം · தமிழ் · English &amp; beyond</h2>
     <p class="lead">Kitabi grew up on Indian bookshelves. Your മലയാളം, தமிழ் and English books
-    live side by side — spelled right, shown proudly, never an afterthought. And when you own
-    both <span class="serif" style="font-style:italic">Mayyazhippuzhayude Theerangalil</span> and
-    <span class="serif" style="font-style:italic">On the Banks of the Mayyazhi</span>, Kitabi
-    knows they’re the same story.</p>
+    live side by side — spelled right, shown proudly, never an afterthought.</p>
+    <div class="thread" aria-hidden="true">
+      <div class="tpair">
+        <div class="tbook">
+          <div class="bk" style="background:linear-gradient(150deg,#1E5945,#0F3328)"><span>മയ്യഴിപ്പുഴയുടെ തീരങ്ങളിൽ</span></div>
+          <div class="tt"><b>മയ്യഴിപ്പുഴയുടെ തീരങ്ങളിൽ</b>M. Mukundan · 1974</div>
+        </div>
+        <svg class="tsvg" viewBox="0 0 200 70" aria-hidden="true">
+          <path d="M8 35 C 60 6, 140 6, 192 35"/>
+          <text x="100" y="58" text-anchor="middle">same story ❦ linked</text>
+        </svg>
+        <div class="tbook">
+          <div class="bk" style="background:linear-gradient(150deg,#43617E,#22344A)"><span>On the Banks of the Mayyazhi</span></div>
+          <div class="tt"><b>On the Banks of the Mayyazhi</b>tr. Gita Krishnankutty</div>
+        </div>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:26px">When you own both, Kitabi knows they’re the same
+    story — translations stay linked, yet each keeps its own life, its own reviews, its own
+    place on your shelf.</p>
+  </section>
+
+  <!-- ═══ marginalia ═══ -->
+  <section class="sect">
+    <div class="reveal">
+      <span class="kicker">…and the marginalia</span>
+      <h2>The small things, done properly</h2>
+    </div>
+    <div class="feats">
+      <div class="feat reveal" style="--d:.05s"><div class="fi" style="background:var(--gold-soft)">🔍</div>
+        <h3>Search everything</h3>
+        <p>Your shelves and the whole catalogue — filtered by language, genre, year, status, author, publisher.</p></div>
+      <div class="feat reveal" style="--d:.1s"><div class="fi" style="background:#F2DEDA">✈</div>
+        <h3>Works offline</h3>
+        <p>Your library lives on your phone. Airplane mode, basement, hill station — it all just works, and syncs later.</p></div>
+      <div class="feat reveal" style="--d:.15s"><div class="fi" style="background:#E3EAD9">❤</div>
+        <h3>Favourites &amp; shelves</h3>
+        <p>Pin the books you love; sort the rest into shelves that are yours alone — no global tags polluted.</p></div>
+      <div class="feat reveal" style="--d:.2s"><div class="fi" style="background:#DEE7EF">🔔</div>
+        <h3>Gentle reminders</h3>
+        <p>Local notifications when a lent book has wandered too long. On your phone, not in anyone’s feed.</p></div>
+      <div class="feat reveal" style="--d:.25s"><div class="fi" style="background:#E3EAD9">🪶</div>
+        <h3>Authors as first-class</h3>
+        <p>Tap any author or publisher to wander their whole catalogue — series in order, of course.</p></div>
+      <div class="feat reveal" style="--d:.3s"><div class="fi" style="background:var(--gold-soft)">💌</div>
+        <h3>Share a book, not data</h3>
+        <p>Beautiful share cards — cover, your stars, your one-line verdict — to press a book into a friend’s hands.</p></div>
+      <div class="feat reveal" style="--d:.35s"><div class="fi" style="background:#F2DEDA">🔑</div>
+        <h3>Sign in, simply</h3>
+        <p>Google or Apple. No passwords to invent, nothing to forget, nothing to leak.</p></div>
+      <div class="feat reveal" style="--d:.4s"><div class="fi" style="background:#DEE7EF">🕊</div>
+        <h3>Private by default</h3>
+        <p>Free, no ads, no feed. Every visibility switch starts off. Your library is nobody’s product.</p></div>
+    </div>
   </section>
 </main>
 
@@ -300,17 +907,19 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 </section>
 
 <section class="close" id="notify">
-  <div class="orn">❦</div>
-  <h2>Your shelf is waiting</h2>
-  <p>Kitabi arrives soon on Android and iOS — because your books deserve better than
-  a spreadsheet. The door opens right here at <b>kitabi.in</b>.</p>
-  <div class="ctas dark">
-    <a class="store" href="#" aria-disabled="true">
-      <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
-      <span><small>Launching soon</small><span>App Store</span></span></a>
-    <a class="store" href="#" aria-disabled="true">
-      <svg class="ic" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M4 2.3v19.4c0 .4.45.65.79.42l14.4-9.7a.5.5 0 0 0 0-.84L4.79 1.88A.5.5 0 0 0 4 2.3z"/></svg>
-      <span><small>Launching soon</small><span>Google Play</span></span></a>
+  <div class="reveal">
+    <div class="orn">❦</div>
+    <h2>Your shelf is waiting</h2>
+    <p>Kitabi arrives soon on Android and iOS — because your books deserve better than
+    a spreadsheet. The door opens right here at <b>kitabi.in</b>.</p>
+    <div class="ctas dark">
+      <a class="store" href="#" aria-disabled="true">
+        <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
+        <span><small>Launching soon</small><span>App Store</span></span></a>
+      <a class="store" href="#" aria-disabled="true">
+        <svg class="ic" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M4 2.3v19.4c0 .4.45.65.79.42l14.4-9.7a.5.5 0 0 0 0-.84L4.79 1.88A.5.5 0 0 0 4 2.3z"/></svg>
+        <span><small>Launching soon</small><span>Google Play</span></span></a>
+    </div>
   </div>
 </section>
 
@@ -327,7 +936,105 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 <script>
 document.getElementById('y').textContent = new Date().getFullYear();
 
-// Quote carousel — legends in their own languages, shuffled every visit.
+var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- scroll reveals ---------- */
+(function () {
+  var els = document.querySelectorAll('.reveal, .cvis > *, .langs');
+  if (REDUCED || !('IntersectionObserver' in window)) {
+    for (var i = 0; i < els.length; i++) els[i].classList.add('in');
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, {threshold: 0.18, rootMargin: '0px 0px -8% 0px'});
+  for (var j = 0; j < els.length; j++) io.observe(els[j]);
+})();
+
+/* ---------- reading-progress ribbon + sticky nav + hero scrub ---------- */
+(function () {
+  var ribbon = document.getElementById('ribbon'),
+      nav = document.getElementById('nav'),
+      cine = document.querySelector('.cine'),
+      ticking = false;
+  function paint() {
+    ticking = false;
+    var doc = document.documentElement,
+        max = doc.scrollHeight - window.innerHeight,
+        y = window.scrollY || doc.scrollTop;
+    ribbon.style.width = (max > 0 ? (y / max) * 100 : 0) + '%';
+    nav.classList.toggle('show', y > cine.offsetHeight - window.innerHeight * 0.1);
+    if (!REDUCED) {
+      var span = Math.max(1, cine.offsetHeight - window.innerHeight),
+          p = Math.min(1, Math.max(0, y / span));
+      cine.style.setProperty('--p', p.toFixed(4));
+    }
+  }
+  window.addEventListener('scroll', function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(paint); }
+  }, {passive: true});
+  window.addEventListener('resize', paint, {passive: true});
+  paint();
+})();
+
+/* ---------- stat counters ---------- */
+(function () {
+  var nums = document.querySelectorAll('[data-count]');
+  function run(el) {
+    var target = parseInt(el.getAttribute('data-count'), 10), t0 = null;
+    if (REDUCED) { el.textContent = target.toLocaleString('en-IN'); return; }
+    function step(ts) {
+      if (!t0) t0 = ts;
+      var p = Math.min((ts - t0) / 1400, 1),
+          eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased).toLocaleString('en-IN');
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  if (!('IntersectionObserver' in window)) {
+    for (var i = 0; i < nums.length; i++) run(nums[i]);
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { run(e.target); io.unobserve(e.target); }
+    });
+  }, {threshold: 0.6});
+  for (var j = 0; j < nums.length; j++) io.observe(nums[j]);
+})();
+
+/* ---------- ticking session timer ---------- */
+(function () {
+  var el = document.getElementById('sesstm');
+  if (!el || REDUCED) return;
+  var s = 41 * 60 + 52;
+  function fmt(n) {
+    var h = Math.floor(n / 3600), m = Math.floor((n % 3600) / 60), ss = n % 60;
+    return h + ':' + String(m).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+  }
+  function tick() { s++; el.textContent = fmt(s); }
+  if ('IntersectionObserver' in window) {
+    var started = false;
+    new IntersectionObserver(function (entries, io) {
+      if (entries[0].isIntersecting && !started) { started = true; setInterval(tick, 1000); io.disconnect(); }
+    }, {threshold: 0.4}).observe(el);
+  } else {
+    setInterval(tick, 1000);
+  }
+})();
+
+/* ---------- recommendations demo switch ---------- */
+(function () {
+  var sw = document.getElementById('recsw'), card = document.getElementById('reccard');
+  if (sw && card) sw.addEventListener('change', function () {
+    card.classList.toggle('off', !sw.checked);
+  });
+})();
+
+/* ---------- quote carousel — legends in their own languages, shuffled every visit ---------- */
 (function () {
   var QUOTES = [
     {q: "ഒന്നും ഒന്നും ഇമ്മിണി ബല്യ ഒന്ന്.", a: "Vaikom Muhammad Basheer", l: "Malayalam",
