@@ -1583,6 +1583,58 @@
     "description": "Snackbar shown after stopping a session from the mini-bar's own quick-stop control",
     "placeholders": {"duration": {"type": "String"}}
   },
+  "timerStop": "Stop",
+  "@timerStop": {"description": "Accessibility label for the mini-bar's icon-only quick-stop control"},
+  "timerCheckInTitle": "Still reading?",
+  "@timerCheckInTitle": {"description": "Title of the notification checking in on a long-running reading session"},
+  "timerCheckInBody": "It's been a while — tap Yes to keep the clock running, or No to stop it now.",
+  "@timerCheckInBody": {"description": "Body of the still-reading check-in notification"},
+  "timerCheckInYes": "Yes, still reading",
+  "@timerCheckInYes": {"description": "Check-in notification action that keeps the timer running"},
+  "timerCheckInNo": "No, stop it",
+  "@timerCheckInNo": {"description": "Check-in notification action that stops the timer"},
+  "timerAutoStoppedTitle": "Reading timer stopped",
+  "@timerAutoStoppedTitle": {"description": "Title of the notification shown after a session is auto-stopped"},
+  "timerAutoStoppedBody": "Logged {duration} while you were away.",
+  "@timerAutoStoppedBody": {
+    "description": "Body of the notification shown after a session is auto-stopped",
+    "placeholders": {"duration": {"type": "String"}}
+  },
+  "timerResumeSafetyNetMessage": "Your timer was still running, so we stopped it — logged {duration}.",
+  "@timerResumeSafetyNetMessage": {
+    "description": "Snackbar shown when the app itself notices and stops a long-forgotten timer on resume",
+    "placeholders": {"duration": {"type": "String"}}
+  },
+  "timerLogManually": "Log manually",
+  "@timerLogManually": {"description": "Book page link that opens the manual session-logging sheet"},
+  "timerManualSheetTitle": "Log a reading session",
+  "@timerManualSheetTitle": {"description": "Title of the manual session-logging bottom sheet"},
+  "timerManualDurationLabel": "How long did you read?",
+  "@timerManualDurationLabel": {"description": "Label above the minutes field in the manual-log sheet"},
+  "timerManualDurationUnit": "minutes",
+  "@timerManualDurationUnit": {"description": "Unit suffix next to the manual-log duration field"},
+  "timerManualSave": "Save session",
+  "@timerManualSave": {"description": "Button that saves a manually logged session"},
+  "timerSessionPages": "{pages, plural, =1{1 page} other{{pages} pages}}",
+  "@timerSessionPages": {
+    "description": "Pages read shown next to a session's duration",
+    "placeholders": {"pages": {"type": "int"}}
+  },
+  "timerPagesPerHour": "{rate} pages/hr",
+  "@timerPagesPerHour": {
+    "description": "Reading pace shown on the wax-seal stop screen",
+    "placeholders": {"rate": {"type": "String"}}
+  },
+  "insightsPagesThisWeek": "{pages, plural, =1{1 page} other{{pages} pages}} this week",
+  "@insightsPagesThisWeek": {
+    "description": "Pages-read figure under the Insights weekly reading-time chart",
+    "placeholders": {"pages": {"type": "int"}}
+  },
+  "insightsPagesPace": "{rate} pages/hr average",
+  "@insightsPagesPace": {
+    "description": "Reading pace figure under the Insights weekly reading-time chart",
+    "placeholders": {"rate": {"type": "String"}}
+  },
   "recsOptInBody": "Opt in and Kitabi suggests books from your ratings, each with a plain-words \"why\". Off by default — turn it off anytime.",
   "@recsOptInBody": {
     "description": "Explainer shown before the reader opts into recommendations"

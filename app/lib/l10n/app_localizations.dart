@@ -2830,6 +2830,108 @@ abstract class AppLocalizations {
   /// **'Session logged — {duration}'**
   String timerMiniBarStopped(String duration);
 
+  /// Accessibility label for the mini-bar's icon-only quick-stop control
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get timerStop;
+
+  /// Title of the notification checking in on a long-running reading session
+  ///
+  /// In en, this message translates to:
+  /// **'Still reading?'**
+  String get timerCheckInTitle;
+
+  /// Body of the still-reading check-in notification
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s been a while — tap Yes to keep the clock running, or No to stop it now.'**
+  String get timerCheckInBody;
+
+  /// Check-in notification action that keeps the timer running
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, still reading'**
+  String get timerCheckInYes;
+
+  /// Check-in notification action that stops the timer
+  ///
+  /// In en, this message translates to:
+  /// **'No, stop it'**
+  String get timerCheckInNo;
+
+  /// Title of the notification shown after a session is auto-stopped
+  ///
+  /// In en, this message translates to:
+  /// **'Reading timer stopped'**
+  String get timerAutoStoppedTitle;
+
+  /// Body of the notification shown after a session is auto-stopped
+  ///
+  /// In en, this message translates to:
+  /// **'Logged {duration} while you were away.'**
+  String timerAutoStoppedBody(String duration);
+
+  /// Snackbar shown when the app itself notices and stops a long-forgotten timer on resume
+  ///
+  /// In en, this message translates to:
+  /// **'Your timer was still running, so we stopped it — logged {duration}.'**
+  String timerResumeSafetyNetMessage(String duration);
+
+  /// Book page link that opens the manual session-logging sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Log manually'**
+  String get timerLogManually;
+
+  /// Title of the manual session-logging bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Log a reading session'**
+  String get timerManualSheetTitle;
+
+  /// Label above the minutes field in the manual-log sheet
+  ///
+  /// In en, this message translates to:
+  /// **'How long did you read?'**
+  String get timerManualDurationLabel;
+
+  /// Unit suffix next to the manual-log duration field
+  ///
+  /// In en, this message translates to:
+  /// **'minutes'**
+  String get timerManualDurationUnit;
+
+  /// Button that saves a manually logged session
+  ///
+  /// In en, this message translates to:
+  /// **'Save session'**
+  String get timerManualSave;
+
+  /// Pages read shown next to a session's duration
+  ///
+  /// In en, this message translates to:
+  /// **'{pages, plural, =1{1 page} other{{pages} pages}}'**
+  String timerSessionPages(int pages);
+
+  /// Reading pace shown on the wax-seal stop screen
+  ///
+  /// In en, this message translates to:
+  /// **'{rate} pages/hr'**
+  String timerPagesPerHour(String rate);
+
+  /// Pages-read figure under the Insights weekly reading-time chart
+  ///
+  /// In en, this message translates to:
+  /// **'{pages, plural, =1{1 page} other{{pages} pages}} this week'**
+  String insightsPagesThisWeek(int pages);
+
+  /// Reading pace figure under the Insights weekly reading-time chart
+  ///
+  /// In en, this message translates to:
+  /// **'{rate} pages/hr average'**
+  String insightsPagesPace(String rate);
+
   /// Explainer shown before the reader opts into recommendations
   ///
   /// In en, this message translates to:

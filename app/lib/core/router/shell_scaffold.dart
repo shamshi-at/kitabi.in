@@ -213,9 +213,30 @@ class _MiniTimerBarContentState extends ConsumerState<_MiniTimerBarContent> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  // Runs on every second the mini-bar is visible — piggybacks the
+  // deterministic forgot-to-stop safety net (`checkReadingTimerSafetyNet`)
+  // onto the tick this widget already needs for its own live clock, instead
+  // of a separate lifecycle observer.
+  Future<void> _tick() async {
+    if (!mounted) return;
+    final logged = await checkReadingTimerSafetyNet(ref);
+    if (!mounted) return;
+    if (logged == null) {
+      setState(() {});
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    ref.invalidate(weeklyReadingSecondsProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          l10n.timerResumeSafetyNetMessage(formatDuration(Duration(seconds: logged.durationSeconds))),
+        ),
+      ),
+    );
   }
 
   @override
@@ -300,14 +321,25 @@ class _MiniTimerBarContentState extends ConsumerState<_MiniTimerBarContent> {
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: () => _quickStop(ref),
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(color: AppColors.gold, shape: BoxShape.circle),
-                  child: Center(
-                    child: Container(width: 8, height: 8, color: AppColors.night),
+              Semantics(
+                button: true,
+                label: AppLocalizations.of(context)!.timerStop,
+                child: GestureDetector(
+                  onTap: () => _quickStop(ref),
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(color: AppColors.gold, shape: BoxShape.circle),
+                        child: Center(
+                          child: Container(width: 8, height: 8, color: AppColors.night),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),

@@ -40,12 +40,14 @@ class ReadingTimerScreen extends ConsumerStatefulWidget {
 class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     with SingleTickerProviderStateMixin {
   static const _zoneThreshold = Duration(minutes: 20);
+  static const _handPeriod = Duration(minutes: 1);
 
   Timer? _clockTimer;
   late final AnimationController _hand = AnimationController(
     vsync: this,
-    duration: const Duration(minutes: 1),
+    duration: _handPeriod,
   );
+  bool _handSeeded = false;
   LoggedSession? _logged;
   late final _pageController = TextEditingController(
     text: widget.currentPage?.toString() ?? '',
@@ -55,20 +57,54 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   @override
   void initState() {
     super.initState();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+    _seedHandIfReady();
+  }
+
+  // Same deterministic forgot-to-stop safety net as the mini-bar
+  // (`checkReadingTimerSafetyNet`), piggybacked on the tick this screen
+  // already runs for its own live clock — if someone leaves the watch face
+  // open for 90+ minutes, landing straight on the wax-seal face here is a
+  // more coherent outcome than a bare snackbar on some other screen.
+  Future<void> _tick() async {
+    if (!mounted) return;
+    final logged = await checkReadingTimerSafetyNet(ref);
+    if (!mounted) return;
+    if (logged == null) {
+      setState(() {});
+      return;
+    }
+    ref.invalidate(weeklyReadingSecondsProvider);
+    setState(() => _logged = logged);
+  }
+
+  // Reopening a session that's already been running for a while must not
+  // reset the sweeping hand to 12 o'clock — it has to pick up from the
+  // actual elapsed second, same as the numeric clock next to it.
+  void _seedHandIfReady() {
+    if (_handSeeded) return;
+    final startedAt = ref.read(activeSessionProvider)?.startedAt;
+    if (startedAt == null) return;
+    _handSeeded = true;
+    final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+    _hand.value = (elapsedMs % _handPeriod.inMilliseconds) / _handPeriod.inMilliseconds;
+  }
+
+  void _loopHand() {
+    if (!mounted) return;
+    _hand.forward(from: 0).whenComplete(_loopHand);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _seedHandIfReady();
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     if (reduceMotion) {
       _hand.stop();
     } else if (!_hand.isAnimating) {
-      _hand.repeat();
+      _hand.forward(from: _hand.value).whenComplete(_loopHand);
     }
   }
 
@@ -109,6 +145,12 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   @override
   Widget build(BuildContext context) {
     final active = ref.watch(activeSessionProvider);
+    // Cold-start restore case: activeSessionProvider hydrates from disk
+    // asynchronously, so it can still be null on the first build or two —
+    // seed the hand as soon as it resolves instead of leaving it at 0.
+    ref.listen<ActiveSession?>(activeSessionProvider, (_, next) {
+      if (next != null) _seedHandIfReady();
+    });
     // Stopped from elsewhere (the mini-bar's own quick-stop) while this
     // screen sat in the background — nothing left to show here.
     if (_logged == null && active?.libraryEntryId != widget.libraryEntryId) {
@@ -545,6 +587,32 @@ class _LoggedFace extends ConsumerWidget {
                         ],
                       ),
                     ),
+                  ),
+                  AnimatedBuilder(
+                    animation: pageController,
+                    builder: (context, _) {
+                      final pageStart = logged.pageStart;
+                      final pageEnd = int.tryParse(pageController.text.trim());
+                      final pages = (pageStart != null && pageEnd != null && pageEnd > pageStart)
+                          ? pageEnd - pageStart
+                          : null;
+                      if (pages == null) return const SizedBox.shrink();
+                      final hours = duration.inSeconds / 3600;
+                      final pace = hours > 0 ? (pages / hours).round() : null;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(
+                          pace != null
+                              ? '${l10n.timerSessionPages(pages)} · ${l10n.timerPagesPerHour('$pace')}'
+                              : l10n.timerSessionPages(pages),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.inkSoft,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

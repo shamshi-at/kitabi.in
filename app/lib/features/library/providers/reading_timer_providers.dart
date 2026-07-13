@@ -1,13 +1,44 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workmanager/workmanager.dart';
 
+import '../../../core/notifications/notification_service.dart';
 import '../../../data/db/database.dart';
+import '../../../data/repositories/repositories.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import 'library_providers.dart';
 
-const _entryKey = 'active_session_entry_id';
-const _startedKey = 'active_session_started_at';
-const _pageStartKey = 'active_session_page_start';
+// Public (not file-private) because the background notification-action
+// handler and the workmanager enforcement task (`reading_timer_notifications.dart`,
+// `background_sync.dart`) need to read/write the exact same KeyValues rows
+// from a separate isolate with no access to this file's Riverpod state.
+const activeSessionEntryKey = 'active_session_entry_id';
+const activeSessionStartedKey = 'active_session_started_at';
+const activeSessionPageStartKey = 'active_session_page_start';
+
+/// A session left running this long gets a "still reading?" check-in.
+const readingCheckInDelay = Duration(minutes: 60);
+
+/// If the check-in goes unanswered this much longer, the session is
+/// auto-stopped — 90 minutes total from the original start.
+const readingCheckInGrace = Duration(minutes: 30);
+
+const readingCheckInYesActionId = 'reading_checkin_yes';
+const readingCheckInNoActionId = 'reading_checkin_no';
+const readingCheckInCategoryId = 'reading_checkin';
+
+/// Deterministic per-entry ids/names so a later call (cancel, reschedule,
+/// dedupe) always finds the same notification/task — same hashing trick as
+/// `reminderIdForRecord` (lending), salted so the two families can never
+/// collide even if a library entry id and a lending record id happened to
+/// hash the same.
+int readingCheckInNotificationId(String libraryEntryId) =>
+    ('reading_checkin_$libraryEntryId').hashCode & 0x7fffffff;
+int readingAutoStoppedNotificationId(String libraryEntryId) =>
+    ('reading_autostopped_$libraryEntryId').hashCode & 0x7fffffff;
+String readingEnforcementTaskName(String libraryEntryId) =>
+    'kitabi.readingTimerAutoStop.$libraryEntryId';
 
 /// The one reading session currently running, if any — device-local
 /// (KeyValues), never synced until it's stopped and logged as a
@@ -23,17 +54,77 @@ class ActiveSession {
 
 /// The result of stopping a session — what the wax-seal confirmation screen
 /// needs to show, and [sessionId] so it can attach a page number moments
-/// later via [ReadingSessionsRepository.updateSessionPageEnd].
+/// later via [ReadingSessionsRepository.updateSessionPageEnd]. [pageStart] lets
+/// the wax-seal screen compute pages-read live as the reader types an end page.
 class LoggedSession {
   const LoggedSession({
     required this.sessionId,
     required this.libraryEntryId,
     required this.durationSeconds,
+    this.pageStart,
   });
 
   final String sessionId;
   final String libraryEntryId;
   final int durationSeconds;
+  final int? pageStart;
+}
+
+/// Stops whatever session is in [db]'s KeyValues (if any), logs it, and
+/// clears local state — the single source of truth for "stop and log",
+/// callable with no `ref`/Riverpod so the exact same logic runs from three
+/// places: the foreground [ActiveSessionController.stop], the notification
+/// "No, stop it" action, and the workmanager auto-stop enforcement task (both
+/// in background isolates — see `reading_timer_notifications.dart` and
+/// `background_sync.dart`). Reads straight from KeyValues rather than taking
+/// an [ActiveSession] parameter so it's correct even when called from an
+/// isolate that never hydrated any in-memory state.
+Future<LoggedSession?> stopAndLogActiveSession(
+  AppDatabase db,
+  SessionContext session, {
+  void Function()? onMutation,
+}) async {
+  final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
+  final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
+  if (entryId == null || startedRaw == null) return null;
+  final startedAt = DateTime.tryParse(startedRaw);
+  if (startedAt == null) return null;
+  final pageStartRaw = await db.keyValuesDao.getValue(activeSessionPageStartKey);
+  final pageStart = int.tryParse(pageStartRaw ?? '');
+
+  final endedAt = DateTime.now();
+  final durationSeconds = endedAt.difference(startedAt).inSeconds;
+  final repo = ReadingSessionsRepository(db, session, onMutation: onMutation);
+  final sessionId = await repo.logSession(
+    libraryEntryId: entryId,
+    startedAt: startedAt,
+    endedAt: endedAt,
+    durationSeconds: durationSeconds,
+    pageStart: pageStart,
+  );
+
+  await db.keyValuesDao.deleteValue(activeSessionEntryKey);
+  await db.keyValuesDao.deleteValue(activeSessionStartedKey);
+  await db.keyValuesDao.deleteValue(activeSessionPageStartKey);
+
+  // Every stop path — manual, quick-stop, "No", or auto-stop — goes through
+  // here, so this is the one place that needs to cancel the check-in
+  // notification and the enforcement task, instead of every call site
+  // remembering to. Best-effort: a plugin channel that isn't ready (a
+  // notification-less platform, a widget test with no platform channels
+  // mocked) must never stop the session from being logged correctly.
+  try {
+    final notifications = NotificationService(FlutterLocalNotificationsPlugin());
+    await notifications.cancel(readingCheckInNotificationId(entryId));
+    await Workmanager().cancelByUniqueName(readingEnforcementTaskName(entryId));
+  } catch (_) {}
+
+  return LoggedSession(
+    sessionId: sessionId,
+    libraryEntryId: entryId,
+    durationSeconds: durationSeconds,
+    pageStart: pageStart,
+  );
 }
 
 /// Same load-on-build, write-through-on-change shape as
@@ -48,12 +139,12 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
 
   Future<void> _hydrate() async {
     final db = ref.read(appDatabaseProvider);
-    final entryId = await db.keyValuesDao.getValue(_entryKey);
-    final startedRaw = await db.keyValuesDao.getValue(_startedKey);
+    final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
+    final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
     if (entryId == null || startedRaw == null) return;
     final startedAt = DateTime.tryParse(startedRaw);
     if (startedAt == null) return;
-    final pageStartRaw = await db.keyValuesDao.getValue(_pageStartKey);
+    final pageStartRaw = await db.keyValuesDao.getValue(activeSessionPageStartKey);
     state = ActiveSession(
       libraryEntryId: entryId,
       startedAt: startedAt,
@@ -66,16 +157,20 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   /// anything. A no-op if this same entry is already the one running.
   /// [pageStart] is normally the book's current page at the moment reading
   /// began, captured once here rather than re-read at stop time.
+  ///
+  /// Scheduling the "still reading?" check-in is the caller's job (it needs
+  /// localized copy from a `BuildContext`, which a `Notifier` doesn't have —
+  /// see `_ReadingSessionCard._open` for the only call site).
   Future<void> start(String libraryEntryId, {int? pageStart}) async {
     if (state?.libraryEntryId == libraryEntryId) return;
     if (state != null) await stop();
 
     final startedAt = DateTime.now();
     final db = ref.read(appDatabaseProvider);
-    await db.keyValuesDao.setValue(_entryKey, libraryEntryId);
-    await db.keyValuesDao.setValue(_startedKey, startedAt.toIso8601String());
+    await db.keyValuesDao.setValue(activeSessionEntryKey, libraryEntryId);
+    await db.keyValuesDao.setValue(activeSessionStartedKey, startedAt.toIso8601String());
     if (pageStart != null) {
-      await db.keyValuesDao.setValue(_pageStartKey, '$pageStart');
+      await db.keyValuesDao.setValue(activeSessionPageStartKey, '$pageStart');
     }
     state = ActiveSession(libraryEntryId: libraryEntryId, startedAt: startedAt, pageStart: pageStart);
   }
@@ -84,35 +179,38 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   /// clears local state. Returns what got logged for the wax-seal screen —
   /// null if nothing was running.
   Future<LoggedSession?> stop() async {
-    final current = state;
-    if (current == null) return null;
-
-    final endedAt = DateTime.now();
-    final durationSeconds = endedAt.difference(current.startedAt).inSeconds;
-    final repo = await ref.read(readingSessionsRepositoryProvider.future);
-    final sessionId = await repo.logSession(
-      libraryEntryId: current.libraryEntryId,
-      startedAt: current.startedAt,
-      endedAt: endedAt,
-      durationSeconds: durationSeconds,
-      pageStart: current.pageStart,
-    );
-
+    if (state == null) return null;
     final db = ref.read(appDatabaseProvider);
-    await db.keyValuesDao.deleteValue(_entryKey);
-    await db.keyValuesDao.deleteValue(_startedKey);
-    await db.keyValuesDao.deleteValue(_pageStartKey);
-    state = null;
-    return LoggedSession(
-      sessionId: sessionId,
-      libraryEntryId: current.libraryEntryId,
-      durationSeconds: durationSeconds,
+    final session = await ref.read(sessionContextProvider.future);
+    final logged = await stopAndLogActiveSession(
+      db,
+      session,
+      onMutation: ref.read(syncTriggerProvider),
     );
+    state = null;
+    return logged;
   }
 }
 
 final activeSessionProvider =
     NotifierProvider<ActiveSessionController, ActiveSession?>(ActiveSessionController.new);
+
+/// The deterministic, cross-platform half of the forgot-to-stop safety net:
+/// the check-in notification and workmanager enforcement task are
+/// best-effort (especially on iOS), but any screen that already ticks once a
+/// second while a session is live — the mini-bar, the watch face, the book
+/// page's live clock — can call this on every tick and it guarantees a
+/// session is never found running past 90 minutes, independent of whether
+/// the OS actually delivered either background mechanism. Returns the
+/// [LoggedSession] (so the caller can show feedback) only when it actually
+/// had to intervene; null otherwise.
+Future<LoggedSession?> checkReadingTimerSafetyNet(WidgetRef ref) async {
+  final active = ref.read(activeSessionProvider);
+  if (active == null) return null;
+  final elapsed = DateTime.now().difference(active.startedAt);
+  if (elapsed < readingCheckInDelay + readingCheckInGrace) return null;
+  return ref.read(activeSessionProvider.notifier).stop();
+}
 
 /// What the active session's book actually is — title/cover for the mini-bar,
 /// which only has the raw `libraryEntryId` to go on. Reuses the

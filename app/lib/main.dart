@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +10,7 @@ import 'package:workmanager/workmanager.dart';
 import 'core/auth/supabase_auth_service.dart';
 import 'core/deep_links.dart';
 import 'core/notifications/push_service.dart';
+import 'core/notifications/reading_timer_notifications.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'data/sync/background_sync.dart';
@@ -41,6 +44,11 @@ Future<void> main() async {
     await Workmanager().initialize(syncCallbackDispatcher);
     registerBackgroundSync();
   }
+  // Best-effort: iOS can't reliably deliver a background notification-action
+  // response while the app was fully terminated, so check whether this cold
+  // start itself was caused by tapping the reading timer's "still reading?"
+  // check-in (see reading_timer_notifications.dart for why).
+  unawaited(handleColdStartReadingTimerResponse());
   runApp(ProviderScope(child: KitabiApp()));
 }
 

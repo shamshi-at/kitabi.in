@@ -365,6 +365,52 @@ void main() {
     await flushTree(tester);
   });
 
+  testWidgets('reading timer: log manually records a session and shows pages read', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      final repo = LibraryRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      final id = await repo.add(editionId: _editionId);
+      await repo.updateStatus(id, 'reading');
+      await repo.updateProgress(id, currentPage: 50);
+    });
+
+    await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
+    await settle(tester);
+
+    expect(find.text('Log manually'), findsOneWidget);
+    await tester.tap(find.text('Log manually'));
+    await settle(tester);
+
+    expect(find.text('Log a reading session'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, '30');
+    // The page field is pre-filled with the current page (50) — replace it
+    // with the end page for this session.
+    await tester.enterText(find.byType(TextField).at(1), '78');
+    await settle(tester);
+
+    await tester.tap(find.text('Save session'));
+    await settle(tester);
+    await settle(tester);
+
+    // Sheet closed, back on the book page; the freshly logged session shows
+    // its pages-read figure next to the duration.
+    expect(find.text('Log a reading session'), findsNothing);
+    expect(find.textContaining('28 pages'), findsOneWidget);
+
+    final entry = await tester.runAsync(() => db.libraryEntriesDao.getByEditionId(_editionId));
+    final sessions = await tester.runAsync(() => db.readingSessionsDao.watchForEntry(entry!.id).first);
+    expect(sessions, hasLength(1));
+    expect(sessions!.first.durationSeconds, 30 * 60);
+    expect(sessions.first.pageStart, 50);
+    expect(sessions.first.pageEnd, 78);
+    expect(entry!.currentPage, 78);
+
+    await flushTree(tester);
+  });
+
   testWidgets('review card shows rating above the review body; distribution does not overflow',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);

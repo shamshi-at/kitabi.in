@@ -1652,6 +1652,82 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get timerStop => 'Stop';
+
+  @override
+  String get timerCheckInTitle => 'Still reading?';
+
+  @override
+  String get timerCheckInBody =>
+      'It\'s been a while — tap Yes to keep the clock running, or No to stop it now.';
+
+  @override
+  String get timerCheckInYes => 'Yes, still reading';
+
+  @override
+  String get timerCheckInNo => 'No, stop it';
+
+  @override
+  String get timerAutoStoppedTitle => 'Reading timer stopped';
+
+  @override
+  String timerAutoStoppedBody(String duration) {
+    return 'Logged $duration while you were away.';
+  }
+
+  @override
+  String timerResumeSafetyNetMessage(String duration) {
+    return 'Your timer was still running, so we stopped it — logged $duration.';
+  }
+
+  @override
+  String get timerLogManually => 'Log manually';
+
+  @override
+  String get timerManualSheetTitle => 'Log a reading session';
+
+  @override
+  String get timerManualDurationLabel => 'How long did you read?';
+
+  @override
+  String get timerManualDurationUnit => 'minutes';
+
+  @override
+  String get timerManualSave => 'Save session';
+
+  @override
+  String timerSessionPages(int pages) {
+    String _temp0 = intl.Intl.pluralLogic(
+      pages,
+      locale: localeName,
+      other: '$pages pages',
+      one: '1 page',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String timerPagesPerHour(String rate) {
+    return '$rate pages/hr';
+  }
+
+  @override
+  String insightsPagesThisWeek(int pages) {
+    String _temp0 = intl.Intl.pluralLogic(
+      pages,
+      locale: localeName,
+      other: '$pages pages',
+      one: '1 page',
+    );
+    return '$_temp0 this week';
+  }
+
+  @override
+  String insightsPagesPace(String rate) {
+    return '$rate pages/hr average';
+  }
+
+  @override
   String get recsOptInBody =>
       'Opt in and Kitabi suggests books from your ratings, each with a plain-words \"why\". Off by default — turn it off anytime.';
 

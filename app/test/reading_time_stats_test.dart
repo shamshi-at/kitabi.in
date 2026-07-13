@@ -2,9 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/features/insights/reading_time_stats.dart';
 
-ReadingSession _session(DateTime startedAt, int durationSeconds) {
+ReadingSession _session(
+  DateTime startedAt,
+  int durationSeconds, {
+  int? pageStart,
+  int? pageEnd,
+}) {
   return ReadingSession(
-    id: 'id-${startedAt.millisecondsSinceEpoch}',
+    id: 'id-${startedAt.millisecondsSinceEpoch}-${pageStart ?? 0}-${pageEnd ?? 0}',
     userId: 'u1',
     createdAt: startedAt,
     updatedAt: startedAt,
@@ -16,8 +21,8 @@ ReadingSession _session(DateTime startedAt, int durationSeconds) {
     startedAt: startedAt,
     endedAt: startedAt.add(Duration(seconds: durationSeconds)),
     durationSeconds: durationSeconds,
-    pageStart: null,
-    pageEnd: null,
+    pageStart: pageStart,
+    pageEnd: pageEnd,
   );
 }
 
@@ -88,5 +93,33 @@ void main() {
     ];
     final stats = computeReadingTimeStats(sessions, now: now);
     expect(stats.thisWeekSeconds, 0);
+  });
+
+  test('pages and pace are null when no session this week has both page numbers', () {
+    final sessions = [
+      _session(mondayThisWeek, 600),
+      _session(mondayThisWeek.add(const Duration(days: 1)), 600, pageStart: 10),
+    ];
+    final stats = computeReadingTimeStats(sessions, now: now);
+    expect(stats.totalPagesThisWeek, isNull);
+    expect(stats.pagesPerHour, isNull);
+  });
+
+  test('pages and pace sum only qualifying sessions this week', () {
+    final sessions = [
+      // 30 pages in 1800s (30min) -> 60 pages/hr
+      _session(mondayThisWeek, 1800, pageStart: 10, pageEnd: 40),
+      // 15 pages in 900s (15min) -> also 60 pages/hr combined
+      _session(mondayThisWeek.add(const Duration(days: 1)), 900, pageStart: 40, pageEnd: 55),
+      // no page numbers — contributes duration to thisWeekSeconds but not pages
+      _session(mondayThisWeek.add(const Duration(days: 2)), 300),
+      // mistyped/lower end page — excluded from the pages total
+      _session(mondayThisWeek.add(const Duration(days: 3)), 600, pageStart: 55, pageEnd: 50),
+      // last week — must not contribute even though it has page numbers
+      _session(mondayThisWeek.subtract(const Duration(days: 1)), 1200, pageStart: 1, pageEnd: 100),
+    ];
+    final stats = computeReadingTimeStats(sessions, now: now);
+    expect(stats.totalPagesThisWeek, 45);
+    expect(stats.pagesPerHour, 60);
   });
 }

@@ -23,6 +23,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/notifications/reading_timer_notifications.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../../lending/lending_format.dart';
 import '../../lending/presentation/lend_sheet.dart';
@@ -1540,9 +1541,53 @@ class _ReadingSessionCard extends ConsumerWidget {
   final String? title;
   final String? author;
 
+  Future<void> _logManually(BuildContext context, WidgetRef ref, {required int? pageCount}) async {
+    final result = await showModalBottomSheet<(int, int?)>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _ManualLogSheet(currentPage: entry.currentPage, pageCount: pageCount),
+    );
+    if (result == null || !context.mounted) return;
+    final (minutes, pageEnd) = result;
+    Haptics.success();
+
+    final endedAt = DateTime.now();
+    final startedAt = endedAt.subtract(Duration(minutes: minutes));
+    final repo = await ref.read(readingSessionsRepositoryProvider.future);
+    await repo.logSession(
+      libraryEntryId: entry.id,
+      startedAt: startedAt,
+      endedAt: endedAt,
+      durationSeconds: minutes * 60,
+      pageStart: entry.currentPage,
+      pageEnd: pageEnd,
+    );
+    if (pageEnd != null) {
+      final libraryRepo = await ref.read(libraryRepositoryProvider.future);
+      await libraryRepo.updateProgress(entry.id, currentPage: pageEnd);
+      ref.invalidate(libraryEntryProvider(entry.editionId));
+    }
+    ref.invalidate(weeklyReadingSecondsProvider);
+  }
+
   void _open(BuildContext context, WidgetRef ref, {required int? pageCount}) {
     Haptics.selection();
+    final freshStart = ref.read(activeSessionProvider)?.libraryEntryId != entry.id;
+    final startedAt = DateTime.now();
     ref.read(activeSessionProvider.notifier).start(entry.id, pageStart: entry.currentPage);
+    if (freshStart) {
+      final l10n = AppLocalizations.of(context)!;
+      armReadingTimerSafetyNet(
+        libraryEntryId: entry.id,
+        from: startedAt,
+        title: l10n.timerCheckInTitle,
+        body: l10n.timerCheckInBody,
+        yesLabel: l10n.timerCheckInYes,
+        noLabel: l10n.timerCheckInNo,
+      );
+    }
     context.push(
       Routes.readingTimerPath(entry.id),
       extra: {
@@ -1577,9 +1622,11 @@ class _ReadingSessionCard extends ConsumerWidget {
                     style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
                   ),
                 ),
-                if (running)
-                  _LiveClock(startedAt: active!.startedAt)
-                else
+                if (running) ...[
+                  _LiveClock(startedAt: active!.startedAt),
+                  const SizedBox(width: 2),
+                  Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+                ] else
                   ElevatedButton.icon(
                     onPressed: () => _open(context, ref, pageCount: book?.pageCount),
                     style: ElevatedButton.styleFrom(
@@ -1592,10 +1639,128 @@ class _ReadingSessionCard extends ConsumerWidget {
               ],
             ),
           ),
+          if (!running) ...[
+            SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => _logManually(context, ref, pageCount: book?.pageCount),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  minimumSize: Size(0, 28),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: AppColors.inkSoft,
+                  textStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+                child: Text(l10n.timerLogManually),
+              ),
+            ),
+          ],
           if (sessions.isNotEmpty) ...[
             SizedBox(height: 10),
             for (final s in sessions.take(3)) _SessionLogRow(session: s),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Duration-only fallback for a session the reader forgot to time live —
+/// synthesizes `startedAt`/`endedAt` as `(now - duration)..now` and reuses
+/// the same optional end-page field as the wax-seal stop screen. Returns
+/// `(minutes, pageEnd)` for the caller to log; pure UI, no repository calls
+/// here, same split as `_StatusSheet`/`_changeStatus`.
+class _ManualLogSheet extends StatefulWidget {
+  const _ManualLogSheet({required this.currentPage, required this.pageCount});
+
+  final int? currentPage;
+  final int? pageCount;
+
+  @override
+  State<_ManualLogSheet> createState() => _ManualLogSheetState();
+}
+
+class _ManualLogSheetState extends State<_ManualLogSheet> {
+  late final _minutesController = TextEditingController();
+  late final _pageController = TextEditingController(
+    text: widget.currentPage?.toString() ?? '',
+  );
+
+  @override
+  void dispose() {
+    _minutesController.dispose();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final minutes = int.tryParse(_minutesController.text.trim());
+    if (minutes == null || minutes <= 0) return;
+    final page = int.tryParse(_pageController.text.trim());
+    Navigator.pop(context, (minutes, page));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.timerManualSheetTitle, style: Theme.of(context).textTheme.titleMedium),
+          SizedBox(height: 18),
+          Text(
+            l10n.timerManualDurationLabel,
+            style: TextStyle(fontSize: 11, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
+          ),
+          SizedBox(height: 6),
+          TextField(
+            controller: _minutesController,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            style: TextStyle(fontWeight: FontWeight.w600),
+            decoration: InputDecoration(
+              isDense: true,
+              suffixText: l10n.timerManualDurationUnit,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          SizedBox(height: 16),
+          Text(
+            l10n.timerPageFieldLabel,
+            style: TextStyle(fontSize: 11, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
+          ),
+          SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _pageController,
+                  keyboardType: TextInputType.number,
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              if (widget.pageCount != null) ...[
+                SizedBox(width: 8),
+                Text(
+                  l10n.timerPageFieldOf(widget.pageCount!),
+                  style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+                ),
+              ],
+            ],
+          ),
+          SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(onPressed: _save, child: Text(l10n.timerManualSave)),
+          ),
         ],
       ),
     );
@@ -1608,30 +1773,50 @@ final _recentSessionsProvider =
   return ref.watch(appDatabaseProvider).readingSessionsDao.watchForEntry(entryId);
 });
 
-class _LiveClock extends StatefulWidget {
+class _LiveClock extends ConsumerStatefulWidget {
   const _LiveClock({required this.startedAt});
 
   final DateTime startedAt;
 
   @override
-  State<_LiveClock> createState() => _LiveClockState();
+  ConsumerState<_LiveClock> createState() => _LiveClockState();
 }
 
-class _LiveClockState extends State<_LiveClock> {
+class _LiveClockState extends ConsumerState<_LiveClock> {
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  // The book page hides the mini-bar (it's a top-level route, covers the
+  // shell), so someone parked here — not on the watch face or a shell tab —
+  // still needs the same deterministic forgot-to-stop safety net.
+  Future<void> _tick() async {
+    if (!mounted) return;
+    final logged = await checkReadingTimerSafetyNet(ref);
+    if (!mounted) return;
+    if (logged == null) {
+      setState(() {});
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    ref.invalidate(weeklyReadingSecondsProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          l10n.timerResumeSafetyNetMessage(formatDuration(Duration(seconds: logged.durationSeconds))),
+        ),
+      ),
+    );
   }
 
   @override
@@ -1674,6 +1859,11 @@ class _SessionLogRow extends StatelessWidget {
         : DateUtils.isSameDay(date, today.subtract(Duration(days: 1)))
             ? l10n.timerYesterday
             : '${date.day}/${date.month}';
+    final pageStart = session.pageStart;
+    final pageEnd = session.pageEnd;
+    final pages = (pageStart != null && pageEnd != null && pageEnd > pageStart)
+        ? pageEnd - pageStart
+        : null;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -1681,6 +1871,13 @@ class _SessionLogRow extends StatelessWidget {
           Expanded(
             child: Text(label, style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft)),
           ),
+          if (pages != null) ...[
+            Text(
+              l10n.timerSessionPages(pages),
+              style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft),
+            ),
+            SizedBox(width: 6),
+          ],
           Text(
             formatDuration(Duration(seconds: session.durationSeconds)),
             style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: AppColors.ink),

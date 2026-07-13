@@ -587,6 +587,22 @@ class _ReadingTimeSection extends ConsumerWidget {
               ),
           ],
         ),
+        if (stats.totalPagesThisWeek != null) ...[
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.auto_stories_outlined, size: 12, color: AppColors.inkSoft),
+              SizedBox(width: 5),
+              Text(
+                stats.pagesPerHour != null
+                    ? '${l10n.insightsPagesThisWeek(stats.totalPagesThisWeek!)} · '
+                        '${l10n.insightsPagesPace(stats.pagesPerHour!.round().toString())}'
+                    : l10n.insightsPagesThisWeek(stats.totalPagesThisWeek!),
+                style: TextStyle(fontSize: 11, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ],
         if (stats.busiestWeekday != null && stats.busiestHour != null) ...[
           SizedBox(height: 12),
           Container(
