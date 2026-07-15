@@ -107,6 +107,14 @@ class ApiClient {
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
+  /// The "Works" tab on a reader's public profile — every catalog Work whose
+  /// author is linked to them. Gated only on the profile itself being public,
+  /// independent of their library visibility.
+  Future<List<Map<String, dynamic>>> getPublicWorks(String userId) async {
+    final res = await _dio.get('/users/$userId/works');
+    return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
   // --- Push notifications (FCM device tokens) ---
 
   /// Register this install's FCM token for the signed-in user.
@@ -359,6 +367,14 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getAuthorWorks(String authorId) async {
     final res = await _dio.get('/catalog/authors/$authorId');
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// "This is me" — self-link an existing, unclaimed Author row to the
+  /// signed-in reader. First to claim wins; throws (409) if someone already
+  /// linked it.
+  Future<Map<String, dynamic>> linkAuthor(String authorId) async {
+    final res = await _dio.post('/catalog/authors/$authorId/link');
     return res.data as Map<String, dynamic>;
   }
 

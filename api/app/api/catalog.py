@@ -42,7 +42,7 @@ router = APIRouter(prefix="/catalog", tags=["catalog"])
 OlClient = Annotated[OpenLibraryClient, Depends(get_openlibrary_client)]
 
 
-def _summary(work) -> WorkSummaryOut:  # noqa: ANN001 — Work ORM instance
+def work_summary(work) -> WorkSummaryOut:  # noqa: ANN001 — Work ORM instance
     edition = work.editions[0] if work.editions else None
     return WorkSummaryOut(
         id=work.id,
@@ -60,7 +60,7 @@ async def _work_out(db: AsyncSession, work) -> WorkOut:  # noqa: ANN001 — Work
     return WorkOut.model_validate(work).model_copy(
         update={
             "translation_group_rating": rating,
-            "translations": [_summary(w) for w in siblings],
+            "translations": [work_summary(w) for w in siblings],
         }
     )
 
@@ -72,7 +72,7 @@ async def search(db: DbSession, q: str = Query(min_length=1)) -> list[WorkSummar
     typo-laden free-text search doesn't burn an external request on every
     keystroke — the app calls that explicitly for the "add from ISBN" flow."""
     works = await catalog_service.search_local(db, q)
-    return [_summary(w) for w in works]
+    return [work_summary(w) for w in works]
 
 
 @router.get("/search/all", response_model=GlobalSearchOut)
@@ -84,7 +84,7 @@ async def search_all(db: DbSession, q: str = Query(min_length=1)) -> GlobalSearc
     authors = await catalog_service.search_authors(db, q)
     publishers = await catalog_service.search_publishers(db, q)
     return GlobalSearchOut(
-        works=[_summary(w) for w in works],
+        works=[work_summary(w) for w in works],
         authors=[AuthorOut.model_validate(a) for a in authors],
         publishers=[PublisherOut.model_validate(p) for p in publishers],
     )
@@ -101,7 +101,7 @@ async def browse_works(
     """Discover screen — catalog books, paged, filterable by language and
     sortable by title / newest / oldest / author (S4/browse)."""
     works = await catalog_service.browse_works(db, limit, offset, language=language, sort=sort)
-    return [_summary(w) for w in works]
+    return [work_summary(w) for w in works]
 
 
 @router.get("/browse/languages", response_model=list[str])
@@ -198,7 +198,7 @@ async def similar_works(db: DbSession, title: str = Query(min_length=1)) -> list
     catalog matches for a title as it's being typed (trigram similarity),
     best match first. Empty when the title is too short or nothing is close."""
     works = await catalog_service.find_similar_works(db, title)
-    return [_summary(w) for w in works]
+    return [work_summary(w) for w in works]
 
 
 @router.post("/works", response_model=WorkOut, status_code=status.HTTP_201_CREATED)
@@ -368,6 +368,15 @@ async def create_publisher(
     return PublisherOut.model_validate(publisher)
 
 
+@router.post("/authors/{author_id}/link", response_model=AuthorOut)
+async def link_author(author_id: uuid.UUID, user: CurrentUser, db: DbSession) -> AuthorOut:
+    """ "This is me" on an existing, unclaimed Author row — first to claim
+    wins, no approval step (owner decision, scoped to an invited friend
+    circle — see docs/author-identity-and-moderation-plan.md)."""
+    author = await catalog_service.link_author_to_self(db, author_id, uuid.UUID(user["id"]))
+    return AuthorOut.model_validate(author)
+
+
 @router.get("/authors/{author_id}", response_model=AuthorWorksOut)
 async def get_author(author_id: uuid.UUID, db: DbSession) -> AuthorWorksOut:
     """Author browse page (S4c) — every catalog work by this author."""
@@ -378,7 +387,7 @@ async def get_author(author_id: uuid.UUID, db: DbSession) -> AuthorWorksOut:
             detail={"code": "not_found", "message": "Author not found"},
         )
     works = await catalog_service.author_works(db, author_id)
-    return AuthorWorksOut(author=author, works=[_summary(w) for w in works])
+    return AuthorWorksOut(author=author, works=[work_summary(w) for w in works])
 
 
 @router.get("/publishers/{publisher_id}", response_model=PublisherWorksOut)
@@ -391,4 +400,4 @@ async def get_publisher(publisher_id: uuid.UUID, db: DbSession) -> PublisherWork
             detail={"code": "not_found", "message": "Publisher not found"},
         )
     works = await catalog_service.publisher_works(db, publisher_id)
-    return PublisherWorksOut(publisher=publisher, works=[_summary(w) for w in works])
+    return PublisherWorksOut(publisher=publisher, works=[work_summary(w) for w in works])

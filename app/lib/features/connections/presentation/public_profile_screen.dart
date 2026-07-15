@@ -14,6 +14,7 @@ import '../../../core/widgets/shelf_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../catalog/presentation/catalog_result_tile.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../../library/providers/library_providers.dart';
 import '../connections_providers.dart';
@@ -71,6 +72,14 @@ final _publicProfileProvider =
 final _publicLibraryProvider =
     FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, userId) {
   return ref.watch(apiClientProvider).getPublicLibrary(userId);
+});
+
+/// Catalog Works whose linked author is this profile — the Works tab. Gated
+/// only on the profile itself being public (the endpoint 404s otherwise),
+/// independent of library visibility.
+final _publicWorksProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, userId) {
+  return ref.watch(apiClientProvider).getPublicWorks(userId);
 });
 
 bool _isNotFound(Object err) => err is DioException && err.response?.statusCode == 404;
@@ -156,8 +165,10 @@ class _ProfileBody extends ConsumerStatefulWidget {
 }
 
 /// Which tab is showing below the header. Ledger first — the loans between
-/// you are why most visits happen — with the shelf a tap away.
-enum _ProfileTab { ledger, shelf }
+/// you are why most visits happen — with the shelf a tap away. Works only
+/// shows up (as a third segment) when this reader is a linked author of at
+/// least one catalog Work.
+enum _ProfileTab { ledger, shelf, works }
 
 class _ProfileBodyState extends ConsumerState<_ProfileBody> {
   var _tab = _ProfileTab.ledger;
@@ -192,6 +203,13 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     final shelfCount = (isPrivate || !libraryVisible)
         ? null
         : ref.watch(_publicLibraryProvider(widget.userId)).valueOrNull?.length;
+    // Only surfaced once we know it's non-empty — most readers aren't a
+    // linked author, so the tab stays hidden rather than showing "Works · 0".
+    final worksCountRaw =
+        isPrivate ? null : ref.watch(_publicWorksProvider(widget.userId)).valueOrNull?.length;
+    final worksCount = (worksCountRaw != null && worksCountRaw > 0) ? worksCountRaw : null;
+    // A hidden Works tab can't stay selected (e.g. the count just changed).
+    final tab = (_tab == _ProfileTab.works && worksCount == null) ? _ProfileTab.ledger : _tab;
 
     return ListView(
       padding: EdgeInsets.fromLTRB(20, 14, 20, 24),
@@ -206,19 +224,21 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
         ),
         SizedBox(height: 16),
         _TabBar(
-          selected: _tab,
+          selected: tab,
           ledgerCount: loanCount,
           shelfCount: shelfCount,
+          worksCount: worksCount,
           onChanged: (t) => setState(() => _tab = t),
         ),
         SizedBox(height: 14),
-        switch (_tab) {
+        switch (tab) {
           _ProfileTab.ledger => _LedgerTab(userId: widget.userId, name: display),
           _ProfileTab.shelf => isPrivate
               ? _MutedNote(l10n.publicProfilePrivate)
               : !libraryVisible
                   ? _MutedNote(l10n.publicLibraryPrivate)
                   : _PublicShelf(userId: widget.userId),
+          _ProfileTab.works => _PublicWorksTab(userId: widget.userId),
         },
       ],
     );
@@ -611,19 +631,24 @@ class _StatCell extends StatelessWidget {
   }
 }
 
-/// Segmented Ledger / Shelf tabs with live counts — the same control the
-/// lending ledger uses, so the app keeps one segmented pattern.
+/// Segmented Ledger / Shelf(/ Works) tabs with live counts — the same control
+/// the lending ledger uses, so the app keeps one segmented pattern. Works is
+/// only added to the row when [worksCount] is non-null (this reader is a
+/// linked author of at least one catalog Work) — otherwise the tab stays
+/// exactly as it was before this feature existed.
 class _TabBar extends StatelessWidget {
   const _TabBar({
     required this.selected,
     required this.ledgerCount,
     required this.shelfCount,
+    this.worksCount,
     required this.onChanged,
   });
 
   final _ProfileTab selected;
   final int? ledgerCount;
   final int? shelfCount;
+  final int? worksCount;
   final ValueChanged<_ProfileTab> onChanged;
 
   @override
@@ -649,6 +674,13 @@ class _TabBar extends StatelessWidget {
             active: selected == _ProfileTab.shelf,
             onTap: () => onChanged(_ProfileTab.shelf),
           ),
+          if (worksCount != null)
+            _SegTab(
+              label: l10n.publicProfileTabWorks,
+              count: worksCount,
+              active: selected == _ProfileTab.works,
+              onTap: () => onChanged(_ProfileTab.works),
+            ),
         ],
       ),
     );
@@ -835,6 +867,30 @@ class _PublicShelfState extends ConsumerState<_PublicShelf> {
           ],
         );
       },
+    );
+  }
+}
+
+/// The Works tab — every catalog Work whose linked author is this profile.
+/// Same [CatalogResultTile] row the author browse page and search use, so
+/// "everything by them" reads the same wherever it shows up.
+class _PublicWorksTab extends ConsumerWidget {
+  const _PublicWorksTab({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final works = ref.watch(_publicWorksProvider(userId));
+    return works.when(
+      loading: () => Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+      ),
+      error: (_, _) => ErrorRetry(onRetry: () => ref.invalidate(_publicWorksProvider(userId))),
+      data: (items) => items.isEmpty
+          ? _MutedNote(AppLocalizations.of(context)!.browseEmpty)
+          : Column(children: [for (final work in items) CatalogResultTile(work: work)]),
     );
   }
 }

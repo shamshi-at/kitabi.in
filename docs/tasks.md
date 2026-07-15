@@ -356,6 +356,19 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       contributor approves/rejects from the profile's "Pending edits" inbox; the editor sees
       "Edit sent … will review it". V1 approver = the reader who added the book; proper
       moderation comes with the community layer (8 Jul 2026)
+- [ ] Author account linking ("This is me") — `authors.linked_user_id` column + migration;
+      "This is me" checkbox wired into the existing `create_author` call for a brand-new
+      Author, plus a one-tap self-link button (`linked_user_id IS NULL` guard, first-come)
+      on an existing unclaimed Author's page; `GET /users/{user_id}/works` (mirrors
+      `public_library`, gated on `profile_visible`) + "Works by [name]" section on the
+      profile screen; `AuthorOut`/`GET /catalog/authors?q=` returns `linked_user_id` so
+      the add-book author typeahead and global search's new "Authors" section can both
+      show a 🔗 "on Kitabi" pill on a linked friend; author page gets a "View their
+      Kitabi profile" row when linked. Mockups: `kitabi_screens.html` 4e/4f/4g/7c.
+      **Simplified 14 Jul 2026** (owner: invited friend circle, not open
+      sign-up) — no claim/evidence/approval workflow, no verified badge; the heavier
+      version is shelved in `docs/author-identity-and-moderation-plan.md` for if this ever
+      opens beyond invited friends
 - [x] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — written server-side as a side
       effect of other syncable ops, pulled to the client; no feed UI yet (feature-map.md: "flip it
       public later")

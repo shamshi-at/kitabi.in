@@ -4,9 +4,11 @@ import uuid
 
 from fastapi import APIRouter, Query
 
+from app.api.catalog import work_summary
 from app.api.deps import CurrentUser, DbSession
+from app.schemas.catalog import WorkSummaryOut
 from app.schemas.profile import PublicLibraryItemOut, PublicProfileOut, UserSearchOut
-from app.services import connection_service, profile_service, scoring_service
+from app.services import catalog_service, connection_service, profile_service, scoring_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -50,3 +52,16 @@ async def public_library(
     and library are public."""
     items = await profile_service.public_library(db, user_id)
     return [PublicLibraryItemOut(**item) for item in items]
+
+
+@router.get("/{user_id}/works", response_model=list[WorkSummaryOut])
+async def public_works(
+    user_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> list[WorkSummaryOut]:
+    """The "Works" tab on a reader's public profile — every catalog Work
+    whose author is linked to this profile. Gated only on `profile_visible`,
+    independent of `library_visible`: a private reader can still be a public
+    author."""
+    await profile_service.get_public_profile(db, user_id)
+    works = await catalog_service.works_by_linked_author(db, user_id)
+    return [work_summary(w) for w in works]

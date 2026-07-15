@@ -156,6 +156,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get linkedAuthorBadge => 'On Kitabi';
+
+  @override
+  String get authorBrowseIsMe => 'This is me';
+
+  @override
+  String get authorBrowseViewProfile => 'View their Kitabi profile';
+
+  @override
+  String get authorLinkFailed => 'Couldn\'t link this author right now';
+
+  @override
   String authorWritingAs(String name) {
     return 'writing as $name';
   }
@@ -765,6 +777,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publicProfileTabShelf => 'Shelf';
+
+  @override
+  String get publicProfileTabWorks => 'Works';
 
   @override
   String get publicProfileConnect => 'Connect';
@@ -1608,6 +1623,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get timerPageFieldHint => '0';
+
+  @override
   String get timerDone => 'Done';
 
   @override
@@ -1900,6 +1918,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authorPickerAddNew => 'Add a new author';
+
+  @override
+  String get authorPickerIsMe => 'This is me — I wrote this book';
 
   @override
   String authorPickerLanguage(String language) {

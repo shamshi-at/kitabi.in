@@ -218,6 +218,51 @@ class PickerLanguageDropdown extends StatelessWidget {
   }
 }
 
+/// A labelled checkbox row for picker add-new forms — currently just "This is
+/// me" on the author picker, but plain enough to reuse rather than one-off.
+class PickerCheckbox extends StatelessWidget {
+  const PickerCheckbox({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Checkbox(
+              value: value,
+              onChanged: (v) => onChanged(v ?? false),
+              visualDensity: VisualDensity.compact,
+            ),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Photo picker used on the author/publisher add-new forms — shows a circular
 /// preview of the chosen/uploaded image (or a placeholder) with a button to
 /// pick or replace it, so users upload a real photo instead of pasting a URL.

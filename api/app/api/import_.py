@@ -6,7 +6,7 @@ import io
 
 from fastapi import APIRouter
 
-from app.api.catalog import _summary
+from app.api.catalog import work_summary
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.catalog import ImportPreviewIn, ImportPreviewOut, ImportRowOut
 from app.services import catalog_service, import_service
@@ -48,7 +48,7 @@ async def preview(payload: ImportPreviewIn, user: CurrentUser, db: DbSession) ->
                 status=row.status,
                 date_read=row.date_read,
                 tags=row.tags,
-                match=_summary(work) if work is not None else None,
+                match=work_summary(work) if work is not None else None,
             )
         )
 

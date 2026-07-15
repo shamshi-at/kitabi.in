@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
+import '../../../core/widgets/kitabi_linked_badge.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../catalog_image_upload.dart';
@@ -177,6 +178,7 @@ class _AuthorResultTile extends StatelessWidget {
     final penName = author['pen_name'] as String?;
     final language = author['primary_language'] as String?;
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final linked = author['linked_user_id'] != null;
 
     return InkWell(
       onTap: onTap,
@@ -204,11 +206,21 @@ class _AuthorResultTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                        ),
+                      ),
+                      if (linked) ...[
+                        const SizedBox(width: 6),
+                        const KitabiLinkedBadge(compact: true),
+                      ],
+                    ],
                   ),
                   if (penName != null && penName.isNotEmpty)
                     Text(
@@ -258,6 +270,7 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
   final _bio = TextEditingController();
   String? _language;
   String? _imageUrl;
+  bool _isMe = false;
   bool _uploading = false;
   bool _saving = false;
 
@@ -304,6 +317,7 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
       if (_language != null) 'primary_language': _language,
       if (_imageUrl != null) 'image_url': _imageUrl,
       if (_bio.text.trim().isNotEmpty) 'bio': _bio.text.trim(),
+      if (_isMe) 'is_me': true,
     };
     try {
       final author = await ref.read(apiClientProvider).createAuthor(payload);
@@ -366,7 +380,13 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
             ),
             const SizedBox(height: 8),
             PickerField(label: l10n.pickerFieldBio, controller: _bio, maxLines: 3),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
+            PickerCheckbox(
+              label: l10n.authorPickerIsMe,
+              value: _isMe,
+              onChanged: (v) => setState(() => _isMe = v),
+            ),
+            const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

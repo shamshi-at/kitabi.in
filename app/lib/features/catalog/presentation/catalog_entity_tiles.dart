@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/kitabi_linked_badge.dart';
 import '../../../core/widgets/net_image.dart';
 
 /// A catalog author row (portrait/monogram, name, primary language) — shared by
@@ -18,6 +19,7 @@ class AuthorRowTile extends StatelessWidget {
     final imageUrl = author['image_url'] as String?;
     final language = author['primary_language'] as String?;
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final linked = author['linked_user_id'] != null;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -46,11 +48,21 @@ class AuthorRowTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                      ),
+                      if (linked) ...[
+                        const SizedBox(width: 6),
+                        const KitabiLinkedBadge(compact: true),
+                      ],
+                    ],
                   ),
                   if (language != null && language.isNotEmpty)
                     Text(language, style: TextStyle(color: AppColors.inkSoft, fontSize: 11)),

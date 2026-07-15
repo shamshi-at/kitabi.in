@@ -14,6 +14,9 @@ class AuthorOut(BaseModel):
     pen_name: str | None = None
     image_url: str | None = None
     primary_language: str | None = None
+    # The Profile who is this author, if self-linked — drives the 🔗 "on
+    # Kitabi" badge and the "View their Kitabi profile" door.
+    linked_user_id: uuid.UUID | None = None
 
 
 class AuthorDetailOut(AuthorOut):
@@ -40,6 +43,9 @@ class AuthorCreate(BaseModel):
     image_url: str | None = None
     primary_language: str | None = None
     bio: str | None = None
+    # "This is me" — the add-author form's checkbox, shown only when creating
+    # a brand-new author. Self-links the new row to the signed-in reader.
+    is_me: bool = False
 
 
 class PublisherCreate(BaseModel):

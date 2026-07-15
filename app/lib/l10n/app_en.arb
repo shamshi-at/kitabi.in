@@ -161,6 +161,22 @@
       }
     }
   },
+  "linkedAuthorBadge": "On Kitabi",
+  "@linkedAuthorBadge": {
+    "description": "Small pill on an author's name marking them as a linked, registered Kitabi reader"
+  },
+  "authorBrowseIsMe": "This is me",
+  "@authorBrowseIsMe": {
+    "description": "Self-link button on an unclaimed author's browse page"
+  },
+  "authorBrowseViewProfile": "View their Kitabi profile",
+  "@authorBrowseViewProfile": {
+    "description": "Button on a linked author's browse page, opens their public profile"
+  },
+  "authorLinkFailed": "Couldn't link this author right now",
+  "@authorLinkFailed": {
+    "description": "Error snackbar when self-linking an author fails"
+  },
   "authorWritingAs": "writing as {name}",
   "@authorWritingAs": {
     "description": "Shows an author's pen name under their real name",
@@ -656,6 +672,8 @@
   "@publicProfileTabLedger": {"description": "Profile tab: the lending ledger between you and this reader"},
   "publicProfileTabShelf": "Shelf",
   "@publicProfileTabShelf": {"description": "Profile tab: this reader's public library"},
+  "publicProfileTabWorks": "Works",
+  "@publicProfileTabWorks": {"description": "Profile tab: catalog works this reader is the linked author of — only shown when they have at least one"},
   "publicProfileConnect": "Connect",
   "@publicProfileConnect": {"description": "Button to send a connection request from a public profile"},
   "publicProfileRequestSent": "Connection request sent.",
@@ -1546,6 +1564,8 @@
     "description": "Suffix after the page-number field, e.g. \"of 320\"",
     "placeholders": {"total": {"type": "int"}}
   },
+  "timerPageFieldHint": "0",
+  "@timerPageFieldHint": {"description": "Placeholder digit shown in the empty page-number field"},
   "timerDone": "Done",
   "@timerDone": {"description": "Closes the wax-seal confirmation and returns to the book page"},
   "timerRecentSessions": "Recent sessions",
@@ -1831,6 +1851,8 @@
   "@authorPickerEmpty": {"description": "Empty state on the author picker"},
   "authorPickerAddNew": "Add a new author",
   "@authorPickerAddNew": {"description": "Expands the add-new-author form on the picker"},
+  "authorPickerIsMe": "This is me — I wrote this book",
+  "@authorPickerIsMe": {"description": "Checkbox on the add-new-author form, self-links the new author"},
   "authorPickerLanguage": "Writes in {language}",
   "@authorPickerLanguage": {
     "description": "Primary-language line under an author in the picker",

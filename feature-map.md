@@ -31,9 +31,10 @@ not two copies — even while you're the only user filling it in.*
 | Add / edit a book | `[V1]` | Your data-entry path |
 | Translated-book linking (original ↔ translation) | `[WIRED]` | Structure now, full UI later. **Decided 5 Jul 2026: a translation is its own Work**, not a language variant of an Edition — its own authors/genres/editions, and its own independent rating/review pool once Phase 3 lands (a translation is its own literary object; a fresh translation shouldn't inherit the original's reviews). Linked Works only share a `translation_group_id` for cross-navigation |
 | Aggregate rating (avg across users) | `[WIRED]` | Computes for free *if* ratings attach here (see below). A **second**, separate aggregate — average *across every Work in a translation_group* — is computed at read time for display ("4.2 across all translations") without merging the underlying per-translation pools |
-| Report incorrect info | `[LATER]` | Needs other users to matter |
-| Verification status / verified badge | `[LATER]` | Nothing to moderate when solo |
-| Author profile pages + author reviews | `[LATER]` | The *browse* page (works list) is `[V1]` — see Layer 1; a full profile (bio, follows, aggregate author rating, reviews of the author) is the later, reviewed-entity version |
+| Report incorrect info | `[LATER]` | Needs other users to matter — no crowd yet |
+| Verification status / verified badge (data trust — `Work`/`Edition`/`Publisher`) | `[LATER]` | Nothing to moderate when solo/friends-only |
+| Author account linking ("This is me") | `[V1]` | **Decided & simplified 14 Jul 2026.** Scoped to an invited friend circle of writers, not open sign-up — so no claim/evidence/approval workflow. Just `authors.linked_user_id`, a "This is me" checkbox at author-creation time or a one-tap self-link on an existing unclaimed Author row, and a "Works by [name]" section on their profile (`GET /users/{id}/works`, mirrors the existing public-library endpoint). Full design + the shelved heavier claim/verified-badge version for if this ever opens beyond invited friends: [docs/author-identity-and-moderation-plan.md](docs/author-identity-and-moderation-plan.md) |
+| Author profile pages + author reviews | `[LATER]` | The *browse* page (works list) is `[V1]`; "Works by [name]" on a linked author's own profile ships with account linking above. A full standalone author profile (bio, follows, aggregate author rating, reviews of the author) is still the later, reviewed-entity version |
 | Publisher profile pages + publisher reviews | `[LATER]` | Same distinction as authors |
 
 ---

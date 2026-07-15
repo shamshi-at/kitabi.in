@@ -10,7 +10,7 @@ from httpx import ASGITransport, AsyncClient
 from app.core.db import get_db
 from app.core.security import get_current_user
 from app.main import create_app
-from app.models import LibraryEntry, Profile
+from app.models import Author, LibraryEntry, Profile
 from app.services.openlibrary_client import get_openlibrary_client
 
 
@@ -142,3 +142,62 @@ async def test_public_library_gated_on_library_visibility(
     assert shelf[0]["title"] == "Chemmeen"
     assert shelf[0]["status"] == "read"
     assert shelf[0]["work_id"] == work["id"]
+
+
+async def test_public_works_lists_catalog_works_by_linked_author(
+    two_user_client, db_sessionmaker, user, user_b
+):
+    client = two_user_client
+    work = (
+        await client.post(
+            "/catalog/works", json={"title": "Tide Lines", "author_names": ["Anu Varghese"]}
+        )
+    ).json()
+    author_id = uuid.UUID(work["authors"][0]["id"])
+
+    async with db_sessionmaker() as db:
+        db.add(
+            Profile(
+                id=uuid.UUID(user_b["id"]),
+                email=user_b["email"],
+                profile_visible=True,
+                library_visible=False,
+            )
+        )
+        author = await db.get(Author, author_id)
+        author.linked_user_id = uuid.UUID(user_b["id"])
+        await db.commit()
+
+    resp = await client.get(f"/users/{user_b['id']}/works")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 1
+    assert body[0]["title"] == "Tide Lines"
+
+
+async def test_public_works_visible_even_when_library_private(
+    two_user_client, db_sessionmaker, user_b
+):
+    # A private library must not hide the Works tab — a private reader can
+    # still be a public author (independent toggles, on purpose).
+    client = two_user_client
+    async with db_sessionmaker() as db:
+        db.add(
+            Profile(
+                id=uuid.UUID(user_b["id"]),
+                email=user_b["email"],
+                profile_visible=True,
+                library_visible=False,
+            )
+        )
+        await db.commit()
+    assert (await client.get(f"/users/{user_b['id']}/works")).status_code == 200
+    assert (await client.get(f"/users/{user_b['id']}/library")).status_code == 404
+
+
+async def test_public_works_404_when_profile_private(two_user_client, db_sessionmaker, user_b):
+    client = two_user_client
+    async with db_sessionmaker() as db:
+        db.add(Profile(id=uuid.UUID(user_b["id"]), email=user_b["email"], profile_visible=False))
+        await db.commit()
+    assert (await client.get(f"/users/{user_b['id']}/works")).status_code == 404

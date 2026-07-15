@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/kitabi_linked_badge.dart';
+import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../share/presentation/entity_share_sheet.dart';
 import '../providers/catalog_providers.dart';
@@ -37,6 +40,7 @@ class AuthorBrowseScreen extends ConsumerWidget {
             final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
             final imageUrl = author['image_url'] as String?;
             final penName = author['pen_name'] as String?;
+            final linkedUserId = author['linked_user_id'] as String?;
 
             return ListView(
               padding: EdgeInsets.all(20),
@@ -94,7 +98,17 @@ class AuthorBrowseScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(name, style: Theme.of(context).textTheme.titleLarge),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(name, style: Theme.of(context).textTheme.titleLarge),
+                              ),
+                              if (linkedUserId != null) ...[
+                                SizedBox(width: 8),
+                                KitabiLinkedBadge(),
+                              ],
+                            ],
+                          ),
                           if (penName != null && penName.isNotEmpty)
                             Text(
                               l10n.authorWritingAs(penName),
@@ -116,6 +130,19 @@ class AuthorBrowseScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+                SizedBox(height: 14),
+                if (linkedUserId != null)
+                  OutlinedButton.icon(
+                    onPressed: () => context.push(
+                      Routes.publicProfilePath(linkedUserId),
+                      extra: name,
+                    ),
+                    icon: Icon(Icons.person_outline, size: 16, color: AppColors.oxblood),
+                    label: Text(l10n.authorBrowseViewProfile),
+                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.oxblood),
+                  )
+                else
+                  _LinkAuthorAction(authorId: authorId),
                 SizedBox(height: 20),
                 if (works.isEmpty)
                   Padding(
@@ -134,6 +161,55 @@ class AuthorBrowseScreen extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// "This is me" — self-links an unclaimed Author row to the signed-in reader
+/// (owner decision, 14 Jul 2026: invited friend circle, no claim/approval
+/// step — first to tap wins). Its own stateful widget just for the busy flag
+/// around the API call; the author page itself stays a plain ConsumerWidget.
+class _LinkAuthorAction extends ConsumerStatefulWidget {
+  const _LinkAuthorAction({required this.authorId});
+
+  final String authorId;
+
+  @override
+  ConsumerState<_LinkAuthorAction> createState() => _LinkAuthorActionState();
+}
+
+class _LinkAuthorActionState extends ConsumerState<_LinkAuthorAction> {
+  bool _busy = false;
+
+  Future<void> _link() async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(apiClientProvider).linkAuthor(widget.authorId);
+      ref.invalidate(authorWorksProvider(widget.authorId));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.authorLinkFailed)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return OutlinedButton.icon(
+      onPressed: _busy ? null : _link,
+      icon: _busy
+          ? SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.inkSoft),
+            )
+          : Icon(Icons.person_add_alt, size: 16),
+      label: Text(l10n.authorBrowseIsMe),
     );
   }
 }

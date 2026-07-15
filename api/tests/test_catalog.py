@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import text
 
 
@@ -239,6 +241,49 @@ async def test_create_author_is_idempotent_on_name(client):
         "/catalog/authors", json={"name": "perumal murugan", "primary_language": "Tamil"}
     )
     assert first.json()["id"] == second.json()["id"]
+
+
+async def test_create_author_is_me_links_creator(client, user):
+    resp = await client.post("/catalog/authors", json={"name": "Anu Varghese", "is_me": True})
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["linked_user_id"] == user["id"]
+
+
+async def test_create_author_without_is_me_stays_unlinked(client):
+    resp = await client.post("/catalog/authors", json={"name": "M.T. Vasudevan Nair"})
+    assert resp.json()["linked_user_id"] is None
+
+
+async def test_create_author_is_me_does_not_relink_existing_author(client):
+    first = await client.post("/catalog/authors", json={"name": "K.R. Meera", "is_me": True})
+    # Re-"adding" the same name (get-or-create hit) must not re-run the
+    # is_me link — the existing row's link is untouched either way.
+    second = await client.post("/catalog/authors", json={"name": "k.r. meera", "is_me": True})
+    assert second.json()["id"] == first.json()["id"]
+    assert second.json()["linked_user_id"] == first.json()["linked_user_id"]
+
+
+async def test_link_author_to_self(client, user):
+    author = (await client.post("/catalog/authors", json={"name": "Anuja Menon"})).json()
+    assert author["linked_user_id"] is None
+
+    resp = await client.post(f"/catalog/authors/{author['id']}/link")
+    assert resp.status_code == 200
+    assert resp.json()["linked_user_id"] == user["id"]
+
+
+async def test_link_author_to_self_already_linked_is_conflict(client):
+    author = (
+        await client.post("/catalog/authors", json={"name": "Small Weather", "is_me": True})
+    ).json()
+    resp = await client.post(f"/catalog/authors/{author['id']}/link")
+    assert resp.status_code == 409
+
+
+async def test_link_author_to_self_404_for_unknown_author(client):
+    resp = await client.post(f"/catalog/authors/{uuid.uuid4()}/link")
+    assert resp.status_code == 404
 
 
 async def test_create_publisher_with_details(client):

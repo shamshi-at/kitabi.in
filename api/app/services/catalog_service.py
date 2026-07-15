@@ -9,7 +9,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, literal, or_, select, text
+from sqlalchemy import func, literal, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -107,7 +107,13 @@ async def create_author(db: AsyncSession, **fields: object) -> Author:
     """Author picker's "add new" flow — get-or-create by name, populating the
     extra detail fields (pen_name/image_url/primary_language/bio) only when we
     actually insert a new row. Idempotent on name, so a race just returns the
-    existing canonical author rather than a duplicate."""
+    existing canonical author rather than a duplicate.
+
+    `is_me=True` self-links the new row to `created_by_user_id` (the "This is
+    me" checkbox) — a no-op on the get-or-create-hit path, since an existing
+    author's link isn't overwritten by someone else creating a duplicate."""
+    is_me = bool(fields.pop("is_me", False))
+    created_by = fields.get("created_by_user_id")
     name = str(fields["name"]).strip()
     existing = (
         await db.execute(select(Author).where(Author.name.ilike(name)))
@@ -115,7 +121,40 @@ async def create_author(db: AsyncSession, **fields: object) -> Author:
     if existing is not None:
         return existing
     author = Author(**{**fields, "name": name})
+    if is_me and created_by is not None:
+        author.linked_user_id = created_by
     db.add(author)
+    await db.commit()
+    await db.refresh(author)
+    return author
+
+
+async def link_author_to_self(db: AsyncSession, author_id: uuid.UUID, user_id: uuid.UUID) -> Author:
+    """ "This is me" on an existing, unclaimed Author row — first to claim
+    wins, atomically (the UPDATE's WHERE guards the race), no pending state.
+    Scoped to an invited friend circle for now — no evidence/approval step;
+    see docs/author-identity-and-moderation-plan.md."""
+    author = await db.get(Author, author_id)
+    if author is None or author.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "Author not found"},
+        )
+    stmt = (
+        update(Author)
+        .where(Author.id == author_id, Author.linked_user_id.is_(None))
+        .values(linked_user_id=user_id)
+    )
+    result = await db.execute(stmt)
+    if result.rowcount == 0:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "already_linked",
+                "message": "This author is already linked to another reader",
+            },
+        )
     await db.commit()
     await db.refresh(author)
     return author
@@ -697,6 +736,22 @@ async def author_works(db: AsyncSession, author_id: uuid.UUID) -> list[Work]:
         .options(*_SUMMARY_OPTIONS)
         .join(Work.authors)
         .where(Author.id == author_id, Work.deleted_at.is_(None))
+        .order_by(Work.first_publish_year)
+        .execution_options(populate_existing=True)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def works_by_linked_author(db: AsyncSession, user_id: uuid.UUID) -> list[Work]:
+    """Every catalog Work whose author is linked to this profile — the
+    "Works" tab on a reader's public profile. Same shape as `author_works`,
+    just keyed by `linked_user_id` instead of a specific Author row (a reader
+    can be self-linked to more than one Author, e.g. a pen name)."""
+    stmt = (
+        select(Work)
+        .options(*_SUMMARY_OPTIONS)
+        .join(Work.authors)
+        .where(Author.linked_user_id == user_id, Work.deleted_at.is_(None))
         .order_by(Work.first_publish_year)
         .execution_options(populate_existing=True)
     )

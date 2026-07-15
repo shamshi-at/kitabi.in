@@ -94,19 +94,47 @@ camera; everything else stays paper.
   same "+" add affordance as search. This is the catalog's existing linkability
   (Layer 1) surfaced as a screen — not the fuller "author profile with bio and
   reviews" feature, which stays `[LATER]`.
+- **A linked-author avatar is oxblood + a gold ring; a catalog-only author is a
+  flat gold-soft initials circle** (added 14 Jul 2026). Same visual language the
+  profile screen already uses for you — an author who's also a registered reader
+  gets your treatment, a catalog-only name (an OpenLibrary import, a classic
+  author who isn't a Kitabi user) doesn't. Paired everywhere with the same small
+  gold "🔗 on Kitabi" pill lending already uses for a linked lender/borrower — one
+  badge, one meaning, reused across lending, search, and authorship.
 
 ## Screen inventory (v1)
 
 1. Sign in (Google/Apple) · 2. CSV import · 3. Home dashboard · 4. Global search ·
 4b. Filter sheet (language/genre/status/year/author/publisher) · 4c. Author page ·
-4d. Publisher page · 5. Library grid · 6. Book page · 6c. Share this book (generic
-per-book card) · 7. Add via ISBN scan · 7b. Add/edit book form (series + book №,
-edition-scoped ISBN, format, global genres, cover upload) · 8. Lending ledger (Lent
-out tab) · 8b. Borrowed tab (linked + self-logged) · 8c. Log a borrowed book (bottom
-sheet) · 9. Lend flow (bottom sheet, now detects Kitabi users) · 10. Stats (bars +
-donut + line spark + reading-goal ring) · 11. Recommendations · 12. Profile
-(visibility switchboard) · 13. Share card (personal-endorsement variant) ·
-14. Quote capture (v1.5 preview, OCR).
+4d. Publisher page · 4e. Search — author match (linked-author 🔗 badge) ·
+4f. Author page — on Kitabi (link to the author's public profile) · 4g. Public
+Kitabi profile (Library/Works tabs) · 5. Library grid · 6. Book page ·
+6c. Share this book (generic per-book card) · 7. Add via ISBN scan ·
+7b. Add/edit book form (series + book №, edition-scoped ISBN, format, global
+genres, cover upload) · 7c. Add book — author field detects a Kitabi user ·
+8. Lending ledger (Lent out tab) · 8b. Borrowed tab (linked + self-logged) ·
+8c. Log a borrowed book (bottom sheet) · 9. Lend flow (bottom sheet, now detects
+Kitabi users) · 10. Stats (bars + donut + line spark + reading-goal ring) ·
+11. Recommendations · 12. Profile (visibility switchboard) · 13. Share card
+(personal-endorsement variant) · 14. Quote capture (v1.5 preview, OCR).
+
+Added (14 Jul 2026, owner request — author account linking): 4e/4f/4g and 7c.
+Scoped to an invited friend circle of writers (not open sign-up), so there's no
+claim/evidence/approval flow in these mockups — the author-field typeahead (7c)
+and the author-page (4f) simply reflect an existing `authors.linked_user_id`,
+and 4g is the public profile it opens onto. Full plan, including the heavier
+claim-based version shelved for if this ever opens beyond invited friends:
+`docs/author-identity-and-moderation-plan.md`. 4g is also the first mockup of
+the public-profile screen the `GET /users/{id}/profile` /
+`GET /users/{id}/library` endpoints already serve — it didn't have one yet.
+
+Revised same day (owner feedback): 4f's link to the profile was a flat text
+row that read as dead space — now an outlined `.btn.ghost` button. 4g was
+redrawn to reuse the *existing* profile screen (12)'s header exactly rather
+than invent a new layout, and "Works by [name]" moved from a static card into
+a **Works** tab next to **Library** — the same segmented-control pattern the
+lending ledger already uses for Lent out/Borrowed (8b) — so Works is a real
+first-class section of the one profile screen, not a bolt-on.
 
 Feature-map audit (3 Jul 2026): every `[V1]` feature now has a home on a screen —
 series ordering (7b + search results), share cards (13), full filter set (4b),

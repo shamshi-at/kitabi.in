@@ -31,3 +31,9 @@ class Author(CatalogMixin, Base):
     # The reader who added this author to the catalog — for their contribution
     # score. Null for OpenLibrary-imported / seeded rows.
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, default=None, index=True)
+    # The Profile who *is* this author, if any — self-linked via "This is me"
+    # (create-time checkbox or a one-tap link on an unclaimed author's page),
+    # no claim/approval workflow (scoped to an invited friend circle; see
+    # docs/author-identity-and-moderation-plan.md). Drives the 🔗 "on Kitabi"
+    # badge and the "Works" tab on that reader's public profile.
+    linked_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, default=None, index=True)

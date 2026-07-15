@@ -346,6 +346,30 @@ abstract class AppLocalizations {
   /// **'{count} {count, plural, one{work} other{works}} in the catalog'**
   String authorBrowseWorksCount(int count);
 
+  /// Small pill on an author's name marking them as a linked, registered Kitabi reader
+  ///
+  /// In en, this message translates to:
+  /// **'On Kitabi'**
+  String get linkedAuthorBadge;
+
+  /// Self-link button on an unclaimed author's browse page
+  ///
+  /// In en, this message translates to:
+  /// **'This is me'**
+  String get authorBrowseIsMe;
+
+  /// Button on a linked author's browse page, opens their public profile
+  ///
+  /// In en, this message translates to:
+  /// **'View their Kitabi profile'**
+  String get authorBrowseViewProfile;
+
+  /// Error snackbar when self-linking an author fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t link this author right now'**
+  String get authorLinkFailed;
+
   /// Shows an author's pen name under their real name
   ///
   /// In en, this message translates to:
@@ -1365,6 +1389,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shelf'**
   String get publicProfileTabShelf;
+
+  /// Profile tab: catalog works this reader is the linked author of — only shown when they have at least one
+  ///
+  /// In en, this message translates to:
+  /// **'Works'**
+  String get publicProfileTabWorks;
 
   /// Button to send a connection request from a public profile
   ///
@@ -2764,6 +2794,12 @@ abstract class AppLocalizations {
   /// **'of {total}'**
   String timerPageFieldOf(int total);
 
+  /// Placeholder digit shown in the empty page-number field
+  ///
+  /// In en, this message translates to:
+  /// **'0'**
+  String get timerPageFieldHint;
+
   /// Closes the wax-seal confirmation and returns to the book page
   ///
   /// In en, this message translates to:
@@ -3225,6 +3261,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add a new author'**
   String get authorPickerAddNew;
+
+  /// Checkbox on the add-new-author form, self-links the new author
+  ///
+  /// In en, this message translates to:
+  /// **'This is me — I wrote this book'**
+  String get authorPickerIsMe;
 
   /// Primary-language line under an author in the picker
   ///
