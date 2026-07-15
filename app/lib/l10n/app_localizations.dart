@@ -2884,11 +2884,17 @@ abstract class AppLocalizations {
   /// **'You read most on {day}s, often around {hourRange}.'**
   String insightsReadingTimeInsight(String day, String hourRange);
 
-  /// Snackbar shown after stopping a session from the mini-bar's own quick-stop control
+  /// Title of the page-number popup shown after stopping a session from the mini-bar's own quick-stop control
   ///
   /// In en, this message translates to:
   /// **'Session logged — {duration}'**
   String timerMiniBarStopped(String duration);
+
+  /// Dismisses the mini-bar quick-stop's page-number popup without logging a page
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get timerPageDialogSkip;
 
   /// Accessibility label for the mini-bar's icon-only quick-stop control
   ///

@@ -1683,6 +1683,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get timerPageDialogSkip => 'Skip';
+
+  @override
   String get timerStop => 'Stop';
 
   @override

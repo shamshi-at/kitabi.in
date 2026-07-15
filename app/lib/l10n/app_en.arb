@@ -1616,9 +1616,11 @@
   },
   "timerMiniBarStopped": "Session logged — {duration}",
   "@timerMiniBarStopped": {
-    "description": "Snackbar shown after stopping a session from the mini-bar's own quick-stop control",
+    "description": "Title of the page-number popup shown after stopping a session from the mini-bar's own quick-stop control",
     "placeholders": {"duration": {"type": "String"}}
   },
+  "timerPageDialogSkip": "Skip",
+  "@timerPageDialogSkip": {"description": "Dismisses the mini-bar quick-stop's page-number popup without logging a page"},
   "timerStop": "Stop",
   "@timerStop": {"description": "Accessibility label for the mini-bar's icon-only quick-stop control"},
   "timerCheckInTitle": "Still reading?",

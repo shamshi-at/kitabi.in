@@ -1408,6 +1408,9 @@ class _StatusAndProgressCard extends ConsumerWidget {
     Haptics.selection();
     final repo = await ref.read(libraryRepositoryProvider.future);
     await repo.updateStatus(entry.id, chosen);
+    if (chosen == 'reading' && entry.startDate == null) {
+      await repo.updateProgress(entry.id, startDate: DateTime.now());
+    }
     if (chosen == 'read' && entry.finishDate == null) {
       await repo.updateProgress(entry.id, finishDate: DateTime.now());
     }
