@@ -135,11 +135,19 @@ class _RouterRefreshNotifier extends ChangeNotifier {
   }
 }
 
+/// A live reference to the app's single [GoRouter], set the moment
+/// [routerProvider] builds — lets code with no `Ref`/`BuildContext` (the
+/// reading-timer notification-tap handler, which can run in a background
+/// isolate) drive navigation via [navigateFromExternal]. Null before the
+/// router first builds (or after its `ProviderScope` is torn down); callers
+/// fall back to [pendingExternalTarget] in that case, same as a cold start.
+GoRouter? globalRouter;
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefreshNotifier(ref);
   ref.onDispose(refresh.dispose);
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: Routes.splash,
     refreshListenable: refresh,
     redirect: (context, state) {
@@ -460,4 +468,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  globalRouter = router;
+  ref.onDispose(() {
+    if (identical(globalRouter, router)) globalRouter = null;
+  });
+  return router;
 });

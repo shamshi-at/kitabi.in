@@ -52,6 +52,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   late final _pageController = TextEditingController(
     text: widget.currentPage?.toString() ?? '',
   );
+  final _pageFocusNode = FocusNode();
   bool _saving = false;
 
   @override
@@ -113,6 +114,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     _clockTimer?.cancel();
     _hand.dispose();
     _pageController.dispose();
+    _pageFocusNode.dispose();
     super.dispose();
   }
 
@@ -173,6 +175,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
                 title: widget.title,
                 logged: _logged!,
                 pageController: _pageController,
+                pageFocusNode: _pageFocusNode,
                 pageCount: widget.pageCount,
                 saving: _saving,
                 onDone: _done,
@@ -444,6 +447,7 @@ class _LoggedFace extends ConsumerWidget {
     required this.title,
     required this.logged,
     required this.pageController,
+    required this.pageFocusNode,
     required this.pageCount,
     required this.saving,
     required this.onDone,
@@ -452,6 +456,7 @@ class _LoggedFace extends ConsumerWidget {
   final String? title;
   final LoggedSession logged;
   final TextEditingController pageController;
+  final FocusNode pageFocusNode;
   final int? pageCount;
   final bool saving;
   final VoidCallback onDone;
@@ -542,49 +547,82 @@ class _LoggedFace extends ConsumerWidget {
                   const SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.card,
-                        border: Border.all(color: AppColors.line),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            l10n.timerPageFieldLabel,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: AppColors.ink,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 48,
-                            child: TextField(
-                              controller: pageController,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                isDense: true,
-                              ),
-                            ),
-                          ),
-                          if (pageCount != null)
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => pageFocusNode.requestFocus(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          border: Border.all(color: AppColors.line),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
                             Text(
-                              l10n.timerPageFieldOf(pageCount!),
+                              l10n.timerPageFieldLabel,
                               style: TextStyle(
                                 fontSize: 12.5,
-                                color: AppColors.inkSoft,
+                                color: AppColors.ink,
                               ),
                             ),
-                        ],
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 54,
+                              child: TextField(
+                                controller: pageController,
+                                focusNode: pageFocusNode,
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.oxblood,
+                                    ),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  filled: true,
+                                  fillColor: AppColors.paperDeep,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  hintText: l10n.timerPageFieldHint,
+                                  hintStyle: TextStyle(color: AppColors.inkSoft),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: AppColors.oxblood,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.edit_outlined,
+                              size: 13,
+                              color: AppColors.inkSoft,
+                            ),
+                            if (pageCount != null) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                l10n.timerPageFieldOf(pageCount!),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.inkSoft,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                   ),

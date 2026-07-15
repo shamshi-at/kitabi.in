@@ -12,6 +12,7 @@ import '../../features/library/providers/reading_timer_providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../auth/supabase_auth_service.dart';
 import '../format_duration.dart';
+import '../router/app_router.dart';
 import 'notification_service.dart';
 
 /// Schedules (or re-schedules) both halves of the "still reading?" safety
@@ -87,6 +88,17 @@ Future<void> handleColdStartReadingTimerResponse() async {
 
 Future<void> _handle(NotificationResponse response) async {
   final actionId = response.actionId;
+  // A plain tap on the notification body (not a Yes/No action button) — the
+  // OS already brings the app forward for this; the missing piece was where
+  // it lands. Surface the running timer instead of whatever the app's
+  // default route is. `payload` is only ever set on the check-in
+  // notification (see `armReadingTimerSafetyNet`), so a tap on an unrelated
+  // notification (a lending reminder, the "stopped while you were away"
+  // notice) safely no-ops here.
+  if (actionId == null) {
+    _openReadingTimer(response.payload);
+    return;
+  }
   if (actionId != readingCheckInYesActionId && actionId != readingCheckInNoActionId) {
     return;
   }
@@ -119,6 +131,26 @@ Future<void> _handle(NotificationResponse response) async {
     }
   } catch (_) {
     // Never let a notification-action isolate crash the OS.
+  }
+}
+
+/// Routes a plain notification-body tap to the running timer. [globalRouter]
+/// is only null before the app's first frame (a genuine cold start) — that
+/// case, and a tap that arrives while the router is still holding on splash/
+/// sign-in, both fall through to [pendingExternalTarget], the same hand-off
+/// `navigateFromExternal` already uses for cold-start deep links.
+void _openReadingTimer(String? libraryEntryId) {
+  if (libraryEntryId == null) return;
+  try {
+    final location = Routes.readingTimerPath(libraryEntryId);
+    final router = globalRouter;
+    if (router == null) {
+      pendingExternalTarget = location;
+      return;
+    }
+    navigateFromExternal(router, location);
+  } catch (_) {
+    // Never let a notification-tap handler crash the OS.
   }
 }
 
