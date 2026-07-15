@@ -1625,8 +1625,10 @@
   "@timerStop": {"description": "Accessibility label for the mini-bar's icon-only quick-stop control"},
   "timerCheckInTitle": "Still reading?",
   "@timerCheckInTitle": {"description": "Title of the notification checking in on a long-running reading session"},
-  "timerCheckInBody": "It's been a while — tap Yes to keep the clock running, or No to stop it now.",
-  "@timerCheckInBody": {"description": "Body of the still-reading check-in notification"},
+  "timerCheckInBody": "It's been a while. Press & hold for Yes/No, or tap to open the timer.",
+  "@timerCheckInBody": {
+    "description": "Body of the still-reading check-in notification. Android shows the Yes/No actions directly; iOS only reveals them on a swipe/long-press, so the copy must not promise a bare tap shows them — a plain tap opens the running timer screen instead (see reading_timer_notifications.dart's _openReadingTimer), where Stop & log is always available."
+  },
   "timerCheckInYes": "Yes, still reading",
   "@timerCheckInYes": {"description": "Check-in notification action that keeps the timer running"},
   "timerCheckInNo": "No, stop it",
@@ -1819,6 +1821,13 @@
       "page": {"type": "int"},
       "total": {"type": "int"},
       "percent": {"type": "int"}
+    }
+  },
+  "homeProgressLineNoTotal": "p. {page}",
+  "@homeProgressLineNoTotal": {
+    "description": "Reading progress line on a currently-reading card when the book's total page count isn't known, so no 'of N' or percent/progress bar can be shown",
+    "placeholders": {
+      "page": {"type": "int"}
     }
   },
   "homeNudgeDue": "{title} is with {name} — due in {days}d",

@@ -1693,7 +1693,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timerCheckInBody =>
-      'It\'s been a while — tap Yes to keep the clock running, or No to stop it now.';
+      'It\'s been a while. Press & hold for Yes/No, or tap to open the timer.';
 
   @override
   String get timerCheckInYes => 'Yes, still reading';
@@ -1880,6 +1880,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String homeProgressLine(int page, int total, int percent) {
     return 'p. $page of $total · $percent%';
+  }
+
+  @override
+  String homeProgressLineNoTotal(int page) {
+    return 'p. $page';
   }
 
   @override

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/haptics.dart';
+import '../../../core/notifications/reading_timer_notifications.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
@@ -455,34 +456,89 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 11),
                     ),
-                  if (page != null && total != null && percent != null) ...[
+                  if (page != null) ...[
                     SizedBox(height: 5),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        value: (page / total).clamp(0.0, 1.0),
-                        minHeight: 4,
-                        backgroundColor: Colors.white.withValues(alpha: 0.15),
-                        valueColor: AlwaysStoppedAnimation(AppColors.gold),
+                    // A book with no known total (catalog data missing
+                    // page_count) still shows the page the reader logged —
+                    // it just skips the bar/percent, which need a total to
+                    // mean anything. Previously the whole row was suppressed
+                    // whenever total was null, so entering a page via the
+                    // "+" button silently had no visible effect (owner
+                    // report, 15 Jul 2026).
+                    if (total != null && percent != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: LinearProgressIndicator(
+                          value: (page / total).clamp(0.0, 1.0),
+                          minHeight: 4,
+                          backgroundColor: Colors.white.withValues(alpha: 0.15),
+                          valueColor: AlwaysStoppedAnimation(AppColors.gold),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 3),
+                    if (total != null && percent != null) SizedBox(height: 3),
                     Text(
-                      l10n.homeProgressLine(page, total, percent),
+                      total != null && percent != null
+                          ? l10n.homeProgressLine(page, total, percent)
+                          : l10n.homeProgressLineNoTotal(page),
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 10.5),
                     ),
                   ],
                 ],
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.add_circle_outline, color: AppColors.gold, size: 22),
-              tooltip: l10n.homeUpdateProgress,
-              onPressed: () => _updateProgress(context, ref, l10n),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  padding: EdgeInsets.all(4),
+                  constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                  icon: Icon(Icons.play_circle_outline, color: AppColors.gold, size: 22),
+                  tooltip: l10n.timerStart,
+                  onPressed: () => _start(context, ref, l10n, book),
+                ),
+                IconButton(
+                  padding: EdgeInsets.all(4),
+                  constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                  icon: Icon(Icons.add_circle_outline, color: AppColors.gold, size: 22),
+                  tooltip: l10n.homeUpdateProgress,
+                  onPressed: () => _updateProgress(context, ref, l10n),
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Same start-a-session sequence as the book page's `_ReadingSessionCard._open`
+  /// (owner request, 15 Jul 2026: a way to start reading straight from Home,
+  /// no detour through the book page first). Starting a session already
+  /// running for this entry is a harmless no-op in the notifier — it just
+  /// re-opens the timer screen.
+  void _start(BuildContext context, WidgetRef ref, AppLocalizations l10n, CachedBook? book) {
+    Haptics.selection();
+    final freshStart = ref.read(activeSessionProvider)?.libraryEntryId != entry.id;
+    final startedAt = DateTime.now();
+    ref.read(activeSessionProvider.notifier).start(entry.id, pageStart: entry.currentPage);
+    if (freshStart) {
+      armReadingTimerSafetyNet(
+        libraryEntryId: entry.id,
+        from: startedAt,
+        title: l10n.timerCheckInTitle,
+        body: l10n.timerCheckInBody,
+        yesLabel: l10n.timerCheckInYes,
+        noLabel: l10n.timerCheckInNo,
+      );
+    }
+    context.push(
+      Routes.readingTimerPath(entry.id),
+      extra: {
+        'title': book?.title,
+        'author': book?.authorNames,
+        'currentPage': entry.currentPage,
+        'pageCount': book?.pageCount,
+      },
     );
   }
 

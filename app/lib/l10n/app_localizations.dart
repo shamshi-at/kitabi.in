@@ -2908,10 +2908,10 @@ abstract class AppLocalizations {
   /// **'Still reading?'**
   String get timerCheckInTitle;
 
-  /// Body of the still-reading check-in notification
+  /// Body of the still-reading check-in notification. Android shows the Yes/No actions directly; iOS only reveals them on a swipe/long-press, so the copy must not promise a bare tap shows them — a plain tap opens the running timer screen instead (see reading_timer_notifications.dart's _openReadingTimer), where Stop & log is always available.
   ///
   /// In en, this message translates to:
-  /// **'It\'s been a while — tap Yes to keep the clock running, or No to stop it now.'**
+  /// **'It\'s been a while. Press & hold for Yes/No, or tap to open the timer.'**
   String get timerCheckInBody;
 
   /// Check-in notification action that keeps the timer running
@@ -3213,6 +3213,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'p. {page} of {total} · {percent}%'**
   String homeProgressLine(int page, int total, int percent);
+
+  /// Reading progress line on a currently-reading card when the book's total page count isn't known, so no 'of N' or percent/progress bar can be shown
+  ///
+  /// In en, this message translates to:
+  /// **'p. {page}'**
+  String homeProgressLineNoTotal(int page);
 
   /// Lending nudge with a due date
   ///
