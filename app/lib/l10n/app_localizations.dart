@@ -262,6 +262,12 @@ abstract class AppLocalizations {
   /// **'Default for new reviews'**
   String get profileVisibilityReviewsDesc;
 
+  /// Profile screen action button that opens the same bookplate view other readers see (respects the visibility toggles above — a private profile shows the quiet 'keeps their profile private' state)
+  ///
+  /// In en, this message translates to:
+  /// **'View my public profile'**
+  String get profileViewPublicEntry;
+
   /// Sign-out action on the profile screen
   ///
   /// In en, this message translates to:

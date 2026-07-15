@@ -92,6 +92,10 @@
   "@profileVisibilityReviewsDesc": {
     "description": "Visibility toggle description"
   },
+  "profileViewPublicEntry": "View my public profile",
+  "@profileViewPublicEntry": {
+    "description": "Profile screen action button that opens the same bookplate view other readers see (respects the visibility toggles above — a private profile shows the quiet 'keeps their profile private' state)"
+  },
   "profileSignOut": "Sign out",
   "@profileSignOut": {
     "description": "Sign-out action on the profile screen"

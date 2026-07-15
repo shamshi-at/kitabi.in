@@ -109,6 +109,22 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     if (saved == true) ref.invalidate(meProvider);
   }
 
+  /// Opens the exact same "bookplate" screen a connection or search result
+  /// sees (owner request, 15 Jul 2026) — reusing `PublicProfileScreen`
+  /// rather than a bespoke preview means the visibility toggles above are
+  /// always the source of truth: a private profile shows the same quiet
+  /// "keeps their profile private" state here as it would for anyone else.
+  void _viewPublicProfile(BuildContext context) {
+    Haptics.selection();
+    final id = widget.profile['id'] as String;
+    final fullName = (widget.profile['full_name'] as String?)?.trim();
+    final username = widget.profile['username'] as String?;
+    context.push(
+      Routes.publicProfilePath(id),
+      extra: (fullName != null && fullName.isNotEmpty) ? fullName : username,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -218,6 +234,12 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
               ],
             ),
           ),
+        ),
+        SizedBox(height: 16),
+        _ActionButton(
+          icon: Icons.visibility_outlined,
+          label: l10n.profileViewPublicEntry,
+          onPressed: () => _viewPublicProfile(context),
         ),
         SizedBox(height: 16),
         Card(

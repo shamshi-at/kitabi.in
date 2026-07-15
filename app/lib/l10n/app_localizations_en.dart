@@ -99,6 +99,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileVisibilityReviewsDesc => 'Default for new reviews';
 
   @override
+  String get profileViewPublicEntry => 'View my public profile';
+
+  @override
   String get profileSignOut => 'Sign out';
 
   @override
