@@ -15,7 +15,13 @@ import 'typeset_cover.dart';
 /// - [progress] (0..1) → an oxblood reading sliver along the very bottom.
 /// - [favorite] → a gold ribbon bookmark, top-right corner.
 /// - [lentToName] → a gold "WITH `NAME`" band across the bottom.
-/// - [borrowedFromName] → a slate "FROM `NAME`" band across the bottom.
+/// - [borrowedFromName] → a slate "FROM `NAME`" band across the bottom, for
+///   an *active* borrow.
+/// - [returned] → a small grey "RETURNED" tag, top-left — a borrowed book
+///   that's been given back but stays on the shelf (owner request, 15 Jul
+///   2026): unlike an active borrow, this does NOT hide [status], since the
+///   whole point is the reader can still see/change reading status on a book
+///   they no longer physically hold.
 ///
 /// A band (lent/borrowed) owns the bottom strip, so the status pill hides when
 /// one is present — the band already carries the headline for that book.
@@ -30,6 +36,7 @@ class ShelfCover extends StatelessWidget {
     this.favorite = false,
     this.lentToName,
     this.borrowedFromName,
+    this.returned = false,
   });
 
   final String title;
@@ -40,6 +47,7 @@ class ShelfCover extends StatelessWidget {
   final bool favorite;
   final String? lentToName;
   final String? borrowedFromName;
+  final bool returned;
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +81,27 @@ class ShelfCover extends StatelessWidget {
             child: ClipPath(
               clipper: _RibbonClipper(),
               child: Container(width: 9, height: 20, color: AppColors.gold),
+            ),
+          ),
+        if (returned)
+          Positioned(
+            top: 5,
+            left: 5,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xE0EAE4D6),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'RETURNED',
+                style: TextStyle(
+                  fontSize: 5.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                  color: AppColors.stampGrey,
+                ),
+              ),
             ),
           ),
         if (band != null)

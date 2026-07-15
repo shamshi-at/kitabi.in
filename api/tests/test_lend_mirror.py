@@ -67,6 +67,28 @@ async def test_mirror_creates_borrowed_record(db_sessionmaker, user, user_b):
     assert m.linked_loan_id == rec_id
 
 
+async def test_mirror_creates_a_library_entry_for_the_borrower(db_sessionmaker, user, user_b):
+    """Owner request, 15 Jul 2026: an auto-mirrored loan must unify the same
+    way a self-logged borrow does — a real ownership='borrowed' LibraryEntry
+    on the borrower's account, linked back from the mirror record — so a
+    lend from a connected friend reads/tracks/stays-on-the-shelf identically
+    to logging a borrow by hand."""
+    lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
+    async with db_sessionmaker() as db:
+        rec_id, edition_id = await _seed_lend(db, lender, borrower, connected=True)
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, lender, rec_id)
+    async with db_sessionmaker() as db:
+        mirror = (await _borrowed(db, borrower))[0]
+        assert mirror.library_entry_id is not None
+        entry = await db.get(LibraryEntry, mirror.library_entry_id)
+        assert entry is not None
+        assert entry.user_id == borrower
+        assert entry.edition_id == edition_id
+        assert entry.ownership == "borrowed"
+        assert entry.deleted_at is None
+
+
 async def test_no_mirror_without_accepted_connection(db_sessionmaker, user, user_b):
     lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
     async with db_sessionmaker() as db:

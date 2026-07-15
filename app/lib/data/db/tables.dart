@@ -19,9 +19,19 @@ mixin SyncColumns on Table {
 
 /// A user's copy of an Edition — ownership, reading status, progress,
 /// favorite flag, and always-private notes (feature-map.md rule 13).
+///
+/// `ownership` (added 15 Jul 2026, owner request) is 'owned' or 'borrowed' —
+/// a borrowed book gets a real row here (via the log-a-borrowed-book flow)
+/// so status/progress/notes work on it exactly like an owned book. It's
+/// never deleted on return: "returned" lives only on the linked
+/// LendingRecord (`lendingRecords.libraryEntryId` points back at this row),
+/// never duplicated here. Buying your own copy later just flips this to
+/// 'owned' on the same row — history intact, the LendingRecord stays as the
+/// permanent log of the loan.
 class LibraryEntries extends Table with SyncColumns {
   TextColumn get editionId => text()();
   TextColumn get status => text().withDefault(Constant('pending'))();
+  TextColumn get ownership => text().withDefault(Constant('owned'))();
   DateTimeColumn get startDate => dateTime().nullable()();
   DateTimeColumn get finishDate => dateTime().nullable()();
   IntColumn get currentPage => integer().nullable()();
@@ -70,10 +80,13 @@ class LibraryEntryTags extends Table with SyncColumns {
 }
 
 /// A record, not a flag (rule 14) — runs both ways. `direction` is 'lent' or
-/// 'borrowed'; a lent record hangs off my `libraryEntryId` (the copy I own), a
-/// borrowed one off the catalog `editionId` (I don't own it). `borrowerName` is
-/// the counterparty either way. `linkedLoanId` is the dormant [WIRED] cross-user
-/// correlation.
+/// 'borrowed'; either way `libraryEntryId` points at my own LibraryEntry for
+/// this loan — the owned copy that went out (lent) or the `ownership:
+/// 'borrowed'` entry the log-a-borrowed-book flow creates (borrowed, added
+/// 15 Jul 2026). `editionId` stays populated on borrowed rows too, so older
+/// rows that predate `libraryEntryId` still resolve the book. `borrowerName`
+/// is the counterparty either way. `linkedLoanId` is the dormant [WIRED]
+/// cross-user correlation.
 class LendingRecords extends Table with SyncColumns {
   TextColumn get direction => text().withDefault(Constant('lent'))();
   TextColumn get libraryEntryId => text().nullable()();

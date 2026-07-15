@@ -16,10 +16,15 @@ class LendingRecord(SyncableMixin, Base):
     "Lending — the ledger, both ways").
 
     `direction` is 'lent' (I lent my copy out) or 'borrowed' (someone's copy is
-    with me). A lent record hangs off my `library_entry_id` (the copy I own); a
-    borrowed record — I don't own the book — instead points at the catalog
-    `edition_id`, so `library_entry_id` is null. `borrower_name` is the free-text
-    counterparty (the borrower if I lent, the lender if I borrowed).
+    with me). Either way `library_entry_id` points at the account owner's own
+    LibraryEntry for this loan: for 'lent' it's the owned copy that went out;
+    for 'borrowed' it's the `ownership='borrowed'` entry created by the
+    "log a borrowed book" flow (added 15 Jul 2026 — previously borrowed loans
+    left this null and relied on `edition_id` alone; new borrowed records set
+    both). `edition_id` stays populated on 'borrowed' rows too, so older
+    clients/rows that never got a `library_entry_id` still resolve the book.
+    `borrower_name` is the free-text counterparty (the borrower if I lent, the
+    lender if I borrowed).
 
     `borrower_user_id` / `linked_loan_id` are dormant `[WIRED]` fields for the
     cross-user case: once both sides are Kitabi users, a lend can mirror a

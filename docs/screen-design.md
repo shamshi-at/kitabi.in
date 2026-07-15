@@ -86,6 +86,15 @@ camera; everything else stays paper.
   page's lending card carries the full per-book history (every loan both ways,
   newest first, with dates, notes, and Returned/Out-now stamps), including on a
   book you only borrowed.
+- **A borrowed book lives on the library grid, not just the Lending screen**
+  (added 15 Jul 2026) — S5's `ShelfCover` gets a grey "Returned" tag (independent
+  of the lend/borrow bands, and doesn't hide the status pill) once a borrow closes;
+  the book stays on the shelf rather than disappearing, so returning a book never
+  reads as losing your reading history. The book page's lending card gets a
+  matching header for a borrowed copy — "Borrowed from X" / "Mark returned" while
+  open, "Returned" / "Make this mine" once closed — the latter a confirm dialog
+  that flips the same entry to owned in place (id unchanged) and says plainly that
+  the lending history stays below as a log.
 - **Author/publisher names are doors, not just labels** — anywhere a name appears
   (search results, book page, add/edit form), it's tinted oxblood and tappable,
   opening a browse page for everything by that author or publisher. One list

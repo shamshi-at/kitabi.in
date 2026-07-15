@@ -80,7 +80,14 @@ class LibraryRepository extends Repo {
       db.keyValuesDao.setValue('reading_goal', '$goal');
 
   /// Add a book to the library (S6's implicit "own this" action).
-  Future<String> add({required String editionId, String status = 'pending'}) async {
+  /// [ownership] is 'owned' (default) or 'borrowed' — a borrowed entry is
+  /// normally created via [LendingRepository.logBorrowed] instead of calling
+  /// this directly, so its LendingRecord gets linked in the same breath.
+  Future<String> add({
+    required String editionId,
+    String status = 'pending',
+    String ownership = 'owned',
+  }) async {
     final id = _uuid.v4();
     await db.libraryEntriesDao.insertOne(
       LibraryEntriesCompanion.insert(
@@ -88,15 +95,38 @@ class LibraryRepository extends Repo {
         userId: session.userId,
         editionId: editionId,
         status: Value(status),
+        ownership: Value(ownership),
       ),
     );
     await enqueue(
       entity: 'library_entries',
       entityId: id,
       opType: 'create',
-      data: {'edition_id': editionId, 'status': status},
+      data: {'edition_id': editionId, 'status': status, 'ownership': ownership},
     );
     return id;
+  }
+
+  /// The "I bought this" transition (owner request, 15 Jul 2026) — a reader
+  /// who bought their own copy of a book they'd borrowed flips this same
+  /// entry from 'borrowed' to 'owned' (same id, so reading status/progress/
+  /// notes/favorite carry over untouched). The linked LendingRecord — the
+  /// permanent log of the loan — is never touched by this.
+  Future<void> markAsOwned(String id) async {
+    await db.libraryEntriesDao.patch(
+      id,
+      LibraryEntriesCompanion(
+        ownership: Value('owned'),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'library_entries',
+      entityId: id,
+      opType: 'update',
+      data: {'ownership': 'owned'},
+    );
   }
 
   Future<void> updateStatus(String id, String status) async {
@@ -445,9 +475,21 @@ class LendingRepository extends Repo {
     return id;
   }
 
-  /// Log a borrowed book (S8c) — the other direction. There's no owned library
-  /// entry, so the book is carried by the catalog `editionId`. `lenderName` is
-  /// who I borrowed it from.
+  /// Log a borrowed book (S8c) — the other direction. Creates a real
+  /// LibraryEntry (`ownership: 'borrowed'`) linked via `libraryEntryId`, so
+  /// the borrowed book gets full reading status/progress/notes just like an
+  /// owned one (owner request, 15 Jul 2026) — it stays on the shelf after
+  /// it's returned (that's derived from this record's `returnedDate`, never
+  /// stored on the entry) and flips to owned in place if the reader later
+  /// buys their own copy ([LibraryRepository.markAsOwned]). `editionId`
+  /// stays populated too, for continuity with pre-15-Jul rows that only ever
+  /// had that. `lenderName` is who I borrowed it from.
+  ///
+  /// Reuses an existing entry for this edition if there is one — already
+  /// owned, or borrowed-and-returned before — rather than creating a second
+  /// row for the same book (the app assumes one active entry per edition;
+  /// re-borrowing a book you'd previously borrowed just continues the same
+  /// reading record instead of forking it).
   Future<String> logBorrowed({
     required String editionId,
     required String lenderName,
@@ -456,6 +498,11 @@ class LendingRepository extends Repo {
     String? note,
     String? borrowerUserId,
   }) async {
+    final libraryRepo = LibraryRepository(db, session, onMutation: onMutation);
+    final existing = await libraryRepo.getByEditionId(editionId);
+    final libraryEntryId =
+        existing?.id ?? await libraryRepo.add(editionId: editionId, ownership: 'borrowed');
+
     final id = _uuid.v4();
     final trimmedNote = note?.trim();
     await db.lendingRecordsDao.insertOne(
@@ -463,6 +510,7 @@ class LendingRepository extends Repo {
         id: id,
         userId: session.userId,
         direction: Value('borrowed'),
+        libraryEntryId: Value(libraryEntryId),
         editionId: Value(editionId),
         borrowerName: lenderName,
         borrowerUserId: Value(borrowerUserId),
@@ -477,6 +525,7 @@ class LendingRepository extends Repo {
       opType: 'create',
       data: {
         'direction': 'borrowed',
+        'library_entry_id': libraryEntryId,
         'edition_id': editionId,
         'borrower_name': lenderName,
         // The Kitabi user I borrowed from, when matched by username.

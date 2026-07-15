@@ -53,12 +53,21 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 5) {
+            // Unifies borrowed books into the library (15 Jul 2026, owner
+            // request) — existing borrowed loans get their LibraryEntry (and
+            // this device's copy of that row) via the normal pull, since the
+            // server-side migration backfills them with fresh server_seq
+            // values above any cursor a device could already be at; nothing
+            // to backfill locally, just the new column.
+            await m.addColumn(libraryEntries, libraryEntries.ownership);
+          }
           if (from < 4) {
             // Reading sessions (10 Jul 2026, pulled forward from the v1.5
             // parking lot) — a whole new table, nothing to migrate from.

@@ -325,6 +325,157 @@ async def test_push_borrowed_lending_record_without_library_entry(client):
     assert record["data"]["note"] == "Handle with care"
 
 
+async def test_library_entry_defaults_to_owned(client):
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    op = _op("library_entries", entry_id, "create", {"edition_id": edition_id})
+    await client.post("/sync/push", json={"ops": [op]})
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    entry = next(c for c in pulled.json()["changes"] if c["data"]["id"] == entry_id)
+    assert entry["data"]["ownership"] == "owned"
+
+
+async def test_borrowed_library_entry_links_back_from_lending_record(client):
+    """The unified borrow flow (owner request, 15 Jul 2026): a borrowed book
+    gets a real library_entries row (ownership='borrowed') that the lending
+    record's library_entry_id points at — so status/progress work on it like
+    any owned book, and it isn't a bare lending_records row anymore."""
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    record_id = str(uuid.uuid4())
+
+    ops = [
+        _op(
+            "library_entries",
+            entry_id,
+            "create",
+            {"edition_id": edition_id, "status": "reading", "ownership": "borrowed"},
+        ),
+        _op(
+            "lending_records",
+            record_id,
+            "create",
+            {
+                "direction": "borrowed",
+                "library_entry_id": entry_id,
+                "edition_id": edition_id,
+                "borrower_name": "Divya",
+                "lent_date": "2026-07-15",
+            },
+        ),
+    ]
+    resp = await client.post("/sync/push", json={"ops": ops})
+    assert [r["status"] for r in resp.json()["results"]] == ["applied", "applied"]
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    changes = pulled.json()["changes"]
+    entry = next(
+        c for c in changes if c["entity"] == "library_entries" and c["data"]["id"] == entry_id
+    )
+    record = next(
+        c for c in changes if c["entity"] == "lending_records" and c["data"]["id"] == record_id
+    )
+    assert entry["data"]["ownership"] == "borrowed"
+    assert entry["data"]["status"] == "reading"
+    assert record["data"]["library_entry_id"] == entry_id
+
+
+async def test_returning_a_loan_does_not_touch_the_library_entry(client):
+    """Returning a borrow must never delete/hide the shelf entry — "returned"
+    lives only on the lending record; the reader keeps reading status,
+    progress, and notes on the entry either side of the return."""
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    record_id = str(uuid.uuid4())
+
+    ops = [
+        _op(
+            "library_entries",
+            entry_id,
+            "create",
+            {"edition_id": edition_id, "status": "read", "ownership": "borrowed"},
+        ),
+        _op(
+            "lending_records",
+            record_id,
+            "create",
+            {
+                "direction": "borrowed",
+                "library_entry_id": entry_id,
+                "edition_id": edition_id,
+                "borrower_name": "Divya",
+                "lent_date": "2026-07-01",
+            },
+        ),
+    ]
+    await client.post("/sync/push", json={"ops": ops})
+    returned = _op("lending_records", record_id, "update", {"returned_date": "2026-07-15"})
+    resp = await client.post("/sync/push", json={"ops": [returned]})
+    assert resp.json()["results"][0]["status"] == "applied"
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    changes = pulled.json()["changes"]
+    entry = next(
+        c for c in changes if c["entity"] == "library_entries" and c["data"]["id"] == entry_id
+    )
+    record = next(
+        c for c in changes if c["entity"] == "lending_records" and c["data"]["id"] == record_id
+    )
+    assert entry["data"]["deleted_at"] is None
+    assert entry["data"]["ownership"] == "borrowed"
+    assert entry["data"]["status"] == "read"
+    assert record["data"]["returned_date"] == "2026-07-15"
+
+
+async def test_buying_a_borrowed_book_flips_ownership_and_keeps_the_lending_log(client):
+    """The "I bought this" transition: ownership flips to 'owned' on the same
+    row (same id — reading history untouched); the LendingRecord (the loan
+    log) is never modified or deleted, so the borrow is still on record."""
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    record_id = str(uuid.uuid4())
+
+    ops = [
+        _op(
+            "library_entries",
+            entry_id,
+            "create",
+            {"edition_id": edition_id, "status": "read", "ownership": "borrowed"},
+        ),
+        _op(
+            "lending_records",
+            record_id,
+            "create",
+            {
+                "direction": "borrowed",
+                "library_entry_id": entry_id,
+                "edition_id": edition_id,
+                "borrower_name": "Divya",
+                "lent_date": "2026-07-01",
+                "returned_date": "2026-07-10",
+            },
+        ),
+    ]
+    await client.post("/sync/push", json={"ops": ops})
+    buy = _op("library_entries", entry_id, "update", {"ownership": "owned"})
+    resp = await client.post("/sync/push", json={"ops": [buy]})
+    assert resp.json()["results"][0]["status"] == "applied"
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    changes = pulled.json()["changes"]
+    entry = next(
+        c for c in changes if c["entity"] == "library_entries" and c["data"]["id"] == entry_id
+    )
+    record = next(
+        c for c in changes if c["entity"] == "lending_records" and c["data"]["id"] == record_id
+    )
+    assert entry["data"]["ownership"] == "owned"
+    assert entry["data"]["status"] == "read"  # untouched by the ownership flip
+    assert record["data"]["returned_date"] == "2026-07-10"  # the log survives intact
+    assert record["data"]["library_entry_id"] == entry_id
+
+
 async def test_delete_op_carries_empty_payload_and_is_idempotent(client):
     _, edition_id = await _seed_edition(client)
     entry_id = str(uuid.uuid4())

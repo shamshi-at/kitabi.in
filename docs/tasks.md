@@ -465,6 +465,23 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       `ConnectionLoansScreen` generalized to match free-text names when there's no
       linked user. Ledger/loan rows' covers+titles and activity-log rows now open the
       book page (activity events resolve entity → edition/work locally).
+- [x] Borrowed books unified into the main library (15 Jul 2026, owner request):
+      a borrowed book is now a real `library_entries` row (`ownership: 'borrowed'`)
+      instead of living only in the lending ledger, so it reads/tracks status and
+      progress exactly like an owned book, and — the actual problem being
+      solved — **staying returned doesn't remove it from the library**; the
+      library grid keeps showing it with a grey "Returned" tag, "returned" is
+      derived from the linked `LendingRecord.returned_date` (never stored twice).
+      "Log a borrowed book" and the cross-user lend mirror both create/reuse this
+      entry (one active entry per edition — re-borrowing the same book reuses it,
+      doesn't fork a duplicate). Buying a borrowed book flips the same row's
+      `ownership` to `'owned'` in place (same id — reading status/progress/notes
+      carry over untouched) via a "Make this mine" action on the book page,
+      confirmed with a dialog explaining the lending history stays as a log.
+      The separate library-grid "Borrowed" section is gone — one grid, banded.
+      API: `library_entries.ownership` column + migration (backfills existing
+      unlinked borrowed `lending_records` into entries); Flutter: Drift schema
+      bump to v5 + migration.
 
 ## Phase 5 — Import (the front door)
 

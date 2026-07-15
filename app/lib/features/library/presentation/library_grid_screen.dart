@@ -37,7 +37,6 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   // re-trigger it in a loop.
   bool _coverRefreshTried = false;
 
-  bool _borrowedCacheTried = false;
   bool _hydrateTried = false;
 
   Future<void> _refreshMissingCovers() async {
@@ -50,17 +49,13 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   /// Fresh-install self-heal: sync restores the entries but the cached-book
   /// rows are device-local, so without this the grid's join drops every book
   /// (home says 5 owned, library says 0). Cheap no-op when nothing is missing.
+  /// Covers borrowed entries too now (they're real library_entries rows since
+  /// 15 Jul 2026) — no separate borrowed-catalog hydration needed here.
   Future<void> _hydrateMissingBooks() async {
     await cacheMissingLibraryBooks(
       ref.read(appDatabaseProvider),
       ref.read(apiClientProvider),
     );
-  }
-
-  /// Hydrate the catalog data for borrowed books (they were never added by this
-  /// reader, so aren't cached) so the Borrowed section can render them.
-  Future<void> _cacheBorrowed() async {
-    await cacheBorrowedBooks(ref.read(appDatabaseProvider), ref.read(apiClientProvider));
   }
 
   @override
@@ -103,12 +98,6 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
               _coverRefreshTried = true;
               WidgetsBinding.instance.addPostFrameCallback((_) => _refreshMissingCovers());
             }
-            final borrowed = ref.watch(borrowedBooksProvider);
-            // Hydrate any borrowed book missing its catalog data, once per mount.
-            if (!_borrowedCacheTried && borrowed.any((b) => b.book == null)) {
-              _borrowedCacheTried = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) => _cacheBorrowed());
-            }
             final filtered = all.where(_filter.matches).toList();
             return RefreshIndicator(
               color: AppColors.oxblood,
@@ -121,7 +110,6 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                 ref.invalidate(allLendingProvider);
                 await _hydrateMissingBooks();
                 await _refreshMissingCovers();
-                await _cacheBorrowed();
               },
               child: CustomScrollView(
               slivers: [
@@ -167,7 +155,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                     ),
                   ),
                 ),
-                if (filtered.isEmpty && borrowed.isEmpty)
+                if (filtered.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: all.isEmpty
@@ -186,7 +174,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                             title: l10n.libraryNoMatches,
                           ),
                   )
-                else if (filtered.isNotEmpty)
+                else
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(20, 8, 20, 16),
                     sliver: SliverGrid(
@@ -197,44 +185,15 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                         childAspectRatio: 0.66,
                       ),
                       delegate: SliverChildBuilderDelegate(
+                        // Borrowed books (ownership: 'borrowed') are real
+                        // entries now (15 Jul 2026) — one grid, banded by
+                        // _LibraryGridItem, not a separate lending-sourced
+                        // section.
                         (context, index) => _LibraryGridItem(hit: filtered[index]),
                         childCount: filtered.length,
                       ),
                     ),
                   ),
-                // A distinct "Borrowed" section — books lent to you by others,
-                // kept separate from what you own.
-                if (borrowed.isNotEmpty) ...[
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
-                    sliver: SliverToBoxAdapter(
-                      child: Text(
-                        l10n.libraryBorrowedSection.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
-                          color: AppColors.inkSoft,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(20, 4, 20, 24),
-                    sliver: SliverGrid(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 9,
-                        crossAxisSpacing: 8,
-                        childAspectRatio: 0.66,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => _BorrowedGridItem(item: borrowed[index]),
-                        childCount: borrowed.length,
-                      ),
-                    ),
-                  ),
-                ],
               ],
               ),
             );
@@ -295,7 +254,8 @@ class _LibraryGridItem extends ConsumerWidget {
     final entry = hit.entry;
     final book = hit.book;
     // Derived from the reactive ledger stream (not a one-shot per-entry
-    // fetch), so lending a book anywhere shows the band here instantly.
+    // fetch), so lending/borrowing a book anywhere shows the band here
+    // instantly.
     final activeLending = (ref.watch(allLendingProvider).valueOrNull ?? [])
         .map((r) => r.record)
         .where((r) =>
@@ -303,6 +263,15 @@ class _LibraryGridItem extends ConsumerWidget {
             r.direction != 'borrowed' &&
             r.returnedDate == null)
         .firstOrNull;
+    // This entry's own borrow record, if it's ownership: 'borrowed' — the
+    // unified shape every borrow gets now (15 Jul 2026). Active (not yet
+    // returned) shows the "FROM name" band, same as a book lent OUT shows
+    // "WITH name"; once returned the band drops so the status pill (which a
+    // band otherwise hides) is visible again — reading status still matters
+    // on a book you've given back.
+    final borrowRecord =
+        entry.ownership == 'borrowed' ? ref.watch(lendingByLibraryEntryIdProvider)[entry.id] : null;
+    final isReturned = borrowRecord?.returnedDate != null;
     // The reading sliver — only when actively reading and both pages are known.
     final total = book.pageCount;
     final page = entry.currentPage;
@@ -320,30 +289,8 @@ class _LibraryGridItem extends ConsumerWidget {
         progress: progress,
         favorite: entry.isFavorite,
         lentToName: activeLending?.borrowerName,
-      ),
-    );
-  }
-}
-
-/// A borrowed book in the library's Borrowed section — the counterpart to
-/// [_LibraryGridItem], banded with who it's from.
-class _BorrowedGridItem extends StatelessWidget {
-  const _BorrowedGridItem({required this.item});
-
-  final LendingWithBook item;
-
-  @override
-  Widget build(BuildContext context) {
-    final book = item.book;
-    return GestureDetector(
-      onTap: book == null
-          ? null
-          : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
-      child: ShelfCover(
-        title: book?.title ?? '…',
-        author: book?.authorNames,
-        coverUrl: book?.coverUrl,
-        borrowedFromName: item.record.borrowerName,
+        borrowedFromName: isReturned ? null : borrowRecord?.borrowerName,
+        returned: isReturned,
       ),
     );
   }

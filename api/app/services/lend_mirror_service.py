@@ -100,10 +100,39 @@ async def _mirror_onto_borrower(
         # borrower — don't create a born-deleted ghost row.
         if lent.deleted_at is not None:
             return
+        # The borrower gets a real LibraryEntry too (owner request, 15 Jul
+        # 2026) — same unification as a self-logged borrow, so an
+        # auto-mirrored loan reads/tracks/stays-on-the-shelf identically.
+        # Reuses an existing entry for this edition if the borrower already
+        # has one (owned, or borrowed-and-returned before) rather than
+        # forking a second row for the same book — same rule the app's own
+        # logBorrowed applies. A fresh INSERT still gets server_seq from the
+        # column's server_default (only UPDATEs need the explicit nextval
+        # bump).
+        borrowed_entry = (
+            await db.execute(
+                select(LibraryEntry).where(
+                    LibraryEntry.user_id == borrower_id,
+                    LibraryEntry.edition_id == edition_id,
+                    LibraryEntry.deleted_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        if borrowed_entry is None:
+            borrowed_entry = LibraryEntry(
+                id=uuid.uuid4(),
+                user_id=borrower_id,
+                edition_id=edition_id,
+                status="pending",
+                ownership="borrowed",
+            )
+            db.add(borrowed_entry)
+            await db.flush()
         mirror = LendingRecord(
             id=uuid.uuid4(),
             user_id=borrower_id,
             direction="borrowed",
+            library_entry_id=borrowed_entry.id,
             edition_id=edition_id,
             borrower_name=lender_name,  # for a borrowed row, this is the lender
             borrower_user_id=lender_id,

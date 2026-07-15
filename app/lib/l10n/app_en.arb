@@ -724,6 +724,26 @@
   "@bookLendAction": {
     "description": "Lending card action button when not currently lent"
   },
+  "bookBorrowedFromFragment": "Borrowed from",
+  "@bookBorrowedFromFragment": {
+    "description": "Fragment before the tappable lender name on the lending header, for a borrowed copy"
+  },
+  "bookBorrowedReturnedFragment": "Returned",
+  "@bookBorrowedReturnedFragment": {
+    "description": "Lending card status once a borrowed copy has been given back, but stays on the shelf"
+  },
+  "bookMakeMineAction": "Make this mine",
+  "@bookMakeMineAction": {
+    "description": "Lending card action: the reader bought their own copy of a book they'd borrowed"
+  },
+  "bookMakeMineConfirmTitle": "Make this your own copy?",
+  "@bookMakeMineConfirmTitle": {
+    "description": "Confirmation dialog title for the make-this-mine action"
+  },
+  "bookMakeMineConfirmBody": "This moves the book to your library as your own copy. Your reading status, progress, and notes stay exactly as they are — the record of borrowing it stays too, in the lending history below.",
+  "@bookMakeMineConfirmBody": {
+    "description": "Confirmation dialog body for the make-this-mine action"
+  },
   "bookMarkReturnedAction": "Mark returned",
   "@bookMarkReturnedAction": {
     "description": "Lending card action button when currently lent out"
@@ -768,10 +788,6 @@
   "libraryTitle": "My Library",
   "@libraryTitle": {
     "description": "Title on the personal library grid screen"
-  },
-  "libraryBorrowedSection": "Borrowed",
-  "@libraryBorrowedSection": {
-    "description": "Header for the borrowed-books section in the library"
   },
   "libraryBorrowedFrom": "FROM {name}",
   "@libraryBorrowedFrom": {

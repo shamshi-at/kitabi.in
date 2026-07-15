@@ -2712,6 +2712,33 @@ class _LendingCard extends ConsumerWidget {
     await ref.read(notificationServiceProvider).cancel(reminderIdForRecord(lendingId));
   }
 
+  /// The "I bought this" transition (owner request, 15 Jul 2026): confirms,
+  /// then flips this entry from borrowed to owned in place — same id, so
+  /// reading status/progress/notes carry over untouched. The lending history
+  /// below is never touched by this; it stays as the permanent loan log.
+  Future<void> _makeMine(BuildContext context, WidgetRef ref, LibraryEntry entry) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.bookMakeMineConfirmTitle),
+        content: Text(l10n.bookMakeMineConfirmBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.bookMakeMineAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    Haptics.success();
+    final repo = await ref.read(libraryRepositoryProvider.future);
+    await repo.markAsOwned(entry.id);
+    ref.invalidate(libraryEntryProvider(entry.editionId));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
@@ -2719,10 +2746,26 @@ class _LendingCard extends ConsumerWidget {
         .watch(bookLendingHistoryProvider((entryId: entry?.id, editionId: editionId)))
         .valueOrNull ??
         const <LendingRecord>[];
-    // The active loan of the copy I own — drives the header + primary action.
+    // The active loan of the copy I own — drives the header + primary action
+    // for an owned entry.
     final current = history
         .where((r) => r.direction != 'borrowed' && r.returnedDate == null)
         .firstOrNull;
+    // A borrowed entry (ownership: 'borrowed', added 15 Jul 2026) drives an
+    // entirely different header: who it's from while active, "Make this
+    // mine" once returned — never the lend/owned-copy actions above, which
+    // don't make sense for a book that isn't mine yet.
+    final isBorrowedEntry = entry != null && entry!.ownership == 'borrowed';
+    // This entry's own borrows — there can be more than one if the reader
+    // borrowed the same book twice (logBorrowed reuses the entry rather
+    // than forking a new row for a re-borrow) — newest first.
+    final myBorrows = isBorrowedEntry
+        ? (history
+                .where((r) => r.direction == 'borrowed' && r.libraryEntryId == entry!.id)
+                .toList()
+              ..sort((a, b) => b.lentDate.compareTo(a.lentDate)))
+        : const <LendingRecord>[];
+    final activeBorrow = myBorrows.where((r) => r.returnedDate == null).firstOrNull;
 
     // A book that's merely borrowed (not owned) only earns the card once it
     // actually has history — no "Not lent out" noise on catalog pages.
@@ -2736,40 +2779,72 @@ class _LendingCard extends ConsumerWidget {
           if (entry != null)
             Row(
             children: [
-              Icon(Icons.swap_horiz, size: 16, color: AppColors.gold),
+              Icon(
+                isBorrowedEntry ? Icons.south_west : Icons.swap_horiz,
+                size: 16,
+                color: isBorrowedEntry ? AppColors.slate : AppColors.gold,
+              ),
               SizedBox(width: 8),
               Expanded(
-                child: current != null
-                    ? Row(
-                        children: [
-                          Text(
-                            '${l10n.bookLendingWithFragment} ',
+                child: isBorrowedEntry
+                    ? (activeBorrow != null
+                        ? Row(
+                            children: [
+                              Text(
+                                '${l10n.bookBorrowedFromFragment} ',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                              ),
+                              Flexible(
+                                child: PersonLink(
+                                  activeBorrow.borrowerName,
+                                  userId: activeBorrow.borrowerUserId,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            l10n.bookBorrowedReturnedFragment,
                             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                          ),
-                          Flexible(
-                            child: PersonLink(
-                              current.borrowerName,
-                              userId: current.borrowerUserId,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        l10n.bookLendingNotLentOut,
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                      ),
+                          ))
+                    : (current != null
+                        ? Row(
+                            children: [
+                              Text(
+                                '${l10n.bookLendingWithFragment} ',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                              ),
+                              Flexible(
+                                child: PersonLink(
+                                  current.borrowerName,
+                                  userId: current.borrowerUserId,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            l10n.bookLendingNotLentOut,
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                          )),
               ),
-              if (entry != null)
-                TextButton(
-                  onPressed: current != null
-                      ? () => _markReturned(ref, current.id)
-                      : () => _lend(context, ref, entry!),
-                  child: Text(
-                    current != null ? l10n.bookMarkReturnedAction : l10n.bookLendAction,
-                    style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
-                  ),
+              TextButton(
+                onPressed: isBorrowedEntry
+                    ? (activeBorrow != null
+                        ? () => _markReturned(ref, activeBorrow.id)
+                        : () => _makeMine(context, ref, entry!))
+                    : (current != null
+                        ? () => _markReturned(ref, current.id)
+                        : () => _lend(context, ref, entry!)),
+                child: Text(
+                  isBorrowedEntry
+                      ? (activeBorrow != null
+                          ? l10n.bookMarkReturnedAction
+                          : l10n.bookMakeMineAction)
+                      : (current != null ? l10n.bookMarkReturnedAction : l10n.bookLendAction),
+                  style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
                 ),
+              ),
             ],
           ),
           // The detailed ledger for this book — every loan either way,

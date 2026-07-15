@@ -103,11 +103,10 @@ void main() {
     expect(op.payload.contains('signed first edition'), isTrue);
   });
 
-  test('logBorrowed records a borrowed row carried by editionId, no library entry', () async {
+  test('logBorrowed creates a borrowed library entry and links the record to it', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     const session = SessionContext(userId: 'u1', deviceId: 'd1');
-    // A borrowed book isn't owned — cache it, but create no library entry.
     await db.cachedBooksDao.upsert(
       CachedBooksCompanion.insert(
         editionId: 'ed9',
@@ -125,17 +124,26 @@ void main() {
       note: 'careful',
     );
 
+    // A borrowed book is now a real library entry (ownership: 'borrowed') —
+    // unified 15 Jul 2026 so it reads/tracks/stays on the shelf like an owned
+    // book, and survives a return instead of vanishing.
+    final entry = await db.libraryEntriesDao.getByEditionId('ed9');
+    expect(entry, isNotNull);
+    expect(entry!.ownership, 'borrowed');
+
     final rows = await db.lendingRecordsDao.watchAllActive().first;
     final rec = rows.firstWhere((r) => r.record.id == id);
     expect(rec.record.direction, 'borrowed');
-    expect(rec.record.libraryEntryId, isNull);
+    expect(rec.record.libraryEntryId, entry.id);
     expect(rec.record.editionId, 'ed9');
     expect(rec.record.note, 'careful');
-    expect(rec.book?.title, 'Aarachar'); // joined via editionId, not a library entry
+    expect(rec.book?.title, 'Aarachar');
 
     final pending = await db.syncQueueDao.pending(limit: 10);
-    final op = pending.firstWhere((o) => o.entity == 'lending_records');
-    expect(op.opType, 'create');
+    final entryOp = pending.firstWhere((o) => o.entity == 'library_entries');
+    expect(entryOp.opType, 'create');
+    final lendingOp = pending.firstWhere((o) => o.entity == 'lending_records');
+    expect(lendingOp.opType, 'create');
   });
 
   // The screen render is tested against a fixed stream (not a live Drift query),

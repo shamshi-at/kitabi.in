@@ -66,6 +66,7 @@ class LibraryEntryCreate(BaseModel):
     id: uuid.UUID
     edition_id: uuid.UUID
     status: str = "pending"
+    ownership: str = "owned"
     start_date: date | None = None
     finish_date: date | None = None
     current_page: int | None = None
@@ -75,6 +76,10 @@ class LibraryEntryCreate(BaseModel):
 
 class LibraryEntryUpdate(BaseModel):
     status: str | None = None
+    # Only ever sent 'owned' — the reader "buying" a book they'd been
+    # borrowing (see library_entry.py). Nothing flips a row back to
+    # 'borrowed' after creation.
+    ownership: str | None = None
     start_date: date | None = None
     finish_date: date | None = None
     current_page: int | None = None

@@ -82,7 +82,7 @@ void main() {
     final op = api.pushedOps.first;
     expect(op['entity'], 'library_entries');
     expect(op['device_id'], 'device-1');
-    expect(op['payload'], {'edition_id': 'edition-1', 'status': 'pending'});
+    expect(op['payload'], {'edition_id': 'edition-1', 'status': 'pending', 'ownership': 'owned'});
 
     // Queue drained and the row marked synced with the server's seq.
     expect(await db.syncQueueDao.pending(limit: 10), isEmpty);

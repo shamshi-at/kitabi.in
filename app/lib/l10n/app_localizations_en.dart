@@ -829,6 +829,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookLendAction => 'Lend';
 
   @override
+  String get bookBorrowedFromFragment => 'Borrowed from';
+
+  @override
+  String get bookBorrowedReturnedFragment => 'Returned';
+
+  @override
+  String get bookMakeMineAction => 'Make this mine';
+
+  @override
+  String get bookMakeMineConfirmTitle => 'Make this your own copy?';
+
+  @override
+  String get bookMakeMineConfirmBody =>
+      'This moves the book to your library as your own copy. Your reading status, progress, and notes stay exactly as they are — the record of borrowing it stays too, in the lending history below.';
+
+  @override
   String get bookMarkReturnedAction => 'Mark returned';
 
   @override
@@ -860,9 +876,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryTitle => 'My Library';
-
-  @override
-  String get libraryBorrowedSection => 'Borrowed';
 
   @override
   String libraryBorrowedFrom(String name) {

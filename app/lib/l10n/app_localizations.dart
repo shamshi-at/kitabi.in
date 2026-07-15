@@ -1468,6 +1468,36 @@ abstract class AppLocalizations {
   /// **'Lend'**
   String get bookLendAction;
 
+  /// Fragment before the tappable lender name on the lending header, for a borrowed copy
+  ///
+  /// In en, this message translates to:
+  /// **'Borrowed from'**
+  String get bookBorrowedFromFragment;
+
+  /// Lending card status once a borrowed copy has been given back, but stays on the shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Returned'**
+  String get bookBorrowedReturnedFragment;
+
+  /// Lending card action: the reader bought their own copy of a book they'd borrowed
+  ///
+  /// In en, this message translates to:
+  /// **'Make this mine'**
+  String get bookMakeMineAction;
+
+  /// Confirmation dialog title for the make-this-mine action
+  ///
+  /// In en, this message translates to:
+  /// **'Make this your own copy?'**
+  String get bookMakeMineConfirmTitle;
+
+  /// Confirmation dialog body for the make-this-mine action
+  ///
+  /// In en, this message translates to:
+  /// **'This moves the book to your library as your own copy. Your reading status, progress, and notes stay exactly as they are — the record of borrowing it stays too, in the lending history below.'**
+  String get bookMakeMineConfirmBody;
+
   /// Lending card action button when currently lent out
   ///
   /// In en, this message translates to:
@@ -1521,12 +1551,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My Library'**
   String get libraryTitle;
-
-  /// Header for the borrowed-books section in the library
-  ///
-  /// In en, this message translates to:
-  /// **'Borrowed'**
-  String get libraryBorrowedSection;
 
   /// Band on a borrowed book cover naming the lender
   ///

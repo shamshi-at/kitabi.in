@@ -62,14 +62,23 @@ final bookLendingHistoryProvider = Provider.autoDispose
   });
 });
 
-/// Books currently borrowed from others (active, not returned) — their own
-/// section in the library. Derived from the lending ledger; each carries the
-/// cached book (once hydrated) and the lender's name on the record.
-final borrowedBooksProvider = Provider.autoDispose<List<LendingWithBook>>((ref) {
+/// Maps a borrowed LibraryEntry's id to its lending record (owner request,
+/// 15 Jul 2026: borrowed books are unified into the library grid, banded by
+/// this lookup, instead of living in a separate lending-sourced section).
+/// Only ever holds `direction == 'borrowed'` records that are linked to a
+/// LibraryEntry — the unified shape every borrow gets now; a handful of
+/// pre-unification rows without a link just won't band (see
+/// LendingRecord.libraryEntryId's docstring).
+final lendingByLibraryEntryIdProvider = Provider.autoDispose<Map<String, LendingRecord>>((ref) {
   final all = ref.watch(allLendingProvider).valueOrNull ?? const <LendingWithBook>[];
-  return all
-      .where((r) => r.record.direction == 'borrowed' && r.record.returnedDate == null)
-      .toList();
+  final map = <String, LendingRecord>{};
+  for (final r in all) {
+    final entryId = r.record.libraryEntryId;
+    if (r.record.direction == 'borrowed' && entryId != null) {
+      map[entryId] = r.record;
+    }
+  }
+  return map;
 });
 
 /// Global search over the personal library (S4) — the "in your library" section.
