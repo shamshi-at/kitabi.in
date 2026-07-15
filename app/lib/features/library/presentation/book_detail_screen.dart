@@ -1991,8 +1991,21 @@ class _FinishedReviewSheetState extends ConsumerState<_FinishedReviewSheet> {
   }
 }
 
+/// One glyph per status, echoing its meaning rather than being generic —
+/// shared only by [_StatusSheet], so it lives right next to its one caller.
+const _statusIcons = {
+  'reading': Icons.auto_stories_outlined,
+  'read': Icons.check_circle_outline,
+  'stopped': Icons.pause_circle_outline,
+  'wishlist': Icons.favorite_border,
+  'pending': Icons.menu_book_outlined, // 'To read'
+};
+
 /// The five reading statuses as a bottom sheet — the current one checked,
-/// tap any other to switch and close.
+/// tap any other to switch and close. Each row's icon/tint comes from
+/// [readingStatusForeground]/[readingStatusBackground] — the same per-status
+/// colors [StatusPill] uses — so "Reading" reads oxblood, "Read" reads moss,
+/// etc., instead of every row being an identical oxblood-or-grey dot.
 class _StatusSheet extends StatelessWidget {
   const _StatusSheet({required this.current});
 
@@ -2003,28 +2016,44 @@ class _StatusSheet extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.fromLTRB(18, 12, 18, 12),
+        padding: EdgeInsets.fromLTRB(18, 12, 18, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SheetGrabber(),
             Text(l10n.bookStatusSheetTitle, style: Theme.of(context).textTheme.titleLarge),
-            SizedBox(height: 6),
-            for (final status in readingStatuses)
+            SizedBox(height: 8),
+            for (final status in readingStatuses) ...[
               InkWell(
                 onTap: () => Navigator.of(context).pop(status),
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 11, horizontal: 4),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: status == current
+                        ? readingStatusBackground(status)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Row(
                     children: [
                       Container(
-                        width: 8,
-                        height: 8,
+                        width: 34,
+                        height: 34,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: status == current ? AppColors.oxblood : AppColors.line,
+                          color: status == current
+                              ? Colors.white.withValues(alpha: 0.55)
+                              : AppColors.paperDeep,
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          _statusIcons[status],
+                          size: 18,
+                          color: status == current
+                              ? readingStatusForeground(status)
+                              : AppColors.inkSoft,
                         ),
                       ),
                       SizedBox(width: 12),
@@ -2032,17 +2061,20 @@ class _StatusSheet extends StatelessWidget {
                         child: Text(
                           readingStatusLabel(status),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 14.5,
                             fontWeight: status == current ? FontWeight.w700 : FontWeight.w500,
-                            color: status == current ? AppColors.oxblood : AppColors.ink,
+                            color: status == current ? readingStatusForeground(status) : AppColors.ink,
                           ),
                         ),
                       ),
-                      if (status == current) Icon(Icons.check, size: 18, color: AppColors.oxblood),
+                      if (status == current)
+                        Icon(Icons.check_circle, size: 20, color: readingStatusForeground(status)),
                     ],
                   ),
                 ),
               ),
+              SizedBox(height: 4),
+            ],
           ],
         ),
       ),

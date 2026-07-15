@@ -18,8 +18,18 @@ import '../../../core/widgets/net_image.dart';
 /// primary language so near-duplicates are distinguishable), or add a brand-new
 /// one with those same details. Returns the chosen author map
 /// `{id, name, image_url?, primary_language?}` via [Navigator.pop].
+///
+/// [initialIsMe] jumps straight into the add-new form with "This is me"
+/// pre-checked — the "is this your book?" entry point from the add-book form
+/// (owner report, 15 Jul 2026: self-tagging was buried two taps under "add a
+/// new author"). [initialName] seeds both the search (so an already-linked
+/// Author row for this reader surfaces as a pick instead of inviting a
+/// duplicate) and the add-new form's name field.
 class AuthorPickerScreen extends ConsumerStatefulWidget {
-  const AuthorPickerScreen({super.key});
+  const AuthorPickerScreen({super.key, this.initialName, this.initialIsMe = false});
+
+  final String? initialName;
+  final bool initialIsMe;
 
   @override
   ConsumerState<AuthorPickerScreen> createState() => _AuthorPickerScreenState();
@@ -38,6 +48,13 @@ class _AuthorPickerScreenState extends ConsumerState<AuthorPickerScreen> {
   void initState() {
     super.initState();
     _loadSuggestions();
+    _adding = widget.initialIsMe;
+    final name = widget.initialName?.trim();
+    if (name != null && name.isNotEmpty) {
+      _search.text = name;
+      _query = name;
+      _fetch(name);
+    }
   }
 
   Future<void> _loadSuggestions() async {
@@ -152,6 +169,7 @@ class _AuthorPickerScreenState extends ConsumerState<AuthorPickerScreen> {
                   _AddNewAuthorSection(
                     expanded: _adding,
                     initialName: _query,
+                    initialIsMe: widget.initialIsMe,
                     onToggle: () => setState(() => _adding = !_adding),
                   ),
                 ],
@@ -253,11 +271,13 @@ class _AddNewAuthorSection extends ConsumerStatefulWidget {
   const _AddNewAuthorSection({
     required this.expanded,
     required this.initialName,
+    this.initialIsMe = false,
     required this.onToggle,
   });
 
   final bool expanded;
   final String initialName;
+  final bool initialIsMe;
   final VoidCallback onToggle;
 
   @override
@@ -273,6 +293,18 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
   bool _isMe = false;
   bool _uploading = false;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isMe = widget.initialIsMe;
+    // Expanded from the very first frame (the "is this your book?" entry
+    // point) — didUpdateWidget's false-\>true transition never fires, so seed
+    // the name here too.
+    if (widget.expanded) {
+      _name.text = widget.initialName;
+    }
+  }
 
   @override
   void didUpdateWidget(_AddNewAuthorSection old) {

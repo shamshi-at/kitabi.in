@@ -377,7 +377,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.authorPicker,
         name: 'author-picker',
-        builder: (context, state) => AuthorPickerScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return AuthorPickerScreen(
+            initialName: extra?['name'] as String?,
+            initialIsMe: extra?['isMe'] as bool? ?? false,
+          );
+        },
       ),
       GoRoute(
         path: Routes.publisherPicker,

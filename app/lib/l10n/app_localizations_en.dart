@@ -2013,6 +2013,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formAuthorAddAnother => '＋ Add another author';
 
   @override
+  String get formAuthorAddSelf =>
+      'Is this your book? Tag yourself as the author';
+
+  @override
   String get formAuthorHelp =>
       'Add each co-author for books with more than one';
 

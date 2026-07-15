@@ -225,8 +225,24 @@ class _BookFormState extends ConsumerState<_BookForm> {
   List<String> _splitNames(String raw) =>
       raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
-  Future<void> _pickAuthor() async {
-    final result = await context.push<Map<String, dynamic>>(Routes.authorPicker);
+  Future<void> _pickAuthor() => _openAuthorPicker();
+
+  /// "Is this your book?" — jumps straight into the author picker with the
+  /// add-new form already expanded and "This is me" pre-checked (owner
+  /// report, 15 Jul 2026: the same flow buried two taps deep under "add a
+  /// new author" wasn't discoverable). Pre-fills the search with the
+  /// signed-in reader's name too, so if they've already self-linked an
+  /// Author row on another book, it surfaces as a pick instead of inviting
+  /// a duplicate.
+  Future<void> _pickAuthorAsSelf() async {
+    final fullName = ref.read(meProvider).valueOrNull?['full_name'] as String?;
+    await _openAuthorPicker(
+      extra: {'isMe': true, if (fullName != null && fullName.trim().isNotEmpty) 'name': fullName},
+    );
+  }
+
+  Future<void> _openAuthorPicker({Object? extra}) async {
+    final result = await context.push<Map<String, dynamic>>(Routes.authorPicker, extra: extra);
     if (result == null) return;
     final id = result['id'] as String?;
     final name = (result['name'] as String? ?? '').trim();
@@ -881,6 +897,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
           _AuthorField(
             authors: _authors,
             onAdd: _pickAuthor,
+            onAddSelf: _pickAuthorAsSelf,
             onRemove: (author) => setState(() => _authors.remove(author)),
           ),
           SizedBox(height: 10),
@@ -1427,11 +1444,13 @@ class _AuthorField extends StatelessWidget {
   const _AuthorField({
     required this.authors,
     required this.onAdd,
+    required this.onAddSelf,
     required this.onRemove,
   });
 
   final List<Map<String, dynamic>> authors;
   final VoidCallback onAdd;
+  final VoidCallback onAddSelf;
   final void Function(Map<String, dynamic>) onRemove;
 
   @override
@@ -1469,7 +1488,29 @@ class _AuthorField extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 3, left: 2),
+          padding: const EdgeInsets.only(top: 8, left: 2),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onAddSelf,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.stars_rounded, size: 15, color: AppColors.oxblood),
+                SizedBox(width: 5),
+                Text(
+                  l10n.formAuthorAddSelf,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.oxblood,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 5, left: 2),
           child: Text(
             l10n.formAuthorHelp,
             style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),

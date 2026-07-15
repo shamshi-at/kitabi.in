@@ -3436,6 +3436,12 @@ abstract class AppLocalizations {
   /// **'＋ Add another author'**
   String get formAuthorAddAnother;
 
+  /// Tappable line under the author field that jumps to the author picker with This is me pre-checked
+  ///
+  /// In en, this message translates to:
+  /// **'Is this your book? Tag yourself as the author'**
+  String get formAuthorAddSelf;
+
   /// Helper text under the author field clarifying multiple authors are supported
   ///
   /// In en, this message translates to:

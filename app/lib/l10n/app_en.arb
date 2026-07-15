@@ -1912,6 +1912,8 @@
   "@formBookNumberHelp": {"description": "Helper text under the Book № field on the add-book form"},
   "formAuthorAddAnother": "＋ Add another author",
   "@formAuthorAddAnother": {"description": "Button on the add-book form to add a further co-author once one is chosen"},
+  "formAuthorAddSelf": "Is this your book? Tag yourself as the author",
+  "@formAuthorAddSelf": {"description": "Tappable line under the author field that jumps to the author picker with This is me pre-checked"},
   "formAuthorHelp": "Add each co-author for books with more than one",
   "@formAuthorHelp": {"description": "Helper text under the author field clarifying multiple authors are supported"},
   "formIsbnScan": "Scan barcode",
