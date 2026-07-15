@@ -1575,7 +1575,7 @@ class _ReadingSessionCard extends ConsumerWidget {
     ref.invalidate(weeklyReadingSecondsProvider);
   }
 
-  void _open(BuildContext context, WidgetRef ref, {required int? pageCount}) {
+  void _open(BuildContext context, WidgetRef ref, {required int? pageCount, String? coverUrl}) {
     Haptics.selection();
     final freshStart = ref.read(activeSessionProvider)?.libraryEntryId != entry.id;
     final startedAt = DateTime.now();
@@ -1598,6 +1598,7 @@ class _ReadingSessionCard extends ConsumerWidget {
         'author': author,
         'currentPage': entry.currentPage,
         'pageCount': pageCount,
+        'coverUrl': coverUrl,
       },
     );
   }
@@ -1615,7 +1616,7 @@ class _ReadingSessionCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => _open(context, ref, pageCount: book?.pageCount),
+            onTap: () => _open(context, ref, pageCount: book?.pageCount, coverUrl: book?.coverUrl),
             behavior: HitTestBehavior.opaque,
             child: Row(
               children: [
@@ -1631,7 +1632,7 @@ class _ReadingSessionCard extends ConsumerWidget {
                   Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
                 ] else
                   ElevatedButton.icon(
-                    onPressed: () => _open(context, ref, pageCount: book?.pageCount),
+                    onPressed: () => _open(context, ref, pageCount: book?.pageCount, coverUrl: book?.coverUrl),
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       textStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),

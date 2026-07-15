@@ -6,6 +6,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/shelf_cover.dart';
+import '../../../core/widgets/sticky_header_delegate.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/catalog_cache.dart';
 import '../../../data/db/database.dart';
@@ -113,45 +114,52 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
               },
               child: CustomScrollView(
               slivers: [
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  sliver: SliverToBoxAdapter(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(l10n.libraryTitle,
-                                  style: Theme.of(context).textTheme.titleLarge),
-                              Text(
-                                l10n.libraryBookCount(filtered.length),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: AppColors.inkSoft),
-                              ),
-                            ],
+                // Pinned (owner request, 16 Jul 2026) so search stays reachable
+                // without scrolling back to the top of a long shelf.
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: StickyHeaderDelegate(
+                    height: 72,
+                    child: Container(
+                      color: AppColors.paper,
+                      padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(l10n.libraryTitle,
+                                    style: Theme.of(context).textTheme.titleLarge),
+                                Text(
+                                  l10n.libraryBookCount(filtered.length),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: AppColors.inkSoft),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.search, color: AppColors.oxblood),
-                          tooltip: l10n.searchTitle,
-                          onPressed: () => context.push(Routes.catalogSearch),
-                        ),
-                        _FilterButton(
-                          activeCount: _filter.activeCount,
-                          onTap: () async {
-                            final result = await showLibraryFilterSheet(
-                              context,
-                              hits: all,
-                              current: _filter,
-                            );
-                            if (result != null) setState(() => _filter = result);
-                          },
-                        ),
-                      ],
+                          IconButton(
+                            icon: Icon(Icons.search, color: AppColors.oxblood),
+                            tooltip: l10n.searchTitle,
+                            onPressed: () => context.push(Routes.catalogSearch),
+                          ),
+                          _FilterButton(
+                            activeCount: _filter.activeCount,
+                            onTap: () async {
+                              final result = await showLibraryFilterSheet(
+                                context,
+                                hits: all,
+                                current: _filter,
+                              );
+                              if (result != null) setState(() => _filter = result);
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

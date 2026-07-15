@@ -538,6 +538,7 @@ class _CurrentlyReadingCard extends ConsumerWidget {
         'author': book?.authorNames,
         'currentPage': entry.currentPage,
         'pageCount': book?.pageCount,
+        'coverUrl': book?.coverUrl,
       },
     );
   }

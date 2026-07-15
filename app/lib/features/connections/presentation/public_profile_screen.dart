@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/net_image.dart';
 import '../../../core/widgets/shelf_cover.dart';
+import '../../../core/widgets/sticky_header_delegate.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
@@ -211,34 +212,62 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     // A hidden Works tab can't stay selected (e.g. the count just changed).
     final tab = (_tab == _ProfileTab.works && worksCount == null) ? _ProfileTab.ledger : _tab;
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(20, 14, 20, 24),
-      children: [
-        _Bookplate(
-          userId: widget.userId,
-          display: display,
-          avatar: avatar,
-          data: data,
-          connection: connection,
-          isSelf: isSelf,
+    // The shelf tab pins its own search field (owner request, 16 Jul 2026),
+    // so it builds its own slivers directly rather than sitting inside the
+    // shared bottom-padded box every other tab uses.
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _Bookplate(
+                  userId: widget.userId,
+                  display: display,
+                  avatar: avatar,
+                  data: data,
+                  connection: connection,
+                  isSelf: isSelf,
+                ),
+                SizedBox(height: 16),
+                _TabBar(
+                  selected: tab,
+                  ledgerCount: loanCount,
+                  shelfCount: shelfCount,
+                  worksCount: worksCount,
+                  onChanged: (t) => setState(() => _tab = t),
+                ),
+                SizedBox(height: 14),
+              ],
+            ),
+          ),
         ),
-        SizedBox(height: 16),
-        _TabBar(
-          selected: tab,
-          ledgerCount: loanCount,
-          shelfCount: shelfCount,
-          worksCount: worksCount,
-          onChanged: (t) => setState(() => _tab = t),
-        ),
-        SizedBox(height: 14),
         switch (tab) {
-          _ProfileTab.ledger => _LedgerTab(userId: widget.userId, name: display),
+          _ProfileTab.ledger => SliverPadding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+              sliver: SliverToBoxAdapter(
+                child: _LedgerTab(userId: widget.userId, name: display),
+              ),
+            ),
           _ProfileTab.shelf => isPrivate
-              ? _MutedNote(l10n.publicProfilePrivate)
+              ? SliverPadding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  sliver: SliverToBoxAdapter(child: _MutedNote(l10n.publicProfilePrivate)),
+                )
               : !libraryVisible
-                  ? _MutedNote(l10n.publicLibraryPrivate)
+                  ? SliverPadding(
+                      padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      sliver: SliverToBoxAdapter(child: _MutedNote(l10n.publicLibraryPrivate)),
+                    )
                   : _PublicShelf(userId: widget.userId),
-          _ProfileTab.works => _PublicWorksTab(userId: widget.userId),
+          _ProfileTab.works => SliverPadding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+              sliver: SliverToBoxAdapter(
+                child: _PublicWorksTab(userId: widget.userId),
+              ),
+            ),
         },
       ],
     );
@@ -777,17 +806,48 @@ class _PublicShelfState extends ConsumerState<_PublicShelf> {
     super.dispose();
   }
 
+  /// The search field, pinned to the top of the tab (owner request, 16 Jul
+  /// 2026) so it stays reachable while scrolling a long shelf — the same
+  /// treatment the library grid's own search icon got.
+  Widget _searchField(AppLocalizations l10n) {
+    return Container(
+      color: AppColors.paper,
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: TextField(
+        onChanged: _onChanged,
+        decoration: InputDecoration(
+          hintText: l10n.publicShelfSearchHint,
+          isDense: true,
+          prefixIcon: Icon(Icons.search, size: 18, color: AppColors.inkSoft),
+          filled: true,
+          fillColor: AppColors.paper,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: AppColors.line),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: AppColors.line),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final shelf = ref.watch(_publicLibraryProvider(widget.userId));
     return shelf.when(
-      loading: () => Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+      loading: () => SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+        ),
       ),
-      error: (_, _) => ErrorRetry(
-        onRetry: () => ref.invalidate(_publicLibraryProvider(widget.userId)),
+      error: (_, _) => SliverToBoxAdapter(
+        child: ErrorRetry(onRetry: () => ref.invalidate(_publicLibraryProvider(widget.userId))),
       ),
       data: (items) {
         final q = _query.trim().toLowerCase();
@@ -805,64 +865,55 @@ class _PublicShelfState extends ConsumerState<_PublicShelf> {
                     ((b['author_names'] as String?) ?? '').toLowerCase().contains(q) ||
                     crossScriptWorkIds.contains(b['work_id']))
                 .toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              onChanged: _onChanged,
-              decoration: InputDecoration(
-                hintText: l10n.publicShelfSearchHint,
-                isDense: true,
-                prefixIcon: Icon(Icons.search, size: 18, color: AppColors.inkSoft),
-                filled: true,
-                fillColor: AppColors.paper,
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: AppColors.line),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: AppColors.line),
-                ),
-              ),
+        return SliverMainAxisGroup(
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: StickyHeaderDelegate(height: 58, child: _searchField(l10n)),
             ),
-            SizedBox(height: 12),
             if (filtered.isEmpty)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Center(
-                  child: Text(
-                    l10n.publicShelfSearchEmpty,
-                    style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: Center(
+                    child: Text(
+                      l10n.publicShelfSearchEmpty,
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+                    ),
                   ),
                 ),
               )
             else
-              GridView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 0.66,
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.66,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) {
+                      final b = filtered[i];
+                      return GestureDetector(
+                        onTap: () => context.push(
+                          Routes.bookDetailPath(
+                              b['work_id'] as String, b['edition_id'] as String),
+                        ),
+                        // No status pill here (owner request, 16 Jul 2026) —
+                        // a public shelf shows what a reader owns, not their
+                        // private reading progress on each book.
+                        child: ShelfCover(
+                          title: b['title'] as String? ?? '',
+                          author: b['author_names'] as String?,
+                          coverUrl: b['cover_url'] as String?,
+                        ),
+                      );
+                    },
+                    childCount: filtered.length,
+                  ),
                 ),
-                itemCount: filtered.length,
-                itemBuilder: (context, i) {
-                  final b = filtered[i];
-                  return GestureDetector(
-                    onTap: () => context.push(
-                      Routes.bookDetailPath(b['work_id'] as String, b['edition_id'] as String),
-                    ),
-                    child: ShelfCover(
-                      title: b['title'] as String? ?? '',
-                      author: b['author_names'] as String?,
-                      coverUrl: b['cover_url'] as String?,
-                      status: b['status'] as String? ?? 'pending',
-                    ),
-                  );
-                },
               ),
           ],
         );

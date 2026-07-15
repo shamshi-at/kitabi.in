@@ -477,6 +477,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             author: args['author'] as String?,
             currentPage: args['currentPage'] as int?,
             pageCount: args['pageCount'] as int?,
+            coverUrl: args['coverUrl'] as String?,
           );
         },
       ),

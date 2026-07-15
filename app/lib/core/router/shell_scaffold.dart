@@ -343,6 +343,7 @@ class _MiniTimerBarContentState extends ConsumerState<_MiniTimerBarContent> {
               'author': activeBook?.book?.authorNames,
               'currentPage': activeBook?.entry.currentPage,
               'pageCount': activeBook?.book?.pageCount,
+              'coverUrl': activeBook?.book?.coverUrl,
             },
           );
         },

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/format_duration.dart';
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../providers/reading_timer_providers.dart';
@@ -25,6 +26,7 @@ class ReadingTimerScreen extends ConsumerStatefulWidget {
     this.author,
     this.currentPage,
     this.pageCount,
+    this.coverUrl,
   });
 
   final String libraryEntryId;
@@ -32,6 +34,7 @@ class ReadingTimerScreen extends ConsumerStatefulWidget {
   final String? author;
   final int? currentPage;
   final int? pageCount;
+  final String? coverUrl;
 
   @override
   ConsumerState<ReadingTimerScreen> createState() => _ReadingTimerScreenState();
@@ -167,12 +170,14 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
         child: _logged == null
             ? _RunningFace(
                 title: widget.title,
+                coverUrl: widget.coverUrl,
                 startedAt: active?.startedAt,
                 hand: _hand,
                 onStop: _stop,
               )
             : _LoggedFace(
                 title: widget.title,
+                coverUrl: widget.coverUrl,
                 logged: _logged!,
                 pageController: _pageController,
                 pageFocusNode: _pageFocusNode,
@@ -188,12 +193,14 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
 class _RunningFace extends StatelessWidget {
   const _RunningFace({
     required this.title,
+    required this.coverUrl,
     required this.startedAt,
     required this.hand,
     required this.onStop,
   });
 
   final String? title;
+  final String? coverUrl;
   final DateTime? startedAt;
   final AnimationController hand;
   final VoidCallback onStop;
@@ -242,16 +249,33 @@ class _RunningFace extends StatelessWidget {
                   const SizedBox(height: 10),
                   if (title != null)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Text(
-                        title!,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20,
-                        ),
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          if (coverUrl != null) ...[
+                            TypesetCover(
+                              title: title!,
+                              coverUrl: coverUrl,
+                              width: 30,
+                              height: 44,
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          Flexible(
+                            child: Text(
+                              title!,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                color: Colors.white,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   const SizedBox(height: 28),
@@ -445,6 +469,7 @@ class _Dot extends StatelessWidget {
 class _LoggedFace extends ConsumerWidget {
   const _LoggedFace({
     required this.title,
+    required this.coverUrl,
     required this.logged,
     required this.pageController,
     required this.pageFocusNode,
@@ -454,6 +479,7 @@ class _LoggedFace extends ConsumerWidget {
   });
 
   final String? title;
+  final String? coverUrl;
   final LoggedSession logged;
   final TextEditingController pageController;
   final FocusNode pageFocusNode;
@@ -511,16 +537,33 @@ class _LoggedFace extends ConsumerWidget {
                   if (title != null) ...[
                     const SizedBox(height: 6),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Text(
-                        title!,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.inkSoft,
-                          fontSize: 12.5,
-                        ),
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          if (coverUrl != null) ...[
+                            TypesetCover(
+                              title: title!,
+                              coverUrl: coverUrl,
+                              width: 24,
+                              height: 36,
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Flexible(
+                            child: Text(
+                              title!,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.inkSoft,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

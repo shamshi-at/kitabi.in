@@ -131,6 +131,15 @@ Future<LoggedSession?> stopAndLogActiveSession(
 /// `ThemeModeController` — restores a session still running after an app
 /// restart (kill+reopen mid-session shouldn't lose the clock).
 class ActiveSessionController extends Notifier<ActiveSession?> {
+  // Guards checkReadingTimerSafetyNet's DB-divergence check against racing a
+  // legitimate in-flight stop() (16 Jul 2026): stopAndLogActiveSession clears
+  // KeyValues in several awaited steps before this Notifier's own `state`
+  // finally goes null, so a concurrent per-second tick could catch that
+  // transient window and read it as "stopped elsewhere," nulling state (and
+  // popping the timer screen) before the button's own setState landed —
+  // dropping the wax-seal page-count screen on what looked like most stops.
+  bool _stopping = false;
+
   @override
   ActiveSession? build() {
     _hydrate();
@@ -180,16 +189,34 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   /// null if nothing was running.
   Future<LoggedSession?> stop() async {
     if (state == null) return null;
-    final db = ref.read(appDatabaseProvider);
-    final session = await ref.read(sessionContextProvider.future);
-    final logged = await stopAndLogActiveSession(
-      db,
-      session,
-      onMutation: ref.read(syncTriggerProvider),
-    );
-    state = null;
-    return logged;
+    _stopping = true;
+    try {
+      final db = ref.read(appDatabaseProvider);
+      final session = await ref.read(sessionContextProvider.future);
+      final logged = await stopAndLogActiveSession(
+        db,
+        session,
+        onMutation: ref.read(syncTriggerProvider),
+      );
+      state = null;
+      return logged;
+    } finally {
+      _stopping = false;
+    }
   }
+
+  /// Drops in-memory state without touching the DB or logging anything — for
+  /// when a session was already stopped+logged elsewhere (a notification
+  /// action, the enforcement task, both of which write through their own
+  /// standalone `AppDatabase`, never this Notifier) and `state` just needs to
+  /// catch up, not repeat the stop. See [checkReadingTimerSafetyNet].
+  void clearStaleState() {
+    state = null;
+  }
+
+  /// Whether this controller's own [stop] is mid-flight — see the [_stopping]
+  /// field doc for why [checkReadingTimerSafetyNet] needs to know.
+  bool get isStopping => _stopping;
 }
 
 final activeSessionProvider =
@@ -204,12 +231,42 @@ final activeSessionProvider =
 /// the OS actually delivered either background mechanism. Returns the
 /// [LoggedSession] (so the caller can show feedback) only when it actually
 /// had to intervene; null otherwise.
+///
+/// Also piggybacks the same per-second tick to catch a *different* kind of
+/// staleness: the check-in notification's "No, stop it" action and the
+/// workmanager enforcement task both stop+log a session through their own
+/// standalone `AppDatabase` (a background isolate has no access to this
+/// app's live `ProviderContainer`), so that write never reaches this
+/// Notifier's in-memory `state` — the mini-bar/timer screen kept ticking
+/// even after the DB-side session was already closed (owner report, 16 Jul
+/// 2026). If the DB's own active-session pointer no longer names this entry,
+/// someone else already stopped it — just drop local state instead of
+/// re-stopping (and double-logging) a session that's already gone.
+///
+/// Skips entirely while [ActiveSessionController.isStopping] — a legitimate
+/// in-app `stop()` clears KeyValues in several awaited steps before its own
+/// `state` finally goes null, and a concurrent tick landing in that window
+/// misread it as "stopped elsewhere," racing ahead of the stop button's own
+/// `setState` and popping the timer screen before the wax-seal page-count
+/// step could show (bug introduced by this same safety-net check, caught
+/// live on-device 16 Jul 2026).
 Future<LoggedSession?> checkReadingTimerSafetyNet(WidgetRef ref) async {
   final active = ref.read(activeSessionProvider);
   if (active == null) return null;
+
+  final notifier = ref.read(activeSessionProvider.notifier);
+  if (notifier.isStopping) return null;
+
+  final db = ref.read(appDatabaseProvider);
+  final dbEntryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
+  if (dbEntryId != active.libraryEntryId) {
+    notifier.clearStaleState();
+    return null;
+  }
+
   final elapsed = DateTime.now().difference(active.startedAt);
   if (elapsed < readingCheckInDelay + readingCheckInGrace) return null;
-  return ref.read(activeSessionProvider.notifier).stop();
+  return notifier.stop();
 }
 
 /// What the active session's book actually is — title/cover for the mini-bar,
