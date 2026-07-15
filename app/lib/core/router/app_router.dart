@@ -198,9 +198,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (me.isLoading) {
         return loc == Routes.splash ? null : Routes.splash;
       }
-      final langs = (me.valueOrNull?['preferred_languages'] as List?) ?? const [];
-      if (langs.isEmpty) {
-        return loc == Routes.languages ? null : Routes.languages;
+      // A fetch failure (a network hiccup right at cold start — e.g. the
+      // phone is still reconnecting Wi-Fi at unlock) must not be misread as
+      // "confirmed no languages set": `.valueOrNull` on a first-ever
+      // `AsyncError` is null same as a real empty response, which flashed the
+      // picker for already-configured accounts (owner report, 15 Jul 2026).
+      // Only a response that actually came back gets to answer this gate.
+      if (!me.hasError || me.hasValue) {
+        final langs = (me.valueOrNull?['preferred_languages'] as List?) ?? const [];
+        if (langs.isEmpty) {
+          return loc == Routes.languages ? null : Routes.languages;
+        }
       }
 
       if (loc == Routes.splash ||
