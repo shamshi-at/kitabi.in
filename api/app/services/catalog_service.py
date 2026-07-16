@@ -226,6 +226,7 @@ async def create_work_with_edition(
         description=payload.description,
         language=payload.language,
         first_publish_year=payload.first_publish_year,
+        form=payload.form,
         authors=authors,
         genres=genres,
         created_by_user_id=created_by,

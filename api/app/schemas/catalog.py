@@ -6,6 +6,30 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
+# The closed vocabulary for Work.form — the literary form (the app calls it
+# "Type"): one per work, a separate axis from genre (owner decision, 16 Jul
+# 2026). Closed so the shared catalog can't accumulate near-duplicates
+# ("Novel"/"novel"/"Fiction novel"); extending it is a deliberate API change.
+# The cover-extract prompt and the app's chip row both draw from this list.
+WORK_FORMS = (
+    "Novel",
+    "Short stories",
+    "Poetry",
+    "Memoir",
+    "Biography",
+    "Essays",
+    "Play",
+    "Travelogue",
+    "Children's",
+    "Graphic novel",
+)
+
+
+def _validate_form(value: str | None) -> str | None:
+    if value is not None and value not in WORK_FORMS:
+        raise ValueError(f"form must be one of {', '.join(WORK_FORMS)}")
+    return value
+
 
 class AuthorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -107,6 +131,8 @@ class WorkOut(BaseModel):
     description: str | None
     language: str | None
     first_publish_year: int | None
+    # The literary form ("Type" in the UI) — one of WORK_FORMS, or null.
+    form: str | None = None
     aggregate_rating: float | None
     translation_group_id: uuid.UUID | None
     # Display-only aggregate across every Work sharing translation_group_id —
@@ -132,6 +158,7 @@ class WorkSummaryOut(BaseModel):
     id: uuid.UUID
     title: str
     first_publish_year: int | None
+    form: str | None = None
     aggregate_rating: float | None
     authors: list[AuthorOut]
     edition: EditionOut | None
@@ -148,6 +175,7 @@ class WorkCreate(BaseModel):
     description: str | None = None
     language: str | None = None
     first_publish_year: int | None = None
+    form: str | None = None
     # Authors/publisher can be referenced either by their catalog id (the app's
     # author/publisher pickers yield canonical ids) or by name (free-text /
     # OpenLibrary import). Ids win; names get the case-insensitive
@@ -166,6 +194,8 @@ class WorkCreate(BaseModel):
     cover_url: str | None = None
     back_cover_url: str | None = None
 
+    _check_form = field_validator("form")(_validate_form)
+
 
 class WorkUpdate(BaseModel):
     title: str | None = None
@@ -173,9 +203,12 @@ class WorkUpdate(BaseModel):
     description: str | None = None
     language: str | None = None
     first_publish_year: int | None = None
+    form: str | None = None
     author_ids: list[uuid.UUID] | None = None
     author_names: list[str] | None = None
     genre_names: list[str] | None = None
+
+    _check_form = field_validator("form")(_validate_form)
 
 
 class WorkPatchResult(BaseModel):

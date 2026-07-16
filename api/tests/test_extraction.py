@@ -59,6 +59,7 @@ def test_clean_normalises_types_and_trims():
         "series_name": None,
         "series_number": 3,
         "language": "Malayalam",
+        "form": None,
         "isbn": None,
     }
 
@@ -134,3 +135,10 @@ async def test_extract_from_covers_round_trip_with_fake_llm():
     images = [b for b in captured["messages"][0]["content"] if b["type"] == "image"]
     assert [i["source"]["url"] for i in images] == [f"{_BUCKET}/front.jpg", f"{_BUCKET}/back.jpg"]
     assert captured["model"] == settings.extraction_model
+
+
+def test_clean_gates_form_to_the_vocabulary():
+    assert _clean({"form": "Novel"})["form"] == "Novel"
+    assert _clean({"form": " Poetry "})["form"] == "Poetry"
+    assert _clean({"form": "Romantic saga"})["form"] is None
+    assert _clean({})["form"] is None

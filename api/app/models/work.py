@@ -52,6 +52,14 @@ class Work(CatalogMixin, Base):
     language: Mapped[str | None] = mapped_column(String, default=None)
     first_publish_year: Mapped[int | None] = mapped_column(default=None)
 
+    # The literary form the book takes — Novel, Short stories, Poetry, Memoir…
+    # (owner decision, 16 Jul 2026): a separate axis from genre, single-valued,
+    # closed vocabulary (schemas.catalog.WORK_FORMS), because Malayalam
+    # publishing organizes by form first (നോവൽ, ചെറുകഥ, കവിത) and the library
+    # filter needs it as a clean primary facet. Null on pre-existing works;
+    # backfills organically via "Improve this entry".
+    form: Mapped[str | None] = mapped_column(String, default=None)
+
     # [WIRED] — computes once Layer 2 ratings exist (Phase 3); null until then.
     # Never written to directly by the add/edit flow.
     aggregate_rating: Mapped[float | None] = mapped_column(Float, default=None)

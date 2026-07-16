@@ -571,3 +571,30 @@ async def test_catalog_mutations_require_auth(client, unauthenticated_client):
     for coro in anon_writes:
         resp = await coro
         assert resp.status_code == 401, resp.request.url
+
+
+async def test_work_form_round_trips_on_create_and_update(client):
+    """The literary form ("Type" in the UI) — a closed-vocabulary axis separate
+    from genre (owner decision, 16 Jul 2026)."""
+    resp = await client.post(
+        "/catalog/works",
+        json={"title": "Khasakkinte Itihasam", "form": "Novel"},
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["form"] == "Novel"
+
+    patched = await client.patch(
+        f"/catalog/works/{body['id']}",
+        json={"form": "Short stories"},
+    )
+    assert patched.status_code == 200, patched.text
+    assert patched.json()["work"]["form"] == "Short stories"
+
+
+async def test_work_form_outside_the_vocabulary_is_rejected(client):
+    resp = await client.post(
+        "/catalog/works",
+        json={"title": "Some Book", "form": "Novella-ish"},
+    )
+    assert resp.status_code == 422

@@ -20,6 +20,7 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings
+from app.schemas.catalog import WORK_FORMS
 
 _ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
@@ -32,7 +33,11 @@ _SYSTEM = (
     "review quotes, price, or barcode text; keep it under 150 words. "
     "`series_number` is the book's position if the cover shows one (e.g. "
     "'Book 3'). `language` is the language the book itself is written in, as "
-    "an English word (e.g. 'Malayalam'). `isbn` is the 13-digit ISBN printed "
+    "an English word (e.g. 'Malayalam'). `form` is the literary form of the "
+    "book when the cover makes it clear (a Malayalam cover saying നോവൽ means "
+    "'Novel', ചെറുകഥകൾ means 'Short stories', കവിതകൾ means 'Poetry'), and it "
+    f"must be EXACTLY one of: {', '.join(WORK_FORMS)} — or null when unsure. "
+    "`isbn` is the 13-digit ISBN printed "
     "next to the back-cover barcode — digits only (no hyphens/spaces), and ONLY "
     "if you can read all 13 clearly; otherwise null (never guess a digit). "
     "CRITICAL: transcribe ONLY text that is actually printed and legible in the "
@@ -41,7 +46,8 @@ _SYSTEM = (
     "better to return null than a made-up value. "
     "Respond with ONLY a JSON object exactly like: "
     '{"title": null, "authors": [], "publisher": null, "description": null, '
-    '"series_name": null, "series_number": null, "language": null, "isbn": null}'
+    '"series_name": null, "series_number": null, "language": null, "form": null, '
+    '"isbn": null}'
 )
 
 
@@ -97,6 +103,7 @@ def _clean(raw: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(number, int) or isinstance(number, bool):
         number = None
 
+    form = _str("form")
     return {
         "title": _str("title"),
         "authors": authors,
@@ -105,6 +112,8 @@ def _clean(raw: dict[str, Any]) -> dict[str, Any]:
         "series_name": _str("series_name"),
         "series_number": number,
         "language": _str("language"),
+        # Only the closed vocabulary passes — a creative model answer drops.
+        "form": form if form in WORK_FORMS else None,
         # Only surfaces a checksum-valid ISBN-13; a misread digit drops it.
         "isbn": valid_isbn13(raw.get("isbn")),
     }
