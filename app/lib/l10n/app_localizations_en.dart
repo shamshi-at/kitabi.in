@@ -308,6 +308,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formFieldGenrePrimary => 'GENRE · TAP ALL THAT FIT';
 
   @override
+  String get formGenreCustom => '＋ ADD ANOTHER GENRE';
+
+  @override
+  String get formGenreCustomHelp =>
+      'Not in the list? Type it — separate several with commas';
+
+  @override
   String get formMoreDetails => 'More details';
 
   @override

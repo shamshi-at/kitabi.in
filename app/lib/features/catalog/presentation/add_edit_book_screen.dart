@@ -1067,7 +1067,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
             ],
           ),
           SizedBox(height: 8),
-          _Field(label: '+ ${l10n.formFieldGenres}', controller: _customGenres),
+          _Field(
+            label: l10n.formGenreCustom,
+            controller: _customGenres,
+            helper: l10n.formGenreCustomHelp,
+          ),
           // Everything less essential folds into one disclosure — collapsed on
           // a fresh create, open on edit or when a scan/photo-read filled it.
           SizedBox(height: 12),

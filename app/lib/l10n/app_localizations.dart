@@ -616,6 +616,18 @@ abstract class AppLocalizations {
   /// **'GENRE · TAP ALL THAT FIT'**
   String get formFieldGenrePrimary;
 
+  /// Label for the free-text field under the genre chips, for a genre not in the common list (comma-separated)
+  ///
+  /// In en, this message translates to:
+  /// **'＋ ADD ANOTHER GENRE'**
+  String get formGenreCustom;
+
+  /// Helper under the custom-genre field on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Not in the list? Type it — separate several with commas'**
+  String get formGenreCustomHelp;
+
   /// Header of the collapsible section holding the less-essential book fields
   ///
   /// In en, this message translates to:
