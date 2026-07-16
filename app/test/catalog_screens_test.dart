@@ -852,4 +852,48 @@ void main() {
     expect(fake.lastBrowseGenre, 'Historical');
     expect(fake.lastBrowseForm, 'Novel');
   });
+  testWidgets('a type outside the suggested list can be typed in and saved', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'A Novella');
+    await tester.tap(find.text('＋ Other'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).last, 'Novella');
+    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+
+    // It shows as its own selected chip, and rides the payload.
+    expect(find.widgetWithText(FilterChip, 'Novella'), findsOneWidget);
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+    expect(fake.lastCreatePayload?['form'], 'Novella');
+  });
+
+  testWidgets('a custom type that is really a known one folds onto it', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Case folded');
+    await tester.tap(find.text('＋ Other'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '  novel ');
+    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+
+    // Mirrors the server's fold, so the facet can't split into novel/Novel.
+    expect(fake.lastCreatePayload?['form'], 'Novel');
+  });
 }

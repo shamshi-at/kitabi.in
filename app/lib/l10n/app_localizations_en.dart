@@ -305,6 +305,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formFieldType => 'TYPE · PICK ONE';
 
   @override
+  String get formTypeOther => '＋ Other';
+
+  @override
+  String get formTypeOtherTitle => 'What kind of book is it?';
+
+  @override
+  String get formTypeOtherHint => 'Novella, Screenplay, Devotional…';
+
+  @override
   String get formFieldGenrePrimary => 'GENRE · TAP ALL THAT FIT';
 
   @override

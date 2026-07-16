@@ -299,6 +299,47 @@ class _BookFormState extends ConsumerState<_BookForm> {
     setState(() => _authors.add(result));
   }
 
+  /// Name a type the suggestions don't cover. The server folds a variant onto
+  /// its canonical spelling ("novel" → "Novel"), so typing one that's already
+  /// a chip just selects that chip rather than forking the facet.
+  Future<void> _pickCustomForm() async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController(
+      text: _form != null && !kWorkForms.contains(_form) ? _form : '',
+    );
+    final typed = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text(l10n.formTypeOtherTitle, style: TextStyle(fontSize: 16)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(hintText: l10n.formTypeOtherHint),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text(l10n.bookSave),
+          ),
+        ],
+      ),
+    );
+    if (typed == null || !mounted) return;
+    final cleaned = typed.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (cleaned.isEmpty) return;
+    // Mirror the server's fold so the chip highlights immediately instead of
+    // waiting for a round-trip to tell us "novel" was really "Novel".
+    final canonical = kWorkForms.firstWhere(
+      (f) => f.toLowerCase() == cleaned.toLowerCase(),
+      orElse: () => cleaned,
+    );
+    setState(() => _form = canonical);
+  }
+
   Future<void> _pickPublisher() async {
     final result = await context.push<Map<String, dynamic>>(Routes.publisherPicker);
     if (result == null) return;
@@ -541,6 +582,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
 
+    // Read before the awaits — this widget may be gone by the time the cache
+    // mirror below runs, and `ref` isn't safe to touch after dispose.
+    final db = ref.read(appDatabaseProvider);
     final genres = {..._selectedGenres, ..._splitNames(_customGenres.text)}.toList();
     final publisherId = _publisher?['id'] as String?;
     final payload = {
@@ -589,6 +633,16 @@ class _BookFormState extends ConsumerState<_BookForm> {
               'back_cover_url': _backCoverUrl,
           };
           if (edPatch.isNotEmpty) await api.updateEdition(editionId, edPatch);
+        }
+        // Mirror the edit into the offline cache the shelf reads from —
+        // otherwise a new Type/title saves server-side but the library grid
+        // and its filters keep showing the stale row (16 Jul 2026). The mirror
+        // is a convenience, never the truth, so this must never block the save
+        // or fail it: fire it off, let the grid's stream pick the row up when
+        // it lands, and fall back on the grid's own hydration if it doesn't.
+        final updated = result['work'];
+        if (updated is Map<String, dynamic>) {
+          unawaited(refreshCachedWork(db, updated).catchError((_) {}));
         }
         ref.invalidate(workProvider(workId));
         if (mounted) {
@@ -1054,7 +1108,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
             spacing: 6,
             runSpacing: 6,
             children: [
-              for (final form in kWorkForms)
+              // The suggestions, plus the reader's own type when it isn't one
+              // of them — a custom form must still show as a selected chip on
+              // edit, not vanish because it's off-list.
+              for (final form in [
+                ...kWorkForms,
+                if (_form != null && !kWorkForms.contains(_form)) _form!,
+              ])
                 FilterChip(
                   label: Text(form, style: TextStyle(fontSize: 12)),
                   showCheckmark: false,
@@ -1070,6 +1130,19 @@ class _BookFormState extends ConsumerState<_BookForm> {
                     color: _form == form ? AppColors.oxblood : AppColors.line,
                   ),
                 ),
+              // Our list will never cover every kind of book — a novella, a
+              // screenplay, a devotional. Naming one is a tap away rather than
+              // a dead end (owner report, 16 Jul 2026).
+              ActionChip(
+                onPressed: _pickCustomForm,
+                label: Text(l10n.formTypeOther, style: TextStyle(fontSize: 12)),
+                backgroundColor: AppColors.card,
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.oxblood,
+                ),
+                side: BorderSide(color: AppColors.gold),
+              ),
             ],
           ),
           SizedBox(height: 12),

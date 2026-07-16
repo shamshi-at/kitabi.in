@@ -610,6 +610,24 @@ abstract class AppLocalizations {
   /// **'TYPE · PICK ONE'**
   String get formFieldType;
 
+  /// Chip at the end of the Type row that opens a field to name a type not in the suggested list
+  ///
+  /// In en, this message translates to:
+  /// **'＋ Other'**
+  String get formTypeOther;
+
+  /// Title of the dialog for typing a custom book type
+  ///
+  /// In en, this message translates to:
+  /// **'What kind of book is it?'**
+  String get formTypeOtherTitle;
+
+  /// Placeholder in the custom book-type field, showing example types
+  ///
+  /// In en, this message translates to:
+  /// **'Novella, Screenplay, Devotional…'**
+  String get formTypeOtherHint;
+
   /// Section label for the multi-select genre chips on the add-book form
   ///
   /// In en, this message translates to:

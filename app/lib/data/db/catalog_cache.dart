@@ -40,6 +40,25 @@ Future<void> cacheBookForOffline(
   );
 }
 
+/// Refresh the offline mirror for a Work the reader just edited — for every
+/// edition of it they actually hold (a cached row already exists).
+///
+/// The library grid and its filters read the mirror, never the catalog, so an
+/// edit that isn't mirrored is invisible on the shelf: setting a book's Type
+/// saved fine server-side but the shelf's Type filter kept reading the stale
+/// null, which looked exactly like the filter being broken (owner report,
+/// 16 Jul 2026). Skips editions with no cached row so editing a book you don't
+/// own can't quietly seed the cache with it.
+Future<void> refreshCachedWork(AppDatabase db, Map<String, dynamic> work) async {
+  final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+  for (final edition in editions) {
+    final editionId = edition['id'] as String?;
+    if (editionId == null) continue;
+    if (await db.cachedBooksDao.getByEditionId(editionId) == null) continue;
+    await cacheBookForOffline(db, work, edition);
+  }
+}
+
 /// Hydrate the catalog data for borrowed books so they can render (cover, title,
 /// author). A borrowed book was never added by this reader — it arrived as a
 /// mirrored loan record carrying only an edition id — so it isn't in the cache.

@@ -350,6 +350,18 @@
   "@formFieldType": {
     "description": "Section label for the single-select literary form (Novel, Short stories, ...) chips"
   },
+  "formTypeOther": "＋ Other",
+  "@formTypeOther": {
+    "description": "Chip at the end of the Type row that opens a field to name a type not in the suggested list"
+  },
+  "formTypeOtherTitle": "What kind of book is it?",
+  "@formTypeOtherTitle": {
+    "description": "Title of the dialog for typing a custom book type"
+  },
+  "formTypeOtherHint": "Novella, Screenplay, Devotional…",
+  "@formTypeOtherHint": {
+    "description": "Placeholder in the custom book-type field, showing example types"
+  },
   "formFieldGenrePrimary": "GENRE · TAP ALL THAT FIT",
   "@formFieldGenrePrimary": {
     "description": "Section label for the multi-select genre chips on the add-book form"
