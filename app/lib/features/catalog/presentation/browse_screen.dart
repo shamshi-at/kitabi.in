@@ -89,9 +89,11 @@ class BrowseScreen extends ConsumerWidget {
   }
 }
 
-/// The Books tab — a sort control (title / newest / oldest / author) and a
-/// language filter above the paged list. Changing either re-keys the list so
-/// it reloads cleanly from the first page with the new query.
+/// The Books tab — a sort control (title / newest / oldest / author) plus
+/// language, Type and genre filters above the paged list. Changing any of them
+/// re-keys the list so it reloads cleanly from the first page with the new
+/// query. Every facet is applied server-side: the list is paged, so filtering
+/// the page already fetched would silently hide matches further in.
 class _BooksBrowseTab extends StatefulWidget {
   const _BooksBrowseTab({required this.api});
 
@@ -104,13 +106,25 @@ class _BooksBrowseTab extends StatefulWidget {
 class _BooksBrowseTabState extends State<_BooksBrowseTab> {
   String _sort = 'title';
   String? _language;
+  String? _form;
+  String? _genre;
   List<String> _languages = [];
+  List<String> _forms = [];
+  List<String> _genres = [];
 
   @override
   void initState() {
     super.initState();
+    // Each facet list is best-effort: a failed fetch just leaves that filter
+    // showing "all", never blocks browsing.
     widget.api.browseLanguages().then((langs) {
       if (mounted) setState(() => _languages = langs);
+    }).catchError((_) {});
+    widget.api.browseForms().then((forms) {
+      if (mounted) setState(() => _forms = forms);
+    }).catchError((_) {});
+    widget.api.browseGenres().then((genres) {
+      if (mounted) setState(() => _genres = genres);
     }).catchError((_) {});
   }
 
@@ -128,33 +142,71 @@ class _BooksBrowseTabState extends State<_BooksBrowseTab> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: _FilterChipDropdown<String>(
-                  icon: Icons.sort,
-                  value: _sort,
-                  label: sorts[_sort]!,
-                  items: [
-                    for (final e in sorts.entries)
-                      DropdownMenuItem(value: e.key, child: Text(e.value)),
-                  ],
-                  onChanged: (v) => setState(() => _sort = v ?? 'title'),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _FilterChipDropdown<String>(
+                      icon: Icons.sort,
+                      value: _sort,
+                      label: sorts[_sort]!,
+                      items: [
+                        for (final e in sorts.entries)
+                          DropdownMenuItem(value: e.key, child: Text(e.value)),
+                      ],
+                      onChanged: (v) => setState(() => _sort = v ?? 'title'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _FilterChipDropdown<String?>(
+                      icon: Icons.translate,
+                      value: _language,
+                      label: _language ?? l10n.browseFilterAllLanguages,
+                      items: [
+                        DropdownMenuItem(value: null, child: Text(l10n.browseFilterAllLanguages)),
+                        for (final lang in _languages)
+                          DropdownMenuItem(value: lang, child: Text(lang)),
+                      ],
+                      onChanged: (v) => setState(() => _language = v),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _FilterChipDropdown<String?>(
-                  icon: Icons.translate,
-                  value: _language,
-                  label: _language ?? l10n.browseFilterAllLanguages,
-                  items: [
-                    DropdownMenuItem(value: null, child: Text(l10n.browseFilterAllLanguages)),
-                    for (final lang in _languages)
-                      DropdownMenuItem(value: lang, child: Text(lang)),
-                  ],
-                  onChanged: (v) => setState(() => _language = v),
-                ),
+              const SizedBox(height: 6),
+              // Type and genre — the two axes the add form makes primary, so
+              // Discover can be read the same way the shelf is filtered.
+              Row(
+                children: [
+                  Expanded(
+                    child: _FilterChipDropdown<String?>(
+                      icon: Icons.menu_book_outlined,
+                      value: _form,
+                      label: _form ?? l10n.browseFilterAllTypes,
+                      items: [
+                        DropdownMenuItem(value: null, child: Text(l10n.browseFilterAllTypes)),
+                        for (final form in _forms)
+                          DropdownMenuItem(value: form, child: Text(form)),
+                      ],
+                      onChanged: (v) => setState(() => _form = v),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _FilterChipDropdown<String?>(
+                      icon: Icons.local_offer_outlined,
+                      value: _genre,
+                      label: _genre ?? l10n.browseFilterAllGenres,
+                      items: [
+                        DropdownMenuItem(value: null, child: Text(l10n.browseFilterAllGenres)),
+                        for (final genre in _genres)
+                          DropdownMenuItem(value: genre, child: Text(genre)),
+                      ],
+                      onChanged: (v) => setState(() => _genre = v),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -162,12 +214,14 @@ class _BooksBrowseTabState extends State<_BooksBrowseTab> {
         Expanded(
           child: _PaginatedList(
             // Re-key on filter/sort so pagination resets to page 1.
-            key: ValueKey('$_sort|$_language'),
+            key: ValueKey('$_sort|$_language|$_form|$_genre'),
             fetch: (limit, offset) => widget.api.browseWorks(
               limit: limit,
               offset: offset,
               sort: _sort,
               language: _language,
+              form: _form,
+              genre: _genre,
             ),
             emptyText: AppLocalizations.of(context)!.browseEmpty,
             itemBuilder: (work) => CatalogResultTile(work: work),

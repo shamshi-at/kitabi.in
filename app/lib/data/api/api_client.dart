@@ -195,6 +195,8 @@ class ApiClient {
     int limit = 40,
     int offset = 0,
     String? language,
+    String? form,
+    String? genre,
     String sort = 'title',
   }) async {
     final res = await _dio.get(
@@ -204,6 +206,8 @@ class ApiClient {
         'offset': offset,
         'sort': sort,
         'language': ?language,
+        'form': ?form,
+        'genre': ?genre,
       },
     );
     return (res.data as List).cast<Map<String, dynamic>>();
@@ -212,6 +216,19 @@ class ApiClient {
   /// Distinct catalog languages — powers the browse language filter.
   Future<List<String>> browseLanguages() async {
     final res = await _dio.get('/catalog/browse/languages');
+    return (res.data as List).cast<String>();
+  }
+
+  /// Literary forms present in the catalog — the browse Type filter offers
+  /// only what it can actually return.
+  Future<List<String>> browseForms() async {
+    final res = await _dio.get('/catalog/browse/forms');
+    return (res.data as List).cast<String>();
+  }
+
+  /// Genres carried by at least one work — powers the browse genre filter.
+  Future<List<String>> browseGenres() async {
+    final res = await _dio.get('/catalog/browse/genres');
     return (res.data as List).cast<String>();
   }
 

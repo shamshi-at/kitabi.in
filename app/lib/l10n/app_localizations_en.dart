@@ -2297,4 +2297,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browseFilterAllLanguages => 'All languages';
+
+  @override
+  String get browseFilterAllTypes => 'All types';
+
+  @override
+  String get browseFilterAllGenres => 'All genres';
 }

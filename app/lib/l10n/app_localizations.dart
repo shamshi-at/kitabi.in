@@ -3945,6 +3945,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All languages'**
   String get browseFilterAllLanguages;
+
+  /// Browse Type (literary form) filter: no type filter
+  ///
+  /// In en, this message translates to:
+  /// **'All types'**
+  String get browseFilterAllTypes;
+
+  /// Browse genre filter: no genre filter
+  ///
+  /// In en, this message translates to:
+  /// **'All genres'**
+  String get browseFilterAllGenres;
 }
 
 class _AppLocalizationsDelegate

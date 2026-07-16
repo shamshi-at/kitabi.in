@@ -2153,5 +2153,9 @@
   "browseSortAuthor": "Author (A–Z)",
   "@browseSortAuthor": {"description": "Browse sort option: alphabetical by author"},
   "browseFilterAllLanguages": "All languages",
-  "@browseFilterAllLanguages": {"description": "Browse language filter: no language filter"}
+  "@browseFilterAllLanguages": {"description": "Browse language filter: no language filter"},
+  "browseFilterAllTypes": "All types",
+  "@browseFilterAllTypes": {"description": "Browse Type (literary form) filter: no type filter"},
+  "browseFilterAllGenres": "All genres",
+  "@browseFilterAllGenres": {"description": "Browse genre filter: no genre filter"}
 }

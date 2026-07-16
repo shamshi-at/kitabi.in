@@ -113,19 +113,34 @@ class _FakeApiClient extends ApiClient {
     return {'id': _authorId, ...payload};
   }
 
+  /// The facets the browse screen last asked the server for — the filters are
+  /// server-side (the list is paged), so the query is the thing to assert.
+  String? lastBrowseForm;
+  String? lastBrowseGenre;
+
   @override
   Future<List<Map<String, dynamic>>> browseWorks({
     int limit = 40,
     int offset = 0,
     String? language,
+    String? form,
+    String? genre,
     String sort = 'title',
   }) async {
+    lastBrowseForm = form;
+    lastBrowseGenre = genre;
     if (offset > 0) return []; // one page, then end
     return searchCatalog('chemmeen');
   }
 
   @override
   Future<List<String>> browseLanguages() async => ['Malayalam', 'Tamil'];
+
+  @override
+  Future<List<String>> browseForms() async => ['Novel', 'Poetry'];
+
+  @override
+  Future<List<String>> browseGenres() async => ['Fiction', 'Historical'];
 
   @override
   Future<List<Map<String, dynamic>>> browseAuthors({
@@ -801,5 +816,40 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fake.lastCreatePayload?['form'], isNull);
+  });
+  testWidgets('the catalog browse screen filters by Type and genre server-side',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const BrowseScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // Both facets start unset — the list is the whole catalog.
+    expect(find.text('All types'), findsOneWidget);
+    expect(find.text('All genres'), findsOneWidget);
+    expect(fake.lastBrowseForm, isNull);
+    expect(fake.lastBrowseGenre, isNull);
+
+    // The dropdowns offer only what the catalog actually has.
+    await tester.tap(find.text('All types'));
+    await tester.pumpAndSettle();
+    expect(find.text('Poetry').hitTestable(), findsWidgets);
+    await tester.tap(find.text('Novel').last);
+    await tester.pumpAndSettle();
+
+    // Picking one re-queries the server rather than filtering the fetched page
+    // (which would hide matches further into the pagination).
+    expect(fake.lastBrowseForm, 'Novel');
+
+    await tester.tap(find.text('All genres'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Historical').last);
+    await tester.pumpAndSettle();
+
+    // Facets compose — the Type filter survives picking a genre.
+    expect(fake.lastBrowseGenre, 'Historical');
+    expect(fake.lastBrowseForm, 'Novel');
   });
 }
