@@ -178,12 +178,16 @@ async def _refs_owned(db: AsyncSession, user_id: uuid.UUID, entity: str, data: d
             if entry is None or entry.user_id != user_id:
                 return False
     elif entity == "library_entry_tags":
-        entry = await db.get(LibraryEntry, data["library_entry_id"])
-        if entry is None or entry.user_id != user_id:
-            return False
-        tag = await db.get(PersonalTag, data["tag_id"])
-        if tag is None or tag.user_id != user_id:
-            return False
+        entry_id = data.get("library_entry_id")
+        if entry_id is not None:
+            entry = await db.get(LibraryEntry, entry_id)
+            if entry is None or entry.user_id != user_id:
+                return False
+        tag_id = data.get("tag_id")
+        if tag_id is not None:
+            tag = await db.get(PersonalTag, tag_id)
+            if tag is None or tag.user_id != user_id:
+                return False
     return True
 
 
@@ -251,6 +255,14 @@ async def _apply_one(
         )
 
     data = update_schema.model_validate(op.payload)
+    # An update can re-point a child at another library entry (the client's
+    # duplicate-entry heal) — that target must belong to the pusher too.
+    if not await _refs_owned(db, user_id, op.entity, data.model_dump(exclude_unset=True)):
+        return (
+            SyncOpResult(op_id=op.op_id, status="rejected", code="invalid_reference"),
+            None,
+            None,
+        )
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(row, key, value)
     row.updated_at = datetime.now(UTC)

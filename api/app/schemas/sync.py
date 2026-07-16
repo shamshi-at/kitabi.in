@@ -108,6 +108,10 @@ class ReadingSessionCreate(BaseModel):
 
 
 class ReadingSessionUpdate(BaseModel):
+    # Sent by the client's duplicate-entry heal, re-pointing sessions from a
+    # merged-away library entry onto the kept one. Ownership of the target
+    # entry is validated in apply (same _refs_owned check as create).
+    library_entry_id: uuid.UUID | None = None
     ended_at: datetime | None = None
     duration_seconds: int | None = Field(default=None, ge=0)
     page_start: int | None = None
@@ -160,6 +164,8 @@ class LendingRecordCreate(BaseModel):
 
 
 class LendingRecordUpdate(BaseModel):
+    # Sent by the client's duplicate-entry heal (see ReadingSessionUpdate).
+    library_entry_id: uuid.UUID | None = None
     borrower_name: str | None = None
     # Sent (possibly as null) when a rejected loan is unlinked to a private
     # contact — clearing the Kitabi user reference. Explicit-null clears it.

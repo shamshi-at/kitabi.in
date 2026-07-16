@@ -586,3 +586,102 @@ async def test_reading_session_update_sets_page_end(client):
     pulled = await client.get("/sync/pull", params={"cursor": 0})
     session = next(c for c in pulled.json()["changes"] if c["entity"] == "reading_sessions")
     assert session["data"]["page_end"] == 220
+
+
+async def test_update_can_repoint_children_at_another_owned_entry(client):
+    """The client's duplicate-entry heal merges two library entries for one
+    edition and re-points the loser's reading sessions / lending records at
+    the keeper via plain update ops — the update schemas must accept
+    library_entry_id and the server must apply it."""
+    _, edition_id = await _seed_edition(client)
+    keeper_id = str(uuid.uuid4())
+    dup_id = str(uuid.uuid4())
+    session_id = str(uuid.uuid4())
+    record_id = str(uuid.uuid4())
+
+    ops = [
+        _op("library_entries", keeper_id, "create", {"edition_id": edition_id}),
+        _op("library_entries", dup_id, "create", {"edition_id": edition_id}),
+        _op(
+            "reading_sessions",
+            session_id,
+            "create",
+            {
+                "library_entry_id": dup_id,
+                "started_at": "2026-07-10T20:00:00Z",
+                "ended_at": "2026-07-10T20:10:00Z",
+                "duration_seconds": 600,
+            },
+        ),
+        _op(
+            "lending_records",
+            record_id,
+            "create",
+            {"library_entry_id": dup_id, "borrower_name": "Anu", "lent_date": "2026-07-01"},
+        ),
+    ]
+    await client.post("/sync/push", json={"ops": ops})
+
+    heal = [
+        _op("reading_sessions", session_id, "update", {"library_entry_id": keeper_id}),
+        _op("lending_records", record_id, "update", {"library_entry_id": keeper_id}),
+        _op("library_entries", dup_id, "delete", {}),
+    ]
+    resp = await client.post("/sync/push", json={"ops": heal})
+    assert [r["status"] for r in resp.json()["results"]] == ["applied"] * 3
+
+    pulled = (await client.get("/sync/pull", params={"cursor": 0})).json()["changes"]
+    session = next(c for c in pulled if c["entity"] == "reading_sessions")
+    record = next(c for c in pulled if c["entity"] == "lending_records")
+    dup = next(c for c in pulled if c["entity"] == "library_entries" and c["data"]["id"] == dup_id)
+    assert session["data"]["library_entry_id"] == keeper_id
+    assert record["data"]["library_entry_id"] == keeper_id
+    assert dup["data"]["deleted_at"] is not None
+
+
+async def test_update_repointing_at_another_users_entry_is_rejected(
+    client, db_sessionmaker, user_b
+):
+    """Re-pointing on update gets the same ownership check as create — an
+    update must not hang my session off another user's library entry."""
+    import uuid as _uuid
+
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(_uuid.uuid4())
+    session_id = str(_uuid.uuid4())
+    await client.post(
+        "/sync/push",
+        json={
+            "ops": [
+                _op("library_entries", entry_id, "create", {"edition_id": edition_id}),
+                _op(
+                    "reading_sessions",
+                    session_id,
+                    "create",
+                    {
+                        "library_entry_id": entry_id,
+                        "started_at": "2026-07-10T20:00:00Z",
+                        "ended_at": "2026-07-10T20:10:00Z",
+                        "duration_seconds": 600,
+                    },
+                ),
+            ]
+        },
+    )
+
+    foreign_entry = str(_uuid.uuid4())
+    async with db_sessionmaker() as session:
+        await session.execute(
+            text(
+                "INSERT INTO library_entries (id, user_id, edition_id, status, is_favorite,"
+                " created_at, updated_at) VALUES (:id, :uid, :ed, 'pending', false, now(), now())"
+            ),
+            {"id": foreign_entry, "uid": user_b["id"], "ed": edition_id},
+        )
+        await session.commit()
+
+    op = _op("reading_sessions", session_id, "update", {"library_entry_id": foreign_entry})
+    resp = await client.post("/sync/push", json={"ops": [op]})
+    result = resp.json()["results"][0]
+    assert result["status"] == "rejected"
+    assert result["code"] == "invalid_reference"
