@@ -15,6 +15,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
 import '../../library/providers/reading_timer_providers.dart';
+import '../../library/stop_session_flow.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../../recommendations/providers/recommendations_providers.dart';
 
@@ -489,12 +490,22 @@ class _CurrentlyReadingCard extends ConsumerWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // While this book's session is running the control IS a stop —
+                // a play icon on a live timer just lies about what it does
+                // (owner report, 16 Jul 2026). Stops and logs through the same
+                // flow as the mini-bar, page prompt and all.
                 IconButton(
                   padding: EdgeInsets.all(4),
                   constraints: BoxConstraints(minWidth: 32, minHeight: 32),
-                  icon: Icon(Icons.play_circle_outline, color: AppColors.gold, size: 22),
-                  tooltip: l10n.timerStart,
-                  onPressed: () => _start(context, ref, l10n, book),
+                  icon: Icon(
+                    isLive ? Icons.stop_circle_outlined : Icons.play_circle_outline,
+                    color: AppColors.gold,
+                    size: 22,
+                  ),
+                  tooltip: isLive ? l10n.timerStop : l10n.timerStart,
+                  onPressed: isLive
+                      ? () => quickStopSession(context, ref)
+                      : () => _start(context, ref, l10n, book),
                 ),
                 IconButton(
                   padding: EdgeInsets.all(4),

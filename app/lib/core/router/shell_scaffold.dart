@@ -4,14 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/repositories/repository_providers.dart';
 import '../../features/connections/connections_providers.dart';
 import '../../features/library/providers/reading_timer_providers.dart';
+import '../../features/library/stop_session_flow.dart';
 import '../../l10n/app_localizations.dart';
 import '../format_duration.dart';
 import '../haptics.dart';
 import '../theme/app_theme.dart';
 import '../widgets/sync_status_bar.dart';
+import '../widgets/typeset_cover.dart';
 import 'app_router.dart';
 
 /// The persistent bottom-nav shell (S3 mockup): Home · Library · [+] ·
@@ -246,84 +247,6 @@ class _MiniTimerBarContentState extends ConsumerState<_MiniTimerBarContent> {
     super.dispose();
   }
 
-  Future<void> _quickStop(WidgetRef ref) async {
-    Haptics.success();
-    // The book/page-count come from the active session's own provider, which
-    // goes null the instant stop() clears the session — so it must be read
-    // before stopping, not after.
-    final activeBook = ref.read(activeSessionBookProvider);
-    final currentPage = activeBook?.entry.currentPage;
-    final pageCount = activeBook?.book?.pageCount;
-    final logged = await ref.read(activeSessionProvider.notifier).stop();
-    ref.invalidate(weeklyReadingSecondsProvider);
-    if (logged == null || !mounted) return;
-    await _promptPageNumber(
-      ref,
-      logged: logged,
-      currentPage: currentPage,
-      pageCount: pageCount,
-    );
-  }
-
-  /// Quick-stopping from the mini-bar used to only show a snackbar, with no
-  /// way to note the page reached — unlike stopping from the full timer
-  /// screen's wax-seal face, which always asks. This closes that gap with the
-  /// same field/skip pattern (owner report, 15 Jul 2026): the title doubles
-  /// as the "session logged" confirmation, "Skip" leaves progress untouched.
-  Future<void> _promptPageNumber(
-    WidgetRef ref, {
-    required LoggedSession logged,
-    required int? currentPage,
-    required int? pageCount,
-  }) async {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(text: currentPage?.toString() ?? '');
-    final page = await showDialog<int>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          l10n.timerMiniBarStopped(formatDuration(Duration(seconds: logged.durationSeconds))),
-        ),
-        content: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.timerPageFieldLabel),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 60,
-              child: TextField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                autofocus: true,
-                decoration: InputDecoration(hintText: l10n.timerPageFieldHint),
-              ),
-            ),
-            if (pageCount != null) ...[
-              const SizedBox(width: 8),
-              Text(l10n.timerPageFieldOf(pageCount)),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.timerPageDialogSkip),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text.trim())),
-            child: Text(l10n.bookSave),
-          ),
-        ],
-      ),
-    );
-    if (page == null || page == currentPage || !mounted) return;
-    final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
-    await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
-    final libraryRepo = await ref.read(libraryRepositoryProvider.future);
-    await libraryRepo.updateProgress(logged.libraryEntryId, currentPage: page);
-  }
-
   @override
   Widget build(BuildContext context) {
     final active = widget.active;
@@ -356,13 +279,15 @@ class _MiniTimerBarContentState extends ConsumerState<_MiniTimerBarContent> {
           ),
           child: Row(
             children: [
-              Container(
+              // The book being read, not a blank tile — same cover frame the
+              // rest of the app uses, so a photographed cover shows and a
+              // cover-less book still reads as itself (the typeset fallback).
+              TypesetCover(
+                title: title ?? '…',
+                author: activeBook?.book?.authorNames,
+                coverUrl: activeBook?.book?.coverUrl,
                 width: 28,
                 height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.oxblood,
-                  borderRadius: BorderRadius.circular(4),
-                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -391,7 +316,7 @@ class _MiniTimerBarContentState extends ConsumerState<_MiniTimerBarContent> {
                 button: true,
                 label: AppLocalizations.of(context)!.timerStop,
                 child: GestureDetector(
-                  onTap: () => _quickStop(ref),
+                  onTap: () => quickStopSession(context, ref),
                   behavior: HitTestBehavior.opaque,
                   child: SizedBox(
                     width: 44,
