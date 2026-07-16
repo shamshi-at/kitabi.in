@@ -88,6 +88,11 @@ class LibraryRepository extends Repo {
     String status = 'pending',
     String ownership = 'owned',
   }) async {
+    // One active entry per edition — a double-tap on "Add to library" (each
+    // tap awaits the catalog cache write first, plenty of time for a second
+    // tap) must not create a duplicate row; reuse the existing entry instead.
+    final existing = await getByEditionId(editionId);
+    if (existing != null) return existing.id;
     final id = _uuid.v4();
     await db.libraryEntriesDao.insertOne(
       LibraryEntriesCompanion.insert(
@@ -154,8 +159,14 @@ class LibraryRepository extends Repo {
   }) async {
     final changes = <String, dynamic>{};
     if (currentPage != null) changes['current_page'] = currentPage;
-    if (startDate != null) changes['start_date'] = startDate.toUtc().toIso8601String();
-    if (finishDate != null) changes['finish_date'] = finishDate.toUtc().toIso8601String();
+    // Plain `date` columns on the server — a full timestamp is rejected as
+    // invalid_payload (Pydantic only accepts zero-time datetimes for a date).
+    if (startDate != null) {
+      changes['start_date'] = startDate.toUtc().toIso8601String().split('T').first;
+    }
+    if (finishDate != null) {
+      changes['finish_date'] = finishDate.toUtc().toIso8601String().split('T').first;
+    }
     if (changes.isEmpty) return;
 
     await db.libraryEntriesDao.patch(

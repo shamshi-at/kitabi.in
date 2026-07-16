@@ -275,6 +275,21 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   and fail loudly before Xcode/Gradle even starts if one is missing. Don't call
   `flutter build ipa`/`flutter run` directly with hand-typed `--dart-define` flags —
   that's exactly how this kept happening.
+- **"One row per key" is a sync-shaped assumption — never enforce it with
+  `getSingleOrNull`.** The pull upserts by *id*, so an entry created on another
+  device/install lands next to the local row for the same edition; every
+  `getByEditionId` then crashed the book page's Yours tab with "Bad state: Too many
+  elements" (16 Jul 2026, Aadujeevitham). Lookups must pick a deterministic winner
+  (earliest `createdAt` — the row children already point at), `add()` must reuse an
+  existing active entry, and a post-pull heal (`library_dedupe.dart`) merges the
+  rows and enqueues the merge so the server converges too.
+- **Server `Date` columns reject full ISO timestamps on `/sync/push`.** Pydantic
+  only accepts a datetime string for a `date` field when the time part is zero —
+  `updateProgress` sent `DateTime.now().toUtc().toIso8601String()` for
+  `start_date`/`finish_date`, so every such op died as `invalid_payload` and reading
+  dates never synced (16 Jul 2026). Anything mapped to a Postgres `Date` goes on the
+  wire as `YYYY-MM-DD` (`.toIso8601String().split('T').first`, like `lent_date`
+  always did).
 - **App icon/splash source art for `flutter_launcher_icons`/`flutter_native_splash`
   should NOT reuse the in-app rounded brand tile (`logo.svg`) directly for the app
   icon** — the OS applies its own rounding mask, so the icon source must be a flat,

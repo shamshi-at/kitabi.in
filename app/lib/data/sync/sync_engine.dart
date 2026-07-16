@@ -5,6 +5,8 @@ import 'package:drift/drift.dart';
 import '../api/api_client.dart';
 import '../db/catalog_cache.dart';
 import '../db/database.dart';
+import 'device_id.dart';
+import 'library_dedupe.dart';
 
 /// Outcome of one sync run — ops pushed and deltas pulled — surfaced to the UI.
 class SyncReport {
@@ -80,6 +82,18 @@ class SyncEngine {
       await cacheBorrowedBooks(db, api);
     } catch (_) {
       // Offline / catalog fetch failed — the next sync (or the grid) retries.
+    }
+    // A pull can leave two active entries for one edition (an entry created on
+    // another device/install upserts by id, next to the local one). Merge them
+    // back into one; the merge enqueues ops, so mark a follow-up pass to push
+    // them right away instead of waiting for the next trigger.
+    try {
+      final deviceId = await getOrCreateDeviceId(db);
+      final healed = await healDuplicateLibraryEntries(db, userId: userId, deviceId: deviceId);
+      if (healed > 0) _runAgain = true;
+    } catch (_) {
+      // Best-effort — the next pass retries; reads no longer crash on
+      // duplicates either way (getByEditionId picks the original).
     }
     return SyncReport(pushedOps: pushed, pulledChanges: pulled);
   }
@@ -243,6 +257,15 @@ class SyncEngine {
             lastSyncedAt: companion.lastSyncedAt,
           ),
         );
+      case 'reading_sessions':
+        await db.readingSessionsDao.patch(
+          entityId,
+          ReadingSessionsCompanion(
+            deletedAt: companion.deletedAt,
+            syncStatus: companion.syncStatus,
+            lastSyncedAt: companion.lastSyncedAt,
+          ),
+        );
     }
   }
 
@@ -302,6 +325,15 @@ class SyncEngine {
             serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
           ),
         );
+      case 'reading_sessions':
+        await db.readingSessionsDao.patch(
+          entityId,
+          ReadingSessionsCompanion(
+            syncStatus: common.syncStatus,
+            lastSyncedAt: common.lastSyncedAt,
+            serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
+          ),
+        );
     }
   }
 
@@ -328,6 +360,7 @@ class SyncEngine {
                 serverSeq: synced.serverSeq,
                 editionId: Value(d['edition_id'] as String),
                 status: Value(d['status'] as String),
+                ownership: Value(d['ownership'] as String? ?? 'owned'),
                 startDate: Value(ts('start_date')),
                 finishDate: Value(ts('finish_date')),
                 currentPage: Value(d['current_page'] as int?),
@@ -422,6 +455,25 @@ class SyncEngine {
                 dueDate: Value(ts('due_date')),
                 returnedDate: Value(ts('returned_date')),
                 note: Value(d['note'] as String?),
+              ),
+            );
+      case 'reading_sessions':
+        await db.into(db.readingSessions).insertOnConflictUpdate(
+              ReadingSessionsCompanion(
+                id: Value(d['id'] as String),
+                userId: Value(d['user_id'] as String),
+                createdAt: Value(ts('created_at')!),
+                updatedAt: Value(ts('updated_at')!),
+                deletedAt: synced.deletedAt,
+                syncStatus: synced.syncStatus,
+                lastSyncedAt: synced.lastSyncedAt,
+                serverSeq: synced.serverSeq,
+                libraryEntryId: Value(d['library_entry_id'] as String),
+                startedAt: Value(ts('started_at')!),
+                endedAt: Value(ts('ended_at')!),
+                durationSeconds: Value(d['duration_seconds'] as int),
+                pageStart: Value(d['page_start'] as int?),
+                pageEnd: Value(d['page_end'] as int?),
               ),
             );
       case 'activity_log_entries':

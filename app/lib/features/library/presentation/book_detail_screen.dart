@@ -376,38 +376,48 @@ class _Frontispiece extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(height: 1.12),
                           ),
-                          if (authorName != null)
-                            GestureDetector(
-                              onTap: () => context
-                                  .push(Routes.authorBrowsePath(authors.first['id'] as String)),
-                              child: Padding(
-                                padding: EdgeInsets.only(top: 3),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (authors.first['image_url'] != null) ...[
-                                      CircleAvatar(
-                                        radius: 9,
-                                        backgroundColor: AppColors.goldSoft,
-                                        foregroundImage: netImageProvider(
-                                            authors.first['image_url'] as String),
-                                      ),
-                                      SizedBox(width: 6),
-                                    ],
-                                    Flexible(
-                                      child: Text(
-                                        l10n.bookByAuthor(authorName),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: AppColors.oxblood,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                        ),
+                          if (authors.isNotEmpty)
+                            Padding(
+                              padding: EdgeInsets.only(top: 3),
+                              // Every author, not just the first — a co-author
+                              // (including the reader who tagged themself) must
+                              // show up here. Each name is its own door to that
+                              // author's page; the row wraps for long lists.
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  for (final (i, author) in authors.indexed)
+                                    GestureDetector(
+                                      onTap: author['id'] != null
+                                          ? () => context.push(
+                                              Routes.authorBrowsePath(author['id'] as String))
+                                          : null,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (i == 0 && author['image_url'] != null) ...[
+                                            CircleAvatar(
+                                              radius: 9,
+                                              backgroundColor: AppColors.goldSoft,
+                                              foregroundImage: netImageProvider(
+                                                  author['image_url'] as String),
+                                            ),
+                                            SizedBox(width: 6),
+                                          ],
+                                          Text(
+                                            i == 0
+                                                ? l10n.bookByAuthor(author['name'] as String)
+                                                : ', ${author['name']}',
+                                            style: TextStyle(
+                                              color: AppColors.oxblood,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
+                                ],
                               ),
                             ),
                           if (publisher != null)

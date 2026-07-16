@@ -23,10 +23,25 @@ class LibraryEntriesDao extends DatabaseAccessor<AppDatabase> with _$LibraryEntr
       )..where((t) => t.deletedAt.isNull()))
           .watch();
 
+  /// The active entry for an edition. The app assumes one entry per edition,
+  /// but duplicates are reachable — a pull can deliver an entry created on
+  /// another device/install for an edition this device already added (and
+  /// double submits used to slip through before `add` deduped). Until the
+  /// post-pull heal merges them, prefer the original (earliest created, the
+  /// row the server and any child records already point at) instead of
+  /// throwing "Bad state: Too many elements".
   Future<LibraryEntry?> getByEditionId(String editionId) =>
       (select(libraryEntries)
-            ..where((t) => t.editionId.equals(editionId) & t.deletedAt.isNull()))
+            ..where((t) => t.editionId.equals(editionId) & t.deletedAt.isNull())
+            ..orderBy([(t) => OrderingTerm.asc(t.createdAt), (t) => OrderingTerm.asc(t.id)])
+            ..limit(1))
           .getSingleOrNull();
+
+  /// Every active entry for one user — the duplicate heal scans this.
+  Future<List<LibraryEntry>> activeForUser(String userId) => (select(libraryEntries)
+        ..where((t) => t.userId.equals(userId) & t.deletedAt.isNull())
+        ..orderBy([(t) => OrderingTerm.asc(t.createdAt), (t) => OrderingTerm.asc(t.id)]))
+      .get();
 
   /// Every active entry joined to its cached book — feeds the insights/stats
   /// screen (S10), which needs page counts, finish dates, and statuses together.
