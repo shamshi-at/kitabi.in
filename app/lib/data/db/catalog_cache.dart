@@ -35,6 +35,7 @@ Future<void> cacheBookForOffline(
       coverUrl: Value(edition['cover_url'] as String?),
       firstPublishYear: Value(work['first_publish_year'] as int?),
       genreNames: Value(genres.map((g) => g['name'] as String).join(', ')),
+      form: Value(work['form'] as String?),
     ),
   );
 }

@@ -10,23 +10,36 @@ class LibraryFilter {
   const LibraryFilter({
     this.statuses = const {},
     this.languages = const {},
+    this.forms = const {},
     this.genres = const {},
     this.favouritesOnly = false,
   });
 
   final Set<String> statuses;
   final Set<String> languages;
+
+  /// Literary forms ("Type": Novel, Short stories, Poetry…) — the Work-level
+  /// single-valued axis, filtered offline from the cached-book mirror.
+  final Set<String> forms;
   final Set<String> genres;
   final bool favouritesOnly;
 
   int get activeCount =>
-      statuses.length + languages.length + genres.length + (favouritesOnly ? 1 : 0);
+      statuses.length +
+      languages.length +
+      forms.length +
+      genres.length +
+      (favouritesOnly ? 1 : 0);
 
   bool matches(LibraryHit hit) {
     if (statuses.isNotEmpty && !statuses.contains(hit.entry.status)) return false;
     if (languages.isNotEmpty) {
       final lang = hit.book.language;
       if (lang == null || !languages.contains(lang)) return false;
+    }
+    if (forms.isNotEmpty) {
+      final form = hit.book.form;
+      if (form == null || !forms.contains(form)) return false;
     }
     if (genres.isNotEmpty && _genresOf(hit).intersection(genres).isEmpty) return false;
     if (favouritesOnly && !hit.entry.isFavorite) return false;
@@ -69,12 +82,14 @@ class _FilterSheet extends StatefulWidget {
 class _FilterSheetState extends State<_FilterSheet> {
   late Set<String> _statuses = {...widget.current.statuses};
   late Set<String> _languages = {...widget.current.languages};
+  late Set<String> _forms = {...widget.current.forms};
   late Set<String> _genres = {...widget.current.genres};
   late bool _favouritesOnly = widget.current.favouritesOnly;
 
   LibraryFilter get _working => LibraryFilter(
         statuses: _statuses,
         languages: _languages,
+        forms: _forms,
         genres: _genres,
         favouritesOnly: _favouritesOnly,
       );
@@ -84,6 +99,16 @@ class _FilterSheetState extends State<_FilterSheet> {
     for (final h in widget.hits) {
       final lang = h.book.language;
       if (lang != null && lang.trim().isNotEmpty) set.add(lang);
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
+  List<String> get _availableForms {
+    final set = <String>{};
+    for (final h in widget.hits) {
+      final form = h.book.form;
+      if (form != null && form.trim().isNotEmpty) set.add(form);
     }
     final list = set.toList()..sort();
     return list;
@@ -109,6 +134,7 @@ class _FilterSheetState extends State<_FilterSheet> {
     final l10n = AppLocalizations.of(context)!;
     final count = widget.hits.where(_working.matches).length;
     final languages = _availableLanguages;
+    final forms = _availableForms;
     final genres = _availableGenres;
 
     return Padding(
@@ -145,6 +171,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                     onPressed: () => setState(() {
                       _statuses = {};
                       _languages = {};
+                      _forms = {};
                       _genres = {};
                       _favouritesOnly = false;
                     }),
@@ -178,6 +205,22 @@ class _FilterSheetState extends State<_FilterSheet> {
                       label: lang,
                       selected: _languages.contains(lang),
                       onTap: () => _toggle(_languages, lang),
+                    ),
+                ],
+              ),
+            ],
+            if (forms.isNotEmpty) ...[
+              SizedBox(height: 14),
+              _Label(l10n.libraryFilterType),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final form in forms)
+                    _Chip(
+                      label: form,
+                      selected: _forms.contains(form),
+                      onTap: () => _toggle(_forms, form),
                     ),
                 ],
               ),

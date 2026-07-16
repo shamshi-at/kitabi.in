@@ -193,6 +193,9 @@ class CachedBooks extends Table {
   TextColumn get coverUrl => text().nullable()();
   IntColumn get firstPublishYear => integer().nullable()();
   TextColumn get genreNames => text().nullable()(); // comma-joined
+  // The Work's literary form ("Type" in the UI — Novel, Short stories,
+  // Poetry…), mirrored so the library filter works offline.
+  TextColumn get form => text().nullable()();
   DateTimeColumn get cachedAt => dateTime().withDefault(currentDateAndTime)();
 
   @override

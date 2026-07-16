@@ -20,6 +20,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../catalog_image_upload.dart';
 import '../providers/catalog_providers.dart';
+import '../work_forms.dart';
 import '../../../core/widgets/net_image.dart';
 
 /// S4d — form to add a new catalog Work + first Edition, or edit an existing one:
@@ -99,9 +100,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
   // Optional; null when unset. A dropdown, not free text — so the catalog stays
   // consistent ("Malayalam", not "malayalam"/"mal"/"Malyalam").
   String? _language;
+  // The literary form ("Type") — single-select from kWorkForms, or null.
+  String? _form;
   // Series fields are hidden behind a toggle (most books are standalone); on by
   // default only when editing a book that already has a series.
   bool _hasSeries = false;
+  // The less-essential fields (series, publisher, ISBN, pages, format,
+  // description) fold into a "More details" section — collapsed on a fresh
+  // create, open when editing or when a scan/photo-read prefilled them.
+  bool _detailsExpanded = false;
+  // What prefilled the form last ('scan' | 'photos') — drives the dismissible
+  // provenance banner so prefilled data is announced, not silent.
+  String? _prefillSource;
   late final Set<String> _selectedGenres;
   // Authors and publisher are chosen via the dedicated picker pages, so each
   // carries its canonical catalog id (falling back to name for legacy data).
@@ -165,6 +175,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
       text: edition?['isbn'] as String? ?? widget.initialIsbn ?? '',
     );
     _format = edition?['format'] as String? ?? _formats.first;
+    _form = work?['form'] as String?;
+    // Edit mode has content everywhere; a carried-in scanned ISBN lives inside
+    // the details section, so it must be visible from the start too.
+    _detailsExpanded = work != null || widget.initialIsbn != null;
     _coverUrl = edition?['cover_url'] as String?;
     _backCoverUrl = edition?['back_cover_url'] as String?;
     _initialCoverUrl = _coverUrl;
@@ -362,6 +376,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
         _language = language;
         filled = true;
       }
+      final form = fields['form'] as String?;
+      if (form != null && _form == null && kWorkForms.contains(form)) {
+        _form = form;
+        filled = true;
+      }
       // Server only returns a checksum-valid ISBN-13 (best-effort off the
       // barcode); fill it only if the field's empty — the Scan button stays
       // the exact path.
@@ -369,6 +388,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
       if (isbn != null && _isbn.text.trim().isEmpty) {
         _isbn.text = isbn;
         filled = true;
+      }
+      if (filled) {
+        _prefillSource = 'photos';
+        _detailsExpanded = true; // the grouped fields now have content — show them
       }
     });
     return filled;
@@ -390,9 +413,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
         (work['genres'] as List?)?.map((g) => (g as Map)['name'] as String).toSet() ?? <String>{};
 
     setState(() {
+      _prefillSource = 'scan';
+      _detailsExpanded = true;
       _title.text = work['title'] as String? ?? _title.text;
       final language = work['language'] as String?;
       if (language != null && language.isNotEmpty) _language = language;
+      final form = work['form'] as String?;
+      if (form != null && kWorkForms.contains(form)) _form = form;
 
       _authors
         ..clear()
@@ -490,6 +517,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
       'title': _title.text.trim(),
       'description': _description.text.trim().isEmpty ? null : _description.text.trim(),
       'language': _language,
+      'form': _form,
       // Ids for picker-chosen authors; names only for anything without one.
       'author_ids': [
         for (final a in _authors)
@@ -576,8 +604,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
       _authors.clear();
       _publisher = null;
       _language = null;
+      _form = null;
       _format = _formats.first;
       _hasSeries = false;
+      _detailsExpanded = false;
+      _prefillSource = null;
       _selectedGenres.clear();
       _coverUrl = null;
       _backCoverUrl = null;
@@ -784,7 +815,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final form = Form(
       key: _formKey,
       child: ListView(
-        padding: EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
           Row(
             children: [
@@ -812,7 +843,66 @@ class _BookFormState extends ConsumerState<_BookForm> {
               ),
             ],
           ),
-          SizedBox(height: 16),
+          // The capture strip — the two paths that fill the form lead,
+          // full-width, before any field (they used to hide mid-form: scan as
+          // a small icon inside the ISBN field, photos only after an upload).
+          if (!isEdit) ...[
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _scanning ? null : _scanIsbn,
+                    icon: _scanning
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.paper,
+                            ),
+                          )
+                        : Icon(Icons.qr_code_scanner, size: 18),
+                    label: Text(l10n.formCaptureScan),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                      textStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _uploadingFront ? null : () => _onCoverTap(back: false),
+                    icon: Icon(Icons.photo_camera_outlined, size: 18),
+                    label: Text(l10n.formCapturePhoto),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                      textStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 5),
+            Center(
+              child: Text(
+                l10n.formCaptureHelp,
+                style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+              ),
+            ),
+          ],
+          // Prefilled data is announced, not silent — a quiet dismissible
+          // banner saying where it came from and that everything is editable.
+          if (_prefillSource != null) ...[
+            SizedBox(height: 10),
+            _PrefillBanner(
+              message:
+                  _prefillSource == 'scan' ? l10n.formPrefillScan : l10n.formPrefillPhotos,
+              onDismiss: () => setState(() => _prefillSource = null),
+            ),
+          ],
+          SizedBox(height: 14),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -823,6 +913,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
                 // Front falls back to the live typeset preview from title/author.
                 title: _title.text.isEmpty ? '…' : _title.text,
                 author: _authors.isEmpty ? null : _authors.first['name'] as String?,
+                width: 64,
+                height: 96,
                 onTap: () => _onCoverTap(back: false),
               ),
               SizedBox(width: 12),
@@ -901,139 +993,49 @@ class _BookFormState extends ConsumerState<_BookForm> {
             onRemove: (author) => setState(() => _authors.remove(author)),
           ),
           SizedBox(height: 10),
-          _SeriesToggle(
-            label: l10n.formSeriesToggle,
-            sublabel: l10n.formSeriesToggleSub,
-            value: _hasSeries,
-            onChanged: (v) => setState(() => _hasSeries = v),
+          _LanguageField(
+            label: l10n.formFieldLanguage,
+            value: _language,
+            unsetLabel: l10n.formLanguageUnset,
+            // The reader's own languages first; note points to profile to
+            // manage the list. Falls back to all if none set yet.
+            languages: (ref.watch(meProvider).valueOrNull?['preferred_languages'] as List?)
+                    ?.cast<String>() ??
+                const [],
+            note: l10n.formLanguageProfileNote,
+            onChanged: (v) => setState(() => _language = v),
           ),
-          if (_hasSeries) ...[
-            SizedBox(height: 8),
-            // A grouped well so the two series fields read as one unit that
-            // belongs to the toggle above them, not as two loose inputs.
-            Container(
-              padding: EdgeInsets.fromLTRB(12, 10, 12, 12),
-              decoration: BoxDecoration(
-                color: AppColors.paperDeep,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.line),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.formSeriesHint,
-                    style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.3),
-                  ),
-                  SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 14,
-                        child: _Field(
-                          label: l10n.formFieldSeries,
-                          controller: _series,
-                          fillColor: AppColors.card,
-                          helper: l10n.formSeriesNameHelp,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        flex: 9,
-                        child: _Field(
-                          label: l10n.formFieldBookNumber,
-                          controller: _seriesNumber,
-                          keyboardType: TextInputType.number,
-                          fillColor: AppColors.card,
-                          helper: l10n.formBookNumberHelp,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-          SizedBox(height: 10),
-          Row(
+          // Type and genre are primary — they power the library filter — as
+          // one-tap chip rows with every option visible, no typing. Type is
+          // the single-valued literary form (Novel, Short stories, Poetry…);
+          // tapping the selected chip again clears it.
+          SizedBox(height: 12),
+          Text(l10n.formFieldType, style: _fieldLabelStyle),
+          SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
             children: [
-              Expanded(
-                flex: 14,
-                child: _LanguageField(
-                  label: l10n.formFieldLanguage,
-                  value: _language,
-                  unsetLabel: l10n.formLanguageUnset,
-                  // The reader's own languages first; note points to profile to
-                  // manage the list. Falls back to all if none set yet.
-                  languages: (ref.watch(meProvider).valueOrNull?['preferred_languages'] as List?)
-                          ?.cast<String>() ??
-                      const [],
-                  note: l10n.formLanguageProfileNote,
-                  onChanged: (v) => setState(() => _language = v),
+              for (final form in kWorkForms)
+                FilterChip(
+                  label: Text(form, style: TextStyle(fontSize: 12)),
+                  showCheckmark: false,
+                  selected: _form == form,
+                  onSelected: (sel) => setState(() => _form = sel ? form : null),
+                  selectedColor: AppColors.oxblood,
+                  backgroundColor: AppColors.card,
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _form == form ? AppColors.paper : AppColors.ink,
+                  ),
+                  side: BorderSide(
+                    color: _form == form ? AppColors.oxblood : AppColors.line,
+                  ),
                 ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                flex: 10,
-                child: _Field(
-                  label: l10n.formFieldPages,
-                  controller: _pages,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
             ],
           ),
-          SizedBox(height: 10),
-          _PickerButtonField(
-            label: l10n.formFieldPublisher,
-            value: _publisher?['name'] as String?,
-            placeholder: l10n.formPublisherChoose,
-            onTap: _pickPublisher,
-            onClear: _publisher == null ? null : () => setState(() => _publisher = null),
-          ),
-          SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 14,
-                child: _IsbnScanField(
-                  controller: _isbn,
-                  onScan: _scanIsbn,
-                  scanning: _scanning,
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                flex: 10,
-                child: _DropdownField(
-                  label: l10n.formFieldFormat,
-                  value: _format,
-                  options: _formats,
-                  onChanged: (v) => setState(() => _format = v),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 10),
-          _Field(
-            label: l10n.formFieldDescription,
-            controller: _description,
-            maxLines: 4,
-            helper: l10n.formDescriptionHelp,
-            expandable: true,
-          ),
-          SizedBox(height: 14),
-          Text(
-            l10n.formFieldGenres,
-            style: TextStyle(
-              fontSize: 10,
-              letterSpacing: 1,
-              color: AppColors.inkSoft,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          SizedBox(height: 12),
+          Text(l10n.formFieldGenrePrimary, style: _fieldLabelStyle),
           SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -1041,7 +1043,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
             children: [
               for (final genre in _commonGenres)
                 FilterChip(
-                  label: Text(genre, style: TextStyle(fontSize: 11)),
+                  label: Text(genre, style: TextStyle(fontSize: 12)),
+                  showCheckmark: false,
                   selected: _selectedGenres.contains(genre),
                   onSelected: (sel) => setState(() {
                     if (sel) {
@@ -1053,38 +1056,214 @@ class _BookFormState extends ConsumerState<_BookForm> {
                   selectedColor: AppColors.oxblood,
                   backgroundColor: AppColors.card,
                   labelStyle: TextStyle(
+                    fontWeight: FontWeight.w600,
                     color: _selectedGenres.contains(genre) ? AppColors.paper : AppColors.ink,
                   ),
-                  side: BorderSide(color: AppColors.line),
+                  side: BorderSide(
+                    color:
+                        _selectedGenres.contains(genre) ? AppColors.oxblood : AppColors.line,
+                  ),
                 ),
             ],
           ),
           SizedBox(height: 8),
           _Field(label: '+ ${l10n.formFieldGenres}', controller: _customGenres),
-          SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
-                    )
-                  : Text(l10n.formSave),
+          // Everything less essential folds into one disclosure — collapsed on
+          // a fresh create, open on edit or when a scan/photo-read filled it.
+          SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: _detailsExpanded ? AppColors.card : AppColors.paperDeep,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => _detailsExpanded = !_detailsExpanded),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(12, 10, 12, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                l10n.formMoreDetails,
+                                style:
+                                    TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            Icon(
+                              _detailsExpanded ? Icons.expand_less : Icons.expand_more,
+                              size: 18,
+                              color: AppColors.inkSoft,
+                            ),
+                          ],
+                        ),
+                        if (!_detailsExpanded)
+                          Padding(
+                            padding: EdgeInsets.only(top: 2),
+                            child: Text(
+                              l10n.formMoreDetailsSummary,
+                              style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (_detailsExpanded)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _SeriesToggle(
+                          label: l10n.formSeriesToggle,
+                          sublabel: l10n.formSeriesToggleSub,
+                          value: _hasSeries,
+                          onChanged: (v) => setState(() => _hasSeries = v),
+                        ),
+                        if (_hasSeries) ...[
+                          SizedBox(height: 8),
+                          // A grouped well so the two series fields read as one
+                          // unit belonging to the toggle, not two loose inputs.
+                          Container(
+                            padding: EdgeInsets.fromLTRB(12, 10, 12, 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.paperDeep,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.line),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.formSeriesHint,
+                                  style: TextStyle(
+                                      fontSize: 11.5, color: AppColors.inkSoft, height: 1.3),
+                                ),
+                                SizedBox(height: 10),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      flex: 14,
+                                      child: _Field(
+                                        label: l10n.formFieldSeries,
+                                        controller: _series,
+                                        fillColor: AppColors.card,
+                                        helper: l10n.formSeriesNameHelp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      flex: 9,
+                                      child: _Field(
+                                        label: l10n.formFieldBookNumber,
+                                        controller: _seriesNumber,
+                                        keyboardType: TextInputType.number,
+                                        fillColor: AppColors.card,
+                                        helper: l10n.formBookNumberHelp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 14,
+                              child: _PickerButtonField(
+                                label: l10n.formFieldPublisher,
+                                value: _publisher?['name'] as String?,
+                                placeholder: l10n.formPublisherChoose,
+                                onTap: _pickPublisher,
+                                onClear: _publisher == null
+                                    ? null
+                                    : () => setState(() => _publisher = null),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              flex: 10,
+                              child: _Field(
+                                label: l10n.formFieldPages,
+                                controller: _pages,
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 14,
+                              child: _IsbnScanField(
+                                controller: _isbn,
+                                onScan: _scanIsbn,
+                                scanning: _scanning,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              flex: 10,
+                              child: _DropdownField(
+                                label: l10n.formFieldFormat,
+                                value: _format,
+                                options: _formats,
+                                onChanged: (v) => setState(() => _format = v),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        _Field(
+                          label: l10n.formFieldDescription,
+                          controller: _description,
+                          maxLines: 4,
+                          helper: l10n.formDescriptionHelp,
+                          expandable: true,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
       ),
     );
 
+    // The form scrolls; Save never does — a sticky bar keeps it (and its
+    // one-line consequence note) visible without scrolling a long form.
     // While the covers are being read, a full-screen "reading your cover"
-    // overlay sits above the form (the scan takes a few seconds on the vision
-    // model) — far more legible than the little button spinner.
+    // overlay sits above everything (the scan takes a few seconds on the
+    // vision model) — far more legible than the little button spinner.
     return Stack(
       children: [
-        form,
+        Column(
+          children: [
+            Expanded(child: form),
+            _SaveBar(
+              saving: _saving,
+              onSave: _save,
+              label: l10n.formSave,
+              hint: l10n.formSaveHint,
+            ),
+          ],
+        ),
         if (_extracting)
           _ExtractingOverlay(
             coverUrl: _coverUrl ?? _backCoverUrl,
@@ -1092,6 +1271,98 @@ class _BookFormState extends ConsumerState<_BookForm> {
             author: _authors.isEmpty ? null : _authors.first['name'] as String?,
           ),
       ],
+    );
+  }
+}
+
+/// The sticky save bar under the scrolling form — the primary action is never
+/// below the fold, and the one-line note spells out that saving publishes to
+/// the shared catalog.
+class _SaveBar extends StatelessWidget {
+  const _SaveBar({
+    required this.saving,
+    required this.onSave,
+    required this.label,
+    required this.hint,
+  });
+
+  final bool saving;
+  final VoidCallback onSave;
+  final String label;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        border: Border(top: BorderSide(color: AppColors.line)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ElevatedButton(
+            onPressed: saving ? null : onSave,
+            child: saving
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+                  )
+                : Text(label),
+          ),
+          SizedBox(height: 5),
+          Text(
+            hint,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The dismissible gold provenance banner — shown after a barcode scan or a
+/// cover-photo read prefilled the form, so prefilled data is announced.
+class _PrefillBanner extends StatelessWidget {
+  const _PrefillBanner({required this.message, required this.onDismiss});
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  // The gold-on-goldSoft ink the status pills already use for "To read".
+  static const _ink = Color(0xFF8F681E);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.goldSoft,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.auto_awesome, size: 14, color: _ink),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: _ink),
+            ),
+          ),
+          GestureDetector(
+            onTap: onDismiss,
+            child: Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(Icons.close, size: 14, color: _ink),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1363,6 +1634,8 @@ class _CoverSlot extends StatelessWidget {
     required this.onTap,
     this.title,
     this.author,
+    this.width = 46,
+    this.height = 69, // 2:3
   });
 
   final String label;
@@ -1372,10 +1645,15 @@ class _CoverSlot extends StatelessWidget {
   final String? title;
   final String? author;
 
+  /// The front slot renders larger (the mockup's 64×96 hero slot); the back
+  /// stays a small companion tile.
+  final double width;
+  final double height;
+
   @override
   Widget build(BuildContext context) {
-    const w = 46.0;
-    const h = 69.0; // 2:3
+    final w = width;
+    final h = height;
     // What the slot shows without (or instead of) a photo — the front falls
     // back to the live typeset preview, the back to an "add a photo" tile.
     Widget fallback() => title != null
@@ -1461,32 +1739,41 @@ class _AuthorField extends StatelessWidget {
       children: [
         Text(l10n.formFieldAuthor, style: _fieldLabelStyle),
         SizedBox(height: 4),
+        // Once an author is chosen the big button collapses into a compact ＋
+        // chip riding the same wrap — the chips are the field now.
         if (authors.isNotEmpty)
-          Padding(
-            padding: EdgeInsets.only(bottom: 6),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final author in authors)
-                  Chip(
-                    label: Text(author['name'] as String, style: TextStyle(fontSize: 12)),
-                    onDeleted: () => onRemove(author),
-                    backgroundColor: AppColors.goldSoft,
-                    side: BorderSide.none,
-                    visualDensity: VisualDensity.compact,
-                  ),
-              ],
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (final author in authors)
+                Chip(
+                  label: Text(author['name'] as String, style: TextStyle(fontSize: 12)),
+                  onDeleted: () => onRemove(author),
+                  backgroundColor: AppColors.goldSoft,
+                  side: BorderSide.none,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ActionChip(
+                onPressed: onAdd,
+                tooltip: l10n.formAuthorAddAnother,
+                label: Icon(Icons.person_add_alt, size: 16, color: AppColors.oxblood),
+                backgroundColor: AppColors.card,
+                side: BorderSide(color: AppColors.line),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          )
+        else
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onAdd,
+              icon: Icon(Icons.person_add_alt, size: 18),
+              label: Text(l10n.formAuthorAddButton),
             ),
           ),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: onAdd,
-            icon: Icon(Icons.person_add_alt, size: 18),
-            label: Text(authors.isEmpty ? l10n.formAuthorAddButton : l10n.formAuthorAddAnother),
-          ),
-        ),
         Padding(
           padding: const EdgeInsets.only(top: 8, left: 2),
           child: GestureDetector(
@@ -1509,13 +1796,15 @@ class _AuthorField extends StatelessWidget {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(top: 5, left: 2),
-          child: Text(
-            l10n.formAuthorHelp,
-            style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),
+        // The co-author hint has done its job once authors exist — drop it.
+        if (authors.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 5, left: 2),
+            child: Text(
+              l10n.formAuthorHelp,
+              style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),
+            ),
           ),
-        ),
       ],
     );
   }

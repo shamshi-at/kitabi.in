@@ -292,6 +292,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formFieldGenres => 'GENRES · GLOBAL';
 
   @override
+  String get formCaptureScan => 'Scan the barcode';
+
+  @override
+  String get formCapturePhoto => 'Photograph the covers';
+
+  @override
+  String get formCaptureHelp =>
+      'Either one fills the form — everything stays editable. Or just type:';
+
+  @override
+  String get formFieldType => 'TYPE · PICK ONE';
+
+  @override
+  String get formFieldGenrePrimary => 'GENRE · TAP ALL THAT FIT';
+
+  @override
+  String get formMoreDetails => 'More details';
+
+  @override
+  String get formMoreDetailsSummary =>
+      'Series · publisher · ISBN · pages · format · description';
+
+  @override
+  String get formPrefillScan =>
+      'Filled from your barcode scan — check and edit anything';
+
+  @override
+  String get formPrefillPhotos =>
+      'Read from your photos — check and edit anything';
+
+  @override
+  String get formSaveHint =>
+      'Saved books join the shared catalog for every reader';
+
+  @override
   String get formSave => 'Save to catalog';
 
   @override
@@ -920,6 +955,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryFilterLanguage => 'Language';
+
+  @override
+  String get libraryFilterType => 'Type';
 
   @override
   String get libraryFilterGenre => 'Genre';

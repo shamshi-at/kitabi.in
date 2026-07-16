@@ -423,6 +423,10 @@ void main() {
     await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
+    // The grouped fields moved into the collapsed "More details" section.
+    await tester.tap(find.text('More details'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Edit full screen'));
     await tester.pumpAndSettle();
 
@@ -449,6 +453,10 @@ void main() {
     await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
+    // The grouped fields moved into the collapsed "More details" section.
+    await tester.tap(find.text('More details'));
+    await tester.pumpAndSettle();
+
     // Default format shows in the select box (no Material dropdown).
     expect(find.byType(DropdownButton<String>), findsNothing);
     expect(find.text('Paperback'), findsOneWidget);
@@ -472,6 +480,10 @@ void main() {
     addTearDown(tester.view.reset);
     final fake = _FakeApiClient();
     await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // The grouped fields moved into the collapsed "More details" section.
+    await tester.tap(find.text('More details'));
     await tester.pumpAndSettle();
 
     // Hidden by default (standalone book).
@@ -723,5 +735,71 @@ void main() {
       find.text('Edit sent — the reader who added this book will review it.'),
       findsOneWidget,
     );
+  });
+  testWidgets('fresh create form: capture strip leads, details fold, save is sticky',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // The two capture paths lead, full-width, before any field.
+    expect(find.text('Scan the barcode'), findsOneWidget);
+    expect(find.text('Photograph the covers'), findsOneWidget);
+
+    // The grouped fields are folded behind one summarized disclosure row.
+    expect(find.text('More details'), findsOneWidget);
+    expect(find.text('Series · publisher · ISBN · pages · format · description'),
+        findsOneWidget);
+    expect(find.text('Part of a series'), findsNothing); // inside the fold
+
+    // Type and genre are primary — every option a visible one-tap chip.
+    expect(find.text('TYPE · PICK ONE'), findsOneWidget);
+    expect(find.text('Novel'), findsOneWidget);
+    expect(find.text('GENRE · TAP ALL THAT FIT'), findsOneWidget);
+    expect(find.text('Fiction'), findsOneWidget);
+
+    // Save is sticky — hit-testable without any scrolling.
+    expect(find.text('Save to catalog').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('type and genre chips ride the create payload', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Khasakkinte Itihasam');
+    await tester.tap(find.text('Novel'));
+    await tester.tap(find.text('Fiction'));
+    await tester.pump();
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+
+    expect(fake.lastCreatePayload?['form'], 'Novel');
+    expect(fake.lastCreatePayload?['genre_names'], contains('Fiction'));
+  });
+
+  testWidgets('tapping the selected type chip again clears it', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Some Book');
+    await tester.tap(find.text('Novel'));
+    await tester.pump();
+    await tester.tap(find.text('Novel')); // deselect
+    await tester.pump();
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+
+    expect(fake.lastCreatePayload?['form'], isNull);
   });
 }

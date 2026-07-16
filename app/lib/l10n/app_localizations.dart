@@ -586,6 +586,66 @@ abstract class AppLocalizations {
   /// **'GENRES · GLOBAL'**
   String get formFieldGenres;
 
+  /// Capture-strip tile at the top of the add-book form: open the barcode scanner
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the barcode'**
+  String get formCaptureScan;
+
+  /// Capture-strip tile at the top of the add-book form: photograph the front cover
+  ///
+  /// In en, this message translates to:
+  /// **'Photograph the covers'**
+  String get formCapturePhoto;
+
+  /// One-line helper under the capture strip on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Either one fills the form — everything stays editable. Or just type:'**
+  String get formCaptureHelp;
+
+  /// Section label for the single-select literary form (Novel, Short stories, ...) chips
+  ///
+  /// In en, this message translates to:
+  /// **'TYPE · PICK ONE'**
+  String get formFieldType;
+
+  /// Section label for the multi-select genre chips on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'GENRE · TAP ALL THAT FIT'**
+  String get formFieldGenrePrimary;
+
+  /// Header of the collapsible section holding the less-essential book fields
+  ///
+  /// In en, this message translates to:
+  /// **'More details'**
+  String get formMoreDetails;
+
+  /// One-line summary of what the collapsed More details section contains
+  ///
+  /// In en, this message translates to:
+  /// **'Series · publisher · ISBN · pages · format · description'**
+  String get formMoreDetailsSummary;
+
+  /// Banner after a barcode scan prefilled the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Filled from your barcode scan — check and edit anything'**
+  String get formPrefillScan;
+
+  /// Banner after the cover-photo extraction prefilled the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Read from your photos — check and edit anything'**
+  String get formPrefillPhotos;
+
+  /// One-line consequence note under the sticky Save button on the add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Saved books join the shared catalog for every reader'**
+  String get formSaveHint;
+
   /// Submit button on the add/edit catalog form
   ///
   /// In en, this message translates to:
@@ -1617,6 +1677,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Language'**
   String get libraryFilterLanguage;
+
+  /// Filter sheet section header for the literary form (Novel, Short stories, ...)
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get libraryFilterType;
 
   /// Filter sheet section header for genre
   ///

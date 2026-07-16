@@ -334,6 +334,46 @@
   "@formFieldGenres": {
     "description": "Form field label — clarifies genres are shared, not personal tags"
   },
+  "formCaptureScan": "Scan the barcode",
+  "@formCaptureScan": {
+    "description": "Capture-strip tile at the top of the add-book form: open the barcode scanner"
+  },
+  "formCapturePhoto": "Photograph the covers",
+  "@formCapturePhoto": {
+    "description": "Capture-strip tile at the top of the add-book form: photograph the front cover"
+  },
+  "formCaptureHelp": "Either one fills the form — everything stays editable. Or just type:",
+  "@formCaptureHelp": {
+    "description": "One-line helper under the capture strip on the add-book form"
+  },
+  "formFieldType": "TYPE · PICK ONE",
+  "@formFieldType": {
+    "description": "Section label for the single-select literary form (Novel, Short stories, ...) chips"
+  },
+  "formFieldGenrePrimary": "GENRE · TAP ALL THAT FIT",
+  "@formFieldGenrePrimary": {
+    "description": "Section label for the multi-select genre chips on the add-book form"
+  },
+  "formMoreDetails": "More details",
+  "@formMoreDetails": {
+    "description": "Header of the collapsible section holding the less-essential book fields"
+  },
+  "formMoreDetailsSummary": "Series · publisher · ISBN · pages · format · description",
+  "@formMoreDetailsSummary": {
+    "description": "One-line summary of what the collapsed More details section contains"
+  },
+  "formPrefillScan": "Filled from your barcode scan — check and edit anything",
+  "@formPrefillScan": {
+    "description": "Banner after a barcode scan prefilled the add-book form"
+  },
+  "formPrefillPhotos": "Read from your photos — check and edit anything",
+  "@formPrefillPhotos": {
+    "description": "Banner after the cover-photo extraction prefilled the add-book form"
+  },
+  "formSaveHint": "Saved books join the shared catalog for every reader",
+  "@formSaveHint": {
+    "description": "One-line consequence note under the sticky Save button on the add-book form"
+  },
   "formSave": "Save to catalog",
   "@formSave": {
     "description": "Submit button on the add/edit catalog form"
@@ -834,6 +874,10 @@
   "libraryFilterLanguage": "Language",
   "@libraryFilterLanguage": {
     "description": "Filter sheet section header for language"
+  },
+  "libraryFilterType": "Type",
+  "@libraryFilterType": {
+    "description": "Filter sheet section header for the literary form (Novel, Short stories, ...)"
   },
   "libraryFilterGenre": "Genre",
   "@libraryFilterGenre": {

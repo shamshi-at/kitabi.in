@@ -53,12 +53,18 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 6) {
+            // Work.form ("Type": Novel/Short stories/Poetry…) mirrored into
+            // the offline cache for the library filter (16 Jul 2026). Cached
+            // rows refresh on their next catalog fetch; null until then.
+            await m.addColumn(cachedBooks, cachedBooks.form);
+          }
           if (from < 5) {
             // Unifies borrowed books into the library (15 Jul 2026, owner
             // request) — existing borrowed loans get their LibraryEntry (and

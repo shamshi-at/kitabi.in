@@ -95,6 +95,15 @@ camera; everything else stays paper.
   open, "Returned" / "Make this mine" once closed — the latter a confirm dialog
   that flips the same entry to owned in place (id unchanged) and says plainly that
   the lending history stays below as a log.
+- **Add form is capture-first, essentials-next, details-on-demand** (rebuilt
+  16 Jul 2026) — scan/photo tiles lead full-width; cover, title, author,
+  language, Type, and Genre are the whole visible form; Type (`Work.form`,
+  closed vocabulary, single-select) and Genre (multi-select) are one-tap chip
+  rows with every option visible because they power the library filter;
+  series/publisher/ISBN/pages/format/description fold into a "More details"
+  disclosure (auto-open on edit or after a prefill, announced by a gold
+  provenance banner); Save is a sticky bottom bar with the shared-catalog
+  consequence spelled out under it.
 - **Author/publisher names are doors, not just labels** — anywhere a name appears
   (search results, book page, add/edit form), it's tinted oxblood and tappable,
   opening a browse page for everything by that author or publisher. One list

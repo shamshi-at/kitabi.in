@@ -10,6 +10,7 @@ void main() {
     String ed, {
     required String status,
     required String language,
+    String? form,
     bool favourite = false,
   }) async {
     await db.cachedBooksDao.upsert(
@@ -19,6 +20,7 @@ void main() {
         title: 'T-$ed',
         authorNames: 'A',
         language: Value(language),
+        form: Value(form),
       ),
     );
     await db.libraryEntriesDao.insertOne(
@@ -35,8 +37,8 @@ void main() {
   test('LibraryFilter narrows by status, language, and favourites', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
-    await seed(db, 'e1', status: 'read', language: 'Malayalam', favourite: true);
-    await seed(db, 'e2', status: 'reading', language: 'English');
+    await seed(db, 'e1', status: 'read', language: 'Malayalam', form: 'Novel', favourite: true);
+    await seed(db, 'e2', status: 'reading', language: 'English', form: 'Memoir');
     await seed(db, 'e3', status: 'wishlist', language: 'Malayalam');
 
     final hits = await db.libraryEntriesDao.allWithBooks();
@@ -46,6 +48,9 @@ void main() {
     expect(count(const LibraryFilter()), 3); // no filter → everything
     expect(count(const LibraryFilter(statuses: {'read'})), 1);
     expect(count(const LibraryFilter(languages: {'Malayalam'})), 2);
+    // Type: one Novel; a form-less book (e3) never matches a type filter.
+    expect(count(const LibraryFilter(forms: {'Novel'})), 1);
+    expect(count(const LibraryFilter(forms: {'Novel', 'Memoir'})), 2);
     expect(count(const LibraryFilter(favouritesOnly: true)), 1);
     // Filters compose (AND): reading OR read, and English → just e2.
     expect(

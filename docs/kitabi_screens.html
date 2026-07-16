@@ -878,53 +878,62 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       book slides up as a confirm card; search and manual entry are one tap away, never buried.</p>
     </div>
 
-    <!-- 7b. Add / edit book form -->
+    <!-- 7b. Add / edit book form — capture first, essentials next, details on demand -->
     <div class="shot">
       <div class="phone"><div class="scr">
         <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
         <div class="body">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
-            <div class="pgtitle" style="margin:0">Edit book</div>
+            <div class="pgtitle" style="margin:0">Add a book</div>
             <span class="sub" style="font-size:8px">catalog entry · shared</span>
           </div>
+          <div style="display:flex;gap:6px;margin-top:9px">
+            <div class="btn" style="flex:1.1;padding:7px 5px;font-size:8.5px">▥ Scan the barcode</div>
+            <div class="btn soft" style="flex:1;padding:7px 5px;font-size:8.5px;border:1px solid var(--line)">📷 Photo the covers</div>
+          </div>
+          <div class="sub" style="font-size:7.5px;text-align:center;margin-top:4px">Either one fills the form — everything stays editable. Or just type:</div>
           <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">TITLE</div>
-          <div class="search" style="font-size:9.5px;color:var(--ink);font-weight:600">Ponniyin Selvan — Vol I</div>
+          <div class="search" style="font-size:9.5px;color:var(--ink);font-weight:600">Khasakkinte Itihasam</div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:7px 0 3px">AUTHOR</div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <span class="chip" style="font-size:8.5px;background:var(--gold-soft);border:none;color:var(--ink)">O.V. Vijayan ✕</span>
+            <span class="chip" style="font-size:8.5px">＋</span>
+          </div>
           <div style="display:flex;gap:7px;margin-top:7px">
-            <div style="flex:1.4"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">AUTHOR</div>
-              <div class="search" style="font-size:9.5px;color:var(--ink)">Kalki Krishnamurthy</div></div>
             <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">LANGUAGE</div>
-              <div class="search" style="font-size:9.5px;color:var(--ink)">Tamil ▾</div></div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">Malayalam ▾</div></div>
           </div>
-          <div style="display:flex;gap:7px;margin-top:7px">
-            <div style="flex:1.4"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">SERIES</div>
-              <div class="search" style="font-size:9.5px;color:var(--ink)">Ponniyin Selvan</div></div>
-            <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">BOOK №</div>
-              <div class="search" style="font-size:9.5px;color:var(--ink)">1 of 5</div></div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">TYPE · PICK ONE</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <span class="chip on" style="font-size:8px;background:var(--oxblood);border-color:var(--oxblood)">Novel</span>
+            <span class="chip" style="font-size:8px">Short stories</span><span class="chip" style="font-size:8px">Poetry</span>
+            <span class="chip" style="font-size:8px">Memoir</span><span class="chip" style="font-size:8px">Essays</span>
           </div>
-          <div style="display:flex;gap:7px;margin-top:7px">
-            <div style="flex:1.4"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">PUBLISHER</div>
-              <div class="search" style="font-size:9.5px;color:var(--ink)">Vanathi Pathippakam</div></div>
-            <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">PAGES</div>
-              <div class="search" style="font-size:9.5px;color:var(--ink)">520</div></div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">GENRE · TAP ALL THAT FIT</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <span class="chip on" style="font-size:8px;background:var(--oxblood);border-color:var(--oxblood)">Fiction</span>
+            <span class="chip" style="font-size:8px">Historical</span><span class="chip" style="font-size:8px">Mystery</span>
+            <span class="chip" style="font-size:8px">Poetry</span>
           </div>
-          <div style="display:flex;gap:7px;margin-top:7px">
-            <div style="flex:1.4"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">ISBN · this edition</div>
-              <div class="search" style="font-size:9.5px;color:var(--ink)">978-81-8493-066-6</div></div>
-            <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">FORMAT</div>
-              <div class="search" style="font-size:9.5px;color:var(--ink)">Paperback ▾</div></div>
+          <div class="card" style="margin-top:9px;padding:8px 10px;background:var(--paper-deep)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9.5px;font-weight:600">More details</span>
+              <span style="font-size:9px;color:var(--ink-soft)">▾</span>
+            </div>
+            <div class="sub" style="font-size:7px;margin-top:2px">Series · publisher · ISBN · pages · format · description</div>
           </div>
-          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">GENRES · global</div>
-          <div style="display:flex;gap:4px"><span class="chip on" style="font-size:8px">Historical</span><span class="chip on" style="font-size:8px">Fiction</span><span class="chip" style="font-size:8px">+ add</span></div>
-          <div class="card" style="margin-top:8px;padding:8px;display:flex;align-items:center;gap:8px">
-            <div class="cover" style="width:24px;height:36px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:4.5px">Ponniyin Selvan</div></div>
-            <div style="flex:1;font-size:8.5px;color:var(--ink-soft)">Typeset cover in use · <b style="color:var(--oxblood)">⇧ upload a photo</b></div>
+          <div style="margin-top:auto;border-top:1px solid var(--line);margin-left:-13px;margin-right:-13px;padding:8px 13px 10px;background:var(--card)">
+            <div class="btn" style="padding:8px">Save to catalog</div>
+            <div class="sub" style="font-size:7px;text-align:center;margin-top:3px">Saved books join the shared catalog for every reader</div>
           </div>
-          <div class="btn" style="margin-top:9px;padding:8px">Save to catalog</div>
         </div>
       </div></div>
-      <p class="cap"><b>7b · Add / edit form</b> The catalog data-entry path: series + book number,
-      ISBN scoped to <i>this edition</i>, format, and global genres — the Work vs. Edition split
-      and series ordering wired exactly as the feature map demands.</p>
+      <p class="cap"><b>7b · Add / edit form — capture first</b> Rebuilt 16 Jul 2026: the two
+      capture paths (scan, photos) lead full-width; essentials (cover, title, author, language,
+      <i>type</i>, <i>genre</i>) are the whole visible form — Type is the new single-select
+      Work.form axis, Genre stays multi-select, both one-tap chip rows because they power the
+      library filter. Series/publisher/ISBN/pages/format/description fold into "More details"
+      (auto-open on edit or after a prefill, with a gold provenance banner). Save is sticky.</p>
     </div>
 
     <!-- 7c. Add book — author field detects a Kitabi user -->
