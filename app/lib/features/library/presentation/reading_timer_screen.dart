@@ -9,8 +9,10 @@ import '../../../core/format_duration.dart';
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
 
 /// Full-screen reading session — pushed the moment a session starts (from
@@ -129,21 +131,34 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     setState(() => _logged = logged);
   }
 
-  Future<void> _done() async {
+  /// Persist the page reached. Split out of [_done] because leaving this
+  /// screen by the system back gesture must save too — the wax-seal face has
+  /// no close button, so back/swipe used to pop the route without ever running
+  /// this, silently dropping the page the reader had just typed (owner report,
+  /// 16 Jul 2026: "sometimes the page doesn't update when stopping").
+  ///
+  /// Guarded against the entry's *live* page rather than [widget.currentPage],
+  /// which is a snapshot from when this screen opened and goes stale the
+  /// moment progress changes anywhere else mid-session.
+  Future<void> _savePage() async {
     final logged = _logged;
     final page = int.tryParse(_pageController.text.trim());
-    if (logged != null && page != null && page != widget.currentPage) {
-      setState(() => _saving = true);
-      final sessionsRepo = await ref.read(
-        readingSessionsRepositoryProvider.future,
-      );
-      await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
-      final libraryRepo = await ref.read(libraryRepositoryProvider.future);
-      await libraryRepo.updateProgress(
-        widget.libraryEntryId,
-        currentPage: page,
-      );
-    }
+    if (logged == null || page == null) return;
+    final entries = ref.read(libraryEntriesProvider).valueOrNull ?? const <LibraryEntry>[];
+    final livePage = entries
+        .where((e) => e.id == widget.libraryEntryId)
+        .map((e) => e.currentPage)
+        .firstOrNull;
+    if (page == livePage) return; // genuinely unchanged — nothing to write
+    final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
+    await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
+    final libraryRepo = await ref.read(libraryRepositoryProvider.future);
+    await libraryRepo.updateProgress(widget.libraryEntryId, currentPage: page);
+  }
+
+  Future<void> _done() async {
+    if (_logged != null) setState(() => _saving = true);
+    await _savePage();
     if (mounted) context.pop();
   }
 
@@ -164,27 +179,36 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
       });
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.night,
-      body: SafeArea(
-        child: _logged == null
-            ? _RunningFace(
+    return PopScope(
+      // Leaving the wax-seal face by the back gesture must still log the page
+      // (there's no close button there — only "Done" — so back was a silent
+      // data-loss path). The pop itself is never blocked; we just save on the
+      // way out.
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _savePage();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.night,
+        body: SafeArea(
+          child: _logged == null
+              ? _RunningFace(
                 title: widget.title,
                 coverUrl: widget.coverUrl,
                 startedAt: active?.startedAt,
                 hand: _hand,
                 onStop: _stop,
               )
-            : _LoggedFace(
-                title: widget.title,
-                coverUrl: widget.coverUrl,
-                logged: _logged!,
-                pageController: _pageController,
-                pageFocusNode: _pageFocusNode,
-                pageCount: widget.pageCount,
-                saving: _saving,
-                onDone: _done,
-              ),
+              : _LoggedFace(
+                  title: widget.title,
+                  coverUrl: widget.coverUrl,
+                  logged: _logged!,
+                  pageController: _pageController,
+                  pageFocusNode: _pageFocusNode,
+                  pageCount: widget.pageCount,
+                  saving: _saving,
+                  onDone: _done,
+                ),
+        ),
       ),
     );
   }
