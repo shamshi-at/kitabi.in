@@ -290,6 +290,20 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   dates never synced (16 Jul 2026). Anything mapped to a Postgres `Date` goes on the
   wire as `YYYY-MM-DD` (`.toIso8601String().split('T').first`, like `lent_date`
   always did).
+- **`qlmanage -t` flattens transparency onto WHITE — never use it to raster an
+  asset whose alpha matters.** `assets/icon/app_icon_foreground.png` (the Android
+  adaptive-icon foreground) was generated that way, so the "transparent" layer was
+  really an opaque white square: Android painted the oxblood background layer and
+  the foreground covered every pixel of it, leaving a white tile with a small book
+  (owner report, 16 Jul 2026). iOS was unaffected — it uses the full-bleed
+  `app_icon.png`, which has its own oxblood background — so the icon looked right
+  on one platform and broken on the other. Check any regenerated raster with
+  `Image.open(p).convert('RGBA').getpixel((5,5))`: a foreground's corner must be
+  `(0,0,0,0)`, not `(255,255,255,255)`. Recovering it needs a real renderer
+  (`rsvg-convert`/`cairosvg` — none are installed), or, when the same art also
+  exists over a second known background, exact two-background alpha recovery:
+  `Cw = A·a + W·(1−a)` and `Co = A·a + O·(1−a)` solve for `a` (that's how this was
+  fixed — the result recomposited over oxblood matched `app_icon.png` to ±1/255).
 - **App icon/splash source art for `flutter_launcher_icons`/`flutter_native_splash`
   should NOT reuse the in-app rounded brand tile (`logo.svg`) directly for the app
   icon** — the OS applies its own rounding mask, so the icon source must be a flat,
