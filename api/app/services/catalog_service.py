@@ -567,9 +567,13 @@ async def catalog_forms(db: AsyncSession) -> list[str]:
     Type filter offers only what it can return, not the whole vocabulary."""
     stmt = select(Work.form).where(Work.deleted_at.is_(None), Work.form.is_not(None)).distinct()
     present = {row for row in (await db.execute(stmt)).scalars().all() if row}
-    # Vocabulary order, not alphabetical — Novel/Short stories/Poetry lead
-    # because that's how a reader scans them (schemas.catalog.WORK_FORMS).
-    return [f for f in WORK_FORMS if f in present]
+    # Vocabulary order first (Novel/Short stories/Poetry lead — that's how a
+    # reader scans them), then anyone's custom forms alphabetically after. The
+    # custom ones must not be dropped: a reader who typed "Novella" has to be
+    # able to filter by it.
+    known = [f for f in WORK_FORMS if f in present]
+    custom = sorted(present - set(WORK_FORMS))
+    return known + custom
 
 
 async def catalog_genres(db: AsyncSession) -> list[str]:

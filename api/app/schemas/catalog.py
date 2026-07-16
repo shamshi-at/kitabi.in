@@ -6,11 +6,15 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-# The closed vocabulary for Work.form — the literary form (the app calls it
+# The suggested vocabulary for Work.form — the literary form (the app calls it
 # "Type"): one per work, a separate axis from genre (owner decision, 16 Jul
-# 2026). Closed so the shared catalog can't accumulate near-duplicates
-# ("Novel"/"novel"/"Fiction novel"); extending it is a deliberate API change.
-# The cover-extract prompt and the app's chip row both draw from this list.
+# 2026). These are the chips the add form offers and the order it offers them
+# in; the cover-extract prompt draws from the same list.
+#
+# Suggested, not closed (owner request, 16 Jul 2026): a reader whose book is a
+# form we didn't think of — a novella, a screenplay, a devotional — must be
+# able to say so rather than leave it blank. Free values are normalised below
+# instead of rejected, which is what actually keeps the catalog clean.
 WORK_FORMS = (
     "Novel",
     "Short stories",
@@ -24,11 +28,31 @@ WORK_FORMS = (
     "Graphic novel",
 )
 
+MAX_FORM_LEN = 40
+
+
+def normalize_form(value: str | None) -> str | None:
+    """Fold a form onto its canonical spelling. A custom value is kept, but
+    case-insensitively matched against the vocabulary first, so "novel" and
+    "NOVEL" become "Novel" rather than splitting the facet three ways — the
+    near-duplicate problem a closed list was there to prevent, solved without
+    turning a reader's honest answer away."""
+    if value is None:
+        return None
+    cleaned = " ".join(value.split())  # collapse stray whitespace
+    if not cleaned:
+        return None
+    for known in WORK_FORMS:
+        if cleaned.casefold() == known.casefold():
+            return known
+    return cleaned
+
 
 def _validate_form(value: str | None) -> str | None:
-    if value is not None and value not in WORK_FORMS:
-        raise ValueError(f"form must be one of {', '.join(WORK_FORMS)}")
-    return value
+    cleaned = normalize_form(value)
+    if cleaned is not None and len(cleaned) > MAX_FORM_LEN:
+        raise ValueError(f"form must be at most {MAX_FORM_LEN} characters")
+    return cleaned
 
 
 class AuthorOut(BaseModel):

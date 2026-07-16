@@ -592,12 +592,16 @@ async def test_work_form_round_trips_on_create_and_update(client):
     assert patched.json()["work"]["form"] == "Short stories"
 
 
-async def test_work_form_outside_the_vocabulary_is_rejected(client):
+async def test_work_form_outside_the_vocabulary_is_kept_not_rejected(client):
+    """Reversed 16 Jul 2026 (owner request): the vocabulary is a suggestion,
+    not a gate — a form we didn't think of is the reader's to name. See
+    test_work_form_accepts_a_custom_type for the whole flow."""
     resp = await client.post(
         "/catalog/works",
         json={"title": "Some Book", "form": "Novella-ish"},
     )
-    assert resp.status_code == 422
+    assert resp.status_code == 201
+    assert resp.json()["form"] == "Novella-ish"
 
 
 async def test_browse_filters_by_form_and_genre(client):
@@ -660,3 +664,52 @@ async def test_browse_facet_lists_only_offer_what_exists(client):
     # A vocabulary entry nothing uses isn't offered — it'd be a dead end.
     assert "Graphic novel" not in forms
     assert "Biography" in genres
+
+
+async def test_work_form_accepts_a_custom_type(client):
+    """A form we didn't think of must be sayable, not rejected — the reader's
+    book is a novella whether our list knows the word or not (owner request,
+    16 Jul 2026)."""
+    resp = await client.post(
+        "/catalog/works",
+        json={"title": "A Novella", "form": "Novella"},
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["form"] == "Novella"
+
+    # ...and it's filterable, so it isn't a write-only field.
+    browse = await client.get("/catalog/browse/works", params={"form": "Novella"})
+    assert {w["title"] for w in browse.json()} == {"A Novella"}
+    assert "Novella" in (await client.get("/catalog/browse/forms")).json()
+
+
+async def test_work_form_folds_onto_the_canonical_spelling(client):
+    """Case/whitespace variants must not split the facet three ways — that's
+    the near-duplicate problem the closed list used to prevent."""
+    for raw in ("novel", "NOVEL", "  Novel  "):
+        resp = await client.post("/catalog/works", json={"title": f"Book {raw}", "form": raw})
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["form"] == "Novel"
+
+    forms = (await client.get("/catalog/browse/forms")).json()
+    assert forms.count("Novel") == 1
+    assert "novel" not in forms
+
+
+async def test_custom_forms_sort_after_the_known_vocabulary(client):
+    await client.post("/catalog/works", json={"title": "K1", "form": "Poetry"})
+    await client.post("/catalog/works", json={"title": "K2", "form": "Novel"})
+    await client.post("/catalog/works", json={"title": "C1", "form": "Zine"})
+    await client.post("/catalog/works", json={"title": "C2", "form": "Almanac"})
+
+    forms = (await client.get("/catalog/browse/forms")).json()
+    # Vocabulary order leads; custom ones follow, alphabetically.
+    assert forms == ["Novel", "Poetry", "Almanac", "Zine"]
+
+
+async def test_absurdly_long_form_is_rejected(client):
+    resp = await client.post(
+        "/catalog/works",
+        json={"title": "Long form", "form": "x" * 200},
+    )
+    assert resp.status_code == 422
