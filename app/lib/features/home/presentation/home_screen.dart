@@ -9,6 +9,7 @@ import '../../../core/notifications/reading_timer_notifications.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/quote_card.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
@@ -188,6 +189,11 @@ class _Dashboard extends ConsumerWidget {
         _ShelfGrid(counts: counts, l10n: l10n),
         SizedBox(height: 14),
         _RecsEntryCard(l10n: l10n),
+        // Moved here from the profile screen (owner request, 16 Jul 2026) —
+        // inspiration nobody scrolls to isn't inspiration. Last, as a closing
+        // flourish: Home opens on what you're reading, not on a fortune.
+        SizedBox(height: 14),
+        const QuoteCard(),
       ],
     );
   }

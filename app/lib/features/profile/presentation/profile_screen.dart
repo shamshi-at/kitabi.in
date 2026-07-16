@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -317,8 +316,6 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
           label: l10n.exportEntry,
           onPressed: () => _exportLibrary(context),
         ),
-        SizedBox(height: 24),
-        const _QuoteCard(),
         SizedBox(height: 24),
         Center(
           child: TextButton(
@@ -768,55 +765,6 @@ class _UsernameSheetState extends ConsumerState<_UsernameSheet> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QuoteCard extends StatefulWidget {
-  const _QuoteCard();
-
-  @override
-  State<_QuoteCard> createState() => _QuoteCardState();
-}
-
-class _QuoteCardState extends State<_QuoteCard> {
-  int _index = 0;
-
-  static const _quotes = [
-    ('"I have always imagined that Paradise will be a kind of library."', 'BORGES'),
-    ('"A reader lives a thousand lives before he dies."', 'GEORGE R.R. MARTIN'),
-    ('"A book must be the axe for the frozen sea within us."', 'KAFKA'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final (quote, author) = _quotes[_index];
-    return GestureDetector(
-      onTap: () => setState(() => _index = Random().nextInt(_quotes.length)),
-      child: Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.night,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          children: [
-            Text(
-              quote,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.goldSoft,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              '— $author · TAP FOR A NEW ONE',
-              style: TextStyle(color: AppColors.inkSoft, fontSize: 10, letterSpacing: 1),
-            ),
-          ],
-        ),
       ),
     );
   }
