@@ -47,7 +47,13 @@ const _commonGenres = [
 /// Edition (CLAUDE.md rule 17: series/ISBN/format/pages live on the
 /// Edition, everything else on the Work).
 class AddEditBookScreen extends ConsumerWidget {
-  const AddEditBookScreen({super.key, this.workId, this.initialIsbn});
+  const AddEditBookScreen({
+    super.key,
+    this.workId,
+    this.initialIsbn,
+    this.initialTitle,
+    this.returnCreated = false,
+  });
 
   final String? workId;
 
@@ -55,12 +61,27 @@ class AddEditBookScreen extends ConsumerWidget {
   /// state, so the form starts with the number already filled.
   final String? initialIsbn;
 
+  /// A title typed somewhere else that found nothing — carried in so the
+  /// reader never retypes it (the borrow sheet's "not in the catalog?" path).
+  final String? initialTitle;
+
+  /// Pick mode: this screen was opened to *produce a book for the caller*, so
+  /// on save it pops with the created Work instead of showing the standalone
+  /// "Added to the catalog" popup — the caller selects it and carries on.
+  final bool returnCreated;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (workId == null) {
       return Scaffold(
         backgroundColor: AppColors.paper,
-        body: SafeArea(child: _BookForm(initialIsbn: initialIsbn)),
+        body: SafeArea(
+          child: _BookForm(
+            initialIsbn: initialIsbn,
+            initialTitle: initialTitle,
+            returnCreated: returnCreated,
+          ),
+        ),
       );
     }
     final work = ref.watch(workProvider(workId!));
@@ -78,10 +99,17 @@ class AddEditBookScreen extends ConsumerWidget {
 }
 
 class _BookForm extends ConsumerStatefulWidget {
-  const _BookForm({this.initialWork, this.initialIsbn});
+  const _BookForm({
+    this.initialWork,
+    this.initialIsbn,
+    this.initialTitle,
+    this.returnCreated = false,
+  });
 
   final Map<String, dynamic>? initialWork;
   final String? initialIsbn;
+  final String? initialTitle;
+  final bool returnCreated;
 
   @override
   ConsumerState<_BookForm> createState() => _BookFormState();
@@ -157,7 +185,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
     );
     final publisher = edition?['publisher'] as Map?;
     if (publisher != null) _publisher = Map<String, dynamic>.from(publisher);
-    _title = TextEditingController(text: work?['title'] as String? ?? '');
+    _title = TextEditingController(
+      text: work?['title'] as String? ?? widget.initialTitle ?? '',
+    );
     // Live cover preview (S7b): the typeset cover mirrors the title/author as
     // they're typed, so a keystroke redraws it.
     _title.addListener(_onCoverChanged);
@@ -581,10 +611,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
-    // Create mode lands on the confirmation popup instead of silently popping:
-    // what was made, plus "Add to library" / "Create another"; the screen
-    // itself only closes on the popup's Close.
     if (created != null && mounted) {
+      // Pick mode: someone is waiting on this book (the borrow sheet's "not in
+      // the catalog?" path). Hand it straight back and close — the standalone
+      // popup's "Add to library"/"Create another" are the wrong next steps
+      // mid-flow, and the caller selects it for them.
+      if (widget.returnCreated) {
+        context.pop(created);
+        return;
+      }
+      // Create mode lands on the confirmation popup instead of silently
+      // popping: what was made, plus "Add to library" / "Create another"; the
+      // screen itself only closes on the popup's Close.
       await _showCreatedDialog(created);
     }
   }

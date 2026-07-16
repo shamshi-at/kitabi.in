@@ -360,12 +360,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           // extra is historically a bare workId String (edit mode); the scan
           // flow's not-found path hands over a map so the typed ISBN survives
-          // into the blank form.
+          // into the blank form, and the borrow sheet's "not in the catalog?"
+          // path passes a typed title plus `returnCreated` to get the new book
+          // handed back to it (this route then pops with the created Work).
           final extra = state.extra;
           final map = extra is Map<String, dynamic> ? extra : const <String, dynamic>{};
           return AddEditBookScreen(
             workId: extra is String ? extra : map['workId'] as String?,
             initialIsbn: map['isbn'] as String?,
+            initialTitle: map['title'] as String?,
+            returnCreated: map['returnCreated'] as bool? ?? false,
           );
         },
       ),

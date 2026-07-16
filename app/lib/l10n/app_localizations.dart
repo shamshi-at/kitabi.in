@@ -2236,6 +2236,18 @@ abstract class AppLocalizations {
   /// **'Add a book to your library first, then lend it from here.'**
   String get lendingPickEmpty;
 
+  /// Row under the borrow sheet's book search: create the typed book in the catalog, then come back with it selected
+  ///
+  /// In en, this message translates to:
+  /// **'＋ Add \"{title}\" to the catalog'**
+  String logBorrowedAddNew(String title);
+
+  /// Helper shown under the borrow sheet's book search when nothing matches the typed title
+  ///
+  /// In en, this message translates to:
+  /// **'Not in the catalog yet? Add it — you\'ll come right back here.'**
+  String get logBorrowedNotFound;
+
   /// Title of the log-borrowed bottom sheet (S8c)
   ///
   /// In en, this message translates to:

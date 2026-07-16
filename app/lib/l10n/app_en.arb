@@ -1294,6 +1294,17 @@
   "@lendingPickEmpty": {
     "description": "Empty state when there are no lendable books to pick"
   },
+  "logBorrowedAddNew": "＋ Add \"{title}\" to the catalog",
+  "@logBorrowedAddNew": {
+    "description": "Row under the borrow sheet's book search: create the typed book in the catalog, then come back with it selected",
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "logBorrowedNotFound": "Not in the catalog yet? Add it — you'll come right back here.",
+  "@logBorrowedNotFound": {
+    "description": "Helper shown under the borrow sheet's book search when nothing matches the typed title"
+  },
   "logBorrowedTitle": "Log a borrowed book",
   "@logBorrowedTitle": {
     "description": "Title of the log-borrowed bottom sheet (S8c)"

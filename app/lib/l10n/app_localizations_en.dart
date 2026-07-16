@@ -1282,6 +1282,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add a book to your library first, then lend it from here.';
 
   @override
+  String logBorrowedAddNew(String title) {
+    return '＋ Add \"$title\" to the catalog';
+  }
+
+  @override
+  String get logBorrowedNotFound =>
+      'Not in the catalog yet? Add it — you\'ll come right back here.';
+
+  @override
   String get logBorrowedTitle => 'Log a borrowed book';
 
   @override
