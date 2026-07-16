@@ -634,17 +634,17 @@ abstract class AppLocalizations {
   /// **'GENRE · TAP ALL THAT FIT'**
   String get formFieldGenrePrimary;
 
-  /// Label for the free-text field under the genre chips, for a genre not in the common list (comma-separated)
+  /// Title of the dialog for typing a genre that isn't among the suggested chips
   ///
   /// In en, this message translates to:
-  /// **'＋ ADD ANOTHER GENRE'**
-  String get formGenreCustom;
+  /// **'Add a genre'**
+  String get formGenreOtherTitle;
 
-  /// Helper under the custom-genre field on the add-book form
+  /// Placeholder in the custom-genre field; commas separate several
   ///
   /// In en, this message translates to:
-  /// **'Not in the list? Type it — separate several with commas'**
-  String get formGenreCustomHelp;
+  /// **'Sufi, Devotional, Magical realism…'**
+  String get formGenreOtherHint;
 
   /// Header of the collapsible section holding the less-essential book fields
   ///
@@ -2931,6 +2931,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'of {total}'**
   String timerPageFieldOf(int total);
+
+  /// Precedes the editable total-pages field on the wax-seal screen, shown when the book has no page count yet
+  ///
+  /// In en, this message translates to:
+  /// **'of'**
+  String get timerTotalFieldLabel;
+
+  /// Placeholder in the editable total-pages field on the wax-seal screen
+  ///
+  /// In en, this message translates to:
+  /// **'total'**
+  String get timerTotalFieldHint;
 
   /// Placeholder digit shown in the empty page-number field
   ///

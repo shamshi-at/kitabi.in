@@ -227,6 +227,18 @@ class _FakeApiClient extends ApiClient {
     return _work();
   }
 
+  /// The edition patch the edit form sent, if any — page count, ISBN, format,
+  /// publisher and series all live on the Edition, so `updateWork` ignoring
+  /// them means the *patch* is the only place an edit to them can show up.
+  Map<String, dynamic>? lastEditionPatch;
+
+  @override
+  Future<Map<String, dynamic>> updateEdition(String editionId, Map<String, dynamic> patch) async {
+    lastEditionPatch = patch;
+    final edition = Map<String, dynamic>.from((_work()['editions'] as List).first as Map);
+    return {...edition, ...patch};
+  }
+
   /// When false, mirrors the API queueing the edit for the contributor's
   /// approval instead of applying it live.
   bool updateApplies = true;
@@ -861,7 +873,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'A Novella');
-    await tester.tap(find.text('＋ Other'));
+    await tester.tap(find.text('＋ Other').first); // Type's — Genre has one too now
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).last, 'Novella');
@@ -884,7 +896,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'Case folded');
-    await tester.tap(find.text('＋ Other'));
+    await tester.tap(find.text('＋ Other').first); // Type's
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, '  novel ');
     await tester.tap(find.text('Save').last);
@@ -895,5 +907,106 @@ void main() {
 
     // Mirrors the server's fold, so the facet can't split into novel/Novel.
     expect(fake.lastCreatePayload?['form'], 'Novel');
+  });
+  testWidgets('genre gets the same "＋ Other" chip as type, and adds custom genres',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // One on each row — the two "add" affordances now look and work alike
+    // (they used to be a chip vs. a free-text field).
+    expect(find.text('＋ Other'), findsNWidgets(2));
+    // The old free-text field is gone.
+    expect(find.text('＋ ADD ANOTHER GENRE'), findsNothing);
+
+    await tester.enterText(find.byType(TextFormField).first, 'Custom genre book');
+    await tester.tap(find.text('＋ Other').last); // Genre's
+    await tester.pumpAndSettle();
+    // One dialog can add several, as the comma-separated field used to.
+    await tester.enterText(find.byType(TextField).last, 'Sufi, Devotional');
+    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+
+    // Each arrives as its own selected chip, beside the suggestions.
+    expect(find.widgetWithText(FilterChip, 'Sufi'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Devotional'), findsOneWidget);
+
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+    final sent = (fake.lastCreatePayload?['genre_names'] as List).cast<String>();
+    expect(sent, containsAll(<String>['Sufi', 'Devotional']));
+  });
+
+  testWidgets('a custom genre that is really a suggested one folds onto it', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Folded genre');
+    await tester.tap(find.text('＋ Other').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'fiction');
+    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+
+    // Selects the existing Fiction chip instead of adding a near-duplicate.
+    expect(find.widgetWithText(FilterChip, 'Fiction'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'fiction'), findsNothing);
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+    expect((fake.lastCreatePayload?['genre_names'] as List), contains('Fiction'));
+  });
+  testWidgets('editing sends changed edition fields — a page count actually saves',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(AddEditBookScreen(workId: _workId), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // Correct the page count (edit mode opens "More details" already).
+    final pagesField = find.descendant(
+      of: find.ancestor(of: find.text('PAGES'), matching: find.byType(Column)).first,
+      matching: find.byType(TextFormField),
+    );
+    await tester.enterText(pagesField, '250'); // was 184
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+
+    // The Work payload can't carry it (the API ignores edition fields there),
+    // so it has to ride the edition patch — this is the bug the owner hit:
+    // the form said "saved" and the page count never moved.
+    expect(fake.lastEditionPatch, isNotNull,
+        reason: 'an edition-level edit must be PATCHed to the edition');
+    expect(fake.lastEditionPatch?['page_count'], 250);
+    // Untouched edition fields must not ride along and rewrite themselves.
+    expect(fake.lastEditionPatch?.containsKey('isbn'), isFalse);
+  });
+
+  testWidgets('editing without touching the edition sends no edition patch', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(AddEditBookScreen(workId: _workId), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // Change only a Work field.
+    await tester.enterText(find.byType(TextFormField).first, 'Chemmeen (revised)');
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+
+    // Nothing on the edition changed, so it must not be patched — a save must
+    // not rewrite fields the reader never touched.
+    expect(fake.lastEditionPatch, isNull);
   });
 }

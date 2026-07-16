@@ -366,13 +366,13 @@
   "@formFieldGenrePrimary": {
     "description": "Section label for the multi-select genre chips on the add-book form"
   },
-  "formGenreCustom": "＋ ADD ANOTHER GENRE",
-  "@formGenreCustom": {
-    "description": "Label for the free-text field under the genre chips, for a genre not in the common list (comma-separated)"
+  "formGenreOtherTitle": "Add a genre",
+  "@formGenreOtherTitle": {
+    "description": "Title of the dialog for typing a genre that isn't among the suggested chips"
   },
-  "formGenreCustomHelp": "Not in the list? Type it — separate several with commas",
-  "@formGenreCustomHelp": {
-    "description": "Helper under the custom-genre field on the add-book form"
+  "formGenreOtherHint": "Sufi, Devotional, Magical realism…",
+  "@formGenreOtherHint": {
+    "description": "Placeholder in the custom-genre field; commas separate several"
   },
   "formMoreDetails": "More details",
   "@formMoreDetails": {
@@ -1659,6 +1659,10 @@
     "description": "Suffix after the page-number field, e.g. \"of 320\"",
     "placeholders": {"total": {"type": "int"}}
   },
+  "timerTotalFieldLabel": "of",
+  "@timerTotalFieldLabel": {"description": "Precedes the editable total-pages field on the wax-seal screen, shown when the book has no page count yet"},
+  "timerTotalFieldHint": "total",
+  "@timerTotalFieldHint": {"description": "Placeholder in the editable total-pages field on the wax-seal screen"},
   "timerPageFieldHint": "0",
   "@timerPageFieldHint": {"description": "Placeholder digit shown in the empty page-number field"},
   "timerDone": "Done",

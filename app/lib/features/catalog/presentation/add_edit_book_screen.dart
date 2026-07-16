@@ -123,7 +123,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
   late final TextEditingController _seriesNumber;
   late final TextEditingController _pages;
   late final TextEditingController _isbn;
-  late final TextEditingController _customGenres;
+  // Genres the reader added themselves — chips on the same row as the
+  // suggestions (they used to live in a free-text field underneath).
+  final List<String> _customGenreList = [];
   late String _format;
   // Optional; null when unset. A dropdown, not free text — so the catalog stays
   // consistent ("Malayalam", not "malayalam"/"mal"/"Malyalam").
@@ -153,6 +155,16 @@ class _BookFormState extends ConsumerState<_BookForm> {
   // actually changed — and never null an existing cover out.
   String? _initialCoverUrl;
   String? _initialBackCoverUrl;
+  // The rest of the Edition as it was loaded. Everything below lives on the
+  // Edition, not the Work, so `updateWork` silently ignores it — an edit only
+  // lands if it's sent as an edition patch, and only what actually changed
+  // should be (owner report, 17 Jul 2026: adding a page count did nothing).
+  int? _initialPageCount;
+  String? _initialIsbn;
+  String? _initialFormat;
+  String? _initialPublisherId;
+  String? _initialSeriesName;
+  int? _initialSeriesNumber;
   bool _uploadingFront = false;
   bool _uploadingBack = false;
   bool _saving = false;
@@ -213,9 +225,16 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _backCoverUrl = edition?['back_cover_url'] as String?;
     _initialCoverUrl = _coverUrl;
     _initialBackCoverUrl = _backCoverUrl;
-    _selectedGenres = genreNames.where(_commonGenres.contains).toSet();
-    _customGenres =
-        TextEditingController(text: genreNames.where((g) => !_commonGenres.contains(g)).join(', '));
+    _initialPageCount = edition?['page_count'] as int?;
+    _initialIsbn = edition?['isbn'] as String?;
+    _initialFormat = edition?['format'] as String?;
+    _initialPublisherId = (edition?['publisher'] as Map?)?['id'] as String?;
+    _initialSeriesName = (edition?['series'] as Map?)?['name'] as String?;
+    _initialSeriesNumber = edition?['series_number'] as int?;
+    // A genre that isn't one of ours is the reader's own — it must come back
+    // as a selected chip on edit, not vanish for being off-list.
+    _selectedGenres = {...genreNames};
+    _customGenreList.addAll(genreNames.where((g) => !_commonGenres.contains(g)));
   }
 
   void _onCoverChanged() {
@@ -259,7 +278,6 @@ class _BookFormState extends ConsumerState<_BookForm> {
       _seriesNumber,
       _pages,
       _isbn,
-      _customGenres,
     ]) {
       c.dispose();
     }
@@ -338,6 +356,53 @@ class _BookFormState extends ConsumerState<_BookForm> {
       orElse: () => cleaned,
     );
     setState(() => _form = canonical);
+  }
+
+  /// Add a genre the suggestions don't cover — the same door, and the same
+  /// look, as Type's "＋ Other" (owner request, 17 Jul 2026). The server
+  /// get-or-creates genres case-insensitively, so typing one that's already a
+  /// chip just selects that chip instead of forking it.
+  Future<void> _pickCustomGenre() async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController();
+    final typed = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text(l10n.formGenreOtherTitle, style: TextStyle(fontSize: 16)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(hintText: l10n.formGenreOtherHint),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text(l10n.bookSave),
+          ),
+        ],
+      ),
+    );
+    if (typed == null || !mounted) return;
+    // One dialog can add several ("Sufi, Devotional") — the old free-text
+    // field was comma-separated, so keep honouring that here.
+    setState(() {
+      for (final raw in _splitNames(typed)) {
+        final cleaned = raw.replaceAll(RegExp(r'\s+'), ' ');
+        if (cleaned.isEmpty) continue;
+        // Fold onto an existing chip rather than adding a near-duplicate.
+        final existing = [..._commonGenres, ..._customGenreList].firstWhere(
+          (g) => g.toLowerCase() == cleaned.toLowerCase(),
+          orElse: () => '',
+        );
+        final genre = existing.isEmpty ? cleaned : existing;
+        if (existing.isEmpty) _customGenreList.add(genre);
+        _selectedGenres.add(genre);
+      }
+    });
   }
 
   Future<void> _pickPublisher() async {
@@ -523,9 +588,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
 
       _selectedGenres
         ..clear()
-        ..addAll(genreNames.where(_commonGenres.contains));
-      final custom = genreNames.where((g) => !_commonGenres.contains(g)).join(', ');
-      if (custom.isNotEmpty) _customGenres.text = custom;
+        ..addAll(genreNames);
+      _customGenreList
+        ..clear()
+        ..addAll(genreNames.where((g) => !_commonGenres.contains(g)));
     });
   }
 
@@ -578,6 +644,22 @@ class _BookFormState extends ConsumerState<_BookForm> {
     }
   }
 
+  /// [work] with [edition] swapped in for the edition of the same id — the
+  /// Work returned by `updateWork` predates the edition patch that follows it,
+  /// so anything cached from it would carry the pre-edit edition.
+  Map<String, dynamic> _withEdition(Map<String, dynamic> work, Map<String, dynamic>? edition) {
+    final id = edition?['id'];
+    if (edition == null || id == null) return work;
+    final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    return {
+      ...work,
+      'editions': [
+        for (final e in editions)
+          if (e['id'] == id) edition else e,
+      ],
+    };
+  }
+
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
@@ -585,7 +667,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     // Read before the awaits — this widget may be gone by the time the cache
     // mirror below runs, and `ref` isn't safe to touch after dispose.
     final db = ref.read(appDatabaseProvider);
-    final genres = {..._selectedGenres, ..._splitNames(_customGenres.text)}.toList();
+    final genres = _selectedGenres.toList();
     final publisherId = _publisher?['id'] as String?;
     final payload = {
       'title': _title.text.trim(),
@@ -623,26 +705,53 @@ class _BookFormState extends ConsumerState<_BookForm> {
         created = await api.createWork(payload);
       } else {
         final result = await api.updateWork(workId, payload);
-        // Covers live on the Edition, not the Work — patch them separately, and
-        // only the side the user actually changed.
+        // Everything below lives on the Edition, not the Work — `updateWork`
+        // accepts none of it, so until now an edit that added a page count (or
+        // an ISBN, format, publisher, series) was silently thrown away: the
+        // form said saved and nothing changed (owner report, 17 Jul 2026).
+        // Only what actually changed is sent, so a save can't clobber a field
+        // the reader never touched.
         final editionId = _edition?['id'] as String?;
+        Map<String, dynamic>? patchedEdition;
         if (editionId != null) {
+          final pageCount = int.tryParse(_pages.text.trim());
+          final isbn = _isbn.text.trim().isEmpty ? null : _isbn.text.trim();
+          final seriesName =
+              _hasSeries && _series.text.trim().isNotEmpty ? _series.text.trim() : null;
+          final seriesNumber = _hasSeries ? int.tryParse(_seriesNumber.text.trim()) : null;
+          final publisherName = _publisher?['name'] as String?;
           final edPatch = <String, dynamic>{
             if (_coverUrl != null && _coverUrl != _initialCoverUrl) 'cover_url': _coverUrl,
             if (_backCoverUrl != null && _backCoverUrl != _initialBackCoverUrl)
               'back_cover_url': _backCoverUrl,
+            if (pageCount != null && pageCount != _initialPageCount) 'page_count': pageCount,
+            if (isbn != null && isbn != _initialIsbn) 'isbn': isbn,
+            if (_format != _initialFormat) 'format': _format,
+            if (seriesName != null && seriesName != _initialSeriesName) 'series_name': seriesName,
+            if (seriesNumber != null && seriesNumber != _initialSeriesNumber)
+              'series_number': seriesNumber,
+            // Publisher rides as an id when picked from the catalog, else by
+            // name for the server to get-or-create — same shape as create.
+            if (publisherId != null && publisherId != _initialPublisherId)
+              'publisher_id': publisherId,
+            if (publisherId == null && publisherName != null && _initialPublisherId != null)
+              'publisher_name': publisherName,
           };
-          if (edPatch.isNotEmpty) await api.updateEdition(editionId, edPatch);
+          if (edPatch.isNotEmpty) {
+            patchedEdition = await api.updateEdition(editionId, edPatch);
+          }
         }
         // Mirror the edit into the offline cache the shelf reads from —
-        // otherwise a new Type/title saves server-side but the library grid
-        // and its filters keep showing the stale row (16 Jul 2026). The mirror
-        // is a convenience, never the truth, so this must never block the save
-        // or fail it: fire it off, let the grid's stream pick the row up when
-        // it lands, and fall back on the grid's own hydration if it doesn't.
+        // otherwise a new Type/title/page count saves server-side but the
+        // library grid and its filters keep showing the stale row (16 Jul
+        // 2026). Splice the patched edition back in first: `result` was
+        // fetched *before* the edition patch, so caching it as-is would write
+        // the very page count we just changed straight back as stale.
         final updated = result['work'];
         if (updated is Map<String, dynamic>) {
-          unawaited(refreshCachedWork(db, updated).catchError((_) {}));
+          unawaited(
+            refreshCachedWork(db, _withEdition(updated, patchedEdition)).catchError((_) {}),
+          );
         }
         ref.invalidate(workProvider(workId));
         if (mounted) {
@@ -692,7 +801,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
       _seriesNumber.clear();
       _pages.clear();
       _isbn.clear();
-      _customGenres.clear();
+      _customGenreList.clear();
       _authors.clear();
       _publisher = null;
       _language = null;
@@ -1152,7 +1261,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
             spacing: 6,
             runSpacing: 6,
             children: [
-              for (final genre in _commonGenres)
+              // The suggestions, plus any genre the reader added themselves —
+              // their own genres are chips too, not a separate text field
+              // hiding underneath (owner request, 17 Jul 2026: Type's "＋
+              // Other" is the pattern both rows should share).
+              for (final genre in [..._commonGenres, ..._customGenreList])
                 FilterChip(
                   label: Text(genre, style: TextStyle(fontSize: 12)),
                   showCheckmark: false,
@@ -1162,6 +1275,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
                       _selectedGenres.add(genre);
                     } else {
                       _selectedGenres.remove(genre);
+                      // A custom genre deselected has nowhere to live — drop it
+                      // rather than leave a dead chip on the row.
+                      _customGenreList.remove(genre);
                     }
                   }),
                   selectedColor: AppColors.oxblood,
@@ -1175,13 +1291,17 @@ class _BookFormState extends ConsumerState<_BookForm> {
                         _selectedGenres.contains(genre) ? AppColors.oxblood : AppColors.line,
                   ),
                 ),
+              ActionChip(
+                onPressed: _pickCustomGenre,
+                label: Text(l10n.formTypeOther, style: TextStyle(fontSize: 12)),
+                backgroundColor: AppColors.card,
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.oxblood,
+                ),
+                side: BorderSide(color: AppColors.gold),
+              ),
             ],
-          ),
-          SizedBox(height: 8),
-          _Field(
-            label: l10n.formGenreCustom,
-            controller: _customGenres,
-            helper: l10n.formGenreCustomHelp,
           ),
           // Everything less essential folds into one disclosure — collapsed on
           // a fresh create, open on edit or when a scan/photo-read filled it.

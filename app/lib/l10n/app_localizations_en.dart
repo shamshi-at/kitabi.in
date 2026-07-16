@@ -317,11 +317,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formFieldGenrePrimary => 'GENRE · TAP ALL THAT FIT';
 
   @override
-  String get formGenreCustom => '＋ ADD ANOTHER GENRE';
+  String get formGenreOtherTitle => 'Add a genre';
 
   @override
-  String get formGenreCustomHelp =>
-      'Not in the list? Type it — separate several with commas';
+  String get formGenreOtherHint => 'Sufi, Devotional, Magical realism…';
 
   @override
   String get formMoreDetails => 'More details';
@@ -1700,6 +1699,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String timerPageFieldOf(int total) {
     return 'of $total';
   }
+
+  @override
+  String get timerTotalFieldLabel => 'of';
+
+  @override
+  String get timerTotalFieldHint => 'total';
 
   @override
   String get timerPageFieldHint => '0';
