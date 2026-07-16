@@ -111,7 +111,15 @@ final libraryEntriesProvider = StreamProvider.autoDispose<List<LibraryEntry>>((r
 
 /// Offline-capable display data for one edition — populated the moment a
 /// book is added to the library (data/db/catalog_cache.dart).
+///
+/// Reactive (17 Jul 2026): this was a one-shot FutureProvider, so anything
+/// that changed a cached book — a Type edit mirrored back, a cover upload, a
+/// page count supplied from the reading timer — wrote the row and left every
+/// live screen showing the old value until it happened to be rebuilt. Home
+/// especially never rebuilt: it's an always-alive shell branch, so the
+/// provider was never re-subscribed. Watching the row means the write itself
+/// is the refresh.
 final cachedBookProvider =
-    FutureProvider.autoDispose.family<CachedBook?, String>((ref, editionId) {
-  return ref.watch(appDatabaseProvider).cachedBooksDao.getByEditionId(editionId);
+    StreamProvider.autoDispose.family<CachedBook?, String>((ref, editionId) {
+  return ref.watch(appDatabaseProvider).cachedBooksDao.watchByEditionId(editionId);
 });

@@ -9,8 +9,10 @@ import '../../../core/format_duration.dart';
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/api/api_client.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
@@ -58,6 +60,9 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     text: widget.currentPage?.toString() ?? '',
   );
   final _pageFocusNode = FocusNode();
+  /// The book's total pages, typed on the wax-seal face when the catalog
+  /// doesn't know it — otherwise progress can never be a percentage.
+  final _totalController = TextEditingController();
   bool _saving = false;
 
   @override
@@ -119,6 +124,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     _clockTimer?.cancel();
     _hand.dispose();
     _pageController.dispose();
+    _totalController.dispose();
     _pageFocusNode.dispose();
     super.dispose();
   }
@@ -131,16 +137,44 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     setState(() => _logged = logged);
   }
 
-  /// Persist the page reached. Split out of [_done] because leaving this
-  /// screen by the system back gesture must save too — the wax-seal face has
-  /// no close button, so back/swipe used to pop the route without ever running
-  /// this, silently dropping the page the reader had just typed (owner report,
-  /// 16 Jul 2026: "sometimes the page doesn't update when stopping").
+  /// The book had no page count and the reader typed one on the way out.
+  /// Without a total there's no progress bar and no percentage, so the timer
+  /// is exactly where the gap hurts — and exactly where they know the number
+  /// (the book is in their hands). Owner request, 17 Jul 2026.
+  ///
+  /// The total belongs to the shared Edition, so it goes to the catalog; the
+  /// local mirror is written either way, so their progress works offline and
+  /// reconciles the next time this book is re-cached.
+  Future<void> _saveTotalPages() async {
+    if (widget.pageCount != null) return; // already known — the field isn't shown
+    final total = int.tryParse(_totalController.text.trim());
+    if (total == null || total <= 0) return;
+    final entries = ref.read(libraryEntriesProvider).valueOrNull ?? const <LibraryEntry>[];
+    final editionId = entries
+        .where((e) => e.id == widget.libraryEntryId)
+        .map((e) => e.editionId)
+        .firstOrNull;
+    if (editionId == null) return;
+    await ref.read(appDatabaseProvider).cachedBooksDao.updatePageCount(editionId, total);
+    try {
+      await ref.read(apiClientProvider).updateEdition(editionId, {'page_count': total});
+    } catch (_) {
+      // Offline or rejected — the reader keeps their progress locally; the
+      // catalog picks the number up if they set it again from the book page.
+    }
+  }
+
+  /// Persist the page reached (and the total, if they supplied one). Split out
+  /// of [_done] because leaving this screen by the system back gesture must
+  /// save too — the wax-seal face has no close button, so back/swipe used to
+  /// pop the route without ever running this, silently dropping the page the
+  /// reader had just typed (owner report, 16 Jul 2026).
   ///
   /// Guarded against the entry's *live* page rather than [widget.currentPage],
   /// which is a snapshot from when this screen opened and goes stale the
   /// moment progress changes anywhere else mid-session.
   Future<void> _savePage() async {
+    await _saveTotalPages();
     final logged = _logged;
     final page = int.tryParse(_pageController.text.trim());
     if (logged == null || page == null) return;
@@ -205,6 +239,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
                   pageController: _pageController,
                   pageFocusNode: _pageFocusNode,
                   pageCount: widget.pageCount,
+                  totalController: _totalController,
                   saving: _saving,
                   onDone: _done,
                 ),
@@ -498,6 +533,7 @@ class _LoggedFace extends ConsumerWidget {
     required this.pageController,
     required this.pageFocusNode,
     required this.pageCount,
+    required this.totalController,
     required this.saving,
     required this.onDone,
   });
@@ -508,6 +544,9 @@ class _LoggedFace extends ConsumerWidget {
   final TextEditingController pageController;
   final FocusNode pageFocusNode;
   final int? pageCount;
+
+  /// Only used when [pageCount] is null — the reader supplying the total.
+  final TextEditingController totalController;
   final bool saving;
   final VoidCallback onDone;
 
@@ -685,6 +724,52 @@ class _LoggedFace extends ConsumerWidget {
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   color: AppColors.inkSoft,
+                                ),
+                              ),
+                            ] else ...[
+                              // Nobody has told the catalog how long this book
+                              // is, so there's no progress bar and no
+                              // percentage. Ask for it here, where the reader
+                              // is holding the book (owner request, 17 Jul
+                              // 2026) — optional, like the page itself.
+                              const SizedBox(width: 6),
+                              Text(
+                                l10n.timerTotalFieldLabel,
+                                style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+                              ),
+                              const SizedBox(width: 6),
+                              SizedBox(
+                                width: 74,
+                                // Same treatment as the page field beside it —
+                                // this face is paper, not the dark running
+                                // face, so light-on-light would vanish.
+                                child: TextField(
+                                  controller: totalController,
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.oxblood,
+                                      ),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: AppColors.paperDeep,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                                    hintText: l10n.timerTotalFieldHint,
+                                    hintStyle: TextStyle(
+                                      color: AppColors.inkSoft,
+                                      fontSize: 13,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: AppColors.oxblood, width: 1.5),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],

@@ -33,4 +33,13 @@ class CachedBooksDao extends DatabaseAccessor<AppDatabase> with _$CachedBooksDao
   Future<void> updateCoverUrl(String editionId, String? url) =>
       (update(cachedBooks)..where((t) => t.editionId.equals(editionId)))
           .write(CachedBooksCompanion(coverUrl: Value(url)));
+
+  /// Patch just the page count — the reader supplying the total from the
+  /// reading timer, where a book with no page count can't show progress at
+  /// all. The catalog is still the source of truth (the same number is PATCHed
+  /// onto the Edition); this keeps the mirror in step immediately, and keeps
+  /// their progress working even if that call couldn't go out.
+  Future<void> updatePageCount(String editionId, int? pageCount) =>
+      (update(cachedBooks)..where((t) => t.editionId.equals(editionId)))
+          .write(CachedBooksCompanion(pageCount: Value(pageCount)));
 }
