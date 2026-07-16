@@ -23,8 +23,15 @@ from app.models import (
     Work,
     WorkRevision,
     work_authors,
+    work_genres,
 )
-from app.schemas.catalog import EditionCreate, EditionUpdate, WorkCreate, WorkUpdate
+from app.schemas.catalog import (
+    WORK_FORMS,
+    EditionCreate,
+    EditionUpdate,
+    WorkCreate,
+    WorkUpdate,
+)
 from app.services.openlibrary_client import OpenLibraryClient, normalize_isbn_lookup
 from app.services.translit import transliterate
 
@@ -504,14 +511,26 @@ async def browse_works(
     limit: int,
     offset: int,
     language: str | None = None,
+    form: str | None = None,
+    genre: str | None = None,
     sort: str = "title",
 ) -> list[Work]:
     """The Discover/browse screen — catalog works, paged, with optional
-    language filter and sort (title / newest / oldest / author). Layer 1 is
-    server-authoritative, so this reads straight from our catalog."""
+    language / form (Type) / genre filters and sort (title / newest / oldest /
+    author). Layer 1 is server-authoritative, so this reads straight from our
+    catalog."""
     stmt = select(Work).options(*_SUMMARY_OPTIONS).where(Work.deleted_at.is_(None))
     if language:
         stmt = stmt.where(Work.language == language)
+    if form:
+        stmt = stmt.where(Work.form == form)
+    if genre:
+        # EXISTS rather than a join: a work can carry several genres, and a
+        # join would fan it out into one row per match (and collide with the
+        # author sort's own join/group_by below).
+        stmt = stmt.where(
+            Work.genres.any(func.lower(Genre.name) == genre.strip().lower()),
+        )
 
     if sort == "author":
         # One row per work, ordered by its earliest author name. group_by the
@@ -539,6 +558,30 @@ async def catalog_languages(db: AsyncSession) -> list[str]:
         .where(Work.deleted_at.is_(None), Work.language.is_not(None))
         .distinct()
         .order_by(Work.language)
+    )
+    return [row for row in (await db.execute(stmt)).scalars().all() if row]
+
+
+async def catalog_forms(db: AsyncSession) -> list[str]:
+    """Distinct literary forms actually present in the catalog — the browse
+    Type filter offers only what it can return, not the whole vocabulary."""
+    stmt = select(Work.form).where(Work.deleted_at.is_(None), Work.form.is_not(None)).distinct()
+    present = {row for row in (await db.execute(stmt)).scalars().all() if row}
+    # Vocabulary order, not alphabetical — Novel/Short stories/Poetry lead
+    # because that's how a reader scans them (schemas.catalog.WORK_FORMS).
+    return [f for f in WORK_FORMS if f in present]
+
+
+async def catalog_genres(db: AsyncSession) -> list[str]:
+    """Genre names carried by at least one live work — powers the browse genre
+    filter. Genres nothing uses (a typo, an emptied work) would be dead ends."""
+    stmt = (
+        select(Genre.name)
+        .join(work_genres, work_genres.c.genre_id == Genre.id)
+        .join(Work, Work.id == work_genres.c.work_id)
+        .where(Work.deleted_at.is_(None))
+        .distinct()
+        .order_by(Genre.name)
     )
     return [row for row in (await db.execute(stmt)).scalars().all() if row]
 

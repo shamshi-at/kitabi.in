@@ -598,3 +598,65 @@ async def test_work_form_outside_the_vocabulary_is_rejected(client):
         json={"title": "Some Book", "form": "Novella-ish"},
     )
     assert resp.status_code == 422
+
+
+async def test_browse_filters_by_form_and_genre(client):
+    """The Discover screen's Type/genre facets — server-side, since browse is
+    paged from the API (owner request, 16 Jul 2026)."""
+    await client.post(
+        "/catalog/works",
+        json={"title": "A Novel of Sorts", "form": "Novel", "genre_names": ["Fiction"]},
+    )
+    await client.post(
+        "/catalog/works",
+        json={"title": "Some Poems", "form": "Poetry", "genre_names": ["Poetry", "Fiction"]},
+    )
+    await client.post("/catalog/works", json={"title": "Untyped Book"})
+
+    async def titles(**params):
+        resp = await client.get("/catalog/browse/works", params=params)
+        assert resp.status_code == 200, resp.text
+        return {w["title"] for w in resp.json()}
+
+    assert await titles(form="Novel") == {"A Novel of Sorts"}
+    assert await titles(form="Poetry") == {"Some Poems"}
+    # Genre is many-per-work, so a work matches on any of its genres...
+    assert await titles(genre="Fiction") == {"A Novel of Sorts", "Some Poems"}
+    # ...and it must not fan the work out into duplicate rows.
+    assert len((await client.get("/catalog/browse/works", params={"genre": "Fiction"})).json()) == 2
+    # Facets compose.
+    assert await titles(form="Poetry", genre="Fiction") == {"Some Poems"}
+    assert await titles(form="Novel", genre="Poetry") == set()
+    # A form-less work only shows when no Type filter is applied.
+    assert "Untyped Book" in await titles()
+    assert "Untyped Book" not in await titles(form="Novel")
+
+
+async def test_browse_genre_filter_is_case_insensitive(client):
+    await client.post(
+        "/catalog/works",
+        json={"title": "Case Test", "genre_names": ["Historical"]},
+    )
+    resp = await client.get("/catalog/browse/works", params={"genre": "historical"})
+    assert "Case Test" in {w["title"] for w in resp.json()}
+
+
+async def test_browse_facet_lists_only_offer_what_exists(client):
+    for title, form in (
+        ("Facet Memoir", "Memoir"),
+        ("Facet Novel", "Novel"),
+        ("Facet Stories", "Short stories"),
+    ):
+        await client.post(
+            "/catalog/works",
+            json={"title": title, "form": form, "genre_names": ["Biography"]},
+        )
+    forms = (await client.get("/catalog/browse/forms")).json()
+    genres = (await client.get("/catalog/browse/genres")).json()
+
+    # Vocabulary order (Novel, Short stories, …, Memoir), not alphabetical —
+    # which would have put Memoir first.
+    assert forms == ["Novel", "Short stories", "Memoir"]
+    # A vocabulary entry nothing uses isn't offered — it'd be a dead end.
+    assert "Graphic novel" not in forms
+    assert "Biography" in genres

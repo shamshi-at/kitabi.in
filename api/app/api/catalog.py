@@ -96,11 +96,15 @@ async def browse_works(
     limit: int = Query(default=40, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     language: str | None = Query(default=None),
+    form: str | None = Query(default=None),
+    genre: str | None = Query(default=None),
     sort: str = Query(default="title", pattern="^(title|year_desc|year_asc|author)$"),
 ) -> list[WorkSummaryOut]:
-    """Discover screen — catalog books, paged, filterable by language and
-    sortable by title / newest / oldest / author (S4/browse)."""
-    works = await catalog_service.browse_works(db, limit, offset, language=language, sort=sort)
+    """Discover screen — catalog books, paged, filterable by language, form
+    (Type) and genre, sortable by title / newest / oldest / author (S4/browse)."""
+    works = await catalog_service.browse_works(
+        db, limit, offset, language=language, form=form, genre=genre, sort=sort
+    )
     return [work_summary(w) for w in works]
 
 
@@ -108,6 +112,18 @@ async def browse_works(
 async def browse_languages(db: DbSession) -> list[str]:
     """Distinct catalog languages for the browse language filter."""
     return await catalog_service.catalog_languages(db)
+
+
+@router.get("/browse/forms", response_model=list[str])
+async def browse_forms(db: DbSession) -> list[str]:
+    """Literary forms present in the catalog, for the browse Type filter."""
+    return await catalog_service.catalog_forms(db)
+
+
+@router.get("/browse/genres", response_model=list[str])
+async def browse_genres(db: DbSession) -> list[str]:
+    """Genres carried by at least one work, for the browse genre filter."""
+    return await catalog_service.catalog_genres(db)
 
 
 @router.get("/browse/authors", response_model=list[AuthorOut])
