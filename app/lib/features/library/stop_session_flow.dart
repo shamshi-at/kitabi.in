@@ -3,9 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format_duration.dart';
 import '../../core/haptics.dart';
+import '../../data/api/api_client.dart';
 import '../../data/repositories/repository_providers.dart';
+import '../../data/sync/sync_providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'providers/reading_timer_providers.dart';
+
+/// What the reader entered in the quick-stop dialog.
+class _StopResult {
+  const _StopResult({this.page, this.total});
+  final int? page;
+
+  /// Only set when the book had no page count and the reader supplied one.
+  final int? total;
+}
 
 /// Stop the running reading session and log it, then offer to note the page
 /// reached — the "quick stop" used by every surface that shows a live session
@@ -17,7 +28,9 @@ import 'providers/reading_timer_providers.dart';
 /// unlike the timer screen's wax-seal face, which always asks. This closes
 /// that gap with the same field/skip pattern (owner report, 15 Jul 2026): the
 /// dialog title doubles as the "session logged" confirmation, and "Skip"
-/// leaves progress untouched.
+/// leaves progress untouched. When the book has no page count, it also asks
+/// for the total, so progress can become a percentage (owner report, 17 Jul
+/// 2026: that field existed only on the full timer screen).
 Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   Haptics.success();
   // The book/page-count come from the active session's own provider, which
@@ -26,13 +39,15 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   final activeBook = ref.read(activeSessionBookProvider);
   final currentPage = activeBook?.entry.currentPage;
   final pageCount = activeBook?.book?.pageCount;
+  final editionId = activeBook?.entry.editionId;
   final logged = await ref.read(activeSessionProvider.notifier).stop();
   ref.invalidate(weeklyReadingSecondsProvider);
   if (logged == null || !context.mounted) return;
 
   final l10n = AppLocalizations.of(context)!;
-  final controller = TextEditingController(text: currentPage?.toString() ?? '');
-  final page = await showDialog<int>(
+  final pageController = TextEditingController(text: currentPage?.toString() ?? '');
+  final totalController = TextEditingController();
+  final result = await showDialog<_StopResult>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(
@@ -44,9 +59,9 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
           Text(l10n.timerPageFieldLabel),
           const SizedBox(width: 8),
           SizedBox(
-            width: 60,
+            width: 56,
             child: TextField(
-              controller: controller,
+              controller: pageController,
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               autofocus: true,
@@ -56,6 +71,21 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
           if (pageCount != null) ...[
             const SizedBox(width: 8),
             Text(l10n.timerPageFieldOf(pageCount)),
+          ] else ...[
+            // No page count anywhere — ask for it here too, so the reader can
+            // start tracking a percentage without a detour to the book page.
+            const SizedBox(width: 8),
+            Text(l10n.timerTotalFieldLabel),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 60,
+              child: TextField(
+                controller: totalController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                decoration: InputDecoration(hintText: l10n.timerTotalFieldHint),
+              ),
+            ),
           ],
         ],
       ),
@@ -65,13 +95,35 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
           child: Text(l10n.timerPageDialogSkip),
         ),
         TextButton(
-          onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text.trim())),
+          onPressed: () => Navigator.pop(
+            ctx,
+            _StopResult(
+              page: int.tryParse(pageController.text.trim()),
+              total: int.tryParse(totalController.text.trim()),
+            ),
+          ),
           child: Text(l10n.bookSave),
         ),
       ],
     ),
   );
-  if (page == null || page == currentPage || !context.mounted) return;
+  if (result == null) return; // skipped / dismissed
+
+  // The total the reader supplied belongs to the shared Edition — write it to
+  // the local mirror (so progress works offline immediately) and to the
+  // catalog. Best-effort on the network; the mirror is what the shelf reads.
+  final total = result.total;
+  if (pageCount == null && total != null && total > 0 && editionId != null) {
+    await ref.read(appDatabaseProvider).cachedBooksDao.updatePageCount(editionId, total);
+    try {
+      await ref.read(apiClientProvider).updateEdition(editionId, {'page_count': total});
+    } catch (_) {
+      // Offline or rejected — the local mirror still has it.
+    }
+  }
+
+  final page = result.page;
+  if (page == null || page == currentPage) return;
   final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
   await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
   final libraryRepo = await ref.read(libraryRepositoryProvider.future);
