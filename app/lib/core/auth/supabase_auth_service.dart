@@ -65,7 +65,16 @@ class SupabaseAuthService implements AuthService {
 
   @override
   Stream<KitabiAuthUser?> get authStateChanges =>
-      _client.auth.onAuthStateChange.map((state) => _toKitabiAuthUser(state.session?.user));
+      _client.auth.onAuthStateChange
+          .map((state) => _toKitabiAuthUser(state.session?.user))
+          // Supabase fires several events on a cold start — the restored
+          // session, then a token refresh (and periodic refreshes after) — all
+          // for the same reader. Only the *identity* changing matters here;
+          // without this, every token refresh re-emitted, re-ran
+          // bootstrapProvider (a network call) and bounced the router back to
+          // splash, so the app flashed splash → home → splash → home on launch
+          // (owner report, 17 Jul 2026).
+          .distinct((a, b) => a?.id == b?.id);
 
   @override
   KitabiAuthUser? get currentUser => _toKitabiAuthUser(_client.auth.currentSession?.user);
