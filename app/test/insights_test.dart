@@ -62,6 +62,27 @@ void main() {
     expect(allTime.avgPagesPerBook, 217); // 650 / 3 rounded
   });
 
+  test('a read book with no finish date still counts (falls back to updatedAt)', () async {
+    // Only the book page's status sheet sets finishDate, so a book marked read
+    // any other way has none — and used to vanish from every year-scoped stat
+    // (Home said "read", Insights said 0). It now counts under the year it was
+    // last touched (updatedAt defaults to now on insert).
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seed(db, 'ed1', status: 'read', pages: 180); // no finish date
+
+    final hits = await db.libraryEntriesDao.allWithBooks();
+    final thisYear = DateTime.now().year;
+
+    final scoped = computeInsights(hits, year: thisYear);
+    expect(scoped.booksRead, 1, reason: 'a finishless read book must not disappear');
+    expect(scoped.pagesRead, 180);
+
+    final allTime = computeInsights(hits, year: null);
+    expect(allTime.booksRead, 1);
+    expect(allTime.pagesRead, 180);
+  });
+
   test('a single finish never earns a most-read-author superlative', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);

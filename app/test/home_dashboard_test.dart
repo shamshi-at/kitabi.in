@@ -97,12 +97,16 @@ void main() {
     expect(find.text('LENT OUT'), findsOneWidget);
     expect(find.text('WISHLIST'), findsOneWidget);
     expect(find.text('3'), findsOneWidget); // owned = 3 entries
-    expect(find.text('2'), findsOneWidget); // read = 2
+    // Two "2"s now, and that's the point: the shelf READ count, and the goal
+    // ring — the two read books (no finish date) count toward the goal via the
+    // updatedAt fallback, where they used to be invisible to it (17 Jul 2026).
+    expect(find.text('2'), findsNWidgets(2));
     // The cover shelf strip labels and its covers (typeset titles render).
     expect(find.text('FRESH ON YOUR SHELF'), findsOneWidget);
     expect(find.text('Chemmeen'), findsWidgets);
-    // The goal slip ties home to insights.
+    // The goal slip ties home to insights, and now reflects the finished books.
     expect(find.text('READING GOAL'), findsOneWidget);
+    expect(find.textContaining('of 30 books'), findsOneWidget);
 
     // Flush drift stream-close timers before the pending-timer check.
     await tester.pumpWidget(const SizedBox());

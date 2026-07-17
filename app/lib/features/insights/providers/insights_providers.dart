@@ -5,9 +5,14 @@ import '../../../data/repositories/repository_providers.dart';
 
 /// All library entries joined to their books — the raw data the insights screen
 /// (S10) reduces into stats.
-final libraryWithBooksProvider = FutureProvider.autoDispose<List<LibraryHit>>((ref) async {
+///
+/// Reactive (17 Jul 2026): this was a one-shot fetch, so finishing a book or
+/// filling in a page count left Insights showing stale numbers until the tab
+/// was rebuilt — and Insights is an always-alive shell branch that rarely is.
+/// Watching the joined stream makes the write its own refresh.
+final libraryWithBooksProvider = StreamProvider.autoDispose<List<LibraryHit>>((ref) async* {
   final repo = await ref.watch(libraryRepositoryProvider.future);
-  return repo.allWithBooks();
+  yield* repo.watchWithBooks();
 });
 
 /// The personal reading goal (books/year), device-local for now.

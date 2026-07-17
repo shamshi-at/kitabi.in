@@ -56,8 +56,16 @@ class InsightsStats {
 InsightsStats computeInsights(List<LibraryHit> hits, {int? year}) {
   bool inYear(DateTime? d) => year == null ? true : (d != null && d.year == year);
 
+  // The date a book counts as finished on. Not every read book has an explicit
+  // finish date — only the book page's status sheet sets one, so a book marked
+  // read any other way (an older row, a CSV import) has none, and would then
+  // vanish from every year-scoped stat: Home showed "2 read" while Insights
+  // 2026 showed 0 books / 0 pages (owner report, 17 Jul 2026). Fall back to
+  // when the row was last touched, so a read book always lands in some year.
+  DateTime? finishedOn(LibraryHit h) => h.entry.finishDate ?? h.entry.updatedAt;
+
   final read = hits
-      .where((h) => h.entry.status == 'read' && inYear(h.entry.finishDate))
+      .where((h) => h.entry.status == 'read' && inYear(finishedOn(h)))
       .toList();
   final perMonth = List<int>.filled(12, 0);
   final pagesMonth = List<int>.filled(12, 0);
@@ -66,7 +74,7 @@ InsightsStats computeInsights(List<LibraryHit> hits, {int? year}) {
   String? longestTitle;
   var longestPages = 0;
   for (final h in read) {
-    final f = h.entry.finishDate;
+    final f = finishedOn(h);
     if (f != null) {
       perMonth[f.month - 1]++;
       pagesMonth[f.month - 1] += h.book.pageCount ?? 0;

@@ -304,10 +304,14 @@ class _GoalSlip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final year = DateTime.now().year;
     final goal = ref.watch(_homeGoalProvider).valueOrNull ?? 30;
-    final read = entries
-        .where((e) =>
-            e.status == 'read' && e.finishDate != null && e.finishDate!.year == year)
-        .length;
+    // A read book with no explicit finish date (only the book page's status
+    // sheet sets one) falls back to when it was last touched, so it counts
+    // toward the goal — same rule as Insights' computeInsights. Otherwise a
+    // book you marked read never moved the ring (owner report, 17 Jul 2026).
+    final read = entries.where((e) {
+      if (e.status != 'read') return false;
+      return (e.finishDate ?? e.updatedAt).year == year;
+    }).length;
     final progress = goal > 0 ? (read / goal).clamp(0.0, 1.0) : 0.0;
 
     return GestureDetector(
