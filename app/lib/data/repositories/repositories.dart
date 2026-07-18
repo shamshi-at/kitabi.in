@@ -60,6 +60,9 @@ class LibraryRepository extends Repo {
   Future<LibraryEntry?> getByEditionId(String editionId) =>
       db.libraryEntriesDao.getByEditionId(editionId);
 
+  Stream<LibraryEntry?> watchByEditionId(String editionId) =>
+      db.libraryEntriesDao.watchByEditionId(editionId);
+
   /// Global search (S4) over the personal library — offline, from Drift.
   Future<List<LibraryHit>> search(String query) => db.libraryEntriesDao.search(query);
 

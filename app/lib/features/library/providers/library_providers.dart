@@ -7,10 +7,15 @@ import '../../../data/sync/sync_providers.dart';
 /// Riverpod providers for the personal library — library entries, ratings, and
 /// derived lists — reading from the Drift-backed repositories (offline-first,
 /// CLAUDE.md rule 1). Shared across the grid, book detail, lending, and insights.
+/// The library entry for an edition — reactive, so status/progress written from
+/// anywhere (the reading timer, the pencil editor, the manual-log sheet) shows
+/// on the book page live. It used to be a one-shot fetch, so the timer's save
+/// landed in Drift but the page kept showing the stale entry (progress "—")
+/// until something happened to invalidate it (owner report, 19 Jul 2026).
 final libraryEntryProvider =
-    FutureProvider.autoDispose.family<LibraryEntry?, String>((ref, editionId) async {
+    StreamProvider.autoDispose.family<LibraryEntry?, String>((ref, editionId) async* {
   final repo = await ref.watch(libraryRepositoryProvider.future);
-  return repo.getByEditionId(editionId);
+  yield* repo.watchByEditionId(editionId);
 });
 
 final ratingProvider = FutureProvider.autoDispose.family<Rating?, String>((ref, workId) async {

@@ -6,6 +6,7 @@ import 'package:kitabi/data/api/api_client.dart';
 import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/data/repositories/repositories.dart';
 import 'package:kitabi/data/sync/sync_providers.dart';
+import 'package:kitabi/features/library/providers/library_providers.dart';
 import 'package:kitabi/features/library/providers/reading_timer_providers.dart';
 import 'package:kitabi/features/library/reading_progress.dart';
 
@@ -169,5 +170,23 @@ void main() {
 
     // Offline-first: the reader's progress still works locally.
     expect((await db.cachedBooksDao.getByEditionId(_editionIdA))?.pageCount, 200);
+  });
+
+  test('libraryEntryProvider reflects a progress write with no manual invalidate', () async {
+    final container = buildContainer();
+    final repo = LibraryRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+    final entryId = await repo.add(editionId: _editionIdA);
+
+    // Keep the stream provider alive and let its first value land.
+    final sub = container.listen(libraryEntryProvider(_editionIdA), (_, _) {});
+    addTearDown(sub.close);
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+    expect(container.read(libraryEntryProvider(_editionIdA)).valueOrNull?.currentPage, isNull);
+
+    // The reading timer writes progress via the repo — the book page's entry
+    // provider must reflect it live, not stay on a stale snapshot (progress "—").
+    await repo.updateProgress(entryId, currentPage: 88);
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+    expect(container.read(libraryEntryProvider(_editionIdA)).valueOrNull?.currentPage, 88);
   });
 }

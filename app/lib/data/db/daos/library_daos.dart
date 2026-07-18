@@ -31,11 +31,20 @@ class LibraryEntriesDao extends DatabaseAccessor<AppDatabase> with _$LibraryEntr
   /// row the server and any child records already point at) instead of
   /// throwing "Bad state: Too many elements".
   Future<LibraryEntry?> getByEditionId(String editionId) =>
+      _byEditionIdQuery(editionId).getSingleOrNull();
+
+  /// Reactive version — the book page watches this so progress/status written
+  /// from anywhere (the reading timer, the pencil editor, a status change)
+  /// refreshes the page live, instead of showing a one-shot snapshot that goes
+  /// stale the moment the timer saves without hand-invalidating.
+  Stream<LibraryEntry?> watchByEditionId(String editionId) =>
+      _byEditionIdQuery(editionId).watchSingleOrNull();
+
+  Selectable<LibraryEntry> _byEditionIdQuery(String editionId) =>
       (select(libraryEntries)
             ..where((t) => t.editionId.equals(editionId) & t.deletedAt.isNull())
             ..orderBy([(t) => OrderingTerm.asc(t.createdAt), (t) => OrderingTerm.asc(t.id)])
-            ..limit(1))
-          .getSingleOrNull();
+            ..limit(1));
 
   /// One active entry by its id — a reliable lookup (an awaited query, not a
   /// snapshot of a stream provider that may not have emitted yet) for flows
