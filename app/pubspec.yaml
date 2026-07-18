@@ -1,7 +1,7 @@
 name: kitabi
 description: Kitabi — personal library, lending, and book discovery. Beyond the bookshelf.
 publish_to: "none"
-version: 0.1.0+71
+version: 0.1.0+72
 
 environment:
   sdk: ^3.12.2
