@@ -975,6 +975,22 @@
   "@bookTagsLabel": {
     "description": "Eyebrow label on the personal tags/shelves row"
   },
+  "bookShelfLabel": "On a shelf",
+  "@bookShelfLabel": {"description": "Eyebrow above the book page's shelf card when the book is on a shelf"},
+  "bookShelfLabelEmpty": "Shelf · yours only",
+  "@bookShelfLabelEmpty": {"description": "Eyebrow above the book page's shelf card when the book is on no shelf"},
+  "bookShelfOthers": "{count, plural, =0{Just this copy on it} =1{This copy + 1 other} other{This copy + {count} others}}",
+  "@bookShelfOthers": {"description": "Count of the other books sharing this shelf", "placeholders": {"count": {"type": "int"}}},
+  "bookShelfMove": "Move to another shelf",
+  "@bookShelfMove": {"description": "Action on the book page shelf card that opens the shelf picker"},
+  "bookShelfRemove": "Remove",
+  "@bookShelfRemove": {"description": "Action that takes the book off its shelf"},
+  "bookShelfEmptyTitle": "Not on a shelf yet",
+  "@bookShelfEmptyTitle": {"description": "Title of the book page shelf card when the book is on no shelf"},
+  "bookShelfEmptyBody": "Keep it somewhere of your own",
+  "@bookShelfEmptyBody": {"description": "Subtitle of the empty shelf card"},
+  "bookShelfChoose": "Choose a shelf",
+  "@bookShelfChoose": {"description": "Action that opens the shelf picker from the empty shelf card"},
   "bookAddTag": "+ add",
   "@bookAddTag": {
     "description": "Chip that opens the new-tag dialog"

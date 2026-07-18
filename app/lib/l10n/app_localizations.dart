@@ -1828,6 +1828,54 @@ abstract class AppLocalizations {
   /// **'SHELVES · yours only'**
   String get bookTagsLabel;
 
+  /// Eyebrow above the book page's shelf card when the book is on a shelf
+  ///
+  /// In en, this message translates to:
+  /// **'On a shelf'**
+  String get bookShelfLabel;
+
+  /// Eyebrow above the book page's shelf card when the book is on no shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Shelf · yours only'**
+  String get bookShelfLabelEmpty;
+
+  /// Count of the other books sharing this shelf
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Just this copy on it} =1{This copy + 1 other} other{This copy + {count} others}}'**
+  String bookShelfOthers(int count);
+
+  /// Action on the book page shelf card that opens the shelf picker
+  ///
+  /// In en, this message translates to:
+  /// **'Move to another shelf'**
+  String get bookShelfMove;
+
+  /// Action that takes the book off its shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get bookShelfRemove;
+
+  /// Title of the book page shelf card when the book is on no shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Not on a shelf yet'**
+  String get bookShelfEmptyTitle;
+
+  /// Subtitle of the empty shelf card
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it somewhere of your own'**
+  String get bookShelfEmptyBody;
+
+  /// Action that opens the shelf picker from the empty shelf card
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a shelf'**
+  String get bookShelfChoose;
+
   /// Chip that opens the new-tag dialog
   ///
   /// In en, this message translates to:

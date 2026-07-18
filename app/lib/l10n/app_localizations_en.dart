@@ -1041,6 +1041,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookTagsLabel => 'SHELVES · yours only';
 
   @override
+  String get bookShelfLabel => 'On a shelf';
+
+  @override
+  String get bookShelfLabelEmpty => 'Shelf · yours only';
+
+  @override
+  String bookShelfOthers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'This copy + $count others',
+      one: 'This copy + 1 other',
+      zero: 'Just this copy on it',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bookShelfMove => 'Move to another shelf';
+
+  @override
+  String get bookShelfRemove => 'Remove';
+
+  @override
+  String get bookShelfEmptyTitle => 'Not on a shelf yet';
+
+  @override
+  String get bookShelfEmptyBody => 'Keep it somewhere of your own';
+
+  @override
+  String get bookShelfChoose => 'Choose a shelf';
+
+  @override
   String get bookAddTag => '+ add';
 
   @override

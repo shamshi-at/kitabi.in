@@ -1232,7 +1232,7 @@ class _YoursTabContent extends ConsumerWidget {
         SizedBox(height: 8),
         _LendingCard(entry: entry, editionId: entry.editionId),
         SizedBox(height: 8),
-        _TagsSection(entry: entry),
+        _ShelfSection(entry: entry),
       ],
     );
   }
@@ -2659,57 +2659,316 @@ class _NotesCard extends ConsumerWidget {
   }
 }
 
-class _TagsSection extends ConsumerWidget {
-  const _TagsSection({required this.entry});
+/// Where this copy lives — one shelf (owner rule: one book, one shelf), shown
+/// as a little bookcase (owner pick, 19 Jul 2026, mockup "B"): a gold bookmark
+/// ribbon down the edge, the shelf name, and a fan of the shelf's other books
+/// on a ledge — the same miniature bookcase the Shelves view uses, so the book
+/// page and that wall read as one world. Tapping opens the single-select
+/// picker (move); Remove takes it off.
+class _ShelfSection extends ConsumerWidget {
+  const _ShelfSection({required this.entry});
 
   final LibraryEntry entry;
+
+  static const _angles = [-0.14, -0.02, 0.11];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final assignments = ref.watch(libraryTagsProvider(entry.id));
-    final allTags = ref.watch(allTagsProvider);
-    final tagNames = {for (final t in allTags.valueOrNull ?? <PersonalTag>[]) t.id: t.name};
+    final assignments = ref.watch(libraryTagsProvider(entry.id)).valueOrNull ?? const <LibraryEntryTag>[];
+    final tagNames = {
+      for (final t in ref.watch(allTagsProvider).valueOrNull ?? const <PersonalTag>[]) t.id: t.name,
+    };
+    // At most one shelf now; take the first assignment whose tag still exists.
+    LibraryEntryTag? current;
+    for (final a in assignments) {
+      if (tagNames.containsKey(a.tagId)) {
+        current = a;
+        break;
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.bookTagsLabel,
+          current != null ? l10n.bookShelfLabel : l10n.bookShelfLabelEmpty,
           style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
         ),
-        SizedBox(height: 6),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
+        const SizedBox(height: 7),
+        if (current == null)
+          _EmptyShelfCard(onTap: () => showShelfPickerSheet(context, entryId: entry.id))
+        else
+          _ShelfCard(entry: entry, assignment: current, name: tagNames[current.tagId]!),
+      ],
+    );
+  }
+}
+
+class _ShelfCard extends ConsumerWidget {
+  const _ShelfCard({required this.entry, required this.assignment, required this.name});
+
+  final LibraryEntry entry;
+  final LibraryEntryTag assignment;
+  final String name;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final hits = ref.watch(libraryHitsProvider).valueOrNull ?? const <LibraryHit>[];
+    final shelvesOf =
+        ref.watch(entryShelvesProvider).valueOrNull ?? const <String, Set<String>>{};
+    final onShelf =
+        hits.where((h) => shelvesOf[h.entry.id]?.contains(assignment.tagId) ?? false).toList();
+    final others = onShelf.where((h) => h.entry.id != entry.id).toList();
+    // Fan the shelf's *other* books; if this is the only one on it so far, fan
+    // its own cover so the little bookcase is never empty.
+    final previews = (others.isNotEmpty ? others : onShelf).take(3).toList();
+
+    void move() => showShelfPickerSheet(context, entryId: entry.id);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Chips are reactive now (libraryTagsProvider streams), so removing
-            // one here or toggling in the picker sheet updates live.
-            for (final assignment in assignments.valueOrNull ?? <LibraryEntryTag>[])
-              if (tagNames[assignment.tagId] != null)
-                Chip(
-                  label: Text(tagNames[assignment.tagId]!, style: TextStyle(fontSize: 11)),
-                  onDeleted: () async {
-                    final repo = await ref.read(tagsRepositoryProvider.future);
-                    await repo.unassign(assignment.id);
-                  },
-                  backgroundColor: AppColors.goldSoft,
-                  side: BorderSide.none,
-                  visualDensity: VisualDensity.compact,
+            // The bookmark ribbon.
+            Container(
+              width: 6,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppColors.gold, Color(0xFF9C6F1E)],
                 ),
-            // Opens the shelf picker — every shelf you have, tap to add/remove,
-            // plus a door to a new one (replaces the old type-the-name dialog,
-            // which never showed the shelves you'd already made).
-            ActionChip(
-              label: Text(l10n.bookAddTag, style: TextStyle(fontSize: 11)),
-              onPressed: () => showShelfPickerSheet(context, entryId: entry.id),
-              backgroundColor: AppColors.card,
-              side: BorderSide(color: AppColors.line),
-              visualDensity: VisualDensity.compact,
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(13, 13, 13, 11),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: move,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _fan(previews),
+                          const SizedBox(width: 13),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.fraunces(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  l10n.bookShelfOthers(others.length),
+                                  style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 11),
+                    Container(
+                      padding: const EdgeInsets.only(top: 10),
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(color: AppColors.line)),
+                      ),
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: move,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.swap_horiz, size: 15, color: AppColors.oxblood),
+                                const SizedBox(width: 5),
+                                Text(
+                                  l10n.bookShelfMove,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.oxblood,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () async {
+                              final repo = await ref.read(tagsRepositoryProvider.future);
+                              await repo.unassign(assignment.id);
+                            },
+                            child: Text(
+                              l10n.bookShelfRemove,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.inkSoft,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-      ],
+      ),
+    );
+  }
+
+  /// A miniature bookcase: up to three covers fanned on a gold ledge.
+  Widget _fan(List<LibraryHit> previews) {
+    return SizedBox(
+      width: 64,
+      height: 48,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: -2,
+            right: -4,
+            bottom: 3,
+            child: Container(
+              height: 1.5,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  AppColors.gold.withValues(alpha: 0),
+                  AppColors.gold.withValues(alpha: 0.6),
+                  AppColors.gold.withValues(alpha: 0),
+                ]),
+              ),
+            ),
+          ),
+          for (final (i, hit) in previews.indexed)
+            Positioned(
+              left: 2.0 + i * 16,
+              bottom: 5,
+              child: Transform.rotate(
+                angle: _ShelfSection._angles[i],
+                alignment: Alignment.bottomCenter,
+                child: TypesetCover(
+                  title: hit.book.title,
+                  author: hit.book.authorNames,
+                  coverUrl: hit.book.coverUrl,
+                  width: 28,
+                  height: 42,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The book is on no shelf — the same ribboned card, quieted, inviting a pick.
+class _EmptyShelfCard extends StatelessWidget {
+  const _EmptyShelfCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 6, color: AppColors.gold.withValues(alpha: 0.4)),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(13, 12, 14, 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: AppColors.paperDeep,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: Icon(Icons.bookmark_add_outlined, size: 18, color: AppColors.inkSoft),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.bookShelfEmptyTitle,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              l10n.bookShelfEmptyBody,
+                              style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.bookShelfChoose,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.oxblood,
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, size: 16, color: AppColors.oxblood),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
