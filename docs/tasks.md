@@ -198,8 +198,11 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Start/finish dates + reading progress in pages — S6 (start date auto-set on first progress
       entry, finish date auto-set when status → Read, matching the mockup's implicit behavior)
 - [x] Personal notes (always private) — S6
-- [x] Personal tags / shelves (chips, filterable) — S6 add/remove; S5 grid doesn't yet filter by tag
-      (only by status + favourites — tag filter chips on S5 are a small follow-up)
+- [x] Personal tags / shelves (chips, filterable) — S6 add/remove; S5 filters by shelf too
+      (17 Jul 2026: filter sheet gained a single-select SHELF row, and the grid gained a
+      whole Shelves face — tiles per status/Favourites/tag with fanned covers, tap-to-open,
+      "+ New shelf" — behind an All books ⇄ Shelves toggle, with search/filter/sort moved
+      to the new `ExpandingFab` floating control)
 - [x] Favorite flag (gold ribbon) — S5 grid overlay + S6 toggle
 - [x] Star rating → attaches to **work** — S6
 - [x] Review text + per-review visibility flag (default private); edit/delete — S6

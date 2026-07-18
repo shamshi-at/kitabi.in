@@ -119,6 +119,20 @@ camera; everything else stays paper.
   author who isn't a Kitabi user) doesn't. Paired everywhere with the same small
   gold "🔗 on Kitabi" pill lending already uses for a linked lender/borrower — one
   badge, one meaning, reused across lending, search, and authorship.
+- **The library has two faces — All books and Shelves — and its controls float**
+  (added 17 Jul 2026, owner picks: expanding button + S1 tiles). A segmented
+  toggle under the title flips between the flat grid and a 2-up wall of shelf
+  tiles: built-in shelves from real state (one per non-empty status, plus
+  Favourites) followed by every personal tag A–Z and a gold-bordered "+ New
+  shelf" door. Each tile fans up to three standing covers on a gold ledge with
+  name + count; tapping opens that shelf as a filtered grid (back arrow + shelf
+  name replace the title). The header scrolls away entirely — search, filter,
+  and sort live on an oxblood circle bottom-right that fans out into labelled
+  mini-buttons (`ExpandingFab`), with a gold count badge for active filters
+  visible even when collapsed. Personal shelves also appear as a single-select
+  SHELF row in the filter sheet, so a shelf composes with status/language/type
+  like any other facet. Shelves are personal tags (rule 18) — the catalogue
+  never sees them; the chosen view persists per device.
 
 ## Screen inventory (v1)
 
