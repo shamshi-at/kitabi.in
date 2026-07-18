@@ -324,6 +324,18 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **18 Jul 2026** — **The catalogue (Discover/browse) becomes a bookshop wall.**
+  The Books tab is now a three-across grid of standing covers on gold ledges
+  (title/author caption, corner quick-add badge), the same "cool" Apple
+  Books-style treatment the owner asked for. The tall header (back + title)
+  steps back on scroll and snaps back on scroll-up while the Books/Authors/
+  Publishers tabs stay pinned (`NestedScrollView` — floating/snap `SliverAppBar`
+  over a pinned tab bar). The old inline sort/language/type/genre dropdown row
+  is gone; search + filter moved to the shared `ExpandingFab` (Search on every
+  tab, Filter with an active-facet badge on Books, opening the facets as a
+  bottom sheet). Facets stay server-side (the list is paged). Authors/Publishers
+  keep their row tiles. All in `browse_screen.dart`; 111 tests green, verified
+  on the Android emulator.
 - **17 Jul 2026** — **The library grows a Shelves face and its controls learn to
   float** (owner picks from the mockup rounds: expanding button + S1 shelf
   tiles). The library grid gains an **All books ⇄ Shelves** segmented toggle

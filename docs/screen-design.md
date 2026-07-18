@@ -133,6 +133,20 @@ camera; everything else stays paper.
   SHELF row in the filter sheet, so a shelf composes with status/language/type
   like any other facet. Shelves are personal tags (rule 18) — the catalogue
   never sees them; the chosen view persists per device.
+- **The catalogue (Discover/browse) reads like a bookshop wall** (added 18 Jul
+  2026, owner request, Apple Books reference). The Books tab is a three-across
+  grid of standing covers, each on a gold ledge with its title/author beneath
+  and a corner quick-add badge (＋ → moss check once owned). The tall header
+  (back + title) steps back on scroll and snaps back the moment you scroll up,
+  while the Books ｜ Authors ｜ Publishers tabs stay pinned — so a long
+  catalogue never traps you at the top (`NestedScrollView`: a floating/snap
+  `SliverAppBar` above a pinned tab bar). The old inline sort/language/type/
+  genre dropdown row is gone; search and filter live on the same `ExpandingFab`
+  the library uses — Search on every tab, Filter (with an active-facet gold
+  badge) only on Books, opening the sort/type/genre/language facets as a bottom
+  sheet. Every facet is still applied server-side (the list is paged, so
+  narrowing an already-fetched page would hide matches further in). Authors and
+  Publishers keep their existing row tiles — only Books gets the cover wall.
 
 ## Screen inventory (v1)
 
