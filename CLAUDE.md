@@ -290,6 +290,23 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   dates never synced (16 Jul 2026). Anything mapped to a Postgres `Date` goes on the
   wire as `YYYY-MM-DD` (`.toIso8601String().split('T').first`, like `lent_date`
   always did).
+- **`ref.read(someStreamProvider).valueOrNull` is null until that stream has
+  emitted — never depend on it for a write.** The reading timer looked the
+  book's edition id up via `ref.read(libraryEntriesProvider).valueOrNull` to
+  save a reader-supplied total page count; on the timer route nothing kept that
+  autoDispose stream warm, so it read empty, the edition id came back null, and
+  the total was silently dropped — the book never got a page count and progress
+  stayed blank (owner report, 19 Jul 2026). For a value a mutation depends on,
+  await a direct query (`libraryEntriesDao.getById`) instead of reading a stream
+  provider that may not have produced its first value yet. Same fix shape as the
+  15 Jul dup-entry heal: don't trust "there's usually a value there."
+- **A feature added to one entry point must be added to *all* of them.** The
+  "type the total pages while logging" field lived only on the full timer + the
+  quick-stop dialog; the manual-log sheet and the progress-editor pencil never
+  got it, so logging from those paths could never set a total (same 19 Jul
+  report). The four progress surfaces (timer / quick-stop / manual-log /
+  pencil) must stay in lockstep — the total-save now routes through one shared
+  `saveBookTotalPages(db, api, editionId, total)` so they can't drift again.
 - **`qlmanage -t` flattens transparency onto WHITE — never use it to raster an
   asset whose alpha matters.** `assets/icon/app_icon_foreground.png` (the Android
   adaptive-icon foreground) was generated that way, so the "transparent" layer was

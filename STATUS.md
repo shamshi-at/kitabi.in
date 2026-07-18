@@ -324,6 +324,17 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **19 Jul 2026** — **Total-page capture fixed across every progress path**
+  (owner report: on a book with no page count, typing the total while logging
+  never reached the book or the cloud, and progress stayed blank). One shared
+  `saveBookTotalPages(db, api, editionId, total)` (mirror locally + PATCH the
+  Edition) now backs all four entry points, and a total field was added where it
+  was missing — the **manual-log sheet** and the **progress editor** (pencil)
+  had none. The reading timer's own save was reading the edition id off a
+  stream provider that hadn't emitted on that route (so it silently dropped the
+  total); it now looks the entry up directly (`libraryEntriesDao.getById`).
+  Result: the total saves to the local mirror (progress shows a percentage
+  immediately, offline) and syncs to the catalog. 118 tests green.
 - **18 Jul 2026** — **Shelving a book becomes a proper two-way picker** (owner
   report: couldn't select a shelf you'd made from the book page, and an empty
   shelf was a dead end). Two sheets (`shelf_sheets.dart`): from a book, "Add to
