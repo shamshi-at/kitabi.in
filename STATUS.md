@@ -324,6 +324,15 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **18 Jul 2026** — **Shelving a book becomes a proper two-way picker** (owner
+  report: couldn't select a shelf you'd made from the book page, and an empty
+  shelf was a dead end). Two sheets (`shelf_sheets.dart`): from a book, "Add to
+  a shelf" lists every shelf with a tap-to-toggle checkmark + a New-shelf door
+  (replacing the type-the-exact-name dialog); from a shelf, an empty personal
+  shelf shows an "Add books to this shelf" button — and the same action rides
+  the floating control while any personal shelf is open — opening a picker of
+  the whole library to shelve/unshelve. `libraryTagsProvider` is now a stream so
+  chips/checkmarks update live. 113 tests green, verified on the emulator.
 - **18 Jul 2026** — **The catalogue (Discover/browse) becomes a bookshop wall.**
   The Books tab is now a three-across grid of standing covers on gold ledges
   (title/author caption, corner quick-add badge), the same "cool" Apple

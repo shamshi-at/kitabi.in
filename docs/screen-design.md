@@ -147,6 +147,17 @@ camera; everything else stays paper.
   sheet. Every facet is still applied server-side (the list is paged, so
   narrowing an already-fetched page would hide matches further in). Authors and
   Publishers keep their existing row tiles — only Books gets the cover wall.
+- **Shelving a book is a two-way picker, never a spelling test** (added 18 Jul
+  2026, owner request). Two sheets share the shelves plumbing (personal tags,
+  rule 18): from a book, "Add to a shelf" lists every shelf you have with a
+  tap-to-toggle checkmark and a "New shelf" door — replacing the old
+  type-the-exact-name dialog that never showed the shelves you'd already made,
+  so moving a book between shelves is just untick-one-tick-another. From a
+  shelf, an opened personal shelf that's empty shows an "Add books to this
+  shelf" button (and the same action rides the floating control while the shelf
+  is open, so it's reachable once the shelf has books too) — the picker lists
+  your whole library, a tap shelves or unshelves each. Both write straight to
+  Drift and the shelf/chips update live (`libraryTagsProvider` streams now).
 
 ## Screen inventory (v1)
 
