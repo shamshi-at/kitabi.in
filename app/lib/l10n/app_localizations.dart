@@ -1906,6 +1906,18 @@ abstract class AppLocalizations {
   /// **'Add books'**
   String get libraryShelfAddBooksShort;
 
+  /// Hint in the search field on the add-books-to-shelf sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Search your library'**
+  String get libraryAddBooksSearchHint;
+
+  /// Shown when the add-books search matches nothing
+  ///
+  /// In en, this message translates to:
+  /// **'No books match your search.'**
+  String get libraryAddBooksNoMatches;
+
   /// Snackbar confirming a scanned book was added to the personal library
   ///
   /// In en, this message translates to:

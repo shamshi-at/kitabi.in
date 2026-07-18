@@ -297,4 +297,41 @@ void main() {
 
     await flushTree(tester);
   });
+
+  testWidgets('add-books search filters the library and shows each book\'s shelves',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // e1 (Khasakkinte) sits on a second shelf 'Loved' — so the picker for
+    // 'Classics' can show where a book already lives.
+    await tester.runAsync(() async {
+      await db.tagsDao.insertTag(
+        PersonalTagsCompanion.insert(id: 'tag2', userId: 'u1', name: 'Loved'),
+      );
+      await db.tagsDao.insertAssignment(LibraryEntryTagsCompanion.insert(
+        id: 'a2', userId: 'u1', libraryEntryId: 'le-e1', tagId: 'tag2',
+      ));
+    });
+
+    await tester.pumpWidget(
+      host((c) => showAddBooksToShelfSheet(c, tagId: 'tag1', shelfName: 'Classics')),
+    );
+    await settle(tester);
+    await tester.tap(find.text('open'));
+    await settle(tester);
+
+    // Khasakkinte's row surfaces its current shelf, 'Loved'.
+    expect(find.text('Loved'), findsOneWidget);
+
+    // Searching narrows the library to the match; the others drop out.
+    await tester.enterText(find.byType(TextField), 'Rand');
+    await settle(tester);
+    expect(find.widgetWithText(ListTile, 'Randamoozham'), findsWidgets);
+    expect(find.textContaining('Khasakkinte'), findsNothing);
+    expect(find.text('Loved'), findsNothing);
+
+    await flushTree(tester);
+  });
 }

@@ -214,107 +214,241 @@ Future<void> showAddBooksToShelfSheet(
   );
 }
 
-class _AddBooksToShelfSheet extends ConsumerWidget {
+class _AddBooksToShelfSheet extends ConsumerStatefulWidget {
   const _AddBooksToShelfSheet({required this.tagId, required this.shelfName});
 
   final String tagId;
   final String shelfName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AddBooksToShelfSheet> createState() => _AddBooksToShelfSheetState();
+}
+
+class _AddBooksToShelfSheetState extends ConsumerState<_AddBooksToShelfSheet> {
+  final _controller = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final books = ref.watch(libraryHitsProvider).valueOrNull ?? const <LibraryHit>[];
     final assignments =
         ref.watch(allShelfAssignmentsProvider).valueOrNull ?? const <LibraryEntryTag>[];
+    final shelfNames = {
+      for (final t in ref.watch(personalShelvesProvider).valueOrNull ?? const <PersonalTag>[])
+        t.id: t.name,
+    };
     // For this shelf only: entryId → the assignment that shelves it (unshelve).
     final onShelf = {
       for (final a in assignments)
-        if (a.tagId == tagId) a.libraryEntryId: a.id,
+        if (a.tagId == widget.tagId) a.libraryEntryId: a.id,
     };
+    final q = _query.trim().toLowerCase();
     final sorted = [...books]
       ..sort((a, b) => a.book.title.toLowerCase().compareTo(b.book.title.toLowerCase()));
+    final filtered = sorted
+        .where((h) =>
+            q.isEmpty ||
+            h.book.title.toLowerCase().contains(q) ||
+            h.book.authorNames.toLowerCase().contains(q))
+        .toList();
+
+    // The shelves each entry sits on, named — so the picker shows "this book is
+    // already on Malayalam classics" while you shelve it somewhere new.
+    List<({String id, String name})> shelvesOf(String entryId) {
+      final out = <({String id, String name})>[];
+      for (final a in assignments) {
+        if (a.libraryEntryId == entryId && shelfNames[a.tagId] != null) {
+          out.add((id: a.tagId, name: shelfNames[a.tagId]!));
+        }
+      }
+      out.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      return out;
+    }
 
     return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _sheetHeader(context, l10n.libraryAddToShelfTitle(shelfName), l10n.libraryAddBooksHint),
-            const SizedBox(height: 8),
-            if (sorted.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: Text(
-                  l10n.libraryAddBooksEmpty,
-                  style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
-                ),
-              )
-            else
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.only(bottom: 8),
-                  itemCount: sorted.length,
-                  itemBuilder: (context, i) {
-                    final hit = sorted[i];
-                    final assignmentId = onShelf[hit.entry.id];
-                    final selected = assignmentId != null;
-                    return ListTile(
-                      onTap: () async {
-                        Haptics.selection();
-                        final repo = await ref.read(tagsRepositoryProvider.future);
-                        if (assignmentId != null) {
-                          await repo.unassign(assignmentId);
-                        } else {
-                          await repo.assign(hit.entry.id, tagId);
-                        }
-                      },
-                      leading: TypesetCover(
-                        title: hit.book.title,
-                        author: hit.book.authorNames,
-                        coverUrl: hit.book.coverUrl,
-                        width: 30,
-                        height: 44,
-                      ),
-                      title: Text(
-                        hit.book.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        hit.book.authorNames,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: AppColors.inkSoft, fontSize: 11.5),
-                      ),
-                      trailing: Icon(
-                        selected ? Icons.check_circle : Icons.add_circle_outline,
-                        color: selected ? AppColors.moss : AppColors.oxblood,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.oxblood,
-                    foregroundColor: AppColors.paper,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      child: Padding(
+        // Lift the sheet above the keyboard while searching.
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _sheetHeader(context, l10n.libraryAddToShelfTitle(widget.shelfName), l10n.libraryAddBooksHint),
+              const SizedBox(height: 10),
+              if (books.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: Text(
+                    l10n.libraryAddBooksEmpty,
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
                   ),
-                  child: Text(l10n.formEditorDone),
+                )
+              else ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.paper,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.line),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.search, size: 18, color: AppColors.inkSoft),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            decoration: InputDecoration(
+                              hintText: l10n.libraryAddBooksSearchHint,
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                            onChanged: (v) => setState(() => _query = v),
+                          ),
+                        ),
+                        if (_query.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              _controller.clear();
+                              setState(() => _query = '');
+                            },
+                            child: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (filtered.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                    child: Text(
+                      l10n.libraryAddBooksNoMatches,
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.only(bottom: 8),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, i) {
+                        final hit = filtered[i];
+                        final assignmentId = onShelf[hit.entry.id];
+                        final selected = assignmentId != null;
+                        final shelves = shelvesOf(hit.entry.id);
+                        return ListTile(
+                          onTap: () async {
+                            Haptics.selection();
+                            final repo = await ref.read(tagsRepositoryProvider.future);
+                            if (assignmentId != null) {
+                              await repo.unassign(assignmentId);
+                            } else {
+                              await repo.assign(hit.entry.id, widget.tagId);
+                            }
+                          },
+                          leading: TypesetCover(
+                            title: hit.book.title,
+                            author: hit.book.authorNames,
+                            coverUrl: hit.book.coverUrl,
+                            width: 30,
+                            height: 44,
+                          ),
+                          title: Text(
+                            hit.book.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                hit.book.authorNames,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: AppColors.inkSoft, fontSize: 11.5),
+                              ),
+                              if (shelves.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Wrap(
+                                    spacing: 4,
+                                    runSpacing: 4,
+                                    children: [
+                                      for (final s in shelves)
+                                        _MiniShelfChip(label: s.name, current: s.id == widget.tagId),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: Icon(
+                            selected ? Icons.check_circle : Icons.add_circle_outline,
+                            color: selected ? AppColors.moss : AppColors.oxblood,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.oxblood,
+                      foregroundColor: AppColors.paper,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                    child: Text(l10n.formEditorDone),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A tiny shelf label under a book in the add-books picker — gold for another
+/// shelf the book sits on, oxblood for *this* shelf (already here).
+class _MiniShelfChip extends StatelessWidget {
+  const _MiniShelfChip({required this.label, required this.current});
+
+  final String label;
+  final bool current;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: current ? AppColors.oxblood : AppColors.goldSoft,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w700,
+          color: current ? AppColors.paper : const Color(0xFF6B4E16),
         ),
       ),
     );

@@ -1007,6 +1007,10 @@
   "@libraryAddBooksEmpty": {"description": "Shown when there are no library books to add to a shelf"},
   "libraryShelfAddBooksShort": "Add books",
   "@libraryShelfAddBooksShort": {"description": "Short label for the add-books action on an open shelf"},
+  "libraryAddBooksSearchHint": "Search your library",
+  "@libraryAddBooksSearchHint": {"description": "Hint in the search field on the add-books-to-shelf sheet"},
+  "libraryAddBooksNoMatches": "No books match your search.",
+  "@libraryAddBooksNoMatches": {"description": "Shown when the add-books search matches nothing"},
   "@bookRemoveConfirm": {
     "description": "Confirmation dialog body before removing a library entry"
   },

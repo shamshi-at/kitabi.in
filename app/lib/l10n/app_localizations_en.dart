@@ -1083,6 +1083,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryShelfAddBooksShort => 'Add books';
 
   @override
+  String get libraryAddBooksSearchHint => 'Search your library';
+
+  @override
+  String get libraryAddBooksNoMatches => 'No books match your search.';
+
+  @override
   String get scanAddedToLibrary => 'Added to your library';
 
   @override
