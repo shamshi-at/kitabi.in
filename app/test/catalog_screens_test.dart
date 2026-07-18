@@ -10,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:kitabi/data/api/api_client.dart';
 import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/data/repositories/repositories.dart';
+import 'package:kitabi/core/widgets/typeset_cover.dart';
 import 'package:kitabi/data/sync/sync_providers.dart';
 import 'package:kitabi/features/catalog/presentation/add_edit_book_screen.dart';
 import 'package:kitabi/features/catalog/presentation/author_browse_screen.dart';
@@ -829,7 +830,7 @@ void main() {
 
     expect(fake.lastCreatePayload?['form'], isNull);
   });
-  testWidgets('the catalog browse screen filters by Type and genre server-side',
+  testWidgets('the catalogue filters by Type and genre from the floating control',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -838,31 +839,52 @@ void main() {
     await tester.pumpWidget(_wrap(const BrowseScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
-    // Both facets start unset — the list is the whole catalog.
-    expect(find.text('All types'), findsOneWidget);
-    expect(find.text('All genres'), findsOneWidget);
+    // Nothing narrowed yet — the list is the whole catalog. The old inline
+    // filter row is gone; the facets live behind the floating control now.
+    expect(find.text('All types'), findsNothing);
     expect(fake.lastBrowseForm, isNull);
     expect(fake.lastBrowseGenre, isNull);
 
-    // The dropdowns offer only what the catalog actually has.
-    await tester.tap(find.text('All types'));
+    // Fan the floating control open and reach the filter sheet.
+    await tester.tap(find.byIcon(Icons.tune));
     await tester.pumpAndSettle();
-    expect(find.text('Poetry').hitTestable(), findsWidgets);
-    await tester.tap(find.text('Novel').last);
+    await tester.tap(find.text('Filter'));
     await tester.pumpAndSettle();
 
-    // Picking one re-queries the server rather than filtering the fetched page
-    // (which would hide matches further into the pagination).
+    expect(find.text('Filter & sort'), findsOneWidget);
+    // The sheet offers only what the catalog actually has.
+    expect(find.text('Poetry'), findsOneWidget);
+    await tester.tap(find.text('Novel'));
+    await tester.tap(find.text('Historical'));
+    await tester.tap(find.text('Show books'));
+    await tester.pumpAndSettle();
+
+    // Applying re-queries the server (not the fetched page — that would hide
+    // matches further into the pagination), and the facets compose.
     expect(fake.lastBrowseForm, 'Novel');
-
-    await tester.tap(find.text('All genres'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Historical').last);
-    await tester.pumpAndSettle();
-
-    // Facets compose — the Type filter survives picking a genre.
     expect(fake.lastBrowseGenre, 'Historical');
-    expect(fake.lastBrowseForm, 'Novel');
+  });
+
+  testWidgets('the catalogue Books tab is a wall of standing covers with quick-add',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const BrowseScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // The Apple-Books grid renders standing covers (TypesetCover) with a
+    // quick-add badge, not the old row tiles.
+    expect(find.byType(TypesetCover), findsWidgets);
+    expect(find.byIcon(Icons.add), findsWidgets);
+    // The collapsed floating control is the tune circle; open it and both
+    // actions are there.
+    expect(find.byIcon(Icons.tune), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pumpAndSettle();
+    expect(find.text('Search'), findsOneWidget);
+    expect(find.text('Filter'), findsOneWidget);
   });
   testWidgets('a type outside the suggested list can be typed in and saved', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);

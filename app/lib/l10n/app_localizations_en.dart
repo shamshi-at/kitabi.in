@@ -2353,4 +2353,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browseFilterAllGenres => 'All genres';
+
+  @override
+  String get browseFilterHeading => 'Filter & sort';
+
+  @override
+  String get browseFilterApply => 'Show books';
+
+  @override
+  String get browseFilterClear => 'Clear';
+
+  @override
+  String get browseFilterAllTitle => 'All';
+
+  @override
+  String get browseFabLabel => 'Search and filter the catalogue';
 }

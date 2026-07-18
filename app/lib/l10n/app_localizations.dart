@@ -4059,6 +4059,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All genres'**
   String get browseFilterAllGenres;
+
+  /// Title of the catalogue filter/sort bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Filter & sort'**
+  String get browseFilterHeading;
+
+  /// Apply button on the catalogue filter sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Show books'**
+  String get browseFilterApply;
+
+  /// Reset action on the catalogue filter sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get browseFilterClear;
+
+  /// Catalogue filter chip that clears a single facet (type/genre/language)
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get browseFilterAllTitle;
+
+  /// Accessibility label for the catalogue floating search/filter control
+  ///
+  /// In en, this message translates to:
+  /// **'Search and filter the catalogue'**
+  String get browseFabLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -2221,5 +2221,15 @@
   "browseFilterAllTypes": "All types",
   "@browseFilterAllTypes": {"description": "Browse Type (literary form) filter: no type filter"},
   "browseFilterAllGenres": "All genres",
-  "@browseFilterAllGenres": {"description": "Browse genre filter: no genre filter"}
+  "@browseFilterAllGenres": {"description": "Browse genre filter: no genre filter"},
+  "browseFilterHeading": "Filter & sort",
+  "@browseFilterHeading": {"description": "Title of the catalogue filter/sort bottom sheet"},
+  "browseFilterApply": "Show books",
+  "@browseFilterApply": {"description": "Apply button on the catalogue filter sheet"},
+  "browseFilterClear": "Clear",
+  "@browseFilterClear": {"description": "Reset action on the catalogue filter sheet"},
+  "browseFilterAllTitle": "All",
+  "@browseFilterAllTitle": {"description": "Catalogue filter chip that clears a single facet (type/genre/language)"},
+  "browseFabLabel": "Search and filter the catalogue",
+  "@browseFabLabel": {"description": "Accessibility label for the catalogue floating search/filter control"}
 }
