@@ -147,19 +147,21 @@ camera; everything else stays paper.
   sheet. Every facet is still applied server-side (the list is paged, so
   narrowing an already-fetched page would hide matches further in). Authors and
   Publishers keep their existing row tiles — only Books gets the cover wall.
-- **Shelving a book is a two-way picker, never a spelling test** (added 18 Jul
-  2026, owner request). Two sheets share the shelves plumbing (personal tags,
-  rule 18): from a book, "Add to a shelf" lists every shelf you have with a
-  tap-to-toggle checkmark and a "New shelf" door — replacing the old
-  type-the-exact-name dialog that never showed the shelves you'd already made,
-  so moving a book between shelves is just untick-one-tick-another. From a
-  shelf, an opened personal shelf that's empty shows an "Add books to this
-  shelf" button (and the same action rides the floating control while the shelf
-  is open, so it's reachable once the shelf has books too) — the picker searches
-  your whole library and shows, under each book, the shelves it already sits on
-  (the shelf you're filling tinted oxblood, the rest gold), a tap shelves or
-  unshelves each. Both write straight to Drift and the shelf/chips update live
-  (`libraryTagsProvider` streams now).
+- **A book lives on one shelf, picked two ways** (added 18 Jul 2026, refined
+  19 Jul — owner rule: *one book, one shelf*). Two sheets share the shelves
+  plumbing (personal tags, rule 18). From a book, "Add to a shelf" is a
+  single-select radio list of every shelf you have plus a "New shelf" door;
+  picking one moves the book there exclusively (off any other shelf) and closes
+  the sheet at once — no more type-the-exact-name dialog, no multi-select. From
+  a shelf, an opened personal shelf shows an "Add books" button in its header
+  whether it's empty or not (empty shelves also get a big centred prompt, and
+  the floating control carries the same action), opening a picker that searches
+  your whole library and shows under each book the shelf it currently sits on
+  (this shelf tinted oxblood, another gold); a tap moves it here or takes it
+  off. A search that matches nothing in the library explains that only owned
+  books can be shelved and offers a jump to the catalogue to add it first. All
+  of it writes straight to Drift and updates live (`libraryTagsProvider`
+  streams), and every add/remove enqueues its own sync op.
 
 ## Screen inventory (v1)
 
