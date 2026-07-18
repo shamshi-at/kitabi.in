@@ -333,8 +333,13 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   had none. The reading timer's own save was reading the edition id off a
   stream provider that hadn't emitted on that route (so it silently dropped the
   total); it now looks the entry up directly (`libraryEntriesDao.getById`).
-  Result: the total saves to the local mirror (progress shows a percentage
-  immediately, offline) and syncs to the catalog. 118 tests green.
+  **And the book page's `libraryEntryProvider` was a one-shot fetch** — the
+  timer's save landed in Drift but the page kept showing the stale entry
+  (progress "—") because only the manual-log path hand-invalidated it; it's now
+  a reactive stream (`watchByEditionId`), so a write from *any* path refreshes
+  the page live. Result: the total saves to the local mirror + syncs to the
+  catalog, and progress shows its percentage immediately from every entry point
+  (verified end-to-end on the emulator, incl. the timer wax-seal face). 119 tests green.
 - **18 Jul 2026** — **Shelving a book becomes a proper two-way picker** (owner
   report: couldn't select a shelf you'd made from the book page, and an empty
   shelf was a dead end). Two sheets (`shelf_sheets.dart`): from a book, "Add to

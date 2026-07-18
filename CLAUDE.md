@@ -307,6 +307,19 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   report). The four progress surfaces (timer / quick-stop / manual-log /
   pencil) must stay in lockstep — the total-save now routes through one shared
   `saveBookTotalPages(db, api, editionId, total)` so they can't drift again.
+- **A one-shot `FutureProvider` that other screens mutate behind your back
+  shows stale data unless every writer hand-invalidates it — prefer a reactive
+  stream.** `libraryEntryProvider` was a `FutureProvider` (`getByEditionId`);
+  the book page watched it, but the reading-timer face writes progress from a
+  *different* route and never invalidated it, so after a timed session the page
+  still showed progress "—" — only the manual-log path worked, because it alone
+  called `ref.invalidate` (owner report, 19 Jul 2026, caught by on-device E2E,
+  not by the green unit tests). Fixed by making it a `StreamProvider` over
+  `watchByEditionId`, so a write from any path (timer, pencil, status change)
+  refreshes the page live. If a provider's value can change from a screen that
+  doesn't own it, make it reactive rather than trusting every caller to
+  invalidate. Same shape as the 17 Jul `cachedBookProvider` and `libraryTags`
+  fixes — this is a recurring class of bug here.
 - **`qlmanage -t` flattens transparency onto WHITE — never use it to raster an
   asset whose alpha matters.** `assets/icon/app_icon_foreground.png` (the Android
   adaptive-icon foreground) was generated that way, so the "transparent" layer was
