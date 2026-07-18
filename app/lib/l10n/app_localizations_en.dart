@@ -1086,7 +1086,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryAddBooksSearchHint => 'Search your library';
 
   @override
-  String get libraryAddBooksNoMatches => 'No books match your search.';
+  String get libraryAddBooksNoMatchTitle => 'Not in your library';
+
+  @override
+  String get libraryAddBooksNoMatchBody =>
+      'Only books you already have can go on a shelf. Find it in the catalogue to add it to your library first.';
+
+  @override
+  String get libraryAddBooksBrowse => 'Browse the catalogue';
 
   @override
   String get scanAddedToLibrary => 'Added to your library';

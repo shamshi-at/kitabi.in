@@ -242,30 +242,41 @@ void main() {
     return (await tester.runAsync(() => db.tagsDao.watchForEntry(entryId).first))!;
   }
 
-  testWidgets('the shelf picker lists existing shelves and toggles membership', (tester) async {
+  testWidgets('the book shelf picker is single-select, exclusive, and closes on pick',
+      (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
+
+    // e1 starts on a second shelf, 'Loved'.
+    await tester.runAsync(() async {
+      await db.tagsDao.insertTag(
+        PersonalTagsCompanion.insert(id: 'tag2', userId: 'u1', name: 'Loved'),
+      );
+      await db.tagsDao.insertAssignment(LibraryEntryTagsCompanion.insert(
+        id: 'a2', userId: 'u1', libraryEntryId: 'le-e1', tagId: 'tag2',
+      ));
+    });
 
     await tester.pumpWidget(host((c) => showShelfPickerSheet(c, entryId: 'le-e1')));
     await settle(tester);
     await tester.tap(find.text('open'));
     await settle(tester);
 
-    // The reader's real shelf is offered (this is the fix — the old dialog
-    // never showed it), and e1 isn't on it yet.
+    // The reader's real shelves are offered (this is the fix — the old dialog
+    // never showed them).
     expect(find.text('Add to a shelf'), findsOneWidget);
     expect(find.text('Classics'), findsOneWidget);
-    expect(await tagsOf(tester, 'le-e1'), isEmpty);
+    expect((await tagsOf(tester, 'le-e1')).map((t) => t.tagId), contains('tag2'));
 
-    // Tapping shelves the book; tapping again unshelves it.
+    // Picking a shelf moves the book there exclusively (drops 'Loved') and
+    // closes the sheet at once — one book, one shelf.
     await tester.tap(find.text('Classics'));
     await settle(tester);
-    expect((await tagsOf(tester, 'le-e1')).where((t) => t.tagId == 'tag1').length, 1);
-
-    await tester.tap(find.text('Classics'));
-    await settle(tester);
-    expect(await tagsOf(tester, 'le-e1'), isEmpty);
+    expect(find.text('Add to a shelf'), findsNothing);
+    final tags = (await tagsOf(tester, 'le-e1')).map((t) => t.tagId).toList();
+    expect(tags, contains('tag1'));
+    expect(tags, isNot(contains('tag2')));
 
     await flushTree(tester);
   });
@@ -331,6 +342,29 @@ void main() {
     expect(find.widgetWithText(ListTile, 'Randamoozham'), findsWidgets);
     expect(find.textContaining('Khasakkinte'), findsNothing);
     expect(find.text('Loved'), findsNothing);
+
+    await flushTree(tester);
+  });
+
+  testWidgets('add-books nudges to the catalogue when the library has no match',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      host((c) => showAddBooksToShelfSheet(c, tagId: 'tag1', shelfName: 'Classics')),
+    );
+    await settle(tester);
+    await tester.tap(find.text('open'));
+    await settle(tester);
+
+    // A search that matches nothing in the library explains why and points at
+    // the catalogue, rather than a bare "no matches".
+    await tester.enterText(find.byType(TextField), 'zzznothere');
+    await settle(tester);
+    expect(find.text('Not in your library'), findsOneWidget);
+    expect(find.text('Browse the catalogue'), findsOneWidget);
 
     await flushTree(tester);
   });

@@ -1009,8 +1009,12 @@
   "@libraryShelfAddBooksShort": {"description": "Short label for the add-books action on an open shelf"},
   "libraryAddBooksSearchHint": "Search your library",
   "@libraryAddBooksSearchHint": {"description": "Hint in the search field on the add-books-to-shelf sheet"},
-  "libraryAddBooksNoMatches": "No books match your search.",
-  "@libraryAddBooksNoMatches": {"description": "Shown when the add-books search matches nothing"},
+  "libraryAddBooksNoMatchTitle": "Not in your library",
+  "@libraryAddBooksNoMatchTitle": {"description": "Title when the add-books search matches no owned book"},
+  "libraryAddBooksNoMatchBody": "Only books you already have can go on a shelf. Find it in the catalogue to add it to your library first.",
+  "@libraryAddBooksNoMatchBody": {"description": "Body guiding the reader to the catalogue when a shelf search matches nothing"},
+  "libraryAddBooksBrowse": "Browse the catalogue",
+  "@libraryAddBooksBrowse": {"description": "Button that leaves the add-books sheet for the catalogue search"},
   "@bookRemoveConfirm": {
     "description": "Confirmation dialog body before removing a library entry"
   },

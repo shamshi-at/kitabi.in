@@ -1912,11 +1912,23 @@ abstract class AppLocalizations {
   /// **'Search your library'**
   String get libraryAddBooksSearchHint;
 
-  /// Shown when the add-books search matches nothing
+  /// Title when the add-books search matches no owned book
   ///
   /// In en, this message translates to:
-  /// **'No books match your search.'**
-  String get libraryAddBooksNoMatches;
+  /// **'Not in your library'**
+  String get libraryAddBooksNoMatchTitle;
+
+  /// Body guiding the reader to the catalogue when a shelf search matches nothing
+  ///
+  /// In en, this message translates to:
+  /// **'Only books you already have can go on a shelf. Find it in the catalogue to add it to your library first.'**
+  String get libraryAddBooksNoMatchBody;
+
+  /// Button that leaves the add-books sheet for the catalogue search
+  ///
+  /// In en, this message translates to:
+  /// **'Browse the catalogue'**
+  String get libraryAddBooksBrowse;
 
   /// Snackbar confirming a scanned book was added to the personal library
   ///

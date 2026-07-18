@@ -347,6 +347,15 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                           showToggle: _openShelf == null && all.isNotEmpty,
                           onBack: _closeShelf,
                           onViewChanged: _setShelvesView,
+                          // A visible "add books" on an open personal shelf, so
+                          // filling it doesn't depend on finding the fab action.
+                          onAddBooks: _openShelf?.tagId != null
+                              ? () => showAddBooksToShelfSheet(
+                                    context,
+                                    tagId: _openShelf!.tagId!,
+                                    shelfName: _openShelf!.label,
+                                  )
+                              : null,
                         ),
                       ),
                       if (all.isEmpty)
@@ -520,6 +529,7 @@ class _Header extends StatelessWidget {
     required this.showToggle,
     required this.onBack,
     required this.onViewChanged,
+    this.onAddBooks,
   });
 
   final String? openShelf;
@@ -529,12 +539,15 @@ class _Header extends StatelessWidget {
   final VoidCallback onBack;
   final ValueChanged<bool> onViewChanged;
 
+  /// When set (an open personal shelf), a visible "Add books" action.
+  final VoidCallback? onAddBooks;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     if (openShelf != null) {
       return Padding(
-        padding: EdgeInsets.fromLTRB(8, 12, 20, 8),
+        padding: EdgeInsets.fromLTRB(8, 12, 12, 8),
         child: Row(
           children: [
             IconButton(
@@ -557,6 +570,15 @@ class _Header extends StatelessWidget {
                 ],
               ),
             ),
+            if (onAddBooks != null)
+              TextButton.icon(
+                onPressed: onAddBooks,
+                icon: Icon(Icons.add, size: 18, color: AppColors.oxblood),
+                label: Text(
+                  l10n.libraryShelfAddBooksShort,
+                  style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+                ),
+              ),
           ],
         ),
       );

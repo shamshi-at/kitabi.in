@@ -437,6 +437,17 @@ class TagsRepository extends Repo {
       data: {},
     );
   }
+
+  /// One book, one shelf (owner rule, 19 Jul 2026): put this entry on [tagId]
+  /// and take it off every other shelf. A no-op if it's already only there.
+  /// Each add/remove enqueues its own op, so the move syncs like any edit.
+  Future<void> shelveExclusive(String libraryEntryId, String tagId) async {
+    final current = await db.tagsDao.watchForEntry(libraryEntryId).first;
+    for (final a in current) {
+      if (a.tagId != tagId) await unassign(a.id);
+    }
+    if (!current.any((a) => a.tagId == tagId)) await assign(libraryEntryId, tagId);
+  }
 }
 
 class LendingRepository extends Repo {

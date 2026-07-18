@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/haptics.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
@@ -83,7 +85,8 @@ Future<String?> _promptNewShelf(BuildContext context, WidgetRef ref) async {
   return existing.isNotEmpty ? existing.first.id : await repo.createTag(cleaned);
 }
 
-/// From a book — the shelves it's on, toggleable, with a door to a new one.
+/// From a book — pick the one shelf it lives on (owner rule: one book, one
+/// shelf), with a door to a new one. Picking closes the sheet at once.
 Future<void> showShelfPickerSheet(BuildContext context, {required String entryId}) {
   return showModalBottomSheet<void>(
     context: context,
@@ -101,13 +104,21 @@ class _ShelfPickerSheet extends ConsumerWidget {
 
   final String entryId;
 
+  /// Move the book to [tagId] (exclusively) and close the sheet immediately —
+  /// the mutation runs after the pop, so the tap feels instant.
+  void _pick(BuildContext context, WidgetRef ref, String tagId) {
+    Haptics.selection();
+    final repoFuture = ref.read(tagsRepositoryProvider.future);
+    Navigator.of(context).pop();
+    repoFuture.then((repo) => repo.shelveExclusive(entryId, tagId));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final shelves = ref.watch(personalShelvesProvider).valueOrNull ?? const <PersonalTag>[];
     final assignments = ref.watch(libraryTagsProvider(entryId)).valueOrNull ?? const <LibraryEntryTag>[];
-    // tagId → the assignment row that puts this book on it (for unshelving).
-    final memberAssignment = {for (final a in assignments) a.tagId: a.id};
+    final memberTagIds = {for (final a in assignments) a.tagId};
     final sorted = [...shelves]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     return SafeArea(
@@ -134,17 +145,8 @@ class _ShelfPickerSheet extends ConsumerWidget {
                   for (final shelf in sorted)
                     _ShelfRow(
                       name: shelf.name,
-                      selected: memberAssignment.containsKey(shelf.id),
-                      onTap: () async {
-                        Haptics.selection();
-                        final repo = await ref.read(tagsRepositoryProvider.future);
-                        final assignmentId = memberAssignment[shelf.id];
-                        if (assignmentId != null) {
-                          await repo.unassign(assignmentId);
-                        } else {
-                          await repo.assign(entryId, shelf.id);
-                        }
-                      },
+                      selected: memberTagIds.contains(shelf.id),
+                      onTap: () => _pick(context, ref, shelf.id),
                     ),
                 ],
               ),
@@ -158,9 +160,8 @@ class _ShelfPickerSheet extends ConsumerWidget {
               ),
               onTap: () async {
                 final tagId = await _promptNewShelf(context, ref);
-                if (tagId == null) return;
-                final repo = await ref.read(tagsRepositoryProvider.future);
-                await repo.assign(entryId, tagId);
+                if (tagId == null || !context.mounted) return;
+                _pick(context, ref, tagId);
               },
             ),
           ],
@@ -170,6 +171,7 @@ class _ShelfPickerSheet extends ConsumerWidget {
   }
 }
 
+/// A single-select shelf row — a radio, since a book lives on just one shelf.
 class _ShelfRow extends StatelessWidget {
   const _ShelfRow({required this.name, required this.selected, required this.onTap});
 
@@ -182,7 +184,7 @@ class _ShelfRow extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       leading: Icon(
-        selected ? Icons.check_circle : Icons.circle_outlined,
+        selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
         color: selected ? AppColors.oxblood : AppColors.line,
       ),
       title: Text(
@@ -330,10 +332,33 @@ class _AddBooksToShelfSheetState extends ConsumerState<_AddBooksToShelfSheet> {
                 ),
                 if (filtered.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                    child: Text(
-                      l10n.libraryAddBooksNoMatches,
-                      style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                    child: Column(
+                      children: [
+                        Text(
+                          l10n.libraryAddBooksNoMatchTitle,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          l10n.libraryAddBooksNoMatchBody,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+                        ),
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            context.push(Routes.catalogSearch);
+                          },
+                          icon: Icon(Icons.search, size: 18),
+                          label: Text(l10n.libraryAddBooksBrowse),
+                        ),
+                      ],
                     ),
                   )
                 else
@@ -352,9 +377,12 @@ class _AddBooksToShelfSheetState extends ConsumerState<_AddBooksToShelfSheet> {
                             Haptics.selection();
                             final repo = await ref.read(tagsRepositoryProvider.future);
                             if (assignmentId != null) {
+                              // Already here — tap again to take it off.
                               await repo.unassign(assignmentId);
                             } else {
-                              await repo.assign(hit.entry.id, widget.tagId);
+                              // One book, one shelf: this moves it here from
+                              // wherever it was.
+                              await repo.shelveExclusive(hit.entry.id, widget.tagId);
                             }
                           },
                           leading: TypesetCover(
