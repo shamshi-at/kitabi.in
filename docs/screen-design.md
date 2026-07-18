@@ -155,9 +155,11 @@ camera; everything else stays paper.
   so moving a book between shelves is just untick-one-tick-another. From a
   shelf, an opened personal shelf that's empty shows an "Add books to this
   shelf" button (and the same action rides the floating control while the shelf
-  is open, so it's reachable once the shelf has books too) — the picker lists
-  your whole library, a tap shelves or unshelves each. Both write straight to
-  Drift and the shelf/chips update live (`libraryTagsProvider` streams now).
+  is open, so it's reachable once the shelf has books too) — the picker searches
+  your whole library and shows, under each book, the shelves it already sits on
+  (the shelf you're filling tinted oxblood, the rest gold), a tap shelves or
+  unshelves each. Both write straight to Drift and the shelf/chips update live
+  (`libraryTagsProvider` streams now).
 
 ## Screen inventory (v1)
 
