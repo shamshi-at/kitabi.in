@@ -10,12 +10,11 @@ import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
-import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
-import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
+import '../reading_progress.dart';
 
 /// Full-screen reading session — pushed the moment a session starts (from
 /// the book page's timer card, or reopened from the persistent mini-bar).
@@ -149,19 +148,18 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     if (widget.pageCount != null) return; // already known — the field isn't shown
     final total = int.tryParse(_totalController.text.trim());
     if (total == null || total <= 0) return;
-    final entries = ref.read(libraryEntriesProvider).valueOrNull ?? const <LibraryEntry>[];
-    final editionId = entries
-        .where((e) => e.id == widget.libraryEntryId)
-        .map((e) => e.editionId)
-        .firstOrNull;
+    // Look the entry up directly (awaited) rather than off a stream provider
+    // that may not have emitted on this route — that read returned empty here,
+    // so the editionId came back null and the total was silently dropped.
+    final entry = await ref.read(appDatabaseProvider).libraryEntriesDao.getById(widget.libraryEntryId);
+    final editionId = entry?.editionId;
     if (editionId == null) return;
-    await ref.read(appDatabaseProvider).cachedBooksDao.updatePageCount(editionId, total);
-    try {
-      await ref.read(apiClientProvider).updateEdition(editionId, {'page_count': total});
-    } catch (_) {
-      // Offline or rejected — the reader keeps their progress locally; the
-      // catalog picks the number up if they set it again from the book page.
-    }
+    await saveBookTotalPages(
+      ref.read(appDatabaseProvider),
+      ref.read(apiClientProvider),
+      editionId,
+      total,
+    );
   }
 
   /// Persist the page reached (and the total, if they supplied one). Split out
@@ -178,12 +176,8 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     final logged = _logged;
     final page = int.tryParse(_pageController.text.trim());
     if (logged == null || page == null) return;
-    final entries = ref.read(libraryEntriesProvider).valueOrNull ?? const <LibraryEntry>[];
-    final livePage = entries
-        .where((e) => e.id == widget.libraryEntryId)
-        .map((e) => e.currentPage)
-        .firstOrNull;
-    if (page == livePage) return; // genuinely unchanged — nothing to write
+    final entry = await ref.read(appDatabaseProvider).libraryEntriesDao.getById(widget.libraryEntryId);
+    if (page == entry?.currentPage) return; // genuinely unchanged — nothing to write
     final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
     await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
     final libraryRepo = await ref.read(libraryRepositoryProvider.future);

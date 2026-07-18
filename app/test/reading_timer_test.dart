@@ -2,13 +2,30 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:kitabi/data/api/api_client.dart';
 import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/data/repositories/repositories.dart';
 import 'package:kitabi/data/sync/sync_providers.dart';
 import 'package:kitabi/features/library/providers/reading_timer_providers.dart';
+import 'package:kitabi/features/library/reading_progress.dart';
 
 const _editionIdA = '44444444-4444-4444-4444-444444444444';
 const _editionIdB = '55555555-5555-5555-5555-555555555555';
+
+/// Captures the edition patch the total-pages save pushes to the catalog.
+class _FakeApi extends ApiClient {
+  Map<String, dynamic>? lastPatch;
+  String? lastEditionId;
+  bool throwOnUpdate = false;
+
+  @override
+  Future<Map<String, dynamic>> updateEdition(String editionId, Map<String, dynamic> patch) async {
+    if (throwOnUpdate) throw Exception('offline');
+    lastEditionId = editionId;
+    lastPatch = patch;
+    return {};
+  }
+}
 
 void main() {
   late AppDatabase db;
@@ -117,5 +134,40 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
     expect(container2.read(activeSessionProvider)?.libraryEntryId, entryId);
+  });
+
+  test('getById returns the active entry by its id', () async {
+    final repo = LibraryRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+    final entryId = await repo.add(editionId: _editionIdA);
+    final entry = await db.libraryEntriesDao.getById(entryId);
+    expect(entry?.editionId, _editionIdA);
+    expect(await db.libraryEntriesDao.getById('nope'), isNull);
+  });
+
+  test('saveBookTotalPages mirrors the total locally and pushes it to the catalog', () async {
+    // A book the catalog had no page count for.
+    await db.cachedBooksDao.upsert(CachedBooksCompanion.insert(
+      editionId: _editionIdA, workId: 'w', title: 'Untotalled', authorNames: 'A'));
+    expect((await db.cachedBooksDao.getByEditionId(_editionIdA))?.pageCount, isNull);
+
+    final api = _FakeApi();
+    await saveBookTotalPages(db, api, _editionIdA, 320);
+
+    // Local mirror updated (so progress can show a percentage)...
+    expect((await db.cachedBooksDao.getByEditionId(_editionIdA))?.pageCount, 320);
+    // ...and pushed to the shared Edition (so it syncs to the cloud).
+    expect(api.lastEditionId, _editionIdA);
+    expect(api.lastPatch, {'page_count': 320});
+  });
+
+  test('saveBookTotalPages keeps the local total even if the catalog call fails', () async {
+    await db.cachedBooksDao.upsert(CachedBooksCompanion.insert(
+      editionId: _editionIdA, workId: 'w', title: 'Offline', authorNames: 'A'));
+    final api = _FakeApi()..throwOnUpdate = true;
+
+    await saveBookTotalPages(db, api, _editionIdA, 200);
+
+    // Offline-first: the reader's progress still works locally.
+    expect((await db.cachedBooksDao.getByEditionId(_editionIdA))?.pageCount, 200);
   });
 }

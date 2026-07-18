@@ -8,6 +8,7 @@ import '../../data/repositories/repository_providers.dart';
 import '../../data/sync/sync_providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'providers/reading_timer_providers.dart';
+import 'reading_progress.dart';
 
 /// What the reader entered in the quick-stop dialog.
 class _StopResult {
@@ -109,17 +110,16 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   );
   if (result == null) return; // skipped / dismissed
 
-  // The total the reader supplied belongs to the shared Edition — write it to
-  // the local mirror (so progress works offline immediately) and to the
-  // catalog. Best-effort on the network; the mirror is what the shelf reads.
+  // The total the reader supplied belongs to the shared Edition — mirror it
+  // locally and push it to the catalog (see saveBookTotalPages).
   final total = result.total;
-  if (pageCount == null && total != null && total > 0 && editionId != null) {
-    await ref.read(appDatabaseProvider).cachedBooksDao.updatePageCount(editionId, total);
-    try {
-      await ref.read(apiClientProvider).updateEdition(editionId, {'page_count': total});
-    } catch (_) {
-      // Offline or rejected — the local mirror still has it.
-    }
+  if (pageCount == null && total != null && editionId != null) {
+    await saveBookTotalPages(
+      ref.read(appDatabaseProvider),
+      ref.read(apiClientProvider),
+      editionId,
+      total,
+    );
   }
 
   final page = result.page;

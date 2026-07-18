@@ -37,6 +37,13 @@ class LibraryEntriesDao extends DatabaseAccessor<AppDatabase> with _$LibraryEntr
             ..limit(1))
           .getSingleOrNull();
 
+  /// One active entry by its id — a reliable lookup (an awaited query, not a
+  /// snapshot of a stream provider that may not have emitted yet) for flows
+  /// like the reading timer that only hold the entry id.
+  Future<LibraryEntry?> getById(String id) =>
+      (select(libraryEntries)..where((t) => t.id.equals(id) & t.deletedAt.isNull()))
+          .getSingleOrNull();
+
   /// Every active entry for one user — the duplicate heal scans this.
   Future<List<LibraryEntry>> activeForUser(String userId) => (select(libraryEntries)
         ..where((t) => t.userId.equals(userId) & t.deletedAt.isNull())

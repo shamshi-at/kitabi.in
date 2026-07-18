@@ -31,6 +31,7 @@ import '../../lending/presentation/sheet_fields.dart';
 import '../../lending/reminder.dart';
 import '../../share/presentation/share_book_sheet.dart';
 import '../cover_upload.dart';
+import '../reading_progress.dart';
 import '../reading_status.dart';
 import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
@@ -1433,26 +1434,55 @@ class _StatusAndProgressCard extends ConsumerWidget {
 
   Future<void> _editProgress(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
+    // When the catalog has no total, offer to set it here too — otherwise
+    // progress can only ever be "p. 42", never a percentage.
+    final knownTotal = ref.read(cachedBookProvider(entry.editionId)).valueOrNull?.pageCount;
     final controller = TextEditingController(text: entry.currentPage?.toString() ?? '');
-    final page = await showDialog<int>(
+    final totalController = TextEditingController();
+    final result = await showDialog<(int?, int?)>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.bookEditProgress),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: l10n.bookCurrentPage),
-          autofocus: true,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: l10n.bookCurrentPage),
+              autofocus: true,
+            ),
+            if (knownTotal == null)
+              TextField(
+                controller: totalController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: l10n.timerTotalFieldLabel),
+              ),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text)),
+            onPressed: () => Navigator.pop(
+              ctx,
+              (int.tryParse(controller.text.trim()), int.tryParse(totalController.text.trim())),
+            ),
             child: Text(l10n.bookSave),
           ),
         ],
       ),
     );
+    if (result == null) return;
+    final (page, total) = result;
+    // The total belongs to the shared Edition — mirror it locally + sync it.
+    if (knownTotal == null && total != null) {
+      await saveBookTotalPages(
+        ref.read(appDatabaseProvider),
+        ref.read(apiClientProvider),
+        entry.editionId,
+        total,
+      );
+    }
     if (page == null) return;
     final repo = await ref.read(libraryRepositoryProvider.future);
     final needsStartDate = entry.startDate == null;
@@ -1556,7 +1586,7 @@ class _ReadingSessionCard extends ConsumerWidget {
   final String? author;
 
   Future<void> _logManually(BuildContext context, WidgetRef ref, {required int? pageCount}) async {
-    final result = await showModalBottomSheet<(int, int?)>(
+    final result = await showModalBottomSheet<(int, int?, int?)>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.card,
@@ -1564,8 +1594,18 @@ class _ReadingSessionCard extends ConsumerWidget {
       builder: (_) => _ManualLogSheet(currentPage: entry.currentPage, pageCount: pageCount),
     );
     if (result == null || !context.mounted) return;
-    final (minutes, pageEnd) = result;
+    final (minutes, pageEnd, total) = result;
     Haptics.success();
+
+    // A total typed here (book had none) belongs to the Edition — save + sync.
+    if (pageCount == null && total != null) {
+      await saveBookTotalPages(
+        ref.read(appDatabaseProvider),
+        ref.read(apiClientProvider),
+        entry.editionId,
+        total,
+      );
+    }
 
     final endedAt = DateTime.now();
     final startedAt = endedAt.subtract(Duration(minutes: minutes));
@@ -1701,11 +1741,13 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
   late final _pageController = TextEditingController(
     text: widget.currentPage?.toString() ?? '',
   );
+  final _totalController = TextEditingController();
 
   @override
   void dispose() {
     _minutesController.dispose();
     _pageController.dispose();
+    _totalController.dispose();
     super.dispose();
   }
 
@@ -1713,7 +1755,8 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
     final minutes = int.tryParse(_minutesController.text.trim());
     if (minutes == null || minutes <= 0) return;
     final page = int.tryParse(_pageController.text.trim());
-    Navigator.pop(context, (minutes, page));
+    final total = int.tryParse(_totalController.text.trim());
+    Navigator.pop(context, (minutes, page, total));
   }
 
   @override
@@ -1767,6 +1810,27 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                 Text(
                   l10n.timerPageFieldOf(widget.pageCount!),
                   style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+                ),
+              ] else ...[
+                // No total in the catalog — capture it here so progress can be
+                // a percentage (and the number reaches the book + the cloud).
+                SizedBox(width: 8),
+                Text(l10n.timerTotalFieldLabel,
+                    style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
+                SizedBox(width: 8),
+                SizedBox(
+                  width: 72,
+                  child: TextField(
+                    controller: _totalController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: l10n.timerTotalFieldHint,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
                 ),
               ],
             ],
