@@ -100,6 +100,36 @@ final allTagsProvider = FutureProvider.autoDispose<List<PersonalTag>>((ref) asyn
   return repo.watchAll().first;
 });
 
+/// The reader's shelves (personal tags), reactive — a shelf created anywhere
+/// (the book page's "Add to a shelf", the shelves view's "New shelf") appears
+/// in the shelves view without a hand-rolled invalidate.
+final personalShelvesProvider = StreamProvider.autoDispose<List<PersonalTag>>((ref) async* {
+  final repo = await ref.watch(tagsRepositoryProvider.future);
+  yield* repo.watchAll();
+});
+
+/// entryId → the shelf (tag) ids on it, across the whole library — one map
+/// instead of a per-entry lookup, so shelf tiles get counts/covers and the
+/// shelf filter can match entries in a plain `where`.
+final entryShelvesProvider = StreamProvider.autoDispose<Map<String, Set<String>>>((ref) async* {
+  final repo = await ref.watch(tagsRepositoryProvider.future);
+  yield* repo.watchAssignments().map((rows) {
+    final map = <String, Set<String>>{};
+    for (final row in rows) {
+      map.putIfAbsent(row.libraryEntryId, () => {}).add(row.tagId);
+    }
+    return map;
+  });
+});
+
+/// Whether the Library tab opens on the shelves view — a reader who thinks in
+/// shelves shouldn't have to re-toggle every launch. Device-local (KeyValues).
+final libraryShelvesViewProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final value =
+      await ref.watch(appDatabaseProvider).keyValuesDao.getValue('library_shelves_view');
+  return value == 'true';
+});
+
 /// Active (non-deleted) library entries — feeds the library grid (S5) and the
 /// home screen. A reactive stream (not a one-shot snapshot) so a book added on
 /// any screen surfaces immediately on the always-alive home route, without

@@ -1690,6 +1690,78 @@ abstract class AppLocalizations {
   /// **'No books match these filters.'**
   String get libraryNoMatches;
 
+  /// Library view toggle: the flat grid of every book
+  ///
+  /// In en, this message translates to:
+  /// **'All books'**
+  String get libraryViewAll;
+
+  /// Library view toggle: books grouped onto shelves (statuses, favourites, personal tags)
+  ///
+  /// In en, this message translates to:
+  /// **'Shelves'**
+  String get libraryViewShelves;
+
+  /// Tile in the shelves view that creates a new personal shelf
+  ///
+  /// In en, this message translates to:
+  /// **'New shelf'**
+  String get libraryNewShelf;
+
+  /// Dialog title when creating a new shelf from the shelves view
+  ///
+  /// In en, this message translates to:
+  /// **'Name your shelf'**
+  String get libraryNewShelfTitle;
+
+  /// Text-field hint in the new-shelf dialog
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Signed copies'**
+  String get libraryNewShelfHint;
+
+  /// The built-in shelf holding every favourited book
+  ///
+  /// In en, this message translates to:
+  /// **'Favourites'**
+  String get libraryShelfFavourites;
+
+  /// Filter sheet section header for the reader's personal shelves
+  ///
+  /// In en, this message translates to:
+  /// **'Shelf'**
+  String get libraryFilterShelf;
+
+  /// Title of the library sort sheet, and the sort action's label on the floating control
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get librarySortTitle;
+
+  /// Sort option: newest additions first (the default)
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added'**
+  String get librarySortRecent;
+
+  /// Sort option: alphabetical by title
+  ///
+  /// In en, this message translates to:
+  /// **'Title A–Z'**
+  String get librarySortAZ;
+
+  /// Sort option: alphabetical by author, then title
+  ///
+  /// In en, this message translates to:
+  /// **'Author'**
+  String get librarySortAuthor;
+
+  /// Accessibility label for the collapsed floating library control
+  ///
+  /// In en, this message translates to:
+  /// **'Search, filter and sort'**
+  String get libraryFabLabel;
+
   /// Title of the library filter sheet (S4b)
   ///
   /// In en, this message translates to:

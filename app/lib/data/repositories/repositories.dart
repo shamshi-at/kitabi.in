@@ -392,6 +392,9 @@ class TagsRepository extends Repo {
   Stream<List<LibraryEntryTag>> watchForEntry(String libraryEntryId) =>
       db.tagsDao.watchForEntry(libraryEntryId);
 
+  /// Every active shelf assignment — feeds the library's shelves view.
+  Stream<List<LibraryEntryTag>> watchAssignments() => db.tagsDao.watchAllAssignments();
+
   Future<String> createTag(String name) async {
     final id = _uuid.v4();
     await db.tagsDao.insertTag(

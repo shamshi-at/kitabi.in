@@ -883,6 +883,54 @@
   "@libraryNoMatches": {
     "description": "Shown when active filters exclude every book"
   },
+  "libraryViewAll": "All books",
+  "@libraryViewAll": {
+    "description": "Library view toggle: the flat grid of every book"
+  },
+  "libraryViewShelves": "Shelves",
+  "@libraryViewShelves": {
+    "description": "Library view toggle: books grouped onto shelves (statuses, favourites, personal tags)"
+  },
+  "libraryNewShelf": "New shelf",
+  "@libraryNewShelf": {
+    "description": "Tile in the shelves view that creates a new personal shelf"
+  },
+  "libraryNewShelfTitle": "Name your shelf",
+  "@libraryNewShelfTitle": {
+    "description": "Dialog title when creating a new shelf from the shelves view"
+  },
+  "libraryNewShelfHint": "e.g. Signed copies",
+  "@libraryNewShelfHint": {
+    "description": "Text-field hint in the new-shelf dialog"
+  },
+  "libraryShelfFavourites": "Favourites",
+  "@libraryShelfFavourites": {
+    "description": "The built-in shelf holding every favourited book"
+  },
+  "libraryFilterShelf": "Shelf",
+  "@libraryFilterShelf": {
+    "description": "Filter sheet section header for the reader's personal shelves"
+  },
+  "librarySortTitle": "Sort",
+  "@librarySortTitle": {
+    "description": "Title of the library sort sheet, and the sort action's label on the floating control"
+  },
+  "librarySortRecent": "Recently added",
+  "@librarySortRecent": {
+    "description": "Sort option: newest additions first (the default)"
+  },
+  "librarySortAZ": "Title A–Z",
+  "@librarySortAZ": {
+    "description": "Sort option: alphabetical by title"
+  },
+  "librarySortAuthor": "Author",
+  "@librarySortAuthor": {
+    "description": "Sort option: alphabetical by author, then title"
+  },
+  "libraryFabLabel": "Search, filter and sort",
+  "@libraryFabLabel": {
+    "description": "Accessibility label for the collapsed floating library control"
+  },
   "libraryFilterTitle": "Filter",
   "@libraryFilterTitle": {
     "description": "Title of the library filter sheet (S4b)"

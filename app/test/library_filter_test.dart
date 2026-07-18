@@ -59,4 +59,31 @@ void main() {
     );
     expect(const LibraryFilter(statuses: {'read'}, favouritesOnly: true).activeCount, 2);
   });
+
+  test('the shelf facet narrows to one personal shelf and composes', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seed(db, 'e1', status: 'read', language: 'Malayalam', form: 'Novel');
+    await seed(db, 'e2', status: 'reading', language: 'Malayalam');
+    await seed(db, 'e3', status: 'read', language: 'English');
+
+    final hits = await db.libraryEntriesDao.allWithBooks();
+    // e1 and e2 sit on the "classics" shelf; e3 doesn't.
+    const shelvesOf = {
+      'le-e1': {'tag-classics'},
+      'le-e2': {'tag-classics', 'tag-loved'},
+    };
+
+    int count(LibraryFilter f) =>
+        hits.where((h) => f.matches(h, shelvesOf: shelvesOf)).length;
+
+    expect(count(const LibraryFilter(shelf: 'tag-classics')), 2);
+    expect(count(const LibraryFilter(shelf: 'tag-loved')), 1);
+    expect(count(const LibraryFilter(shelf: 'tag-empty')), 0);
+    // Shelf composes with the other facets: classics AND read → just e1.
+    expect(count(const LibraryFilter(shelf: 'tag-classics', statuses: {'read'})), 1);
+    // Without the map, a shelf filter matches nothing rather than everything.
+    expect(hits.where((h) => const LibraryFilter(shelf: 'tag-classics').matches(h)).length, 0);
+    expect(const LibraryFilter(shelf: 'tag-classics').activeCount, 1);
+  });
 }

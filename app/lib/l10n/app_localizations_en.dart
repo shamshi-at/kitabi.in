@@ -963,6 +963,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryNoMatches => 'No books match these filters.';
 
   @override
+  String get libraryViewAll => 'All books';
+
+  @override
+  String get libraryViewShelves => 'Shelves';
+
+  @override
+  String get libraryNewShelf => 'New shelf';
+
+  @override
+  String get libraryNewShelfTitle => 'Name your shelf';
+
+  @override
+  String get libraryNewShelfHint => 'e.g. Signed copies';
+
+  @override
+  String get libraryShelfFavourites => 'Favourites';
+
+  @override
+  String get libraryFilterShelf => 'Shelf';
+
+  @override
+  String get librarySortTitle => 'Sort';
+
+  @override
+  String get librarySortRecent => 'Recently added';
+
+  @override
+  String get librarySortAZ => 'Title A–Z';
+
+  @override
+  String get librarySortAuthor => 'Author';
+
+  @override
+  String get libraryFabLabel => 'Search, filter and sort';
+
+  @override
   String get libraryFilterTitle => 'Filter';
 
   @override

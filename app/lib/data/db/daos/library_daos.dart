@@ -156,6 +156,11 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
       )..where((t) => t.libraryEntryId.equals(libraryEntryId) & t.deletedAt.isNull()))
           .watch();
 
+  /// Every active assignment across the whole library — the shelves view and
+  /// the shelf filter need the full entry→tags picture, not one entry's.
+  Stream<List<LibraryEntryTag>> watchAllAssignments() =>
+      (select(libraryEntryTags)..where((t) => t.deletedAt.isNull())).watch();
+
   Future<void> insertTag(PersonalTagsCompanion row) => into(personalTags).insert(row);
 
   Future<void> insertAssignment(LibraryEntryTagsCompanion row) =>

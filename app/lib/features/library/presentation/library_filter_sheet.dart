@@ -13,6 +13,7 @@ class LibraryFilter {
     this.forms = const {},
     this.genres = const {},
     this.favouritesOnly = false,
+    this.shelf,
   });
 
   final Set<String> statuses;
@@ -24,14 +25,24 @@ class LibraryFilter {
   final Set<String> genres;
   final bool favouritesOnly;
 
+  /// One personal shelf (tag id) to walk — single-select, like standing at
+  /// one shelf of a real bookcase. Composes with every other facet
+  /// ("Favourites shelf, Malayalam, unread"). The built-in shelves (Reading,
+  /// Read…) aren't values here: they map onto [statuses]/[favouritesOnly],
+  /// so the filter sheet's own controls already show them selected.
+  final String? shelf;
+
   int get activeCount =>
       statuses.length +
       languages.length +
       forms.length +
       genres.length +
-      (favouritesOnly ? 1 : 0);
+      (favouritesOnly ? 1 : 0) +
+      (shelf != null ? 1 : 0);
 
-  bool matches(LibraryHit hit) {
+  /// [shelvesOf] is entryId → tag ids (entryShelvesProvider's map); only
+  /// consulted when a [shelf] is set, so every other caller can omit it.
+  bool matches(LibraryHit hit, {Map<String, Set<String>> shelvesOf = const {}}) {
     if (statuses.isNotEmpty && !statuses.contains(hit.entry.status)) return false;
     if (languages.isNotEmpty) {
       final lang = hit.book.language;
@@ -43,6 +54,7 @@ class LibraryFilter {
     }
     if (genres.isNotEmpty && _genresOf(hit).intersection(genres).isEmpty) return false;
     if (favouritesOnly && !hit.entry.isFavorite) return false;
+    if (shelf != null && !(shelvesOf[hit.entry.id]?.contains(shelf) ?? false)) return false;
     return true;
   }
 
@@ -57,6 +69,8 @@ Future<LibraryFilter?> showLibraryFilterSheet(
   BuildContext context, {
   required List<LibraryHit> hits,
   required LibraryFilter current,
+  List<PersonalTag> shelves = const [],
+  Map<String, Set<String>> shelvesOf = const {},
 }) {
   return showModalBottomSheet<LibraryFilter>(
     context: context,
@@ -65,15 +79,27 @@ Future<LibraryFilter?> showLibraryFilterSheet(
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _FilterSheet(hits: hits, current: current),
+    builder: (_) =>
+        _FilterSheet(hits: hits, current: current, shelves: shelves, shelvesOf: shelvesOf),
   );
 }
 
 class _FilterSheet extends StatefulWidget {
-  const _FilterSheet({required this.hits, required this.current});
+  const _FilterSheet({
+    required this.hits,
+    required this.current,
+    required this.shelves,
+    required this.shelvesOf,
+  });
 
   final List<LibraryHit> hits;
   final LibraryFilter current;
+
+  /// The reader's personal shelves, for the single-select Shelf row.
+  final List<PersonalTag> shelves;
+
+  /// entryId → tag ids, so the live count respects a picked shelf.
+  final Map<String, Set<String>> shelvesOf;
 
   @override
   State<_FilterSheet> createState() => _FilterSheetState();
@@ -85,6 +111,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   late Set<String> _forms = {...widget.current.forms};
   late Set<String> _genres = {...widget.current.genres};
   late bool _favouritesOnly = widget.current.favouritesOnly;
+  late String? _shelf = widget.current.shelf;
 
   LibraryFilter get _working => LibraryFilter(
         statuses: _statuses,
@@ -92,6 +119,7 @@ class _FilterSheetState extends State<_FilterSheet> {
         forms: _forms,
         genres: _genres,
         favouritesOnly: _favouritesOnly,
+        shelf: _shelf,
       );
 
   List<String> get _availableLanguages {
@@ -132,7 +160,8 @@ class _FilterSheetState extends State<_FilterSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final count = widget.hits.where(_working.matches).length;
+    final count =
+        widget.hits.where((h) => _working.matches(h, shelvesOf: widget.shelvesOf)).length;
     final languages = _availableLanguages;
     final forms = _availableForms;
     final genres = _availableGenres;
@@ -174,6 +203,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       _forms = {};
                       _genres = {};
                       _favouritesOnly = false;
+                      _shelf = null;
                     }),
                     child: Text(l10n.libraryFilterClear),
                   ),
@@ -205,6 +235,25 @@ class _FilterSheetState extends State<_FilterSheet> {
                       label: lang,
                       selected: _languages.contains(lang),
                       onTap: () => _toggle(_languages, lang),
+                    ),
+                ],
+              ),
+            ],
+            if (widget.shelves.isNotEmpty) ...[
+              SizedBox(height: 14),
+              _Label(l10n.libraryFilterShelf),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final shelf in widget.shelves)
+                    _Chip(
+                      label: shelf.name,
+                      selected: _shelf == shelf.id,
+                      // Single-select: you stand at one shelf at a time.
+                      // Tapping the selected one steps away from it again.
+                      onTap: () =>
+                          setState(() => _shelf = _shelf == shelf.id ? null : shelf.id),
                     ),
                 ],
               ),
