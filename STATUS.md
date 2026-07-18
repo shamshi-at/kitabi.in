@@ -324,6 +324,14 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **19 Jul 2026** — **The book page's shelf section becomes a little bookcase**
+  (owner pick "B" from a 3-option mockup). The bare "SHELVES · yours only" +
+  "＋ add" chip row is now a ribboned card — gold bookmark edge, shelf name in
+  Fraunces, a fan of the shelf's other books on a gold ledge (the same
+  miniature bookcase the Shelves wall uses), a live "This copy + N others"
+  count, and Move / Remove actions; the empty state quiets to "Not on a shelf
+  yet · Choose a shelf". Reflects one-book-one-shelf. Verified on the emulator
+  (move updates the card live, remove drops to the empty state). 119 tests green.
 - **19 Jul 2026** — **Total-page capture fixed across every progress path**
   (owner report: on a book with no page count, typing the total while logging
   never reached the book or the cloud, and progress stayed blank). One shared

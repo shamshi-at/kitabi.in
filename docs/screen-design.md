@@ -162,6 +162,15 @@ camera; everything else stays paper.
   books can be shelved and offers a jump to the catalogue to add it first. All
   of it writes straight to Drift and updates live (`libraryTagsProvider`
   streams), and every add/remove enqueues its own sync op.
+- **The book page shows the one shelf as a little bookcase** (added 19 Jul 2026,
+  owner pick "B"). The old bare "SHELVES · yours only" + "＋ add" chip row is
+  replaced by a ribboned card: a gold bookmark down the edge, the shelf name in
+  Fraunces, and a fan of the shelf's *other* books on a gold ledge — the same
+  miniature bookcase the Shelves wall uses, so the book page and that grid read
+  as one world — with a live "This copy + N others" count and explicit **Move to
+  another shelf** / **Remove** actions (Move opens the single-select picker). On
+  no shelf, the same card quiets to "Not on a shelf yet · Choose a shelf". The
+  fan falls back to the book's own cover when it's the only one on the shelf.
 
 ## Screen inventory (v1)
 
