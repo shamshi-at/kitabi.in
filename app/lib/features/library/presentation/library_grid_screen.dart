@@ -18,6 +18,7 @@ import '../../../l10n/app_localizations.dart';
 import '../providers/library_providers.dart';
 import '../reading_status.dart';
 import 'library_filter_sheet.dart';
+import 'shelf_sheets.dart';
 
 /// S5 — the personal library. Two faces on one screen (owner pick, 17 Jul
 /// 2026): the covers-first grid, and a *shelves* view — every reading status,
@@ -371,10 +372,28 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                       else if (filtered.isEmpty)
                         SliverFillRemaining(
                           hasScrollBody: false,
-                          child: EmptyState(
-                            icon: Icons.filter_alt_off_outlined,
-                            title: l10n.libraryNoMatches,
-                          ),
+                          // An opened personal shelf with nothing on it isn't a
+                          // dead end — offer to shelve books you already have,
+                          // rather than the bare "no matches" the filter shows.
+                          child: _openShelf?.tagId != null
+                              ? EmptyState(
+                                  icon: Icons.library_add_outlined,
+                                  title: l10n.libraryShelfEmptyTitle,
+                                  body: l10n.libraryShelfEmptyBody,
+                                  action: ElevatedButton.icon(
+                                    onPressed: () => showAddBooksToShelfSheet(
+                                      context,
+                                      tagId: _openShelf!.tagId!,
+                                      shelfName: _openShelf!.label,
+                                    ),
+                                    icon: Icon(Icons.add, size: 18),
+                                    label: Text(l10n.libraryShelfAddBooks),
+                                  ),
+                                )
+                              : EmptyState(
+                                  icon: Icons.filter_alt_off_outlined,
+                                  title: l10n.libraryNoMatches,
+                                ),
                         )
                       else
                         SliverPadding(
@@ -413,6 +432,18 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                       label: l10n.searchTitle,
                       onPressed: () => context.push(Routes.catalogSearch),
                     ),
+                    // On an open personal shelf, shelving more books is one tap
+                    // from anywhere — not just from the empty state.
+                    if (_openShelf?.tagId != null)
+                      ExpandingFabAction(
+                        icon: Icons.library_add_outlined,
+                        label: l10n.libraryShelfAddBooksShort,
+                        onPressed: () => showAddBooksToShelfSheet(
+                          context,
+                          tagId: _openShelf!.tagId!,
+                          shelfName: _openShelf!.label,
+                        ),
+                      ),
                     if (!shelvesView) ...[
                       ExpandingFabAction(
                         icon: Icons.tune,

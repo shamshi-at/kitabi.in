@@ -987,6 +987,26 @@
   "@bookNewTagHint": {
     "description": "Text field hint in the new-tag dialog"
   },
+  "shelfPickerTitle": "Add to a shelf",
+  "@shelfPickerTitle": {"description": "Title of the sheet that picks which shelves a book sits on"},
+  "shelfPickerHint": "Tap a shelf to add or remove this book",
+  "@shelfPickerHint": {"description": "Subtitle on the shelf-picker sheet"},
+  "shelfPickerEmpty": "No shelves yet — create your first below.",
+  "@shelfPickerEmpty": {"description": "Shown in the shelf-picker sheet when the reader has no shelves"},
+  "libraryShelfEmptyTitle": "This shelf is empty",
+  "@libraryShelfEmptyTitle": {"description": "Title of the empty state for an opened personal shelf with no books"},
+  "libraryShelfEmptyBody": "Move a book you already have onto it.",
+  "@libraryShelfEmptyBody": {"description": "Body of the empty-shelf state"},
+  "libraryShelfAddBooks": "Add books to this shelf",
+  "@libraryShelfAddBooks": {"description": "Button that opens the picker to add existing library books to a shelf"},
+  "libraryAddToShelfTitle": "Add to {shelf}",
+  "@libraryAddToShelfTitle": {"description": "Title of the sheet that adds existing books to a named shelf", "placeholders": {"shelf": {"type": "String"}}},
+  "libraryAddBooksHint": "Tap a book to shelve or unshelve it",
+  "@libraryAddBooksHint": {"description": "Subtitle on the add-books-to-shelf sheet"},
+  "libraryAddBooksEmpty": "Your library is empty — add a book first.",
+  "@libraryAddBooksEmpty": {"description": "Shown when there are no library books to add to a shelf"},
+  "libraryShelfAddBooksShort": "Add books",
+  "@libraryShelfAddBooksShort": {"description": "Short label for the add-books action on an open shelf"},
   "@bookRemoveConfirm": {
     "description": "Confirmation dialog body before removing a library entry"
   },

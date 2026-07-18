@@ -89,10 +89,13 @@ final librarySearchProvider =
   return repo.search(query);
 });
 
+/// The shelves (personal tags) one library entry sits on — reactive, so the
+/// book page's chips and the shelf-picker sheet's checkmarks update the instant
+/// a shelf is toggled anywhere, with no hand-rolled invalidation.
 final libraryTagsProvider =
-    FutureProvider.autoDispose.family<List<LibraryEntryTag>, String>((ref, libraryEntryId) async {
+    StreamProvider.autoDispose.family<List<LibraryEntryTag>, String>((ref, libraryEntryId) async* {
   final repo = await ref.watch(tagsRepositoryProvider.future);
-  return repo.watchForEntry(libraryEntryId).first;
+  yield* repo.watchForEntry(libraryEntryId);
 });
 
 final allTagsProvider = FutureProvider.autoDispose<List<PersonalTag>>((ref) async {
@@ -106,6 +109,14 @@ final allTagsProvider = FutureProvider.autoDispose<List<PersonalTag>>((ref) asyn
 final personalShelvesProvider = StreamProvider.autoDispose<List<PersonalTag>>((ref) async* {
   final repo = await ref.watch(tagsRepositoryProvider.future);
   yield* repo.watchAll();
+});
+
+/// Every active shelf assignment, reactive — the raw rows (with their ids), so
+/// the add-books-to-shelf sheet can unshelve a book (which needs the assignment
+/// id, not just the tag id [entryShelvesProvider] carries).
+final allShelfAssignmentsProvider = StreamProvider.autoDispose<List<LibraryEntryTag>>((ref) async* {
+  final repo = await ref.watch(tagsRepositoryProvider.future);
+  yield* repo.watchAssignments();
 });
 
 /// entryId → the shelf (tag) ids on it, across the whole library — one map

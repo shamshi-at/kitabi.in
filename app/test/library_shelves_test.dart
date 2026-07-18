@@ -11,6 +11,7 @@ import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/data/repositories/repositories.dart';
 import 'package:kitabi/data/sync/sync_providers.dart';
 import 'package:kitabi/features/library/presentation/library_grid_screen.dart';
+import 'package:kitabi/features/library/presentation/shelf_sheets.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
 /// The library's shelves view (S1, owner pick 17 Jul 2026) and its expanding
@@ -206,6 +207,93 @@ void main() {
     await tester.tap(find.text('Classics'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Show 1'), findsOneWidget);
+
+    await flushTree(tester);
+  });
+
+  // A host with a button that opens one of the shelf sheets — the sheets need
+  // a Navigator/Overlay, and testing them directly beats driving the whole
+  // book page.
+  Widget host(void Function(BuildContext) onTap) {
+    return ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        apiClientProvider.overrideWithValue(_FakeApiClient()),
+        sessionContextProvider.overrideWith(
+          (ref) async => const SessionContext(userId: 'u1', deviceId: 'd1'),
+        ),
+        syncTriggerProvider.overrideWithValue(() {}),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: ElevatedButton(onPressed: () => onTap(context), child: const Text('open')),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<List<LibraryEntryTag>> tagsOf(WidgetTester tester, String entryId) async {
+    return (await tester.runAsync(() => db.tagsDao.watchForEntry(entryId).first))!;
+  }
+
+  testWidgets('the shelf picker lists existing shelves and toggles membership', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(host((c) => showShelfPickerSheet(c, entryId: 'le-e1')));
+    await settle(tester);
+    await tester.tap(find.text('open'));
+    await settle(tester);
+
+    // The reader's real shelf is offered (this is the fix — the old dialog
+    // never showed it), and e1 isn't on it yet.
+    expect(find.text('Add to a shelf'), findsOneWidget);
+    expect(find.text('Classics'), findsOneWidget);
+    expect(await tagsOf(tester, 'le-e1'), isEmpty);
+
+    // Tapping shelves the book; tapping again unshelves it.
+    await tester.tap(find.text('Classics'));
+    await settle(tester);
+    expect((await tagsOf(tester, 'le-e1')).where((t) => t.tagId == 'tag1').length, 1);
+
+    await tester.tap(find.text('Classics'));
+    await settle(tester);
+    expect(await tagsOf(tester, 'le-e1'), isEmpty);
+
+    await flushTree(tester);
+  });
+
+  testWidgets('add-books-to-shelf shelves an existing library book', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      host((c) => showAddBooksToShelfSheet(c, tagId: 'tag1', shelfName: 'Classics')),
+    );
+    await settle(tester);
+    await tester.tap(find.text('open'));
+    await settle(tester);
+
+    // Titled for the shelf; every library book is listed (Randamoozham/le-e2 is
+    // already on it, the others are not).
+    expect(find.text('Add to Classics'), findsOneWidget);
+    // Title shows twice per row (once on the typeset cover, once as the tile
+    // title), so both point at the one ListTile.
+    expect(find.widgetWithText(ListTile, 'Khasakkinte Itihasam'), findsWidgets);
+    expect(await tagsOf(tester, 'le-e1'), isEmpty);
+
+    // Tap a not-yet-shelved book to shelve it.
+    await tester.tap(find.widgetWithText(ListTile, 'Khasakkinte Itihasam').first);
+    await settle(tester);
+    expect((await tagsOf(tester, 'le-e1')).where((t) => t.tagId == 'tag1').length, 1);
 
     await flushTree(tester);
   });

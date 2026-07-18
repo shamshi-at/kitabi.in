@@ -1050,6 +1050,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookNewTagHint => 'e.g. beach reads';
 
   @override
+  String get shelfPickerTitle => 'Add to a shelf';
+
+  @override
+  String get shelfPickerHint => 'Tap a shelf to add or remove this book';
+
+  @override
+  String get shelfPickerEmpty => 'No shelves yet — create your first below.';
+
+  @override
+  String get libraryShelfEmptyTitle => 'This shelf is empty';
+
+  @override
+  String get libraryShelfEmptyBody => 'Move a book you already have onto it.';
+
+  @override
+  String get libraryShelfAddBooks => 'Add books to this shelf';
+
+  @override
+  String libraryAddToShelfTitle(String shelf) {
+    return 'Add to $shelf';
+  }
+
+  @override
+  String get libraryAddBooksHint => 'Tap a book to shelve or unshelve it';
+
+  @override
+  String get libraryAddBooksEmpty =>
+      'Your library is empty — add a book first.';
+
+  @override
+  String get libraryShelfAddBooksShort => 'Add books';
+
+  @override
   String get scanAddedToLibrary => 'Added to your library';
 
   @override

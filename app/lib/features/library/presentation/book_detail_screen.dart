@@ -35,6 +35,7 @@ import '../reading_status.dart';
 import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
 import 'cover_viewer.dart';
+import 'shelf_sheets.dart';
 import '../../../core/widgets/net_image.dart';
 
 /// S6 — book detail. Reached with a Work id (shared data: title, authors,
@@ -2599,38 +2600,6 @@ class _TagsSection extends ConsumerWidget {
 
   final LibraryEntry entry;
 
-  Future<void> _addTag(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.bookNewTagTitle),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(hintText: l10n.bookNewTagHint),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: Text(l10n.bookSave),
-          ),
-        ],
-      ),
-    );
-    if (name == null || name.trim().isEmpty) return;
-
-    final repo = await ref.read(tagsRepositoryProvider.future);
-    final allTags = await ref.read(allTagsProvider.future);
-    final existing = allTags.where((t) => t.name.toLowerCase() == name.trim().toLowerCase());
-    final tagId = existing.isNotEmpty ? existing.first.id : await repo.createTag(name.trim());
-    await repo.assign(entry.id, tagId);
-    ref.invalidate(libraryTagsProvider(entry.id));
-    ref.invalidate(allTagsProvider);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
@@ -2650,6 +2619,8 @@ class _TagsSection extends ConsumerWidget {
           spacing: 6,
           runSpacing: 6,
           children: [
+            // Chips are reactive now (libraryTagsProvider streams), so removing
+            // one here or toggling in the picker sheet updates live.
             for (final assignment in assignments.valueOrNull ?? <LibraryEntryTag>[])
               if (tagNames[assignment.tagId] != null)
                 Chip(
@@ -2657,15 +2628,17 @@ class _TagsSection extends ConsumerWidget {
                   onDeleted: () async {
                     final repo = await ref.read(tagsRepositoryProvider.future);
                     await repo.unassign(assignment.id);
-                    ref.invalidate(libraryTagsProvider(entry.id));
                   },
                   backgroundColor: AppColors.goldSoft,
                   side: BorderSide.none,
                   visualDensity: VisualDensity.compact,
                 ),
+            // Opens the shelf picker — every shelf you have, tap to add/remove,
+            // plus a door to a new one (replaces the old type-the-name dialog,
+            // which never showed the shelves you'd already made).
             ActionChip(
               label: Text(l10n.bookAddTag, style: TextStyle(fontSize: 11)),
-              onPressed: () => _addTag(context, ref),
+              onPressed: () => showShelfPickerSheet(context, entryId: entry.id),
               backgroundColor: AppColors.card,
               side: BorderSide(color: AppColors.line),
               visualDensity: VisualDensity.compact,

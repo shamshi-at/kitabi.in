@@ -1846,6 +1846,66 @@ abstract class AppLocalizations {
   /// **'e.g. beach reads'**
   String get bookNewTagHint;
 
+  /// Title of the sheet that picks which shelves a book sits on
+  ///
+  /// In en, this message translates to:
+  /// **'Add to a shelf'**
+  String get shelfPickerTitle;
+
+  /// Subtitle on the shelf-picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a shelf to add or remove this book'**
+  String get shelfPickerHint;
+
+  /// Shown in the shelf-picker sheet when the reader has no shelves
+  ///
+  /// In en, this message translates to:
+  /// **'No shelves yet — create your first below.'**
+  String get shelfPickerEmpty;
+
+  /// Title of the empty state for an opened personal shelf with no books
+  ///
+  /// In en, this message translates to:
+  /// **'This shelf is empty'**
+  String get libraryShelfEmptyTitle;
+
+  /// Body of the empty-shelf state
+  ///
+  /// In en, this message translates to:
+  /// **'Move a book you already have onto it.'**
+  String get libraryShelfEmptyBody;
+
+  /// Button that opens the picker to add existing library books to a shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Add books to this shelf'**
+  String get libraryShelfAddBooks;
+
+  /// Title of the sheet that adds existing books to a named shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Add to {shelf}'**
+  String libraryAddToShelfTitle(String shelf);
+
+  /// Subtitle on the add-books-to-shelf sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a book to shelve or unshelve it'**
+  String get libraryAddBooksHint;
+
+  /// Shown when there are no library books to add to a shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Your library is empty — add a book first.'**
+  String get libraryAddBooksEmpty;
+
+  /// Short label for the add-books action on an open shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Add books'**
+  String get libraryShelfAddBooksShort;
+
   /// Snackbar confirming a scanned book was added to the personal library
   ///
   /// In en, this message translates to:
