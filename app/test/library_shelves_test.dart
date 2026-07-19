@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:kitabi/core/router/tab_reset.dart';
 import 'package:kitabi/data/api/api_client.dart';
 import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/data/repositories/repositories.dart';
@@ -153,6 +154,36 @@ void main() {
     await settle(tester);
     expect(find.text('My Library'), findsOneWidget);
     expect(find.text('Classics'), findsOneWidget);
+
+    await flushTree(tester);
+  });
+
+  testWidgets('a Library footer tap resets from an opened shelf to a fresh All books',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(wrap());
+    await settle(tester);
+
+    // Drill into the shelves view and open a shelf.
+    await tester.tap(find.text('Shelves'));
+    await settle(tester);
+    await tester.tap(find.text('Classics'));
+    await settle(tester);
+    expect(find.text('1 book'), findsOneWidget); // an opened shelf, not the grid
+    expect(find.text('All books'), findsNothing);
+
+    // Tapping the Library footer tab bumps this — the screen must land back on
+    // the fresh "All books" grid, not the shelf it was left on.
+    final container = ProviderScope.containerOf(tester.element(find.byType(LibraryGridScreen)));
+    container.read(libraryTabResetProvider.notifier).state++;
+    await settle(tester);
+
+    expect(find.text('My Library'), findsOneWidget);
+    expect(find.text('All books'), findsOneWidget); // the grid's view toggle is back
+    expect(find.text('1 book'), findsNothing); // the shelf is closed
 
     await flushTree(tester);
   });

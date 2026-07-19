@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/tab_reset.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/expanding_fab.dart';
@@ -66,11 +67,33 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   /// 'recent' (createdAt desc — the default), 'title', or 'author'.
   String _sort = 'recent';
 
+  final _scroll = ScrollController();
+
   // Guards the one-shot cover backfill so the stream re-emit it causes doesn't
   // re-trigger it in a loop.
   bool _coverRefreshTried = false;
 
   bool _hydrateTried = false;
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// Land fresh on the "All books" grid — closes any opened shelf, clears the
+  /// filter and sort, forces the grid view (not the persisted shelves
+  /// preference), and scrolls to the top. Fired when the reader taps the
+  /// Library footer tab (owner request, 19 Jul 2026: always the first page).
+  void _resetToFresh() {
+    setState(() {
+      _openShelf = null;
+      _shelvesOverride = false;
+      _filter = const LibraryFilter();
+      _sort = 'recent';
+    });
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+  }
 
   Future<void> _refreshMissingCovers() async {
     await refreshMissingCovers(
@@ -289,6 +312,8 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // A tap on the Library footer tab bumps this — reset to the fresh first page.
+    ref.listen(libraryTabResetProvider, (_, _) => _resetToFresh());
     final hits = ref.watch(libraryHitsProvider);
     final shelves = ref.watch(personalShelvesProvider).valueOrNull ?? const <PersonalTag>[];
     final shelvesOf =
@@ -338,6 +363,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                     await _refreshMissingCovers();
                   },
                   child: CustomScrollView(
+                    controller: _scroll,
                     slivers: [
                       SliverToBoxAdapter(
                         child: _Header(

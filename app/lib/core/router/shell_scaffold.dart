@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import '../widgets/sync_status_bar.dart';
 import '../widgets/typeset_cover.dart';
 import 'app_router.dart';
+import 'tab_reset.dart';
 
 /// The persistent bottom-nav shell (S3 mockup): Home · Library · [+] ·
 /// Lending · Insights. The four real tabs map to the [StatefulNavigationShell]
@@ -82,7 +83,12 @@ class ShellScaffold extends ConsumerWidget {
                   activeIcon: Icons.auto_stories,
                   label: l10n.navLibrary,
                   selected: index == 1,
-                  onTap: () { Haptics.selection(); navigationShell.goBranch(1, initialLocation: true); },
+                  onTap: () {
+                    Haptics.selection();
+                    // Fresh landing — reset the in-screen view state, then the route.
+                    ref.read(libraryTabResetProvider.notifier).state++;
+                    navigationShell.goBranch(1, initialLocation: true);
+                  },
                 ),
                 // Scan-first (docs/screen-design.md): the tile opens the camera
                 // directly — one tap to the main add path. Search / manual add
@@ -97,7 +103,11 @@ class ShellScaffold extends ConsumerWidget {
                   label: l10n.navLending,
                   selected: index == 2,
                   badgeCount: incoming,
-                  onTap: () { Haptics.selection(); navigationShell.goBranch(2, initialLocation: true); },
+                  onTap: () {
+                    Haptics.selection();
+                    ref.read(lendingTabResetProvider.notifier).state++;
+                    navigationShell.goBranch(2, initialLocation: true);
+                  },
                 ),
                 _NavItem(
                   icon: Icons.donut_large_outlined,

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/haptics.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/tab_reset.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/person_link.dart';
@@ -32,6 +33,9 @@ class LendingLedgerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final ledger = ref.watch(allLendingProvider);
+    // A tap on the Lending footer tab bumps this — re-key the tab controller so
+    // it lands on the first tab, not the last one viewed (owner request).
+    final resetTick = ref.watch(lendingTabResetProvider);
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -71,6 +75,7 @@ class LendingLedgerScreen extends ConsumerWidget {
                 .length;
 
             return DefaultTabController(
+              key: ValueKey(resetTick),
               length: 3,
               child: Column(
                 children: [
