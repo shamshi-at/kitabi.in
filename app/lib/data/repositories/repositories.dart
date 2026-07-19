@@ -340,6 +340,19 @@ class ReadingSessionsRepository extends Repo {
       data: {'page_end': pageEnd},
     );
   }
+
+  /// Remove a stray session from the reading log (soft delete — the reader
+  /// deleting a mistimed 5-second sitting, from the reading-log sheet).
+  Future<void> deleteSession(String sessionId) async {
+    await db.readingSessionsDao.patch(
+      sessionId,
+      ReadingSessionsCompanion(
+        deletedAt: Value(DateTime.now()),
+        syncStatus: Value('pending'),
+      ),
+    );
+    await enqueue(entity: 'reading_sessions', entityId: sessionId, opType: 'delete', data: {});
+  }
 }
 
 class ReviewsRepository extends Repo {

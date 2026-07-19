@@ -1220,12 +1220,14 @@ class _YoursTabContent extends ConsumerWidget {
           _GotItButton(entry: entry),
           SizedBox(height: 8),
         ],
-        _StatusAndProgressCard(entry: entry, workId: workId, reviewExtra: _reviewExtra),
+        _ReadingCard(
+          entry: entry,
+          workId: workId,
+          reviewExtra: _reviewExtra,
+          title: title,
+          author: author,
+        ),
         SizedBox(height: 8),
-        if (entry.status == 'reading') ...[
-          _ReadingSessionCard(entry: entry, title: title, author: author),
-          SizedBox(height: 8),
-        ],
         _ReviewCard(workId: workId, reviewExtra: _reviewExtra),
         SizedBox(height: 8),
         _NotesCard(entry: entry),
@@ -1377,15 +1379,41 @@ class _Card extends StatelessWidget {
   }
 }
 
-/// Status + progress, merged into one card: a tappable status pill opens a
-/// bottom sheet to change it, sitting directly above the progress bar it
-/// governs — replaces the old five-button row + a separate progress card.
-class _StatusAndProgressCard extends ConsumerWidget {
-  const _StatusAndProgressCard({required this.entry, required this.workId, required this.reviewExtra});
+const _monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+String _fmtDate(DateTime d) => '${d.day} ${_monthNames[d.month - 1]} ${d.year}';
+String _fmtDayMonth(DateTime d) => '${d.day} ${_monthNames[d.month - 1]}';
+
+/// "today" / "yesterday" / "18 Jul 2026" — the reading card's last-read line.
+String _relativeDay(DateTime d, AppLocalizations l10n) {
+  final today = DateTime.now();
+  if (DateUtils.isSameDay(d, today)) return l10n.timerToday.toLowerCase();
+  if (DateUtils.isSameDay(d, today.subtract(const Duration(days: 1)))) {
+    return l10n.timerYesterday.toLowerCase();
+  }
+  return _fmtDate(d);
+}
+
+/// The reading card (owner pick "B", 19 Jul 2026): status, progress, and the
+/// live/manual reading session merged onto one surface. A tappable status pill,
+/// a real progress bar, the started date with an inline edit, and — while
+/// reading — Start-a-session with a manual-log fallback. Its footer summarises
+/// the sessions and opens the full [showReadingLogSheet]. Replaces the old
+/// separate status/progress and reading-session cards.
+class _ReadingCard extends ConsumerWidget {
+  const _ReadingCard({
+    required this.entry,
+    required this.workId,
+    required this.reviewExtra,
+    this.title,
+    this.author,
+  });
 
   final LibraryEntry entry;
   final String workId;
   final Map<String, dynamic> reviewExtra;
+  final String? title;
+  final String? author;
 
   /// One gentle, self-dismissing nudge to review a book the moment it's marked
   /// read — and only when there's nothing to lose by ignoring it: no popup at
@@ -1494,97 +1522,6 @@ class _StatusAndProgressCard extends ConsumerWidget {
     ref.invalidate(libraryEntryProvider(entry.editionId));
   }
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final total = ref.watch(cachedBookProvider(entry.editionId)).valueOrNull?.pageCount;
-    final page = entry.currentPage;
-
-    return _Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () => _changeStatus(context, ref),
-            behavior: HitTestBehavior.opaque,
-            child: Row(
-              children: [
-                StatusPill(status: entry.status),
-                Spacer(),
-                Text(
-                  l10n.bookChangeStatus,
-                  style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
-                ),
-                Icon(Icons.chevron_right, size: 15, color: AppColors.inkSoft),
-              ],
-            ),
-          ),
-          SizedBox(height: 11),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.bookProgressLabel,
-                      style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
-                    ),
-                    Text(
-                      page == null
-                          ? '—'
-                          : (total != null && total > 0
-                              // "p. 302 of 724 · 42%" — pages first, never a bare
-                              // percentage (docs/screen-design.md).
-                              ? l10n.bookProgressValue(
-                                  page, total, ((page / total) * 100).round().clamp(0, 100))
-                              : l10n.bookProgressPage(page)),
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.bookStartedLabel,
-                      style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
-                    ),
-                    Text(
-                      entry.startDate != null
-                          ? '${entry.startDate!.day}/${entry.startDate!.month}/${entry.startDate!.year}'
-                          : l10n.bookNotStarted,
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.edit, size: 16, color: AppColors.oxblood),
-                onPressed: () => _editProgress(context, ref),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A live-timed reading session on this copy — "Start" opens the full-screen
-/// pocket-watch view (`ReadingTimerScreen`); if one's already running here
-/// (resumed from the mini-bar or a backgrounded watch face), the card shows
-/// a live clock instead and re-opens the same screen rather than starting
-/// a second one. Only shown while the book is actually being read.
-class _ReadingSessionCard extends ConsumerWidget {
-  const _ReadingSessionCard({required this.entry, this.title, this.author});
-
-  final LibraryEntry entry;
-  final String? title;
-  final String? author;
-
   Future<void> _logManually(BuildContext context, WidgetRef ref, {required int? pageCount}) async {
     final result = await showModalBottomSheet<(int, int?, int?)>(
       context: context,
@@ -1658,65 +1595,386 @@ class _ReadingSessionCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final book = ref.watch(cachedBookProvider(entry.editionId)).valueOrNull;
+    final total = book?.pageCount;
+    final page = entry.currentPage;
     final active = ref.watch(activeSessionProvider);
     final running = active?.libraryEntryId == entry.id;
-    final sessions = ref.watch(_recentSessionsProvider(entry.id)).valueOrNull ?? const [];
+    final sessions = ref.watch(_recentSessionsProvider(entry.id)).valueOrNull ?? const <ReadingSession>[];
+    final isReading = entry.status == 'reading';
+    final pct = (page != null && total != null && total > 0)
+        ? ((page / total) * 100).round().clamp(0, 100)
+        : null;
 
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Status — tap the pill row to change it.
           GestureDetector(
-            onTap: () => _open(context, ref, pageCount: book?.pageCount, coverUrl: book?.coverUrl),
+            onTap: () => _changeStatus(context, ref),
             behavior: HitTestBehavior.opaque,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.timerSessionLabel,
-                    style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+            child: Row(children: [
+              StatusPill(status: entry.status),
+              Spacer(),
+              Text(l10n.bookChangeStatus,
+                  style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, fontWeight: FontWeight.w600)),
+              Icon(Icons.chevron_right, size: 15, color: AppColors.inkSoft),
+            ]),
+          ),
+          SizedBox(height: 14),
+          // Progress — a real bar when the total is known, page text either way.
+          if (pct != null) ...[
+            _ProgressBar(value: page! / total!),
+            SizedBox(height: 8),
+            Text(l10n.bookProgressValue(page, total, pct),
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.ink)),
+          ] else
+            Text(page == null ? l10n.bookNotStarted : l10n.bookProgressPage(page),
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.ink)),
+          SizedBox(height: 9),
+          // Started + inline edit.
+          Row(children: [
+            Expanded(
+              child: Text(
+                entry.startDate != null
+                    ? l10n.bookStartedOn(_fmtDate(entry.startDate!))
+                    : l10n.bookNotStarted,
+                style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _editProgress(context, ref),
+              behavior: HitTestBehavior.opaque,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.edit, size: 13, color: AppColors.oxblood),
+                SizedBox(width: 3),
+                Text(l10n.bookProgressEdit,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.oxblood)),
+              ]),
+            ),
+          ]),
+          // The reading session lives on the same card while the book is open.
+          if (isReading) ...[
+            SizedBox(height: 13),
+            Container(height: 1, color: AppColors.line),
+            SizedBox(height: 13),
+            if (running)
+              GestureDetector(
+                onTap: () => _open(context, ref, pageCount: total, coverUrl: book?.coverUrl),
+                behavior: HitTestBehavior.opaque,
+                child: Row(children: [
+                  Expanded(
+                    child: Text(l10n.timerSessionLabel,
+                        style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1)),
                   ),
-                ),
-                if (running) ...[
                   _LiveClock(startedAt: active!.startedAt),
                   const SizedBox(width: 2),
                   Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
-                ] else
-                  ElevatedButton.icon(
-                    onPressed: () => _open(context, ref, pageCount: book?.pageCount, coverUrl: book?.coverUrl),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      textStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                    ),
-                    icon: Icon(Icons.play_arrow, size: 14),
-                    label: Text(l10n.timerStart),
+                ]),
+              )
+            else
+              Row(children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _open(context, ref, pageCount: total, coverUrl: book?.coverUrl),
+                    style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(vertical: 11)),
+                    icon: Icon(Icons.play_arrow, size: 16),
+                    label: Text(l10n.bookStartSession),
                   ),
-              ],
-            ),
-          ),
-          if (!running) ...[
-            SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => _logManually(context, ref, pageCount: book?.pageCount),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  minimumSize: Size(0, 28),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  foregroundColor: AppColors.inkSoft,
-                  textStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                 ),
-                child: Text(l10n.timerLogManually),
+                SizedBox(width: 8),
+                Tooltip(
+                  message: l10n.timerLogManually,
+                  child: OutlinedButton(
+                    onPressed: () => _logManually(context, ref, pageCount: total),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: Size(46, 44),
+                      padding: EdgeInsets.zero,
+                      side: BorderSide(color: AppColors.line),
+                      foregroundColor: AppColors.oxblood,
+                    ),
+                    child: Icon(Icons.edit_note, size: 20),
+                  ),
+                ),
+              ]),
+            // Footer: a summary that opens the full reading log.
+            if (sessions.isNotEmpty) ...[
+              SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => showReadingLogSheet(context, entry.id),
+                behavior: HitTestBehavior.opaque,
+                child: Row(children: [
+                  Text(l10n.bookLogLastRead(_relativeDay(sessions.first.startedAt, l10n)),
+                      style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
+                  Spacer(),
+                  Text(
+                    '${l10n.bookLogSessions(sessions.length)} · '
+                    '${formatDuration(Duration(seconds: sessions.fold<int>(0, (a, s) => a + s.durationSeconds)))}',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.oxblood),
+                  ),
+                  Icon(Icons.chevron_right, size: 15, color: AppColors.oxblood),
+                ]),
               ),
-            ),
-          ],
-          if (sessions.isNotEmpty) ...[
-            SizedBox(height: 10),
-            for (final s in sessions.take(3)) _SessionLogRow(session: s),
+            ],
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The gold→oxblood progress fill on a paper track — the reading card's bar.
+class _ProgressBar extends StatelessWidget {
+  const _ProgressBar({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(99),
+      child: SizedBox(
+        height: 7,
+        child: ColoredBox(
+          color: AppColors.paperDeep,
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: value.clamp(0.0, 1.0),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [AppColors.gold, AppColors.oxblood]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The reading log — every sitting on this book, grouped by day, with a week
+/// sparkline and swipe-free delete (owner request, 19 Jul 2026). Opened from
+/// the reading card's footer.
+Future<void> showReadingLogSheet(BuildContext context, String entryId) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => _ReadingLogSheet(entryId: entryId),
+  );
+}
+
+class _ReadingLogSheet extends ConsumerWidget {
+  const _ReadingLogSheet({required this.entryId});
+
+  final String entryId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final sessions = ref.watch(_recentSessionsProvider(entryId)).valueOrNull ?? const <ReadingSession>[];
+    final totalSecs = sessions.fold<int>(0, (a, s) => a + s.durationSeconds);
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.82),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 34,
+              height: 4,
+              margin: const EdgeInsets.only(top: 10, bottom: 12),
+              decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(99)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.bookReadingLogTitle, style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${l10n.bookLogSessions(sessions.length)} · ${formatDuration(Duration(seconds: totalSecs))}',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                  ),
+                  if (sessions.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _WeekSparkline(sessions: sessions),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            if (sessions.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                child: Text(l10n.bookLogEmpty,
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 13)),
+              )
+            else
+              Flexible(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 6, 12, 14),
+                  children: _rows(context, ref, sessions, l10n),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _rows(
+    BuildContext context,
+    WidgetRef ref,
+    List<ReadingSession> sessions,
+    AppLocalizations l10n,
+  ) {
+    final out = <Widget>[];
+    DateTime? lastDay;
+    for (final s in sessions) {
+      if (lastDay == null || !DateUtils.isSameDay(s.startedAt, lastDay)) {
+        lastDay = s.startedAt;
+        final header = DateUtils.isSameDay(s.startedAt, DateTime.now())
+            ? l10n.timerToday
+            : DateUtils.isSameDay(s.startedAt, DateTime.now().subtract(const Duration(days: 1)))
+                ? l10n.timerYesterday
+                : _fmtDayMonth(s.startedAt);
+        out.add(Padding(
+          padding: EdgeInsets.only(top: out.isEmpty ? 0 : 14, bottom: 3),
+          child: Text(header.toUpperCase(),
+              style: TextStyle(
+                  fontSize: 8.5, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: AppColors.inkSoft)),
+        ));
+      }
+      out.add(_LogRow(
+        session: s,
+        onDelete: () async {
+          Haptics.selection();
+          final messenger = ScaffoldMessenger.of(context);
+          final repo = await ref.read(readingSessionsRepositoryProvider.future);
+          await repo.deleteSession(s.id);
+          messenger.showSnackBar(SnackBar(content: Text(l10n.bookLogDeleted)));
+        },
+      ));
+    }
+    return out;
+  }
+}
+
+/// One sitting in the log: time of day, the pages it moved through, its length,
+/// and a delete for the stray micro-sessions.
+class _LogRow extends StatelessWidget {
+  const _LogRow({required this.session, required this.onDelete});
+
+  final ReadingSession session;
+  final Future<void> Function() onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final time = MaterialLocalizations.of(context)
+        .formatTimeOfDay(TimeOfDay.fromDateTime(session.startedAt));
+    final ps = session.pageStart;
+    final pe = session.pageEnd;
+    final pages = (ps != null && pe != null && pe > ps) ? l10n.bookLogPages(ps, pe) : l10n.bookLogNoPages;
+
+    return Container(
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.line))),
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(color: AppColors.goldSoft, shape: BoxShape.circle),
+            child: Icon(Icons.timelapse, size: 15, color: AppColors.gold),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(time, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.ink)),
+                Text(pages, style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft)),
+              ],
+            ),
+          ),
+          Text(
+            formatDuration(Duration(seconds: session.durationSeconds)),
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.oxblood,
+                fontFeatures: const [FontFeature.tabularFigures()]),
+          ),
+          SizedBox(width: 2),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.delete_outline, size: 18, color: AppColors.inkSoft),
+            tooltip: l10n.bookLogDelete,
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Minutes read per day across the last week — today in oxblood, the rest gold.
+class _WeekSparkline extends StatelessWidget {
+  const _WeekSparkline({required this.sessions});
+
+  final List<ReadingSession> sessions;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final today = DateUtils.dateOnly(DateTime.now());
+    final days = List.generate(7, (i) => today.subtract(Duration(days: 6 - i)));
+    final secs = [
+      for (final d in days)
+        sessions
+            .where((s) => DateUtils.isSameDay(s.startedAt, d))
+            .fold<int>(0, (a, s) => a + s.durationSeconds)
+    ];
+    final maxSec = secs.fold<int>(1, (a, b) => b > a ? b : a);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 32,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (final (i, s) in secs.indexed)
+                Expanded(
+                  child: Container(
+                    height: (s / maxSec * 32).clamp(3.0, 32.0),
+                    margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                    decoration: BoxDecoration(
+                      color: i == 6 ? AppColors.oxblood : AppColors.goldSoft,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 5),
+        Row(
+          children: [
+            Text(_fmtDayMonth(days.first),
+                style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w700, letterSpacing: .5, color: AppColors.inkSoft)),
+            Spacer(),
+            Text(l10n.timerToday.toUpperCase(),
+                style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w700, letterSpacing: .5, color: AppColors.inkSoft)),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -1919,50 +2177,6 @@ class _LiveClockState extends ConsumerState<_LiveClock> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SessionLogRow extends StatelessWidget {
-  const _SessionLogRow({required this.session});
-
-  final ReadingSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final date = session.startedAt;
-    final today = DateTime.now();
-    final label = DateUtils.isSameDay(date, today)
-        ? l10n.timerToday
-        : DateUtils.isSameDay(date, today.subtract(Duration(days: 1)))
-            ? l10n.timerYesterday
-            : '${date.day}/${date.month}';
-    final pageStart = session.pageStart;
-    final pageEnd = session.pageEnd;
-    final pages = (pageStart != null && pageEnd != null && pageEnd > pageStart)
-        ? pageEnd - pageStart
-        : null;
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label, style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft)),
-          ),
-          if (pages != null) ...[
-            Text(
-              l10n.timerSessionPages(pages),
-              style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft),
-            ),
-            SizedBox(width: 6),
-          ],
-          Text(
-            formatDuration(Duration(seconds: session.durationSeconds)),
-            style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: AppColors.ink),
-          ),
-        ],
-      ),
     );
   }
 }

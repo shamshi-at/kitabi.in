@@ -772,6 +772,78 @@ abstract class AppLocalizations {
   /// **'Edit progress'**
   String get bookEditProgress;
 
+  /// Inline edit action beside the started date on the reading card
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get bookProgressEdit;
+
+  /// Started-date line on the reading card
+  ///
+  /// In en, this message translates to:
+  /// **'Started {date}'**
+  String bookStartedOn(String date);
+
+  /// Primary button on the reading card that opens the reading timer
+  ///
+  /// In en, this message translates to:
+  /// **'Start a session'**
+  String get bookStartSession;
+
+  /// Title of the reading-log bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Reading log'**
+  String get bookReadingLogTitle;
+
+  /// Count of reading sessions
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No sessions} =1{1 session} other{{count} sessions}}'**
+  String bookLogSessions(int count);
+
+  /// Footer on the reading card showing when the book was last read
+  ///
+  /// In en, this message translates to:
+  /// **'Last read {when}'**
+  String bookLogLastRead(String when);
+
+  /// Page range a session moved through
+  ///
+  /// In en, this message translates to:
+  /// **'p. {from} → {to}'**
+  String bookLogPages(int from, int to);
+
+  /// Shown for a session that logged no page range
+  ///
+  /// In en, this message translates to:
+  /// **'Page not noted'**
+  String get bookLogNoPages;
+
+  /// Empty state in the reading-log sheet
+  ///
+  /// In en, this message translates to:
+  /// **'No reading sessions yet — start one to build your log.'**
+  String get bookLogEmpty;
+
+  /// Swipe action to remove a reading session
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get bookLogDelete;
+
+  /// Snackbar after deleting a reading session
+  ///
+  /// In en, this message translates to:
+  /// **'Session removed'**
+  String get bookLogDeleted;
+
+  /// Label above the reading-log week sparkline
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get bookLogWeek;
+
   /// Text field label in the edit-progress dialog
   ///
   /// In en, this message translates to:

@@ -338,8 +338,8 @@ void main() {
     await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
     await settle(tester);
 
-    expect(find.text('Start'), findsOneWidget);
-    await tester.tap(find.text('Start'));
+    expect(find.text('Start a session'), findsOneWidget);
+    await tester.tap(find.text('Start a session'));
     await settle(tester);
 
     expect(find.text('Session in Progress'), findsOneWidget);
@@ -352,10 +352,10 @@ void main() {
     await settle(tester);
     await settle(tester);
 
-    // Back on the book page — a fresh session sits in the log and the card
-    // offers "Start" again (nothing left running).
-    expect(find.text('Start'), findsOneWidget);
-    expect(find.text('Today'), findsOneWidget);
+    // Back on the book page — a fresh session sits in the log; the card offers
+    // "Start a session" again and its footer summarises the sitting.
+    expect(find.text('Start a session'), findsOneWidget);
+    expect(find.textContaining('Last read'), findsOneWidget);
 
     final entry = await tester.runAsync(() => db.libraryEntriesDao.getByEditionId(_editionId));
     final sessions = await tester.runAsync(() => db.readingSessionsDao.watchForEntry(entry!.id).first);
@@ -380,8 +380,9 @@ void main() {
     await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
     await settle(tester);
 
-    expect(find.text('Log manually'), findsOneWidget);
-    await tester.tap(find.text('Log manually'));
+    // Manual log is the compact ✎ beside "Start a session".
+    expect(find.byIcon(Icons.edit_note), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.edit_note));
     await settle(tester);
 
     expect(find.text('Log a reading session'), findsOneWidget);
@@ -395,10 +396,13 @@ void main() {
     await settle(tester);
     await settle(tester);
 
-    // Sheet closed, back on the book page; the freshly logged session shows
-    // its pages-read figure next to the duration.
+    // Sheet closed, back on the book page; open the reading log from the footer
+    // and the session shows the pages it moved through.
     expect(find.text('Log a reading session'), findsNothing);
-    expect(find.textContaining('28 pages'), findsOneWidget);
+    await tester.tap(find.textContaining('1 session'));
+    await settle(tester);
+    expect(find.text('Reading log'), findsOneWidget);
+    expect(find.text('p. 50 → 78'), findsOneWidget);
 
     final entry = await tester.runAsync(() => db.libraryEntriesDao.getByEditionId(_editionId));
     final sessions = await tester.runAsync(() => db.readingSessionsDao.watchForEntry(entry!.id).first);

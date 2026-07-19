@@ -395,6 +395,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookEditProgress => 'Edit progress';
 
   @override
+  String get bookProgressEdit => 'Edit';
+
+  @override
+  String bookStartedOn(String date) {
+    return 'Started $date';
+  }
+
+  @override
+  String get bookStartSession => 'Start a session';
+
+  @override
+  String get bookReadingLogTitle => 'Reading log';
+
+  @override
+  String bookLogSessions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+      zero: 'No sessions',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookLogLastRead(String when) {
+    return 'Last read $when';
+  }
+
+  @override
+  String bookLogPages(int from, int to) {
+    return 'p. $from → $to';
+  }
+
+  @override
+  String get bookLogNoPages => 'Page not noted';
+
+  @override
+  String get bookLogEmpty =>
+      'No reading sessions yet — start one to build your log.';
+
+  @override
+  String get bookLogDelete => 'Delete';
+
+  @override
+  String get bookLogDeleted => 'Session removed';
+
+  @override
+  String get bookLogWeek => 'Last 7 days';
+
+  @override
   String get bookCurrentPage => 'Current page';
 
   @override
