@@ -40,8 +40,21 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   final activeBook = ref.read(activeSessionBookProvider);
   final currentPage = activeBook?.entry.currentPage;
   final pageCount = activeBook?.book?.pageCount;
-  final logged = await ref.read(activeSessionProvider.notifier).stop();
-  ref.invalidate(weeklyReadingSecondsProvider);
+  // Capture every provider-derived handle we'll need AFTER the stop, up front.
+  // stop() clears the session, which unmounts the mini-bar — often this call's
+  // caller — and invalidates its `ref`; reads through it after the page dialog
+  // silently no-op'd, so a page typed while stopping from the mini-bar never
+  // reached the entry (owner report, 19 Jul 2026: the book stayed "Not started"
+  // even though the session logged). The captured db/repos outlive the widget.
+  final db = ref.read(appDatabaseProvider);
+  final api = ref.read(apiClientProvider);
+  final notifier = ref.read(activeSessionProvider.notifier);
+  final container = ProviderScope.containerOf(context, listen: false);
+  final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
+  final libraryRepo = await ref.read(libraryRepositoryProvider.future);
+
+  final logged = await notifier.stop();
+  container.invalidate(weeklyReadingSecondsProvider);
   if (logged == null || !context.mounted) return;
 
   final l10n = AppLocalizations.of(context)!;
@@ -109,22 +122,18 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   );
   if (result == null) return; // skipped / dismissed
 
-  // The total the reader supplied belongs to the shared Edition — mirror it
-  // locally and push it to the catalog (see saveBookTotalPages). Resolve the
-  // edition id from the logged entry directly (an awaited query), not the
-  // pre-stop provider snapshot, which can be null if it hadn't emitted — that
-  // would silently drop the total and leave progress without a percentage.
-  final db = ref.read(appDatabaseProvider);
-  final entry = await db.libraryEntriesDao.getById(logged.libraryEntryId);
+  // Everything below runs through the captured handles, never `ref` — by now
+  // the mini-bar may be gone. The total the reader supplied belongs to the
+  // shared Edition (mirror locally + push to the catalog); the edition id comes
+  // from the logged entry directly, not a pre-stop snapshot that may be null.
   final total = result.total;
-  if (pageCount == null && total != null && entry != null) {
-    await saveBookTotalPages(db, ref.read(apiClientProvider), entry.editionId, total);
+  if (pageCount == null && total != null) {
+    final entry = await db.libraryEntriesDao.getById(logged.libraryEntryId);
+    if (entry != null) await saveBookTotalPages(db, api, entry.editionId, total);
   }
 
   final page = result.page;
   if (page == null || page == currentPage) return;
-  final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
   await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
-  final libraryRepo = await ref.read(libraryRepositoryProvider.future);
   await libraryRepo.updateProgress(logged.libraryEntryId, currentPage: page);
 }
