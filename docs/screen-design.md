@@ -72,6 +72,12 @@ camera; everything else stays paper.
   "All books" grid (closing any opened shelf, clearing filters, scrolling up,
   forced over the saved Shelves preference), and Lending re-keys to its first
   tab. So tapping a tab never drops you onto the last sub-view you left.
+- **Swipe from the left edge to go back, on every page and platform** (owner
+  request, 19 Jul 2026). `buildAppTheme` sets a `PageTransitionsTheme` that uses
+  `CupertinoPageTransitionsBuilder` for *all* platforms, so every pushed route
+  gets the same draggable back gesture — Android's default (Zoom) had no
+  edge-swipe at all. The one custom overlay route (the full-screen cover viewer)
+  keeps its own front/back swipe and is dismissed by tap/back.
 - **Lending is two tabs, one ledger** — "Lent out" and "Borrowed" sit on the same
   segmented control at the top of the Lending screen; it's one record set seen from
   either side, not two features.
