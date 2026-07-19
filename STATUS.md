@@ -324,6 +324,13 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **19 Jul 2026** — **The reading status/session cards merge into one, with a
+  proper reading log** (owner pick "B" from a 3-option mockup). One `_ReadingCard`
+  now carries the status pill, a gold→oxblood progress bar, started + inline edit,
+  and Start-a-session / manual-log; its footer opens `showReadingLogSheet` — a
+  scrollable, day-grouped log with a week sparkline, each sitting's time/pages/
+  duration, and a delete for stray micro-sessions (`deleteSession`, soft +
+  synced). Verified on the emulator (card, log, live delete). 119 tests green.
 - **19 Jul 2026** — **The book page's shelf section becomes a little bookcase**
   (owner pick "B" from a 3-option mockup). The bare "SHELVES · yours only" +
   "＋ add" chip row is now a ribboned card — gold bookmark edge, shelf name in

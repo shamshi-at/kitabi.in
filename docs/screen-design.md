@@ -162,6 +162,17 @@ camera; everything else stays paper.
   books can be shelved and offers a jump to the catalogue to add it first. All
   of it writes straight to Drift and updates live (`libraryTagsProvider`
   streams), and every add/remove enqueues its own sync op.
+- **The reading card is one surface; the session history has its own log**
+  (added 19 Jul 2026, owner pick "B"). The old separate status/progress and
+  reading-session cards merge into one `_ReadingCard`: a tappable status pill,
+  a real gold→oxblood **progress bar** over "p. 88 of 200 · 44%", the started
+  date with an inline **Edit**, and — while reading — a primary **Start a
+  session** with the manual-log as a compact ✎ beside it. Its footer reads
+  "Last read {when} · N sessions · {total}" and opens the **reading log** sheet:
+  a total, a **week sparkline** (today in oxblood), and every sitting grouped by
+  day with its time, the pages it moved through, and its length — each with a
+  **delete** for the stray micro-sessions (soft delete, synced). This retires
+  the flat "Today · 5s / 3s" rows that used to clutter the card.
 - **The book page shows the one shelf as a little bookcase** (added 19 Jul 2026,
   owner pick "B"). The old bare "SHELVES · yours only" + "＋ add" chip row is
   replaced by a ribboned card: a gold bookmark down the edge, the shelf name in
