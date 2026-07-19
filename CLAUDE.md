@@ -320,6 +320,20 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   doesn't own it, make it reactive rather than trusting every caller to
   invalidate. Same shape as the 17 Jul `cachedBookProvider` and `libraryTags`
   fixes — this is a recurring class of bug here.
+- **Don't use a `WidgetRef` across an `await` that can unmount the widget it
+  belongs to — capture the handles you need first.** `quickStopSession(context,
+  ref)` called `stop()` (clearing the session), then `showDialog`, then wrote
+  the page via `ref.read(...)`. Stopping from the persistent **mini-bar** works
+  differently from the home card: the mini-bar is rendered only while a session
+  is live (`active == null ? SizedBox.shrink()`), so `stop()` unmounts it and
+  its `ref` — the post-dialog reads silently no-op'd and the page a reader typed
+  never reached the entry (the book stayed "Not started" though the session
+  logged; owner report, 19 Jul 2026). The home *card* hid the bug because it
+  stays mounted after stop. Fix: read the db/repos/notifier and a
+  `ProviderScope.containerOf(context)` **before** `stop()`, and do every
+  post-stop mutation through those captured objects, never `ref`. Regression
+  test (`quick_stop_test.dart`) reproduces it with a child that unmounts on stop
+  — it fails on the old code, passes on the fix.
 - **`qlmanage -t` flattens transparency onto WHITE — never use it to raster an
   asset whose alpha matters.** `assets/icon/app_icon_foreground.png` (the Android
   adaptive-icon foreground) was generated that way, so the "transparent" layer was
