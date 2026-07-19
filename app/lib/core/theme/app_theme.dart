@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -32,6 +33,21 @@ abstract final class AppColors {
 /// Builds the theme for the given brightness. Sets [AppColors.dark] first so the
 /// token getters (and every screen that reads them on the next rebuild) resolve
 /// to the matching palette. Callers pass a single resolved theme to MaterialApp.
+/// The iOS-style interactive "swipe from the left edge to go back" gesture, on
+/// every platform (owner request, 19 Jul 2026: some pages had no swipe-back).
+/// Android's default (ZoomPageTransitionsBuilder) has no edge-swipe at all, so
+/// forcing the Cupertino builder everywhere gives every pushed route the same
+/// draggable back gesture — the shell tabs (which swap, not push) are
+/// unaffected.
+const _swipeBackTransitions = PageTransitionsTheme(builders: {
+  TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+  TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+  TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+  TargetPlatform.fuchsia: CupertinoPageTransitionsBuilder(),
+  TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
+  TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+});
+
 ThemeData buildAppTheme({bool dark = false}) {
   AppColors.dark = dark;
   final scheme = ColorScheme.fromSeed(
@@ -44,6 +60,7 @@ ThemeData buildAppTheme({bool dark = false}) {
   final base = ThemeData(useMaterial3: true, colorScheme: scheme);
   return base.copyWith(
     scaffoldBackgroundColor: AppColors.paper,
+    pageTransitionsTheme: _swipeBackTransitions,
     textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
       displayLarge: GoogleFonts.fraunces(textStyle: base.textTheme.displayLarge),
       displayMedium: GoogleFonts.fraunces(textStyle: base.textTheme.displayMedium),
