@@ -65,7 +65,13 @@ camera; everything else stays paper.
   quoting the user's own ratings; opt-in, with a visible off switch. One labelled
   pick on Home, never a feed.
 - **Bottom nav** — Home · Library · [+] · Lending · Insights; oxblood FAB opens
-  add-book (scan-first).
+  add-book (scan-first). **A footer tap always lands fresh** (owner request,
+  19 Jul 2026): `goBranch(initialLocation: true)` pops nested routes, and a
+  per-tab reset tick (`libraryTabResetProvider` / `lendingTabResetProvider`,
+  bumped on tap) resets the in-screen state too — Library snaps back to the
+  "All books" grid (closing any opened shelf, clearing filters, scrolling up,
+  forced over the saved Shelves preference), and Lending re-keys to its first
+  tab. So tapping a tab never drops you onto the last sub-view you left.
 - **Lending is two tabs, one ledger** — "Lent out" and "Borrowed" sit on the same
   segmented control at the top of the Lending screen; it's one record set seen from
   either side, not two features.
