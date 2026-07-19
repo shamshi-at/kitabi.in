@@ -40,7 +40,6 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   final activeBook = ref.read(activeSessionBookProvider);
   final currentPage = activeBook?.entry.currentPage;
   final pageCount = activeBook?.book?.pageCount;
-  final editionId = activeBook?.entry.editionId;
   final logged = await ref.read(activeSessionProvider.notifier).stop();
   ref.invalidate(weeklyReadingSecondsProvider);
   if (logged == null || !context.mounted) return;
@@ -111,15 +110,15 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   if (result == null) return; // skipped / dismissed
 
   // The total the reader supplied belongs to the shared Edition — mirror it
-  // locally and push it to the catalog (see saveBookTotalPages).
+  // locally and push it to the catalog (see saveBookTotalPages). Resolve the
+  // edition id from the logged entry directly (an awaited query), not the
+  // pre-stop provider snapshot, which can be null if it hadn't emitted — that
+  // would silently drop the total and leave progress without a percentage.
+  final db = ref.read(appDatabaseProvider);
+  final entry = await db.libraryEntriesDao.getById(logged.libraryEntryId);
   final total = result.total;
-  if (pageCount == null && total != null && editionId != null) {
-    await saveBookTotalPages(
-      ref.read(appDatabaseProvider),
-      ref.read(apiClientProvider),
-      editionId,
-      total,
-    );
+  if (pageCount == null && total != null && entry != null) {
+    await saveBookTotalPages(db, ref.read(apiClientProvider), entry.editionId, total);
   }
 
   final page = result.page;
