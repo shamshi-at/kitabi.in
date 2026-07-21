@@ -150,6 +150,37 @@ void main() {
     await settle(tester);
   }
 
+  testWidgets('a book you don\'t own can be wishlisted, then acquired off it',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // No entry at all — the catalogue-side state, where wishlisting has to be
+    // reachable. It briefly wasn't: the only control that could set the status
+    // lived in the sheet U5 deleted, and every test still passed.
+    await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
+    await settle(tester);
+
+    expect(find.text('Add to my library'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.bookmark_outline));
+    await settle(tester);
+
+    // Wishlisted: no reading stage, and the one move that matters.
+    expect(find.text("You don't own this one yet — it's on your wishlist."), findsOneWidget);
+    expect(find.text('WHERE IT STANDS'), findsNothing);
+    expect(find.byIcon(Icons.bookmark), findsWidgets); // filled, in the title bar
+
+    await tester.tap(find.text('I got this book — move to my library'));
+    await settle(tester);
+
+    // Acquiring it takes it off the wishlist and hands back the full card.
+    expect(find.text('WHERE IT STANDS'), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark), findsNothing);
+
+    await flushTree(tester);
+  });
+
   testWidgets('review editor saves rating and review together to Drift', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;

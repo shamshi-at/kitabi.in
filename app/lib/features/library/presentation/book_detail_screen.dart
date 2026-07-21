@@ -1326,15 +1326,43 @@ class _LibraryEntryMenu extends ConsumerWidget {
     if (context.mounted) context.pop();
   }
 
+  /// Taking a book off the wishlist removes the entry outright: a wishlisted
+  /// book is in your library *only* as a wish, so withdrawing the wish leaves
+  /// nothing behind. (Soft delete, like every other removal here.)
+  Future<void> _unwishlist(BuildContext context, WidgetRef ref, LibraryEntry entry) async {
+    final l10n = AppLocalizations.of(context)!;
+    Haptics.selection();
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = await ref.read(libraryRepositoryProvider.future);
+    await repo.remove(entry.id);
+    ref.invalidate(libraryEntryProvider(editionId));
+    messenger.showSnackBar(SnackBar(content: Text(l10n.bookWishlistRemoved)));
+    if (context.mounted) context.pop();
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final entry = ref.watch(libraryEntryProvider(editionId));
     final current = entry.valueOrNull;
     if (current == null) return SizedBox.shrink();
 
+    final wishlisted = current.status == 'wishlist';
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Wishlist sits beside Favourite so the two are finally visible
+        // together — gold star (owned, loved) vs slate bookmark (not owned
+        // yet). Apart, they were confusable; side by side the colour and the
+        // mark do the work (U3). A book you already own can't be wished for,
+        // so on an owned entry the bookmark simply isn't there.
+        if (wishlisted)
+          IconButton(
+            tooltip: l10n.bookWishlistRemove,
+            icon: Icon(Icons.bookmark, color: AppColors.slate),
+            onPressed: () => _unwishlist(context, ref, current),
+          ),
         IconButton(
           icon: Icon(
             current.isFavorite ? Icons.star : Icons.star_border,
@@ -1364,21 +1392,48 @@ class _AddToLibraryButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final editionId = edition['id'] as String;
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () async {
-          // Cache before creating the entry so the grid/home cover tiles that
-          // rebuild on the insert already find the catalog data (rule 2).
-          await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
-          final repo = await ref.read(libraryRepositoryProvider.future);
-          await repo.add(editionId: editionId);
-          ref.invalidate(libraryEntryProvider(editionId));
-        },
-        child: Text(AppLocalizations.of(context)!.bookAddToLibrary),
+
+    // Cache before creating the entry so the grid/home cover tiles that
+    // rebuild on the insert already find the catalog data (rule 2).
+    Future<void> addEntry({String status = 'pending'}) async {
+      await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+      final repo = await ref.read(libraryRepositoryProvider.future);
+      await repo.add(editionId: editionId, status: status);
+      ref.invalidate(libraryEntryProvider(editionId));
+    }
+
+    return Row(children: [
+      Expanded(
+        child: ElevatedButton(
+          onPressed: addEntry,
+          child: Text(l10n.bookAddToLibrary),
+        ),
       ),
-    );
+      SizedBox(width: 8),
+      // The other half of the question this page asks: owning it and wanting
+      // it are different answers, and wishlisting used to be reachable only
+      // through the status sheet — which U5 removed.
+      Tooltip(
+        message: l10n.bookWishlistAdd,
+        child: OutlinedButton(
+          onPressed: () async {
+            Haptics.selection();
+            final messenger = ScaffoldMessenger.of(context);
+            await addEntry(status: 'wishlist');
+            messenger.showSnackBar(SnackBar(content: Text(l10n.bookWishlistAdded)));
+          },
+          style: OutlinedButton.styleFrom(
+            minimumSize: Size(50, 46),
+            padding: EdgeInsets.zero,
+            side: BorderSide(color: AppColors.slate),
+            foregroundColor: AppColors.slate,
+          ),
+          child: Icon(Icons.bookmark_outline, size: 20),
+        ),
+      ),
+    ]);
   }
 }
 
@@ -1409,12 +1464,9 @@ class _YoursTabContent extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Wishlist → owned is the wish coming true — one obvious tap, not a
-        // status-chip hunt: flips to "To read" (owned) and celebrates.
-        if (entry.status == 'wishlist') ...[
-          _GotItButton(entry: entry),
-          SizedBox(height: 8),
-        ],
+        // Wishlist → owned is the wish coming true, and it now lives inside
+        // the reading card — which for a wishlisted book is nothing *but*
+        // that one move, so a second button above it was saying it twice.
         _ReadingCard(
           entry: entry,
           workId: workId,
@@ -1427,8 +1479,12 @@ class _YoursTabContent extends ConsumerWidget {
         SizedBox(height: 8),
         _NotesCard(entry: entry),
         SizedBox(height: 8),
-        _LendingCard(entry: entry, editionId: entry.editionId),
-        SizedBox(height: 8),
+        // You can't lend out a book you don't own yet. Shelves stay — filing a
+        // want under "Buy in Kochi" is a real thing to want to do.
+        if (entry.status != 'wishlist') ...[
+          _LendingCard(entry: entry, editionId: entry.editionId),
+          SizedBox(height: 8),
+        ],
         _ShelfSection(entry: entry),
       ],
     );
@@ -1861,6 +1917,29 @@ class _ReadingCard extends ConsumerWidget {
     final pct = (page != null && total != null && total > 0)
         ? ((page / total) * 100).round().clamp(0, 100)
         : null;
+
+    // A book you don't own has no reading stage, no progress and no session to
+    // start — the whole card would be four dead controls. It says what it is
+    // and offers the one move that matters: getting hold of it.
+    if (entry.status == 'wishlist') {
+      return _Card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.bookmark, size: 16, color: AppColors.slate),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(l10n.bookWishlistNotOwned,
+                    style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
+              ),
+            ]),
+            SizedBox(height: 11),
+            _GotItButton(entry: entry),
+          ],
+        ),
+      );
+    }
 
     return _Card(
       child: Column(

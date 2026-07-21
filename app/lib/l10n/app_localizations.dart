@@ -1519,8 +1519,38 @@ abstract class AppLocalizations {
   /// Snackbar after a wishlist entry becomes owned
   ///
   /// In en, this message translates to:
-  /// **'Moved to your library.'**
+  /// **'Moved to your library — off your wishlist.'**
   String get bookMovedToLibrary;
+
+  /// Tooltip on the title-bar bookmark when the book isn't wishlisted
+  ///
+  /// In en, this message translates to:
+  /// **'Add to wishlist'**
+  String get bookWishlistAdd;
+
+  /// Tooltip on the title-bar bookmark when the book is wishlisted
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from wishlist'**
+  String get bookWishlistRemove;
+
+  /// Snackbar after wishlisting a book
+  ///
+  /// In en, this message translates to:
+  /// **'On your wishlist.'**
+  String get bookWishlistAdded;
+
+  /// Snackbar after un-wishlisting a book
+  ///
+  /// In en, this message translates to:
+  /// **'Off your wishlist.'**
+  String get bookWishlistRemoved;
+
+  /// Line shown on a wishlisted book's page in place of the reading status tiles
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t own this one yet — it\'s on your wishlist.'**
+  String get bookWishlistNotOwned;
 
   /// Global search section header for Kitabi users
   ///

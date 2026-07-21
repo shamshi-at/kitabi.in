@@ -863,7 +863,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookGotIt => 'I got this book — move to my library';
 
   @override
-  String get bookMovedToLibrary => 'Moved to your library.';
+  String get bookMovedToLibrary => 'Moved to your library — off your wishlist.';
+
+  @override
+  String get bookWishlistAdd => 'Add to wishlist';
+
+  @override
+  String get bookWishlistRemove => 'Remove from wishlist';
+
+  @override
+  String get bookWishlistAdded => 'On your wishlist.';
+
+  @override
+  String get bookWishlistRemoved => 'Off your wishlist.';
+
+  @override
+  String get bookWishlistNotOwned =>
+      'You don\'t own this one yet — it\'s on your wishlist.';
 
   @override
   String get searchReadersHeader => 'Readers';
