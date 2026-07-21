@@ -1792,6 +1792,18 @@ abstract class AppLocalizations {
   /// **'e.g. Signed copies'**
   String get libraryNewShelfHint;
 
+  /// Header over the status/Favourites shelf row — the shelves the app gives you
+  ///
+  /// In en, this message translates to:
+  /// **'Where your books stand'**
+  String get libraryShelvesStatusSection;
+
+  /// Header over the grid of shelves the reader created
+  ///
+  /// In en, this message translates to:
+  /// **'Your shelves'**
+  String get libraryShelvesYoursSection;
+
   /// The built-in shelf holding every favourited book
   ///
   /// In en, this message translates to:

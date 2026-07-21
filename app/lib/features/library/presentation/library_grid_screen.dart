@@ -46,7 +46,18 @@ typedef _OpenShelf = ({String label, String? tagId, String? status, bool fav});
 /// A shelf the shelves view can show: built-ins (statuses, Favourites) and
 /// personal tags share this shape.
 class _ShelfSpec {
-  const _ShelfSpec({required this.label, required this.books, required this.open});
+  const _ShelfSpec({
+    required this.label,
+    required this.books,
+    required this.open,
+    this.isStatus = false,
+  });
+
+  /// Status and Favourites are shelves the app gives you; the rest are ones
+  /// you made. They're different kinds of thing, so they get different rows
+  /// (owner request, 21 Jul 2026) — the given ones scroll sideways, yours
+  /// stay a grid you can scan.
+  final bool isStatus;
 
   final String label;
   final List<LibraryHit> books;
@@ -350,7 +361,24 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
 
             return Stack(
               children: [
-                RefreshIndicator(
+                // An opened shelf is in-screen state, not a pushed route, so
+                // the app-wide edge-swipe-back has nothing to pop and the
+                // shelf felt like a trap (owner report, 21 Jul 2026). A
+                // horizontal fling closes it. Both directions are accepted:
+                // the grid underneath never scrolls sideways, so there's
+                // nothing to disambiguate against, and "swipe back" means
+                // opposite things to different hands.
+                GestureDetector(
+                  behavior: HitTestBehavior.deferToChild,
+                  onHorizontalDragEnd: _openShelf == null
+                      ? null
+                      : (details) {
+                          final v = details.primaryVelocity ?? 0;
+                          if (v.abs() < 250) return; // a real fling, not a nudge
+                          Haptics.selection();
+                          setState(() => _openShelf = null);
+                        },
+                  child: RefreshIndicator(
                   color: AppColors.oxblood,
                   onRefresh: () async {
                     // A real sync round-trip — push pending local ops, pull deltas
@@ -454,6 +482,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                         ),
                     ],
                   ),
+                  ),
                 ),
                 // Search/filter/sort follow the reader down the shelf — the
                 // header (and its old icon buttons) scroll away instead of
@@ -513,13 +542,14 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
     Map<String, Set<String>> shelvesOf,
   ) {
     final specs = <_ShelfSpec>[];
-    for (final status in ['reading', 'pending', 'read', 'wishlist']) {
+    for (final status in ['reading', 'pending', 'read', 'wishlist', 'stopped']) {
       final books = all.where((h) => h.entry.status == status).toList();
       if (books.isNotEmpty) {
         specs.add(_ShelfSpec(
           label: readingStatusLabel(status),
           books: books,
           open: (label: readingStatusLabel(status), tagId: null, status: status, fav: false),
+          isStatus: true,
         ));
       }
     }
@@ -529,6 +559,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
         label: l10n.libraryShelfFavourites,
         books: favourites,
         open: (label: l10n.libraryShelfFavourites, tagId: null, status: null, fav: true),
+        isStatus: true,
       ));
     }
     for (final shelf in shelves) {
@@ -696,20 +727,77 @@ class _ShelvesSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(20, 8, 20, 96),
-      sliver: SliverGrid(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 1.02,
+    final l10n = AppLocalizations.of(context)!;
+    // Two kinds of shelf, two treatments: the ones the app gives you (status +
+    // Favourites) run along one sideways row, and the ones you made get the
+    // grid, because that's the set that grows and needs scanning.
+    final status = [for (final s in specs) if (s.isStatus) s];
+    final custom = [for (final s in specs) if (!s.isStatus) s];
+
+    return SliverMainAxisGroup(
+      slivers: [
+        if (status.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: _SectionLabel(l10n.libraryShelvesStatusSection),
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 176,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                itemCount: status.length,
+                separatorBuilder: (_, _) => SizedBox(width: 14),
+                itemBuilder: (context, i) => SizedBox(
+                  width: 156,
+                  child: _ShelfTile(spec: status[i], onTap: () => onOpen(status[i])),
+                ),
+              ),
+            ),
+          ),
+        ],
+        SliverToBoxAdapter(
+          child: _SectionLabel(l10n.libraryShelvesYoursSection),
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => index < specs.length
-              ? _ShelfTile(spec: specs[index], onTap: () => onOpen(specs[index]))
-              : _NewShelfTile(onTap: onNewShelf),
-          childCount: specs.length + 1,
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 96),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio: 1.02,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => index < custom.length
+                  ? _ShelfTile(spec: custom[index], onTap: () => onOpen(custom[index]))
+                  : _NewShelfTile(onTap: onNewShelf),
+              childCount: custom.length + 1,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A small caps label separating the two shelf families.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 10, 20, 8),
+      child: Text(
+        text.toUpperCase(),
+        style: TextStyle(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.2,
+          color: AppColors.inkSoft,
         ),
       ),
     );

@@ -927,6 +927,10 @@
   "@libraryNewShelfHint": {
     "description": "Text-field hint in the new-shelf dialog"
   },
+  "libraryShelvesStatusSection": "Where your books stand",
+  "@libraryShelvesStatusSection": {"description": "Header over the status/Favourites shelf row — the shelves the app gives you"},
+  "libraryShelvesYoursSection": "Your shelves",
+  "@libraryShelvesYoursSection": {"description": "Header over the grid of shelves the reader created"},
   "libraryShelfFavourites": "Favourites",
   "@libraryShelfFavourites": {
     "description": "The built-in shelf holding every favourited book"

@@ -1030,6 +1030,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryNewShelfHint => 'e.g. Signed copies';
 
   @override
+  String get libraryShelvesStatusSection => 'Where your books stand';
+
+  @override
+  String get libraryShelvesYoursSection => 'Your shelves';
+
+  @override
   String get libraryShelfFavourites => 'Favourites';
 
   @override
