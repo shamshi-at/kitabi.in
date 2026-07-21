@@ -15,7 +15,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/person_link.dart';
-import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/catalog_cache.dart';
@@ -34,6 +33,7 @@ import '../../share/presentation/share_book_sheet.dart';
 import '../cover_upload.dart';
 import '../reading_progress.dart';
 import '../reading_status.dart';
+import '../stop_session_flow.dart';
 import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
 import 'notes_journal_screen.dart';
@@ -1632,14 +1632,11 @@ class _ReadingCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _changeStatus(BuildContext context, WidgetRef ref) async {
-    final chosen = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppColors.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _StatusSheet(current: entry.status),
-    );
-    if (chosen == null || chosen == entry.status || !context.mounted) return;
+  /// Applies a status picked straight off the tile row (U5). The start/finish
+  /// stamps and the review prompt ride along with it, exactly as they did when
+  /// this was reached through a sheet.
+  Future<void> _setStatus(BuildContext context, WidgetRef ref, String chosen) async {
+    if (chosen == entry.status || !context.mounted) return;
     Haptics.selection();
     final repo = await ref.read(libraryRepositoryProvider.future);
     await repo.updateStatus(entry.id, chosen);
@@ -1807,6 +1804,22 @@ class _ReadingCard extends ConsumerWidget {
     ref.invalidate(weeklyReadingSecondsProvider);
   }
 
+  /// The primary button's idle half: a book you haven't started is the one you
+  /// most want to start, so this moves it to Reading (stamping the start date)
+  /// before opening the timer — one tap where there used to be three.
+  Future<void> _startReading(
+    BuildContext context,
+    WidgetRef ref, {
+    required int? pageCount,
+    String? coverUrl,
+  }) async {
+    if (entry.status != 'reading') {
+      await _setStatus(context, ref, 'reading');
+      if (!context.mounted) return;
+    }
+    _open(context, ref, pageCount: pageCount, coverUrl: coverUrl);
+  }
+
   void _open(BuildContext context, WidgetRef ref, {required int? pageCount, String? coverUrl}) {
     Haptics.selection();
     final freshStart = ref.read(activeSessionProvider)?.libraryEntryId != entry.id;
@@ -1853,19 +1866,37 @@ class _ReadingCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status — tap the pill row to change it.
-          GestureDetector(
-            onTap: () => _changeStatus(context, ref),
-            behavior: HitTestBehavior.opaque,
-            child: Row(children: [
-              StatusPill(status: entry.status),
-              Spacer(),
-              Text(l10n.bookChangeStatus,
-                  style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, fontWeight: FontWeight.w600)),
-              Icon(Icons.chevron_right, size: 15, color: AppColors.inkSoft),
-            ]),
+          // Status — four tiles, one tap each. The old pill + "Change ›" hid
+          // the options behind a sheet, so nobody found Stopped and starting
+          // to read took two taps and a guess (owner report, 21 Jul 2026; U5).
+          // Wishlist is deliberately absent: it isn't a stage of reading a
+          // book you own, it lives in the title bar (U3).
+          Text(l10n.bookWhereItStands,
+              style: TextStyle(
+                  fontSize: 9, letterSpacing: 1.2, color: AppColors.inkSoft, fontWeight: FontWeight.w600)),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              for (final status in _ownedStatuses) ...[
+                if (status != _ownedStatuses.first) SizedBox(width: 5),
+                Expanded(
+                  child: _StatusTile(
+                    status: status,
+                    selected: entry.status == status,
+                    onTap: () => _setStatus(context, ref, status),
+                  ),
+                ),
+              ],
+            ],
           ),
-          SizedBox(height: 14),
+          SizedBox(height: 6),
+          Center(
+            child: Text(l10n.bookStatusHint,
+                style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft)),
+          ),
+          SizedBox(height: 13),
+          Container(height: 1, color: AppColors.line),
+          SizedBox(height: 13),
           // Progress — a real bar when the total is known, page text either way.
           if (pct != null) ...[
             _ProgressBar(value: page! / total!),
@@ -1897,69 +1928,86 @@ class _ReadingCard extends ConsumerWidget {
               ]),
             ),
           ]),
-          // The reading session lives on the same card while the book is open.
-          if (isReading) ...[
-            SizedBox(height: 13),
-            Container(height: 1, color: AppColors.line),
-            SizedBox(height: 13),
-            if (running)
-              GestureDetector(
-                onTap: () => _open(context, ref, pageCount: total, coverUrl: book?.coverUrl),
-                behavior: HitTestBehavior.opaque,
-                child: Row(children: [
-                  Expanded(
-                    child: Text(l10n.timerSessionLabel,
-                        style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1)),
-                  ),
-                  _LiveClock(startedAt: active!.startedAt),
-                  const SizedBox(width: 2),
-                  Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
-                ]),
-              )
-            else
-              Row(children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _open(context, ref, pageCount: total, coverUrl: book?.coverUrl),
-                    style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(vertical: 11)),
-                    icon: Icon(Icons.play_arrow, size: 16),
-                    label: Text(l10n.bookStartSession),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Tooltip(
-                  message: l10n.timerLogManually,
-                  child: OutlinedButton(
-                    onPressed: () => _logManually(context, ref, pageCount: total),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: Size(46, 44),
-                      padding: EdgeInsets.zero,
-                      side: BorderSide(color: AppColors.line),
-                      foregroundColor: AppColors.oxblood,
+          // One control that changes state in place: Start reading becomes
+          // Stop & log with the running clock on it, so starting and stopping
+          // are never two buttons in two places (U5). It shows whatever the
+          // status is — a book you haven't started is exactly the book you
+          // most want to start.
+          SizedBox(height: 13),
+          Row(children: [
+            Expanded(
+              flex: 22,
+              child: running
+                  ? ElevatedButton.icon(
+                      onPressed: () => quickStopSession(context, ref),
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 11),
+                        backgroundColor: AppColors.ink,
+                      ),
+                      icon: Icon(Icons.stop_rounded, size: 16),
+                      label: _StopLabel(startedAt: active!.startedAt, label: l10n.timerStopAndLog),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: () => _startReading(context, ref, pageCount: total, coverUrl: book?.coverUrl),
+                      style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(vertical: 11)),
+                      icon: Icon(Icons.play_arrow, size: 16),
+                      label: Text(isReading ? l10n.bookStartSession : l10n.bookStartReading),
                     ),
-                    child: Icon(Icons.edit_note, size: 20),
-                  ),
+            ),
+            SizedBox(width: 7),
+            Expanded(
+              flex: 10,
+              child: OutlinedButton.icon(
+                onPressed: running
+                    ? () => _open(context, ref, pageCount: total, coverUrl: book?.coverUrl)
+                    : () => _editProgress(context, ref),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: Size(0, 44),
+                  padding: EdgeInsets.zero,
+                  side: BorderSide(color: AppColors.line),
+                  foregroundColor: AppColors.oxblood,
                 ),
-              ]),
-            // Footer: a summary that opens the full reading log.
-            if (sessions.isNotEmpty) ...[
-              SizedBox(height: 12),
-              GestureDetector(
-                onTap: () => showReadingLogSheet(context, entry.id),
-                behavior: HitTestBehavior.opaque,
-                child: Row(children: [
-                  Text(l10n.bookLogLastRead(_relativeDay(sessions.first.startedAt, l10n)),
-                      style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
-                  Spacer(),
-                  Text(
-                    '${l10n.bookLogSessions(sessions.length)} · '
-                    '${formatDuration(Duration(seconds: sessions.fold<int>(0, (a, s) => a + s.durationSeconds)))}',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.oxblood),
-                  ),
-                  Icon(Icons.chevron_right, size: 15, color: AppColors.oxblood),
-                ]),
+                icon: Icon(running ? Icons.edit_note : Icons.edit, size: 15),
+                label: Text(running ? l10n.bookSecondaryNote : l10n.bookSecondaryPage,
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
               ),
-            ],
+            ),
+          ]),
+          // Logging a sitting you never timed used to be the icon beside
+          // "Start a session"; U5 spends that slot on Page/Note, so it keeps
+          // its own line rather than vanishing with the button it rode on.
+          if (!running) ...[
+            SizedBox(height: 7),
+            Center(
+              child: TextButton(
+                onPressed: () => _logManually(context, ref, pageCount: total),
+                style: TextButton.styleFrom(
+                  minimumSize: Size(0, 30),
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  foregroundColor: AppColors.inkSoft,
+                ),
+                child: Text(l10n.timerLogManually, style: TextStyle(fontSize: 11)),
+              ),
+            ),
+          ],
+          // Footer: a summary that opens the full reading log.
+          if (sessions.isNotEmpty) ...[
+            SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => showReadingLogSheet(context, entry.id),
+              behavior: HitTestBehavior.opaque,
+              child: Row(children: [
+                Text(l10n.bookLogLastRead(_relativeDay(sessions.first.startedAt, l10n)),
+                    style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
+                Spacer(),
+                Text(
+                  '${l10n.bookLogSessions(sessions.length)} · '
+                  '${formatDuration(Duration(seconds: sessions.fold<int>(0, (a, s) => a + s.durationSeconds)))}',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.oxblood),
+                ),
+                Icon(Icons.chevron_right, size: 15, color: AppColors.oxblood),
+              ]),
+            ),
           ],
         ],
       ),
@@ -2528,94 +2576,74 @@ class _FinishedReviewSheetState extends ConsumerState<_FinishedReviewSheet> {
   }
 }
 
-/// One glyph per status, echoing its meaning rather than being generic —
-/// shared only by [_StatusSheet], so it lives right next to its one caller.
-const _statusIcons = {
-  'reading': Icons.auto_stories_outlined,
-  'read': Icons.check_circle_outline,
-  'stopped': Icons.pause_circle_outline,
-  'wishlist': Icons.favorite_border,
-  'pending': Icons.menu_book_outlined, // 'To read'
-};
+/// The statuses a book you *own* can be in, in the order a book travels
+/// through them. Wishlist is not among them — it says you don't own the book
+/// yet, which is a different claim entirely, so it lives in the title bar (U3).
+const _ownedStatuses = ['pending', 'reading', 'read', 'stopped'];
 
-/// The five reading statuses as a bottom sheet — the current one checked,
-/// tap any other to switch and close. Each row's icon/tint comes from
-/// [readingStatusForeground]/[readingStatusBackground] — the same per-status
-/// colors [StatusPill] uses — so "Reading" reads oxblood, "Read" reads moss,
-/// etc., instead of every row being an identical oxblood-or-grey dot.
-class _StatusSheet extends StatelessWidget {
-  const _StatusSheet({required this.current});
+/// One status, as a labelled tile: mark on top, word under it, filled in its
+/// own ink when it's the current one. Four of these replace the sheet that
+/// used to hide the choice behind "Change ›" (U5).
+class _StatusTile extends StatelessWidget {
+  const _StatusTile({required this.status, required this.selected, required this.onTap});
 
-  final String current;
+  final String status;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(18, 12, 18, 16),
+    final ink = readingStatusInk(status);
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        decoration: BoxDecoration(
+          color: selected ? ink : AppColors.card,
+          border: Border.all(color: selected ? ink : AppColors.line),
+          borderRadius: BorderRadius.circular(10),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SheetGrabber(),
-            Text(l10n.bookStatusSheetTitle, style: Theme.of(context).textTheme.titleLarge),
-            SizedBox(height: 8),
-            for (final status in readingStatuses) ...[
-              InkWell(
-                onTap: () => Navigator.of(context).pop(status),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 9, horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: status == current
-                        ? readingStatusBackground(status)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: status == current
-                              ? Colors.white.withValues(alpha: 0.55)
-                              : AppColors.paperDeep,
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          _statusIcons[status],
-                          size: 18,
-                          color: status == current
-                              ? readingStatusForeground(status)
-                              : AppColors.inkSoft,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          readingStatusLabel(status),
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: status == current ? FontWeight.w700 : FontWeight.w500,
-                            color: status == current ? readingStatusForeground(status) : AppColors.ink,
-                          ),
-                        ),
-                      ),
-                      if (status == current)
-                        Icon(Icons.check_circle, size: 20, color: readingStatusForeground(status)),
-                    ],
-                  ),
-                ),
+            Icon(readingStatusIcon(status),
+                size: 17, color: selected ? AppColors.paper : ink),
+            const SizedBox(height: 3),
+            Text(
+              readingStatusLabel(status),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 9.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppColors.paper : AppColors.inkSoft,
               ),
-              SizedBox(height: 4),
-            ],
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// "Stop & log · 12:04" — the label half of the primary button while a session
+/// runs, so the clock is on the control you press rather than beside it.
+class _StopLabel extends StatelessWidget {
+  const _StopLabel({required this.startedAt, required this.label});
+
+  final DateTime startedAt;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+      const Text(' · '),
+      _LiveClock(startedAt: startedAt),
+    ]);
   }
 }
 

@@ -412,6 +412,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookStartSession => 'Start a session';
 
   @override
+  String get bookWhereItStands => 'WHERE IT STANDS';
+
+  @override
+  String get bookStatusHint => 'Four states, one tap each.';
+
+  @override
+  String get bookStartReading => 'Start reading';
+
+  @override
+  String get bookSecondaryPage => 'Page';
+
+  @override
+  String get bookSecondaryNote => 'Note';
+
+  @override
   String get bookReadingLogTitle => 'Reading log';
 
   @override

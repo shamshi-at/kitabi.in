@@ -241,11 +241,9 @@ void main() {
     await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
     await settle(tester);
 
-    // Status + progress are one merged card now: tap "Change" to open the
-    // status sheet, then the status label within it.
+    // Status is a row of four tiles on the card itself now (U5) — the label
+    // IS the control, no sheet in between.
     Future<void> changeStatus(String label) async {
-      await tester.tap(find.text('Change'));
-      await settle(tester);
       await tester.tap(find.text(label));
       await settle(tester);
     }
@@ -294,8 +292,6 @@ void main() {
     await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
     await settle(tester);
 
-    await tester.tap(find.text('Change'));
-    await settle(tester);
     await tester.tap(find.text('Read'));
     await settle(tester);
 
@@ -343,7 +339,9 @@ void main() {
     await settle(tester);
 
     expect(find.text('Session in Progress'), findsOneWidget);
-    await tester.tap(find.text('Stop & log'));
+    // The book page sits under the pushed timer route and now carries its own
+    // "Stop & log" (U5) — the timer's is the later one in the tree.
+    await tester.tap(find.text('Stop & log').last);
     await settle(tester);
     await settle(tester);
 
@@ -380,9 +378,10 @@ void main() {
     await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
     await settle(tester);
 
-    // Manual log is the compact ✎ beside "Start a session".
-    expect(find.byIcon(Icons.edit_note), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.edit_note));
+    // Manual log has its own line under the buttons — U5 spends the slot it
+    // used to occupy on Page/Note.
+    expect(find.text('Log manually'), findsOneWidget);
+    await tester.tap(find.text('Log manually'));
     await settle(tester);
 
     expect(find.text('Log a reading session'), findsOneWidget);

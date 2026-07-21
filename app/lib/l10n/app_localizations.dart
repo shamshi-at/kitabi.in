@@ -802,6 +802,36 @@ abstract class AppLocalizations {
   /// **'Start a session'**
   String get bookStartSession;
 
+  /// Label above the four status tiles on the book page
+  ///
+  /// In en, this message translates to:
+  /// **'WHERE IT STANDS'**
+  String get bookWhereItStands;
+
+  /// Caption under the status tiles explaining they change status directly
+  ///
+  /// In en, this message translates to:
+  /// **'Four states, one tap each.'**
+  String get bookStatusHint;
+
+  /// Primary button that marks the book as reading and opens the timer
+  ///
+  /// In en, this message translates to:
+  /// **'Start reading'**
+  String get bookStartReading;
+
+  /// Secondary button beside Start reading, for editing the page reached
+  ///
+  /// In en, this message translates to:
+  /// **'Page'**
+  String get bookSecondaryPage;
+
+  /// Secondary button shown mid-session, for writing a private note
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get bookSecondaryNote;
+
   /// Title of the reading-log bottom sheet
   ///
   /// In en, this message translates to:
