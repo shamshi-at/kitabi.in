@@ -149,7 +149,11 @@ class _ExpandingFabState extends State<ExpandingFab> with SingleTickerProviderSt
                               child: AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 140),
                                 child: Icon(
-                                  _open ? Icons.close : Icons.tune,
+                                  // Closed, this button hides *both* search
+                                  // and filter; a plain slider icon read as
+                                  // filter-only and search went unfound
+                                  // (owner report, 21 Jul 2026).
+                                  _open ? Icons.close : Icons.manage_search,
                                   key: ValueKey(_open),
                                   color: AppColors.paper,
                                   size: 22,

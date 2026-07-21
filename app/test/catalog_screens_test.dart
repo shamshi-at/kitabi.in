@@ -911,7 +911,7 @@ void main() {
     expect(fake.lastBrowseGenre, isNull);
 
     // Fan the floating control open and reach the filter sheet.
-    await tester.tap(find.byIcon(Icons.tune));
+    await tester.tap(find.byIcon(Icons.manage_search));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Filter'));
     await tester.pumpAndSettle();
@@ -945,8 +945,8 @@ void main() {
     expect(find.byIcon(Icons.add), findsWidgets);
     // The collapsed floating control is the tune circle; open it and both
     // actions are there.
-    expect(find.byIcon(Icons.tune), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.tune));
+    expect(find.byIcon(Icons.manage_search), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.manage_search));
     await tester.pumpAndSettle();
     expect(find.text('Search'), findsOneWidget);
     expect(find.text('Filter'), findsOneWidget);
