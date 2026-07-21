@@ -51,7 +51,11 @@ class _ShelfSpec {
     required this.books,
     required this.open,
     this.isStatus = false,
+    this.status,
   });
+
+  /// The reading status this tile stands for, when it is one — drives the mark.
+  final String? status;
 
   /// Status and Favourites are shelves the app gives you; the rest are ones
   /// you made. They're different kinds of thing, so they get different rows
@@ -329,7 +333,9 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
     final shelves = ref.watch(personalShelvesProvider).valueOrNull ?? const <PersonalTag>[];
     final shelvesOf =
         ref.watch(entryShelvesProvider).valueOrNull ?? const <String, Set<String>>{};
-    final prefersShelves = ref.watch(libraryShelvesViewProvider).valueOrNull ?? false;
+    // Defaults to Shelves now that it leads the toggle — a saved preference
+    // still wins, so anyone who chose All books keeps it.
+    final prefersShelves = ref.watch(libraryShelvesViewProvider).valueOrNull ?? true;
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -542,24 +548,30 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
     Map<String, Set<String>> shelvesOf,
   ) {
     final specs = <_ShelfSpec>[];
-    for (final status in ['reading', 'pending', 'read', 'wishlist', 'stopped']) {
+    // Every status keeps its tile, even at zero (owner request, 21 Jul 2026).
+    // Hiding an empty one is why "add Stopped" was ever a request: it was
+    // always in this list, just invisible until something was in it — so a
+    // status you can't see reads as one that doesn't exist.
+    for (final status in ['reading', 'pending', 'read', 'stopped', 'wishlist']) {
       final books = all.where((h) => h.entry.status == status).toList();
-      if (books.isNotEmpty) {
+      {
         specs.add(_ShelfSpec(
           label: readingStatusLabel(status),
           books: books,
           open: (label: readingStatusLabel(status), tagId: null, status: status, fav: false),
           isStatus: true,
+          status: status,
         ));
       }
     }
     final favourites = all.where((h) => h.entry.isFavorite).toList();
-    if (favourites.isNotEmpty) {
+    {
       specs.add(_ShelfSpec(
         label: l10n.libraryShelfFavourites,
         books: favourites,
         open: (label: l10n.libraryShelfFavourites, tagId: null, status: null, fav: true),
         isStatus: true,
+        status: 'favourite',
       ));
     }
     for (final shelf in shelves) {
@@ -660,8 +672,10 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// "All books ｜ Shelves" — the same segmented language the lending ledger's
-/// tabs use: two equal halves, the active one solid oxblood.
+/// "Shelves ｜ All books" — the same segmented language the lending ledger's
+/// tabs use: two equal halves, the active one solid oxblood. Shelves leads
+/// (owner request, 21 Jul 2026) because it answers "where is my…"; the flat
+/// grid of everything is the fallback, not the front door.
 class _ViewToggle extends StatelessWidget {
   const _ViewToggle({required this.shelvesView, required this.onChanged});
 
@@ -705,8 +719,8 @@ class _ViewToggle extends StatelessWidget {
       padding: EdgeInsets.all(3),
       child: Row(
         children: [
-          half(l10n.libraryViewAll, false),
           half(l10n.libraryViewShelves, true),
+          half(l10n.libraryViewAll, false),
         ],
       ),
     );
@@ -818,14 +832,21 @@ class _ShelfTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final preview = spec.books.take(3).toList();
+    final status = spec.status;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: Stack(
+        children: [
+          Container(
         padding: EdgeInsets.fromLTRB(12, 10, 12, 10),
         decoration: BoxDecoration(
           color: AppColors.paperDeep,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.line),
+          border: Border.all(
+            // Wishlist is the odd one out — books you don't own yet — so it
+            // carries its own slate edge rather than blending into the row.
+            color: status == 'wishlist' ? AppColors.slate : AppColors.line,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -883,6 +904,28 @@ class _ShelfTile extends StatelessWidget {
             ),
           ],
         ),
+          ),
+          if (status != null)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: status == 'favourite'
+                      ? AppColors.goldSoft
+                      : readingStatusBackground(status),
+                ),
+                child: Icon(
+                  status == 'favourite' ? Icons.star_rounded : readingStatusIcon(status),
+                  size: 13,
+                  color: status == 'favourite' ? AppColors.gold : readingStatusInk(status),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

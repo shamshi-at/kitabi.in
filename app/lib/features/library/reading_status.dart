@@ -27,3 +27,23 @@ Color readingStatusForeground(String status) => switch (status) {
       'wishlist' => Color(0xFF43617E),
       _ => Color(0xFF8F681E), // To read
     };
+
+/// The mark that stands for a status — one glyph, used on the shelf tile, the
+/// book page's status row, and anywhere else a status needs to be recognised
+/// without reading the word (owner request, 21 Jul 2026; mockups U1/U5).
+IconData readingStatusIcon(String status) => switch (status) {
+      'reading' => Icons.play_arrow_rounded,
+      'read' => Icons.check_rounded,
+      'stopped' => Icons.pause_rounded,
+      'wishlist' => Icons.bookmark_outline_rounded,
+      _ => Icons.schedule_rounded, // 'pending' — to read
+    };
+
+/// The ink for that mark, matching the pill tints already in use.
+Color readingStatusInk(String status) => switch (status) {
+      'reading' => const Color(0xFF7E2A33),
+      'read' => const Color(0xFF48663F),
+      'stopped' => const Color(0xFF8A7F6C),
+      'wishlist' => const Color(0xFF43617E),
+      _ => const Color(0xFF8F681E),
+    };
