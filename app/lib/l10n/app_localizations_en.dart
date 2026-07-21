@@ -392,6 +392,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookNotStarted => 'Not started';
 
   @override
+  String get bookStartDateUnset => 'No start date yet';
+
+  @override
+  String get bookChangeDate => 'Change';
+
+  @override
   String get bookEditProgress => 'Edit progress';
 
   @override

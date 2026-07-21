@@ -766,6 +766,18 @@ abstract class AppLocalizations {
   /// **'Not started'**
   String get bookNotStarted;
 
+  /// Shown in the progress editor when a book has no recorded start date
+  ///
+  /// In en, this message translates to:
+  /// **'No start date yet'**
+  String get bookStartDateUnset;
+
+  /// Opens the date picker for the reading start date
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get bookChangeDate;
+
   /// Dialog title for editing reading progress
   ///
   /// In en, this message translates to:

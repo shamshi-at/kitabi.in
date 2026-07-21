@@ -450,6 +450,10 @@
   "@bookNotStarted": {
     "description": "Progress card placeholder when no start date is set"
   },
+  "bookStartDateUnset": "No start date yet",
+  "@bookStartDateUnset": {"description": "Shown in the progress editor when a book has no recorded start date"},
+  "bookChangeDate": "Change",
+  "@bookChangeDate": {"description": "Opens the date picker for the reading start date"},
   "bookEditProgress": "Edit progress",
   "@bookEditProgress": {
     "description": "Dialog title for editing reading progress"

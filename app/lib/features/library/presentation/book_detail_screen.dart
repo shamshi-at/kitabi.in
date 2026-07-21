@@ -1662,41 +1662,88 @@ class _ReadingCard extends ConsumerWidget {
     final knownTotal = ref.read(cachedBookProvider(entry.editionId)).valueOrNull?.pageCount;
     final controller = TextEditingController(text: entry.currentPage?.toString() ?? '');
     final totalController = TextEditingController();
-    final result = await showDialog<(int?, int?)>(
+    // The start date is stamped automatically the first time a book goes to
+    // Reading — which is right, until it isn't: a book you began last month
+    // but added today is dated today, forever, with nowhere to correct it
+    // (owner question, 21 Jul 2026). It's editable here now.
+    var started = entry.startDate;
+    final result = await showDialog<(int?, int?, DateTime?)>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.bookEditProgress),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: l10n.bookCurrentPage),
-              autofocus: true,
-            ),
-            if (knownTotal == null)
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.bookEditProgress),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               TextField(
-                controller: totalController,
+                controller: controller,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: l10n.timerTotalFieldLabel),
+                decoration: InputDecoration(labelText: l10n.bookCurrentPage),
+                autofocus: true,
               ),
+              if (knownTotal == null)
+                TextField(
+                  controller: totalController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: l10n.timerTotalFieldLabel),
+                ),
+              const SizedBox(height: 14),
+              InkWell(
+                onTap: () async {
+                  final now = DateTime.now();
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: started ?? now,
+                    firstDate: DateTime(now.year - 20),
+                    // You can't have started a book after today.
+                    lastDate: now,
+                  );
+                  if (picked != null) setDialogState(() => started = picked);
+                },
+                child: Row(
+                  children: [
+                    Icon(Icons.event_outlined, size: 16, color: AppColors.inkSoft),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        started == null
+                            ? l10n.bookStartDateUnset
+                            : l10n.bookStartedOn(_fmtDate(started!)),
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    Text(
+                      l10n.bookChangeDate,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.oxblood,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
+            TextButton(
+              onPressed: () => Navigator.pop(
+                ctx,
+                (
+                  int.tryParse(controller.text.trim()),
+                  int.tryParse(totalController.text.trim()),
+                  started,
+                ),
+              ),
+              child: Text(l10n.bookSave),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(
-              ctx,
-              (int.tryParse(controller.text.trim()), int.tryParse(totalController.text.trim())),
-            ),
-            child: Text(l10n.bookSave),
-          ),
-        ],
       ),
     );
     if (result == null) return;
-    final (page, total) = result;
+    final (page, total, startDate) = result;
     // The total belongs to the shared Edition — mirror it locally + sync it.
     if (knownTotal == null && total != null) {
       await saveBookTotalPages(
@@ -1708,11 +1755,13 @@ class _ReadingCard extends ConsumerWidget {
     }
     if (page == null) return;
     final repo = await ref.read(libraryRepositoryProvider.future);
-    final needsStartDate = entry.startDate == null;
+    // Whatever the reader chose wins; falling back to now only when there was
+    // no date and they didn't set one.
+    final resolvedStart = startDate ?? (entry.startDate == null ? DateTime.now() : null);
     await repo.updateProgress(
       entry.id,
       currentPage: page,
-      startDate: needsStartDate ? DateTime.now() : null,
+      startDate: resolvedStart,
     );
     ref.invalidate(libraryEntryProvider(entry.editionId));
   }
