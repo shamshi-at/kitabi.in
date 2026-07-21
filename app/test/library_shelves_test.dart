@@ -158,7 +158,7 @@ void main() {
     await flushTree(tester);
   });
 
-  testWidgets('a Library footer tap resets from an opened shelf to a fresh All books',
+  testWidgets('a Library footer tap resets from an opened shelf to the Shelves tab',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -176,14 +176,17 @@ void main() {
     expect(find.text('All books'), findsNothing);
 
     // Tapping the Library footer tab bumps this — the screen must land back on
-    // the fresh "All books" grid, not the shelf it was left on.
+    // the Shelves tab, not the shelf it was left on.
     final container = ProviderScope.containerOf(tester.element(find.byType(LibraryGridScreen)));
     container.read(libraryTabResetProvider.notifier).state++;
     await settle(tester);
 
     expect(find.text('My Library'), findsOneWidget);
-    expect(find.text('All books'), findsOneWidget); // the grid's view toggle is back
-    expect(find.text('1 book'), findsNothing); // the shelf is closed
+    // The view toggle only renders with no shelf open, so its return *is* the
+    // proof the shelf closed — the shelf list's own "1 book" counts mean that
+    // text no longer discriminates between the two views.
+    expect(find.text('All books'), findsOneWidget);
+    expect(find.text('Classics'), findsOneWidget); // …on the shelf list, not the grid
 
     await flushTree(tester);
   });
@@ -197,10 +200,10 @@ void main() {
     await settle(tester);
 
     // Collapsed: one tune circle; no labels on screen.
-    expect(find.byIcon(Icons.tune), findsOneWidget);
+    expect(find.byIcon(Icons.manage_search), findsOneWidget);
     expect(find.text('Sort'), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.tune));
+    await tester.tap(find.byIcon(Icons.manage_search));
     await tester.pumpAndSettle();
     expect(find.text('Search'), findsOneWidget);
     expect(find.text('Filter'), findsOneWidget);
@@ -227,7 +230,7 @@ void main() {
     await tester.pumpWidget(wrap());
     await settle(tester);
 
-    await tester.tap(find.byIcon(Icons.tune));
+    await tester.tap(find.byIcon(Icons.manage_search));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Filter'));
     await settle(tester);

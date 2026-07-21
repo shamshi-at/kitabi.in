@@ -97,13 +97,15 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   }
 
   /// Land fresh on the "All books" grid — closes any opened shelf, clears the
-  /// filter and sort, forces the grid view (not the persisted shelves
-  /// preference), and scrolls to the top. Fired when the reader taps the
-  /// Library footer tab (owner request, 19 Jul 2026: always the first page).
+  /// filter and sort, lands on the *first* tab, and scrolls to the top. Fired
+  /// when the reader taps the Library footer tab (owner request, 19 Jul 2026:
+  /// always the first page). Since Shelves became the first tab (U4), "first
+  /// page" means Shelves — it used to force the flat grid, which is now the
+  /// second tab (owner report, 21 Jul 2026).
   void _resetToFresh() {
     setState(() {
       _openShelf = null;
-      _shelvesOverride = false;
+      _shelvesOverride = true;
       _filter = const LibraryFilter();
       _sort = 'recent';
     });
@@ -552,7 +554,13 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
     // Hiding an empty one is why "add Stopped" was ever a request: it was
     // always in this list, just invisible until something was in it — so a
     // status you can't see reads as one that doesn't exist.
-    for (final status in ['reading', 'pending', 'read', 'stopped', 'wishlist']) {
+    // Ordered by how often a reader opens them, not by the lifecycle: Reading
+    // is a near-daily visit, To read is where you pick the next one, Read is
+    // history you browse occasionally, Wishlist is for when you're buying, and
+    // Stopped is a graveyard you rarely revisit. Favourites is inserted after
+    // To read below, for the same reason — revisiting a loved book beats
+    // scrolling your whole finished pile.
+    for (final status in ['reading', 'pending', 'read', 'wishlist', 'stopped']) {
       final books = all.where((h) => h.entry.status == status).toList();
       {
         specs.add(_ShelfSpec(
@@ -573,6 +581,9 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
         isStatus: true,
         status: 'favourite',
       ));
+      // Third, after Reading and To read.
+      final fav = specs.removeLast();
+      specs.insert(specs.length >= 2 ? 2 : specs.length, fav);
     }
     for (final shelf in shelves) {
       final books =
@@ -909,19 +920,37 @@ class _ShelfTile extends StatelessWidget {
             Positioned(
               top: 8,
               right: 8,
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: status == 'favourite'
-                      ? AppColors.goldSoft
-                      : readingStatusBackground(status),
-                ),
-                child: Icon(
-                  status == 'favourite' ? Icons.star_rounded : readingStatusIcon(status),
-                  size: 13,
-                  color: status == 'favourite' ? AppColors.gold : readingStatusInk(status),
+              // Solid in the status's own ink rather than its pale tint: a
+              // soft disc on soft paper simply didn't catch the eye (owner
+              // report, 21 Jul 2026). The paper ring lifts it off the tile,
+              // and it scales in so the row has a moment of life on arrival.
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.6, end: 1),
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutBack,
+                builder: (context, t, child) => Transform.scale(scale: t, child: child),
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: status == 'favourite'
+                        ? AppColors.gold
+                        : readingStatusInk(status),
+                    border: Border.all(color: AppColors.paper, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: .18),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    status == 'favourite' ? Icons.star_rounded : readingStatusIcon(status),
+                    size: 15,
+                    color: AppColors.paper,
+                  ),
                 ),
               ),
             ),
