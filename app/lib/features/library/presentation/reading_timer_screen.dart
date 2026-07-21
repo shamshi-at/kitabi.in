@@ -15,6 +15,7 @@ import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../providers/reading_timer_providers.dart';
 import '../reading_progress.dart';
+import 'session_page_entry.dart';
 
 /// Full-screen reading session — pushed the moment a session starts (from
 /// the book page's timer card, or reopened from the persistent mini-bar).
@@ -63,6 +64,10 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// doesn't know it — otherwise progress can never be a percentage.
   final _totalController = TextEditingController();
   bool _saving = false;
+
+  /// Null while the typed page is savable. A backwards page must not be
+  /// written by Done *or* by the back gesture, which also saves.
+  PageEntryError? _pageError;
 
   @override
   void initState() {
@@ -176,6 +181,9 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     final logged = _logged;
     final page = int.tryParse(_pageController.text.trim());
     if (logged == null || page == null) return;
+    // Back/swipe saves too (16 Jul 2026), so the same guard that disables Done
+    // has to hold here — otherwise leaving by gesture is a way around it.
+    if (_pageError != null) return;
     final entry = await ref.read(appDatabaseProvider).libraryEntriesDao.getById(widget.libraryEntryId);
     if (page == entry?.currentPage) return; // genuinely unchanged — nothing to write
     final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
@@ -234,8 +242,9 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
                   pageFocusNode: _pageFocusNode,
                   pageCount: widget.pageCount,
                   totalController: _totalController,
-                  saving: _saving,
+                  saving: _saving || _pageError != null,
                   onDone: _done,
+                  onValidityChanged: (err) => setState(() => _pageError = err),
                 ),
         ),
       ),
@@ -530,6 +539,7 @@ class _LoggedFace extends ConsumerWidget {
     required this.totalController,
     required this.saving,
     required this.onDone,
+    required this.onValidityChanged,
   });
 
   final String? title;
@@ -543,6 +553,10 @@ class _LoggedFace extends ConsumerWidget {
   final TextEditingController totalController;
   final bool saving;
   final VoidCallback onDone;
+
+  /// Fires when the typed page becomes (in)valid, so Done can be disabled
+  /// rather than silently walking the reader's progress backwards.
+  final ValueChanged<PageEntryError?> onValidityChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -646,158 +660,19 @@ class _LoggedFace extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => pageFocusNode.requestFocus(),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.card,
-                          border: Border.all(color: AppColors.line),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              l10n.timerPageFieldLabel,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 54,
-                              child: TextField(
-                                controller: pageController,
-                                focusNode: pageFocusNode,
-                                keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.oxblood,
-                                    ),
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  filled: true,
-                                  fillColor: AppColors.paperDeep,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 6,
-                                  ),
-                                  hintText: l10n.timerPageFieldHint,
-                                  hintStyle: TextStyle(color: AppColors.inkSoft),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: AppColors.oxblood,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.edit_outlined,
-                              size: 13,
-                              color: AppColors.inkSoft,
-                            ),
-                            if (pageCount != null) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                l10n.timerPageFieldOf(pageCount!),
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: AppColors.inkSoft,
-                                ),
-                              ),
-                            ] else ...[
-                              // Nobody has told the catalog how long this book
-                              // is, so there's no progress bar and no
-                              // percentage. Ask for it here, where the reader
-                              // is holding the book (owner request, 17 Jul
-                              // 2026) — optional, like the page itself.
-                              const SizedBox(width: 6),
-                              Text(
-                                l10n.timerTotalFieldLabel,
-                                style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
-                              ),
-                              const SizedBox(width: 6),
-                              SizedBox(
-                                width: 74,
-                                // Same treatment as the page field beside it —
-                                // this face is paper, not the dark running
-                                // face, so light-on-light would vanish.
-                                child: TextField(
-                                  controller: totalController,
-                                  keyboardType: TextInputType.number,
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.oxblood,
-                                      ),
-                                  decoration: InputDecoration(
-                                    isDense: true,
-                                    filled: true,
-                                    fillColor: AppColors.paperDeep,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
-                                    hintText: l10n.timerTotalFieldHint,
-                                    hintStyle: TextStyle(
-                                      color: AppColors.inkSoft,
-                                      fontSize: 13,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(color: AppColors.oxblood, width: 1.5),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: SessionPageEntry(
+                      pageController: pageController,
+                      totalController: totalController,
+                      pageFocusNode: pageFocusNode,
+                      pageCount: pageCount,
+                      pageStart: logged.pageStart,
+                      duration: duration,
+                      // The wax-seal face sits on the night background.
+                      dark: true,
+                      onValidityChanged: onValidityChanged,
                     ),
-                  ),
-                  AnimatedBuilder(
-                    animation: pageController,
-                    builder: (context, _) {
-                      final pageStart = logged.pageStart;
-                      final pageEnd = int.tryParse(pageController.text.trim());
-                      final pages = (pageStart != null && pageEnd != null && pageEnd > pageStart)
-                          ? pageEnd - pageStart
-                          : null;
-                      if (pages == null) return const SizedBox.shrink();
-                      final hours = duration.inSeconds / 3600;
-                      final pace = hours > 0 ? (pages / hours).round() : null;
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Text(
-                          pace != null
-                              ? '${l10n.timerSessionPages(pages)} · ${l10n.timerPagesPerHour('$pace')}'
-                              : l10n.timerSessionPages(pages),
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: AppColors.inkSoft,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  )
                 ],
               ),
             ),

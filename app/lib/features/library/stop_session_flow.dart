@@ -1,23 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/format_duration.dart';
 import '../../core/haptics.dart';
 import '../../data/api/api_client.dart';
 import '../../data/repositories/repository_providers.dart';
 import '../../data/sync/sync_providers.dart';
-import '../../l10n/app_localizations.dart';
 import 'providers/reading_timer_providers.dart';
+import 'presentation/stop_session_sheet.dart';
 import 'reading_progress.dart';
-
-/// What the reader entered in the quick-stop dialog.
-class _StopResult {
-  const _StopResult({this.page, this.total});
-  final int? page;
-
-  /// Only set when the book had no page count and the reader supplied one.
-  final int? total;
-}
 
 /// Stop the running reading session and log it, then offer to note the page
 /// reached — the "quick stop" used by every surface that shows a live session
@@ -27,11 +17,12 @@ class _StopResult {
 ///
 /// Quick-stopping used to only show a snackbar, with no way to note the page —
 /// unlike the timer screen's wax-seal face, which always asks. This closes
-/// that gap with the same field/skip pattern (owner report, 15 Jul 2026): the
-/// dialog title doubles as the "session logged" confirmation, and "Skip"
-/// leaves progress untouched. When the book has no page count, it also asks
-/// for the total, so progress can become a percentage (owner report, 17 Jul
-/// 2026: that field existed only on the full timer screen).
+/// that gap with the same field/skip pattern (owner report, 15 Jul 2026), and
+/// since 21 Jul 2026 both surfaces render the *same* [SessionPageEntry]: one
+/// big number you can tap to overwrite, -/+ for small corrections, an anchor
+/// line saying where the sitting began, and a Skip that names what it costs.
+/// When the book has no page count it also asks for the total, so progress can
+/// become a percentage (owner report, 17 Jul 2026).
 Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   Haptics.success();
   // The book/page-count come from the active session's own provider, which
@@ -57,68 +48,19 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   container.invalidate(weeklyReadingSecondsProvider);
   if (logged == null || !context.mounted) return;
 
-  final l10n = AppLocalizations.of(context)!;
-  final pageController = TextEditingController(text: currentPage?.toString() ?? '');
-  final totalController = TextEditingController();
-  final result = await showDialog<_StopResult>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(
-        l10n.timerMiniBarStopped(formatDuration(Duration(seconds: logged.durationSeconds))),
-      ),
-      content: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(l10n.timerPageFieldLabel),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 56,
-            child: TextField(
-              controller: pageController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              autofocus: true,
-              decoration: InputDecoration(hintText: l10n.timerPageFieldHint),
-            ),
-          ),
-          if (pageCount != null) ...[
-            const SizedBox(width: 8),
-            Text(l10n.timerPageFieldOf(pageCount)),
-          ] else ...[
-            // No page count anywhere — ask for it here too, so the reader can
-            // start tracking a percentage without a detour to the book page.
-            const SizedBox(width: 8),
-            Text(l10n.timerTotalFieldLabel),
-            const SizedBox(width: 6),
-            SizedBox(
-              width: 60,
-              child: TextField(
-                controller: totalController,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                decoration: InputDecoration(hintText: l10n.timerTotalFieldHint),
-              ),
-            ),
-          ],
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: Text(l10n.timerPageDialogSkip),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(
-            ctx,
-            _StopResult(
-              page: int.tryParse(pageController.text.trim()),
-              total: int.tryParse(totalController.text.trim()),
-            ),
-          ),
-          child: Text(l10n.bookSave),
-        ),
-      ],
-    ),
+  // R1/R2 — a sheet, not an AlertDialog whose whole content was one cramped
+  // Row. The entry block is shared with the timer's wax-seal face so the two
+  // can't drift (CLAUDE.md: the four progress surfaces have drifted before).
+  final result = await showStopSessionSheet(
+    context,
+    libraryEntryId: logged.libraryEntryId,
+    loggedSessionId: logged.sessionId,
+    duration: Duration(seconds: logged.durationSeconds),
+    title: activeBook?.book?.title,
+    coverUrl: activeBook?.book?.coverUrl,
+    currentPage: currentPage,
+    pageCount: pageCount,
+    pageStart: logged.pageStart ?? currentPage,
   );
   if (result == null) return; // skipped / dismissed
 

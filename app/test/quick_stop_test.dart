@@ -62,6 +62,16 @@ void main() {
   });
 
   testWidgets('quick-stop from a caller that unmounts still saves the page', (tester) async {
+    // The stop sheet shows the book's cover, and TypesetCover typesets its
+    // fallback in Fraunces — runAsync surfaces google_fonts' async font-miss.
+    // Cosmetic, filter it (same setup as catalog_screens_test.dart).
+    GoogleFonts.config.allowRuntimeFetching = false;
+    final reportOriginal = reportTestException;
+    reportTestException = (details, testDescription) {
+      if (details.exception.toString().contains('GoogleFonts')) return;
+      reportOriginal(details, testDescription);
+    };
+
     // Never closed: db.close() deadlocks between the fake-async zone and drift.
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     const session = SessionContext(userId: 'u1', deviceId: 'd1');
@@ -104,15 +114,15 @@ void main() {
     await settle();
     expect(find.text('stop'), findsOneWidget);
 
-    // Stop → the mini-bar unmounts, the quick-stop dialog opens.
+    // Stop → the mini-bar unmounts, the quick-stop sheet opens.
     await tester.tap(find.text('stop'));
     await settle();
     expect(find.text('stop'), findsNothing); // the caller is gone
-    expect(find.byType(TextField), findsWidgets); // the page dialog is up
+    expect(find.byType(TextField), findsWidgets); // the page sheet is up
 
-    // Type the page reached (the first field) and save.
+    // Type the page reached (the big numeral is the first field) and save.
     await tester.enterText(find.byType(TextField).first, '42');
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('Save the page'));
     await settle();
 
     // The page must have landed on the entry even though the caller unmounted.
@@ -121,5 +131,9 @@ void main() {
 
     await tester.pumpWidget(const SizedBox());
     await settle();
+
+    // Restore inline, not in a tearDown — the binding asserts the hook is back
+    // to its original value at the end of the test *body*.
+    reportTestException = reportOriginal;
   });
 }

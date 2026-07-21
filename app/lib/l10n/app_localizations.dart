@@ -3382,6 +3382,126 @@ abstract class AppLocalizations {
   /// **'{pages, plural, =1{1 page} other{{pages} pages}}'**
   String timerSessionPages(int pages);
 
+  /// Prompt above the big page numeral on the stop-session sheet (R1)
+  ///
+  /// In en, this message translates to:
+  /// **'Where did you get to?'**
+  String get stopWhereDidYouGet;
+
+  /// Label under the numeral when the book's total page count is unknown
+  ///
+  /// In en, this message translates to:
+  /// **'page'**
+  String get stopPageUnit;
+
+  /// Confirmation eyebrow on the stop sheet — the session is already saved before any page is entered
+  ///
+  /// In en, this message translates to:
+  /// **'Session logged'**
+  String get stopSessionLogged;
+
+  /// Anchor line telling the reader where the session began, so the number they type is easy to judge
+  ///
+  /// In en, this message translates to:
+  /// **'You started this session at p. {page}'**
+  String stopStartedAtPage(int page);
+
+  /// The previous sitting, shown under the anchor line
+  ///
+  /// In en, this message translates to:
+  /// **'Last time · {date} · {duration} · p. {from} → {to}'**
+  String stopLastSession(String date, String duration, int from, int to);
+
+  /// Link on the stop sheet opening the full list of sittings (R3)
+  ///
+  /// In en, this message translates to:
+  /// **'Log'**
+  String get stopOpenLog;
+
+  /// Primary action on the stop sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Save the page'**
+  String get stopSavePage;
+
+  /// Skip action naming its consequence when the book already has a page
+  ///
+  /// In en, this message translates to:
+  /// **'Skip — keep the time, leave the page at {page}'**
+  String stopSkipWithPage(int page);
+
+  /// Skip action when there is no existing page to leave behind
+  ///
+  /// In en, this message translates to:
+  /// **'Skip — keep the time only'**
+  String get stopSkipNoPage;
+
+  /// Label on the gold total-pages line, shown only when the catalogue has no page count
+  ///
+  /// In en, this message translates to:
+  /// **'How long is this book?'**
+  String get stopTotalQuestion;
+
+  /// Unit beside the total-pages field
+  ///
+  /// In en, this message translates to:
+  /// **'pages'**
+  String get stopTotalUnit;
+
+  /// Why the total is worth entering — it improves the shared Edition, not just this reader's view
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Nobody has told the catalogue yet — filling it in gives you a % here, and helps every other reader of this book.'**
+  String get stopTotalWhy;
+
+  /// Validation message for a page below 1
+  ///
+  /// In en, this message translates to:
+  /// **'Pages start at 1.'**
+  String get stopErrorBelowOne;
+
+  /// Validation message for a page beyond the book's length
+  ///
+  /// In en, this message translates to:
+  /// **'This book has {total} pages.'**
+  String stopErrorAboveTotal(int total);
+
+  /// Validation message preventing a session from logging backwards, pointing at the place that can
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s before p. {page}, where this sitting began. To correct earlier progress, edit it from the book page.'**
+  String stopErrorBelowStart(int page);
+
+  /// Title of the sittings log (R3)
+  ///
+  /// In en, this message translates to:
+  /// **'{title} · your sessions'**
+  String stopSessionsTitle(String title);
+
+  /// Totals line under the sittings-log title
+  ///
+  /// In en, this message translates to:
+  /// **'{duration} · {pages} pages · {count} sittings'**
+  String stopSessionsSummary(String duration, int pages, int count);
+
+  /// Shown for a sitting the reader skipped the page on — still a sitting
+  ///
+  /// In en, this message translates to:
+  /// **'no page noted'**
+  String get stopSessionsNoPage;
+
+  /// Reassurance at the foot of the sittings log that skipping is normal
+  ///
+  /// In en, this message translates to:
+  /// **'A sitting with no page is still a sitting — the time counts toward your week either way.'**
+  String get stopSessionsSkipNote;
+
+  /// Returns from the sittings log to the page entry
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the page'**
+  String get stopBackToPage;
+
   /// Reading pace shown on the wax-seal stop screen
   ///
   /// In en, this message translates to:

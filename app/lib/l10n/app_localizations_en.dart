@@ -1979,6 +1979,82 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get stopWhereDidYouGet => 'Where did you get to?';
+
+  @override
+  String get stopPageUnit => 'page';
+
+  @override
+  String get stopSessionLogged => 'Session logged';
+
+  @override
+  String stopStartedAtPage(int page) {
+    return 'You started this session at p. $page';
+  }
+
+  @override
+  String stopLastSession(String date, String duration, int from, int to) {
+    return 'Last time · $date · $duration · p. $from → $to';
+  }
+
+  @override
+  String get stopOpenLog => 'Log';
+
+  @override
+  String get stopSavePage => 'Save the page';
+
+  @override
+  String stopSkipWithPage(int page) {
+    return 'Skip — keep the time, leave the page at $page';
+  }
+
+  @override
+  String get stopSkipNoPage => 'Skip — keep the time only';
+
+  @override
+  String get stopTotalQuestion => 'How long is this book?';
+
+  @override
+  String get stopTotalUnit => 'pages';
+
+  @override
+  String get stopTotalWhy =>
+      'Optional. Nobody has told the catalogue yet — filling it in gives you a % here, and helps every other reader of this book.';
+
+  @override
+  String get stopErrorBelowOne => 'Pages start at 1.';
+
+  @override
+  String stopErrorAboveTotal(int total) {
+    return 'This book has $total pages.';
+  }
+
+  @override
+  String stopErrorBelowStart(int page) {
+    return 'That\'s before p. $page, where this sitting began. To correct earlier progress, edit it from the book page.';
+  }
+
+  @override
+  String stopSessionsTitle(String title) {
+    return '$title · your sessions';
+  }
+
+  @override
+  String stopSessionsSummary(String duration, int pages, int count) {
+    return '$duration · $pages pages · $count sittings';
+  }
+
+  @override
+  String get stopSessionsNoPage => 'no page noted';
+
+  @override
+  String get stopSessionsSkipNote =>
+      'A sitting with no page is still a sitting — the time counts toward your week either way.';
+
+  @override
+  String get stopBackToPage => 'Back to the page';
+
+  @override
   String timerPagesPerHour(String rate) {
     return '$rate pages/hr';
   }

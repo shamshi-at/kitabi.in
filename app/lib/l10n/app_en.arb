@@ -1859,6 +1859,76 @@
     "description": "Pages read shown next to a session's duration",
     "placeholders": {"pages": {"type": "int"}}
   },
+  "stopWhereDidYouGet": "Where did you get to?",
+  "@stopWhereDidYouGet": {"description": "Prompt above the big page numeral on the stop-session sheet (R1)"},
+  "stopPageUnit": "page",
+  "@stopPageUnit": {"description": "Label under the numeral when the book's total page count is unknown"},
+  "stopSessionLogged": "Session logged",
+  "@stopSessionLogged": {"description": "Confirmation eyebrow on the stop sheet — the session is already saved before any page is entered"},
+  "stopStartedAtPage": "You started this session at p. {page}",
+  "@stopStartedAtPage": {
+    "description": "Anchor line telling the reader where the session began, so the number they type is easy to judge",
+    "placeholders": {"page": {"type": "int"}}
+  },
+  "stopLastSession": "Last time · {date} · {duration} · p. {from} → {to}",
+  "@stopLastSession": {
+    "description": "The previous sitting, shown under the anchor line",
+    "placeholders": {
+      "date": {"type": "String"},
+      "duration": {"type": "String"},
+      "from": {"type": "int"},
+      "to": {"type": "int"}
+    }
+  },
+  "stopOpenLog": "Log",
+  "@stopOpenLog": {"description": "Link on the stop sheet opening the full list of sittings (R3)"},
+  "stopSavePage": "Save the page",
+  "@stopSavePage": {"description": "Primary action on the stop sheet"},
+  "stopSkipWithPage": "Skip — keep the time, leave the page at {page}",
+  "@stopSkipWithPage": {
+    "description": "Skip action naming its consequence when the book already has a page",
+    "placeholders": {"page": {"type": "int"}}
+  },
+  "stopSkipNoPage": "Skip — keep the time only",
+  "@stopSkipNoPage": {"description": "Skip action when there is no existing page to leave behind"},
+  "stopTotalQuestion": "How long is this book?",
+  "@stopTotalQuestion": {"description": "Label on the gold total-pages line, shown only when the catalogue has no page count"},
+  "stopTotalUnit": "pages",
+  "@stopTotalUnit": {"description": "Unit beside the total-pages field"},
+  "stopTotalWhy": "Optional. Nobody has told the catalogue yet — filling it in gives you a % here, and helps every other reader of this book.",
+  "@stopTotalWhy": {"description": "Why the total is worth entering — it improves the shared Edition, not just this reader's view"},
+  "stopErrorBelowOne": "Pages start at 1.",
+  "@stopErrorBelowOne": {"description": "Validation message for a page below 1"},
+  "stopErrorAboveTotal": "This book has {total} pages.",
+  "@stopErrorAboveTotal": {
+    "description": "Validation message for a page beyond the book's length",
+    "placeholders": {"total": {"type": "int"}}
+  },
+  "stopErrorBelowStart": "That's before p. {page}, where this sitting began. To correct earlier progress, edit it from the book page.",
+  "@stopErrorBelowStart": {
+    "description": "Validation message preventing a session from logging backwards, pointing at the place that can",
+    "placeholders": {"page": {"type": "int"}}
+  },
+  "stopSessionsTitle": "{title} · your sessions",
+  "@stopSessionsTitle": {
+    "description": "Title of the sittings log (R3)",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "stopSessionsSummary": "{duration} · {pages} pages · {count} sittings",
+  "@stopSessionsSummary": {
+    "description": "Totals line under the sittings-log title",
+    "placeholders": {
+      "duration": {"type": "String"},
+      "pages": {"type": "int"},
+      "count": {"type": "int"}
+    }
+  },
+  "stopSessionsNoPage": "no page noted",
+  "@stopSessionsNoPage": {"description": "Shown for a sitting the reader skipped the page on — still a sitting"},
+  "stopSessionsSkipNote": "A sitting with no page is still a sitting — the time counts toward your week either way.",
+  "@stopSessionsSkipNote": {"description": "Reassurance at the foot of the sittings log that skipping is normal"},
+  "stopBackToPage": "Back to the page",
+  "@stopBackToPage": {"description": "Returns from the sittings log to the page entry"},
   "timerPagesPerHour": "{rate} pages/hr",
   "@timerPagesPerHour": {
     "description": "Reading pace shown on the wax-seal stop screen",
