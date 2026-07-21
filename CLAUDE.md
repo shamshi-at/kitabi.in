@@ -359,7 +359,18 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   a 3px `Container` strip as the row's first child. This is exactly the
   class of bug the on-device E2E pass exists to catch — screenshots, not tests,
   found it.
-- **`qlmanage -t` flattens transparency onto WHITE — never use it to raster an
+- **A `SingleTickerProviderStateMixin` state may only ever create ONE Ticker —
+  never dispose-and-recreate its `AnimationController` in `didUpdateWidget`.**
+  `TickerText` did exactly that when text *and* startDelay changed together —
+  which is every recycled grid cell and every keystroke in the add-form's live
+  cover preview, since the ticker delay is derived from the title hash (21 Jul
+  2026). The second controller threw "multiple tickers were created". Reuse the
+  controller: stop it, reset `value`, assign a new `duration`, and rebuild the
+  `TweenSequence` on it. Corollary for reading device logs: a thrown build paints
+  a `RenderErrorBox` whose debug intrinsic size is 100000×100000 px, so a
+  "BOTTOM OVERFLOWED BY 99873 PIXELS" banner (≈100000 − the box's height) is a
+  *symptom of an exception in build*, not a real layout overflow — find the
+  first thrown exception above it before chasing layout. — never use it to raster an
   asset whose alpha matters.** `assets/icon/app_icon_foreground.png` (the Android
   adaptive-icon foreground) was generated that way, so the "transparent" layer was
   really an opaque white square: Android painted the oxblood background layer and
