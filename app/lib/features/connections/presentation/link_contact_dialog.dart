@@ -99,6 +99,7 @@ class _LinkContactDialogState extends ConsumerState<_LinkContactDialog> {
             ),
             SizedBox(height: 12),
             TextField(
+              textCapitalization: TextCapitalization.words,
               controller: _query,
               autofocus: true,
               onChanged: _onChanged,

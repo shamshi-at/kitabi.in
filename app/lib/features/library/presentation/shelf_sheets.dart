@@ -67,7 +67,7 @@ Future<String?> _promptNewShelf(BuildContext context, WidgetRef ref) async {
       content: TextField(
         controller: controller,
         autofocus: true,
-        textCapitalization: TextCapitalization.sentences,
+        textCapitalization: TextCapitalization.words,
         decoration: InputDecoration(hintText: l10n.libraryNewShelfHint),
         onSubmitted: (v) => Navigator.pop(ctx, v),
       ),
@@ -309,6 +309,7 @@ class _AddBooksToShelfSheetState extends ConsumerState<_AddBooksToShelfSheet> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
+                            textCapitalization: TextCapitalization.words,
                             controller: _controller,
                             decoration: InputDecoration(
                               hintText: l10n.libraryAddBooksSearchHint,

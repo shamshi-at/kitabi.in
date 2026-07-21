@@ -380,6 +380,7 @@ class _RejectedCardState extends ConsumerState<_RejectedCard> {
             ),
             SizedBox(height: 14),
             TextField(
+              textCapitalization: TextCapitalization.words,
               controller: controller,
               decoration: InputDecoration(
                 labelText: l10n.lendingContactNameLabel,

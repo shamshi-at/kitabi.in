@@ -10,6 +10,7 @@ void main() {
     String ed, {
     required String status,
     int? pages,
+    int? currentPage,
     DateTime? finish,
   }) async {
     await db.cachedBooksDao.upsert(
@@ -27,6 +28,7 @@ void main() {
         userId: 'u1',
         editionId: ed,
         status: Value(status),
+        currentPage: Value(currentPage),
         finishDate: Value(finish),
       ),
     );
@@ -91,5 +93,34 @@ void main() {
     final stats = computeInsights(await db.libraryEntriesDao.allWithBooks(), year: null);
     expect(stats.topAuthor, isNull); // one book is not a pattern
     expect(stats.longestBookTitle, 'T-ed1'); // but longest is still honest
+  });
+
+  test('pages you are part-way through count toward Insights', () async {
+    // The bug (owner report, 21 Jul 2026): pagesRead summed only *finished*
+    // books, so a reader 302 pages into a 724-page book saw nothing here
+    // while Home and the book page both showed the progress. Insights and
+    // the rest of the app have to agree about the same number.
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seed(db, 'done', status: 'read', pages: 200, finish: DateTime(2026, 3, 10));
+    await seed(db, 'midway', status: 'reading', pages: 724, currentPage: 302);
+    // Never opened — a wishlist book must not inflate the count.
+    await seed(db, 'wish', status: 'wishlist', pages: 400);
+
+    final hits = await db.libraryEntriesDao.allWithBooks();
+    final stats = computeInsights(hits, year: 2026);
+
+    expect(stats.pagesRead, 502); // 200 finished + 302 in progress
+    expect(stats.booksRead, 1); // still one *book* read
+  });
+
+  test('a finished book with no page count falls back to its last page', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seed(db, 'nopages', status: 'read', currentPage: 88, finish: DateTime(2026, 2, 1));
+
+    final stats = computeInsights(await db.libraryEntriesDao.allWithBooks(), year: 2026);
+
+    expect(stats.pagesRead, 88);
   });
 }

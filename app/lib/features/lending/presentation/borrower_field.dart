@@ -167,6 +167,7 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
       children: [
         SheetLabel(widget.label),
         TextField(
+          textCapitalization: TextCapitalization.words,
           controller: widget.controller,
           autofocus: widget.autofocus,
           autocorrect: false,

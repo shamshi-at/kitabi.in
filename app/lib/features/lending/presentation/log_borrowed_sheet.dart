@@ -199,6 +199,7 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
             SizedBox(height: 12),
             SheetLabel(l10n.logBorrowedNoteLabel),
             TextField(
+              textCapitalization: TextCapitalization.sentences,
               controller: _note,
               maxLines: 2,
               decoration: sheetInputDecoration(''),
@@ -248,6 +249,7 @@ class _BookSearch extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
+          textCapitalization: TextCapitalization.sentences,
           controller: controller,
           onChanged: onQuery,
           decoration: sheetInputDecoration(l10n.logBorrowedSearchHint).copyWith(

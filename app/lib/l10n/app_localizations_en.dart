@@ -1147,7 +1147,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryShelfEmptyTitle => 'This shelf is empty';
 
   @override
-  String get libraryShelfEmptyBody => 'Move a book you already have onto it.';
+  String get libraryShelfEmptyBody =>
+      'Shelves are yours to arrange — move a book you already own onto this one.';
 
   @override
   String get libraryShelfAddBooks => 'Add books to this shelf';
@@ -1193,10 +1194,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSeeAll => 'See all';
 
   @override
-  String get homeEmptyTitle => 'Your shelf is empty';
+  String get homeEmptyTitle => 'Your first shelf awaits';
 
   @override
-  String get homeEmptyBody => 'Add a book to start building your library.';
+  String get homeEmptyBody =>
+      'Every library starts with one book. Scan the one nearest you — the rest follows.';
 
   @override
   String get homeAddBook => 'Add a book';

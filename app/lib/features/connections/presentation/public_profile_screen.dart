@@ -814,6 +814,7 @@ class _PublicShelfState extends ConsumerState<_PublicShelf> {
       color: AppColors.paper,
       padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: TextField(
+        textCapitalization: TextCapitalization.words,
         onChanged: _onChanged,
         decoration: InputDecoration(
           hintText: l10n.publicShelfSearchHint,

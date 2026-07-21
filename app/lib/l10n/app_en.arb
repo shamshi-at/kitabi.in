@@ -1035,7 +1035,7 @@
   "@shelfPickerEmpty": {"description": "Shown in the shelf-picker sheet when the reader has no shelves"},
   "libraryShelfEmptyTitle": "This shelf is empty",
   "@libraryShelfEmptyTitle": {"description": "Title of the empty state for an opened personal shelf with no books"},
-  "libraryShelfEmptyBody": "Move a book you already have onto it.",
+  "libraryShelfEmptyBody": "Shelves are yours to arrange — move a book you already own onto this one.",
   "@libraryShelfEmptyBody": {"description": "Body of the empty-shelf state"},
   "libraryShelfAddBooks": "Add books to this shelf",
   "@libraryShelfAddBooks": {"description": "Button that opens the picker to add existing library books to a shelf"},
@@ -1074,11 +1074,11 @@
   "@homeSeeAll": {
     "description": "Link to the full library grid from the home screen preview"
   },
-  "homeEmptyTitle": "Your shelf is empty",
+  "homeEmptyTitle": "Your first shelf awaits",
   "@homeEmptyTitle": {
     "description": "Title of the empty state on the home screen"
   },
-  "homeEmptyBody": "Add a book to start building your library.",
+  "homeEmptyBody": "Every library starts with one book. Scan the one nearest you — the rest follows.",
   "@homeEmptyBody": {
     "description": "Body of the empty state on the home screen"
   },

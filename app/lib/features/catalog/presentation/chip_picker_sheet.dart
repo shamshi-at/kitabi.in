@@ -148,6 +148,7 @@ class _ChipPickerSheetState extends State<ChipPickerSheet> {
                   ),
                   const SizedBox(height: 10),
                   TextField(
+                    textCapitalization: TextCapitalization.words,
                     controller: _search,
                     autofocus: true,
                     decoration: InputDecoration(

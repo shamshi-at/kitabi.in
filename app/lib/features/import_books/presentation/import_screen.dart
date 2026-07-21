@@ -142,6 +142,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         ),
         SizedBox(height: 12),
         TextField(
+          textCapitalization: TextCapitalization.words,
           controller: _csvController,
           maxLines: 10,
           minLines: 6,

@@ -14,6 +14,8 @@ class InsightsStats {
     this.topAuthorCount = 0,
     this.longestBookTitle,
     this.longestBookPages = 0,
+    this.longestBookWorkId,
+    this.longestBookEditionId,
   });
 
   final int booksRead;
@@ -29,6 +31,11 @@ class InsightsStats {
   /// page count is finished.
   final String? longestBookTitle;
   final int longestBookPages;
+
+  /// Carried so the superlative can be a door to the book, not just a label
+  /// (the names-are-doors rule — every other screen already honours it).
+  final String? longestBookWorkId;
+  final String? longestBookEditionId;
 
   /// Mean pages per finished book, over the books that carry a page count.
   int get avgPagesPerBook {
@@ -72,6 +79,8 @@ InsightsStats computeInsights(List<LibraryHit> hits, {int? year}) {
   final languages = <String, int>{};
   final authors = <String, int>{};
   String? longestTitle;
+  String? longestWorkId;
+  String? longestEditionId;
   var longestPages = 0;
   for (final h in read) {
     final f = finishedOn(h);
@@ -89,6 +98,8 @@ InsightsStats computeInsights(List<LibraryHit> hits, {int? year}) {
     if (pages > longestPages) {
       longestPages = pages;
       longestTitle = h.book.title;
+      longestWorkId = h.book.workId;
+      longestEditionId = h.book.editionId;
     }
   }
   final sortedLanguages = Map.fromEntries(
@@ -98,9 +109,30 @@ InsightsStats computeInsights(List<LibraryHit> hits, {int? year}) {
       ? null
       : (authors.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).first;
 
+  // Pages you've actually read, not pages you've finished books of. A reader
+  // 302 pages into a 724-page book saw 0 on this screen until they marked it
+  // read, which is why Insights disagreed with the page count Home and the
+  // book page were both showing (owner report, 21 Jul 2026).
+  //
+  // A finished book counts its whole length (or its last recorded page, when
+  // the catalogue has no page count); an unfinished one counts how far in you
+  // are. Only 'read' and 'reading' contribute — a wishlist book you've never
+  // opened shouldn't inflate the number.
+  final readIds = {for (final h in read) h.entry.id};
+  var pages = 0;
+  for (final h in read) {
+    pages += h.book.pageCount ?? h.entry.currentPage ?? 0;
+  }
+  for (final h in hits) {
+    if (h.entry.status != 'reading' || readIds.contains(h.entry.id)) continue;
+    // In-progress books aren't scoped by year — there's no finish date to
+    // scope them by, and the pages are read *now*.
+    pages += h.entry.currentPage ?? 0;
+  }
+
   return InsightsStats(
     booksRead: read.length,
-    pagesRead: read.fold<int>(0, (sum, h) => sum + (h.book.pageCount ?? 0)),
+    pagesRead: pages,
     currentlyReading: hits.where((h) => h.entry.status == 'reading').length,
     booksPerMonth: perMonth,
     pagesPerMonth: pagesMonth,
@@ -112,5 +144,7 @@ InsightsStats computeInsights(List<LibraryHit> hits, {int? year}) {
         : 0,
     longestBookTitle: longestTitle,
     longestBookPages: longestPages,
+    longestBookWorkId: longestWorkId,
+    longestBookEditionId: longestEditionId,
   );
 }

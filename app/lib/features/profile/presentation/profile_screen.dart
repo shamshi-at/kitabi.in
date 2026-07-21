@@ -716,6 +716,7 @@ class _UsernameSheetState extends ConsumerState<_UsernameSheet> {
           Text(l10n.profileUsernameHint, style: TextStyle(color: AppColors.inkSoft, fontSize: 13)),
           SizedBox(height: 14),
           TextField(
+            textCapitalization: TextCapitalization.words,
             controller: _controller,
             autofocus: true,
             autocorrect: false,

@@ -87,6 +87,7 @@ class PickerSearchField extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
+              textCapitalization: TextCapitalization.words,
               controller: controller,
               autofocus: true,
               onChanged: onChanged,
@@ -133,6 +134,7 @@ class PickerField extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         TextFormField(
+          textCapitalization: TextCapitalization.words,
           controller: controller,
           validator: validator,
           maxLines: maxLines,

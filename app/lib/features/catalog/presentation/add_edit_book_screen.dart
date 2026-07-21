@@ -2422,6 +2422,7 @@ class _Field extends StatelessWidget {
         ),
         SizedBox(height: 4),
         TextFormField(
+          textCapitalization: TextCapitalization.sentences,
           controller: controller,
           validator: validator,
           keyboardType: keyboardType,

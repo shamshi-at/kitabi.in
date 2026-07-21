@@ -221,6 +221,7 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
             SizedBox(height: 12),
             SheetLabel(l10n.logBorrowedNoteLabel),
             TextField(
+              textCapitalization: TextCapitalization.words,
               controller: _note,
               maxLines: 2,
               decoration: sheetInputDecoration(''),

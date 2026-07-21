@@ -400,6 +400,7 @@ class _Field extends StatelessWidget {
         Text(label, style: _labelStyle),
         const SizedBox(height: 4),
         TextField(
+          textCapitalization: TextCapitalization.sentences,
           controller: controller,
           keyboardType: keyboardType,
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/format_duration.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/api/api_client.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
@@ -69,6 +70,30 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     final diff = read - expected;
     if (diff == 0) return l10n.insightsOnTrack;
     return diff > 0 ? l10n.insightsAhead(diff) : l10n.insightsBehind(-diff);
+  }
+
+  /// Cached books store author *names*, not ids, so the most-read-author tile
+  /// can't link straight through. Resolve the name against the catalogue and
+  /// open their page; if that can't be done (offline, or an author the
+  /// catalogue doesn't know under that spelling) fall back to search rather
+  /// than leaving the tap dead.
+  Future<void> _openAuthor(BuildContext context, WidgetRef ref, String name) async {
+    try {
+      final matches = await ref.read(apiClientProvider).searchAuthors(name);
+      final exact = matches.firstWhere(
+        (a) => (a['name'] as String? ?? '').toLowerCase() == name.toLowerCase(),
+        orElse: () => matches.isNotEmpty ? matches.first : const <String, dynamic>{},
+      );
+      final id = exact['id'] as String?;
+      if (!context.mounted) return;
+      if (id != null) {
+        context.push(Routes.authorBrowsePath(id));
+        return;
+      }
+    } catch (_) {
+      // Offline or the lookup failed — search still gets them somewhere useful.
+    }
+    if (context.mounted) context.push(Routes.catalogSearch);
   }
 
   @override
@@ -153,6 +178,11 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                             caption:
                                 '${l10n.insightsTopAuthor} · ${stats.topAuthorCount}',
                             color: AppColors.gold,
+                            // Names are doors everywhere else; they were dead
+                            // text here (owner report, 21 Jul 2026). Cached
+                            // books hold author *names*, not ids, so resolve
+                            // the name to a page on tap.
+                            onTap: () => _openAuthor(context, ref, stats.topAuthor!),
                           ),
                         ),
                       if (stats.topAuthor != null && stats.longestBookPages > 0)
@@ -165,6 +195,15 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                             caption:
                                 '${l10n.insightsLongestBook} · ${stats.longestBookPages} pp',
                             color: AppColors.slate,
+                            onTap: stats.longestBookWorkId == null ||
+                                    stats.longestBookEditionId == null
+                                ? null
+                                : () => context.push(
+                                      Routes.bookDetailPath(
+                                        stats.longestBookWorkId!,
+                                        stats.longestBookEditionId!,
+                                      ),
+                                    ),
                           ),
                         ),
                     ],
@@ -791,16 +830,18 @@ class _SuperlativeTile extends StatelessWidget {
     required this.title,
     required this.caption,
     required this.color,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String caption;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final tile = Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.card,
@@ -830,7 +871,18 @@ class _SuperlativeTile extends StatelessWidget {
               ],
             ),
           ),
+          if (onTap != null)
+            Icon(Icons.chevron_right, size: 15, color: AppColors.inkSoft),
         ],
+      ),
+    );
+    if (onTap == null) return tile;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: tile,
       ),
     );
   }

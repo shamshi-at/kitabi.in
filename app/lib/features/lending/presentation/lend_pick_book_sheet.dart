@@ -109,6 +109,7 @@ class _LendPickBookSheetState extends ConsumerState<_LendPickBookSheet> {
             Text(l10n.lendingPickTitle, style: Theme.of(context).textTheme.titleLarge),
             SizedBox(height: 10),
             TextField(
+              textCapitalization: TextCapitalization.sentences,
               autofocus: false,
               onChanged: _onChanged,
               decoration: InputDecoration(

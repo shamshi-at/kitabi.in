@@ -1993,7 +1993,7 @@ abstract class AppLocalizations {
   /// Body of the empty-shelf state
   ///
   /// In en, this message translates to:
-  /// **'Move a book you already have onto it.'**
+  /// **'Shelves are yours to arrange — move a book you already own onto this one.'**
   String get libraryShelfEmptyBody;
 
   /// Button that opens the picker to add existing library books to a shelf
@@ -2077,13 +2077,13 @@ abstract class AppLocalizations {
   /// Title of the empty state on the home screen
   ///
   /// In en, this message translates to:
-  /// **'Your shelf is empty'**
+  /// **'Your first shelf awaits'**
   String get homeEmptyTitle;
 
   /// Body of the empty state on the home screen
   ///
   /// In en, this message translates to:
-  /// **'Add a book to start building your library.'**
+  /// **'Every library starts with one book. Scan the one nearest you — the rest follows.'**
   String get homeEmptyBody;
 
   /// Primary call to action on the home screen that opens search/add

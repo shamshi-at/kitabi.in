@@ -100,6 +100,7 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                           SizedBox(width: 8),
                           Expanded(
                             child: TextField(
+                              textCapitalization: TextCapitalization.sentences,
                               controller: _controller,
                               // Keyboard up on arrival — the screen is useless
                               // until there's a query, so don't make the user
