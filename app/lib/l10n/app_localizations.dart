@@ -1543,7 +1543,7 @@ abstract class AppLocalizations {
   /// Snackbar after un-wishlisting a book
   ///
   /// In en, this message translates to:
-  /// **'Off your wishlist.'**
+  /// **'Off your wishlist — kept as To read.'**
   String get bookWishlistRemoved;
 
   /// Line shown on a wishlisted book's page in place of the reading status tiles

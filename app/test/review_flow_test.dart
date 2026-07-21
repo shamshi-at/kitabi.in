@@ -181,7 +181,7 @@ void main() {
     await flushTree(tester);
   });
 
-  testWidgets('un-wishlisting drops your entry but never the catalogue book',
+  testWidgets('un-wishlisting keeps your entry as To read, and the catalogue book',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -199,11 +199,11 @@ void main() {
     await tester.tap(find.byIcon(Icons.bookmark).first);
     await settle(tester);
 
-    // The book is still right here — same page, same title, offering to be
-    // added or wished for again. Only the personal entry went.
+    // Nothing personal is removed by a one-tap toggle: the entry survives as
+    // "To read", and the catalogue book was never in question.
     expect(find.text('Chemmeen'), findsWidgets);
-    expect(find.text('Add to my library'), findsOneWidget);
-    expect(find.byIcon(Icons.bookmark_outline), findsOneWidget);
+    expect(find.text('WHERE IT STANDS'), findsOneWidget);
+    expect(find.text('Add to my library'), findsNothing);
 
     await flushTree(tester);
   });

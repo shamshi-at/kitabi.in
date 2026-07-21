@@ -1326,19 +1326,18 @@ class _LibraryEntryMenu extends ConsumerWidget {
     if (context.mounted) context.pop();
   }
 
-  /// Taking a book off the wishlist drops *your entry* for it — the wish was
-  /// the only reason it was in your library. The book itself is catalogue data
-  /// (Layer 1, shared and server-authoritative) and is never touched: stay on
-  /// the page and it re-renders as any un-owned book, offering "Add to my
-  /// library" and the bookmark again. Leaving the page here made it look like
-  /// the book had been deleted outright (owner report, 22 Jul 2026), which is
-  /// exactly the thing that must never happen.
+  /// Taking a book off the wishlist keeps the entry — it just stops being a
+  /// wish and becomes "To read" (owner decision, 22 Jul 2026: nothing personal
+  /// gets removed behind a one-tap toggle). Deleting outright is still there,
+  /// but only behind the trash can and its confirm dialog, where the cost is
+  /// spelled out. The catalogue book is Layer 1 and is never touched either
+  /// way.
   Future<void> _unwishlist(BuildContext context, WidgetRef ref, LibraryEntry entry) async {
     final l10n = AppLocalizations.of(context)!;
     Haptics.selection();
     final messenger = ScaffoldMessenger.of(context);
     final repo = await ref.read(libraryRepositoryProvider.future);
-    await repo.remove(entry.id);
+    await repo.updateStatus(entry.id, 'pending');
     ref.invalidate(libraryEntryProvider(editionId));
     messenger.showSnackBar(SnackBar(content: Text(l10n.bookWishlistRemoved)));
   }

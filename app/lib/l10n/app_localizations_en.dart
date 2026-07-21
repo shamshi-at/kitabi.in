@@ -875,7 +875,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookWishlistAdded => 'On your wishlist.';
 
   @override
-  String get bookWishlistRemoved => 'Off your wishlist.';
+  String get bookWishlistRemoved => 'Off your wishlist — kept as To read.';
 
   @override
   String get bookWishlistNotOwned =>

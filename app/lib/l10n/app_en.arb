@@ -753,7 +753,7 @@
   "@bookWishlistRemove": {"description": "Tooltip on the title-bar bookmark when the book is wishlisted"},
   "bookWishlistAdded": "On your wishlist.",
   "@bookWishlistAdded": {"description": "Snackbar after wishlisting a book"},
-  "bookWishlistRemoved": "Off your wishlist.",
+  "bookWishlistRemoved": "Off your wishlist — kept as To read.",
   "@bookWishlistRemoved": {"description": "Snackbar after un-wishlisting a book"},
   "bookWishlistNotOwned": "You don't own this one yet — it's on your wishlist.",
   "@bookWishlistNotOwned": {"description": "Line shown on a wishlisted book's page in place of the reading status tiles"},
