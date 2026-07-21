@@ -68,19 +68,24 @@ class _TickerTextState extends State<TickerText> with SingleTickerProviderStateM
   @override
   void didUpdateWidget(TickerText old) {
     super.didUpdateWidget(old);
+    // The timeline bakes the lead-in into its duration and weights — retune
+    // the SAME controller and rebuild the tween on it. This State owns a
+    // single Ticker for its whole lifetime; disposing and recreating the
+    // controller creates a second Ticker, which throws the moment a recycled
+    // grid cell (or the add-form's live cover preview, whose per-book jitter
+    // changes startDelay on every keystroke) swaps books.
+    if (old.startDelay != widget.startDelay) {
+      _c?.stop();
+      _c?.value = 0;
+      _c?.duration = const Duration(seconds: 7) + widget.startDelay;
+      _t = null;
+    }
     // A recycled element showing new text (grid cells swap books) is a fresh
     // first render for that title — settle and allow one new run.
     if (old.text != widget.text) {
       _runScheduled = false;
-      if (old.startDelay != widget.startDelay) {
-        // The timeline bakes the lead-in into its weights — rebuild it.
-        _c?.dispose();
-        _c = null;
-        _t = null;
-      } else {
-        _c?.stop();
-        _c?.value = 0;
-      }
+      _c?.stop();
+      _c?.value = 0;
     }
   }
 

@@ -80,6 +80,51 @@ void main() {
     expect(offsetNow().dx, 0);
   });
 
+  testWidgets(
+      'new text with a new startDelay reuses the single ticker '
+      '(regression: grid recycle / live cover preview threw "multiple tickers")',
+      (tester) async {
+    // TypesetCover derives startDelay from the title hash, so a recycled grid
+    // cell — and the add-form's live preview on every keystroke — changes text
+    // and startDelay together. The old code disposed and recreated the
+    // AnimationController for that case, creating a second Ticker on a
+    // SingleTickerProviderStateMixin: the build threw and the cover painted a
+    // 100000px RenderErrorBox ("BOTTOM OVERFLOWED BY 99873 PIXELS").
+    await tester.pumpWidget(_host(
+      TickerText(
+        'First very long title that cannot possibly fit',
+        style: style,
+        startDelay: const Duration(milliseconds: 1200),
+      ),
+    ));
+    await tester.pump(const Duration(milliseconds: 500)); // mid-run: ticker live
+
+    await tester.pumpWidget(_host(
+      TickerText(
+        'Second very long title that cannot possibly fit',
+        style: style,
+        startDelay: const Duration(milliseconds: 1740),
+      ),
+    ));
+    expect(tester.takeException(), isNull);
+
+    // The rebuilt timeline (new lead-in baked into its weights) still runs a
+    // full pass and settles back.
+    Offset offsetNow() {
+      final transform = tester.widget<Transform>(find.descendant(
+        of: find.byType(ClipRect),
+        matching: find.byType(Transform),
+      ));
+      return Offset(transform.transform.getTranslation().x, 0);
+    }
+
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 4500));
+    expect(offsetNow().dx, lessThan(0));
+    await tester.pump(const Duration(seconds: 9));
+    expect(offsetNow().dx, 0);
+  });
+
   testWidgets('reduced motion falls back to static ellipsis', (tester) async {
     await tester.pumpWidget(_host(
       TickerText('A very long title that cannot possibly fit', style: style),
