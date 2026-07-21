@@ -125,15 +125,19 @@ camera; everything else stays paper.
   (Layer 1) surfaced as a screen — not the fuller "author profile with bio and
   reviews" feature, which stays `[LATER]`.
 - **Notes become a journal, and nothing about them may block stopping the timer**
-  (designed 21 Jul 2026, mockups **N1–N3**). Personal notes stay exactly as
-  private as rule 13 says, but stop being one overwritable blob per book: a
-  quiet ✎ on the running watch face captures a thought **without pausing the
-  session** (the sheet says so — "the timer never stopped"), pre-tagged with the
+  (designed 21 Jul 2026, mockups **N1–N4**). Personal notes stay exactly as
+  private as rule 13 says, but stop being one overwritable blob per book. The
+  way in is a **"✎ Note a thought" pill on the running watch face** (**N1**),
+  sitting above Stop & log and never competing with it, carrying a count of the
+  notes this sitting already holds — that count is the only way to know they
+  exist without opening anything, and it's what makes the Skip copy believable
+  later. Tapping it captures a thought **without pausing the session** (**N2**;
+  the sheet says so outright — "the timer never stopped"), pre-tagged with the
   page you're on. The stop sheet then grows *one* section listing what you
   already wrote plus room for a closing line, and its Skip says "your 2 notes
   are already saved" — because they are. That's the governing rule made
   concrete: a reader who just wants the timer off is gone in one tap with the
-  sitting and every note intact. On the book page (**N3**) notes group under the
+  sitting and every note intact. On the book page (**N4**) notes group under the
   sitting that produced them, so the session header *is* the timestamp; a note
   that came from no sitting keeps its own place rather than being forced into a
   fake one. Private is stated once at the top and never contradicted — unlike a
