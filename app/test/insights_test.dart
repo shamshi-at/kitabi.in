@@ -112,6 +112,9 @@ void main() {
 
     expect(stats.pagesRead, 502); // 200 finished + 302 in progress
     expect(stats.booksRead, 1); // still one *book* read
+    // The per-book average must stay about *finished* books, or part-way
+    // progress silently inflates it (200, not 502).
+    expect(stats.avgPagesPerBook, 200);
   });
 
   test('a finished book with no page count falls back to its last page', () async {

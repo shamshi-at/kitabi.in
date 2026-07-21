@@ -6,6 +6,7 @@ class InsightsStats {
   InsightsStats({
     required this.booksRead,
     required this.pagesRead,
+    this.pagesFinished = 0,
     required this.currentlyReading,
     required this.booksPerMonth,
     required this.pagesPerMonth,
@@ -20,6 +21,11 @@ class InsightsStats {
 
   final int booksRead;
   final int pagesRead;
+
+  /// Pages in *finished* books only. [pagesRead] includes progress through
+  /// books still open, which is what the reader wants to see as a total — but
+  /// averaging that over finished books would inflate the per-book figure.
+  final int pagesFinished;
   final int currentlyReading;
 
   /// The most-finished author (first listed author of each read book) and how
@@ -39,8 +45,8 @@ class InsightsStats {
 
   /// Mean pages per finished book, over the books that carry a page count.
   int get avgPagesPerBook {
-    if (booksRead == 0 || pagesRead == 0) return 0;
-    return (pagesRead / booksRead).round();
+    if (booksRead == 0 || pagesFinished == 0) return 0;
+    return (pagesFinished / booksRead).round();
   }
 
   /// Finished-books count per calendar month (index 0 = Jan). Meaningful when a
@@ -120,8 +126,11 @@ InsightsStats computeInsights(List<LibraryHit> hits, {int? year}) {
   // opened shouldn't inflate the number.
   final readIds = {for (final h in read) h.entry.id};
   var pages = 0;
+  var finishedPages = 0;
   for (final h in read) {
-    pages += h.book.pageCount ?? h.entry.currentPage ?? 0;
+    final p = h.book.pageCount ?? h.entry.currentPage ?? 0;
+    pages += p;
+    finishedPages += p;
   }
   for (final h in hits) {
     if (h.entry.status != 'reading' || readIds.contains(h.entry.id)) continue;
@@ -133,6 +142,7 @@ InsightsStats computeInsights(List<LibraryHit> hits, {int? year}) {
   return InsightsStats(
     booksRead: read.length,
     pagesRead: pages,
+    pagesFinished: finishedPages,
     currentlyReading: hits.where((h) => h.entry.status == 'reading').length,
     booksPerMonth: perMonth,
     pagesPerMonth: pagesMonth,
