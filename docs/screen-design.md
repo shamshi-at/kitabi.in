@@ -125,15 +125,19 @@ camera; everything else stays paper.
   (Layer 1) surfaced as a screen — not the fuller "author profile with bio and
   reviews" feature, which stays `[LATER]`.
 - **Notes become a journal, and nothing about them may block stopping the timer**
-  (designed 21 Jul 2026, mockups **N1–N4**). Personal notes stay exactly as
+  (designed 21 Jul 2026, mockups **N1–N5**). Personal notes stay exactly as
   private as rule 13 says, but stop being one overwritable blob per book. The
   way in is a **"✎ Note a thought" pill on the running watch face** (**N1**),
   sitting above Stop & log and never competing with it, carrying a count of the
   notes this sitting already holds — that count is the only way to know they
   exist without opening anything, and it's what makes the Skip copy believable
-  later. Tapping it captures a thought **without pausing the session** (**N2**;
-  the sheet says so outright — "the timer never stopped"), pre-tagged with the
-  page you're on. The stop sheet then grows *one* section listing what you
+  later. Tapping it opens **a page, not a sheet** (**N2**) — the scarce resource
+  while reading is *room to write*, and a sheet plus a keyboard is a slot. The
+  live clock stays pinned to the top of that page, so "the timer never paused"
+  is something the reader can *see* rather than a caption they have to trust.
+  Pages are optional, start as the one you're on, and widen to a **range**,
+  because a thought is usually about a passage rather than a point. The stop
+  sheet then grows *one* section listing what you
   already wrote plus room for a closing line, and its Skip says "your 2 notes
   are already saved" — because they are. That's the governing rule made
   concrete: a reader who just wants the timer off is gone in one tap with the
@@ -142,6 +146,11 @@ camera; everything else stays paper.
   that came from no sitting keeps its own place rather than being forced into a
   fake one. Private is stated once at the top and never contradicted — unlike a
   review there is no visibility toggle, because there is no other setting.
+  **Every note is editable from the history** (**N5**): tapping one in the
+  journal opens the same editor it was written in, with only the header swapped
+  — the live clock becomes the sitting it came from, which is the context you
+  need once the words stop explaining themselves. Editing never re-dates a
+  note, or the journal stops being a record and becomes a draft.
 - **Stopping the timer asks for one number, and makes it easy to be right**
   (designed 21 Jul 2026, mockups **R1–R3**). The moment after a stop is the only
   one where the reader is holding the book, so it's worth more than an

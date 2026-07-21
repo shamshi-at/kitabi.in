@@ -2558,50 +2558,55 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       and most sittings produce no notes at all.</p>
     </div>
 
-    <!-- N2. A note while reading -->
+    <!-- N2. The note page -->
     <div class="shot">
-      <div class="phone"><div class="scr" style="background:#17120C">
-        <div class="sbar" style="color:#EDE3D0"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
-        <div class="body flush" style="color:#EDE3D0;position:relative">
-          <div style="text-align:center;margin-top:10px">
-            <div class="sub" style="font-size:7.5px;letter-spacing:1.4px;color:#A9997F">SESSION IN PROGRESS</div>
-            <div class="h-serif" style="font-size:13px;margin-top:2px">Naalukettu</div>
-          </div>
-          <div style="margin:14px auto 0;width:132px;height:132px;border-radius:50%;border:1px solid #3A2F20;position:relative;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#241B12,#17120C)">
-            <div style="position:absolute;top:12px;left:50%;width:1.5px;height:44px;background:var(--gold);transform-origin:bottom center;transform:rotate(34deg)"></div>
-            <div style="text-align:center">
-              <div class="h-serif" style="font-size:24px;color:#EDE3D0">42:11</div>
-              <div class="sub" style="font-size:7px;color:#A9997F">elapsed</div>
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush">
+          <!-- the clock stays on screen: the promise made visible -->
+          <div style="background:#17120C;color:#EDE3D0;padding:9px 14px;display:flex;align-items:center;gap:9px">
+            <span style="font-size:12px;color:#8C7C64">✕</span>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="width:6px;height:6px;border-radius:50%;background:#E3B14C;display:inline-block"></span>
+                <span class="h-serif" style="font-size:15px">42:11</span>
+                <span class="sub" style="font-size:8px;color:#A9997F">still running</span>
+              </div>
+              <div class="sub" style="font-size:7.5px;color:#A9997F;margin-top:1px">Naalukettu · note 3 of this sitting</div>
             </div>
+            <span style="font-size:8.5px;font-weight:700;color:#E3B14C">Save</span>
           </div>
-          <div style="text-align:center;margin-top:9px"><span style="font-size:8px;background:#2A2114;color:var(--gold);border-radius:99px;padding:3px 10px">✦ In the zone — 42 min</span></div>
 
-          <!-- the note sheet, over the still-running face -->
-          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:18px 18px 0 0;padding:11px 14px 14px;color:var(--ink)">
-            <div style="width:30px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px"></div>
-            <div style="display:flex;align-items:baseline;justify-content:space-between">
-              <div class="h-serif" style="font-size:13px">A thought</div>
-              <span class="sub" style="font-size:8px">🔒 only you ever see this</span>
+          <div style="padding:12px 14px 0;flex:1;display:flex;flex-direction:column">
+            <div class="sub" style="font-size:7px;letter-spacing:1.2px">YOUR THOUGHT · 🔒 ONLY YOU</div>
+            <div class="card" style="margin-top:6px;padding:10px;background:#F6EEDC;border-color:#E8DCC0;flex:1">
+              <div style="font-size:10px;line-height:1.6;color:var(--ink)">The Malabar sections read like memory, not plot — he keeps circling the same courtyard, and every circle adds a name.<span style="border-left:1.5px solid var(--oxblood);margin-left:1px">&nbsp;</span></div>
             </div>
-            <div class="card" style="margin-top:8px;padding:9px;background:#F6EEDC;border-color:#E8DCC0;min-height:52px">
-              <div style="font-size:9.5px;line-height:1.5;color:var(--ink)">The Malabar sections read like memory, not plot — he keeps circling the same courtyard.</div>
+
+            <div class="sub" style="font-size:7px;letter-spacing:1.2px;margin:11px 0 5px">PAGES · OPTIONAL</div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 14px;font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--oxblood)">24</div>
+              <span class="sub" style="font-size:11px">→</span>
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 14px;font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--oxblood)">27</div>
+              <span class="sub" style="font-size:8px;flex:1;line-height:1.4">a passage, not a point</span>
+              <span class="chip" style="font-size:8px;color:var(--oxblood);border-color:var(--gold)">✕ single</span>
             </div>
-            <div style="display:flex;gap:5px;margin-top:8px;align-items:center">
-              <span class="chip" style="font-size:8px;background:var(--gold-soft);border:none;color:var(--ink)">p. 27 ✓</span>
-              <span class="sub" style="font-size:7.5px;flex:1;line-height:1.4">Tagged to the page you're on — tap to change</span>
+            <div class="sub" style="font-size:7.5px;margin-top:5px;line-height:1.45">Starts at the page you're on. Leave it, widen it to a range, or clear it — a thought doesn't have to live anywhere.</div>
+
+            <div style="margin-top:auto;margin-bottom:12px">
+              <div class="btn" style="padding:10px">Save &amp; keep reading</div>
+              <div class="sub" style="font-size:7.5px;text-align:center;margin-top:7px">Saved to this book only you can read. The timer never paused.</div>
             </div>
-            <div style="display:flex;gap:7px;margin-top:10px">
-              <div class="btn" style="flex:1;padding:9px;font-size:9.5px">Save &amp; keep reading</div>
-            </div>
-            <div class="sub" style="font-size:7.5px;text-align:center;margin-top:7px">The timer never stopped — it's still running behind this.</div>
           </div>
         </div>
       </div></div>
-      <p class="cap"><b>N2 · A thought, mid-session</b> What <b>N1</b>'s pill opens. The clock keeps
-      sweeping behind the sheet and the button says so — a note must
-      never cost you the session you're timing. It opens straight into the field with the keyboard
-      up, because a thought you have to navigate to is a thought you lose. The page you're on is
-      pre-tagged, so the note knows where it happened without you typing anything.</p>
+      <p class="cap"><b>N2 · The note page</b> A page, not a sheet — because the scarce thing while
+      reading isn't speed of entry, it's <i>room to write</i>: a sheet plus a keyboard leaves a slot,
+      and thoughts worth keeping run longer than that. The clock stays pinned at the top, live, so
+      "the timer never paused" is something you can <i>see</i> rather than a caption you have to
+      believe. Pages are optional and start as the one you're on; <b>→</b> widens them to a range,
+      because a thought is usually about a passage. Still one tap in from <b>N1</b> — the weight
+      moved to the writing, not the getting there.</p>
     </div>
 
     <!-- N3. Stopping, with notes -->
@@ -2680,7 +2685,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
             <div style="font-size:9.5px;line-height:1.5">Lent to mom — she folds pages.</div>
           </div>
 
-          <div style="margin-top:12px;display:flex;gap:6px">
+          <div class="sub" style="font-size:7.5px;margin-top:10px;text-align:center;line-height:1.45">Tap any note to open and edit it.</div>
+          <div style="margin-top:8px;display:flex;gap:6px">
             <div class="btn soft" style="flex:1;padding:8px;font-size:9px;border:1px solid var(--line);color:var(--oxblood)">＋ Add a note</div>
             <div class="btn soft" style="flex:1;padding:8px;font-size:9px;border:1px solid var(--line)">⇪ Export</div>
           </div>
@@ -2688,10 +2694,58 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       </div></div>
       <p class="cap"><b>N4 · The journal</b> The same slip-paper the book page already uses for
       notes, now grouped by the sitting that produced them — the session header <i>is</i> the
-      timestamp, so nothing needs a date of its own. A note that never came from a sitting (the
+      timestamp, so nothing needs a date of its own. <b>Every note is a door</b>: tapping one opens
+      the same editor it was written in (<b>N5</b>). A note that never came from a sitting (the
       classic "lent to mom, she folds pages") keeps its place at the bottom rather than being
       forced into a fake session. Private is stated once, at the top, and never contradicted:
       there is no visibility toggle here, because unlike a review there is no other setting.</p>
+    </div>
+
+    <!-- N5. Editing a note from the history -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush">
+          <!-- same page as N2; the header swaps the live clock for provenance -->
+          <div style="background:var(--paper-deep);padding:9px 14px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line)">
+            <span style="font-size:12px;color:var(--ink-soft)">←</span>
+            <div style="flex:1">
+              <div style="font-size:10.5px;font-weight:600">Written on 17 Jul</div>
+              <div class="sub" style="font-size:7.5px;margin-top:1px">From your sitting · 1m · p. 20 → 25</div>
+            </div>
+            <span style="font-size:8.5px;font-weight:700;color:var(--oxblood)">Save</span>
+          </div>
+
+          <div style="padding:12px 14px 0;flex:1;display:flex;flex-direction:column">
+            <div class="sub" style="font-size:7px;letter-spacing:1.2px">YOUR THOUGHT · 🔒 ONLY YOU</div>
+            <div class="card" style="margin-top:6px;padding:10px;background:#F6EEDC;border-color:#E8DCC0;flex:1">
+              <div style="font-size:10px;line-height:1.6;color:var(--ink)">Started slow. The house itself is the main character.<span style="border-left:1.5px solid var(--oxblood);margin-left:1px">&nbsp;</span></div>
+            </div>
+
+            <div class="sub" style="font-size:7px;letter-spacing:1.2px;margin:11px 0 5px">PAGES · OPTIONAL</div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 14px;font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--oxblood)">22</div>
+              <span class="chip" style="font-size:8px;color:var(--oxblood);border-color:var(--gold)">→ range</span>
+              <span class="sub" style="font-size:8px;flex:1;line-height:1.4">clear it to unpin the note</span>
+            </div>
+
+            <div class="card" style="margin-top:12px;padding:9px 10px;background:var(--paper-deep)">
+              <div class="sub" style="font-size:7.5px;line-height:1.5">Editing the words never moves the note — it stays under the sitting it was written in, so the journal keeps telling the truth about when you thought it.</div>
+            </div>
+
+            <div style="margin-top:auto;margin-bottom:12px">
+              <div class="btn" style="padding:10px">Save changes</div>
+              <div style="text-align:center;font-size:8.5px;color:var(--ink-soft);margin-top:9px">Delete this note</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>N5 · Editing from the history</b> The <i>same page</i> as <b>N2</b> — one
+      editor, whether the thought is thirty seconds or three weeks old. Only the header changes:
+      the live clock becomes the sitting it came from, which is the context you need when the words
+      no longer explain themselves. Editing never re-dates a note; it stays where it was written,
+      or the journal stops being a record and becomes a draft. Delete is present but quiet, at the
+      bottom, away from Save.</p>
     </div>
 
   </div>
