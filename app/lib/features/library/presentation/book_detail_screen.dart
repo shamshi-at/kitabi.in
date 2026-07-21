@@ -1909,13 +1909,15 @@ class _ReadingCard extends ConsumerWidget {
           SizedBox(height: 9),
           // Started + inline edit.
           Row(children: [
+            // Only the real start date earns a line. It used to fall back to
+            // "Not started", which now sits directly under "p. 27 of 200" and
+            // reads as a contradiction — it only ever meant "no start date on
+            // file", and Edit is right there to put one on.
             Expanded(
-              child: Text(
-                entry.startDate != null
-                    ? l10n.bookStartedOn(_fmtDate(entry.startDate!))
-                    : l10n.bookNotStarted,
-                style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
-              ),
+              child: entry.startDate != null
+                  ? Text(l10n.bookStartedOn(_fmtDate(entry.startDate!)),
+                      style: TextStyle(fontSize: 11, color: AppColors.inkSoft))
+                  : const SizedBox.shrink(),
             ),
             GestureDetector(
               onTap: () => _editProgress(context, ref),
