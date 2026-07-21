@@ -334,6 +334,18 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   post-stop mutation through those captured objects, never `ref`. Regression
   test (`quick_stop_test.dart`) reproduces it with a child that unmounts on stop
   — it fails on the old code, passes on the fix.
+- **A `BoxDecoration` with `borderRadius` plus a non-uniform `Border` (e.g. a
+  thicker colored left rule) throws at paint time, not at build/analyze time —
+  the widget renders as a blank box and only the device log says why.** Bit the
+  translation flows (21 Jul 2026): four "left accent rule" cards copied from the
+  mockups used `Border(left: BorderSide(gold, 3), top/right/bottom: line)` +
+  `borderRadius` — `flutter analyze` and all 121 widget tests stayed green, and
+  the cards drew as empty white rectangles on the emulator ("A borderRadius can
+  only be given on borders with uniform colors"). The mockup look is built
+  instead with a uniform `Border.all(line)` + `clipBehavior: Clip.antiAlias` and
+  a 3px `Container` strip as the row's first child. This is exactly the
+  class of bug the on-device E2E pass exists to catch — screenshots, not tests,
+  found it.
 - **`qlmanage -t` flattens transparency onto WHITE — never use it to raster an
   asset whose alpha matters.** `assets/icon/app_icon_foreground.png` (the Android
   adaptive-icon foreground) was generated that way, so the "transparent" layer was

@@ -868,19 +868,19 @@ class _OriginalCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
+          // Left accent rule as an inner clipped bar — borderRadius plus a
+          // non-uniform Border throws at paint time.
           child: Container(
-            padding: EdgeInsets.all(9),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              border: Border(
-                left: BorderSide(color: AppColors.gold, width: 3),
-                top: BorderSide(color: AppColors.line),
-                right: BorderSide(color: AppColors.line),
-                bottom: BorderSide(color: AppColors.line),
-              ),
+              border: Border.all(color: AppColors.line),
             ),
+            clipBehavior: Clip.antiAlias,
+            padding: EdgeInsets.only(right: 9),
             child: Row(
               children: [
+                Container(width: 3, height: 53, color: AppColors.gold),
+                SizedBox(width: 9),
                 Icon(Icons.swap_horiz, size: 16, color: AppColors.oxblood),
                 SizedBox(width: 8),
                 TypesetCover(

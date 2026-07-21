@@ -2898,26 +2898,29 @@ class _TranslatedFromField extends StatelessWidget {
       children: [
         Text(l10n.formFieldTranslatedFrom, style: _fieldLabelStyle),
         SizedBox(height: 4),
+        // Left accent rule as an inner clipped bar — borderRadius plus a
+        // non-uniform Border throws at paint time.
         Container(
-          padding: EdgeInsets.all(9),
           decoration: BoxDecoration(
             color: AppColors.card,
             borderRadius: BorderRadius.circular(10),
-            border: Border(
-              left: BorderSide(color: AppColors.gold, width: 3),
-              top: BorderSide(color: AppColors.line),
-              right: BorderSide(color: AppColors.line),
-              bottom: BorderSide(color: AppColors.line),
-            ),
+            border: Border.all(color: AppColors.line),
           ),
+          clipBehavior: Clip.antiAlias,
+          padding: EdgeInsets.only(right: 9),
           child: Row(
             children: [
-              TypesetCover(
-                title: original['title'] as String? ?? '',
-                author: authors.isNotEmpty ? authors.first['name'] as String? : null,
-                coverUrl: edition?['cover_url'] as String?,
-                width: 26,
-                height: 38,
+              Container(width: 3, height: 56, color: AppColors.gold),
+              SizedBox(width: 9),
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 9),
+                child: TypesetCover(
+                  title: original['title'] as String? ?? '',
+                  author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+                  coverUrl: edition?['cover_url'] as String?,
+                  width: 26,
+                  height: 38,
+                ),
               ),
               SizedBox(width: 10),
               Expanded(
@@ -3053,40 +3056,46 @@ class _ForkSheet extends StatelessWidget {
           child: InkWell(
             onTap: () => Navigator.of(context).pop(value),
             borderRadius: BorderRadius.circular(11),
+            // Left accent rule as an inner clipped bar — borderRadius plus a
+            // non-uniform Border throws at paint time.
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 11, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(11),
-                border: Border(
-                  left: BorderSide(color: accent, width: 3),
-                  top: BorderSide(color: AppColors.line),
-                  right: BorderSide(color: AppColors.line),
-                  bottom: BorderSide(color: AppColors.line),
-                ),
+                border: Border.all(color: AppColors.line),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
-                        ),
-                        if (help != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              help,
-                              style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+              clipBehavior: Clip.antiAlias,
+              child: IntrinsicHeight(
+                child: Row(
+                  children: [
+                    Container(width: 3, color: accent),
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
                             ),
-                          ),
-                      ],
+                            if (help != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  help,
+                                  style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                  Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

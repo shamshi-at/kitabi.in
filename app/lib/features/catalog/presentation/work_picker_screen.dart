@@ -286,34 +286,45 @@ class _AddOriginalCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
+        // A borderRadius + non-uniform Border is invalid in Flutter (throws at
+        // paint time), so the mockup's left accent rule is an inner clipped
+        // bar instead — same look, uniform border.
         child: Container(
-          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border(
-              left: BorderSide(color: AppColors.oxblood, width: 3),
-              top: BorderSide(color: AppColors.line),
-              right: BorderSide(color: AppColors.line),
-              bottom: BorderSide(color: AppColors.line),
-            ),
+            border: Border.all(color: AppColors.line),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.workPickerAddOriginal,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.oxblood,
+          clipBehavior: Clip.antiAlias,
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                Container(width: 3, color: AppColors.oxblood),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.workPickerAddOriginal,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.oxblood,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          l10n.workPickerAddOriginalHelp,
+                          style:
+                              TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                l10n.workPickerAddOriginalHelp,
-                style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.4),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
