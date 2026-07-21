@@ -2506,8 +2506,6 @@
   "@searchNewInCatalogue": {"description": "Header for the newest-arrivals row when no reading language is known — the fallback for the new-in-language row"},
   "searchNewInCatalogueNote": "Newest additions · set your reading languages to narrow this",
   "@searchNewInCatalogueNote": {"description": "Caption under the unfiltered newest-arrivals row, pointing at the profile setting that filters it"},
-  "pickerSearchHint": "Search",
-  "@pickerSearchHint": {"description": "Search field hint in the Type/Genre picker sheet"},
   "pickerGenreTitle": "Genre",
   "@pickerGenreTitle": {"description": "Title of the genre picker sheet — the plain noun, not the shouted field label"},
   "pickerTypeTitle": "Type",

@@ -2768,9 +2768,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Newest additions · set your reading languages to narrow this';
 
   @override
-  String get pickerSearchHint => 'Search';
-
-  @override
   String get pickerGenreTitle => 'Genre';
 
   @override

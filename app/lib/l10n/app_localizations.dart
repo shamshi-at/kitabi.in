@@ -4726,12 +4726,6 @@ abstract class AppLocalizations {
   /// **'Newest additions · set your reading languages to narrow this'**
   String get searchNewInCatalogueNote;
 
-  /// Search field hint in the Type/Genre picker sheet
-  ///
-  /// In en, this message translates to:
-  /// **'Search'**
-  String get pickerSearchHint;
-
   /// Title of the genre picker sheet — the plain noun, not the shouted field label
   ///
   /// In en, this message translates to:
