@@ -124,6 +124,20 @@ camera; everything else stays paper.
   same "+" add affordance as search. This is the catalog's existing linkability
   (Layer 1) surfaced as a screen — not the fuller "author profile with bio and
   reviews" feature, which stays `[LATER]`.
+- **Notes become a journal, and nothing about them may block stopping the timer**
+  (designed 21 Jul 2026, mockups **N1–N3**). Personal notes stay exactly as
+  private as rule 13 says, but stop being one overwritable blob per book: a
+  quiet ✎ on the running watch face captures a thought **without pausing the
+  session** (the sheet says so — "the timer never stopped"), pre-tagged with the
+  page you're on. The stop sheet then grows *one* section listing what you
+  already wrote plus room for a closing line, and its Skip says "your 2 notes
+  are already saved" — because they are. That's the governing rule made
+  concrete: a reader who just wants the timer off is gone in one tap with the
+  sitting and every note intact. On the book page (**N3**) notes group under the
+  sitting that produced them, so the session header *is* the timestamp; a note
+  that came from no sitting keeps its own place rather than being forced into a
+  fake one. Private is stated once at the top and never contradicted — unlike a
+  review there is no visibility toggle, because there is no other setting.
 - **Stopping the timer asks for one number, and makes it easy to be right**
   (designed 21 Jul 2026, mockups **R1–R3**). The moment after a stop is the only
   one where the reader is holding the book, so it's worth more than an
