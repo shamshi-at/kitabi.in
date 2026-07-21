@@ -894,7 +894,10 @@ class _SessionNotesSheet extends StatelessWidget {
                             builder: (_) => NotePage(
                               libraryEntryId: libraryEntryId,
                               existing: note,
-                              startReadOnly: true,
+                              // Mid-session you're still writing, so this opens
+                              // straight into the editor. Read-only is for the
+                              // book page, where you're revisiting old thoughts
+                              // (owner report, 21 Jul 2026).
                             ),
                           ),
                         );
