@@ -3262,23 +3262,37 @@ class _ChipRowHeader extends StatelessWidget {
       textBaseline: TextBaseline.alphabetic,
       children: [
         Expanded(child: Text(label, style: _fieldLabelStyle)),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onOpenAll,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.formPickerAll(total),
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.oxblood,
-                ),
+        // Reads as a control, not a caption (owner report, 21 Jul 2026: the
+        // bare "All 11 ⌕" didn't look clickable). A tinted pill with a border
+        // is the same affordance language the chips beside it already use.
+        Material(
+          color: AppColors.goldSoft,
+          borderRadius: BorderRadius.circular(99),
+          child: InkWell(
+            onTap: onOpenAll,
+            borderRadius: BorderRadius.circular(99),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: AppColors.gold),
               ),
-              SizedBox(width: 3),
-              Icon(Icons.search, size: 14, color: AppColors.oxblood),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.search, size: 13, color: AppColors.oxblood),
+                  SizedBox(width: 4),
+                  Text(
+                    l10n.formPickerAll(total),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.oxblood,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],

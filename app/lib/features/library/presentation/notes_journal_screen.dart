@@ -207,7 +207,11 @@ class _NoteTile extends StatelessWidget {
           // N5 — every note is a door back into the editor it was written in.
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<bool>(
-              builder: (_) => NotePage(libraryEntryId: entryId, existing: note),
+              builder: (_) => NotePage(
+                libraryEntryId: entryId,
+                existing: note,
+                startReadOnly: true,
+              ),
             ),
           ),
           child: Container(

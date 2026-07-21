@@ -3472,6 +3472,12 @@ abstract class AppLocalizations {
   /// **'Editing the words never moves the note — it stays under the sitting it was written in, so the journal keeps telling the truth about when you thought it.'**
   String get noteEditNeverMoves;
 
+  /// Turns the read-only note view into the editor
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get noteEdit;
+
   /// Quiet destructive action at the foot of the note editor
   ///
   /// In en, this message translates to:

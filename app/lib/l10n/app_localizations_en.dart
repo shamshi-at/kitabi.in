@@ -2035,6 +2035,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Editing the words never moves the note — it stays under the sitting it was written in, so the journal keeps telling the truth about when you thought it.';
 
   @override
+  String get noteEdit => 'Edit';
+
+  @override
   String get noteDelete => 'Delete this note';
 
   @override

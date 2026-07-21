@@ -530,7 +530,11 @@ class _StopNoteRow extends StatelessWidget {
     return InkWell(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<bool>(
-          builder: (_) => NotePage(libraryEntryId: entryId, existing: note),
+          builder: (_) => NotePage(
+                libraryEntryId: entryId,
+                existing: note,
+                startReadOnly: true,
+              ),
         ),
       ),
       child: Container(

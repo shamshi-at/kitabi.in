@@ -204,7 +204,25 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// N1 -> N2. Opens the note page without touching the session: the clock
   /// keeps running, and this method deliberately has no stop/pause path.
   Future<void> _openNote(ActiveSession active) async {
-    final count = ref.read(sessionNotesProvider(active.id)).valueOrNull?.length ?? 0;
+    final existing = ref.read(sessionNotesProvider(active.id)).valueOrNull ?? const [];
+    // With notes already in this sitting, going straight to a blank page hides
+    // them — there was no way back to fix a thought you'd just jotted (owner
+    // report, 21 Jul 2026). Show what's there first; writing another is one tap.
+    if (existing.isNotEmpty) {
+      final wantsNew = await showModalBottomSheet<bool>(
+        context: context,
+        backgroundColor: AppColors.paper,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => _SessionNotesSheet(
+          notes: existing,
+          libraryEntryId: active.libraryEntryId,
+        ),
+      );
+      if (wantsNew != true || !mounted) return;
+    }
+    final count = existing.length;
     await Navigator.of(context).push(
       MaterialPageRoute<bool>(
         builder: (_) => NotePage(
@@ -808,6 +826,121 @@ class _StatColumn extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+
+/// The notes already written in this sitting, reachable from the timer's pill.
+/// Each opens read-only (it's a re-read, not an edit); "Write another" starts
+/// a fresh one. The session keeps running throughout — nothing here stops it.
+class _SessionNotesSheet extends StatelessWidget {
+  const _SessionNotesSheet({required this.notes, required this.libraryEntryId});
+
+  final List<ReadingNote> notes;
+  final String libraryEntryId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 32,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.notesSectionThisSitting(notes.length),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.1,
+                color: AppColors.inkSoft,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: notes.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 6),
+                itemBuilder: (context, i) {
+                  final note = notes[i];
+                  final pages = note.pageStart == null
+                      ? null
+                      : (note.pageEnd == null
+                          ? 'p. ${note.pageStart}'
+                          : 'p. ${note.pageStart}-${note.pageEnd}');
+                  return Material(
+                    color: const Color(0xFFF6EEDC),
+                    borderRadius: BorderRadius.circular(11),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(11),
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<bool>(
+                            builder: (_) => NotePage(
+                              libraryEntryId: libraryEntryId,
+                              existing: note,
+                              startReadOnly: true,
+                            ),
+                          ),
+                        );
+                        if (context.mounted) Navigator.of(context).pop(false);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(11),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(11),
+                          border: Border.all(color: const Color(0xFFE8DCC0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(note.body, style: const TextStyle(fontSize: 13, height: 1.5)),
+                            if (pages != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                pages,
+                                style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(true),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.noteAThought),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.oxblood,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

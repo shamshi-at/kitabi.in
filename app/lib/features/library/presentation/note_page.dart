@@ -34,6 +34,7 @@ class NotePage extends ConsumerStatefulWidget {
     this.currentPage,
     this.noteIndex,
     this.sessionSummary,
+    this.startReadOnly = false,
   });
 
   final String libraryEntryId;
@@ -55,6 +56,11 @@ class NotePage extends ConsumerStatefulWidget {
   /// Pre-formatted provenance for N5's header.
   final String? sessionSummary;
 
+  /// Opening an existing note from the journal is *reading* it, not editing it
+  /// — a keyboard shouldn't leap up over a thought you came back to re-read
+  /// (owner report, 21 Jul 2026). Edit is one tap away.
+  final bool startReadOnly;
+
   @override
   ConsumerState<NotePage> createState() => _NotePageState();
 }
@@ -66,6 +72,7 @@ class _NotePageState extends ConsumerState<NotePage> {
   Timer? _clock;
   bool _range = false;
   bool _saving = false;
+  late bool _reading = widget.startReadOnly && widget.existing != null;
 
   bool get _isEditing => widget.existing != null;
   bool get _isLive => widget.sessionStartedAt != null && !_isEditing;
@@ -182,6 +189,9 @@ class _NotePageState extends ConsumerState<NotePage> {
               subtitle: widget.sessionSummary,
               onBack: () => Navigator.of(context).pop(),
               onSave: _saving ? null : _save,
+              // Reading: the action is Edit. Editing: it's Save.
+              reading: _reading,
+              onEdit: () => setState(() => _reading = false),
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -217,7 +227,8 @@ class _NotePageState extends ConsumerState<NotePage> {
                       ),
                       child: TextField(
                         controller: _body,
-                        autofocus: true,
+                        autofocus: !widget.startReadOnly,
+                        readOnly: _reading,
                         maxLines: null,
                         keyboardType: TextInputType.multiline,
                         textCapitalization: TextCapitalization.sentences,
@@ -276,7 +287,7 @@ class _NotePageState extends ConsumerState<NotePage> {
                       l10n.notePagesHelp,
                       style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.45),
                     ),
-                    if (_isEditing) ...[
+                    if (_isEditing && !_reading) ...[
                       const SizedBox(height: 14),
                       Container(
                         padding: const EdgeInsets.all(10),
@@ -295,6 +306,7 @@ class _NotePageState extends ConsumerState<NotePage> {
                       ),
                     ],
                     const SizedBox(height: 18),
+                    if (!_reading)
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -316,7 +328,7 @@ class _NotePageState extends ConsumerState<NotePage> {
                         style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
                       ),
                     ],
-                    if (_isEditing) ...[
+                    if (_isEditing && !_reading) ...[
                       const SizedBox(height: 12),
                       Center(
                         child: GestureDetector(
@@ -436,12 +448,16 @@ class _PastHeader extends StatelessWidget {
     required this.subtitle,
     required this.onBack,
     required this.onSave,
+    this.reading = false,
+    this.onEdit,
   });
 
   final String title;
   final String? subtitle;
   final VoidCallback onBack;
   final VoidCallback? onSave;
+  final bool reading;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -478,15 +494,24 @@ class _PastHeader extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: onSave,
+            onTap: reading ? onEdit : onSave,
             behavior: HitTestBehavior.opaque,
-            child: Text(
-              l10n.bookSave,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.oxblood,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (reading) ...[
+                  Icon(Icons.edit_outlined, size: 14, color: AppColors.oxblood),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  reading ? l10n.noteEdit : l10n.bookSave,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.oxblood,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -495,17 +520,46 @@ class _PastHeader extends StatelessWidget {
   }
 }
 
-class _PageBox extends StatelessWidget {
+class _PageBox extends StatefulWidget {
   const _PageBox({required this.controller});
 
   final TextEditingController controller;
+
+  @override
+  State<_PageBox> createState() => _PageBoxState();
+}
+
+class _PageBoxState extends State<_PageBox> {
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Tapping a page number means "this is wrong, here's the right one" —
+    // select it all so typing replaces rather than appends. Same rule the
+    // stop sheet's big numeral follows.
+    _focus.addListener(() {
+      if (!_focus.hasFocus) return;
+      widget.controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.controller.text.length,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 66,
       child: TextField(
-        controller: controller,
+        controller: widget.controller,
+        focusNode: _focus,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         textAlign: TextAlign.center,

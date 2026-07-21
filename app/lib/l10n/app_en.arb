@@ -1898,6 +1898,8 @@
   },
   "noteEditNeverMoves": "Editing the words never moves the note — it stays under the sitting it was written in, so the journal keeps telling the truth about when you thought it.",
   "@noteEditNeverMoves": {"description": "Explains that editing does not re-date a note"},
+  "noteEdit": "Edit",
+  "@noteEdit": {"description": "Turns the read-only note view into the editor"},
   "noteDelete": "Delete this note",
   "@noteDelete": {"description": "Quiet destructive action at the foot of the note editor"},
   "noteDeleteConfirm": "Delete this note?",
