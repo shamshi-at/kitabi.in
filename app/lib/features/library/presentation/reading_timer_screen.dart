@@ -10,11 +10,14 @@ import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
+import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
 import '../reading_progress.dart';
+import 'note_page.dart';
 import 'session_page_entry.dart';
 
 /// Full-screen reading session — pushed the moment a session starts (from
@@ -198,9 +201,29 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     if (mounted) context.pop();
   }
 
+  /// N1 -> N2. Opens the note page without touching the session: the clock
+  /// keeps running, and this method deliberately has no stop/pause path.
+  Future<void> _openNote(ActiveSession active) async {
+    final count = ref.read(sessionNotesProvider(active.id)).valueOrNull?.length ?? 0;
+    await Navigator.of(context).push(
+      MaterialPageRoute<bool>(
+        builder: (_) => NotePage(
+          libraryEntryId: active.libraryEntryId,
+          bookTitle: widget.title,
+          sessionId: active.id,
+          sessionStartedAt: active.startedAt,
+          currentPage: widget.currentPage,
+          noteIndex: count + 1,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final active = ref.watch(activeSessionProvider);
+    final sessionNotes =
+        active == null ? const <ReadingNote>[] : (ref.watch(sessionNotesProvider(active.id)).valueOrNull ?? const []);
     // Cold-start restore case: activeSessionProvider hydrates from disk
     // asynchronously, so it can still be null on the first build or two —
     // seed the hand as soon as it resolves instead of leaving it at 0.
@@ -233,6 +256,8 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
                 startedAt: active?.startedAt,
                 hand: _hand,
                 onStop: _stop,
+                onNote: active == null ? null : () => _openNote(active),
+                noteCount: sessionNotes.length,
               )
               : _LoggedFace(
                   title: widget.title,
@@ -259,6 +284,8 @@ class _RunningFace extends StatelessWidget {
     required this.startedAt,
     required this.hand,
     required this.onStop,
+    required this.onNote,
+    required this.noteCount,
   });
 
   final String? title;
@@ -266,6 +293,12 @@ class _RunningFace extends StatelessWidget {
   final DateTime? startedAt;
   final AnimationController hand;
   final VoidCallback onStop;
+
+  /// Opens the note page (N1 -> N2). Null hides the pill.
+  final VoidCallback? onNote;
+
+  /// How many notes this sitting already holds.
+  final int noteCount;
 
   @override
   Widget build(BuildContext context) {
@@ -478,6 +511,53 @@ class _RunningFace extends StatelessWidget {
               ),
             ),
           ),
+          // N1 — the way into a note, quiet and above Stop & log so it never
+          // competes with it. The count is the only way to see the sitting
+          // already holds notes without opening anything, and it's what makes
+          // the stop sheet's "already saved" believable.
+          if (onNote != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Center(
+                child: OutlinedButton.icon(
+                  onPressed: onNote,
+                  icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFFE3B14C)),
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.noteAThought,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFEDE3D0),
+                        ),
+                      ),
+                      if (noteCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3A2F20),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            '$noteCount',
+                            style: const TextStyle(fontSize: 10.5, color: Color(0xFFCFC1A6)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: const Color(0xFF221A11),
+                    side: const BorderSide(color: Color(0xFF3A2F20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 22),
             child: SizedBox(

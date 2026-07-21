@@ -1979,6 +1979,108 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get noteAThought => 'Note a thought';
+
+  @override
+  String get noteStillRunning => 'still running';
+
+  @override
+  String noteOfThisSitting(String book, int n) {
+    return '$book · note $n of this sitting';
+  }
+
+  @override
+  String get noteYourThought => 'Your thought · only you';
+
+  @override
+  String get noteHint => 'What are you thinking?';
+
+  @override
+  String get notePagesLabel => 'Pages · optional';
+
+  @override
+  String get noteAddRange => 'range';
+
+  @override
+  String get noteSingle => 'single';
+
+  @override
+  String get notePagesHelp =>
+      'Starts at the page you\'re on. Leave it, widen it to a range, or clear it — a thought doesn\'t have to live anywhere.';
+
+  @override
+  String get noteSaveKeepReading => 'Save & keep reading';
+
+  @override
+  String get noteSaveChanges => 'Save changes';
+
+  @override
+  String get noteTimerNeverPaused =>
+      'Saved to this book only you can read. The timer never paused.';
+
+  @override
+  String noteWrittenOn(String date) {
+    return 'Written on $date';
+  }
+
+  @override
+  String noteFromSitting(String duration, int from, int to) {
+    return 'From your sitting · $duration · p. $from to $to';
+  }
+
+  @override
+  String get noteEditNeverMoves =>
+      'Editing the words never moves the note — it stays under the sitting it was written in, so the journal keeps telling the truth about when you thought it.';
+
+  @override
+  String get noteDelete => 'Delete this note';
+
+  @override
+  String get noteDeleteConfirm => 'Delete this note?';
+
+  @override
+  String get notesTitle => 'Your notes';
+
+  @override
+  String get notesAlwaysPrivate => 'always private';
+
+  @override
+  String notesSummary(int notes, int sittings) {
+    return '$notes notes across $sittings sittings';
+  }
+
+  @override
+  String notesSessionHeader(String date, String duration) {
+    return '$date · $duration';
+  }
+
+  @override
+  String get notesNoSitting => 'Not from a sitting';
+
+  @override
+  String get notesTapToEdit => 'Tap any note to open and edit it.';
+
+  @override
+  String get notesAdd => 'Add a note';
+
+  @override
+  String get notesEmpty =>
+      'No notes yet. Anything you jot while reading lands here.';
+
+  @override
+  String notesSectionThisSitting(int n) {
+    return 'Notes from this sitting · $n';
+  }
+
+  @override
+  String get notesClosingThought => 'Add a closing thought…';
+
+  @override
+  String stopSkipNotesSafe(int n) {
+    return 'Skip — your $n notes are already saved';
+  }
+
+  @override
   String get stopWhereDidYouGet => 'Where did you get to?';
 
   @override

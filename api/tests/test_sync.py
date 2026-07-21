@@ -685,3 +685,185 @@ async def test_update_repointing_at_another_users_entry_is_rejected(
     result = resp.json()["results"][0]
     assert result["status"] == "rejected"
     assert result["code"] == "invalid_reference"
+
+
+async def test_push_reading_note_and_pull_reflects_it(client):
+    """A note is the third Layer-2 thing hanging off a library entry, and the
+    whole point of the feature is that it reaches the reader's other devices —
+    so the round-trip is the test that matters."""
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    entry_op = _op("library_entries", entry_id, "create", {"edition_id": edition_id})
+    session_id = str(uuid.uuid4())
+    session_op = _op(
+        "reading_sessions",
+        session_id,
+        "create",
+        {
+            "library_entry_id": entry_id,
+            "started_at": "2026-07-21T20:00:00Z",
+            "ended_at": "2026-07-21T20:42:00Z",
+            "duration_seconds": 2520,
+            "page_start": 24,
+        },
+    )
+    note_id = str(uuid.uuid4())
+    note_op = _op(
+        "reading_notes",
+        note_id,
+        "create",
+        {
+            "library_entry_id": entry_id,
+            "session_id": session_id,
+            "body": "The Malabar sections read like memory, not plot.",
+            "page_start": 24,
+            "page_end": 27,
+        },
+    )
+    resp = await client.post("/sync/push", json={"ops": [entry_op, session_op, note_op]})
+    assert resp.status_code == 200, resp.text
+    assert [r["status"] for r in resp.json()["results"]] == ["applied"] * 3
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    note = next(c for c in pulled.json()["changes"] if c["entity"] == "reading_notes")
+    assert note["data"]["body"] == "The Malabar sections read like memory, not plot."
+    assert note["data"]["session_id"] == session_id
+    # The range survives — a note about a passage, not a point.
+    assert note["data"]["page_start"] == 24
+    assert note["data"]["page_end"] == 27
+
+
+async def test_reading_note_without_a_sitting_or_pages_is_fine(client):
+    """ "Lent to mom, she folds pages" belongs to the book, not to any stretch
+    of reading — session and pages are all optional."""
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    entry_op = _op("library_entries", entry_id, "create", {"edition_id": edition_id})
+    note_op = _op(
+        "reading_notes",
+        str(uuid.uuid4()),
+        "create",
+        {"library_entry_id": entry_id, "body": "Lent to mom - she folds pages."},
+    )
+    resp = await client.post("/sync/push", json={"ops": [entry_op, note_op]})
+    assert [r["status"] for r in resp.json()["results"]] == ["applied", "applied"]
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    note = next(c for c in pulled.json()["changes"] if c["entity"] == "reading_notes")
+    assert note["data"]["session_id"] is None
+    assert note["data"]["page_start"] is None
+
+
+async def test_reading_note_edit_and_delete_round_trip(client):
+    """Editing must change the words without moving the note off its sitting,
+    and a delete is a soft delete like every other Layer-2 row."""
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    note_id = str(uuid.uuid4())
+    await client.post(
+        "/sync/push",
+        json={
+            "ops": [
+                _op("library_entries", entry_id, "create", {"edition_id": edition_id}),
+                _op(
+                    "reading_notes",
+                    note_id,
+                    "create",
+                    {"library_entry_id": entry_id, "body": "first thought", "page_start": 22},
+                ),
+            ]
+        },
+    )
+
+    edit = _op("reading_notes", note_id, "update", {"body": "a better thought"})
+    resp = await client.post("/sync/push", json={"ops": [edit]})
+    assert resp.json()["results"][0]["status"] == "applied"
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    note = next(c for c in pulled.json()["changes"] if c["entity"] == "reading_notes")
+    assert note["data"]["body"] == "a better thought"
+    assert note["data"]["page_start"] == 22  # untouched by the edit
+
+    delete = _op("reading_notes", note_id, "delete", {})
+    resp = await client.post("/sync/push", json={"ops": [delete]})
+    assert resp.json()["results"][0]["status"] == "applied"
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    note = next(c for c in pulled.json()["changes"] if c["entity"] == "reading_notes")
+    # Soft delete (rule 3) — the row still pulls, carrying its tombstone, so
+    # every other device knows to drop it.
+    assert note["data"]["deleted_at"] is not None
+
+
+async def test_reading_note_on_another_users_entry_is_rejected(client, db_sessionmaker, user_b):
+    """Notes are private. A crafted create must not be able to hang one off
+    someone else's library entry."""
+    import uuid as _uuid
+
+    _, edition_id = await _seed_edition(client)
+    foreign_entry = str(_uuid.uuid4())
+    async with db_sessionmaker() as session:
+        await session.execute(
+            text(
+                "INSERT INTO library_entries (id, user_id, edition_id, status, is_favorite,"
+                " created_at, updated_at) VALUES (:id, :uid, :ed, 'pending', false, now(), now())"
+            ),
+            {"id": foreign_entry, "uid": user_b["id"], "ed": edition_id},
+        )
+        await session.commit()
+
+    op = _op(
+        "reading_notes",
+        str(_uuid.uuid4()),
+        "create",
+        {"library_entry_id": foreign_entry, "body": "not mine to write on"},
+    )
+    resp = await client.post("/sync/push", json={"ops": [op]})
+    result = resp.json()["results"][0]
+    assert result["status"] == "rejected"
+    assert result["code"] == "invalid_reference"
+
+
+async def test_reading_note_citing_another_users_session_is_rejected(
+    client, db_sessionmaker, user_b
+):
+    """The note's own entry can be legitimately owned while `session_id` points
+    at a stranger's sitting — the FK proves existence, not ownership."""
+    import uuid as _uuid
+
+    _, edition_id = await _seed_edition(client)
+    # A sitting belonging to user B.
+    foreign_entry = str(_uuid.uuid4())
+    foreign_session = str(_uuid.uuid4())
+    async with db_sessionmaker() as session:
+        await session.execute(
+            text(
+                "INSERT INTO library_entries (id, user_id, edition_id, status, is_favorite,"
+                " created_at, updated_at) VALUES (:id, :uid, :ed, 'pending', false, now(), now())"
+            ),
+            {"id": foreign_entry, "uid": user_b["id"], "ed": edition_id},
+        )
+        await session.execute(
+            text(
+                "INSERT INTO reading_sessions (id, user_id, library_entry_id, started_at,"
+                " ended_at, duration_seconds, created_at, updated_at) VALUES (:id, :uid, :entry,"
+                " now(), now(), 60, now(), now())"
+            ),
+            {"id": foreign_session, "uid": user_b["id"], "entry": foreign_entry},
+        )
+        await session.commit()
+
+    my_entry = str(_uuid.uuid4())
+    ops = [
+        _op("library_entries", my_entry, "create", {"edition_id": edition_id}),
+        _op(
+            "reading_notes",
+            str(_uuid.uuid4()),
+            "create",
+            {"library_entry_id": my_entry, "session_id": foreign_session, "body": "hm"},
+        ),
+    ]
+    resp = await client.post("/sync/push", json={"ops": ops})
+    results = resp.json()["results"]
+    assert results[0]["status"] == "applied"
+    assert results[1]["status"] == "rejected"
+    assert results[1]["code"] == "invalid_reference"

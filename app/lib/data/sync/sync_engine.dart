@@ -266,6 +266,15 @@ class SyncEngine {
             lastSyncedAt: companion.lastSyncedAt,
           ),
         );
+      case 'reading_notes':
+        await db.readingNotesDao.patch(
+          entityId,
+          ReadingNotesCompanion(
+            deletedAt: companion.deletedAt,
+            syncStatus: companion.syncStatus,
+            lastSyncedAt: companion.lastSyncedAt,
+          ),
+        );
     }
   }
 
@@ -329,6 +338,15 @@ class SyncEngine {
         await db.readingSessionsDao.patch(
           entityId,
           ReadingSessionsCompanion(
+            syncStatus: common.syncStatus,
+            lastSyncedAt: common.lastSyncedAt,
+            serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
+          ),
+        );
+      case 'reading_notes':
+        await db.readingNotesDao.patch(
+          entityId,
+          ReadingNotesCompanion(
             syncStatus: common.syncStatus,
             lastSyncedAt: common.lastSyncedAt,
             serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
@@ -472,6 +490,24 @@ class SyncEngine {
                 startedAt: Value(ts('started_at')!),
                 endedAt: Value(ts('ended_at')!),
                 durationSeconds: Value(d['duration_seconds'] as int),
+                pageStart: Value(d['page_start'] as int?),
+                pageEnd: Value(d['page_end'] as int?),
+              ),
+            );
+      case 'reading_notes':
+        await db.into(db.readingNotes).insertOnConflictUpdate(
+              ReadingNotesCompanion(
+                id: Value(d['id'] as String),
+                userId: Value(d['user_id'] as String),
+                createdAt: Value(ts('created_at')!),
+                updatedAt: Value(ts('updated_at')!),
+                deletedAt: synced.deletedAt,
+                syncStatus: synced.syncStatus,
+                lastSyncedAt: synced.lastSyncedAt,
+                serverSeq: synced.serverSeq,
+                libraryEntryId: Value(d['library_entry_id'] as String),
+                sessionId: Value(d['session_id'] as String?),
+                body: Value(d['body'] as String),
                 pageStart: Value(d['page_start'] as int?),
                 pageEnd: Value(d['page_end'] as int?),
               ),

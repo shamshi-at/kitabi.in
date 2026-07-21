@@ -17,6 +17,7 @@ PushEntity = Literal[
     "library_entry_tags",
     "lending_records",
     "reading_sessions",
+    "reading_notes",
 ]
 PullEntity = PushEntity | Literal["activity_log_entries"]
 OpType = Literal["create", "update", "delete"]
@@ -116,6 +117,25 @@ class ReadingSessionUpdate(BaseModel):
     duration_seconds: int | None = Field(default=None, ge=0)
     page_start: int | None = None
     page_end: int | None = None
+
+
+class ReadingNoteCreate(BaseModel):
+    id: uuid.UUID
+    library_entry_id: uuid.UUID
+    # Optional: a note doesn't need a sitting ("lent to mom, she folds pages").
+    session_id: uuid.UUID | None = None
+    body: str
+    # A passage carries both; a moment carries only page_start; a thought
+    # about the book carries neither.
+    page_start: int | None = Field(default=None, ge=1)
+    page_end: int | None = Field(default=None, ge=1)
+
+
+class ReadingNoteUpdate(BaseModel):
+    body: str | None = None
+    session_id: uuid.UUID | None = None
+    page_start: int | None = Field(default=None, ge=1)
+    page_end: int | None = Field(default=None, ge=1)
 
 
 class ReviewCreate(BaseModel):

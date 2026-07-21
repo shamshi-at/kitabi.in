@@ -20,6 +20,7 @@ part 'database.g.dart';
     LibraryEntries,
     Ratings,
     ReadingSessions,
+    ReadingNotes,
     Reviews,
     PersonalTags,
     LibraryEntryTags,
@@ -35,6 +36,7 @@ part 'database.g.dart';
     LibraryEntriesDao,
     RatingsDao,
     ReadingSessionsDao,
+    ReadingNotesDao,
     ReviewsDao,
     TagsDao,
     LendingRecordsDao,
@@ -53,12 +55,20 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 7) {
+            // Private per-book notes as their own syncable rows (21 Jul 2026,
+            // owner request) — a whole new table. The old free-text blob on
+            // library_entries stays exactly where it is: splitting someone's
+            // prose into rows automatically would be lossy, so the journal
+            // shows it as one undated note until they move it themselves.
+            await m.createTable(readingNotes);
+          }
           if (from < 6) {
             // Work.form ("Type": Novel/Short stories/Poetry…) mirrored into
             // the offline cache for the library filter (16 Jul 2026). Cached
@@ -125,6 +135,7 @@ class AppDatabase extends _$AppDatabase {
         await delete(libraryEntries).go();
         await delete(ratings).go();
         await delete(readingSessions).go();
+        await delete(readingNotes).go();
         await delete(reviews).go();
         await delete(personalTags).go();
         await delete(libraryEntryTags).go();

@@ -16,6 +16,7 @@ from app.models.personal_tag import PersonalTag
 from app.models.profile import Profile
 from app.models.publisher import Publisher
 from app.models.rating import Rating
+from app.models.reading_note import ReadingNote
 from app.models.reading_session import ReadingSession
 from app.models.review import Review
 from app.models.series import Series
@@ -43,6 +44,7 @@ __all__ = [
     "work_translators",
     "LibraryEntry",
     "Rating",
+    "ReadingNote",
     "ReadingSession",
     "Review",
     "PersonalTag",

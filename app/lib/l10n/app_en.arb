@@ -1859,6 +1859,83 @@
     "description": "Pages read shown next to a session's duration",
     "placeholders": {"pages": {"type": "int"}}
   },
+  "noteAThought": "Note a thought",
+  "@noteAThought": {"description": "The pill on the running timer face that opens the note page (N1)"},
+  "noteStillRunning": "still running",
+  "@noteStillRunning": {"description": "Beside the live clock on the note page — the timer never paused"},
+  "noteOfThisSitting": "{book} · note {n} of this sitting",
+  "@noteOfThisSitting": {
+    "description": "Subtitle on the note page while a session is live",
+    "placeholders": {"book": {"type": "String"}, "n": {"type": "int"}}
+  },
+  "noteYourThought": "Your thought · only you",
+  "@noteYourThought": {"description": "Label above the writing area"},
+  "noteHint": "What are you thinking?",
+  "@noteHint": {"description": "Placeholder in the empty note field"},
+  "notePagesLabel": "Pages · optional",
+  "@notePagesLabel": {"description": "Label above the page/range row on the note page"},
+  "noteAddRange": "range",
+  "@noteAddRange": {"description": "Widens a single page into a range"},
+  "noteSingle": "single",
+  "@noteSingle": {"description": "Collapses a range back to one page"},
+  "notePagesHelp": "Starts at the page you're on. Leave it, widen it to a range, or clear it — a thought doesn't have to live anywhere.",
+  "@notePagesHelp": {"description": "Explains that pages are optional and rangeable"},
+  "noteSaveKeepReading": "Save & keep reading",
+  "@noteSaveKeepReading": {"description": "Primary action on the note page during a live session"},
+  "noteSaveChanges": "Save changes",
+  "@noteSaveChanges": {"description": "Primary action when editing an existing note"},
+  "noteTimerNeverPaused": "Saved to this book only you can read. The timer never paused.",
+  "@noteTimerNeverPaused": {"description": "Reassurance under the save button during a live session"},
+  "noteWrittenOn": "Written on {date}",
+  "@noteWrittenOn": {
+    "description": "Header when editing a past note",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "noteFromSitting": "From your sitting · {duration} · p. {from} to {to}",
+  "@noteFromSitting": {
+    "description": "Provenance line when editing a note that came from a session",
+    "placeholders": {"duration": {"type": "String"}, "from": {"type": "int"}, "to": {"type": "int"}}
+  },
+  "noteEditNeverMoves": "Editing the words never moves the note — it stays under the sitting it was written in, so the journal keeps telling the truth about when you thought it.",
+  "@noteEditNeverMoves": {"description": "Explains that editing does not re-date a note"},
+  "noteDelete": "Delete this note",
+  "@noteDelete": {"description": "Quiet destructive action at the foot of the note editor"},
+  "noteDeleteConfirm": "Delete this note?",
+  "@noteDeleteConfirm": {"description": "Confirm dialog title before deleting a note"},
+  "notesTitle": "Your notes",
+  "@notesTitle": {"description": "Title of the book's note journal (N4)"},
+  "notesAlwaysPrivate": "always private",
+  "@notesAlwaysPrivate": {"description": "Stated once at the top of the journal; there is no visibility toggle"},
+  "notesSummary": "{notes} notes across {sittings} sittings",
+  "@notesSummary": {
+    "description": "Counts under the journal title",
+    "placeholders": {"notes": {"type": "int"}, "sittings": {"type": "int"}}
+  },
+  "notesSessionHeader": "{date} · {duration}",
+  "@notesSessionHeader": {
+    "description": "Group header in the journal — the sitting is the timestamp",
+    "placeholders": {"date": {"type": "String"}, "duration": {"type": "String"}}
+  },
+  "notesNoSitting": "Not from a sitting",
+  "@notesNoSitting": {"description": "Group header for notes that belong to the book rather than a session"},
+  "notesTapToEdit": "Tap any note to open and edit it.",
+  "@notesTapToEdit": {"description": "Affordance line above the journal's actions"},
+  "notesAdd": "Add a note",
+  "@notesAdd": {"description": "Creates a standalone note from the journal"},
+  "notesEmpty": "No notes yet. Anything you jot while reading lands here.",
+  "@notesEmpty": {"description": "Empty state of the journal"},
+  "notesSectionThisSitting": "Notes from this sitting · {n}",
+  "@notesSectionThisSitting": {
+    "description": "Header of the notes section on the stop sheet (N3)",
+    "placeholders": {"n": {"type": "int"}}
+  },
+  "notesClosingThought": "Add a closing thought…",
+  "@notesClosingThought": {"description": "Row on the stop sheet opening the note page for a final note"},
+  "stopSkipNotesSafe": "Skip — your {n} notes are already saved",
+  "@stopSkipNotesSafe": {
+    "description": "Skip copy on the stop sheet when notes exist — they were saved as they were written",
+    "placeholders": {"n": {"type": "int"}}
+  },
   "stopWhereDidYouGet": "Where did you get to?",
   "@stopWhereDidYouGet": {"description": "Prompt above the big page numeral on the stop-session sheet (R1)"},
   "stopPageUnit": "page",

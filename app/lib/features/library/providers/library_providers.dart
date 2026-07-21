@@ -169,3 +169,19 @@ final cachedBookProvider =
     StreamProvider.autoDispose.family<CachedBook?, String>((ref, editionId) {
   return ref.watch(appDatabaseProvider).cachedBooksDao.watchByEditionId(editionId);
 });
+
+/// Notes written during one sitting — drives the count on the running timer's
+/// pill (N1) and the list on the stop sheet (N3). Reactive, so saving a note
+/// updates the count behind you without any hand-rolled invalidation.
+final sessionNotesProvider =
+    StreamProvider.autoDispose.family<List<ReadingNote>, String>((ref, sessionId) async* {
+  final repo = await ref.watch(readingNotesRepositoryProvider.future);
+  yield* repo.watchForSession(sessionId);
+});
+
+/// Every live note on a book, newest first — the journal (N4).
+final bookNotesProvider =
+    StreamProvider.autoDispose.family<List<ReadingNote>, String>((ref, libraryEntryId) async* {
+  final repo = await ref.watch(readingNotesRepositoryProvider.future);
+  yield* repo.watchForEntry(libraryEntryId);
+});

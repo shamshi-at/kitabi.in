@@ -36,6 +36,15 @@ final readingSessionsRepositoryProvider = FutureProvider<ReadingSessionsReposito
   );
 });
 
+final readingNotesRepositoryProvider = FutureProvider<ReadingNotesRepository>((ref) async {
+  final session = await ref.watch(sessionContextProvider.future);
+  return ReadingNotesRepository(
+    ref.watch(appDatabaseProvider),
+    session,
+    onMutation: ref.watch(syncTriggerProvider),
+  );
+});
+
 final reviewsRepositoryProvider = FutureProvider<ReviewsRepository>((ref) async {
   final session = await ref.watch(sessionContextProvider.future);
   return ReviewsRepository(

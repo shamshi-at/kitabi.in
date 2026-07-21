@@ -120,6 +120,48 @@ class RatingsDao extends DatabaseAccessor<AppDatabase> with _$RatingsDaoMixin {
       (update(ratings)..where((t) => t.id.equals(id))).write(patch);
 }
 
+@DriftAccessor(tables: [ReadingNotes])
+class ReadingNotesDao extends DatabaseAccessor<AppDatabase> with _$ReadingNotesDaoMixin {
+  ReadingNotesDao(super.db);
+
+  /// Every live note on one book, newest first — the journal's source.
+  /// Reactive so a note written on the timer screen appears on the book page
+  /// without anyone remembering to invalidate anything (the recurring bug
+  /// class in CLAUDE.md's "lessons learned").
+  ///
+  /// Ordered by `createdAt` *and* rowid: drift stores DateTime as Unix
+  /// **seconds**, so two thoughts jotted in the same second tie, and a tie
+  /// orders arbitrarily. Insertion order is the correct tiebreak — it's the
+  /// order they were actually thought.
+  Stream<List<ReadingNote>> watchForEntry(String libraryEntryId) => (select(
+        readingNotes,
+      )..where((t) => t.libraryEntryId.equals(libraryEntryId) & t.deletedAt.isNull())
+        ..orderBy([
+          (t) => OrderingTerm.desc(t.createdAt),
+          (t) => OrderingTerm.desc(t.rowId),
+        ]))
+          .watch();
+
+  /// The notes written during one sitting — drives the count on the running
+  /// timer's pill and the list on the stop sheet.
+  Stream<List<ReadingNote>> watchForSession(String sessionId) => (select(
+        readingNotes,
+      )..where((t) => t.sessionId.equals(sessionId) & t.deletedAt.isNull())
+        ..orderBy([
+          (t) => OrderingTerm.asc(t.createdAt),
+          (t) => OrderingTerm.asc(t.rowId),
+        ]))
+          .watch();
+
+  Future<ReadingNote?> getById(String id) =>
+      (select(readingNotes)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<void> insertOne(ReadingNotesCompanion row) => into(readingNotes).insert(row);
+
+  Future<void> patch(String id, ReadingNotesCompanion row) =>
+      (update(readingNotes)..where((t) => t.id.equals(id))).write(row);
+}
+
 @DriftAccessor(tables: [ReadingSessions])
 class ReadingSessionsDao extends DatabaseAccessor<AppDatabase> with _$ReadingSessionsDaoMixin {
   ReadingSessionsDao(super.db);

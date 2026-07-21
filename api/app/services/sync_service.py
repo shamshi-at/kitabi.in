@@ -24,6 +24,7 @@ from app.models import (
     LibraryEntryTag,
     PersonalTag,
     Rating,
+    ReadingNote,
     ReadingSession,
     Review,
     SyncOp,
@@ -39,6 +40,8 @@ from app.schemas.sync import (
     PersonalTagUpdate,
     RatingCreate,
     RatingUpdate,
+    ReadingNoteCreate,
+    ReadingNoteUpdate,
     ReadingSessionCreate,
     ReadingSessionUpdate,
     ReviewCreate,
@@ -63,6 +66,7 @@ ENTITIES: dict[str, tuple[type, type[BaseModel], type[BaseModel]]] = {
     "library_entry_tags": (LibraryEntryTag, LibraryEntryTagCreate, LibraryEntryTagUpdate),
     "lending_records": (LendingRecord, LendingRecordCreate, LendingRecordUpdate),
     "reading_sessions": (ReadingSession, ReadingSessionCreate, ReadingSessionUpdate),
+    "reading_notes": (ReadingNote, ReadingNoteCreate, ReadingNoteUpdate),
 }
 # Pull also serves activity_log_entries, which the client never pushes.
 PULL_MODELS: dict[str, type] = {
@@ -171,11 +175,19 @@ async def _refs_owned(db: AsyncSession, user_id: uuid.UUID, entity: str, data: d
     """Referenced Layer-2 rows must belong to the pusher. The FK constraint only
     proves the row *exists* — without this check a crafted create could hang a
     lending record or tag assignment off another user's library entry/tag."""
-    if entity in ("lending_records", "reading_sessions"):
+    if entity in ("lending_records", "reading_sessions", "reading_notes"):
         entry_id = data.get("library_entry_id")
         if entry_id is not None:
             entry = await db.get(LibraryEntry, entry_id)
             if entry is None or entry.user_id != user_id:
+                return False
+        # A note also names the sitting it was written during — that's a second
+        # Layer-2 reference, so it needs the same proof of ownership. The FK
+        # only says the session exists, not whose it is.
+        session_id = data.get("session_id")
+        if entity == "reading_notes" and session_id is not None:
+            sitting = await db.get(ReadingSession, session_id)
+            if sitting is None or sitting.user_id != user_id:
                 return False
     elif entity == "library_entry_tags":
         entry_id = data.get("library_entry_id")

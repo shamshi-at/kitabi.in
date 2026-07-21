@@ -3382,6 +3382,174 @@ abstract class AppLocalizations {
   /// **'{pages, plural, =1{1 page} other{{pages} pages}}'**
   String timerSessionPages(int pages);
 
+  /// The pill on the running timer face that opens the note page (N1)
+  ///
+  /// In en, this message translates to:
+  /// **'Note a thought'**
+  String get noteAThought;
+
+  /// Beside the live clock on the note page — the timer never paused
+  ///
+  /// In en, this message translates to:
+  /// **'still running'**
+  String get noteStillRunning;
+
+  /// Subtitle on the note page while a session is live
+  ///
+  /// In en, this message translates to:
+  /// **'{book} · note {n} of this sitting'**
+  String noteOfThisSitting(String book, int n);
+
+  /// Label above the writing area
+  ///
+  /// In en, this message translates to:
+  /// **'Your thought · only you'**
+  String get noteYourThought;
+
+  /// Placeholder in the empty note field
+  ///
+  /// In en, this message translates to:
+  /// **'What are you thinking?'**
+  String get noteHint;
+
+  /// Label above the page/range row on the note page
+  ///
+  /// In en, this message translates to:
+  /// **'Pages · optional'**
+  String get notePagesLabel;
+
+  /// Widens a single page into a range
+  ///
+  /// In en, this message translates to:
+  /// **'range'**
+  String get noteAddRange;
+
+  /// Collapses a range back to one page
+  ///
+  /// In en, this message translates to:
+  /// **'single'**
+  String get noteSingle;
+
+  /// Explains that pages are optional and rangeable
+  ///
+  /// In en, this message translates to:
+  /// **'Starts at the page you\'re on. Leave it, widen it to a range, or clear it — a thought doesn\'t have to live anywhere.'**
+  String get notePagesHelp;
+
+  /// Primary action on the note page during a live session
+  ///
+  /// In en, this message translates to:
+  /// **'Save & keep reading'**
+  String get noteSaveKeepReading;
+
+  /// Primary action when editing an existing note
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get noteSaveChanges;
+
+  /// Reassurance under the save button during a live session
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to this book only you can read. The timer never paused.'**
+  String get noteTimerNeverPaused;
+
+  /// Header when editing a past note
+  ///
+  /// In en, this message translates to:
+  /// **'Written on {date}'**
+  String noteWrittenOn(String date);
+
+  /// Provenance line when editing a note that came from a session
+  ///
+  /// In en, this message translates to:
+  /// **'From your sitting · {duration} · p. {from} to {to}'**
+  String noteFromSitting(String duration, int from, int to);
+
+  /// Explains that editing does not re-date a note
+  ///
+  /// In en, this message translates to:
+  /// **'Editing the words never moves the note — it stays under the sitting it was written in, so the journal keeps telling the truth about when you thought it.'**
+  String get noteEditNeverMoves;
+
+  /// Quiet destructive action at the foot of the note editor
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this note'**
+  String get noteDelete;
+
+  /// Confirm dialog title before deleting a note
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this note?'**
+  String get noteDeleteConfirm;
+
+  /// Title of the book's note journal (N4)
+  ///
+  /// In en, this message translates to:
+  /// **'Your notes'**
+  String get notesTitle;
+
+  /// Stated once at the top of the journal; there is no visibility toggle
+  ///
+  /// In en, this message translates to:
+  /// **'always private'**
+  String get notesAlwaysPrivate;
+
+  /// Counts under the journal title
+  ///
+  /// In en, this message translates to:
+  /// **'{notes} notes across {sittings} sittings'**
+  String notesSummary(int notes, int sittings);
+
+  /// Group header in the journal — the sitting is the timestamp
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · {duration}'**
+  String notesSessionHeader(String date, String duration);
+
+  /// Group header for notes that belong to the book rather than a session
+  ///
+  /// In en, this message translates to:
+  /// **'Not from a sitting'**
+  String get notesNoSitting;
+
+  /// Affordance line above the journal's actions
+  ///
+  /// In en, this message translates to:
+  /// **'Tap any note to open and edit it.'**
+  String get notesTapToEdit;
+
+  /// Creates a standalone note from the journal
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note'**
+  String get notesAdd;
+
+  /// Empty state of the journal
+  ///
+  /// In en, this message translates to:
+  /// **'No notes yet. Anything you jot while reading lands here.'**
+  String get notesEmpty;
+
+  /// Header of the notes section on the stop sheet (N3)
+  ///
+  /// In en, this message translates to:
+  /// **'Notes from this sitting · {n}'**
+  String notesSectionThisSitting(int n);
+
+  /// Row on the stop sheet opening the note page for a final note
+  ///
+  /// In en, this message translates to:
+  /// **'Add a closing thought…'**
+  String get notesClosingThought;
+
+  /// Skip copy on the stop sheet when notes exist — they were saved as they were written
+  ///
+  /// In en, this message translates to:
+  /// **'Skip — your {n} notes are already saved'**
+  String stopSkipNotesSafe(int n);
+
   /// Prompt above the big page numeral on the stop-session sheet (R1)
   ///
   /// In en, this message translates to:

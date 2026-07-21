@@ -35,6 +35,7 @@ import '../reading_progress.dart';
 import '../reading_status.dart';
 import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
+import 'notes_journal_screen.dart';
 import 'cover_viewer.dart';
 import 'shelf_sheets.dart';
 import '../../../core/widgets/net_image.dart';
@@ -2985,34 +2986,21 @@ class _NotesCard extends ConsumerWidget {
 
   final LibraryEntry entry;
 
-  Future<void> _edit(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(text: entry.notes ?? '');
-    final notes = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.bookEditNotes),
-        content: TextField(controller: controller, maxLines: 4, autofocus: true),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: Text(l10n.bookSave),
-          ),
-        ],
-      ),
-    );
-    if (notes == null) return;
-    final repo = await ref.read(libraryRepositoryProvider.future);
-    await repo.updateNotes(entry.id, notes);
-    ref.invalidate(libraryEntryProvider(entry.editionId));
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final notes = ref.watch(bookNotesProvider(entry.id)).valueOrNull ?? const <ReadingNote>[];
+    // The pre-journal blob still exists on the entry and still belongs to the
+    // reader — show it as one undated note rather than silently retiring it.
+    final legacy = entry.notes;
+    final hasLegacy = legacy != null && legacy.trim().isNotEmpty;
+
     return GestureDetector(
-      onTap: () => _edit(context, ref),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => NotesJournalScreen(entry: entry),
+        ),
+      ),
       child: _Card(
         color: Color(0xFFF6EEDC),
         borderColor: Color(0xFFE8DCC0),
@@ -3027,14 +3015,29 @@ class _NotesCard extends ConsumerWidget {
                   l10n.bookNotesLabel,
                   style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 0.5),
                 ),
+                Spacer(),
+                if (notes.isNotEmpty)
+                  Text(
+                    '${notes.length}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.inkSoft,
+                    ),
+                  ),
+                Icon(Icons.chevron_right, size: 14, color: AppColors.inkSoft),
               ],
             ),
             SizedBox(height: 4),
             Text(
-              (entry.notes?.isNotEmpty ?? false) ? entry.notes! : l10n.bookNotesEmpty,
+              notes.isNotEmpty
+                  ? notes.first.body
+                  : (hasLegacy ? legacy : l10n.bookNotesEmpty),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12.5,
-                color: (entry.notes?.isNotEmpty ?? false) ? AppColors.ink : AppColors.inkSoft,
+                color: (notes.isNotEmpty || hasLegacy) ? AppColors.ink : AppColors.inkSoft,
               ),
             ),
           ],

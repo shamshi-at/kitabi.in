@@ -60,6 +60,23 @@ class ReadingSessions extends Table with SyncColumns {
 }
 
 /// Text review — Work + user, own visibility flag (default private).
+/// Private per-book notes (feature-map.md rule 13's third leg — ratings go to
+/// the shared Work, reviews to Work+user with a visibility flag, notes stay
+/// here and stay private forever). There is deliberately no visibility column:
+/// unlike a review there's no other setting, so one could only be wrong.
+///
+/// [sessionId] is nullable because a note doesn't need a sitting — "lent to
+/// mom, she folds pages" belongs to the book, not to a stretch of reading.
+/// [pageStart]/[pageEnd] are both optional: a passage carries a range, a
+/// moment carries only the start, a thought about the book carries neither.
+class ReadingNotes extends Table with SyncColumns {
+  TextColumn get libraryEntryId => text()();
+  TextColumn get sessionId => text().nullable()();
+  TextColumn get body => text()();
+  IntColumn get pageStart => integer().nullable()();
+  IntColumn get pageEnd => integer().nullable()();
+}
+
 class Reviews extends Table with SyncColumns {
   TextColumn get workId => text()();
   TextColumn get body => text()();

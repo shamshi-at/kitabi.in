@@ -262,6 +262,105 @@ class RatingsRepository extends Repo {
   }
 }
 
+/// Private per-book notes (rule 13). Offline-first like every Layer-2 repo:
+/// write to Drift, enqueue the op, let the sync engine carry it to the
+/// reader's other devices.
+class ReadingNotesRepository extends Repo {
+  ReadingNotesRepository(super.db, super.session, {super.onMutation});
+
+  Stream<List<ReadingNote>> watchForEntry(String libraryEntryId) =>
+      db.readingNotesDao.watchForEntry(libraryEntryId);
+
+  Stream<List<ReadingNote>> watchForSession(String sessionId) =>
+      db.readingNotesDao.watchForSession(sessionId);
+
+  /// [sessionId] is null for a note that belongs to the book rather than to a
+  /// stretch of reading. [pageEnd] is null for a note about a single page.
+  Future<String> add({
+    required String libraryEntryId,
+    required String body,
+    String? sessionId,
+    int? pageStart,
+    int? pageEnd,
+  }) async {
+    final id = _uuid.v4();
+    final now = DateTime.now();
+    await db.readingNotesDao.insertOne(
+      ReadingNotesCompanion.insert(
+        id: id,
+        userId: session.userId,
+        libraryEntryId: libraryEntryId,
+        body: body,
+        sessionId: Value(sessionId),
+        pageStart: Value(pageStart),
+        pageEnd: Value(pageEnd),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        syncStatus: const Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'reading_notes',
+      entityId: id,
+      opType: 'create',
+      data: {
+        'library_entry_id': libraryEntryId,
+        'body': body,
+        'session_id': ?sessionId,
+        'page_start': ?pageStart,
+        'page_end': ?pageEnd,
+      },
+    );
+    return id;
+  }
+
+  /// Editing the words never re-dates the note or moves it off its sitting —
+  /// the journal is a record of when you thought something, not a draft.
+  /// Passing null for a page clears it, so a note can be unpinned.
+  Future<void> edit(
+    String id, {
+    required String body,
+    int? pageStart,
+    int? pageEnd,
+  }) async {
+    await db.readingNotesDao.patch(
+      id,
+      ReadingNotesCompanion(
+        body: Value(body),
+        pageStart: Value(pageStart),
+        pageEnd: Value(pageEnd),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: const Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'reading_notes',
+      entityId: id,
+      opType: 'update',
+      data: {'body': body, 'page_start': pageStart, 'page_end': pageEnd},
+    );
+  }
+
+  /// Soft delete (rule 3) — the tombstone is what tells the reader's other
+  /// devices to drop it.
+  Future<void> remove(String id) async {
+    await db.readingNotesDao.patch(
+      id,
+      ReadingNotesCompanion(
+        deletedAt: Value(DateTime.now()),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: const Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'reading_notes',
+      entityId: id,
+      opType: 'delete',
+      data: const {},
+    );
+  }
+}
+
 class ReadingSessionsRepository extends Repo {
   ReadingSessionsRepository(super.db, super.session, {super.onMutation});
 
@@ -284,6 +383,9 @@ class ReadingSessionsRepository extends Repo {
   /// row here until this is called. Returns the new session's id, so the
   /// wax-seal confirmation can attach a page number moments later without
   /// re-deriving which row it meant.
+  /// [id] lets the caller mint the session's UUID up front (rule 4). The timer
+  /// does: notes written mid-session need a real session to point at, and the
+  /// row doesn't exist until the sitting stops.
   Future<String> logSession({
     required String libraryEntryId,
     required DateTime startedAt,
@@ -291,8 +393,9 @@ class ReadingSessionsRepository extends Repo {
     required int durationSeconds,
     int? pageStart,
     int? pageEnd,
+    String? id,
   }) async {
-    final id = _uuid.v4();
+    id ??= _uuid.v4();
     await db.readingSessionsDao.insertOne(
       ReadingSessionsCompanion.insert(
         id: id,

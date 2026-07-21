@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:uuid/uuid.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -16,6 +17,11 @@ import 'library_providers.dart';
 const activeSessionEntryKey = 'active_session_entry_id';
 const activeSessionStartedKey = 'active_session_started_at';
 const activeSessionPageStartKey = 'active_session_page_start';
+
+/// The sitting's UUID, minted when it *starts* rather than when it's logged —
+/// a note written mid-session has to reference a real session id, and the row
+/// only appears on stop (rule 4: UUIDs are client-side anyway).
+const activeSessionIdKey = 'active_session_id';
 
 /// A session left running this long gets a "still reading?" check-in.
 const readingCheckInDelay = Duration(minutes: 60);
@@ -45,10 +51,19 @@ String readingEnforcementTaskName(String libraryEntryId) =>
 /// [ReadingSessionsRepository.logSession] row. Only one runs app-wide at a
 /// time: you can't actually read two books in the same minute.
 class ActiveSession {
-  const ActiveSession({required this.libraryEntryId, required this.startedAt, this.pageStart});
+  const ActiveSession({
+    required this.libraryEntryId,
+    required this.startedAt,
+    required this.id,
+    this.pageStart,
+  });
 
   final String libraryEntryId;
   final DateTime startedAt;
+
+  /// Minted at start so mid-session notes can point at this sitting before
+  /// its row exists.
+  final String id;
   final int? pageStart;
 }
 
@@ -101,11 +116,14 @@ Future<LoggedSession?> stopAndLogActiveSession(
     endedAt: endedAt,
     durationSeconds: durationSeconds,
     pageStart: pageStart,
+    // Reuse the id notes were already written against, so they stay attached.
+    id: await db.keyValuesDao.getValue(activeSessionIdKey),
   );
 
   await db.keyValuesDao.deleteValue(activeSessionEntryKey);
   await db.keyValuesDao.deleteValue(activeSessionStartedKey);
   await db.keyValuesDao.deleteValue(activeSessionPageStartKey);
+  await db.keyValuesDao.deleteValue(activeSessionIdKey);
 
   // Every stop path — manual, quick-stop, "No", or auto-stop — goes through
   // here, so this is the one place that needs to cancel the check-in
@@ -154,9 +172,17 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
     final startedAt = DateTime.tryParse(startedRaw);
     if (startedAt == null) return;
     final pageStartRaw = await db.keyValuesDao.getValue(activeSessionPageStartKey);
+    // A session restored from disk predating this key has no id; mint one now
+    // so notes taken after the restore still have something to attach to.
+    var sessionId = await db.keyValuesDao.getValue(activeSessionIdKey);
+    if (sessionId == null || sessionId.isEmpty) {
+      sessionId = const Uuid().v4();
+      await db.keyValuesDao.setValue(activeSessionIdKey, sessionId);
+    }
     state = ActiveSession(
       libraryEntryId: entryId,
       startedAt: startedAt,
+      id: sessionId,
       pageStart: int.tryParse(pageStartRaw ?? ''),
     );
   }
@@ -175,13 +201,20 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
     if (state != null) await stop();
 
     final startedAt = DateTime.now();
+    final sessionId = const Uuid().v4();
     final db = ref.read(appDatabaseProvider);
     await db.keyValuesDao.setValue(activeSessionEntryKey, libraryEntryId);
     await db.keyValuesDao.setValue(activeSessionStartedKey, startedAt.toIso8601String());
+    await db.keyValuesDao.setValue(activeSessionIdKey, sessionId);
     if (pageStart != null) {
       await db.keyValuesDao.setValue(activeSessionPageStartKey, '$pageStart');
     }
-    state = ActiveSession(libraryEntryId: libraryEntryId, startedAt: startedAt, pageStart: pageStart);
+    state = ActiveSession(
+      libraryEntryId: libraryEntryId,
+      startedAt: startedAt,
+      id: sessionId,
+      pageStart: pageStart,
+    );
   }
 
   /// Stops the running session (if any), logs it via the repository, and

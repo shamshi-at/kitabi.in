@@ -6,7 +6,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
 import '../../../data/sync/sync_providers.dart';
+import '../providers/library_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import 'note_page.dart';
 import 'session_page_entry.dart';
 
 /// What the reader entered before the sheet closed.
@@ -120,6 +122,9 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
     final l10n = AppLocalizations.of(context)!;
     final sessions = ref.watch(stopSessionsProvider(widget.libraryEntryId)).valueOrNull ??
         const <ReadingSession>[];
+    final sessionNotes =
+        ref.watch(sessionNotesProvider(widget.loggedSessionId)).valueOrNull ??
+            const <ReadingNote>[];
 
     if (_showingLog) {
       return SessionsLog(
@@ -219,6 +224,61 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
                       pageEnd: last.pageEnd,
                     ),
             ),
+            // N3 — what this sitting already holds. They were saved as they
+            // were written, so nothing here is at stake; Skip says so below.
+            if (sessionNotes.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  l10n.notesSectionThisSitting(sessionNotes.length).toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF6EEDC),
+                  borderRadius: BorderRadius.circular(11),
+                  border: Border.all(color: const Color(0xFFE8DCC0)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (final note in sessionNotes)
+                      _StopNoteRow(note: note, entryId: widget.libraryEntryId),
+                    InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<bool>(
+                          builder: (_) => NotePage(
+                            libraryEntryId: widget.libraryEntryId,
+                            bookTitle: widget.title,
+                            sessionId: widget.loggedSessionId,
+                            currentPage: int.tryParse(_pageController.text.trim()),
+                          ),
+                        ),
+                      ),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                        decoration: BoxDecoration(
+                          border: Border(top: BorderSide(color: const Color(0xFFE8DCC0))),
+                        ),
+                        child: Text(
+                          '+ ${l10n.notesClosingThought}',
+                          style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
@@ -241,9 +301,11 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
                   // Skip says what it costs rather than being a bare word.
-                  widget.currentPage != null
-                      ? l10n.stopSkipWithPage(widget.currentPage!)
-                      : l10n.stopSkipNoPage,
+                  sessionNotes.isNotEmpty
+                      ? l10n.stopSkipNotesSafe(sessionNotes.length)
+                      : (widget.currentPage != null
+                          ? l10n.stopSkipWithPage(widget.currentPage!)
+                          : l10n.stopSkipNoPage),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
                 ),
@@ -446,5 +508,50 @@ class _SessionRow extends StatelessWidget {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return '${local.day} ${months[local.month - 1]}';
+  }
+}
+
+
+/// One already-saved note on the stop sheet — tappable, because the reader may
+/// want to finish a thought they jotted mid-sentence.
+class _StopNoteRow extends StatelessWidget {
+  const _StopNoteRow({required this.note, required this.entryId});
+
+  final ReadingNote note;
+  final String entryId;
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = note.pageStart == null
+        ? null
+        : (note.pageEnd == null
+            ? 'p. ${note.pageStart}'
+            : 'p. ${note.pageStart}-${note.pageEnd}');
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<bool>(
+          builder: (_) => NotePage(libraryEntryId: entryId, existing: note),
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                note.body,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11.5, height: 1.45),
+              ),
+            ),
+            if (pages != null) ...[
+              const SizedBox(width: 8),
+              Text(pages, style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft)),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
