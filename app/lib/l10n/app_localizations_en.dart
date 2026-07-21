@@ -2041,6 +2041,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Editing the words never moves the note — it stays under the sitting it was written in, so the journal keeps telling the truth about when you thought it.';
 
   @override
+  String get rotateTitle => 'Straighten the photo';
+
+  @override
+  String get rotateHint =>
+      'Twist with two fingers to set any angle, or nudge a quarter-turn at a time.';
+
+  @override
+  String get rotateApply => 'Apply';
+
+  @override
+  String get coverRotate => 'Rotate — set any angle by hand';
+
+  @override
   String get noteEdit => 'Edit';
 
   @override

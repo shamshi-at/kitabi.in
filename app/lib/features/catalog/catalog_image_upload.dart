@@ -2,11 +2,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/image_crop.dart';
+import '../../core/photo_rotate.dart';
 
 /// Reuses the existing public `covers` bucket (see cover_upload.dart / STATUS.md)
 /// for author portraits and publisher logos too — the Storage policy is
@@ -62,6 +64,42 @@ Future<String?> recropUploadImage({
     final bytes = await cropPickedImage(tmp.path, ratio);
     if (bytes == null) return null;
     return _uploadJpeg(bytes, folder);
+  } finally {
+    if (await tmp.exists()) await tmp.delete();
+  }
+}
+
+/// Fetch an already-uploaded cover, let the reader twist it to any angle
+/// (the native cropper only does 90° steps), then re-crop and re-upload.
+/// Returns null if they back out at either step — the existing cover stands.
+Future<String?> rotateUploadImage({
+  required BuildContext context,
+  required String url,
+  required String folder,
+  required CropRatio ratio,
+}) async {
+  final response = await Dio().get<List<int>>(
+    url,
+    options: Options(responseType: ResponseType.bytes),
+  );
+  final data = response.data;
+  if (data == null) throw Exception('empty image response');
+
+  if (!context.mounted) return null;
+  final rotated = await Navigator.of(context).push<Uint8List>(
+    MaterialPageRoute(
+      builder: (_) => RotatePhotoScreen(bytes: Uint8List.fromList(data)),
+    ),
+  );
+  if (rotated == null) return null;
+
+  // Straightening usually wants a re-frame, so hand the rotated bytes straight
+  // to the cropper rather than making it a second errand.
+  final tmp = File('${Directory.systemTemp.path}/rotate_${_uuid.v4()}.png');
+  await tmp.writeAsBytes(rotated, flush: true);
+  try {
+    final cropped = await cropPickedImage(tmp.path, ratio);
+    return _uploadJpeg(cropped ?? rotated, folder);
   } finally {
     if (await tmp.exists()) await tmp.delete();
   }

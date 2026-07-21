@@ -833,6 +833,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
               source: ImageSource.gallery, folder: 'covers', ratio: CropRatio.cover);
         case CoverAction.adjust:
           url = await recropUploadImage(url: current!, folder: 'covers', ratio: CropRatio.cover);
+        case CoverAction.rotate:
+          url = await rotateUploadImage(
+            context: context,
+            url: current!,
+            folder: 'covers',
+            ratio: CropRatio.cover,
+          );
         case CoverAction.remove:
           url = null; // handled above
       }

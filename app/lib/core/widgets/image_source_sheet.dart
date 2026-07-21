@@ -42,7 +42,7 @@ Future<ImageSource?> showImageSourceSheet(BuildContext context) {
 /// What the user chose from the cover-options sheet on the add-book form. The
 /// sheet adapts: an empty slot offers only capture; a slot that already holds a
 /// photo also offers adjust (re-crop) and remove.
-enum CoverAction { camera, gallery, adjust, remove }
+enum CoverAction { camera, gallery, adjust, rotate, remove }
 
 /// The richer sheet behind a cover thumbnail on the add-book form. When
 /// [hasImage] is false it's just "take a photo / choose from gallery"; when a
@@ -65,12 +65,21 @@ Future<CoverAction?> showCoverActionSheet(
         mainAxisSize: MainAxisSize.min,
         children: [
           const _SheetGrip(),
-          if (hasImage)
+          if (hasImage) ...[
             ListTile(
               leading: Icon(Icons.crop_rotate, color: AppColors.oxblood),
               title: Text(l10n.coverActionAdjust),
               onTap: () => Navigator.of(context).pop(CoverAction.adjust),
             ),
+            // Free-angle rotation is its own step: the native cropper only
+            // offers 90° buttons, so a photo taken slightly askew had no way
+            // to be straightened (owner request, 21 Jul 2026).
+            ListTile(
+              leading: Icon(Icons.rotate_90_degrees_ccw, color: AppColors.oxblood),
+              title: Text(l10n.coverRotate),
+              onTap: () => Navigator.of(context).pop(CoverAction.rotate),
+            ),
+          ],
           ListTile(
             leading: Icon(Icons.photo_camera_outlined, color: AppColors.oxblood),
             title: Text(hasImage ? l10n.coverActionReplaceCamera : l10n.imageSourceCamera),

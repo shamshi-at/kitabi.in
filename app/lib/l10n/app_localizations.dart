@@ -3484,6 +3484,30 @@ abstract class AppLocalizations {
   /// **'Editing the words never moves the note — it stays under the sitting it was written in, so the journal keeps telling the truth about when you thought it.'**
   String get noteEditNeverMoves;
 
+  /// Title of the free-rotation step before cropping a cover
+  ///
+  /// In en, this message translates to:
+  /// **'Straighten the photo'**
+  String get rotateTitle;
+
+  /// Explains the two-finger rotate gesture
+  ///
+  /// In en, this message translates to:
+  /// **'Twist with two fingers to set any angle, or nudge a quarter-turn at a time.'**
+  String get rotateHint;
+
+  /// Confirms the rotation and continues to cropping
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get rotateApply;
+
+  /// Option on the cover sheet opening the free-rotation step
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate — set any angle by hand'**
+  String get coverRotate;
+
   /// Turns the read-only note view into the editor
   ///
   /// In en, this message translates to:
