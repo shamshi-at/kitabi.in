@@ -14,6 +14,7 @@ import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../insights/providers/insights_providers.dart';
 import '../../library/providers/library_providers.dart';
 import '../../library/providers/reading_timer_providers.dart';
 import '../../library/stop_session_flow.dart';
@@ -303,7 +304,7 @@ class _GoalSlip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final year = DateTime.now().year;
-    final goal = ref.watch(_homeGoalProvider).valueOrNull ?? 30;
+    final goal = ref.watch(readingGoalProvider).valueOrNull ?? 30;
     // A read book with no explicit finish date (only the book page's status
     // sheet sets one) falls back to when it was last touched, so it counts
     // toward the goal — same rule as Insights' computeInsights. Otherwise a
@@ -390,11 +391,10 @@ class _GoalSlip extends ConsumerWidget {
   }
 }
 
-/// The device-local reading goal (same key Insights edits).
-final _homeGoalProvider = FutureProvider.autoDispose<int>((ref) async {
-  final repo = await ref.watch(libraryRepositoryProvider.future);
-  return repo.readingGoal();
-});
+// Home used to keep its own private goal provider over the same key Insights
+// edits. Insights invalidated *its* provider on save, so Home kept serving a
+// stale cached value and still offered "Set a goal for 2026" after one was set
+// (owner report, 21 Jul 2026). One provider, one source of truth.
 
 class _CurrentlyReadingCard extends ConsumerWidget {
   const _CurrentlyReadingCard({required this.entry});
