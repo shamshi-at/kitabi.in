@@ -274,7 +274,7 @@
   "@formLanguageUnset": {
     "description": "Placeholder option in the language dropdown when no language is chosen"
   },
-  "formLanguageProfileNote": "Add more languages in your profile to see them here.",
+  "formLanguageProfileNote": "Your languages are listed first — manage them in your profile.",
   "@formLanguageProfileNote": {
     "description": "Note under the book language dropdown pointing to profile settings"
   },
@@ -2198,6 +2198,10 @@
   "@pickerChoose": {
     "description": "Title of the option-picker bottom sheet (e.g. Choose format)",
     "placeholders": {"label": {"type": "String"}}
+  },
+  "pickerSearchHint": "Search",
+  "@pickerSearchHint": {
+    "description": "Hint in the type-to-filter box atop long option-picker sheets (e.g. the ~40-language list)"
   },
   "bookCoverBack": "Back cover",
   "@bookCoverBack": {"description": "Label under the back-cover thumbnail on the book page"},

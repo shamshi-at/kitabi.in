@@ -499,7 +499,7 @@ abstract class AppLocalizations {
   /// Note under the book language dropdown pointing to profile settings
   ///
   /// In en, this message translates to:
-  /// **'Add more languages in your profile to see them here.'**
+  /// **'Your languages are listed first — manage them in your profile.'**
   String get formLanguageProfileNote;
 
   /// Title of the onboarding reading-languages picker
@@ -4047,6 +4047,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose {label}'**
   String pickerChoose(String label);
+
+  /// Hint in the type-to-filter box atop long option-picker sheets (e.g. the ~40-language list)
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get pickerSearchHint;
 
   /// Label under the back-cover thumbnail on the book page
   ///

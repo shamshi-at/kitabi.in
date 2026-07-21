@@ -11,6 +11,7 @@ import '../../../core/languages.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
+import '../../../core/widgets/select_sheet.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/catalog_cache.dart';
@@ -2598,14 +2599,14 @@ class _DropdownField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return _SelectField(
+    return SelectField(
       label: label,
       displayValue: value,
       isPlaceholder: false,
-      onTap: () => _openSelectSheet(
+      onTap: () => openSelectSheet(
         context,
         title: l10n.pickerChoose(label.toLowerCase()),
-        options: [for (final o in options) _SelectOption(o, o)],
+        options: [for (final o in options) SelectOption(o, o)],
         current: value,
         onChanged: (v) {
           if (v != null) onChanged(v);
@@ -2615,166 +2616,17 @@ class _DropdownField extends StatelessWidget {
   }
 }
 
-/// The shared look for every "tap to choose" field on the form (Format,
-/// Language, and the publisher picker's cousin): a labelled box, matching the
-/// text fields' height, with a chevron — never the raw Material dropdown.
-class _SelectField extends StatelessWidget {
-  const _SelectField({
-    required this.label,
-    required this.displayValue,
-    required this.isPlaceholder,
-    required this.onTap,
-    this.note,
-  });
+// The themed select field + option-picker sheet used to live here as
+// _SelectField/_openSelectSheet; they moved to core/widgets/select_sheet.dart
+// (public SelectField/openSelectSheet, now with type-to-filter on long lists)
+// so the original-stub sheet in work_picker_screen shares the exact picker.
 
-  final String label;
-  final String displayValue;
-  final bool isPlaceholder;
-  final VoidCallback onTap;
-  final String? note;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: _fieldLabelStyle),
-        SizedBox(height: 4),
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            // vertical: 10 matches _Field's dense TextFormField height, so a
-            // select aligns with the text field beside it (Format↔ISBN,
-            // Language↔Pages) — the dropdown-height gripe.
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    displayValue,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isPlaceholder ? AppColors.inkSoft : AppColors.ink,
-                    ),
-                  ),
-                ),
-                Icon(Icons.expand_more, size: 18, color: AppColors.inkSoft),
-              ],
-            ),
-          ),
-        ),
-        if (note != null) ...[
-          SizedBox(height: 4),
-          Text(note!, style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.3)),
-        ],
-      ],
-    );
-  }
-}
-
-/// One row in the option-picker sheet. [value] is null only for a "not set"
-/// entry (Language), which renders subdued.
-class _SelectOption {
-  const _SelectOption(this.value, this.label, {this.subdued = false});
-  final String? value;
-  final String label;
-  final bool subdued;
-}
-
-class _SelectResult {
-  const _SelectResult(this.value);
-  final String? value;
-}
-
-/// Opens the Reading Room option-picker sheet. Fires [onChanged] only when the
-/// user actually picks something; a dismiss (scrim tap / swipe down) leaves the
-/// value untouched — which is how "not set" (a real null pick) stays distinct
-/// from cancelling.
-Future<void> _openSelectSheet(
-  BuildContext context, {
-  required String title,
-  required List<_SelectOption> options,
-  required String? current,
-  required ValueChanged<String?> onChanged,
-}) async {
-  final result = await showModalBottomSheet<_SelectResult>(
-    context: context,
-    backgroundColor: AppColors.paper,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 4),
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.line,
-              borderRadius: BorderRadius.circular(99),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                for (final opt in options)
-                  ListTile(
-                    dense: true,
-                    title: Text(
-                      opt.label,
-                      style: TextStyle(
-                        color: opt.subdued ? AppColors.inkSoft : AppColors.ink,
-                        fontWeight: opt.value == current ? FontWeight.w700 : FontWeight.w500,
-                      ),
-                    ),
-                    trailing: opt.value == current
-                        ? Icon(Icons.check, size: 18, color: AppColors.oxblood)
-                        : null,
-                    onTap: () => Navigator.of(context).pop(_SelectResult(opt.value)),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    ),
-  );
-  if (result != null) onChanged(result.value);
-}
-
-/// The language picker — a nullable dropdown (language is optional) with a
+/// The language picker — a nullable select (language is optional) with a
 /// leading "not set" item. Lists the reader's [languages] (their profile
-/// preferences; falls back to all of [kLanguages] if none are set), and always
-/// keeps the current value even if it's outside that list, so editing an old
-/// book never drops its language. A [note] points the reader to their profile.
+/// preferences) first, then every other language Kitabi knows — a translated
+/// original can be in any language, not just the reader's own. Always keeps
+/// the current value even if it's outside that list, so editing an old book
+/// never drops its language. A [note] points the reader to their profile.
 class _LanguageField extends StatelessWidget {
   const _LanguageField({
     required this.label,
@@ -2795,23 +2647,23 @@ class _LanguageField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final base = languages.isNotEmpty ? languages : kLanguages;
+    final base = languageOptions(languages);
     final options = [
       ...base,
       if (value != null && !base.contains(value)) value!,
     ];
-    return _SelectField(
+    return SelectField(
       label: label,
       displayValue: value ?? unsetLabel,
       isPlaceholder: value == null,
       note: note,
-      onTap: () => _openSelectSheet(
+      onTap: () => openSelectSheet(
         context,
         title: l10n.pickerChoose(label.toLowerCase()),
         current: value,
         options: [
-          _SelectOption(null, unsetLabel, subdued: true),
-          for (final option in options) _SelectOption(option, option),
+          SelectOption(null, unsetLabel, subdued: true),
+          for (final option in options) SelectOption(option, option),
         ],
         onChanged: onChanged,
       ),
