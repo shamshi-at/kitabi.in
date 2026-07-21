@@ -124,6 +124,21 @@ camera; everything else stays paper.
   same "+" add affordance as search. This is the catalog's existing linkability
   (Layer 1) surfaced as a screen — not the fuller "author profile with bio and
   reviews" feature, which stays `[LATER]`.
+- **Stopping the timer asks for one number, and makes it easy to be right**
+  (designed 21 Jul 2026, mockups **R1–R3**). The moment after a stop is the only
+  one where the reader is holding the book, so it's worth more than an
+  `AlertDialog` with a 56px box. The page becomes the screen — a large numeral,
+  tappable to type, flanked by **− / +** because being a page or two off is the
+  common case — with a live bar and "42 pages this session · 35 pages/hour"
+  underneath. The anchor line ("you started this session at p. 260", plus the
+  previous sitting) is what makes the number easy to believe; the full log
+  (**R3**) sits behind it, not on show, because most stops don't need it. **Skip
+  names its consequence** ("keep the time, leave the page at 260") instead of
+  being a bare word beside Save. When the catalogue has no page count the total
+  gets **its own gold line**, not a second box crammed into the same row — gold
+  because it improves the *shared* Edition, and the copy says so. One sheet
+  serves all four callers (timer face, mini-bar, Home card, manual log): CLAUDE.md's
+  own lesson is that those surfaces drift the moment they're built separately.
 - **A chip row is a shortcut, never the vocabulary** (designed 21 Jul 2026,
   mockups **M10–M11**). Type and Genre stay at ~6 visible chips no matter how big
   the catalogue grows: selected values pin first, then the reader's *own*

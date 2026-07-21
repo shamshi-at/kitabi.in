@@ -156,7 +156,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   </div>
   <nav class="toc">
     <a href="#welcome">Welcome</a><a href="#home">Home</a><a href="#library">Library</a>
-    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a><a href="#extras">Extras</a><a href="#translations">Translations</a><a href="#creating">Creating</a>
+    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a><a href="#extras">Extras</a><a href="#translations">Translations</a><a href="#creating">Creating</a><a href="#stopping">Stopping</a>
   </nav>
 </header>
 
@@ -2335,6 +2335,169 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       genre stays possible, but it’s the dashed last resort, and it says out loud that the genre is
       shared. Genres get no case-folding server-side today (Type does), so this screen <i>is</i> the
       dedupe.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 10 — STOPPING A SESSION ================= -->
+<section class="area" id="stopping">
+  <div class="ah"><span class="an">Area 10</span><h2>Stopping well — the page you reached</h2></div>
+  <p class="desc">The moment after you stop the timer is the only one where a reader is
+  <i>holding the book</i> and can see the page number. Today that moment is an
+  <code>AlertDialog</code> with a 56-pixel number box wedged into a single <code>Row</code> —
+  and when the catalogue has no page count, a <i>second</i> box is jammed in beside it. It works,
+  but it asks for precision from someone who has just put a book down. These screens rebuild it as
+  a sheet: <b>one big number</b>, a way to nudge it, the context to know what to type, and a skip
+  that says what skipping costs. <b>One sheet, four callers</b> — the full timer's wax-seal face,
+  the mini-bar, Home's currently-reading card, and the manual log all share it, because
+  CLAUDE.md's own lesson is that those four drift apart the moment they're built separately.</p>
+  <div class="row">
+
+    <!-- R1. Stopped — the page -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.32)">
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 16px 16px">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 12px"></div>
+
+            <div style="display:flex;align-items:center;gap:9px">
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#5C3A24,#3A2114);color:#F0E2C2"><div class="ct" style="font-size:4.5px">Naalukettu</div></div>
+              <div style="flex:1">
+                <div style="font-size:7px;font-weight:700;letter-spacing:1.4px;color:var(--moss)">✓ SESSION LOGGED</div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:1px">1h 12m · Naalukettu</div>
+              </div>
+            </div>
+
+            <div class="rule" style="margin:11px 0 9px"></div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;text-align:center">WHERE DID YOU GET TO?</div>
+
+            <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:8px">
+              <span style="width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--ink-soft)">−</span>
+              <div style="text-align:center;min-width:74px">
+                <div class="h-serif" style="font-size:34px;color:var(--oxblood);line-height:1;border-bottom:2px solid var(--gold);padding-bottom:3px">302</div>
+                <div class="sub" style="font-size:8px;margin-top:4px">of 724</div>
+              </div>
+              <span style="width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--oxblood)">+</span>
+            </div>
+
+            <div style="height:5px;border-radius:99px;background:var(--paper-deep);margin:11px 20px 0;overflow:hidden">
+              <div style="width:42%;height:100%;background:var(--oxblood)"></div>
+            </div>
+            <div style="text-align:center;font-size:8.5px;color:var(--ink-soft);margin-top:5px">42% · <b style="color:var(--ink)">42 pages</b> this session · 35 pages/hour</div>
+
+            <div class="card" style="margin-top:11px;padding:8px 10px;background:var(--paper-deep);display:flex;align-items:center;gap:7px">
+              <span style="font-size:10px">↩</span>
+              <div style="flex:1;font-size:8.5px;line-height:1.45">You started this session at <b>p. 260</b><div class="sub" style="font-size:7.5px">Last time · 12 Jul · 38m · p. 214 → 260</div></div>
+              <span class="sub" style="font-size:8px;color:var(--oxblood);font-weight:700">Log ›</span>
+            </div>
+
+            <div class="btn" style="margin-top:11px;padding:10px">Save the page</div>
+            <div style="text-align:center;font-size:8.5px;color:var(--ink-soft);margin-top:9px">Skip — <span style="color:var(--ink-soft)">keep the time, leave the page at 260</span></div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>R1 · Stopped — the page</b> The number becomes the screen instead of a
+      56-pixel box: big, tappable to type, with <b>− / +</b> for the far commoner case of being a
+      page or two off. Everything else exists to make the number obvious without thinking — the bar
+      and % update live, and the anchor line says where this session <i>began</i>, which is the one
+      fact that makes "302" easy to believe. <b>Skip names its consequence</b> ("keep the time,
+      leave the page at 260") rather than being a bare word beside Save.</p>
+    </div>
+
+    <!-- R2. Stopped — no page count yet -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.32)">
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 16px 16px">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 12px"></div>
+
+            <div style="display:flex;align-items:center;gap:9px">
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#4a5a3a,#28331e);color:#E2E8D6"><div class="ct" style="font-size:4.5px">Mattathi</div></div>
+              <div style="flex:1">
+                <div style="font-size:7px;font-weight:700;letter-spacing:1.4px;color:var(--moss)">✓ SESSION LOGGED</div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:1px">26m · Mattathi</div>
+              </div>
+            </div>
+
+            <div class="rule" style="margin:11px 0 9px"></div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;text-align:center">WHERE DID YOU GET TO?</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:8px">
+              <span style="width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--ink-soft)">−</span>
+              <div style="text-align:center;min-width:74px">
+                <div class="h-serif" style="font-size:34px;color:var(--oxblood);line-height:1;border-bottom:2px solid var(--gold);padding-bottom:3px">88</div>
+                <div class="sub" style="font-size:8px;margin-top:4px">page</div>
+              </div>
+              <span style="width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--oxblood)">+</span>
+            </div>
+
+            <div class="card" style="margin-top:12px;padding:9px 10px;border-color:#E5D3A6;background:var(--gold-soft)">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;font-size:9px;font-weight:600;color:#8F681E">How long is this book?</div>
+                <div style="background:var(--card);border-radius:8px;padding:4px 12px;font-family:'Fraunces',serif;font-size:14px;font-weight:600;color:var(--oxblood);border:1px solid #E5D3A6">200</div>
+                <div class="sub" style="font-size:8px;color:#8a6f34">pages</div>
+              </div>
+              <div class="sub" style="font-size:7.5px;margin-top:4px;color:#8a6f34;line-height:1.45">Optional. Nobody has told the catalogue yet — filling it in gives you a % here, and helps every other reader of this book.</div>
+            </div>
+
+            <div class="btn" style="margin-top:11px;padding:10px">Save</div>
+            <div style="text-align:center;font-size:8.5px;color:var(--ink-soft);margin-top:9px">Skip — <span>keep the time only</span></div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>R2 · No page count yet</b> Today the total is a second tiny box crammed into
+      the same row as the page; here it gets its own line and its own reason. Gold, because it's the
+      <i>shared</i> catalogue being improved, not a personal field — and the copy says so, which is
+      the same honesty the add form's "saved books join the shared catalog" line uses. Optional
+      throughout: skipping still logs the session.</p>
+    </div>
+
+    <!-- R3. The log -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.32)">
+          <div style="position:absolute;left:0;right:0;bottom:0;top:74px;background:var(--paper);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 16px 16px;display:flex;flex-direction:column">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 12px"></div>
+            <div class="h-serif" style="font-size:14px">Naalukettu · your sessions</div>
+            <div class="sub" style="font-size:8px;margin-top:1px">4h 30m · 112 pages · 5 sittings</div>
+
+            <div class="card" style="margin-top:11px;padding:0">
+              <div style="display:flex;align-items:center;padding:8px 10px;gap:8px;background:var(--gold-soft)">
+                <div style="flex:1"><div style="font-size:9.5px;font-weight:700">Today</div><div class="sub" style="font-size:7.5px">1h 12m</div></div>
+                <div style="font-size:9px;color:var(--ink-soft)">p. 260 → <b style="color:var(--oxblood)">302</b></div>
+                <div style="font-size:9px;font-weight:700;color:var(--moss);min-width:24px;text-align:right">+42</div>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;align-items:center;padding:8px 10px;gap:8px">
+                <div style="flex:1"><div style="font-size:9.5px;font-weight:600">12 Jul</div><div class="sub" style="font-size:7.5px">38m</div></div>
+                <div style="font-size:9px;color:var(--ink-soft)">p. 214 → 260</div>
+                <div style="font-size:9px;font-weight:700;color:var(--moss);min-width:24px;text-align:right">+46</div>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;align-items:center;padding:8px 10px;gap:8px">
+                <div style="flex:1"><div style="font-size:9.5px;font-weight:600">10 Jul</div><div class="sub" style="font-size:7.5px">25m</div></div>
+                <div style="font-size:9px;color:var(--ink-soft)">p. 190 → 214</div>
+                <div style="font-size:9px;font-weight:700;color:var(--moss);min-width:24px;text-align:right">+24</div>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;align-items:center;padding:8px 10px;gap:8px;opacity:.55">
+                <div style="flex:1"><div style="font-size:9.5px;font-weight:600">7 Jul</div><div class="sub" style="font-size:7.5px">1h 05m</div></div>
+                <div class="sub" style="font-size:8.5px">no page noted</div>
+                <div class="sub" style="font-size:9px;min-width:24px;text-align:right">—</div>
+              </div>
+            </div>
+
+            <div class="sub" style="font-size:7.5px;margin-top:9px;line-height:1.5">A sitting with no page is still a sitting — the time counts toward your week either way.</div>
+            <div style="margin-top:auto"><div class="btn soft" style="padding:9px;font-size:9.5px;border:1px solid var(--line)">Back to the page</div></div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>R3 · The log, when you need it</b> Reached from R1's "Log ›" — not shown by
+      default, because most stops don't need it. It answers the one question that makes the number
+      hard: <i>where was I?</i> Skipped sittings stay in the list, greyed with "no page noted",
+      which quietly makes the point that skipping is a normal thing to do rather than a gap in the
+      record. Same data the book page's reading log already holds — no new query, just surfaced at
+      the moment it's actually wanted.</p>
     </div>
 
   </div>
