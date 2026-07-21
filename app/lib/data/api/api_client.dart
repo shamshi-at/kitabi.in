@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -226,11 +227,31 @@ class ApiClient {
     return (res.data as List).cast<String>();
   }
 
-  /// Genres carried by at least one work — powers the browse genre filter.
-  Future<List<String>> browseGenres() async {
+  /// Genres carried by at least one work, commonest first, each with its
+  /// `work_count` — `[{name, work_count}]`. The browse filter wants only the
+  /// names; the add form's genre picker shows the count, which is what steers
+  /// a reader onto the established spelling instead of a near-duplicate.
+  ///
+  /// Parsed element by element rather than with `.cast()` on purpose. `.cast()`
+  /// is lazy: a wrong element type sails through here and only throws when the
+  /// list is later iterated — which lands the error inside a widget `build()`,
+  /// red-screening the add form far from the cause (caught on-device,
+  /// 21 Jul 2026). An API older than this build still returns bare name
+  /// strings, and a deploy-order skew shouldn't cost the reader the form, so
+  /// that shape is tolerated with a null count.
+  Future<List<Map<String, dynamic>>> browseGenres() async {
     final res = await _dio.get('/catalog/browse/genres');
-    return (res.data as List).cast<String>();
+    return parseGenreRows(res.data as List);
   }
+
+  /// The genre-row parser, split out so the shape tolerance above is testable
+  /// without standing up a Dio adapter.
+  @visibleForTesting
+  static List<Map<String, dynamic>> parseGenreRows(List<dynamic> rows) => [
+        for (final row in rows)
+          if (row is Map) Map<String, dynamic>.from(row)
+          else if (row is String) {'name': row, 'work_count': null},
+      ];
 
   Future<List<Map<String, dynamic>>> browseAuthors({
     int limit = 40,

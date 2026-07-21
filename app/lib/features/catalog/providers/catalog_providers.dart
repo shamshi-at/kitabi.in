@@ -139,3 +139,23 @@ final popularAuthorsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
   return ref.watch(apiClientProvider).browseAuthors(limit: 8, sort: 'popular');
 });
+
+// ─── Type & Genre pickers (M10/M11) ────────────────────────────────────────
+
+/// Every genre in the catalogue with its work count, commonest first —
+/// `[{name, work_count}]`. The picker shows the count so an existing spelling
+/// visibly beats inventing a near-duplicate; genres get no case-folding on
+/// write, so this is the only dedupe there is.
+final catalogueGenresProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
+  return ref.watch(apiClientProvider).browseGenres();
+});
+
+/// The reader's own genres, commonest first, from the books on their shelves.
+/// Drives the personalized half of the add form's genre row, so the chips are
+/// the ones *they* use rather than the ten we hardcoded. Local and offline —
+/// autoDispose so it recomputes each time the form opens, which is the only
+/// moment it's read.
+final readerGenresProvider = FutureProvider.autoDispose<List<String>>((ref) {
+  return ref.read(appDatabaseProvider).cachedBooksDao.readerGenresByUse();
+});

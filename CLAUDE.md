@@ -334,6 +334,19 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   post-stop mutation through those captured objects, never `ref`. Regression
   test (`quick_stop_test.dart`) reproduces it with a child that unmounts on stop
   — it fails on the old code, passes on the fix.
+- **`.cast<T>()` on a decoded JSON list is lazy — a shape change surfaces as a
+  crash inside `build()`, not at the API call.** Adding work counts to
+  `GET /catalog/browse/genres` changed its rows from `"Fiction"` to
+  `{name, work_count}`; the app's `(res.data as List).cast<Map<String, dynamic>>()`
+  accepted the *old* payload silently and threw `type 'String' is not a subtype
+  of type 'Map<String, dynamic>'` only when the list was later iterated — in the
+  add form's build, red-screening the whole form far from the cause, and sailing
+  straight past the `.catchError` that was meant to make the fetch best-effort
+  (21 Jul 2026). Two rules: parse API lists **eagerly**, element by element, so
+  failures land at the boundary; and tolerate the *previous* payload shape,
+  because an API deployed behind the app is a normal deploy-order state, not an
+  edge case — the update-gate only protects the opposite direction (app too old).
+  `ApiClient.parseGenreRows` is the pattern, with `genre_rows_parse_test.dart`.
 - **A `BoxDecoration` with `borderRadius` plus a non-uniform `Border` (e.g. a
   thicker colored left rule) throws at paint time, not at build/analyze time —
   the widget renders as a blank box and only the device log says why.** Bit the

@@ -20,6 +20,7 @@ from app.schemas.catalog import (
     EditionCreate,
     EditionOut,
     EditionUpdate,
+    GenreCountOut,
     GlobalSearchOut,
     PublicReviewOut,
     PublicReviewsPageOut,
@@ -128,10 +129,14 @@ async def browse_forms(db: DbSession) -> list[str]:
     return await catalog_service.catalog_forms(db)
 
 
-@router.get("/browse/genres", response_model=list[str])
-async def browse_genres(db: DbSession) -> list[str]:
-    """Genres carried by at least one work, for the browse genre filter."""
-    return await catalog_service.catalog_genres(db)
+@router.get("/browse/genres", response_model=list[GenreCountOut])
+async def browse_genres(db: DbSession) -> list[GenreCountOut]:
+    """Genres carried by at least one work, commonest first, with their work
+    counts — powers both the browse genre filter (names only) and the add
+    form's genre picker, which shows the count to steer a reader onto the
+    existing spelling instead of a new one."""
+    rows = await catalog_service.catalog_genres(db)
+    return [GenreCountOut(name=name, work_count=count) for name, count in rows]
 
 
 @router.get("/browse/authors", response_model=list[AuthorOut])

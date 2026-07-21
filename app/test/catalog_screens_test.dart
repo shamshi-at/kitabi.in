@@ -17,6 +17,7 @@ import 'package:kitabi/features/catalog/presentation/author_browse_screen.dart';
 import 'package:kitabi/features/catalog/presentation/author_picker_screen.dart';
 import 'package:kitabi/features/catalog/presentation/browse_screen.dart';
 import 'package:kitabi/features/catalog/presentation/catalog_search_screen.dart';
+import 'package:kitabi/features/catalog/presentation/chip_picker_sheet.dart';
 import 'package:kitabi/features/catalog/presentation/publisher_browse_screen.dart';
 import 'package:kitabi/features/profile/providers/profile_providers.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
@@ -146,7 +147,11 @@ class _FakeApiClient extends ApiClient {
   Future<List<String>> browseForms() async => ['Novel', 'Poetry'];
 
   @override
-  Future<List<String>> browseGenres() async => ['Fiction', 'Historical'];
+  Future<List<Map<String, dynamic>>> browseGenres() async => [
+        {'name': 'Science fiction', 'work_count': 128},
+        {'name': 'Fiction', 'work_count': 54},
+        {'name': 'Historical', 'work_count': 12},
+      ];
 
   @override
   Future<List<Map<String, dynamic>>> browseAuthors({
@@ -946,7 +951,102 @@ void main() {
     expect(find.text('Search'), findsOneWidget);
     expect(find.text('Filter'), findsOneWidget);
   });
-  testWidgets('a type outside the suggested list can be typed in and saved', (tester) async {
+  // ── Type & Genre rows and their picker sheet (M10/M11) ───────────────────
+  // The row is a shortcut, not the vocabulary: it stays ~6 chips however big
+  // the catalogue gets, and the sheet behind "All N" is where the rest lives
+  // — and where duplicate pressure is applied.
+
+  testWidgets('the genre row stays short and offers the whole catalogue behind All N',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // Capped regardless of how many genres exist, so the form never becomes a
+    // wall of chips — that's the whole point of the redesign.
+    final genreChips = tester.widgetList<FilterChip>(find.byType(FilterChip)).length;
+    expect(genreChips, lessThanOrEqualTo(12)); // 6 type + 6 genre
+    expect(find.textContaining('All '), findsNWidgets(2)); // one door per row
+  });
+
+  testWidgets('the genre sheet shows book counts so the established spelling wins',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('All ').last); // Genre's door
+    await tester.pumpAndSettle();
+
+    // The count is the mechanism, not decoration: 128 books makes "Science
+    // fiction" the obvious pick over typing "Sci-fi" beside it.
+    expect(find.text('Science fiction'), findsOneWidget);
+    expect(find.text('128 books'), findsOneWidget);
+  });
+
+  testWidgets('the genre sheet will not offer to create a genre that already exists',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('All ').last);
+    await tester.pumpAndSettle();
+
+    // Typing an existing genre in a different case must not invite the exact
+    // duplicate the sheet exists to prevent — genres get no case-folding on
+    // write, so a "Create" here would fork the shared facet permanently.
+    await tester.enterText(find.byType(TextField).last, 'fiction');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Create'), findsNothing);
+    // Scoped to the sheet: the row behind it carries the same labels.
+    expect(
+      find.descendant(of: find.byType(ChipPickerSheet), matching: find.text('Fiction')),
+      findsOneWidget,
+    );
+
+    // A genuinely new one still can be created.
+    await tester.enterText(find.byType(TextField).last, 'Sufi');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Create'), findsOneWidget);
+  });
+
+  testWidgets('a genre picked in the sheet rides the save payload', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Sheet genre book');
+    await tester.tap(find.textContaining('All ').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Science fiction'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Done'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilterChip, 'Science fiction'), findsOneWidget);
+    await tester.tap(find.text('Save to catalog'));
+    await tester.pumpAndSettle();
+    expect(
+      (fake.lastCreatePayload?['genre_names'] as List).cast<String>(),
+      contains('Science fiction'),
+    );
+  });
+
+  testWidgets('a type outside the vocabulary can be created and folds onto a known one',
+      (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -955,14 +1055,13 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'A Novella');
-    await tester.tap(find.text('＋ Other').first); // Type's — Genre has one too now
+    await tester.tap(find.textContaining('All ').first); // Type's door
     await tester.pumpAndSettle();
-
     await tester.enterText(find.byType(TextField).last, 'Novella');
-    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Create'));
     await tester.pumpAndSettle();
 
-    // It shows as its own selected chip, and rides the payload.
     expect(find.widgetWithText(FilterChip, 'Novella'), findsOneWidget);
     await tester.tap(find.text('Save to catalog'));
     await tester.pumpAndSettle();
@@ -978,73 +1077,24 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'Case folded');
-    await tester.tap(find.text('＋ Other').first); // Type's
+    await tester.tap(find.textContaining('All ').first);
     await tester.pumpAndSettle();
+    // "  novel " is really Novel — the sheet suppresses Create for an exact
+    // case-insensitive match, so the only way through is the existing row,
+    // and the facet can't split into novel/Novel.
     await tester.enterText(find.byType(TextField).last, '  novel ');
-    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Create'), findsNothing);
+    await tester.tap(
+      find.descendant(of: find.byType(ChipPickerSheet), matching: find.text('Novel')),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Save to catalog'));
     await tester.pumpAndSettle();
-
-    // Mirrors the server's fold, so the facet can't split into novel/Novel.
     expect(fake.lastCreatePayload?['form'], 'Novel');
   });
-  testWidgets('genre gets the same "＋ Other" chip as type, and adds custom genres',
-      (tester) async {
-    tester.view.physicalSize = const Size(1200, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-    final fake = _FakeApiClient();
-    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
-    await tester.pumpAndSettle();
 
-    // One on each row — the two "add" affordances now look and work alike
-    // (they used to be a chip vs. a free-text field).
-    expect(find.text('＋ Other'), findsNWidgets(2));
-    // The old free-text field is gone.
-    expect(find.text('＋ ADD ANOTHER GENRE'), findsNothing);
-
-    await tester.enterText(find.byType(TextFormField).first, 'Custom genre book');
-    await tester.tap(find.text('＋ Other').last); // Genre's
-    await tester.pumpAndSettle();
-    // One dialog can add several, as the comma-separated field used to.
-    await tester.enterText(find.byType(TextField).last, 'Sufi, Devotional');
-    await tester.tap(find.text('Save').last);
-    await tester.pumpAndSettle();
-
-    // Each arrives as its own selected chip, beside the suggestions.
-    expect(find.widgetWithText(FilterChip, 'Sufi'), findsOneWidget);
-    expect(find.widgetWithText(FilterChip, 'Devotional'), findsOneWidget);
-
-    await tester.tap(find.text('Save to catalog'));
-    await tester.pumpAndSettle();
-    final sent = (fake.lastCreatePayload?['genre_names'] as List).cast<String>();
-    expect(sent, containsAll(<String>['Sufi', 'Devotional']));
-  });
-
-  testWidgets('a custom genre that is really a suggested one folds onto it', (tester) async {
-    tester.view.physicalSize = const Size(1200, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-    final fake = _FakeApiClient();
-    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextFormField).first, 'Folded genre');
-    await tester.tap(find.text('＋ Other').last);
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, 'fiction');
-    await tester.tap(find.text('Save').last);
-    await tester.pumpAndSettle();
-
-    // Selects the existing Fiction chip instead of adding a near-duplicate.
-    expect(find.widgetWithText(FilterChip, 'Fiction'), findsOneWidget);
-    expect(find.widgetWithText(FilterChip, 'fiction'), findsNothing);
-    await tester.tap(find.text('Save to catalog'));
-    await tester.pumpAndSettle();
-    expect((fake.lastCreatePayload?['genre_names'] as List), contains('Fiction'));
-  });
   testWidgets('editing sends changed edition fields — a page count actually saves',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);

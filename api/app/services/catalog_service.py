@@ -596,18 +596,26 @@ async def catalog_forms(db: AsyncSession) -> list[str]:
     return known + custom
 
 
-async def catalog_genres(db: AsyncSession) -> list[str]:
-    """Genre names carried by at least one live work — powers the browse genre
-    filter. Genres nothing uses (a typo, an emptied work) would be dead ends."""
+async def catalog_genres(db: AsyncSession) -> list[tuple[str, int]]:
+    """Genres carried by at least one live work, with how many works each has —
+    (name, work_count), commonest first. Genres nothing uses (a typo, an
+    emptied work) would be dead ends, so they're excluded.
+
+    The count isn't decoration: the add form's genre picker shows it so a
+    reader can see "Science fiction · 128" and not invent "Sci-fi" beside it
+    (mockup M11). Genres get no case-folding on write the way Type does
+    (`normalize_form`), so that picker is the only thing standing between the
+    shared facet and three spellings of one genre."""
+    count = func.count(work_genres.c.work_id)
     stmt = (
-        select(Genre.name)
+        select(Genre.name, count)
         .join(work_genres, work_genres.c.genre_id == Genre.id)
         .join(Work, Work.id == work_genres.c.work_id)
         .where(Work.deleted_at.is_(None))
-        .distinct()
-        .order_by(Genre.name)
+        .group_by(Genre.name)
+        .order_by(count.desc(), Genre.name)
     )
-    return [row for row in (await db.execute(stmt)).scalars().all() if row]
+    return [(name, total) for name, total in (await db.execute(stmt)).all() if name]
 
 
 async def browse_authors(

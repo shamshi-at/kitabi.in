@@ -769,7 +769,29 @@ async def test_browse_facet_lists_only_offer_what_exists(client):
     assert forms == ["Novel", "Short stories", "Memoir"]
     # A vocabulary entry nothing uses isn't offered — it'd be a dead end.
     assert "Graphic novel" not in forms
-    assert "Biography" in genres
+    assert "Biography" in {g["name"] for g in genres}
+
+
+async def test_browse_genres_carry_work_counts_commonest_first(client):
+    # The add form's genre picker (M11) shows these counts so a reader picks
+    # the established spelling instead of inventing a near-duplicate — genres
+    # get no case-folding on write, so this is the only dedupe there is.
+    for title, genre_names in (
+        ("Counted One", ["Science fiction", "Fiction"]),
+        ("Counted Two", ["Science fiction"]),
+        ("Counted Three", ["Science fiction"]),
+        ("Counted Four", ["Fiction"]),
+    ):
+        await client.post("/catalog/works", json={"title": title, "genre_names": genre_names})
+
+    genres = (await client.get("/catalog/browse/genres")).json()
+    counts = {g["name"]: g["work_count"] for g in genres}
+    assert counts["Science fiction"] == 3
+    assert counts["Fiction"] == 2
+
+    # Commonest first, so the picker's top match is the one worth joining.
+    ordered = [g["name"] for g in genres]
+    assert ordered.index("Science fiction") < ordered.index("Fiction")
 
 
 async def test_work_form_accepts_a_custom_type(client):

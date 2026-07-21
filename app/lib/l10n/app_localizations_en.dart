@@ -2563,6 +2563,83 @@ class AppLocalizationsEn extends AppLocalizations {
       'Newest additions · set your reading languages to narrow this';
 
   @override
+  String get pickerSearchHint => 'Search';
+
+  @override
+  String get pickerGenreTitle => 'Genre';
+
+  @override
+  String get pickerTypeTitle => 'Type';
+
+  @override
+  String get pickerAlreadyHere => 'Already in the catalogue';
+
+  @override
+  String get pickerNoMatches => 'Nothing matches that.';
+
+  @override
+  String pickerBookCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books',
+      one: '1 book',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pickerCreate(String value) {
+    return 'Create “$value”';
+  }
+
+  @override
+  String get pickerCreateSharedNote =>
+      'Only if none of the above is it — a new genre joins the shared filter for every reader.';
+
+  @override
+  String pickerDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Done · $count selected',
+      one: 'Done · 1 selected',
+      zero: 'Done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pickerGenreSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count in the catalogue · tap all that fit',
+      one: '1 in the catalogue · tap all that fit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pickerTypeSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count to choose from',
+      one: '1 to choose from',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String formPickerAll(int count) {
+    return 'All $count';
+  }
+
+  @override
+  String get formGenreYoursNote => 'Your most-used genres first.';
+
+  @override
   String get searchPopularAuthors => 'Most in the catalogue';
 
   @override

@@ -69,6 +69,19 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       average across every Work in the group at read time, so a book page can show
       "4.2 across all translations" without merging the underlying pools
       (`catalog_service.translation_group_rating`, tested in `test_catalog.py`)
+- [x] Type & Genre pickers (21 Jul 2026 — mockups M10/M11): the chip rows became
+      a **shortcut, not the vocabulary** — capped at 6, selected values pinned
+      first, then the reader's own most-used genres (tallied from `cached_books`
+      joined to their live library entries, offline), then the common
+      suggestions. The honest count beside each label (`All 11 ⌕`) opens a shared
+      searchable sheet (`chip_picker_sheet.dart`) holding the whole vocabulary,
+      so the form is the same size whether the catalogue carries 10 genres or
+      500. `GET /catalog/browse/genres` now returns `{name, work_count}`
+      commonest-first, and the sheet shows the count — that's the dedupe
+      mechanism, since genres get no server-side case-folding the way Type does,
+      and "Science fiction · 128" is what stops "Sci-fi" being born. Creating a
+      new value is the dashed last resort and says the genre is shared.
+      Replaces the old "＋ Other" dialogs on both rows.
 - [x] Translation flows, full UI (21 Jul 2026 — mockups T1–T6 + M1, Areas 8/9):
       **translator credits** (`work_translators` join table, migration `000027`;
       `translator_ids`/`translator_names` on create/patch; `WorkOut.translators`;

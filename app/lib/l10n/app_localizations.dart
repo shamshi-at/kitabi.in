@@ -4390,6 +4390,84 @@ abstract class AppLocalizations {
   /// **'Newest additions · set your reading languages to narrow this'**
   String get searchNewInCatalogueNote;
 
+  /// Search field hint in the Type/Genre picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get pickerSearchHint;
+
+  /// Title of the genre picker sheet — the plain noun, not the shouted field label
+  ///
+  /// In en, this message translates to:
+  /// **'Genre'**
+  String get pickerGenreTitle;
+
+  /// Title of the type picker sheet — the plain noun, not the shouted field label
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get pickerTypeTitle;
+
+  /// Section label above existing matches in the picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Already in the catalogue'**
+  String get pickerAlreadyHere;
+
+  /// Empty state in the picker sheet when no option matches and none can be created
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches that.'**
+  String get pickerNoMatches;
+
+  /// How many books carry a genre, shown beside it in the picker so the established spelling is the obvious pick
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 book} other{{count} books}}'**
+  String pickerBookCount(int count);
+
+  /// The last-resort row in the genre picker that makes a brand-new genre
+  ///
+  /// In en, this message translates to:
+  /// **'Create “{value}”'**
+  String pickerCreate(String value);
+
+  /// Line under Create, spelling out that genres are a shared facet
+  ///
+  /// In en, this message translates to:
+  /// **'Only if none of the above is it — a new genre joins the shared filter for every reader.'**
+  String get pickerCreateSharedNote;
+
+  /// Confirm button in the multi-select picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Done} =1{Done · 1 selected} other{Done · {count} selected}}'**
+  String pickerDone(int count);
+
+  /// Subtitle of the genre picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 in the catalogue · tap all that fit} other{{count} in the catalogue · tap all that fit}}'**
+  String pickerGenreSubtitle(int count);
+
+  /// Subtitle of the type picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 to choose from} other{{count} to choose from}}'**
+  String pickerTypeSubtitle(int count);
+
+  /// The door beside the Type/Genre label opening the full picker — shows the honest total
+  ///
+  /// In en, this message translates to:
+  /// **'All {count}'**
+  String formPickerAll(int count);
+
+  /// Caption under the genre row explaining why those chips are there
+  ///
+  /// In en, this message translates to:
+  /// **'Your most-used genres first.'**
+  String get formGenreYoursNote;
+
   /// Section header for authors with the most works — deliberately not called 'popular', since it counts works, not readers
   ///
   /// In en, this message translates to:

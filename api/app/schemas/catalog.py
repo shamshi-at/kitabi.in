@@ -109,6 +109,15 @@ class GenreOut(BaseModel):
     name: str
 
 
+class GenreCountOut(BaseModel):
+    """A genre in the catalogue and how many works carry it — the shape the
+    add form's genre picker needs. The count is what makes an existing genre
+    the obvious pick over a new near-duplicate spelling (mockup M11)."""
+
+    name: str
+    work_count: int
+
+
 class SeriesOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID

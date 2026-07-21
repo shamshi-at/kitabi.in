@@ -64,7 +64,11 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
       if (mounted) setState(() => _forms = v);
     }).catchError((_) {});
     api.browseGenres().then((v) {
-      if (mounted) setState(() => _genres = v);
+      // The filter only needs the names; the counts are for the add form's
+      // genre picker.
+      if (mounted) {
+        setState(() => _genres = [for (final g in v) g['name'] as String]);
+      }
     }).catchError((_) {});
   }
 

@@ -21,6 +21,7 @@ import '../../profile/providers/profile_providers.dart';
 import '../catalog_image_upload.dart';
 import '../providers/catalog_providers.dart';
 import '../work_forms.dart';
+import 'chip_picker_sheet.dart';
 import '../../../core/widgets/net_image.dart';
 
 /// S4d — form to add a new catalog Work + first Edition, or edit an existing one:
@@ -189,6 +190,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
   bool _scanning = false;
   bool _extracting = false;
 
+  // The genre vocabulary behind the row (M10/M11). `_readerGenres` is the
+  // reader's own, commonest first, read from their shelves; `_catalogueGenres`
+  // is every genre in the catalogue with its work count. Both load in the
+  // background — the row renders from the hardcoded suggestions until they
+  // arrive, so the form is never blocked on a request.
+  List<String> _readerGenres = const [];
+  List<Map<String, dynamic>> _catalogueGenres = const [];
+
   // Duplicate detection (create mode only): as the title is typed, a debounced
   // trigram search quietly surfaces near-matches already in the catalog.
   List<Map<String, dynamic>> _similar = const [];
@@ -271,6 +280,20 @@ class _BookFormState extends ConsumerState<_BookForm> {
     // as a selected chip on edit, not vanish for being off-list.
     _selectedGenres = {...genreNames};
     _customGenreList.addAll(genreNames.where((g) => !_commonGenres.contains(g)));
+    _loadGenreVocabulary();
+  }
+
+  /// Both halves of the genre row's vocabulary, best-effort: the reader's own
+  /// usage (local, offline) and the catalogue's list with counts (network).
+  /// Neither blocks the form — a failure just leaves the hardcoded
+  /// suggestions, which is exactly what the row showed before.
+  Future<void> _loadGenreVocabulary() async {
+    ref.read(readerGenresProvider.future).then((genres) {
+      if (mounted) setState(() => _readerGenres = genres);
+    }).catchError((_) {});
+    ref.read(catalogueGenresProvider.future).then((genres) {
+      if (mounted) setState(() => _catalogueGenres = genres);
+    }).catchError((_) {});
   }
 
   void _onCoverChanged() {
@@ -319,9 +342,6 @@ class _BookFormState extends ConsumerState<_BookForm> {
     }
     super.dispose();
   }
-
-  List<String> _splitNames(String raw) =>
-      raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
   Future<void> _pickAuthor() => _openAuthorPicker();
 
@@ -468,91 +488,131 @@ class _BookFormState extends ConsumerState<_BookForm> {
     }
   }
 
-  /// Name a type the suggestions don't cover. The server folds a variant onto
-  /// its canonical spelling ("novel" → "Novel"), so typing one that's already
-  /// a chip just selects that chip rather than forking the facet.
-  Future<void> _pickCustomForm() async {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(
-      text: _form != null && !kWorkForms.contains(_form) ? _form : '',
-    );
-    final typed = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: Text(l10n.formTypeOtherTitle, style: TextStyle(fontSize: 16)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(hintText: l10n.formTypeOtherHint),
-          onSubmitted: (v) => Navigator.pop(ctx, v),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: Text(l10n.bookSave),
-          ),
-        ],
-      ),
-    );
-    if (typed == null || !mounted) return;
-    final cleaned = typed.trim().replaceAll(RegExp(r'\s+'), ' ');
-    if (cleaned.isEmpty) return;
-    // Mirror the server's fold so the chip highlights immediately instead of
-    // waiting for a round-trip to tell us "novel" was really "Novel".
-    final canonical = kWorkForms.firstWhere(
-      (f) => f.toLowerCase() == cleaned.toLowerCase(),
-      orElse: () => cleaned,
-    );
-    setState(() => _form = canonical);
+  // ── Type & Genre rows (M10) ───────────────────────────────────────────
+  // The rows show at most [_kVisibleChips]; the picker sheet holds the rest.
+  // Selected values always survive the cut, so nothing the reader has chosen
+  // can hide behind the "All N" door.
+  static const _kVisibleChips = 6;
+
+  /// Every Type on offer: the closed vocabulary plus the reader's own custom
+  /// value when it's off-list, so an existing custom Type never vanishes.
+  List<String> get _typeOptions => [
+        ...kWorkForms,
+        if (_form != null && !kWorkForms.contains(_form)) _form!,
+      ];
+
+  List<String> get _visibleTypes {
+    final options = _typeOptions;
+    // The selected Type leads, so it's never the one hidden by the cut.
+    final ordered = [
+      ?_form,
+      ...options.where((f) => f != _form),
+    ];
+    return ordered.take(_kVisibleChips).toList();
   }
 
-  /// Add a genre the suggestions don't cover — the same door, and the same
-  /// look, as Type's "＋ Other" (owner request, 17 Jul 2026). The server
-  /// get-or-creates genres case-insensitively, so typing one that's already a
-  /// chip just selects that chip instead of forking it.
-  Future<void> _pickCustomGenre() async {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController();
-    final typed = await showDialog<String>(
+  /// Every genre on offer, ordered by how useful it is to *this* reader:
+  /// what they've selected here, then the genres they actually use across
+  /// their shelves, then the common suggestions, then the rest of the
+  /// catalogue. De-duplicated case-insensitively so "Fiction" from their
+  /// library doesn't sit next to "fiction" from the catalogue.
+  List<String> get _genreOptions {
+    final seen = <String>{};
+    final ordered = <String>[];
+    void add(String genre) {
+      final key = genre.toLowerCase();
+      if (genre.isEmpty || !seen.add(key)) return;
+      ordered.add(genre);
+    }
+
+    _selectedGenres.forEach(add);
+    _customGenreList.forEach(add);
+    _readerGenres.forEach(add);
+    _commonGenres.forEach(add);
+    for (final g in _catalogueGenres) {
+      add(g['name'] as String? ?? '');
+    }
+    return ordered;
+  }
+
+  List<String> get _visibleGenres => _genreOptions.take(_kVisibleChips).toList();
+
+  /// Open the full Type picker — a closed vocabulary, so single-select with
+  /// no create row. "Other" still exists for naming a Type we don't cover;
+  /// it lives inside the sheet's own flow via [_pickCustomForm].
+  Future<void> _openTypePicker() async {
+    final picked = await showModalBottomSheet<Set<String>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: Text(l10n.formGenreOtherTitle, style: TextStyle(fontSize: 16)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(hintText: l10n.formGenreOtherHint),
-          onSubmitted: (v) => Navigator.pop(ctx, v),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: Text(l10n.bookSave),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: AppColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => ChipPickerSheet(
+        title: AppLocalizations.of(ctx)!.pickerTypeTitle,
+        options: [for (final f in _typeOptions) PickerOption(f)],
+        selected: {?_form},
+        multiSelect: false,
+        // A Type outside the vocabulary is still allowed — the server folds
+        // case ("novel" → "Novel"), so this can't fork the facet on spelling.
+        allowCreate: true,
       ),
     );
-    if (typed == null || !mounted) return;
-    // One dialog can add several ("Sufi, Devotional") — the old free-text
-    // field was comma-separated, so keep honouring that here.
+    if (picked == null || !mounted) return;
+    final chosen = picked.isEmpty ? null : picked.first.trim().replaceAll(RegExp(r'\s+'), ' ');
     setState(() {
-      for (final raw in _splitNames(typed)) {
-        final cleaned = raw.replaceAll(RegExp(r'\s+'), ' ');
-        if (cleaned.isEmpty) continue;
-        // Fold onto an existing chip rather than adding a near-duplicate.
-        final existing = [..._commonGenres, ..._customGenreList].firstWhere(
-          (g) => g.toLowerCase() == cleaned.toLowerCase(),
-          orElse: () => '',
-        );
-        final genre = existing.isEmpty ? cleaned : existing;
-        if (existing.isEmpty) _customGenreList.add(genre);
-        _selectedGenres.add(genre);
+      if (chosen == null || chosen.isEmpty) {
+        _form = null;
+        return;
       }
+      // Mirror the server's fold so a typed "novel" highlights the Novel chip
+      // immediately instead of waiting for a round-trip to say it was really
+      // "Novel" all along.
+      _form = kWorkForms.firstWhere(
+        (f) => f.toLowerCase() == chosen.toLowerCase(),
+        orElse: () => chosen,
+      );
+    });
+  }
+
+  /// Open the full Genre picker — multi-select over the whole catalogue with
+  /// book counts, because genres get no case-folding on write and this sheet
+  /// is the only thing preventing three spellings of one genre (M11).
+  Future<void> _openGenrePicker() async {
+    final l10n = AppLocalizations.of(context)!;
+    final counts = {
+      for (final g in _catalogueGenres) (g['name'] as String? ?? ''): g['work_count'] as int?,
+    };
+    final picked = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => ChipPickerSheet(
+        title: l10n.pickerGenreTitle,
+        options: [for (final g in _genreOptions) PickerOption(g, count: counts[g])],
+        selected: {..._selectedGenres},
+        createSharedNote: l10n.pickerCreateSharedNote,
+        allowCreate: true,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      // Anything picked that isn't a known option is the reader's own — it has
+      // to join the custom list or it won't render as a chip.
+      final known = {
+        ..._readerGenres.map((g) => g.toLowerCase()),
+        ..._commonGenres.map((g) => g.toLowerCase()),
+        ..._catalogueGenres.map((g) => (g['name'] as String? ?? '').toLowerCase()),
+      };
+      _selectedGenres
+        ..clear()
+        ..addAll(picked);
+      _customGenreList
+        ..clear()
+        ..addAll(picked.where((g) => !known.contains(g.toLowerCase())));
     });
   }
 
@@ -1389,24 +1449,23 @@ class _BookFormState extends ConsumerState<_BookForm> {
               onRemove: (t) => setState(() => _translators.remove(t)),
             ),
           ],
-          // Type and genre are primary — they power the library filter — as
-          // one-tap chip rows with every option visible, no typing. Type is
-          // the single-valued literary form (Novel, Short stories, Poetry…);
-          // tapping the selected chip again clears it.
+          // Type and genre are primary — they power the library filter — but
+          // the rows are a *shortcut*, not the vocabulary (mockup M10): a
+          // handful of chips, with the honest count beside the label opening
+          // the full picker. That's what keeps the form the same size whether
+          // the catalogue carries 10 genres or 500.
           SizedBox(height: 12),
-          Text(l10n.formFieldType, style: _fieldLabelStyle),
+          _ChipRowHeader(
+            label: l10n.formFieldType,
+            total: _typeOptions.length,
+            onOpenAll: _openTypePicker,
+          ),
           SizedBox(height: 6),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
-              // The suggestions, plus the reader's own type when it isn't one
-              // of them — a custom form must still show as a selected chip on
-              // edit, not vanish because it's off-list.
-              for (final form in [
-                ...kWorkForms,
-                if (_form != null && !kWorkForms.contains(_form)) _form!,
-              ])
+              for (final form in _visibleTypes)
                 FilterChip(
                   label: Text(form, style: TextStyle(fontSize: 12)),
                   showCheckmark: false,
@@ -1422,33 +1481,20 @@ class _BookFormState extends ConsumerState<_BookForm> {
                     color: _form == form ? AppColors.oxblood : AppColors.line,
                   ),
                 ),
-              // Our list will never cover every kind of book — a novella, a
-              // screenplay, a devotional. Naming one is a tap away rather than
-              // a dead end (owner report, 16 Jul 2026).
-              ActionChip(
-                onPressed: _pickCustomForm,
-                label: Text(l10n.formTypeOther, style: TextStyle(fontSize: 12)),
-                backgroundColor: AppColors.card,
-                labelStyle: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.oxblood,
-                ),
-                side: BorderSide(color: AppColors.gold),
-              ),
             ],
           ),
           SizedBox(height: 12),
-          Text(l10n.formFieldGenrePrimary, style: _fieldLabelStyle),
+          _ChipRowHeader(
+            label: l10n.formFieldGenrePrimary,
+            total: _genreOptions.length,
+            onOpenAll: _openGenrePicker,
+          ),
           SizedBox(height: 6),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
-              // The suggestions, plus any genre the reader added themselves —
-              // their own genres are chips too, not a separate text field
-              // hiding underneath (owner request, 17 Jul 2026: Type's "＋
-              // Other" is the pattern both rows should share).
-              for (final genre in [..._commonGenres, ..._customGenreList])
+              for (final genre in _visibleGenres)
                 FilterChip(
                   label: Text(genre, style: TextStyle(fontSize: 12)),
                   showCheckmark: false,
@@ -1474,18 +1520,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
                         _selectedGenres.contains(genre) ? AppColors.oxblood : AppColors.line,
                   ),
                 ),
-              ActionChip(
-                onPressed: _pickCustomGenre,
-                label: Text(l10n.formTypeOther, style: TextStyle(fontSize: 12)),
-                backgroundColor: AppColors.card,
-                labelStyle: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.oxblood,
-                ),
-                side: BorderSide(color: AppColors.gold),
-              ),
             ],
           ),
+          if (_readerGenres.isNotEmpty) ...[
+            SizedBox(height: 5),
+            Text(
+              l10n.formGenreYoursNote,
+              style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+            ),
+          ],
           // Everything less essential folds into one disclosure — collapsed on
           // a fresh create, open on edit or when a scan/photo-read filled it.
           SizedBox(height: 12),
@@ -3192,6 +3235,52 @@ class _ForkSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// M10 — a field label with the honest total beside it, opening the full
+/// picker. The count is the whole trick: it tells the reader the row is a
+/// shortcut without making them scroll to find that out.
+class _ChipRowHeader extends StatelessWidget {
+  const _ChipRowHeader({
+    required this.label,
+    required this.total,
+    required this.onOpenAll,
+  });
+
+  final String label;
+  final int total;
+  final VoidCallback onOpenAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Expanded(child: Text(label, style: _fieldLabelStyle)),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onOpenAll,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.formPickerAll(total),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.oxblood,
+                ),
+              ),
+              SizedBox(width: 3),
+              Icon(Icons.search, size: 14, color: AppColors.oxblood),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
