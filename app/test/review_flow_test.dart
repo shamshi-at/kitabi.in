@@ -181,6 +181,33 @@ void main() {
     await flushTree(tester);
   });
 
+  testWidgets('un-wishlisting drops your entry but never the catalogue book',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      final repo = LibraryRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await repo.add(editionId: _editionId, status: 'wishlist');
+    });
+
+    await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
+    await settle(tester);
+    expect(find.text("You don't own this one yet — it's on your wishlist."), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.bookmark).first);
+    await settle(tester);
+
+    // The book is still right here — same page, same title, offering to be
+    // added or wished for again. Only the personal entry went.
+    expect(find.text('Chemmeen'), findsWidgets);
+    expect(find.text('Add to my library'), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark_outline), findsOneWidget);
+
+    await flushTree(tester);
+  });
+
   testWidgets('review editor saves rating and review together to Drift', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
