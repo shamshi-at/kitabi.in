@@ -246,7 +246,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get formLanguageProfileNote =>
-      'Add more languages in your profile to see them here.';
+      'Your languages are listed first — manage them in your profile.';
 
   @override
   String get langPickerTitle => 'Which languages do you read?';
@@ -2571,6 +2571,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String pickerChoose(String label) {
     return 'Choose $label';
   }
+
+  @override
+  String get pickerSearchHint => 'Search';
 
   @override
   String get bookCoverBack => 'Back cover';

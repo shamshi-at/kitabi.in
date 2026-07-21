@@ -6,9 +6,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/languages.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/select_sheet.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../profile/providers/profile_providers.dart';
 import 'picker_widgets.dart';
 
 /// Search the catalogue and pick a Work — used when linking a translation
@@ -454,22 +456,31 @@ class _OriginalStubSheetState extends ConsumerState<_OriginalStubSheet> {
               children: [
                 Expanded(
                   flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.formFieldLanguage.toUpperCase(), style: labelStyle),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<String>(
-                        initialValue: _language,
-                        isExpanded: true,
-                        items: [
-                          for (final lang in kLanguages)
-                            DropdownMenuItem(value: lang, child: Text(lang)),
+                  // The themed searchable picker (never the raw Material
+                  // dropdown), reader's profile languages first — an original
+                  // can be in any language, Spanish to Japanese.
+                  child: SelectField(
+                    label: l10n.formFieldLanguage.toUpperCase(),
+                    labelStyle: labelStyle,
+                    displayValue: _language ?? l10n.formLanguageUnset,
+                    isPlaceholder: _language == null,
+                    onTap: () {
+                      final preferred =
+                          (ref.read(meProvider).valueOrNull?['preferred_languages'] as List?)
+                                  ?.cast<String>() ??
+                              const [];
+                      openSelectSheet(
+                        context,
+                        title: l10n.pickerChoose(l10n.formFieldLanguage.toLowerCase()),
+                        current: _language,
+                        options: [
+                          SelectOption(null, l10n.formLanguageUnset, subdued: true),
+                          for (final lang in languageOptions(preferred))
+                            SelectOption(lang, lang),
                         ],
                         onChanged: (v) => setState(() => _language = v),
-                        style: TextStyle(fontSize: 13.5, color: AppColors.ink),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),

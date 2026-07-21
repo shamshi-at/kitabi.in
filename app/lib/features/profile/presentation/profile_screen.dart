@@ -818,10 +818,16 @@ class _LanguagesSheetState extends ConsumerState<_LanguagesSheet> {
         children: [
           Text(l10n.profileLanguagesSheetTitle, style: Theme.of(context).textTheme.titleLarge),
           SizedBox(height: 16),
-          LanguageChips(
-            selected: _sel,
-            onToggle: (lang) => setState(
-              () => _sel.contains(lang) ? _sel.remove(lang) : _sel.add(lang),
+          // The list now spans the world (~40 chips), so the sheet scrolls
+          // instead of overflowing on small screens.
+          Flexible(
+            child: SingleChildScrollView(
+              child: LanguageChips(
+                selected: _sel,
+                onToggle: (lang) => setState(
+                  () => _sel.contains(lang) ? _sel.remove(lang) : _sel.add(lang),
+                ),
+              ),
             ),
           ),
           SizedBox(height: 20),
