@@ -323,15 +323,17 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
             child: Text(l10n.profileSignOut, style: TextStyle(color: AppColors.inkSoft)),
           ),
         ),
-        Center(
-          child: TextButton(
-            onPressed: () => _confirmDelete(context),
-            child: Text(
-              l10n.profileDeleteAccount,
-              style: TextStyle(color: AppColors.oxbloodDeep, fontSize: 12),
-            ),
-          ),
-        ),
+        // "Delete account" is hidden (owner call, 21 Jul 2026) because it did
+        // not do what it said. Its dialog promised "this deletes your Kitabi
+        // account and library — this can't be undone", but DELETE /me only
+        // sets profiles.deleted_at: every library entry, session, note, loan,
+        // rating and review stayed exactly where it was. A destructive-sounding
+        // button that quietly does almost nothing is worse than no button.
+        //
+        // Bring it back only with a real cascade (soft-delete every Layer 2 row
+        // the profile owns) plus a decision about the reader's Layer 1
+        // contributions, which belong to the shared catalogue and outlive them.
+        // `_confirmDelete` and the l10n strings are kept for that work.
       ],
     );
   }
@@ -353,6 +355,9 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     await Share.shareXFiles([file], text: l10n.exportShareText);
   }
 
+  // Kept, not deleted: this is the flow to restore once DELETE /me actually
+  // cascades. Deleting it would just mean rewriting it from scratch later.
+  // ignore: unused_element
   Future<void> _confirmDelete(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
