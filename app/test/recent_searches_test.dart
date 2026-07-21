@@ -107,4 +107,14 @@ void main() {
 
     expect(await db.keyValuesDao.getValue('device_id'), 'device-1');
   });
+
+  test('an account switch resets the reading goal to the default', () async {
+    // reading_goal lives in the same device-scoped table but is the *reader's*
+    // target — inheriting the last account's goal would be wrong.
+    await db.keyValuesDao.setValue('reading_goal', '75');
+
+    await db.clearUserData();
+
+    expect(await db.keyValuesDao.getValue('reading_goal'), isNull);
+  });
 }

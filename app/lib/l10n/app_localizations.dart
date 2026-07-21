@@ -4378,6 +4378,18 @@ abstract class AppLocalizations {
   /// **'Newest in the catalogue · from your profile languages'**
   String get searchNewInLanguageNote;
 
+  /// Header for the newest-arrivals row when no reading language is known — the fallback for the new-in-language row
+  ///
+  /// In en, this message translates to:
+  /// **'New in the catalogue'**
+  String get searchNewInCatalogue;
+
+  /// Caption under the unfiltered newest-arrivals row, pointing at the profile setting that filters it
+  ///
+  /// In en, this message translates to:
+  /// **'Newest additions · set your reading languages to narrow this'**
+  String get searchNewInCatalogueNote;
+
   /// Section header for authors with the most works — deliberately not called 'popular', since it counts works, not readers
   ///
   /// In en, this message translates to:

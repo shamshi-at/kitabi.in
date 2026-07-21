@@ -235,7 +235,7 @@ class _SearchIdle extends ConsumerWidget {
           ),
           SizedBox(height: 18),
         ],
-        if (language != null) _NewInLanguage(language: language),
+        _NewInLanguage(language: language),
         _PopularAuthors(),
         // The original help line still earns its place — it explains the
         // author/publisher doors that the rows above are full of.
@@ -281,23 +281,29 @@ class _IdleSectionLabel extends StatelessWidget {
 
 /// Newest catalogue arrivals in the reader's first profile language — the
 /// regional angle, and the one row that makes an empty search page feel like
-/// a bookshop rather than a form. Renders nothing at all while loading or if
-/// the language has no books yet, so it never leaves a stranded header.
+/// a bookshop rather than a form. With no language (none set, or `/me`
+/// unreachable — an expired token makes that routine) it degrades to the
+/// catalogue-wide newest instead of vanishing, so the page never loses a
+/// section for a reason the reader can't see. Still renders nothing while
+/// loading or if the catalogue is empty, so there's no stranded header.
 class _NewInLanguage extends ConsumerWidget {
   const _NewInLanguage({required this.language});
 
-  final String language;
+  final String? language;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final language = this.language;
     final works = ref.watch(newInLanguageProvider(language)).valueOrNull ?? const [];
     if (works.isEmpty) return SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _IdleSectionLabel(l10n.searchNewInLanguage(language)),
+        _IdleSectionLabel(
+          language == null ? l10n.searchNewInCatalogue : l10n.searchNewInLanguage(language),
+        ),
         SizedBox(height: 8),
         SizedBox(
           height: 132,
@@ -346,7 +352,8 @@ class _NewInLanguage extends ConsumerWidget {
         ),
         SizedBox(height: 5),
         Text(
-          l10n.searchNewInLanguageNote,
+          // Only claim it's filtered to their languages when it actually is.
+          language == null ? l10n.searchNewInCatalogueNote : l10n.searchNewInLanguageNote,
           style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
         ),
         SizedBox(height: 18),

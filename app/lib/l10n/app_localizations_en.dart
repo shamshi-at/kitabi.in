@@ -2556,6 +2556,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Newest in the catalogue · from your profile languages';
 
   @override
+  String get searchNewInCatalogue => 'New in the catalogue';
+
+  @override
+  String get searchNewInCatalogueNote =>
+      'Newest additions · set your reading languages to narrow this';
+
+  @override
   String get searchPopularAuthors => 'Most in the catalogue';
 
   @override

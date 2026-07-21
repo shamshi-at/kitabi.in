@@ -18,6 +18,7 @@ import 'package:kitabi/features/catalog/presentation/author_picker_screen.dart';
 import 'package:kitabi/features/catalog/presentation/browse_screen.dart';
 import 'package:kitabi/features/catalog/presentation/catalog_search_screen.dart';
 import 'package:kitabi/features/catalog/presentation/publisher_browse_screen.dart';
+import 'package:kitabi/features/profile/providers/profile_providers.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
 const _authorId = '11111111-1111-1111-1111-111111111111';
@@ -118,6 +119,8 @@ class _FakeApiClient extends ApiClient {
   /// server-side (the list is paged), so the query is the thing to assert.
   String? lastBrowseForm;
   String? lastBrowseGenre;
+  String? lastBrowseLanguage;
+  String? lastBrowseSort;
 
   @override
   Future<List<Map<String, dynamic>>> browseWorks({
@@ -130,6 +133,8 @@ class _FakeApiClient extends ApiClient {
   }) async {
     lastBrowseForm = form;
     lastBrowseGenre = genre;
+    lastBrowseLanguage = language;
+    lastBrowseSort = sort;
     if (offset > 0) return []; // one page, then end
     return searchCatalog('chemmeen');
   }
@@ -270,7 +275,62 @@ Widget _wrap(Widget child, {ApiClient? apiClient, List<Override> overrides = con
   );
 }
 
+/// The search page's idle state (S4h). The branch that matters is the one a
+/// reader can't see the cause of: when `/me` is unreachable (an expired token
+/// makes that routine) or no reading languages are set, the newest-arrivals
+/// row must degrade to the catalogue-wide newest rather than silently vanish.
+Widget _searchScreen(_FakeApiClient fake, {List<String>? languages}) {
+  return _wrap(
+    const CatalogSearchScreen(),
+    apiClient: fake,
+    overrides: [
+      // Recent searches read the local db; keep it in memory and empty.
+      appDatabaseProvider.overrideWithValue(AppDatabase.forTesting(NativeDatabase.memory())),
+      meProvider.overrideWith((ref) async => {
+            'id': 'u1',
+            'full_name': 'A Reader',
+            'preferred_languages': languages ?? const <String>[],
+          }),
+    ],
+  );
+}
+
 void main() {
+  testWidgets('idle search page filters newest arrivals to the reading language',
+      (tester) async {
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_searchScreen(fake, languages: ['Malayalam', 'English']));
+    await tester.pumpAndSettle();
+
+    // Header names the language, and the query was actually filtered by it.
+    expect(find.text('NEW IN MALAYALAM'), findsOneWidget);
+    expect(fake.lastBrowseLanguage, 'Malayalam');
+    expect(fake.lastBrowseSort, 'year_desc');
+  });
+
+  testWidgets('idle search page falls back to the whole catalogue with no language',
+      (tester) async {
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_searchScreen(fake, languages: const []));
+    await tester.pumpAndSettle();
+
+    // The row survives — unfiltered — instead of disappearing, and its caption
+    // stops claiming a filter that isn't applied.
+    expect(find.text('NEW IN THE CATALOGUE'), findsOneWidget);
+    expect(find.textContaining('from your profile languages'), findsNothing);
+    expect(fake.lastBrowseLanguage, isNull);
+    expect(fake.lastBrowseSort, 'year_desc');
+  });
+
+  testWidgets('idle search page ranks authors by works in the catalogue', (tester) async {
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_searchScreen(fake));
+    await tester.pumpAndSettle();
+
+    expect(find.text('MOST IN THE CATALOGUE'), findsOneWidget);
+    expect(find.text('Thakazhi Sivasankara Pillai'), findsWidgets);
+  });
+
   testWidgets('catalog search shows a matching result with tappable author', (tester) async {
     final fake = _FakeApiClient();
     await tester.pumpWidget(_wrap(const CatalogSearchScreen(), apiClient: fake));

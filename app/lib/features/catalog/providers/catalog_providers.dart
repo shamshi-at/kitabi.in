@@ -119,11 +119,13 @@ class RecentSearches extends Notifier<List<String>> {
   }
 }
 
-/// Newest catalogue arrivals in one language — the regional angle on the idle
-/// page. The caller skips the row entirely when the reader has set no profile
-/// languages, rather than showing a global "newest" that means little.
+/// Newest catalogue arrivals, filtered to one language when we know one — the
+/// regional angle on the idle page. A null [language] means we don't (no
+/// profile languages set, or `/me` is unreachable — an expired token makes
+/// that a routine state, not an edge case), and the row falls back to the
+/// catalogue-wide newest rather than disappearing.
 final newInLanguageProvider = FutureProvider.autoDispose
-    .family<List<Map<String, dynamic>>, String>((ref, language) {
+    .family<List<Map<String, dynamic>>, String?>((ref, language) {
   return ref.watch(apiClientProvider).browseWorks(
         limit: 12,
         language: language,

@@ -108,11 +108,19 @@ class AppDatabase extends _$AppDatabase {
         },
       );
 
-  /// Wipe all per-user data (Layer 2 entities, the offline caches, and the sync
-  /// bookkeeping) when the signed-in account changes on this device — so one
-  /// reader's library/loans never leak into another's. `KeyValues` is kept
-  /// (device settings + the active-user marker); the sync cursor in `SyncState`
-  /// is cleared, so the new account re-pulls everything from server_seq 0.
+  /// The `KeyValues` keys that belong to the *reader*, not the device — wiped
+  /// on account switch alongside every other Layer 2 table. Everything else in
+  /// that table (device_id, the active-user marker) is device state and stays.
+  /// Add to this list, not to `KeyValues` blindly: a key that holds anything
+  /// personal and isn't named here follows the device to the next reader.
+  static const _personalKeys = ['recent_searches', 'reading_goal'];
+
+  /// Wipe all per-user data (Layer 2 entities, the offline caches, the sync
+  /// bookkeeping, and the personal `KeyValues` keys) when the signed-in account
+  /// changes on this device — so one reader's library, loans, searches or goal
+  /// never leak into another's. The rest of `KeyValues` is kept (device
+  /// settings + the active-user marker); the sync cursor in `SyncState` is
+  /// cleared, so the new account re-pulls everything from server_seq 0.
   Future<void> clearUserData() => transaction(() async {
         await delete(libraryEntries).go();
         await delete(ratings).go();
@@ -126,9 +134,6 @@ class AppDatabase extends _$AppDatabase {
         await delete(syncState).go();
         await delete(conflictHistoryEntries).go();
         await delete(cachedBooks).go();
-        // KeyValues survives as a whole (device_id, the active-user marker),
-        // but the personal keys in it must not — a search history is as
-        // personal as the library it searched.
-        await (delete(keyValues)..where((k) => k.key.equals('recent_searches'))).go();
+        await (delete(keyValues)..where((k) => k.key.isIn(_personalKeys))).go();
       });
 }
