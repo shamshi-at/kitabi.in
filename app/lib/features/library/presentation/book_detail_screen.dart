@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1029,18 +1030,40 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
 
   Future<void> _upload() async {
     if (_busy) return;
-    final source = await showImageSourceSheet(context);
-    if (source == null || !mounted) return;
+    // The full sheet, so a cover already on the book can be straightened or
+    // re-cropped here — not only from the add/edit form.
+    final action = await showCoverActionSheet(context, hasImage: widget.coverUrl != null);
+    if (action == null || !mounted) return;
+    ImageSource? source;
+    switch (action) {
+      case CoverAction.camera:
+        source = ImageSource.camera;
+      case CoverAction.gallery:
+        source = ImageSource.gallery;
+      case CoverAction.adjust:
+      case CoverAction.rotate:
+      case CoverAction.remove:
+        source = null;
+    }
     setState(() => _busy = true);
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final url = await pickAndUploadCover(
-        ref,
-        editionId: widget.editionId,
-        source: source,
-        back: widget.back,
-      );
+      final url = switch (action) {
+        CoverAction.rotate || CoverAction.adjust => await rotateAndUploadCover(
+            ref,
+            context,
+            editionId: widget.editionId,
+            currentUrl: widget.coverUrl!,
+            back: widget.back,
+          ),
+        _ => await pickAndUploadCover(
+            ref,
+            editionId: widget.editionId,
+            source: source!,
+            back: widget.back,
+          ),
+      };
       if (url != null) {
         ref.invalidate(workProvider(widget.workId));
         ref.invalidate(cachedBookProvider(widget.editionId));
