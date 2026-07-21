@@ -124,6 +124,24 @@ camera; everything else stays paper.
   same "+" add affordance as search. This is the catalog's existing linkability
   (Layer 1) surfaced as a screen — not the fuller "author profile with bio and
   reviews" feature, which stays `[LATER]`.
+- **A chip row is a shortcut, never the vocabulary** (designed 21 Jul 2026,
+  mockups **M10–M11**). Type and Genre stay at ~6 visible chips no matter how big
+  the catalogue grows: selected values pin first, then the reader's *own*
+  most-used, and the honest count beside the label (**All 47 ⌕**) opens a
+  typeahead sheet holding the rest. The sheet is the same interaction as the
+  author, publisher and original pickers — learned once, reused four times. Its
+  real job is **duplicate pressure**: each match carries its book count, so
+  "Science fiction · 128" visibly beats inventing "Sci-fi", and creating a new
+  genre is the dashed last resort that says out loud the genre is shared (rule
+  18). This matters because genres get no server-side case-folding the way Type
+  does (`normalize_form` is Type-only) — the sheet *is* the dedupe.
+- **The search page before you type shows only things that are true**
+  (designed 21 Jul 2026, mockup **4h**): your recent searches (local, private,
+  offline), the newest catalogue arrivals filtered to your profile languages, and
+  the authors with the most works. Explicitly **no "Trending"** — nothing counts
+  reads or views yet, so that row would be sorted by nothing and imply a crowd
+  that doesn't exist. When a real reader-count lands it becomes a fourth row
+  without moving the others.
 - **"Add a book" is four different objects, and the UI must fork before it asks
   for fields** (mapped 21 Jul 2026, mockups **M0–M9**, Area 9). A reader is always
   making one of: a **Work** (not in the catalogue), an **Edition** (a printing of one

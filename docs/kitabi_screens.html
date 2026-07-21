@@ -637,6 +637,72 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       author, independent toggles on purpose.</p>
     </div>
 
+    <!-- 4h. Search — before you type -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="search" style="margin-top:10px">⌕ <span style="color:var(--ink-soft)">Title, author, or ISBN</span></div>
+
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin:14px 0 6px">
+            <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft)">Recent</div>
+            <span class="sub" style="font-size:8px">Clear</span>
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <span class="chip" style="font-size:9px">↺ malayalam classics</span>
+            <span class="chip" style="font-size:9px">↺ K.R. Meera</span>
+            <span class="chip" style="font-size:9px">↺ 9788126415472</span>
+          </div>
+
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 6px">New in Malayalam</div>
+          <div style="display:flex;gap:8px;overflow:hidden">
+            <div style="width:52px;flex-shrink:0">
+              <div class="cover" style="width:52px;height:76px;background:linear-gradient(150deg,#5C3A24,#3A2114);color:#F0E2C2"><div class="ct" style="font-size:5.5px">ഇരുട്ടിന്റെ ആത്മാവ്</div></div>
+              <div class="sub" style="font-size:7px;margin-top:3px;line-height:1.3">M.T. Vasudevan Nair</div>
+            </div>
+            <div style="width:52px;flex-shrink:0">
+              <div class="cover" style="width:52px;height:76px;background:linear-gradient(150deg,#43617E,#22344a);color:#F0E2C2"><div class="ct" style="font-size:5.5px">Mayyazhi</div></div>
+              <div class="sub" style="font-size:7px;margin-top:3px;line-height:1.3">M. Mukundan</div>
+            </div>
+            <div style="width:52px;flex-shrink:0">
+              <div class="cover" style="width:52px;height:76px;background:linear-gradient(150deg,#4a5a3a,#28331e);color:#E2E8D6"><div class="ct" style="font-size:5.5px">Aarachar</div></div>
+              <div class="sub" style="font-size:7px;margin-top:3px;line-height:1.3">K.R. Meera</div>
+            </div>
+            <div style="width:52px;flex-shrink:0">
+              <div class="cover" style="width:52px;height:76px;background:linear-gradient(150deg,#6d3a4a,#3d1f2a);color:#F0DCE2"><div class="ct" style="font-size:5.5px">Ente Katha</div></div>
+              <div class="sub" style="font-size:7px;margin-top:3px;line-height:1.3">Madhavikutty</div>
+            </div>
+          </div>
+          <div class="sub" style="font-size:7.5px;margin-top:5px">Newest in the catalogue · from your profile languages</div>
+
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 6px">Most in the catalogue</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <span class="chip" style="font-size:9px;background:var(--gold-soft);border:none;color:var(--ink)">O.V. Vijayan</span>
+            <span class="chip" style="font-size:9px;background:var(--gold-soft);border:none;color:var(--ink)">M.T. Vasudevan Nair</span>
+            <span class="chip" style="font-size:9px;background:var(--gold-soft);border:none;color:var(--ink)">Basheer</span>
+          </div>
+
+          <div class="rule" style="margin:14px 0 8px"></div>
+          <div class="btn soft" style="padding:8px;font-size:9.5px;border:1px solid var(--line)">📖 Browse the whole catalogue</div>
+        </div>
+        <div class="nav">
+          <div class="on"><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4h · Search — before you type</b> The blank page replaced with three things
+      that are <i>true</i>: your own recent searches (local, private, offline), the newest catalogue
+      arrivals <b>in your profile languages</b>, and the authors who actually have the most works
+      here (ordered most-first; the count itself isn't shown because <code>AuthorOut</code> doesn't
+      carry one — the endpoint ranks by it without returning it). Deliberately <b>no "Trending"</b>
+      — nothing counts reads or views yet, so a trending shelf would be sorted by nothing and imply
+      a crowd Kitabi doesn't have. When a real reader-count lands, it slots in as a fourth row
+      without moving anything.</p>
+    </div>
+
   </div>
 </section>
 
@@ -2178,6 +2244,97 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       (“saved on this phone”). Status is set here, in the moment, instead of a trip to the book
       page. The closing line is the quiet contribution nudge: you didn’t just file a book, you left
       the catalogue better than you found it.</p>
+    </div>
+
+    <!-- M10. Type & Genre — the row is a shortcut, not the vocabulary -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle" style="margin-top:8px">Add a book</div>
+
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin:12px 0 5px">
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px">TYPE · PICK ONE</div>
+            <span class="sub" style="font-size:7.5px;color:var(--oxblood);font-weight:700">All 10 ⌕</span>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <span class="chip on" style="font-size:8px;background:var(--oxblood);border-color:var(--oxblood)">Novel</span>
+            <span class="chip" style="font-size:8px">Short stories</span><span class="chip" style="font-size:8px">Poetry</span>
+            <span class="chip" style="font-size:8px">Memoir</span>
+          </div>
+
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin:12px 0 5px">
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px">GENRE · TAP ALL THAT FIT</div>
+            <span class="sub" style="font-size:7.5px;color:var(--oxblood);font-weight:700">All 47 ⌕</span>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <span class="chip on" style="font-size:8px;background:var(--oxblood);border-color:var(--oxblood)">Fiction ✕</span>
+            <span class="chip on" style="font-size:8px;background:var(--oxblood);border-color:var(--oxblood)">Malayalam literature ✕</span>
+            <span class="chip" style="font-size:8px">Historical</span>
+            <span class="chip" style="font-size:8px">Short fiction</span>
+            <span class="chip" style="font-size:8px">Classics</span>
+            <span class="chip" style="font-size:8px">Mystery</span>
+          </div>
+          <div class="sub" style="font-size:7px;margin-top:5px;line-height:1.5">Your most-used genres first — <b>Malayalam literature</b> and <b>Short fiction</b> are on this row because <i>you</i> use them, not because we shipped them.</div>
+
+          <div class="card" style="margin-top:12px;padding:9px 10px;background:var(--paper-deep)">
+            <div class="sub" style="font-size:7.5px;line-height:1.55"><b>Why the row never grows:</b> it’s a shortcut to ~6 chips, not the vocabulary. Everything else lives one tap away in the sheet — so a 47-genre catalogue and a 470-genre one look identical here.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M10 · Type &amp; Genre — a shortcut, not the vocabulary</b> The fix isn’t
+      fitting more chips, it’s showing fewer. The row shrinks to your <i>own</i> most-used values
+      (selected ones pinned first, always visible), and the count beside the label — <b>All 47 ⌕</b>
+      — is the honest door to the rest. Type keeps the same shape on a closed vocabulary, so both
+      rows read identically. Nothing scrolls, however big the catalogue gets.</p>
+    </div>
+
+    <!-- M11. The genre sheet -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.28)">
+          <div style="position:absolute;left:0;right:0;bottom:0;top:60px;background:var(--paper);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 14px;display:flex;flex-direction:column">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px"></div>
+            <div class="h-serif" style="font-size:14px">Genre</div>
+            <div class="sub" style="font-size:8px;margin-top:1px">47 in the catalogue · tap all that fit</div>
+            <div class="search" style="margin-top:9px;border-color:var(--ink)"><span style="color:var(--ink);font-weight:600">sci</span><span style="margin-left:auto;color:var(--ink-soft)">✕</span></div>
+
+            <div class="sub" style="font-size:7px;letter-spacing:1px;margin:11px 0 5px">ALREADY IN THE CATALOGUE</div>
+            <div class="card" style="padding:0">
+              <div style="display:flex;align-items:center;padding:8px 10px;gap:8px">
+                <span style="width:15px;height:15px;border-radius:4px;background:var(--oxblood);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">✓</span>
+                <div style="flex:1;font-size:10px;font-weight:600">Science fiction</div>
+                <span class="sub" style="font-size:7.5px">128 books</span>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;align-items:center;padding:8px 10px;gap:8px">
+                <span style="width:15px;height:15px;border-radius:4px;border:1.5px solid var(--line)"></span>
+                <div style="flex:1;font-size:10px">Science</div>
+                <span class="sub" style="font-size:7.5px">54 books</span>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;align-items:center;padding:8px 10px;gap:8px">
+                <span style="width:15px;height:15px;border-radius:4px;border:1.5px solid var(--line)"></span>
+                <div style="flex:1;font-size:10px">Social science</div>
+                <span class="sub" style="font-size:7.5px">12 books</span>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top:10px;padding:9px 10px;border-style:dashed;border-color:#D8C9A8;background:transparent">
+              <div style="font-size:9.5px;font-weight:600;color:var(--ink-soft)">Create “sci”</div>
+              <div class="sub" style="font-size:7.5px;margin-top:2px;line-height:1.5">Only if none of the above is it — a new genre joins the shared filter for every reader.</div>
+            </div>
+
+            <div class="sub" style="font-size:7.5px;margin-top:auto;line-height:1.5;text-align:center">Seeing the count is the point: <b>Science fiction · 128</b> is obviously the one to pick, so “Sci-fi” never gets born.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M11 · The genre sheet</b> The same typeahead as the author, publisher and
+      original pickers — one interaction, learned once. It exists to apply <i>duplicate pressure</i>:
+      the book count next to each match is what stops "Sci-fi", "SciFi" and "Science fiction" from
+      becoming three permanent rows that fragment everyone’s library filter. Creating a genuinely new
+      genre stays possible, but it’s the dashed last resort, and it says out loud that the genre is
+      shared. Genres get no case-folding server-side today (Type does), so this screen <i>is</i> the
+      dedupe.</p>
     </div>
 
   </div>

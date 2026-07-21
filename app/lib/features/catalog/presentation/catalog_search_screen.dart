@@ -14,6 +14,7 @@ import '../../../data/api/api_client.dart';
 import '../../../data/db/database.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
+import '../../profile/providers/profile_providers.dart';
 import '../providers/catalog_providers.dart';
 import 'catalog_entity_tiles.dart';
 import 'catalog_result_tile.dart';
@@ -52,6 +53,18 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _remoteQuery = value);
     });
+  }
+
+  /// Tapping a Recent chip re-runs it immediately — no debounce, since the
+  /// query is already complete, and it bubbles back to the top of the list.
+  void _runRecent(String query) {
+    _debounce?.cancel();
+    _controller.text = query;
+    setState(() {
+      _query = query;
+      _remoteQuery = query;
+    });
+    ref.read(recentSearchesProvider.notifier).record(query);
   }
 
   @override
@@ -98,6 +111,12 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                                 isDense: true,
                               ),
                               onChanged: _onQueryChanged,
+                              // A submitted query is one the reader committed
+                              // to — that's what earns a place in Recent, not
+                              // every debounced keystroke on the way there.
+                              textInputAction: TextInputAction.search,
+                              onSubmitted: (v) =>
+                                  ref.read(recentSearchesProvider.notifier).record(v),
                             ),
                           ),
                           if (_controller.text.isNotEmpty)
@@ -144,39 +163,7 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
             SizedBox(height: 12),
             Expanded(
               child: _query.trim().isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              l10n.catalogSearchHelp,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: AppColors.inkSoft),
-                            ),
-                            SizedBox(height: 20),
-                            ElevatedButton.icon(
-                              icon: Icon(Icons.auto_stories_outlined, size: 18),
-                              label: Text(l10n.browseEntry),
-                              onPressed: () => context.push(Routes.catalogBrowse),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.oxblood,
-                                foregroundColor: AppColors.paper,
-                                padding: EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
+                  ? _SearchIdle(onPickRecent: _runRecent)
                   : _SearchResults(query: _query, remoteQuery: _remoteQuery),
             ),
           ],
@@ -191,6 +178,220 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
 /// and publishers — one fuzzy, typo-tolerant, ranked API call on the
 /// debounced [remoteQuery]. A library hit opens the book you own; a catalog
 /// book opens it to add; an author/publisher opens their browse page.
+/// S4h — what the search page shows before you type. Three sections, all of
+/// them real: the reader's own recent searches (local, offline), the newest
+/// catalogue arrivals in their first profile language, and the authors who
+/// have the most works here. There is deliberately no "Trending" — nothing in
+/// the schema counts reads or views, so that row would be sorted by nothing
+/// (docs/screen-design.md). Every section hides itself when empty, so a fresh
+/// install with no languages set falls back to the original help text.
+class _SearchIdle extends ConsumerWidget {
+  const _SearchIdle({required this.onPickRecent});
+
+  final void Function(String) onPickRecent;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final recent = ref.watch(recentSearchesProvider);
+    final languages =
+        (ref.watch(meProvider).valueOrNull?['preferred_languages'] as List?)?.cast<String>() ??
+            const <String>[];
+    final language = languages.isNotEmpty ? languages.first : null;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(20, 4, 20, 24),
+      children: [
+        if (recent.isNotEmpty) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(child: _IdleSectionLabel(l10n.searchRecentSection)),
+              GestureDetector(
+                onTap: () => ref.read(recentSearchesProvider.notifier).clear(),
+                child: Text(
+                  l10n.searchRecentClear,
+                  style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final query in recent)
+                ActionChip(
+                  onPressed: () => onPickRecent(query),
+                  avatar: Icon(Icons.history, size: 14, color: AppColors.inkSoft),
+                  label: Text(query, style: TextStyle(fontSize: 12)),
+                  backgroundColor: AppColors.card,
+                  side: BorderSide(color: AppColors.line),
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+          SizedBox(height: 18),
+        ],
+        if (language != null) _NewInLanguage(language: language),
+        _PopularAuthors(),
+        // The original help line still earns its place — it explains the
+        // author/publisher doors that the rows above are full of.
+        SizedBox(height: 4),
+        Text(
+          l10n.catalogSearchHelp,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.4),
+        ),
+        SizedBox(height: 14),
+        OutlinedButton.icon(
+          icon: Icon(Icons.auto_stories_outlined, size: 18),
+          label: Text(l10n.browseEntry),
+          onPressed: () => context.push(Routes.catalogBrowse),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.oxblood,
+            padding: EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _IdleSectionLabel extends StatelessWidget {
+  const _IdleSectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text.toUpperCase(),
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+        color: AppColors.inkSoft,
+      ),
+    );
+  }
+}
+
+/// Newest catalogue arrivals in the reader's first profile language — the
+/// regional angle, and the one row that makes an empty search page feel like
+/// a bookshop rather than a form. Renders nothing at all while loading or if
+/// the language has no books yet, so it never leaves a stranded header.
+class _NewInLanguage extends ConsumerWidget {
+  const _NewInLanguage({required this.language});
+
+  final String language;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final works = ref.watch(newInLanguageProvider(language)).valueOrNull ?? const [];
+    if (works.isEmpty) return SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _IdleSectionLabel(l10n.searchNewInLanguage(language)),
+        SizedBox(height: 8),
+        SizedBox(
+          height: 132,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: works.length,
+            separatorBuilder: (_, _) => SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final work = works[i];
+              final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+              final author = authors.isNotEmpty ? authors.first['name'] as String? : null;
+              final edition = work['edition'] as Map<String, dynamic>?;
+              final editionId = edition?['id'] as String?;
+              return SizedBox(
+                width: 64,
+                child: GestureDetector(
+                  onTap: editionId == null
+                      ? null
+                      : () => context.push(
+                            Routes.bookDetailPath(work['id'] as String, editionId),
+                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TypesetCover(
+                        title: work['title'] as String? ?? '',
+                        author: author,
+                        coverUrl: edition?['cover_url'] as String?,
+                        width: 64,
+                        height: 94,
+                      ),
+                      SizedBox(height: 4),
+                      if (author != null)
+                        Text(
+                          author,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 9, color: AppColors.inkSoft, height: 1.25),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: 5),
+        Text(
+          l10n.searchNewInLanguageNote,
+          style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
+        ),
+        SizedBox(height: 18),
+      ],
+    );
+  }
+}
+
+/// Authors ranked by how many works they have in the catalogue — the only
+/// popularity signal that exists today. Named "Most in the catalogue" rather
+/// than "Popular" on purpose: it counts works, not readers, and the label
+/// shouldn't imply otherwise.
+class _PopularAuthors extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final authors = ref.watch(popularAuthorsProvider).valueOrNull ?? const [];
+    if (authors.isEmpty) return SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _IdleSectionLabel(l10n.searchPopularAuthors),
+        SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final author in authors)
+              ActionChip(
+                onPressed: () =>
+                    context.push(Routes.authorBrowsePath(author['id'] as String)),
+                label: Text(author['name'] as String? ?? '', style: TextStyle(fontSize: 12)),
+                backgroundColor: AppColors.goldSoft,
+                side: BorderSide.none,
+                visualDensity: VisualDensity.compact,
+              ),
+          ],
+        ),
+        SizedBox(height: 18),
+      ],
+    );
+  }
+}
+
 class _SearchResults extends ConsumerWidget {
   const _SearchResults({required this.query, required this.remoteQuery});
 

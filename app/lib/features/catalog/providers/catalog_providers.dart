@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/api/api_client.dart';
+import '../../../data/sync/sync_providers.dart';
 
 /// Catalog-only search results (title / author / exact ISBN). The personal
 /// library merge ("in your library" vs "in the catalog") lands once Phase 3's
@@ -61,4 +62,78 @@ final workProvider =
 final publicReviewsProvider =
     FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, workId) {
   return ref.watch(apiClientProvider).getWorkReviews(workId);
+});
+
+// ─── Search idle state (S4h) ────────────────────────────────────────────────
+// What the search page shows before you type. Everything here is real data:
+// the reader's own history, the newest catalogue rows in their languages, and
+// authors ranked by how many works they actually have. Deliberately no
+// "trending" — nothing counts reads or views yet (docs/screen-design.md).
+
+/// Recent searches, newest first. Device-local (`key_values`), never synced,
+/// and dropped on account switch (`AppDatabase.clearUserData`) — a search
+/// history is personal, so it must not follow the device to the next reader.
+final recentSearchesProvider =
+    NotifierProvider<RecentSearches, List<String>>(RecentSearches.new);
+
+class RecentSearches extends Notifier<List<String>> {
+  static const _key = 'recent_searches';
+  static const _max = 8;
+
+  /// Queries can contain spaces, so the stored list is newline-delimited —
+  /// a search is a single line by definition.
+  static const _separator = '\n';
+
+  @override
+  List<String> build() {
+    // Notifier.build is synchronous; load in the background and publish when
+    // it arrives. Empty-until-loaded is correct here — the section simply
+    // doesn't render on the first frame.
+    _load();
+    return const [];
+  }
+
+  Future<void> _load() async {
+    final raw = await ref.read(appDatabaseProvider).keyValuesDao.getValue(_key);
+    if (raw == null || raw.isEmpty) return;
+    state = raw.split(_separator).where((s) => s.isNotEmpty).toList();
+  }
+
+  /// Record a query the reader actually committed to (submitted, or followed
+  /// through to a result) — never a debounced keystroke, or the list fills up
+  /// with the prefixes of one search.
+  Future<void> record(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return;
+    final next = [
+      q,
+      ...state.where((s) => s.toLowerCase() != q.toLowerCase()),
+    ].take(_max).toList();
+    state = next;
+    await ref.read(appDatabaseProvider).keyValuesDao.setValue(_key, next.join(_separator));
+  }
+
+  Future<void> clear() async {
+    state = const [];
+    await ref.read(appDatabaseProvider).keyValuesDao.setValue(_key, '');
+  }
+}
+
+/// Newest catalogue arrivals in one language — the regional angle on the idle
+/// page. The caller skips the row entirely when the reader has set no profile
+/// languages, rather than showing a global "newest" that means little.
+final newInLanguageProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, String>((ref, language) {
+  return ref.watch(apiClientProvider).browseWorks(
+        limit: 12,
+        language: language,
+        sort: 'year_desc',
+      );
+});
+
+/// Authors with the most works in the catalogue — the one popularity signal
+/// that genuinely exists today (`sort=popular` counts works, not readers).
+final popularAuthorsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
+  return ref.watch(apiClientProvider).browseAuthors(limit: 8, sort: 'popular');
 });

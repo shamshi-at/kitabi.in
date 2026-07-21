@@ -2541,6 +2541,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseEntry => 'Browse the catalogue';
 
   @override
+  String get searchRecentSection => 'Recent';
+
+  @override
+  String get searchRecentClear => 'Clear';
+
+  @override
+  String searchNewInLanguage(String language) {
+    return 'New in $language';
+  }
+
+  @override
+  String get searchNewInLanguageNote =>
+      'Newest in the catalogue · from your profile languages';
+
+  @override
+  String get searchPopularAuthors => 'Most in the catalogue';
+
+  @override
   String get browseTabBooks => 'Books';
 
   @override

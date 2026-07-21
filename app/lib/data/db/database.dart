@@ -126,5 +126,9 @@ class AppDatabase extends _$AppDatabase {
         await delete(syncState).go();
         await delete(conflictHistoryEntries).go();
         await delete(cachedBooks).go();
+        // KeyValues survives as a whole (device_id, the active-user marker),
+        // but the personal keys in it must not — a search history is as
+        // personal as the library it searched.
+        await (delete(keyValues)..where((k) => k.key.equals('recent_searches'))).go();
       });
 }

@@ -4354,6 +4354,36 @@ abstract class AppLocalizations {
   /// **'Browse the catalogue'**
   String get browseEntry;
 
+  /// Section header for the reader's recent searches (S4h)
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get searchRecentSection;
+
+  /// Action that empties the recent-searches list
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get searchRecentClear;
+
+  /// Section header for newest catalogue arrivals in one of the reader's languages
+  ///
+  /// In en, this message translates to:
+  /// **'New in {language}'**
+  String searchNewInLanguage(String language);
+
+  /// Caption under the new-in-language row explaining where it comes from
+  ///
+  /// In en, this message translates to:
+  /// **'Newest in the catalogue · from your profile languages'**
+  String get searchNewInLanguageNote;
+
+  /// Section header for authors with the most works — deliberately not called 'popular', since it counts works, not readers
+  ///
+  /// In en, this message translates to:
+  /// **'Most in the catalogue'**
+  String get searchPopularAuthors;
+
   /// Browse screen tab for all books
   ///
   /// In en, this message translates to:
