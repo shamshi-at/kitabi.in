@@ -2435,6 +2435,100 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookTranslationLinked => 'Linked as a translation';
 
   @override
+  String bookTranslationOf(String title) {
+    return 'Translation of $title';
+  }
+
+  @override
+  String get bookAddTranslation => 'Add a translation';
+
+  @override
+  String bookTranslatedBy(String name) {
+    return 'trans. $name';
+  }
+
+  @override
+  String get formFieldTranslatedFrom => 'Translated from';
+
+  @override
+  String get formLinkOriginal => 'Link the original work';
+
+  @override
+  String get formTranslatedFromHelp =>
+      'Reading a translation? Linking the original lets readers hop between versions.';
+
+  @override
+  String get formFieldTranslator => 'Translator';
+
+  @override
+  String get formTranslatorHelp =>
+      'Credited on this book, alongside the author — a translator has their own page too.';
+
+  @override
+  String get formAddTranslator => 'Add translator';
+
+  @override
+  String get workPickerOriginalTitle => 'The original work';
+
+  @override
+  String get workPickerOriginalSubtitle =>
+      'Search the shared catalogue in any script';
+
+  @override
+  String get workPickerAddOriginal => 'Not here? Add the original';
+
+  @override
+  String get workPickerAddOriginalHelp =>
+      'A catalogue entry, not a book you own — nothing lands on your shelf.';
+
+  @override
+  String get workPickerStampOriginal => 'Original';
+
+  @override
+  String get workPickerStampInGroup => 'in group';
+
+  @override
+  String get stubFieldTitle => 'Original title';
+
+  @override
+  String get stubFieldYear => 'Year';
+
+  @override
+  String get stubCarriedOver =>
+      'Author, type and genre are copied from your book — a translation shares them. Everything stays editable later.';
+
+  @override
+  String get stubSave => 'Add & link';
+
+  @override
+  String get forkAlreadyHere => 'Kitabi already has this book.';
+
+  @override
+  String get forkQuestion => 'So what are you adding?';
+
+  @override
+  String get forkOwnThis => 'I own this one — put it on my shelf';
+
+  @override
+  String get forkOwnThisAdded => 'On your shelf';
+
+  @override
+  String get forkDifferentPrinting => 'Mine\'s a different printing';
+
+  @override
+  String get forkDifferentPrintingHelp =>
+      'Other ISBN, cover or page count — add an edition';
+
+  @override
+  String get forkTranslation => 'Mine\'s a translation';
+
+  @override
+  String get forkTranslationHelp => 'Its own book, linked to this one';
+
+  @override
+  String get forkDifferentBook => 'Different book, same title — keep typing';
+
+  @override
   String get shareAuthorEyebrow => 'AN AUTHOR ON KITABI';
 
   @override

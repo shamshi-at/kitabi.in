@@ -49,15 +49,17 @@ _ISBN_RE = re.compile(r"^[0-9]{9}[0-9X]$|^[0-9]{13}$")
 # would multiply rows.
 _WORK_JOINED = (
     joinedload(Work.authors),
+    joinedload(Work.translators),
     joinedload(Work.genres),
     joinedload(Work.editions).options(joinedload(Edition.publisher), joinedload(Edition.series)),
 )
 
-# For summary LISTS (browse/search) — WorkSummaryOut needs authors and a
-# representative edition, but not genres, so skip that relationship to save a
-# round-trip per list query.
+# For summary LISTS (browse/search) — WorkSummaryOut needs authors, translators
+# (the "trans. X" line on sibling rows) and a representative edition, but not
+# genres, so skip that relationship to save a round-trip per list query.
 _SUMMARY_OPTIONS = (
     selectinload(Work.authors),
+    selectinload(Work.translators),
     selectinload(Work.editions).options(joinedload(Edition.publisher), joinedload(Edition.series)),
 )
 
@@ -223,6 +225,7 @@ async def create_work_with_edition(
     author/publisher/genre/series, then create the Work + its first Edition.
     [created_by] credits the contributing reader for their score."""
     authors = await _resolve_authors(db, payload.author_ids, payload.author_names)
+    translators = await _resolve_authors(db, payload.translator_ids, payload.translator_names)
     genres = [await _get_or_create(db, Genre, name) for name in payload.genre_names]
     publisher = await _resolve_publisher(db, payload.publisher_id, payload.publisher_name)
     series = await _get_or_create(db, Series, payload.series_name) if payload.series_name else None
@@ -235,11 +238,23 @@ async def create_work_with_edition(
         first_publish_year=payload.first_publish_year,
         form=payload.form,
         authors=authors,
+        translators=translators,
         genres=genres,
         created_by_user_id=created_by,
     )
     db.add(work)
     await db.flush()
+
+    # "Translated from" (T1/T4): join/create the original's translation group
+    # and record the direction, in the same transaction as the create. A
+    # non-resolving id is ignored rather than failing the whole add.
+    if payload.original_work_id is not None:
+        original = await db.get(Work, payload.original_work_id)
+        if original is not None and original.deleted_at is None:
+            group_id = original.translation_group_id or work.translation_group_id or uuid.uuid4()
+            original.translation_group_id = group_id
+            work.translation_group_id = group_id
+            work.original_work_id = original.id
 
     edition = Edition(
         work_id=work.id,
@@ -261,12 +276,17 @@ async def create_work_with_edition(
 
 async def update_work(db: AsyncSession, work: Work, patch: WorkUpdate) -> Work:
     data = patch.model_dump(
-        exclude_unset=True, exclude={"author_ids", "author_names", "genre_names"}
+        exclude_unset=True,
+        exclude={"author_ids", "author_names", "translator_ids", "translator_names", "genre_names"},
     )
     for field, value in data.items():
         setattr(work, field, value)
     if patch.author_ids is not None or patch.author_names is not None:
         work.authors = await _resolve_authors(db, patch.author_ids or [], patch.author_names or [])
+    if patch.translator_ids is not None or patch.translator_names is not None:
+        work.translators = await _resolve_authors(
+            db, patch.translator_ids or [], patch.translator_names or []
+        )
     if patch.genre_names is not None:
         work.genres = [await _get_or_create(db, Genre, name) for name in patch.genre_names]
     await db.commit()
@@ -747,14 +767,32 @@ async def translation_siblings(db: AsyncSession, work: Work) -> list[Work]:
     return list((await db.execute(stmt)).unique().scalars().all())
 
 
-async def link_translation(db: AsyncSession, work: Work, other_work: Work) -> None:
-    """[WIRED] — link two Works as translations of one another. Reuses an
-    existing translation_group_id if either side already has one, so linking
-    a third translation later just joins the same group."""
+async def link_translation(
+    db: AsyncSession, work: Work, other_work: Work, relation: str = "sibling"
+) -> None:
+    """Link two Works as translations of one another. Reuses an existing
+    translation_group_id if either side already has one, so linking a third
+    translation later just joins the same group.
+
+    [relation] adds the direction on top of the undirected group:
+    "original" — other_work is work's original; "translation" — other_work is
+    a translation of work; "sibling" — direction unknown, group-link only."""
     group_id = work.translation_group_id or other_work.translation_group_id or uuid.uuid4()
     work.translation_group_id = group_id
     other_work.translation_group_id = group_id
+    if relation == "original":
+        work.original_work_id = other_work.id
+    elif relation == "translation":
+        other_work.original_work_id = work.id
     await db.commit()
+
+
+async def work_summary_row(db: AsyncSession, work_id: uuid.UUID) -> Work | None:
+    """One Work loaded with the summary options — for WorkOut.original."""
+    stmt = (
+        select(Work).where(Work.id == work_id, Work.deleted_at.is_(None)).options(*_SUMMARY_OPTIONS)
+    )
+    return (await db.execute(stmt)).unique().scalar_one_or_none()
 
 
 async def translation_group_rating(db: AsyncSession, work: Work) -> float | None:

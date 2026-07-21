@@ -267,6 +267,8 @@ class _Frontispiece extends ConsumerWidget {
     final workId = work['id'] as String;
     final title = work['title'] as String;
     final authorName = authors.isNotEmpty ? authors.first['name'] as String? : null;
+    final translators =
+        (work['translators'] as List?)?.cast<Map<String, dynamic>>() ?? const <Map<String, dynamic>>[];
     final tint = TypesetCover.tintFor(title, authorName);
     final accent = TypesetCover.accentFor(title, authorName);
     final front = edition?['cover_url'] as String?;
@@ -417,6 +419,34 @@ class _Frontispiece extends ConsumerWidget {
                                             ),
                                           ),
                                         ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          // T5: the translator in the byline, where a reader
+                          // looks for it — each name a door to their author
+                          // page, same as the authors above.
+                          if (translators.isNotEmpty)
+                            Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: Wrap(
+                                children: [
+                                  for (final (i, translator) in translators.indexed)
+                                    GestureDetector(
+                                      onTap: translator['id'] != null
+                                          ? () => context.push(
+                                              Routes.authorBrowsePath(translator['id'] as String))
+                                          : null,
+                                      child: Text(
+                                        i == 0
+                                            ? l10n.bookTranslatedBy(translator['name'] as String)
+                                            : ', ${translator['name']}',
+                                        style: TextStyle(
+                                          color: AppColors.oxblood,
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -706,7 +736,12 @@ class _TranslationsSection extends ConsumerWidget {
     final otherId = picked['id'] as String?;
     if (otherId == null) return;
     try {
-      await ref.read(apiClientProvider).linkTranslation(workId, otherId);
+      // "Link a translation" from an *original's* page records the direction
+      // (the picked work was translated from this one). From a page that is
+      // itself a translation, stay undirected — the picked sibling's original
+      // is this work's original, not this work.
+      final relation = work['original'] == null ? 'translation' : 'sibling';
+      await ref.read(apiClientProvider).linkTranslation(workId, otherId, relation: relation);
       if (!context.mounted) return;
       ref.invalidate(workProvider(workId));
       ScaffoldMessenger.of(context).showSnackBar(
@@ -719,38 +754,167 @@ class _TranslationsSection extends ConsumerWidget {
     }
   }
 
+  /// T6: open the add form pre-linked to this work as the original — the new
+  /// translation joins the group on save. On return, refresh so it appears.
+  Future<void> _addTranslation(BuildContext context, WidgetRef ref) async {
+    final workId = work['id'] as String;
+    await context.push(Routes.catalogAdd, extra: {
+      'originalWork': {
+        'id': workId,
+        'title': work['title'],
+        'language': work['language'],
+        'first_publish_year': work['first_publish_year'],
+        'authors': work['authors'],
+        'edition':
+            ((work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? const []).firstOrNull,
+      },
+    });
+    ref.invalidate(workProvider(workId));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final translations = (work['translations'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final original = work['original'] as Map<String, dynamic>?;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(label: l10n.bookTranslationsSection),
         SizedBox(height: 4),
-        for (final t in translations)
-          _TranslationRow(
-            translation: t,
+        // T5: on a translation's page, the original leads — the gold-ruled
+        // "Translation of …" card, tappable like any sibling.
+        if (original != null)
+          _OriginalCard(
+            original: original,
             onTap: () {
-              final ed = t['edition'] as Map<String, dynamic>?;
+              final ed = original['edition'] as Map<String, dynamic>?;
               if (ed != null) {
-                context.push(Routes.bookDetailPath(t['id'] as String, ed['id'] as String));
+                context.push(Routes.bookDetailPath(original['id'] as String, ed['id'] as String));
               }
             },
           ),
+        for (final t in translations)
+          if (t['id'] != original?['id'])
+            _TranslationRow(
+              translation: t,
+              onTap: () {
+                final ed = t['edition'] as Map<String, dynamic>?;
+                if (ed != null) {
+                  context.push(Routes.bookDetailPath(t['id'] as String, ed['id'] as String));
+                }
+              },
+            ),
         SizedBox(height: 4),
-        TextButton.icon(
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.oxblood,
-            padding: EdgeInsets.symmetric(vertical: 6),
-            visualDensity: VisualDensity.compact,
-          ),
-          onPressed: () => _link(context, ref),
-          icon: Icon(Icons.link, size: 18),
-          label: Text(l10n.bookLinkTranslation),
+        // T6's two doors, deliberately distinct: create a new translation of
+        // this work (pre-seeded add form), or link one already in the
+        // catalogue (the picker).
+        Wrap(
+          spacing: 4,
+          children: [
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.oxblood,
+                padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                visualDensity: VisualDensity.compact,
+              ),
+              onPressed: () => _addTranslation(context, ref),
+              icon: Icon(Icons.add, size: 18),
+              label: Text(l10n.bookAddTranslation),
+            ),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.oxblood,
+                padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                visualDensity: VisualDensity.compact,
+              ),
+              onPressed: () => _link(context, ref),
+              icon: Icon(Icons.link, size: 18),
+              label: Text(l10n.bookLinkTranslation),
+            ),
+          ],
         ),
       ],
+    );
+  }
+}
+
+/// T5 — "Translation of `<original>`", the gold-ruled provenance card leading
+/// the translations section on a translation's own page.
+class _OriginalCard extends StatelessWidget {
+  const _OriginalCard({required this.original, required this.onTap});
+
+  final Map<String, dynamic> original;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final edition = original['edition'] as Map<String, dynamic>?;
+    final authors = (original['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final language = edition?['language'] as String?;
+    final year = original['first_publish_year'];
+    final subtitle = [
+      ?language,
+      if (year != null) '$year',
+    ].join(' · ');
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border(
+                left: BorderSide(color: AppColors.gold, width: 3),
+                top: BorderSide(color: AppColors.line),
+                right: BorderSide(color: AppColors.line),
+                bottom: BorderSide(color: AppColors.line),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.swap_horiz, size: 16, color: AppColors.oxblood),
+                SizedBox(width: 8),
+                TypesetCover(
+                  title: original['title'] as String? ?? '',
+                  author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+                  coverUrl: edition?['cover_url'] as String?,
+                  width: 24,
+                  height: 35,
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.bookTranslationOf(original['title'] as String? ?? ''),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                      if (subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+                        ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -763,11 +927,18 @@ class _TranslationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final title = translation['title'] as String? ?? '';
     final edition = translation['edition'] as Map<String, dynamic>?;
     final language = edition?['language'] as String?;
     final authors = (translation['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final subtitle = language ?? (authors.isNotEmpty ? authors.first['name'] as String? : null);
+    final translators =
+        (translation['translators'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    // "Malayalam · trans. S. Ramesan" — the two facts that tell versions apart.
+    final subtitle = [
+      ?language ?? (authors.isNotEmpty ? authors.first['name'] as String? : null),
+      if (translators.isNotEmpty) l10n.bookTranslatedBy(translators.first['name'] as String),
+    ].join(' · ');
 
     return InkWell(
       onTap: onTap,
@@ -794,7 +965,7 @@ class _TranslationRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink),
                   ),
-                  if (subtitle != null)
+                  if (subtitle.isNotEmpty)
                     Text(
                       subtitle,
                       maxLines: 1,

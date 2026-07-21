@@ -49,7 +49,10 @@ def work_summary(work) -> WorkSummaryOut:  # noqa: ANN001 — Work ORM instance
         title=work.title,
         first_publish_year=work.first_publish_year,
         aggregate_rating=work.aggregate_rating,
+        translation_group_id=work.translation_group_id,
+        original_work_id=work.original_work_id,
         authors=work.authors,
+        translators=work.translators,
         edition=EditionOut.model_validate(edition) if edition else None,
     )
 
@@ -57,10 +60,15 @@ def work_summary(work) -> WorkSummaryOut:  # noqa: ANN001 — Work ORM instance
 async def _work_out(db: AsyncSession, work) -> WorkOut:  # noqa: ANN001 — Work ORM instance
     rating = await catalog_service.translation_group_rating(db, work)
     siblings = await catalog_service.translation_siblings(db, work)
+    original = None
+    if work.original_work_id is not None:
+        original_row = await catalog_service.work_summary_row(db, work.original_work_id)
+        original = work_summary(original_row) if original_row is not None else None
     return WorkOut.model_validate(work).model_copy(
         update={
             "translation_group_rating": rating,
             "translations": [work_summary(w) for w in siblings],
+            "original": original,
         }
     )
 
@@ -306,7 +314,8 @@ async def link_translation(
     work_id: uuid.UUID, payload: TranslationLinkIn, user: CurrentUser, db: DbSession
 ) -> None:
     """Link two Works as translations of one another (shared translation_group_id)
-    — e.g. the Malayalam "Dantha Simhasanam" under the English "Ivory Throne"."""
+    — e.g. the Malayalam "Dantha Simhasanam" under the English "Ivory Throne".
+    `relation` optionally records the direction (which side is the original)."""
     if work_id == payload.other_work_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -314,7 +323,7 @@ async def link_translation(
         )
     work = await catalog_service.get_work_or_404(db, work_id)
     other = await catalog_service.get_work_or_404(db, payload.other_work_id)
-    await catalog_service.link_translation(db, work, other)
+    await catalog_service.link_translation(db, work, other, relation=payload.relation)
 
 
 @router.post(

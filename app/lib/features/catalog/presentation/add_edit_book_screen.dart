@@ -52,6 +52,7 @@ class AddEditBookScreen extends ConsumerWidget {
     this.workId,
     this.initialIsbn,
     this.initialTitle,
+    this.initialOriginal,
     this.returnCreated = false,
   });
 
@@ -64,6 +65,11 @@ class AddEditBookScreen extends ConsumerWidget {
   /// A title typed somewhere else that found nothing — carried in so the
   /// reader never retypes it (the borrow sheet's "not in the catalog?" path).
   final String? initialTitle;
+
+  /// T6's "Add a translation": the *original* Work's summary carried in from
+  /// its book page, so the form opens pre-linked (Translated-from filled,
+  /// author carried over) and links the group on save.
+  final Map<String, dynamic>? initialOriginal;
 
   /// Pick mode: this screen was opened to *produce a book for the caller*, so
   /// on save it pops with the created Work instead of showing the standalone
@@ -79,6 +85,7 @@ class AddEditBookScreen extends ConsumerWidget {
           child: _BookForm(
             initialIsbn: initialIsbn,
             initialTitle: initialTitle,
+            initialOriginal: initialOriginal,
             returnCreated: returnCreated,
           ),
         ),
@@ -103,12 +110,14 @@ class _BookForm extends ConsumerStatefulWidget {
     this.initialWork,
     this.initialIsbn,
     this.initialTitle,
+    this.initialOriginal,
     this.returnCreated = false,
   });
 
   final Map<String, dynamic>? initialWork;
   final String? initialIsbn;
   final String? initialTitle;
+  final Map<String, dynamic>? initialOriginal;
   final bool returnCreated;
 
   @override
@@ -147,6 +156,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
   // carries its canonical catalog id (falling back to name for legacy data).
   final List<Map<String, dynamic>> _authors = [];
   Map<String, dynamic>? _publisher;
+  // "Translated from" (T1/T4): the original Work's summary once linked, and
+  // the translator credits (Author rows via the same picker as authors). The
+  // translator field only appears while an original is linked — that's the
+  // only moment it means anything.
+  Map<String, dynamic>? _original;
+  final List<Map<String, dynamic>> _translators = [];
+  // What the loaded Work already had (edit mode) — a post-save link call is
+  // made only when the reader *newly* attached an original.
+  String? _initialOriginalId;
   // The edition's front and back cover URLs — set from an ISBN scan, an existing
   // edition (edit mode), or a photo the user captures right here.
   String? _coverUrl;
@@ -195,6 +213,24 @@ class _BookFormState extends ConsumerState<_BookForm> {
       (work?['authors'] as List?)?.map((a) => Map<String, dynamic>.from(a as Map)) ??
           const <Map<String, dynamic>>[],
     );
+    _translators.addAll(
+      (work?['translators'] as List?)?.map((a) => Map<String, dynamic>.from(a as Map)) ??
+          const <Map<String, dynamic>>[],
+    );
+    // Edit mode: the Work's linked original; T6's "Add a translation": the
+    // original carried in from its book page — which also seeds the author
+    // (a translation shares its original's author).
+    final original = (work?['original'] as Map?) ?? widget.initialOriginal;
+    if (original != null) {
+      _original = Map<String, dynamic>.from(original);
+      _initialOriginalId = (work?['original'] as Map?)?['id'] as String?;
+      if (_authors.isEmpty) {
+        _authors.addAll(
+          (original['authors'] as List?)?.map((a) => Map<String, dynamic>.from(a as Map)) ??
+              const <Map<String, dynamic>>[],
+        );
+      }
+    }
     final publisher = edition?['publisher'] as Map?;
     if (publisher != null) _publisher = Map<String, dynamic>.from(publisher);
     _title = TextEditingController(
@@ -315,6 +351,121 @@ class _BookFormState extends ConsumerState<_BookForm> {
     );
     if (already) return;
     setState(() => _authors.add(result));
+  }
+
+  /// The Translator field (T4) — the same author picker, landing in its own
+  /// list. A translator is an Author row: same pages, same typeahead, same
+  /// "add new" path.
+  Future<void> _pickTranslator() async {
+    final result = await context.push<Map<String, dynamic>>(Routes.authorPicker);
+    if (result == null) return;
+    final id = result['id'] as String?;
+    final name = (result['name'] as String? ?? '').trim();
+    if (name.isEmpty) return;
+    final already = _translators.any(
+      (a) => id != null ? a['id'] == id : (a['name'] as String).toLowerCase() == name.toLowerCase(),
+    );
+    if (already) return;
+    setState(() => _translators.add(result));
+  }
+
+  /// "Translated from" (T1) — open the original-picker (T2), carrying the
+  /// form's author/type/genres as the stub seed (T3). The picked (or freshly
+  /// stubbed) original lands as the gold card; on save the new Work joins its
+  /// translation group.
+  Future<void> _pickOriginal() async {
+    final picked = await context.push<Map<String, dynamic>>(Routes.workPicker, extra: {
+      'forOriginal': true,
+      if (widget.initialWork != null) 'excludeWorkId': widget.initialWork!['id'] as String?,
+      'seed': {
+        'authors': [for (final a in _authors) Map<String, dynamic>.from(a)],
+        'form': _form,
+        'genre_names': _selectedGenres.toList(),
+      },
+    });
+    if (picked == null || !mounted) return;
+    setState(() {
+      _original = picked;
+      // A linked original settles the duplicate question — the similar panel
+      // has nothing left to warn about.
+      _similar = const [];
+      _similarDismissed = true;
+      if (_authors.isEmpty) {
+        _authors.addAll(
+          (picked['authors'] as List?)?.map((a) => Map<String, dynamic>.from(a as Map)) ??
+              const <Map<String, dynamic>>[],
+        );
+      }
+    });
+  }
+
+  /// M1 — the fork. A similar-title match means one of four things, and only
+  /// the reader knows which: their copy of that same book (→ shelf), a
+  /// different printing (→ add edition), a translation (→ link as original
+  /// and keep typing), or a genuinely different book (→ dismiss the match).
+  Future<void> _openFork(Map<String, dynamic> work) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _ForkSheet(work: work),
+    );
+    if (choice == null || !mounted) return;
+    switch (choice) {
+      case 'shelf':
+        await _forkAddToShelf(work);
+      case 'edition':
+        context.push(Routes.catalogAddEdition, extra: {
+          'workId': work['id'] as String,
+          'title': work['title'] as String?,
+        });
+      case 'translation':
+        setState(() {
+          _original = work;
+          _similar = const [];
+          _similarDismissed = true;
+          if (_authors.isEmpty) {
+            _authors.addAll(
+              (work['authors'] as List?)?.map((a) => Map<String, dynamic>.from(a as Map)) ??
+                  const <Map<String, dynamic>>[],
+            );
+          }
+        });
+      case 'different':
+        setState(() => _similarDismissed = true);
+    }
+  }
+
+  /// The fork's "I own this one" — same shape as the scanner's Add: cache the
+  /// catalog data, create the entry (idempotent), open the book.
+  Future<void> _forkAddToShelf(Map<String, dynamic> summary) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final work = await ref.read(apiClientProvider).getWork(summary['id'] as String);
+      final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+      final edition = editions.firstOrNull;
+      if (edition == null) return;
+      final editionId = edition['id'] as String;
+      final repo = await ref.read(libraryRepositoryProvider.future);
+      final existing = await repo.getByEditionId(editionId);
+      if (existing == null) {
+        await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+        await repo.add(editionId: editionId);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.forkOwnThisAdded)),
+      );
+      context.pushReplacement(
+        Routes.bookDetailPath(work['id'] as String, editionId),
+      );
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err')));
+      }
+    }
   }
 
   /// Name a type the suggestions don't cover. The server folds a variant onto
@@ -683,6 +834,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
         for (final a in _authors)
           if (a['id'] == null) a['name'] as String,
       ],
+      'translator_ids': [
+        for (final t in _translators)
+          if (t['id'] != null) t['id'] as String,
+      ],
+      'translator_names': [
+        for (final t in _translators)
+          if (t['id'] == null) t['name'] as String,
+      ],
+      // "Translated from" — only meaningful on create; the server joins the
+      // original's translation group and records the direction. Edit mode
+      // links post-save instead (updateWork doesn't accept it).
+      'original_work_id': _original?['id'],
       'genre_names': genres,
       'publisher_id': publisherId,
       'publisher_name':
@@ -705,6 +868,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
         created = await api.createWork(payload);
       } else {
         final result = await api.updateWork(workId, payload);
+        // A newly attached original (the edit form's Translated-from row) —
+        // updateWork doesn't carry it, so link it explicitly. Additive only:
+        // there's no unlink flow yet.
+        final originalId = _original?['id'] as String?;
+        if (originalId != null && originalId != _initialOriginalId) {
+          await api.linkTranslation(workId, originalId, relation: 'original');
+        }
         // Everything below lives on the Edition, not the Work — `updateWork`
         // accepts none of it, so until now an edit that added a page count (or
         // an ISBN, format, publisher, series) was silently thrown away: the
@@ -803,6 +973,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
       _isbn.clear();
       _customGenreList.clear();
       _authors.clear();
+      _translators.clear();
+      _original = null;
       _publisher = null;
       _language = null;
       _form = null;
@@ -1167,23 +1339,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
             validator: (v) => (v == null || v.trim().isEmpty) ? l10n.formTitleRequired : null,
           ),
           // Quiet duplicate check (create mode): near-matches already in the
-          // catalog slide in under the title; tap one to open it instead of
-          // adding a copy, or dismiss and carry on typing undisturbed.
+          // catalog slide in under the title. Tapping one opens the M1 fork —
+          // shelf copy / new edition / translation / different book — because
+          // "Kitabi already has this book" means four different things.
           if (!isEdit && !_similarDismissed && _similar.isNotEmpty) ...[
             SizedBox(height: 8),
             _SimilarWorksPanel(
               works: _similar,
               onDismiss: () => setState(() => _similarDismissed = true),
-              onPick: (work) {
-                final editions = work['editions'] as List?;
-                final edition = editions != null && editions.isNotEmpty
-                    ? editions.first as Map<String, dynamic>
-                    : (work['edition'] as Map<String, dynamic>?);
-                final editionId = edition?['id'] as String?;
-                if (editionId != null) {
-                  context.push(Routes.bookDetailPath(work['id'] as String, editionId));
-                }
-              },
+              onPick: _openFork,
             ),
           ],
           SizedBox(height: 10),
@@ -1206,6 +1370,25 @@ class _BookFormState extends ConsumerState<_BookForm> {
             note: l10n.formLanguageProfileNote,
             onChanged: (v) => setState(() => _language = v),
           ),
+          // "Translated from" (T1/T4) — directly under Language because it is
+          // a language question. Dashed while empty, the gold provenance card
+          // once linked; the Translator field appears only alongside a link.
+          SizedBox(height: 12),
+          _TranslatedFromField(
+            original: _original,
+            onLink: _pickOriginal,
+            // Clearable while creating; edit mode is additive-only (there's
+            // no unlink endpoint yet), so a loaded link can't be removed.
+            onClear: widget.initialWork == null ? () => setState(() => _original = null) : null,
+          ),
+          if (_original != null) ...[
+            SizedBox(height: 10),
+            _TranslatorField(
+              translators: _translators,
+              onAdd: _pickTranslator,
+              onRemove: (t) => setState(() => _translators.remove(t)),
+            ),
+          ],
           // Type and genre are primary — they power the library filter — as
           // one-tap chip rows with every option visible, no typing. Type is
           // the single-valued literary form (Novel, Short stories, Poetry…);
@@ -2631,6 +2814,374 @@ class _LanguageField extends StatelessWidget {
           for (final option in options) _SelectOption(option, option),
         ],
         onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+/// T1/T4 — the "Translated from" row. Empty: a dashed slip-paper invitation
+/// (the personal-notes idiom — nothing attached yet). Linked: the same
+/// gold-ruled provenance card the prefill banner uses, with the original's
+/// cover, title and language/year, and an ✕ while the link is still local.
+class _TranslatedFromField extends StatelessWidget {
+  const _TranslatedFromField({required this.original, required this.onLink, this.onClear});
+
+  final Map<String, dynamic>? original;
+  final VoidCallback onLink;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final original = this.original;
+
+    if (original == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.formFieldTranslatedFrom, style: _fieldLabelStyle),
+          SizedBox(height: 4),
+          InkWell(
+            onTap: onLink,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Color(0xFFD8C9A8), style: BorderStyle.solid),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.swap_horiz, size: 16, color: AppColors.oxblood),
+                      SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          l10n.formLinkOriginal,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.oxblood,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+                    ],
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    l10n.formTranslatedFromHelp,
+                    style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.35),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final edition = original['edition'] as Map<String, dynamic>?;
+    final authors = (original['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final language = original['language'] as String? ?? edition?['language'] as String?;
+    final year = original['first_publish_year'];
+    final subtitle = [
+      ?language,
+      if (year != null) '$year',
+    ].join(' · ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.formFieldTranslatedFrom, style: _fieldLabelStyle),
+        SizedBox(height: 4),
+        Container(
+          padding: EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border(
+              left: BorderSide(color: AppColors.gold, width: 3),
+              top: BorderSide(color: AppColors.line),
+              right: BorderSide(color: AppColors.line),
+              bottom: BorderSide(color: AppColors.line),
+            ),
+          ),
+          child: Row(
+            children: [
+              TypesetCover(
+                title: original['title'] as String? ?? '',
+                author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+                coverUrl: edition?['cover_url'] as String?,
+                width: 26,
+                height: 38,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      original['title'] as String? ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    if (subtitle.isNotEmpty)
+                      Text(
+                        subtitle,
+                        style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                      ),
+                  ],
+                ),
+              ),
+              if (onClear != null)
+                IconButton(
+                  onPressed: onClear,
+                  icon: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// T4 — translator credits, shown only while an original is linked. The same
+/// chip idiom as the author field, feeding the same author picker.
+class _TranslatorField extends StatelessWidget {
+  const _TranslatorField({
+    required this.translators,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final List<Map<String, dynamic>> translators;
+  final VoidCallback onAdd;
+  final void Function(Map<String, dynamic>) onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.formFieldTranslator, style: _fieldLabelStyle),
+        SizedBox(height: 4),
+        if (translators.isNotEmpty)
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (final translator in translators)
+                Chip(
+                  label: Text(translator['name'] as String, style: TextStyle(fontSize: 12)),
+                  onDeleted: () => onRemove(translator),
+                  backgroundColor: AppColors.goldSoft,
+                  side: BorderSide.none,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ActionChip(
+                onPressed: onAdd,
+                tooltip: l10n.formAddTranslator,
+                label: Icon(Icons.person_add_alt, size: 16, color: AppColors.oxblood),
+                backgroundColor: AppColors.card,
+                side: BorderSide(color: AppColors.line),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          )
+        else
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onAdd,
+              icon: Icon(Icons.person_add_alt, size: 18),
+              label: Text(l10n.formAddTranslator),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 5, left: 2),
+          child: Text(
+            l10n.formTranslatorHelp,
+            style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// M1 — "Kitabi already has this book. So what are you adding?" The four-way
+/// fork, phrased in the reader's words; pops one of
+/// 'shelf' | 'edition' | 'translation' | 'different'.
+class _ForkSheet extends StatelessWidget {
+  const _ForkSheet({required this.work});
+
+  final Map<String, dynamic> work;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final edition = (work['editions'] as List?)?.cast<Map<String, dynamic>>().firstOrNull ??
+        work['edition'] as Map<String, dynamic>?;
+    final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final author = authors.isNotEmpty ? authors.first['name'] as String? : null;
+    final year = work['first_publish_year'];
+    final meta = [
+      ?author,
+      if (year != null) '$year',
+    ].join(' · ');
+
+    Widget option({
+      required String value,
+      required String title,
+      String? help,
+      required Color accent,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Material(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(11),
+          child: InkWell(
+            onTap: () => Navigator.of(context).pop(value),
+            borderRadius: BorderRadius.circular(11),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(11),
+                border: Border(
+                  left: BorderSide(color: accent, width: 3),
+                  top: BorderSide(color: AppColors.line),
+                  right: BorderSide(color: AppColors.line),
+                  bottom: BorderSide(color: AppColors.line),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                        ),
+                        if (help != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              help,
+                              style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 32,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              l10n.forkAlreadyHere,
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                TypesetCover(
+                  title: work['title'] as String? ?? '',
+                  author: author,
+                  coverUrl: edition?['cover_url'] as String?,
+                  width: 30,
+                  height: 44,
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        work['title'] as String? ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      if (meta.isNotEmpty)
+                        Text(
+                          meta,
+                          style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              l10n.forkQuestion.toUpperCase(),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: .8,
+                color: AppColors.inkSoft,
+              ),
+            ),
+            SizedBox(height: 6),
+            option(
+              value: 'shelf',
+              title: l10n.forkOwnThis,
+              accent: AppColors.moss,
+            ),
+            option(
+              value: 'edition',
+              title: l10n.forkDifferentPrinting,
+              help: l10n.forkDifferentPrintingHelp,
+              accent: AppColors.gold,
+            ),
+            option(
+              value: 'translation',
+              title: l10n.forkTranslation,
+              help: l10n.forkTranslationHelp,
+              accent: AppColors.oxblood,
+            ),
+            option(
+              value: 'different',
+              title: l10n.forkDifferentBook,
+              accent: AppColors.line,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -475,6 +475,112 @@ async def test_linked_translation_appears_in_each_works_translations(client):
     assert [t["title"] for t in mal_after["translations"]] == ["Ivory Throne"]
 
 
+async def test_create_work_with_translator(client):
+    # T4: the translator rides the create as its own credit, resolved through
+    # the same id-or-name path as authors — and lands in `translators`, never
+    # mixed into `authors`.
+    resp = await client.post(
+        "/catalog/works",
+        json={
+            "title": "ഏകാന്തതയുടെ നൂറു വർഷങ്ങൾ",
+            "language": "Malayalam",
+            "author_names": ["Gabriel García Márquez"],
+            "translator_names": ["S. Ramesan"],
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert [a["name"] for a in body["authors"]] == ["Gabriel García Márquez"]
+    assert [t["name"] for t in body["translators"]] == ["S. Ramesan"]
+
+    # The translator is a real Author row — findable, so they get a page.
+    found = await client.get("/catalog/authors", params={"q": "Ramesan"})
+    assert any(a["name"] == "S. Ramesan" for a in found.json())
+
+
+async def test_patch_work_translators(client):
+    created = await client.post(
+        "/catalog/works", json={"title": "Chemmeen", "translator_names": ["Narayana Menon"]}
+    )
+    work_id = created.json()["id"]
+    resp = await client.patch(
+        f"/catalog/works/{work_id}", json={"translator_names": ["Anita Nair"]}
+    )
+    assert resp.status_code == 200
+    assert [t["name"] for t in resp.json()["work"]["translators"]] == ["Anita Nair"]
+
+
+async def test_create_work_translated_from_links_original(client):
+    # T1/T4: creating a translation with original_work_id joins the original's
+    # group, records the direction, and the original's page lists it back.
+    original = await client.post(
+        "/catalog/works", json={"title": "Cien años de soledad", "language": "Spanish"}
+    )
+    original_id = original.json()["id"]
+
+    translation = await client.post(
+        "/catalog/works",
+        json={
+            "title": "ഏകാന്തതയുടെ നൂറു വർഷങ്ങൾ",
+            "language": "Malayalam",
+            "original_work_id": original_id,
+        },
+    )
+    assert translation.status_code == 201
+    body = translation.json()
+    assert body["original_work_id"] == original_id
+    assert body["original"]["title"] == "Cien años de soledad"
+    assert body["translation_group_id"] is not None
+
+    original_after = (await client.get(f"/catalog/works/{original_id}")).json()
+    assert original_after["translation_group_id"] == body["translation_group_id"]
+    assert original_after["original_work_id"] is None  # the original stays undirected
+    assert [t["title"] for t in original_after["translations"]] == [body["title"]]
+    # The sibling row carries the direction too, for the picker's stamps.
+    assert original_after["translations"][0]["original_work_id"] == original_id
+
+
+async def test_create_work_ignores_unresolvable_original(client):
+    resp = await client.post(
+        "/catalog/works",
+        json={"title": "Orphan Translation", "original_work_id": str(uuid.uuid4())},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["original_work_id"] is None
+    assert body["translation_group_id"] is None
+
+
+async def test_link_translation_directed_relations(client):
+    # T6's "Link existing" (relation=translation, from the original's page) and
+    # T1's post-hoc link (relation=original, from the translation's side).
+    a = await client.post("/catalog/works", json={"title": "Original A"})
+    b = await client.post("/catalog/works", json={"title": "Translation B"})
+    a_id, b_id = a.json()["id"], b.json()["id"]
+
+    resp = await client.post(
+        f"/catalog/works/{a_id}/link-translation",
+        json={"other_work_id": b_id, "relation": "translation"},
+    )
+    assert resp.status_code == 204
+    b_after = (await client.get(f"/catalog/works/{b_id}")).json()
+    assert b_after["original_work_id"] == a_id
+    assert b_after["original"]["title"] == "Original A"
+
+    # A third translation linked from its own side, naming A as its original.
+    c = await client.post("/catalog/works", json={"title": "Translation C"})
+    c_id = c.json()["id"]
+    await client.post(
+        f"/catalog/works/{c_id}/link-translation",
+        json={"other_work_id": a_id, "relation": "original"},
+    )
+    c_after = (await client.get(f"/catalog/works/{c_id}")).json()
+    assert c_after["original_work_id"] == a_id
+    # All three share one group.
+    a_after = (await client.get(f"/catalog/works/{a_id}")).json()
+    assert {t["title"] for t in a_after["translations"]} == {"Translation B", "Translation C"}
+
+
 async def test_link_translation_rejects_self(client):
     w = await client.post("/catalog/works", json={"title": "Solo"})
     w_id = w.json()["id"]

@@ -375,10 +375,17 @@ class ApiClient {
   }
 
   /// Link two Works as translations of one another (shared translation group).
-  Future<void> linkTranslation(String workId, String otherWorkId) async {
+  /// [relation] records the direction: 'original' — the other work is
+  /// [workId]'s original; 'translation' — the other work is a translation of
+  /// [workId]; 'sibling' — direction unknown, group-link only.
+  Future<void> linkTranslation(
+    String workId,
+    String otherWorkId, {
+    String relation = 'sibling',
+  }) async {
     await _dio.post(
       '/catalog/works/$workId/link-translation',
-      data: {'other_work_id': otherWorkId},
+      data: {'other_work_id': otherWorkId, 'relation': relation},
     );
   }
 

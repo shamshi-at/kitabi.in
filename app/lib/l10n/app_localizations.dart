@@ -4162,6 +4162,174 @@ abstract class AppLocalizations {
   /// **'Linked as a translation'**
   String get bookTranslationLinked;
 
+  /// Card on a translation's book page pointing at its original
+  ///
+  /// In en, this message translates to:
+  /// **'Translation of {title}'**
+  String bookTranslationOf(String title);
+
+  /// Button on a book page: create a new translation of this work
+  ///
+  /// In en, this message translates to:
+  /// **'Add a translation'**
+  String get bookAddTranslation;
+
+  /// Byline credit for the translator on the book page header
+  ///
+  /// In en, this message translates to:
+  /// **'trans. {name}'**
+  String bookTranslatedBy(String name);
+
+  /// Label of the add-form row linking the original work (T1)
+  ///
+  /// In en, this message translates to:
+  /// **'Translated from'**
+  String get formFieldTranslatedFrom;
+
+  /// Empty-state action on the Translated-from row
+  ///
+  /// In en, this message translates to:
+  /// **'Link the original work'**
+  String get formLinkOriginal;
+
+  /// Helper line under the empty Translated-from row
+  ///
+  /// In en, this message translates to:
+  /// **'Reading a translation? Linking the original lets readers hop between versions.'**
+  String get formTranslatedFromHelp;
+
+  /// Label of the translator chip field on the add form (T4)
+  ///
+  /// In en, this message translates to:
+  /// **'Translator'**
+  String get formFieldTranslator;
+
+  /// Helper line under the translator field
+  ///
+  /// In en, this message translates to:
+  /// **'Credited on this book, alongside the author — a translator has their own page too.'**
+  String get formTranslatorHelp;
+
+  /// Chip that opens the author picker to add a translator
+  ///
+  /// In en, this message translates to:
+  /// **'Add translator'**
+  String get formAddTranslator;
+
+  /// Title of the work picker when choosing a translation's original (T2)
+  ///
+  /// In en, this message translates to:
+  /// **'The original work'**
+  String get workPickerOriginalTitle;
+
+  /// Subtitle under the original-picker title
+  ///
+  /// In en, this message translates to:
+  /// **'Search the shared catalogue in any script'**
+  String get workPickerOriginalSubtitle;
+
+  /// Card on the original picker opening the add-a-stub form (T3)
+  ///
+  /// In en, this message translates to:
+  /// **'Not here? Add the original'**
+  String get workPickerAddOriginal;
+
+  /// Helper line on the add-original stub form
+  ///
+  /// In en, this message translates to:
+  /// **'A catalogue entry, not a book you own — nothing lands on your shelf.'**
+  String get workPickerAddOriginalHelp;
+
+  /// Badge on a picker row that is a group's original work
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get workPickerStampOriginal;
+
+  /// Badge on a picker row already in the translation group
+  ///
+  /// In en, this message translates to:
+  /// **'in group'**
+  String get workPickerStampInGroup;
+
+  /// Title field on the add-original stub form
+  ///
+  /// In en, this message translates to:
+  /// **'Original title'**
+  String get stubFieldTitle;
+
+  /// First-publish-year field on the add-original stub form
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get stubFieldYear;
+
+  /// Banner on the stub form explaining the carried-over fields
+  ///
+  /// In en, this message translates to:
+  /// **'Author, type and genre are copied from your book — a translation shares them. Everything stays editable later.'**
+  String get stubCarriedOver;
+
+  /// Save button on the add-original stub form
+  ///
+  /// In en, this message translates to:
+  /// **'Add & link'**
+  String get stubSave;
+
+  /// Title of the duplicate-match fork sheet (M1)
+  ///
+  /// In en, this message translates to:
+  /// **'Kitabi already has this book.'**
+  String get forkAlreadyHere;
+
+  /// Question line on the fork sheet
+  ///
+  /// In en, this message translates to:
+  /// **'So what are you adding?'**
+  String get forkQuestion;
+
+  /// Fork option: add the matched edition to the library
+  ///
+  /// In en, this message translates to:
+  /// **'I own this one — put it on my shelf'**
+  String get forkOwnThis;
+
+  /// Snackbar after the fork adds the matched book to the library
+  ///
+  /// In en, this message translates to:
+  /// **'On your shelf'**
+  String get forkOwnThisAdded;
+
+  /// Fork option: add a new edition to the matched work
+  ///
+  /// In en, this message translates to:
+  /// **'Mine\'s a different printing'**
+  String get forkDifferentPrinting;
+
+  /// Helper under the different-printing fork option
+  ///
+  /// In en, this message translates to:
+  /// **'Other ISBN, cover or page count — add an edition'**
+  String get forkDifferentPrintingHelp;
+
+  /// Fork option: mark the book being typed as a translation of the match
+  ///
+  /// In en, this message translates to:
+  /// **'Mine\'s a translation'**
+  String get forkTranslation;
+
+  /// Helper under the translation fork option
+  ///
+  /// In en, this message translates to:
+  /// **'Its own book, linked to this one'**
+  String get forkTranslationHelp;
+
+  /// Fork option: dismiss the match and continue the add
+  ///
+  /// In en, this message translates to:
+  /// **'Different book, same title — keep typing'**
+  String get forkDifferentBook;
+
   /// Eyebrow label on the shareable author card
   ///
   /// In en, this message translates to:

@@ -20,7 +20,7 @@ from app.models.reading_session import ReadingSession
 from app.models.review import Review
 from app.models.series import Series
 from app.models.sync_op import SyncOp
-from app.models.work import Work, work_authors, work_genres
+from app.models.work import Work, work_authors, work_genres, work_translators
 from app.models.work_revision import WorkRevision
 
 # Side-effect import: registers the before_insert/before_update listeners that
@@ -40,6 +40,7 @@ __all__ = [
     "Edition",
     "work_authors",
     "work_genres",
+    "work_translators",
     "LibraryEntry",
     "Rating",
     "ReadingSession",

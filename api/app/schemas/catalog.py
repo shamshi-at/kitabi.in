@@ -3,6 +3,7 @@ publishers, ISBN lookup, CSV import rows, and recommendations."""
 
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -159,17 +160,26 @@ class WorkOut(BaseModel):
     form: str | None = None
     aggregate_rating: float | None
     translation_group_id: uuid.UUID | None
+    # Which Work this one was translated *from* — the direction on top of the
+    # undirected group. Null on originals and legacy flat-linked groups.
+    original_work_id: uuid.UUID | None = None
     # Display-only aggregate across every Work sharing translation_group_id —
     # this Work's own aggregate_rating stays independent (product decision,
     # 5 Jul 2026: each translation keeps its own rating pool).
     translation_group_rating: float | None = None
     authors: list[AuthorOut]
+    # Who translated this Work — Author rows too (same catalog pages), joined
+    # via work_translators. Empty on originals.
+    translators: list[AuthorOut] = []
     genres: list[GenreOut]
     editions: list[EditionOut]
     # Other Works sharing this one's translation_group_id — e.g. the Malayalam
     # "Dantha Simhasanam" listed on the English "Ivory Throne" and vice versa.
     # Computed at read time (a translation is its own Work, only group-linked).
     translations: list["WorkSummaryOut"] = []
+    # The original Work's summary when original_work_id is set — computed at
+    # read time for the book page's "Translation of …" card.
+    original: "WorkSummaryOut | None" = None
     created_at: datetime
 
 
@@ -184,7 +194,12 @@ class WorkSummaryOut(BaseModel):
     first_publish_year: int | None
     form: str | None = None
     aggregate_rating: float | None
+    # Group membership + direction, so pickers/lists can badge "Original" and
+    # "in group" without a detail fetch (T2's stamps).
+    translation_group_id: uuid.UUID | None = None
+    original_work_id: uuid.UUID | None = None
     authors: list[AuthorOut]
+    translators: list[AuthorOut] = []
     edition: EditionOut | None
 
 
@@ -206,6 +221,16 @@ class WorkCreate(BaseModel):
     # get-or-create. Both are optional so either path works.
     author_ids: list[uuid.UUID] = []
     author_names: list[str] = []
+    # Translator credits — same id-or-name resolution as authors (the form's
+    # Translator field reuses the author picker). Only meaningful alongside
+    # original_work_id, but not enforced: a translation whose original isn't
+    # linked yet may still credit its translator.
+    translator_ids: list[uuid.UUID] = []
+    translator_names: list[str] = []
+    # "Translated from" — link this new Work to its original at create time
+    # (T1/T4). Joins/creates the original's translation group and records the
+    # direction. Silently ignored if the id doesn't resolve.
+    original_work_id: uuid.UUID | None = None
     genre_names: list[str] = []
     publisher_id: uuid.UUID | None = None
     publisher_name: str | None = None
@@ -230,6 +255,8 @@ class WorkUpdate(BaseModel):
     form: str | None = None
     author_ids: list[uuid.UUID] | None = None
     author_names: list[str] | None = None
+    translator_ids: list[uuid.UUID] | None = None
+    translator_names: list[str] | None = None
     genre_names: list[str] | None = None
 
     _check_form = field_validator("form")(_validate_form)
@@ -290,6 +317,11 @@ class EditionUpdate(BaseModel):
 
 class TranslationLinkIn(BaseModel):
     other_work_id: uuid.UUID
+    # How the other Work relates to the one in the URL:
+    #   "original"    — the other Work is this one's original (T1's post-hoc link)
+    #   "translation" — the other Work is a translation of this one (T6's link)
+    #   "sibling"     — direction unknown; group-link only (legacy behavior)
+    relation: Literal["sibling", "original", "translation"] = "sibling"
 
 
 class RecommendationOut(BaseModel):

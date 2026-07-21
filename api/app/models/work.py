@@ -30,6 +30,16 @@ work_genres = Table(
     Column("genre_id", Uuid, ForeignKey("genres.id"), primary_key=True),
 )
 
+# Translators are Author rows too (same catalog pages, names are doors) — their
+# own association table rather than a role column on work_authors, so both
+# relationships keep the plain writable-secondary shape.
+work_translators = Table(
+    "work_translators",
+    Base.metadata,
+    Column("work_id", Uuid, ForeignKey("works.id"), primary_key=True),
+    Column("author_id", Uuid, ForeignKey("authors.id"), primary_key=True),
+)
+
 
 class Work(CatalogMixin, Base):
     """The abstract creative work (feature-map.md rule 17: Work vs Edition).
@@ -64,10 +74,16 @@ class Work(CatalogMixin, Base):
     # Never written to directly by the add/edit flow.
     aggregate_rating: Mapped[float | None] = mapped_column(Float, default=None)
 
-    # [WIRED] — translation linking (feature-map.md). Works sharing a non-null
-    # value here are considered translations of one another; no directionality,
-    # no join table needed for this lightweight a structure. UI lands later.
+    # Translation linking (feature-map.md; UI landed 21 Jul 2026). Works
+    # sharing a non-null value here are translations of one another — the
+    # undirected cross-navigation set.
     translation_group_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, default=None, index=True)
+    # …and the direction: which Work this one was translated *from*. Null on
+    # originals and on legacy flat-linked groups. Kept alongside the group id
+    # (not replacing it) so a group can outlive a deleted original.
+    original_work_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("works.id"), default=None, index=True
+    )
 
     external_source: Mapped[str | None] = mapped_column(String, default=None)
     external_id: Mapped[str | None] = mapped_column(String, default=None, index=True)
@@ -77,6 +93,7 @@ class Work(CatalogMixin, Base):
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, default=None, index=True)
 
     authors: Mapped[list["Author"]] = relationship(secondary=work_authors, lazy="selectin")
+    translators: Mapped[list["Author"]] = relationship(secondary=work_translators, lazy="selectin")
     genres: Mapped[list["Genre"]] = relationship(secondary=work_genres, lazy="selectin")
     editions: Mapped[list["Edition"]] = relationship(back_populates="work", lazy="selectin")
 

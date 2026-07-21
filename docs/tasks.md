@@ -61,14 +61,30 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Work vs Edition schema: works, editions, authors, publishers, genres, series
       (+ `series_number`) — migration `000003`, `work_authors`/`work_genres` join
       tables, RLS enabled with zero policies on every table (rule 11)
-- [x] Translated-work linking (original ↔ translation) `[WIRED]` — `translation_group_id`
-      on Work (shared UUID = same translation group) + `POST /catalog/works/{id}/link-translation`;
-      structure + API only, no UI yet. **Decided 5 Jul 2026:** each translation is a
+- [x] Translated-work linking (original ↔ translation) — `translation_group_id`
+      on Work (shared UUID = same translation group) + `POST /catalog/works/{id}/link-translation`.
+      **Decided 5 Jul 2026:** each translation is a
       separate Work with its own independent rating/review pool (not a language variant
       of an Edition) — but `WorkOut.translation_group_rating` computes a *display-only*
       average across every Work in the group at read time, so a book page can show
       "4.2 across all translations" without merging the underlying pools
       (`catalog_service.translation_group_rating`, tested in `test_catalog.py`)
+- [x] Translation flows, full UI (21 Jul 2026 — mockups T1–T6 + M1, Areas 8/9):
+      **translator credits** (`work_translators` join table, migration `000027`;
+      `translator_ids`/`translator_names` on create/patch; `WorkOut.translators`;
+      Translator chip field on the add form reusing the author picker; "trans. X"
+      byline + sibling-row credit on the book page) · **direction**
+      (`works.original_work_id` self-FK; `relation` on link-translation;
+      `WorkOut.original` summary; "Translation of …" gold card on a translation's
+      page) · **"Translated from" on the add form** (T1/T4: dashed row under
+      Language → original-picker T2 with Original/in-group stamps → four-field
+      stub sheet T3 with author/type/genre carried over, catalogue-only; links
+      the group at create time) · **the original's page** (T6: "＋ Add a
+      translation" pre-seeds the add form and links on save, next to "Link
+      existing") · **M1 fork** (tapping a similar-title match now asks shelf copy /
+      different printing / translation / different book instead of navigating
+      away). API covered in `test_catalog.py` (translator create/patch, directed
+      links, unresolvable-original ignore)
 - [x] Catalog search API (title/author/ILIKE, or exact ISBN match) — `GET /catalog/search`;
       cache-on-first-use means once a book is fetched from OpenLibrary it's served from
       our own Postgres on every later search

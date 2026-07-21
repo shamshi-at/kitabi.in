@@ -369,6 +369,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             workId: extra is String ? extra : map['workId'] as String?,
             initialIsbn: map['isbn'] as String?,
             initialTitle: map['title'] as String?,
+            // T6's "Add a translation": the original's summary, pre-linking
+            // the form's Translated-from row.
+            initialOriginal: map['originalWork'] as Map<String, dynamic>?,
             returnCreated: map['returnCreated'] as bool? ?? false,
           );
         },
@@ -405,7 +408,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.workPicker,
         name: 'work-picker',
-        builder: (context, state) => WorkPickerScreen(excludeWorkId: state.extra as String?),
+        builder: (context, state) {
+          // extra is historically a bare excludeWorkId String (the book
+          // page's "Link existing"); the add form's Translated-from flow
+          // passes a map to get the T2 original-picker flavour with the
+          // stub-seed carried over.
+          final extra = state.extra;
+          final map = extra is Map<String, dynamic> ? extra : const <String, dynamic>{};
+          return WorkPickerScreen(
+            excludeWorkId: extra is String ? extra : map['excludeWorkId'] as String?,
+            forOriginal: map['forOriginal'] as bool? ?? false,
+            seed: map['seed'] as Map<String, dynamic>?,
+          );
+        },
       ),
       GoRoute(
         path: Routes.catalogAddEdition,

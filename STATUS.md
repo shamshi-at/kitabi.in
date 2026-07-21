@@ -82,10 +82,18 @@ Two data tiers, never conflated (feature-map.md's core principle):
   for every later search. Ratings/reviews/translations attach to the **Work**;
   ownership/cover/ISBN/pages attach to the **Edition** (feature-map.md rule 17).
   **A translation is its own Work**, not a language variant of an Edition — its own
-  authors/editions and its own independent rating pool, linked to the original only
-  via a shared `translation_group_id` (decided 5 Jul 2026). A separate, read-time-only
+  authors/editions and its own independent rating pool, linked to the original
+  via a shared `translation_group_id` (decided 5 Jul 2026) plus, since 21 Jul 2026,
+  a directed `works.original_work_id` self-FK (which side is the original) and
+  translator credits on the `work_translators` join table (translators are Author
+  rows — same catalog pages). A separate, read-time-only
   `translation_group_rating` field averages across the whole group for display
-  ("4.2 across all translations") without merging the underlying per-translation pools.
+  ("4.2 across all translations") without merging the underlying per-translation
+  pools. Full UI shipped 21 Jul 2026: "Translated from" + Translator on the add
+  form (original picked from the catalogue or stubbed in place, four fields,
+  catalogue-only), "Add a translation"/"Link existing" on the original's book
+  page, and the duplicate-match fork (shelf copy / new edition / translation /
+  different book) on the add form's similar-title panel.
 - **Layer 2 — personal** (library entries, statuses, notes, tags, lending, reviews,
   progress): offline-first, Drift is the source of truth, synced via the sync engine
   (queue + push/pull). **Built in Phase 3**, ported from rupee-diary's proven pattern
