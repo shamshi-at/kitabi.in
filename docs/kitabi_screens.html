@@ -156,7 +156,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   </div>
   <nav class="toc">
     <a href="#welcome">Welcome</a><a href="#home">Home</a><a href="#library">Library</a>
-    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a><a href="#extras">Extras</a>
+    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a><a href="#extras">Extras</a><a href="#translations">Translations</a><a href="#creating">Creating</a>
   </nav>
 </header>
 
@@ -1450,6 +1450,734 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       <p class="cap"><b>14 · Quote capture</b> The good-to-have from the roadmap: photograph a
       page, crop the line, OCR saves it against the book — regional scripts included. Ships
       after the thin slice; designed now so it has a home.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 8 — TRANSLATIONS ================= -->
+<section class="area" id="translations">
+  <div class="ah"><span class="an">Area 8</span><h2>Translations — one book, two works</h2></div>
+  <p class="desc">The locked decision (5 Jul 2026): <b>a translation is its own Work</b> — its own
+  title, authors, editions and its own rating pool — linked to the original by a shared
+  <code>translation_group_id</code>. What was missing was the way in. These screens add it, and they
+  start from the honest premise: <i>the book in your hand is the translation.</i> You add that;
+  the original is context you attach to it, never a second thing you have to own. One field on the
+  add form — <b>Translated from</b> — carries both cases: the original is already in the catalogue
+  (pick it), or it isn't (add a four-field stub without leaving the sheet).</p>
+  <div class="row">
+
+    <!-- T1. Add form — the Translated-from row, empty -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+            <div class="pgtitle" style="margin:0">Add a book</div>
+            <span class="sub" style="font-size:8px">catalog entry · shared</span>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:10px 0 3px">TITLE</div>
+          <div class="search" style="font-size:10px;color:var(--ink);font-weight:600">ഏകാന്തതയുടെ നൂറു വർഷങ്ങൾ</div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">AUTHOR</div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <span class="chip" style="font-size:8.5px;background:var(--gold-soft);border:none;color:var(--ink)">Gabriel García Márquez ✕</span>
+            <span class="chip" style="font-size:8.5px">＋</span>
+          </div>
+          <div style="margin-top:7px"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">LANGUAGE</div>
+            <div class="search" style="font-size:9.5px;color:var(--ink)">Malayalam ▾</div></div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 3px">TRANSLATED FROM · OPTIONAL</div>
+          <div class="card" style="padding:9px 10px;border-style:dashed;border-color:#D8C9A8;background:transparent">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="color:var(--oxblood);font-size:12px">⇄</span>
+              <div style="flex:1;font-size:9.5px;font-weight:600;color:var(--oxblood)">Link the original work</div>
+              <span class="sub" style="font-size:9px">›</span>
+            </div>
+            <div class="sub" style="font-size:7.5px;margin-top:3px;line-height:1.5">Malayalam isn’t this author’s language — this looks like a translation. Linking lets readers hop between versions.</div>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 3px">TYPE · PICK ONE</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <span class="chip on" style="font-size:8px;background:var(--oxblood);border-color:var(--oxblood)">Novel</span>
+            <span class="chip" style="font-size:8px">Short stories</span><span class="chip" style="font-size:8px">Poetry</span>
+            <span class="chip" style="font-size:8px">Memoir</span>
+          </div>
+          <div class="card" style="margin-top:9px;padding:8px 10px;background:var(--paper-deep)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9.5px;font-weight:600">More details</span>
+              <span style="font-size:9px;color:var(--ink-soft)">▾</span>
+            </div>
+          </div>
+          <div style="margin-top:auto;border-top:1px solid var(--line);margin-left:-13px;margin-right:-13px;padding:8px 13px 10px;background:var(--card)">
+            <div class="btn" style="padding:8px">Save to catalog</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>T1 · “Translated from” on the add form</b> One optional row, sitting directly
+      under Language because it <i>is</i> a language question. Dashed = nothing attached yet, the
+      same slip-paper idiom as personal notes. The hint line is the only cleverness: when the chosen
+      language doesn’t match the author’s, the row nudges — it never auto-links anything.</p>
+    </div>
+
+    <!-- T2. Find the original -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.28)">
+          <div style="position:absolute;left:0;right:0;bottom:0;top:52px;background:var(--paper);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 14px;display:flex;flex-direction:column">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px"></div>
+            <div class="h-serif" style="font-size:14px">The original work</div>
+            <div class="sub" style="font-size:8px;margin-top:1px">Search the shared catalogue in any script</div>
+            <div class="search" style="margin-top:9px;border-color:var(--ink)"><span style="color:var(--ink);font-weight:600">cien años</span><span style="margin-left:auto;color:var(--ink-soft)">✕</span></div>
+            <div class="card" style="margin-top:8px;padding:0">
+              <div style="display:flex;gap:8px;align-items:center;padding:8px 9px">
+                <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:5px">Cien años</div></div>
+                <div style="flex:1"><div style="font-size:10px;font-weight:600">Cien años de soledad</div>
+                <div class="sub" style="font-size:7.5px">García Márquez · Spanish · 1967</div></div>
+                <span class="stamp" style="background:var(--gold-soft);color:#8F681E">Original</span>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;padding:8px 9px">
+                <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#3b5064,#22303d);color:#DCE6EF"><div class="ct" style="font-size:5px">One Hundred Years</div></div>
+                <div style="flex:1"><div style="font-size:10px;font-weight:600">One Hundred Years of Solitude</div>
+                <div class="sub" style="font-size:7.5px">English translation · 1970</div></div>
+                <span class="sub" style="font-size:7px">in group</span>
+              </div>
+            </div>
+            <div class="card" style="margin-top:9px;padding:9px 10px;border-left:3px solid var(--oxblood)">
+              <div style="font-size:9.5px;font-weight:600;color:var(--oxblood)">Not here? Add the original</div>
+              <div class="sub" style="font-size:7.5px;margin-top:2px;line-height:1.5">Four fields, right here — you don’t have to own it or leave this sheet.</div>
+            </div>
+            <div class="sub" style="font-size:7.5px;margin-top:auto;line-height:1.5;text-align:center">The English translation already sits in this group. Pick the <i>original</i> and yours joins all of them.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>T2 · Find the original</b> A catalogue search that knows what it’s looking
+      for: the original carries a gold <b>Original</b> stamp, sibling translations already in the
+      group are listed but greyed to “in group” so you can see the family you’re joining. The escape
+      hatch is a card, not a buried link — the not-in-catalogue case is the <i>common</i> one for
+      regional translations, so it gets equal weight.</p>
+    </div>
+
+    <!-- T3. Add the original as a stub -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.28)">
+          <div style="position:absolute;left:0;right:0;bottom:0;top:92px;background:var(--paper);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 14px;display:flex;flex-direction:column">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px"></div>
+            <div class="h-serif" style="font-size:14px">The original work</div>
+            <div class="sub" style="font-size:8px;margin-top:1px;line-height:1.5">A catalogue entry, not a book you own. Nothing lands on your shelf.</div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:10px 0 3px">ORIGINAL TITLE</div>
+            <div class="search" style="font-size:9.5px;color:var(--ink);font-weight:600">Cien años de soledad</div>
+            <div style="display:flex;gap:7px;margin-top:8px">
+              <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">LANGUAGE</div>
+                <div class="search" style="font-size:9.5px;color:var(--ink)">Spanish ▾</div></div>
+              <div style="width:70px"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">YEAR</div>
+                <div class="search" style="font-size:9.5px;color:var(--ink)">1967</div></div>
+            </div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">AUTHOR</div>
+            <div style="display:flex;gap:4px;align-items:center">
+              <span class="chip" style="font-size:8.5px;background:var(--gold-soft);border:none;color:var(--ink)">Gabriel García Márquez ✕</span>
+            </div>
+            <div class="card" style="margin-top:8px;padding:8px 10px;background:var(--gold-soft);border-color:#E5D3A6">
+              <div style="font-size:8.5px;font-weight:700;color:#8F681E;letter-spacing:.6px">CARRIED OVER FROM YOUR BOOK</div>
+              <div class="sub" style="font-size:7.5px;margin-top:2px;color:#8a6f34;line-height:1.5">Author, Type and Genre are copied across — a translation shares them. Everything stays editable.</div>
+            </div>
+            <div class="sub" style="font-size:7.5px;margin-top:9px;line-height:1.5">Someone with the Spanish edition can fill in the rest later — publisher, ISBN, cover. A stub is a real catalogue entry, just a thin one.</div>
+            <div style="margin-top:auto">
+              <div class="btn" style="padding:8px">Add &amp; link</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>T3 · Add the original (stub)</b> Four fields, three of them pre-filled from
+      the book you’re already adding. This is the answer to “the original isn’t in the catalogue
+      yet”: you create it <i>from</i> the translation, in the same breath, and it never touches your
+      library — the stub is catalogue-only. Later readers thicken it via “Improve this entry”.</p>
+    </div>
+
+    <!-- T4. Add form — linked -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+            <div class="pgtitle" style="margin:0">Add a book</div>
+            <span class="sub" style="font-size:8px">catalog entry · shared</span>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:10px 0 3px">TITLE</div>
+          <div class="search" style="font-size:10px;color:var(--ink);font-weight:600">ഏകാന്തതയുടെ നൂറു വർഷങ്ങൾ</div>
+          <div style="margin-top:8px"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">LANGUAGE</div>
+            <div class="search" style="font-size:9.5px;color:var(--ink)">Malayalam ▾</div></div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 3px">TRANSLATED FROM</div>
+          <div class="card" style="padding:8px 9px;border-left:3px solid var(--gold)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="cover" style="width:24px;height:35px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:4.5px">Cien años</div></div>
+              <div style="flex:1"><div style="font-size:9.5px;font-weight:600">Cien años de soledad</div>
+              <div class="sub" style="font-size:7.5px">Spanish · 1967 · <span style="color:#8F681E;font-weight:600">new entry</span></div></div>
+              <span class="sub" style="font-size:9px">✕</span>
+            </div>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 3px">TRANSLATOR</div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <span class="chip" style="font-size:8.5px;background:var(--gold-soft);border:none;color:var(--ink)">S. Ramesan ✕</span>
+            <span class="chip" style="font-size:8.5px">＋</span>
+          </div>
+          <div class="sub" style="font-size:7px;margin-top:3px;line-height:1.5">Credited on this work, alongside the author — a translator has their own page too.</div>
+          <div class="card" style="margin-top:9px;padding:8px 10px;background:var(--paper-deep)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9.5px;font-weight:600">More details</span>
+              <span style="font-size:9px;color:var(--ink-soft)">▾</span>
+            </div>
+          </div>
+          <div style="margin-top:auto;border-top:1px solid var(--line);margin-left:-13px;margin-right:-13px;padding:8px 13px 10px;background:var(--card)">
+            <div class="btn" style="padding:8px">Save to catalog</div>
+            <div class="sub" style="font-size:7px;text-align:center;margin-top:3px;line-height:1.5">Saves two entries — your Malayalam book and the Spanish original, linked. Only yours joins your shelf.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>T4 · Linked, before saving</b> The dashed row has become a gold-ruled card —
+      the same “attached provenance” treatment the prefill banner uses. <b>Translator</b> appears only
+      once a link exists, because that’s the only moment the field means anything. The sticky Save
+      line spells out the consequence plainly: two catalogue entries, one shelf item.</p>
+    </div>
+
+    <!-- T5. Book page — the translation's side -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar" style="background:var(--paper-deep)"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="overflow:hidden">
+          <div style="background:var(--paper-deep);padding:6px 13px 12px;display:flex;gap:11px">
+            <div class="cover" style="width:58px;height:84px;background:linear-gradient(150deg,#6d3a4a,#3d1f2a);color:#F0DCE2"><div class="ct" style="font-size:7px">ഏകാന്തതയുടെ നൂറു വർഷങ്ങൾ</div><div class="ca">Márquez</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="h-serif" style="font-size:13.5px;line-height:1.2">ഏകാന്തതയുടെ നൂറു വർഷങ്ങൾ</div>
+              <div class="sub" style="margin-top:2px"><span style="color:var(--oxblood);font-weight:600">Gabriel García Márquez</span></div>
+              <div class="sub" style="font-size:8.5px">trans. <span style="color:var(--oxblood);font-weight:600">S. Ramesan</span> · Malayalam</div>
+              <div class="stars" style="margin-top:4px;font-size:12px">★★★★<span class="off">★</span> <span style="color:var(--ink-soft);font-size:8px;font-family:'Inter'">your rating</span></div>
+            </div>
+          </div>
+          <div style="padding:10px 13px;display:flex;flex-direction:column;gap:8px;flex:1;overflow:hidden">
+            <div class="card" style="padding:8px 9px;border-left:3px solid var(--gold)">
+              <div style="display:flex;gap:8px;align-items:center">
+                <span style="font-size:11px">⇄</span>
+                <div style="flex:1;font-size:9.5px">Translation of <b style="color:var(--oxblood)">Cien años de soledad</b>
+                <div class="sub" style="font-size:7.5px;margin-top:1px">Spanish · 1967 · 2 other translations</div></div>
+                <span class="sub" style="font-size:9px">›</span>
+              </div>
+              <div style="border-top:1px solid var(--line);margin-top:7px;padding-top:6px;display:flex;align-items:center;gap:6px">
+                <span class="stars" style="font-size:10px">★★★★<span class="off">★</span></span>
+                <span class="sub" style="font-size:7.5px">4.2 across all translations · <b>4.5</b> for this one</span>
+              </div>
+            </div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px">OTHER VERSIONS</div>
+            <div class="card" style="padding:0">
+              <div style="display:flex;gap:8px;align-items:center;padding:7px 9px">
+                <div class="cover" style="width:22px;height:32px;background:linear-gradient(150deg,#3b5064,#22303d);color:#DCE6EF"><div class="ct" style="font-size:4px">One Hundred</div></div>
+                <div style="flex:1"><div style="font-size:9.5px;font-weight:600">One Hundred Years of Solitude</div><div class="sub" style="font-size:7px">English · trans. Gregory Rabassa</div></div>
+                <span class="sub" style="font-size:8px">›</span>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;padding:7px 9px">
+                <div class="cover" style="width:22px;height:32px;background:linear-gradient(150deg,#4a5a3a,#28331e);color:#E2E8D6"><div class="ct" style="font-size:4px">एकांत</div></div>
+                <div style="flex:1"><div style="font-size:9.5px;font-weight:600">एकांत के सौ वर्ष</div><div class="sub" style="font-size:7px">Hindi · on 3 shelves</div></div>
+                <span class="sub" style="font-size:8px">›</span>
+              </div>
+            </div>
+            <div class="card" style="padding:8px;background:#F6EEDC;border-color:#E8DCC0">
+              <div class="sub" style="font-size:8px">🔒 PERSONAL NOTES · always private</div>
+              <div style="font-size:9.5px;margin-top:2px">Ramesan’s Malayalam is closer to the Spanish rhythm than the English.</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>T5 · The translation’s page</b> Its own ratings, its own reviews — the locked
+      5 Jul decision, made visible: <b>4.5 for this one</b> next to <b>4.2 across all translations</b>,
+      two numbers, never merged. The translator sits in the byline where a reader looks for it. “Other
+      versions” is cross-navigation, not a merge: each row is a whole book page of its own.</p>
+    </div>
+
+    <!-- T6. Book page — the original's side -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar" style="background:var(--paper-deep)"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="overflow:hidden">
+          <div style="background:var(--paper-deep);padding:6px 13px 12px;display:flex;gap:11px">
+            <div class="cover" style="width:58px;height:84px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:8px">Cien años de soledad</div><div class="ca">Márquez</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="h-serif" style="font-size:15px;line-height:1.2">Cien años de soledad</div>
+              <div class="sub" style="margin-top:2px"><span style="color:var(--oxblood);font-weight:600">Gabriel García Márquez</span> · 1967</div>
+              <div class="sub" style="font-size:8.5px">Spanish · <span style="color:#8F681E;font-weight:600">original work</span></div>
+              <div class="stars" style="margin-top:4px;font-size:12px">★★★★<span class="off">★</span> <span style="color:var(--ink-soft);font-size:8px;font-family:'Inter'">4.2 · 18 readers</span></div>
+            </div>
+          </div>
+          <div style="padding:10px 13px;display:flex;flex-direction:column;gap:8px;flex:1;overflow:hidden">
+            <div style="display:flex;gap:4px">
+              <span class="chip">Pending</span><span class="chip">Reading</span><span class="chip">Read</span><span class="chip">Wishlist</span>
+            </div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-top:2px">TRANSLATIONS · 3</div>
+            <div class="card" style="padding:0">
+              <div style="display:flex;gap:8px;align-items:center;padding:7px 9px">
+                <div class="cover" style="width:22px;height:32px;background:linear-gradient(150deg,#6d3a4a,#3d1f2a);color:#F0DCE2"><div class="ct" style="font-size:4px">ഏകാന്ത</div></div>
+                <div style="flex:1"><div style="font-size:9.5px;font-weight:600">ഏകാന്തതയുടെ നൂറു വർഷങ്ങൾ</div><div class="sub" style="font-size:7px">Malayalam · trans. S. Ramesan</div></div>
+                <span class="stamp reading" style="font-size:6.5px">On your shelf</span>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;padding:7px 9px">
+                <div class="cover" style="width:22px;height:32px;background:linear-gradient(150deg,#3b5064,#22303d);color:#DCE6EF"><div class="ct" style="font-size:4px">One Hundred</div></div>
+                <div style="flex:1"><div style="font-size:9.5px;font-weight:600">One Hundred Years of Solitude</div><div class="sub" style="font-size:7px">English · trans. Gregory Rabassa</div></div>
+                <span class="sub" style="font-size:8px">›</span>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;padding:7px 9px">
+                <div class="cover" style="width:22px;height:32px;background:linear-gradient(150deg,#4a5a3a,#28331e);color:#E2E8D6"><div class="ct" style="font-size:4px">एकांत</div></div>
+                <div style="flex:1"><div style="font-size:9.5px;font-weight:600">एकांत के सौ वर्ष</div><div class="sub" style="font-size:7px">Hindi</div></div>
+                <span class="sub" style="font-size:8px">›</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px;border:1px solid var(--line);color:var(--oxblood)">＋ Add a translation</div>
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px;border:1px solid var(--line)">🔗 Link existing</div>
+            </div>
+            <div class="sub" style="font-size:7.5px;line-height:1.5">“Add a translation” opens the add form with author, type and genre already carried over — and links it on save.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>T6 · The original’s page</b> The other way in, for when the original
+      <i>is</i> already in the catalogue: two buttons, deliberately distinct. <b>Add</b> opens T1
+      pre-seeded and links on save; <b>Link</b> is today’s existing work-picker, for a translation
+      already in the catalogue. Anything already on your shelf is stamped, so the family reads at a
+      glance as “which of these do I actually own”.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 9 — CREATION FLOWS ================= -->
+<section class="area" id="creating">
+  <div class="ah"><span class="an">Area 9</span><h2>Making things — every creation flow</h2></div>
+  <p class="desc">“Add a book” means <b>four different things</b>, and the app currently funnels
+  almost all of them through one form. This area maps every path that writes a row, then draws the
+  screens that had no mockup. The through-line: <b>you are always making one of four objects</b> —
+  a <i>Work</i> (a book that isn’t in the catalogue), an <i>Edition</i> (a printing of one that is),
+  a <i>Translation</i> (its own Work, linked), or a <i>shelf copy</i> (yours, private, offline).
+  Everything else — authors, publishers, series, genres — is created <i>in passing</i>, never as an
+  errand of its own.</p>
+
+  <!-- M0. The map -->
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:30px;max-width:1180px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.6px;color:var(--oxblood);margin-bottom:14px">M0 · WHAT EACH ENTRY POINT ACTUALLY CREATES</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px">
+
+      <div style="border-top:3px solid var(--oxblood);padding-top:10px">
+        <div style="font-family:'Fraunces',serif;font-size:15px">A new Work</div>
+        <div style="font-size:10.5px;color:var(--ink-soft);margin:3px 0 9px;line-height:1.5">The book isn’t in the shared catalogue. Creates Work + first Edition + author/publisher/genre/series in one call. <b>Online only.</b></div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span class="chip" style="font-size:9px">Search → “Add manually”</span>
+          <span class="chip" style="font-size:9px">Scanner → nothing matched</span>
+          <span class="chip" style="font-size:9px">Borrow sheet → “＋ Add to catalog”</span>
+          <span class="chip" style="font-size:9px">Cover photos → “read the covers”</span>
+        </div>
+        <div class="sub" style="font-size:9px;margin-top:9px"><b>M1, M3, M4, M8</b> · form is <b>7b</b></div>
+      </div>
+
+      <div style="border-top:3px solid var(--gold);padding-top:10px">
+        <div style="font-family:'Fraunces',serif;font-size:15px">Another Edition</div>
+        <div style="font-size:10.5px;color:var(--ink-soft);margin:3px 0 9px;line-height:1.5">The Work exists; your copy is a different printing — other ISBN, cover, page count, publisher. <b>Online only.</b></div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span class="chip" style="font-size:9px">Book page → “Add another edition”</span>
+          <span class="chip" style="font-size:9px">The fork, when a match is found</span>
+        </div>
+        <div class="sub" style="font-size:9px;margin-top:9px"><b>M1, M2</b> — no mockup existed</div>
+      </div>
+
+      <div style="border-top:3px solid #6d3a4a;padding-top:10px">
+        <div style="font-family:'Fraunces',serif;font-size:15px">A Translation</div>
+        <div style="font-size:10.5px;color:var(--ink-soft);margin:3px 0 9px;line-height:1.5">Its own Work, with its own ratings and reviews, linked by a shared group. <b>Online only.</b></div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span class="chip" style="font-size:9px">Add form → “Translated from”</span>
+          <span class="chip" style="font-size:9px">Original’s page → “＋ Add a translation”</span>
+          <span class="chip" style="font-size:9px">Book page → “Link existing”</span>
+        </div>
+        <div class="sub" style="font-size:9px;margin-top:9px"><b>Area 8 · T1–T6</b></div>
+      </div>
+
+      <div style="border-top:3px solid var(--moss);padding-top:10px">
+        <div style="font-family:'Fraunces',serif;font-size:15px">A copy on your shelf</div>
+        <div style="font-size:10.5px;color:var(--ink-soft);margin:3px 0 9px;line-height:1.5">The only <b>personal</b> object here — Drift first, sync later. <b>Works offline.</b> Eight ways in, all one repository call.</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span class="chip" style="font-size:9px">Scan confirm · search “＋” · grid badge</span>
+          <span class="chip" style="font-size:9px">Book page “Add to library”</span>
+          <span class="chip" style="font-size:9px">CSV import · recommendation → wishlist</span>
+          <span class="chip" style="font-size:9px">Logging a borrowed book (implicit)</span>
+        </div>
+        <div class="sub" style="font-size:9px;margin-top:9px"><b>M9</b> · entries at <b>2, 4, 5, 7, 8c, 11</b></div>
+      </div>
+    </div>
+
+    <div class="rule" style="margin:18px 0 14px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.4px;color:var(--ink-soft);margin-bottom:6px">CREATED IN PASSING — NEVER AN ERRAND</div>
+        <div style="font-size:10.5px;color:var(--ink-soft);line-height:1.6">Type a name that doesn’t exist and it gets made: <b>authors</b> (or via the picker’s add-new, <b>7c</b>), <b>publishers</b> (<b>M7</b>), <b>genres</b> and <b>series</b> — series has no picker at all, just free text. This is right: nobody opens Kitabi to create a publisher.</div>
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.4px;color:var(--oxblood);margin-bottom:6px">EDITING IS A CREATION FLOW TOO</div>
+        <div style="font-size:10.5px;color:var(--ink-soft);line-height:1.6">Editing someone else’s Work doesn’t change it — it creates a <b>revision</b> for the contributor to approve (<b>M5</b>), landing in their inbox (<b>M6</b>). The shared catalogue is the one place a reader’s edit isn’t instant, so it has to <i>say</i> so.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+
+    <!-- M1. The fork -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle" style="margin-top:8px">Add a book</div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:10px 0 3px">TITLE</div>
+          <div class="search" style="font-size:9.5px;color:var(--ink);font-weight:600">Khasakkinte Itihasam</div>
+          <div class="card" style="margin-top:9px;padding:10px;border-left:3px solid var(--gold);background:#FDF8EC">
+            <div style="font-size:9.5px;font-weight:700">Kitabi already has this book.</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:7px">
+              <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#5d6b4a,#2f3a24);color:#EFE6C8"><div class="ct" style="font-size:5px">Khasakkinte Itihasam</div></div>
+              <div style="flex:1"><div style="font-size:9.5px;font-weight:600">Khasakkinte Itihasam</div>
+              <div class="sub" style="font-size:7.5px">O.V. Vijayan · Malayalam · 3 editions</div>
+              <div class="stars" style="font-size:9px;margin-top:2px">★★★★<span class="off">★</span> <span style="color:var(--ink-soft);font-size:7px;font-family:'Inter'">4.6 · 22 readers</span></div></div>
+            </div>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:11px 0 5px">SO WHAT ARE YOU ADDING?</div>
+          <div class="card" style="padding:9px 10px;margin-bottom:6px;border-left:3px solid var(--moss)">
+            <div style="display:flex;align-items:center;gap:7px">
+              <div style="flex:1"><div style="font-size:9.5px;font-weight:600">I own this one — put it on my shelf</div>
+              <div class="sub" style="font-size:7.5px;margin-top:1px">DC Books, 2018 · the edition shown above</div></div>
+              <span class="sub" style="font-size:9px">›</span>
+            </div>
+          </div>
+          <div class="card" style="padding:9px 10px;margin-bottom:6px;border-left:3px solid var(--gold)">
+            <div style="display:flex;align-items:center;gap:7px">
+              <div style="flex:1"><div style="font-size:9.5px;font-weight:600">Mine’s a different printing</div>
+              <div class="sub" style="font-size:7.5px;margin-top:1px">Other ISBN, cover or page count → add an edition</div></div>
+              <span class="sub" style="font-size:9px">›</span>
+            </div>
+          </div>
+          <div class="card" style="padding:9px 10px;margin-bottom:6px;border-left:3px solid #6d3a4a">
+            <div style="display:flex;align-items:center;gap:7px">
+              <div style="flex:1"><div style="font-size:9.5px;font-weight:600">Mine’s a translation</div>
+              <div class="sub" style="font-size:7.5px;margin-top:1px">Its own book, linked to this one</div></div>
+              <span class="sub" style="font-size:9px">›</span>
+            </div>
+          </div>
+          <div class="card" style="padding:9px 10px;border-style:dashed;border-color:#D8C9A8;background:transparent">
+            <div style="font-size:9.5px;font-weight:600;color:var(--ink-soft)">Different book, same title — keep typing</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M1 · The fork — the screen that was missing</b> The form already asks the
+      catalogue for near-matches while you type (<code>works/similar</code>, typo-tolerant) — but it
+      does nothing with the answer. This turns that moment into the branch point for the whole area:
+      shelf copy, new edition, or translation, in the reader’s words, never in ours. Dismissal is a
+      dashed row, not an ✕, so “no, it’s a different book” stays an honest fourth choice.</p>
+    </div>
+
+    <!-- M2. Add an edition -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+            <div class="pgtitle" style="margin:0">Add an edition</div>
+            <span class="sub" style="font-size:8px">catalog · shared</span>
+          </div>
+          <div class="card" style="margin-top:8px;padding:8px 9px;background:var(--paper-deep);display:flex;gap:8px;align-items:center">
+            <div class="cover" style="width:24px;height:35px;background:linear-gradient(150deg,#5d6b4a,#2f3a24);color:#EFE6C8"><div class="ct" style="font-size:4.5px">Khasak</div></div>
+            <div style="flex:1"><div style="font-size:9.5px;font-weight:600">Khasakkinte Itihasam</div>
+            <div class="sub" style="font-size:7.5px">O.V. Vijayan · the work stays as it is</div></div>
+          </div>
+          <div class="sub" style="font-size:7.5px;margin-top:5px;line-height:1.5">Title, author, genre and rating belong to the <i>work</i> — you’re only describing your printing.</div>
+          <div style="display:flex;gap:6px;margin-top:9px">
+            <div class="btn" style="flex:1;padding:7px 5px;font-size:8.5px">▥ Scan this copy</div>
+            <div class="btn soft" style="flex:1;padding:7px 5px;font-size:8.5px;border:1px solid var(--line)">📷 Photo the cover</div>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 3px">ISBN</div>
+          <div class="search" style="font-size:9.5px;color:var(--ink)">978-81-264-1234-5</div>
+          <div style="display:flex;gap:7px;margin-top:8px">
+            <div style="flex:1.4"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">PUBLISHER</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">DC Books ▾</div></div>
+            <div style="flex:1"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">PAGES</div>
+              <div class="search" style="font-size:9.5px;color:var(--ink)">228</div></div>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 3px">FORMAT</div>
+          <div style="display:flex;gap:4px">
+            <span class="chip on" style="font-size:8px;background:var(--oxblood);border-color:var(--oxblood)">Paperback</span>
+            <span class="chip" style="font-size:8px">Hardcover</span><span class="chip" style="font-size:8px">E-book</span>
+          </div>
+          <div class="card" style="margin-top:9px;padding:8px 10px;background:var(--paper-deep)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9.5px;font-weight:600">More details</span><span style="font-size:9px;color:var(--ink-soft)">▾</span>
+            </div>
+            <div class="sub" style="font-size:7px;margin-top:2px">Series · language · publication date · covers</div>
+          </div>
+          <div style="margin-top:auto;border-top:1px solid var(--line);margin-left:-13px;margin-right:-13px;padding:8px 13px 10px;background:var(--card)">
+            <div class="btn" style="padding:8px">Save edition</div>
+            <div class="sub" style="font-size:7px;text-align:center;margin-top:3px">Then it goes on your shelf</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M2 · Add an edition</b> Built in code, never drawn. It is the add form with
+      the work-level half amputated — and it needs to <i>say</i> so, or a reader will hunt for the
+      title field. The locked pinned work card at the top does that job, the way the borrowed-book
+      sheet pins its counterparty. Reached from the book page or straight from <b>M1</b>.</p>
+    </div>
+
+    <!-- M3. Scanner — nothing found -->
+    <div class="shot">
+      <div class="phone"><div class="scr" style="background:#1E1710">
+        <div class="sbar" style="color:#EFE6C8"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="color:#EFE6C8">
+          <div style="text-align:center;margin-top:8px"><div class="h-serif" style="font-size:15px">Add a book</div>
+          <div style="font-size:9px;color:#A08D6E">Point at the barcode on the back cover</div></div>
+          <div style="margin:14px 20px;flex:1;border-radius:14px;position:relative;background:
+            radial-gradient(140px 100px at 50% 45%,#4a3a28 0%,#2b2118 70%);border:1px solid #4a3a28;overflow:hidden">
+            <div style="position:absolute;inset:36px 26px auto 26px;height:110px;border:1.5px solid #6b5738;border-radius:10px"></div>
+          </div>
+          <div style="margin:0 20px 8px;background:#2E2318;border:1px solid #6b5738;border-radius:11px;padding:11px">
+            <div style="font-size:10px;font-weight:700;color:#F0E2C2">Nothing found for 978-93-5299-441-2</div>
+            <div style="font-size:8.5px;color:#A08D6E;margin-top:3px;line-height:1.5">Not in Kitabi, and OpenLibrary doesn’t have it either. Regional printings often aren’t listed — you’d be the first to add it.</div>
+            <div style="margin-top:9px;background:var(--gold);color:#241811;font-size:9.5px;font-weight:700;border-radius:9px;padding:8px;text-align:center">Add it — ISBN already filled in</div>
+          </div>
+          <div style="display:flex;gap:8px;margin:0 20px 16px">
+            <div style="flex:1;text-align:center;font-size:9px;font-weight:600;color:#CBB897;border:1px solid #4a3a28;border-radius:9px;padding:7px">⌕ Search by title</div>
+            <div style="flex:1;text-align:center;font-size:9px;font-weight:600;color:#CBB897;border:1px solid #4a3a28;border-radius:9px;padding:7px">↻ Scan again</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M3 · Scanner — nothing found</b> The state that decides whether Kitabi’s
+      regional catalogue ever gets built, and it had no mockup. A dead end reads as a broken app, so
+      it says <i>why</i> (regional printings are thinly listed) and reframes the reader as the first
+      contributor rather than the victim of a miss. The ISBN carries into the form — never retyped.</p>
+    </div>
+
+    <!-- M4. Reading your covers -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="align-items:center;justify-content:center;text-align:center">
+          <div style="display:flex;gap:10px;transform:rotate(-3deg)">
+            <div class="cover" style="width:62px;height:92px;background:linear-gradient(150deg,#5d6b4a,#2f3a24);color:#EFE6C8"><div class="ct" style="font-size:7px">Khasakkinte Itihasam</div><div class="ca">Vijayan</div></div>
+            <div class="cover" style="width:62px;height:92px;background:linear-gradient(150deg,#3d3a34,#221f1a);color:#DDD5C6;transform:rotate(6deg)"><div class="ct" style="font-size:6px">back cover</div></div>
+          </div>
+          <div class="orn" style="margin-top:26px">❦</div>
+          <div class="h-serif" style="font-size:16px;margin-top:2px">Reading your covers</div>
+          <div class="sub" style="font-size:9.5px;margin-top:6px;line-height:1.6;max-width:180px">Pulling out the title, author, publisher and blurb. You’ll get the form back with everything filled in — and everything editable.</div>
+          <div style="margin-top:16px;width:120px;height:3px;border-radius:99px;background:var(--paper-deep);overflow:hidden">
+            <div style="width:62%;height:100%;background:var(--gold)"></div>
+          </div>
+          <div class="sub" style="font-size:8px;margin-top:20px">Skip — I’ll type it</div>
+          <div class="card" style="position:absolute;left:0;right:0;bottom:10px;padding:8px 10px;background:var(--paper-deep)">
+            <div class="sub" style="font-size:7.5px;line-height:1.5"><b>If it comes back empty:</b> “Couldn’t read much from those photos — the form is yours to fill.” Never an error dialog; the photos stay attached as the cover either way.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M4 · Reading your covers</b> The one moment Kitabi visibly uses an LLM in the
+      <i>add</i> path, so it follows the “AI stays quiet” rule: it says plainly what it is doing,
+      shows the two photos it is reading, and offers the way out before it finishes. Failure is a
+      sentence, not a dialog — and the photos are still your cover, which is most of the value.</p>
+    </div>
+
+    <!-- M5. Improve this entry — pending approval -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+            <div class="pgtitle" style="margin:0">Improve this entry</div>
+            <span class="sub" style="font-size:8px">catalog · shared</span>
+          </div>
+          <div class="card" style="margin-top:8px;padding:8px 10px;background:var(--gold-soft);border-color:#E5D3A6">
+            <div style="font-size:8.5px;font-weight:700;color:#8F681E;letter-spacing:.6px">ADDED BY ANOTHER READER</div>
+            <div class="sub" style="font-size:7.5px;margin-top:2px;color:#8a6f34;line-height:1.5">Your changes go to <b>Meera N.</b> to approve. Books you added yourself change straight away.</div>
+          </div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:10px 0 3px">TITLE</div>
+          <div class="search" style="font-size:9.5px;color:var(--ink);font-weight:600">Khasakkinte Itihasam</div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">TYPE · PICK ONE</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <span class="chip on" style="font-size:8px;background:var(--oxblood);border-color:var(--oxblood)">Novel</span>
+            <span class="chip" style="font-size:8px">Short stories</span><span class="chip" style="font-size:8px">Poetry</span>
+          </div>
+          <div class="sub" style="font-size:7px;color:var(--oxblood);margin-top:3px">✎ changed from “not set”</div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:9px 0 3px">DESCRIPTION</div>
+          <div class="card" style="padding:8px;border-color:var(--oxblood)">
+            <div style="font-size:9px;line-height:1.5">A schoolteacher arrives in a remote Malabar village and finds it thick with myth, memory and rain…</div>
+          </div>
+          <div class="sub" style="font-size:7px;color:var(--oxblood);margin-top:3px">✎ you added this</div>
+          <div style="margin-top:auto;border-top:1px solid var(--line);margin-left:-13px;margin-right:-13px;padding:8px 13px 10px;background:var(--card)">
+            <div class="btn" style="padding:8px">Send 2 changes for approval</div>
+            <div class="sub" style="font-size:7px;text-align:center;margin-top:3px">You’ll see it in your contributions either way</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M5 · Improve this entry</b> The shared catalogue is the one place a reader’s
+      edit <i>isn’t</i> instant, so the screen has to say so before they type, not after they save —
+      the gold banner names the person who’ll see it. Changed fields carry a small oxblood ✎ so the
+      Save button can count them honestly: “Send <b>2</b> changes”, not a vague “Save”.</p>
+    </div>
+
+    <!-- M6. Revision inbox -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle" style="margin-top:8px">Suggested changes</div>
+          <div class="sub">2 waiting on books you added</div>
+          <div class="card" style="margin-top:11px;padding:10px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="cover" style="width:24px;height:35px;background:linear-gradient(150deg,#5d6b4a,#2f3a24);color:#EFE6C8"><div class="ct" style="font-size:4.5px">Khasak</div></div>
+              <div style="flex:1"><div style="font-size:9.5px;font-weight:600">Khasakkinte Itihasam</div>
+              <div class="sub" style="font-size:7.5px">from <span style="color:var(--oxblood);font-weight:600">Rahul K.</span> · 2 days ago</div></div>
+            </div>
+            <div style="margin-top:8px;background:var(--paper-deep);border-radius:8px;padding:7px 8px">
+              <div class="sub" style="font-size:7px;letter-spacing:.8px">TYPE</div>
+              <div style="font-size:9px;margin-top:1px"><span style="color:var(--stamp-grey);text-decoration:line-through">not set</span> → <b>Novel</b></div>
+              <div class="sub" style="font-size:7px;letter-spacing:.8px;margin-top:6px">DESCRIPTION</div>
+              <div style="font-size:9px;margin-top:1px;line-height:1.45"><span class="sub" style="font-size:8px">empty</span> → “A schoolteacher arrives in a remote Malabar village…”</div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:9px">
+              <div class="btn" style="flex:1;padding:7px;font-size:9px;background:var(--moss)">Accept both</div>
+              <div class="btn soft" style="flex:1;padding:7px;font-size:9px;border:1px solid var(--line)">Pick &amp; choose</div>
+            </div>
+            <div class="sub" style="font-size:7.5px;text-align:center;margin-top:6px">Decline</div>
+          </div>
+          <div class="card" style="margin-top:9px;padding:10px;opacity:.62">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="cover" style="width:24px;height:35px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:4.5px">Ponniyin</div></div>
+              <div style="flex:1"><div style="font-size:9.5px;font-weight:600">Ponniyin Selvan — Vol I</div>
+              <div class="sub" style="font-size:7.5px">from <span style="color:var(--oxblood);font-weight:600">Anu V.</span> · publisher &amp; page count</div></div>
+              <span class="sub" style="font-size:9px">›</span>
+            </div>
+          </div>
+          <div class="sub" style="font-size:8px;margin-top:12px;line-height:1.6;text-align:center">Ignore them and nothing breaks — a suggestion left alone just stays a suggestion.</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M6 · Suggested changes</b> No mockup existed for the inbox, and the code’s
+      word for it — “revisions” — is not a word a reader would use. It shows the <i>diff</i>, not a
+      form: struck-through old, bold new, per field. “Accept both” is the fast path because most
+      suggestions are somebody filling in a blank; “pick &amp; choose” exists for when they aren’t.
+      The closing line matters — an inbox that nags is a chore, and this one must never be.</p>
+    </div>
+
+    <!-- M7. Publisher picker / add new -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle" style="margin-top:8px">Publisher</div>
+          <div class="search" style="margin-top:9px;border-color:var(--ink)"><span style="color:var(--ink);font-weight:600">dc bo</span><span style="margin-left:auto;color:var(--ink-soft)">✕</span></div>
+          <div class="card" style="margin-top:8px;padding:4px 0">
+            <div style="display:flex;gap:8px;align-items:center;padding:7px 9px">
+              <div style="width:24px;height:24px;border-radius:6px;background:var(--gold-soft);color:#8F681E;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:10px;font-weight:600;flex-shrink:0">DC</div>
+              <div style="flex:1"><div style="font-size:10px;font-weight:600">DC Books</div><div class="sub" style="font-size:7px">Kottayam · 214 books</div></div>
+            </div>
+            <div style="border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;padding:7px 9px">
+              <div style="width:24px;height:24px;border-radius:6px;background:var(--paper-deep);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:10px;font-weight:600;flex-shrink:0">DC</div>
+              <div style="flex:1"><div style="font-size:10px;font-weight:600">D.C. Books &amp; Periodicals</div><div class="sub" style="font-size:7px">6 books</div></div>
+              <span class="sub" style="font-size:7px">same house?</span>
+            </div>
+            <div style="border-top:1px solid var(--line);padding:7px 9px;font-size:9.5px;color:var(--oxblood);font-weight:600">＋ Add “dc bo” as a new publisher</div>
+          </div>
+          <div class="card" style="margin-top:10px;padding:9px 10px;background:var(--paper-deep)">
+            <div class="sub" style="font-size:7.5px;line-height:1.55">Near-duplicates are surfaced, never merged automatically — a publisher’s imprints are a real distinction, and only a person can tell them apart.</div>
+          </div>
+          <div class="rule" style="margin:14px 0 10px"></div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:5px">SERIES — NO PICKER, BY DESIGN</div>
+          <div class="card" style="padding:9px 10px">
+            <div style="display:flex;gap:7px;align-items:center">
+              <span style="width:24px;height:14px;border-radius:99px;background:var(--moss);position:relative;display:inline-block;flex-shrink:0"><span style="position:absolute;right:2px;top:2px;width:10px;height:10px;border-radius:50%;background:#fff"></span></span>
+              <span style="font-size:9.5px;font-weight:600">Part of a series</span>
+            </div>
+            <div style="display:flex;gap:7px;margin-top:8px">
+              <div style="flex:2"><div class="search" style="font-size:9.5px;color:var(--ink)">Ponniyin Selvan</div></div>
+              <div style="flex:1"><div class="search" style="font-size:9.5px;color:var(--ink)">Book 1</div></div>
+            </div>
+            <div class="sub" style="font-size:7px;margin-top:4px">Free text, matched by name on save.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M7 · Publishers &amp; series</b> Both are created <i>in passing</i> — nobody
+      opens Kitabi to make a publisher. The picker’s only real job is duplicate pressure: it shows
+      the near-match and asks a human question (“same house?”) rather than silently merging, because
+      imprints are a genuine distinction. Series stays free text with no picker at all; a screen for
+      it would cost more than it saves.</p>
+    </div>
+
+    <!-- M8. Add to catalog, mid-errand (pick mode) -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="card" style="margin-top:8px;padding:8px 10px;background:var(--paper-deep);border-left:3px solid var(--oxblood)">
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px">STEP 2 OF 2 · LOGGING A BORROWED BOOK</div>
+            <div style="font-size:9.5px;font-weight:600;margin-top:2px">Borrowed from Meera · 12 Jul</div>
+          </div>
+          <div class="pgtitle" style="margin-top:11px">Add it to the catalog</div>
+          <div class="sub" style="font-size:8.5px;line-height:1.5">Kitabi doesn’t have this one yet. Add the essentials and you’ll drop straight back into the loan.</div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:10px 0 3px">TITLE</div>
+          <div class="search" style="font-size:9.5px;color:var(--ink);font-weight:600">Aarachaar</div>
+          <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:8px 0 3px">AUTHOR</div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <span class="chip" style="font-size:8.5px;background:var(--gold-soft);border:none;color:var(--ink)">K.R. Meera ✕</span>
+            <span class="chip" style="font-size:8.5px">＋</span>
+          </div>
+          <div style="margin-top:8px"><div class="sub" style="font-size:7.5px;letter-spacing:1px;margin-bottom:3px">LANGUAGE</div>
+            <div class="search" style="font-size:9.5px;color:var(--ink)">Malayalam ▾</div></div>
+          <div class="card" style="margin-top:9px;padding:8px 10px;background:var(--paper-deep)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9.5px;font-weight:600">More details</span><span style="font-size:9px;color:var(--ink-soft)">▾</span>
+            </div>
+            <div class="sub" style="font-size:7px;margin-top:2px">Add them now or leave them — someone will fill them in.</div>
+          </div>
+          <div style="margin-top:auto;border-top:1px solid var(--line);margin-left:-13px;margin-right:-13px;padding:8px 13px 10px;background:var(--card)">
+            <div class="btn" style="padding:8px">Add &amp; back to the loan</div>
+            <div class="sub" style="font-size:7px;text-align:center;margin-top:3px">It won’t go on your shelf as owned — it’s Meera’s copy</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M8 · Adding mid-errand</b> The same form in <i>pick</i> mode, reached only
+      from the borrow sheet. Two things must change and today neither does: the sticky button says
+      where you’re going back to, and the “Add to library / Create another” dialog must not appear —
+      you’re halfway through something else. The step banner is the whole trick; without it this is
+      just the add form and the reader loses the thread.</p>
+    </div>
+
+    <!-- M9. It's on your shelf -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.28)">
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:14px 16px 16px">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 12px"></div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <div class="cover" style="width:44px;height:64px;background:linear-gradient(150deg,#5d6b4a,#2f3a24);color:#EFE6C8"><div class="ct" style="font-size:6px">Khasakkinte Itihasam</div></div>
+              <div style="flex:1">
+                <div class="h-serif" style="font-size:13px;line-height:1.25">Khasakkinte Itihasam</div>
+                <div class="sub" style="font-size:8px;margin-top:2px">Added to your library</div>
+                <div class="sub" style="font-size:7.5px;color:var(--moss);margin-top:3px">✓ Saved on this phone — it’ll sync when you’re online</div>
+              </div>
+            </div>
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:12px 0 5px">WHERE DOES IT SIT?</div>
+            <div style="display:flex;gap:4px">
+              <span class="chip on" style="background:var(--oxblood);border-color:var(--oxblood)">To read</span>
+              <span class="chip">Reading</span><span class="chip">Read</span><span class="chip">Wishlist</span>
+            </div>
+            <div class="rule" style="margin:12px 0 10px"></div>
+            <div style="display:flex;gap:7px">
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px;border:1px solid var(--line)">Open the book</div>
+              <div class="btn soft" style="flex:1;padding:8px;font-size:9px;border:1px solid var(--line)">Add another</div>
+            </div>
+            <div class="sub" style="font-size:7.5px;text-align:center;margin-top:9px;line-height:1.5">You added the <i>catalog</i> entry too — it’s the first thing a reader in Kerala will find when they search for it.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>M9 · It’s on your shelf</b> The one confirmation every creation path ends
+      at, and the only one that is <i>personal</i> — so it’s the only one that can promise offline
+      (“saved on this phone”). Status is set here, in the moment, instead of a trip to the book
+      page. The closing line is the quiet contribution nudge: you didn’t just file a book, you left
+      the catalogue better than you found it.</p>
     </div>
 
   </div>

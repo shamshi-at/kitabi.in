@@ -124,6 +124,35 @@ camera; everything else stays paper.
   same "+" add affordance as search. This is the catalog's existing linkability
   (Layer 1) surfaced as a screen — not the fuller "author profile with bio and
   reviews" feature, which stays `[LATER]`.
+- **"Add a book" is four different objects, and the UI must fork before it asks
+  for fields** (mapped 21 Jul 2026, mockups **M0–M9**, Area 9). A reader is always
+  making one of: a **Work** (not in the catalogue), an **Edition** (a printing of one
+  that is), a **Translation** (its own Work, linked), or a **shelf copy** (the only
+  *personal* object — Drift-first, the only one that works offline). Authors,
+  publishers, genres and series are created *in passing* from free text, never as an
+  errand of their own — the pickers exist only to apply duplicate pressure (**M7**),
+  and series has no picker at all by design. The branch point is **M1**: the add form
+  already asks `works/similar` while you type but discards the answer; that moment
+  becomes shelf-copy / new-edition / translation / "different book", phrased in the
+  reader's words. Every path ends at one confirmation (**M9**), the only screen that
+  can promise offline. Editing is a creation flow too — an edit to someone else's
+  Work creates a *revision* (**M5**), so the screen says so in a gold banner *before*
+  the reader types, and the inbox shows a diff, not a form (**M6**).
+- **A translation is added from the translation's side, never the original's**
+  (designed 21 Jul 2026, mockups **T1–T6**, Area 8). The book in your hand is the
+  translation, so that's what you add; the original is *context you attach*, not a
+  second book you have to own. One optional add-form row — **Translated from**,
+  sitting directly under Language because it's a language question — carries both
+  cases: pick the original from the catalogue (**T2**), or add it as a four-field
+  stub without leaving the sheet (**T3**) when it isn't there yet. The stub is
+  catalogue-only; nothing lands on your shelf. Empty = dashed slip-paper row; linked
+  = the same gold-ruled card the prefill provenance banner uses (**T4**), and only
+  then does **Translator** appear. The original's page carries the mirror entry
+  points (**T6**): "＋ Add a translation" (opens the form pre-seeded, links on save)
+  next to today's "🔗 Link existing" work-picker. Both sides show two rating numbers,
+  never merged — this translation's own average beside "4.2 across all translations"
+  (**T5**), the visible form of the locked 5 Jul decision that each translation is
+  its own Work with its own rating pool.
 - **A linked-author avatar is oxblood + a gold ring; a catalog-only author is a
   flat gold-soft initials circle** (added 14 Jul 2026). Same visual language the
   profile screen already uses for you — an author who's also a registered reader
