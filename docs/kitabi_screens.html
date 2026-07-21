@@ -156,7 +156,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   </div>
   <nav class="toc">
     <a href="#welcome">Welcome</a><a href="#home">Home</a><a href="#library">Library</a>
-    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a><a href="#extras">Extras</a><a href="#translations">Translations</a><a href="#creating">Creating</a><a href="#stopping">Stopping</a><a href="#notes">Notes</a>
+    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a><a href="#extras">Extras</a><a href="#translations">Translations</a><a href="#creating">Creating</a><a href="#stopping">Stopping</a><a href="#notes">Notes</a><a href="#status">Status</a>
   </nav>
 </header>
 
@@ -2746,6 +2746,180 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       no longer explain themselves. Editing never re-dates a note; it stays where it was written,
       or the journal stops being a record and becomes a draft. Delete is present but quiet, at the
       bottom, away from Save.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 12 — STATUS ================= -->
+<section class="area" id="status">
+  <div class="ah"><span class="an">Area 12</span><h2>Status — where a book stands</h2></div>
+  <p class="desc">Three complaints, one root cause: <b>status is spelled out in words everywhere and
+  shown as a thing nowhere.</b> The shelf row hides Stopped whenever it's empty (so the status looks
+  like it doesn't exist), the book page buries "start reading" inside a <i>Change ›</i> sheet, and
+  Wishlist sits in that same sheet while Favourite lives up in the title bar — two different kinds
+  of "I want this" in two different places, which is exactly why they get confused.</p>
+  <div class="row">
+
+    <!-- U1. Shelves with status marks -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle" style="margin-top:8px">My Library</div>
+          <div class="sub">52 books</div>
+          <div style="display:flex;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:3px;margin-top:10px">
+            <div style="flex:1;text-align:center;font-size:9.5px;padding:6px;color:var(--ink-soft)">All books</div>
+            <div style="flex:1;text-align:center;font-size:9.5px;padding:6px;background:var(--oxblood);color:var(--paper);border-radius:99px;font-weight:600">Shelves</div>
+          </div>
+          <div class="sub" style="font-size:7px;letter-spacing:1.2px;margin:12px 0 6px">WHERE YOUR BOOKS STAND</div>
+          <div style="display:flex;gap:8px;overflow:hidden">
+            <div style="width:88px;flex-shrink:0;background:var(--paper-deep);border-radius:12px;padding:8px;position:relative">
+              <div style="position:absolute;top:7px;right:7px;width:19px;height:19px;border-radius:50%;background:#F2DEDA;display:flex;align-items:center;justify-content:center;font-size:9px">▶</div>
+              <div style="height:44px;display:flex;align-items:flex-end;gap:2px;margin-top:14px">
+                <div class="cover" style="width:20px;height:30px;background:linear-gradient(150deg,#4a5a3a,#28331e)"></div>
+                <div class="cover" style="width:20px;height:34px;background:linear-gradient(150deg,#5C3A24,#3A2114)"></div>
+              </div>
+              <div style="height:1px;background:var(--gold);margin:3px 0 5px"></div>
+              <div style="font-size:9px;font-weight:700">Reading</div><div class="sub" style="font-size:7px">3</div>
+            </div>
+            <div style="width:88px;flex-shrink:0;background:var(--paper-deep);border-radius:12px;padding:8px;position:relative">
+              <div style="position:absolute;top:7px;right:7px;width:19px;height:19px;border-radius:50%;background:#F2E6C4;display:flex;align-items:center;justify-content:center;font-size:9px">◷</div>
+              <div style="height:44px;display:flex;align-items:flex-end;gap:2px;margin-top:14px">
+                <div class="cover" style="width:20px;height:32px;background:linear-gradient(150deg,#3b5064,#22303d)"></div>
+                <div class="cover" style="width:20px;height:28px;background:linear-gradient(150deg,#6d3a4a,#3d1f2a)"></div>
+              </div>
+              <div style="height:1px;background:var(--gold);margin:3px 0 5px"></div>
+              <div style="font-size:9px;font-weight:700">To read</div><div class="sub" style="font-size:7px">42</div>
+            </div>
+            <div style="width:88px;flex-shrink:0;background:var(--paper-deep);border-radius:12px;padding:8px;position:relative">
+              <div style="position:absolute;top:7px;right:7px;width:19px;height:19px;border-radius:50%;background:#E3EAD9;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--moss)">✓</div>
+              <div style="height:44px;margin-top:14px"></div>
+              <div style="height:1px;background:var(--gold);margin:3px 0 5px"></div>
+              <div style="font-size:9px;font-weight:700">Read</div><div class="sub" style="font-size:7px">7</div>
+            </div>
+            <div style="width:60px;flex-shrink:0;background:var(--paper-deep);border-radius:12px;padding:8px;opacity:.6"></div>
+          </div>
+          <div class="sub" style="font-size:7.5px;margin-top:6px;line-height:1.5">Stopped and Wishlist keep their place even at zero — a status you can't see reads as one that doesn't exist.</div>
+
+          <div class="sub" style="font-size:7px;letter-spacing:1.2px;margin:12px 0 6px">YOUR SHELVES</div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1;background:var(--paper-deep);border-radius:12px;padding:8px;height:74px"><div style="font-size:9px;font-weight:700;margin-top:44px">Home</div><div class="sub" style="font-size:7px">2</div></div>
+            <div style="flex:1;background:var(--paper-deep);border-radius:12px;padding:8px;height:74px"><div style="font-size:9px;font-weight:700;margin-top:44px">Kochi</div><div class="sub" style="font-size:7px">8</div></div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>U1 · A mark on every status shelf</b> One small tinted disc, top-right, in
+      the status's own colour — the same tints the pills already use, so nothing new is learned.
+      It gives the row something scannable at a glance when the fanned covers are the only
+      difference between tiles, and it lets an <i>empty</i> shelf still look like a shelf. Stopped
+      and Wishlist now hold their place at zero: hiding a status is why "add Stopped" was even a
+      request — it was always there, just invisible until something was in it.</p>
+    </div>
+
+    <!-- U2. The book's status control -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush">
+          <div style="background:#CFE3E2;padding:8px 13px 12px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:12px">←</span>
+              <div style="display:flex;gap:12px;align-items:center">
+                <span style="font-size:12px;color:var(--oxblood)">⇪</span>
+                <span style="font-size:13px;color:var(--gold)">★</span>
+                <span style="font-size:12px;color:var(--slate)">🔖</span>
+                <span style="font-size:12px;color:var(--ink-soft)">🗑</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:6px">
+              <div class="cover" style="width:46px;height:68px;background:linear-gradient(150deg,#8a6b2c,#5d461a);color:#F6EDD5"><div class="ct" style="font-size:6px">INB Diaries</div></div>
+              <div style="flex:1;align-self:center">
+                <div class="h-serif" style="font-size:13px">INB Diaries</div>
+                <div class="sub" style="font-size:8.5px"><span style="color:var(--oxblood);font-weight:600">Sujith Bhakthan</span> · 320 pp</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:11px 13px">
+            <div class="sub" style="font-size:7px;letter-spacing:1.2px">WHERE IT STANDS</div>
+            <div style="display:flex;gap:5px;margin-top:6px">
+              <span class="chip" style="font-size:8px">◷ To read</span>
+              <span class="chip on" style="font-size:8px;background:var(--oxblood);border-color:var(--oxblood)">▶ Reading</span>
+              <span class="chip" style="font-size:8px">✓ Read</span>
+              <span class="chip" style="font-size:8px">⏸ Stopped</span>
+            </div>
+
+            <div class="card" style="margin-top:10px;padding:10px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between">
+                <div style="font-size:10.5px;font-weight:600">p. 10 of 320 · 3%</div>
+                <span class="sub" style="font-size:8px;color:var(--oxblood);font-weight:700">✎ Edit</span>
+              </div>
+              <div style="height:4px;border-radius:99px;background:var(--paper-deep);margin-top:6px;overflow:hidden"><div style="width:3%;height:100%;background:var(--oxblood)"></div></div>
+              <div style="display:flex;gap:7px;margin-top:10px">
+                <div class="btn" style="flex:1;padding:9px;font-size:9.5px">▶ Start a session</div>
+                <div style="width:38px;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--oxblood);font-size:12px">✎</div>
+              </div>
+              <div class="sub" style="font-size:7.5px;margin-top:6px;text-align:center">Last read yesterday · 2 sessions · 2h 18m ›</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>U2 · Status as one row, not a sheet</b> The four statuses become one tap
+      each, on the page, each with its own mark — no <i>Change ›</i> detour to find out what the
+      options even are. "Start a session" keeps its place directly under the progress it affects,
+      so starting and stopping reading is the biggest thing on the card rather than something
+      behind a menu. <b>Wishlist leaves this row entirely</b> — it isn't a stage of reading a book
+      you own, it's a statement that you don't own it yet.</p>
+    </div>
+
+    <!-- U3. Wishlist vs favourite -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="sub" style="font-size:7px;letter-spacing:1.2px;margin-top:10px">THE TITLE BAR, UP CLOSE</div>
+          <div class="card" style="margin-top:8px;padding:12px;background:#CFE3E2;border:none">
+            <div style="display:flex;justify-content:flex-end;gap:16px;align-items:center">
+              <span style="font-size:15px;color:var(--oxblood)">⇪</span>
+              <span style="font-size:17px;color:var(--gold)">★</span>
+              <span style="font-size:15px;color:var(--slate)">🔖</span>
+              <span style="font-size:15px;color:var(--ink-soft)">🗑</span>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:10px;padding:10px;border-left:3px solid var(--gold)">
+            <div style="font-size:9.5px;font-weight:700;color:var(--gold)">★ Favourite — gold</div>
+            <div class="sub" style="font-size:8px;margin-top:2px;line-height:1.5">A book you own and love. Rides the cover as a gold ribbon on the shelf.</div>
+          </div>
+          <div class="card" style="margin-top:6px;padding:10px;border-left:3px solid var(--slate)">
+            <div style="font-size:9.5px;font-weight:700;color:var(--slate)">🔖 Wishlist — slate</div>
+            <div class="sub" style="font-size:8px;margin-top:2px;line-height:1.5">A book you don't own yet. Different colour, different shape, different word.</div>
+          </div>
+
+          <div class="card" style="margin-top:12px;padding:10px;background:var(--paper-deep)">
+            <div class="sub" style="font-size:7.5px;line-height:1.6">They were confusable because they sat in <i>different places</i> — Favourite in the title bar, Wishlist buried in the status sheet — so nothing ever showed them side by side to be told apart. Put together, the colours (gold vs. slate) and the marks (star vs. bookmark) do the work, and the status row is left to mean only one thing: how far through it you are.</div>
+          </div>
+
+          <div class="sub" style="font-size:7px;letter-spacing:1.2px;margin:12px 0 5px">ON THE SHELF, BOTH READ AT A GLANCE</div>
+          <div style="display:flex;gap:8px">
+            <div style="position:relative;width:62px">
+              <div class="cover" style="width:62px;height:92px;background:linear-gradient(150deg,#5C3A24,#3A2114);color:#F0E2C2"><div class="ct" style="font-size:6px">Owned &amp; loved</div><div class="rib"></div></div>
+              <div class="sub" style="font-size:7px;margin-top:3px">★ gold ribbon</div>
+            </div>
+            <div style="position:relative;width:62px">
+              <div class="cover" style="width:62px;height:92px;background:linear-gradient(150deg,#3b5064,#22303d);color:#DCE6EF;opacity:.85"><div class="ct" style="font-size:6px">Wanted</div></div>
+              <span class="stamp wish" style="position:absolute;top:5px;left:5px;font-size:6px">Wishlist</span>
+              <div class="sub" style="font-size:7px;margin-top:3px">slate pill</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>U3 · Two wants, told apart</b> Wishlist moves up beside Favourite so they're
+      finally visible together — and once they are, gold star (owned, loved) versus slate bookmark
+      (not owned yet) needs no explaining. The shelf already renders them differently; the title bar
+      now matches it. The fix isn't better labelling, it's <i>proximity</i>: things you might confuse
+      have to be shown together, or the difference never gets made.</p>
     </div>
 
   </div>

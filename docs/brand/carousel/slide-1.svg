@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <rect width="1080" height="1080" fill="#7E2A33"/><rect x="34" y="34" width="1012" height="1012" rx="10" fill="none" stroke="#B8862B" stroke-width="3" opacity=".45"/>
+  <text x="108" y="450" font-family="Georgia, 'Times New Roman', serif" font-size="96" fill="#F6F0E3" font-weight="bold" font-style="normal">I lent three books.</text>
+  <text x="108" y="572" font-family="Georgia, 'Times New Roman', serif" font-size="96" fill="#F6F0E3" font-weight="bold" font-style="normal">I don't remember</text>
+  <text x="108" y="694" font-family="Georgia, 'Times New Roman', serif" font-size="96" fill="#F6F0E3" font-weight="bold" font-style="normal">to whom.</text>
+  <rect x="108" y="820" width="160" height="5" fill="#B8862B"/>
+  <text x="108" y="1008" font-family="Georgia, 'Times New Roman', serif" font-size="24" fill="#B8862B" letter-spacing="5" font-weight="bold">KITABI</text>
+</svg>

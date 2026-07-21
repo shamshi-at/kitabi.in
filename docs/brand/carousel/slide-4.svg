@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <rect width="1080" height="1080" fill="#3A2C1E"/><rect x="34" y="34" width="1012" height="1012" rx="10" fill="none" stroke="#B8862B" stroke-width="3" opacity=".4"/>
+  <text x="108" y="360" font-family="Georgia, 'Times New Roman', serif" font-size="82" fill="#F6F0E3" font-weight="bold" font-style="normal">Malayalam.</text>
+  <text x="108" y="468" font-family="Georgia, 'Times New Roman', serif" font-size="82" fill="#F6F0E3" font-weight="bold" font-style="normal">Hindi. Tamil.</text>
+  <text x="108" y="576" font-family="Georgia, 'Times New Roman', serif" font-size="82" fill="#F6F0E3" font-weight="bold" font-style="normal">Your language,</text>
+  <text x="108" y="684" font-family="Georgia, 'Times New Roman', serif" font-size="82" fill="#F6F0E3" font-weight="bold" font-style="normal">first-class.</text>
+  <rect x="108" y="840" width="160" height="5" fill="#B8862B"/>
+  <text x="108" y="1008" font-family="Georgia, 'Times New Roman', serif" font-size="24" fill="#B8862B" letter-spacing="5" font-weight="bold">KITABI</text>
+</svg>

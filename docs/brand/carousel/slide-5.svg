@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <rect width="1080" height="1080" fill="#7E2A33"/><rect x="34" y="34" width="1012" height="1012" rx="10" fill="none" stroke="#B8862B" stroke-width="3" opacity=".45"/>
+  <g transform="translate(540,400) scale(0.5) translate(-512,-564)">
+    <path d="M228 320 C328 272 436 272 500 312 L500 732 C436 696 328 696 228 740 Z" fill="#F6F0E3"/>
+    <path d="M796 320 C696 272 588 272 524 312 L524 732 C588 696 696 696 796 740 Z" fill="#F6F0E3"/>
+    <rect x="500" y="296" width="24" height="444" rx="12" fill="#5E1F26"/>
+    <g stroke="#D9CBAA" stroke-width="18" stroke-linecap="round">
+      <path d="M300 428 H428"/><path d="M300 504 H428"/><path d="M300 580 H392"/>
+      <path d="M596 428 H724"/><path d="M632 580 H724"/>
+    </g>
+    <path d="M596 504 H724" stroke="#B8862B" stroke-width="20" stroke-linecap="round"/>
+    <path d="M480 712 L544 712 L544 856 L512 820 L480 856 Z" fill="#C9973B"/>
+  </g>
+  <text x="540" y="684" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="82" fill="#F6F0E3" font-weight="bold" letter-spacing="3">Kitabi</text>
+  <text x="540" y="752" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="38" fill="#B8862B" font-style="italic">Beyond the Bookshelf</text>
+  <text x="540" y="880" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="40" fill="#F6F0E3" font-weight="bold" letter-spacing="2">kitabi.in</text>
+</svg>

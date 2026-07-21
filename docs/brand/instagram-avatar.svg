@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Kitabi social avatar — "The Gold Line", circular-safe variant.
+       Instagram (and most social profiles) mask the avatar to a circle, which would
+       clip the corners of the master mark's rounded-square gold inset. So: full-bleed
+       oxblood like app_icon.svg, the gold hairline redrawn as a circle inside the mask,
+       and the book scaled to 0.86 and nudged up 20px to sit optically centred once the
+       corners are gone. Reading Room palette, pure vector, no fonts, no letters. -->
+  <rect width="1024" height="1024" fill="#7E2A33"/>
+
+  <!-- gold hairline, circular so the crop can't cut it -->
+  <circle cx="512" cy="512" r="470" fill="none" stroke="#B8862B" stroke-width="6" opacity=".55"/>
+
+  <g transform="translate(512,492) scale(0.86) translate(-512,-512)">
+    <!-- pages -->
+    <path d="M228 320 C328 272 436 272 500 312 L500 732 C436 696 328 696 228 740 Z" fill="#F6F0E3"/>
+    <path d="M796 320 C696 272 588 272 524 312 L524 732 C588 696 696 696 796 740 Z" fill="#F6F0E3"/>
+    <rect x="500" y="296" width="24" height="444" rx="12" fill="#5E1F26"/>
+
+    <!-- text lines; one gold on the recto -->
+    <g stroke="#D9CBAA" stroke-width="18" stroke-linecap="round">
+      <path d="M300 428 H428"/><path d="M300 504 H428"/><path d="M300 580 H392"/>
+      <path d="M596 428 H724"/><path d="M632 580 H724"/>
+    </g>
+    <path d="M596 504 H724" stroke="#B8862B" stroke-width="20" stroke-linecap="round"/>
+
+    <!-- ribbon bookmark -->
+    <path d="M480 712 L544 712 L544 856 L512 820 L480 856 Z" fill="#C9973B"/>
+  </g>
+</svg>

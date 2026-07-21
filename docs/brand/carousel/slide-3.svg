@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <rect width="1080" height="1080" fill="#F6F0E3"/><rect x="34" y="34" width="1012" height="1012" rx="10" fill="none" stroke="#B8862B" stroke-width="3" opacity=".35"/>
+  <text x="108" y="380" font-family="Georgia, 'Times New Roman', serif" font-size="88" fill="#2B2118" font-weight="bold" font-style="normal">Every book</text>
+  <text x="108" y="492" font-family="Georgia, 'Times New Roman', serif" font-size="88" fill="#2B2118" font-weight="bold" font-style="normal">you lent,</text>
+  <text x="108" y="604" font-family="Georgia, 'Times New Roman', serif" font-size="88" fill="#2B2118" font-weight="bold" font-style="normal">remembered.</text>
+  <rect x="108" y="740" width="300" height="80" rx="40" fill="#F0E2C2"/>
+  <text x="152" y="792" font-family="Georgia, 'Times New Roman', serif" font-size="36" fill="#8F681E" font-weight="bold">Free. Always.</text>
+  <text x="108" y="1008" font-family="Georgia, 'Times New Roman', serif" font-size="24" fill="#7E2A33" letter-spacing="5" font-weight="bold">KITABI</text>
+</svg>

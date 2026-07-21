@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <rect width="1080" height="1080" fill="#F6F0E3"/><rect x="34" y="34" width="1012" height="1012" rx="10" fill="none" stroke="#B8862B" stroke-width="3" opacity=".35"/>
+  <text x="108" y="400" font-family="Georgia, 'Times New Roman', serif" font-size="76" fill="#7A6A55" font-weight="normal" font-style="normal">Other apps track</text>
+  <text x="108" y="500" font-family="Georgia, 'Times New Roman', serif" font-size="76" fill="#7A6A55" font-weight="normal" font-style="normal">what you read.</text>
+  <text x="108" y="640" font-family="Georgia, 'Times New Roman', serif" font-size="86" fill="#7E2A33" font-weight="bold" font-style="normal">Kitabi tracks</text>
+  <text x="108" y="748" font-family="Georgia, 'Times New Roman', serif" font-size="86" fill="#7E2A33" font-weight="bold" font-style="normal">what you own.</text>
+  <rect x="108" y="800" width="260" height="6" fill="#B8862B"/>
+  <text x="108" y="1008" font-family="Georgia, 'Times New Roman', serif" font-size="24" fill="#7E2A33" letter-spacing="5" font-weight="bold">KITABI</text>
+</svg>
