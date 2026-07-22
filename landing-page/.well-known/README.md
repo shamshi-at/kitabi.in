@@ -26,23 +26,24 @@ which routes `/b|a|p/:id` and survives a cold start).
 
 ## `assetlinks.json` (Android)
 
-Currently lists two SHA-256 fingerprints:
+Lists three SHA-256 fingerprints — all three are needed, because the certificate that
+signs the installed app differs by how it was installed:
 
 | Key | Fingerprint starts | Covers |
 |---|---|---|
+| **Play app signing key** (Google-managed) | `56:B8:7E:5D…` | **everyone who installs from the Play Store** |
 | Upload key (`~/keys/kitabi-upload.jks`, alias `upload`) | `0E:BA:38:93…` | release builds installed directly (sideloaded AAB/APK) |
 | Local debug key (`~/.android/debug.keystore`) | `FB:6E:F3:3D…` | `flutter run` / emulator builds, so links can be tested in dev |
 
-**Still to add: the Play app signing key.** Because the Play Store uses Google-managed
-app signing, the APK that actually reaches users is re-signed by Google — its
-certificate is *not* the upload key above, so **links will not verify for anyone who
-installs from Play** until its fingerprint is added here. Get it from:
+The Play entry is the one that matters in production: Play re-signs the uploaded AAB
+with Google's own key, so the upload-key fingerprint does *not* cover Play installs.
+It came from Play Console → **Protected with Play** → Play Store protection → app
+signing (Google moved this out of the old Test and release → App integrity page).
 
-> Play Console → your app → Test and release → Setup → **App integrity** →
-> App signing key certificate → copy the **SHA-256 certificate fingerprint**
-
-and add it to the `sha256_cert_fingerprints` array. Play Console's **App integrity →
-Deep links** page also reports verification status once this is live.
+Note that page lists **MD5 (16 bytes), SHA-1 (20 bytes) and SHA-256 (32 bytes)**
+fingerprints. Only SHA-256 belongs here — a SHA-1 in this array is not merely ignored,
+it can invalidate the whole statement and take the working fingerprints down with it.
+Count the colon-separated pairs before adding one: 32, or it's the wrong row.
 
 Keep every entry a well-formed colon-separated uppercase hex fingerprint — a malformed
 string can invalidate the whole statement, taking the valid fingerprints down with it.
