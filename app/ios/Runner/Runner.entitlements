@@ -13,9 +13,13 @@
 	<!-- Universal links for the shareable kitabi.in book/author/publisher pages.
 	     Requires the apple-app-site-association file hosted at kitabi.in with the
 	     app's Team ID filled in (landing-page/.well-known). -->
+	<!-- www is claimed too: it serves the same site, and universal links do NOT
+	     follow redirects — so a shared www link would strand the reader in
+	     Safari even if www 301'd to the apex. -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:kitabi.in</string>
+		<string>applinks:www.kitabi.in</string>
 	</array>
 </dict>
 </plist>

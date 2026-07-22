@@ -30,7 +30,7 @@ jobs:
         run: |
           mkdir -p public
           cp landing-page/index.html landing-page/book.html landing-page/author.html landing-page/publisher.html landing-page/privacy.html landing-page/terms.html landing-page/logo.svg landing-page/kitabi-logo.png landing-page/ico.png landing-page/apple-touch-icon.png landing-page/og-image.png landing-page/robots.txt landing-page/sitemap.xml public/
-          cp landing-page/_redirects public/
+          cp landing-page/_redirects landing-page/_headers public/
           cp -R landing-page/.well-known public/.well-known
           # Pages Functions (server-side OG tags for /b|/a|/p share links) must
           # sit in ./functions relative to the deploy command's cwd — wrangler

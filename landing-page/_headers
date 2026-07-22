@@ -1,0 +1,11 @@
+# Apple requires the association file to be served as application/json. It is
+# deliberately extension-less, so Cloudflare Pages falls back to
+# application/octet-stream and iOS silently refuses to verify the domain — the
+# link opens Safari instead of the app, with no error anywhere.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+
+# Android's verifier is stricter about content type than the file extension
+# implies; set it explicitly rather than relying on the .json extension.
+/.well-known/assetlinks.json
+  Content-Type: application/json

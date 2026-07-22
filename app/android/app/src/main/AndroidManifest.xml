@@ -52,6 +52,11 @@
                 <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/b/"/>
                 <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/a/"/>
                 <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/p/"/>
+                <!-- www serves the same site; claim it so a shared www link
+                     hands off too (deep_links.dart already accepts the host). -->
+                <data android:scheme="https" android:host="www.kitabi.in" android:pathPrefix="/b/"/>
+                <data android:scheme="https" android:host="www.kitabi.in" android:pathPrefix="/a/"/>
+                <data android:scheme="https" android:host="www.kitabi.in" android:pathPrefix="/p/"/>
             </intent-filter>
         </activity>
         <!-- image_cropper (UCrop) — the crop screen shown after picking a cover /
