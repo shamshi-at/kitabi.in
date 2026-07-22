@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — Book page, not-in-library state</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Kitabi design tokens — see docs/screen-design.md */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink);padding-bottom:80px}
+
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:52px 32px 44px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:38px;font-weight:400;margin:0 0 8px;letter-spacing:.5px}
+.hero .tag{font-size:14.5px;color:#CBB897;max-width:720px;margin:0 auto;line-height:1.65}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+
+.area{max-width:1520px;margin:48px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.area h2{font-family:'Fraunces',serif;font-size:28px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:8px 0 26px;max-width:900px;font-size:14.5px;line-height:1.65}
+.row{display:flex;flex-wrap:wrap;gap:36px}
+.shot{display:flex;flex-direction:column;gap:12px}
+.cap{width:272px;font-size:12.5px;color:#6d5f4b;line-height:1.55}
+.cap b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:3px;font-weight:600}
+.cap .pro{color:var(--moss);display:block;margin-top:6px}
+.cap .con{color:var(--oxblood);display:block;margin-top:3px}
+
+/* phone frame */
+.phone{width:272px;height:588px;border-radius:34px;border:8px solid #241B12;
+  background:var(--paper);overflow:hidden;position:relative;
+  box-shadow:0 24px 50px rgba(43,33,24,.30),0 4px 12px rgba(43,33,24,.18)}
+.scr{height:100%;display:flex;flex-direction:column;background:var(--paper);position:relative}
+.sbar{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px 5px;font-size:9.5px;font-weight:600;color:var(--ink)}
+.body{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* ---------- frontispiece (existing hero, unchanged) ---------- */
+.fp{position:relative;padding:6px 13px 13px;overflow:hidden}
+.fp::before{content:"";position:absolute;inset:0;background:linear-gradient(165deg,#8C5560 0%,#F6F0E3 72%);opacity:.55}
+.fp .rail{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--oxblood)}
+.fp .in{position:relative}
+.back{width:26px;height:26px;border-radius:50%;background:rgba(255,252,244,.85);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink);margin-bottom:7px}
+.fp .cov{display:flex;gap:10px;align-items:flex-end}
+.cover{width:78px;height:114px;border-radius:3px 6px 6px 3px;position:relative;overflow:hidden;flex-shrink:0;
+  background:linear-gradient(150deg,#7E2A33,#4A161C);box-shadow:0 6px 16px rgba(43,33,24,.35)}
+.cover::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(0,0,0,.25)}
+.cover span{position:absolute;left:10px;right:6px;top:11px;font-family:'Fraunces',serif;font-size:8.5px;
+  line-height:1.3;color:#F0E2C2}
+.eyebrow{font-size:8px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--oxblood);
+  background:#F3DFDA;padding:3px 8px;border-radius:999px;display:inline-block}
+.fp h3{font-family:'Fraunces',serif;font-size:19px;font-weight:550;line-height:1.2;margin-top:7px}
+.fp .by{font-size:10.5px;color:var(--oxblood);margin-top:3px;font-weight:500}
+.fp .meta{font-size:9.5px;color:var(--ink-soft);margin-top:4px}
+.fp .rate{display:flex;align-items:center;gap:5px;margin-top:7px;font-size:9.5px;color:var(--ink-soft)}
+.stars{color:var(--gold);font-size:11px;letter-spacing:1px}
+
+/* ---------- action treatments ---------- */
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:11px;
+  font-size:12.5px;font-weight:600;letter-spacing:.2px}
+.btn.primary{background:var(--oxblood);color:#F6F0E3;box-shadow:0 4px 12px rgba(126,42,51,.28)}
+.btn.ghost{background:transparent;color:var(--slate);border:1.5px solid var(--slate)}
+.acts{display:flex;gap:8px;padding:11px 13px 0}
+.acts .btn{flex:1}
+.stickybar{position:absolute;left:0;right:0;bottom:0;padding:9px 13px 13px;background:rgba(246,240,227,.96);
+  border-top:1px solid var(--line);display:flex;gap:8px;backdrop-filter:blur(8px)}
+.stickybar .btn{flex:1}
+.stickybar .btn.ghost{flex:0 0 86px}
+
+/* hero-integrated (direction C) */
+.heroact{margin-top:9px;display:flex;gap:7px}
+.heroact .btn{height:32px;font-size:11.5px;border-radius:9px}
+.ribbon{position:absolute;top:-2px;right:7px;width:15px;height:26px;background:var(--gold);
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 74%,0 100%);box-shadow:0 2px 5px rgba(0,0,0,.3)}
+.ribbon.off{background:rgba(255,252,244,.55);border:1px solid var(--line)}
+
+/* ---------- detail sections ---------- */
+.sec{padding:13px 13px 0}
+.sl{font-size:8px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-soft);
+  display:flex;align-items:center;gap:6px}
+.sl::after{content:"";flex:1;height:1px;background:var(--line)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin-top:7px}
+.card p{font-size:10.5px;line-height:1.6;color:var(--ink-soft)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+.chip{font-size:8.5px;padding:3px 8px;border-radius:999px;background:var(--card);
+  border:1px solid var(--line);color:var(--ink-soft)}
+.isbn{font-size:8.5px;color:var(--stamp-grey);margin-top:6px}
+.rev{display:flex;gap:8px;align-items:flex-start;margin-top:7px}
+.av{width:22px;height:22px;border-radius:50%;background:var(--gold-soft);color:var(--oxblood);
+  display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.rev .rt{font-size:9.5px;font-weight:600}
+.rev .rb{font-family:'Fraunces',serif;font-style:italic;font-size:10px;color:var(--ink-soft);line-height:1.5;margin-top:2px}
+.edrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:10px}
+.edrow:last-child{border-bottom:0}
+.edrow .mini{width:20px;height:28px;border-radius:2px 4px 4px 2px;background:linear-gradient(150deg,#5C3A24,#3A2114);flex-shrink:0}
+.edrow .em{color:var(--ink-soft);font-size:8.5px}
+.buy{display:flex;gap:6px;margin-top:7px}
+.buy span{flex:1;text-align:center;font-size:9px;font-weight:600;padding:7px 0;border-radius:8px;
+  border:1px solid var(--line);background:var(--card);color:var(--oxblood)}
+
+/* tabs (owned state only) */
+.tabs{display:flex;background:var(--paper-deep);border-radius:10px;padding:3px;margin:11px 13px 0}
+.tabs div{flex:1;text-align:center;font-size:10px;font-weight:700;letter-spacing:.8px;padding:6px 0;border-radius:8px;color:var(--ink-soft)}
+.tabs div.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(43,33,24,.14)}
+
+.fade{position:absolute;left:0;right:0;bottom:0;height:56px;
+  background:linear-gradient(180deg,rgba(246,240,227,0),var(--paper));pointer-events:none}
+.stickybar ~ .fade{display:none}
+
+.note{max-width:900px;margin:34px auto 0;padding:0 36px;font-size:13.5px;line-height:1.7;color:#5d5140}
+.note h3{font-family:'Fraunces',serif;font-size:19px;font-weight:500;margin-bottom:8px;color:var(--ink)}
+.note ul{margin:8px 0 0 18px}
+.note li{margin-bottom:5px}
+.note code{background:#E4DAC4;padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>The book you don’t own yet</h1>
+  <p class="tag">Today a book that isn’t on your shelf opens on a <b>YOURS</b> tab holding a single button,
+  with the entire book — blurb, reviews, editions, translations, where to buy — hidden behind a second tap.
+  Three ways to drop the tab entirely and let the book introduce itself.</p>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">The problem</span><h2>What a first-time reader sees now</h2></div>
+  <p class="desc">The tab bar assumes ownership. For a shared link — the exact path a friend arrives on —
+  the first screen is nearly empty, and the reason to add the book is on the tab they didn’t land on.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮ ▾</span></div>
+        <div class="body">
+          <div class="fp"><div class="rail"></div><div class="in">
+            <div class="back">‹</div>
+            <div class="cov">
+              <div class="cover"><span>രണ്ടാമൂഴം</span></div>
+              <div>
+                <span class="eyebrow">Novel · Malayalam</span>
+                <h3>രണ്ടാമൂഴം</h3>
+                <div class="by">M.T. Vasudevan Nair</div>
+                <div class="meta">1984 · 288 pp · Malayalam</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 4.3 · 128 ratings</div>
+              </div>
+            </div>
+          </div></div>
+          <div class="tabs"><div class="on">YOURS</div><div>ABOUT</div></div>
+          <div class="acts" style="padding-top:14px"><div class="btn primary">Add to library</div></div>
+          <div style="padding:40px 13px;text-align:center;color:var(--stamp-grey);font-size:10.5px;line-height:1.7">
+            …and nothing else.<br>The book itself is one tab away.
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Today — the empty YOURS tab</b>
+      The reader landed on a tab about a relationship they don’t have yet.</p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">Direction A</span><h2>The Standing Order — pinned actions</h2></div>
+  <p class="desc">No tabs. The book flows in one scroll, and the two actions sit in a bar pinned to the
+  bottom, reachable from anywhere in the page.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮ ▾</span></div>
+        <div class="body">
+          <div class="fp"><div class="rail"></div><div class="in">
+            <div class="back">‹</div>
+            <div class="cov">
+              <div class="cover"><span>രണ്ടാമൂഴം</span></div>
+              <div>
+                <span class="eyebrow">Novel · Malayalam</span>
+                <h3>രണ്ടാമൂഴം</h3>
+                <div class="by">M.T. Vasudevan Nair</div>
+                <div class="meta">1984 · 288 pp · Malayalam</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 4.3 · 128 ratings</div>
+              </div>
+            </div>
+          </div></div>
+          <div class="sec">
+            <div class="sl">About this book</div>
+            <div class="card"><p>The Mahabharata retold in Bhima’s voice — the second son, always
+            second in turn, watching the epic from the inside…</p></div>
+            <div class="chips"><span class="chip">Mythology</span><span class="chip">Classic</span><span class="chip">Literary</span></div>
+            <div class="isbn">ISBN 978-81-264-2198-3</div>
+          </div>
+          <div class="sec">
+            <div class="sl">What readers say</div>
+            <div class="rev"><div class="av">A</div><div>
+              <div class="rt">Anu <span class="stars">★★★★★</span></div>
+              <div class="rb">“The finest Malayalam novel I’ve read this decade.”</div>
+            </div></div>
+          </div>
+        </div>
+        <div class="stickybar">
+          <div class="btn primary">Add to library</div>
+          <div class="btn ghost">Wishlist</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>A — pinned action bar</b>
+      Actions never scroll away; the reader can commit at any depth.
+      <span class="pro">+ Always reachable, even deep in reviews</span>
+      <span class="con">− Floating chrome over a sheet is exactly what bit the FAB (reverted 9 Jul)</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">Direction B</span><h2>The Bookplate — actions under the hero</h2></div>
+  <p class="desc">No tabs, no floating chrome. The two actions sit directly beneath the frontispiece as the
+  first thing after the cover, then the book’s details flow uninterrupted.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮ ▾</span></div>
+        <div class="body">
+          <div class="fp"><div class="rail"></div><div class="in">
+            <div class="back">‹</div>
+            <div class="cov">
+              <div class="cover"><span>രണ്ടാമൂഴം</span></div>
+              <div>
+                <span class="eyebrow">Novel · Malayalam</span>
+                <h3>രണ്ടാമൂഴം</h3>
+                <div class="by">M.T. Vasudevan Nair</div>
+                <div class="meta">1984 · 288 pp · Malayalam</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 4.3 · 128 ratings</div>
+              </div>
+            </div>
+          </div></div>
+          <div class="acts">
+            <div class="btn primary">Add to library</div>
+            <div class="btn ghost">Wishlist</div>
+          </div>
+          <div class="sec">
+            <div class="sl">About this book</div>
+            <div class="card"><p>The Mahabharata retold in Bhima’s voice — the second son, always
+            second in turn, watching the epic from the inside…</p></div>
+            <div class="chips"><span class="chip">Mythology</span><span class="chip">Classic</span></div>
+            <div class="isbn">ISBN 978-81-264-2198-3</div>
+          </div>
+          <div class="sec">
+            <div class="sl">Editions</div>
+            <div class="edrow"><div class="mini"></div><div>Current Books, 1984<div class="em">288 pp · Malayalam</div></div></div>
+            <div class="edrow"><div class="mini"></div><div>DC Books, 2011<div class="em">312 pp · Malayalam</div></div></div>
+          </div>
+          <div class="fade"></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B — inline under the hero</b>
+      The calmest option, and the closest to the app’s existing voice.
+      <span class="pro">+ No floating layer; nothing can cover a bottom sheet</span>
+      <span class="con">− Scrolls away; a reader deep in reviews must scroll back up</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">Direction C</span><h2>The Slip — inside the frontispiece</h2></div>
+  <p class="desc">The primary action moves into the hero beside the cover, and wishlist becomes the gold
+  ribbon on the cover corner — the same bookmark language the shelf grid already uses.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮ ▾</span></div>
+        <div class="body">
+          <div class="fp"><div class="rail"></div><div class="in">
+            <div class="back">‹</div>
+            <div class="cov">
+              <div class="cover"><span>രണ്ടാമൂഴം</span><div class="ribbon off"></div></div>
+              <div>
+                <span class="eyebrow">Novel · Malayalam</span>
+                <h3>രണ്ടാമൂഴം</h3>
+                <div class="by">M.T. Vasudevan Nair</div>
+                <div class="meta">1984 · 288 pp</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 4.3</div>
+                <div class="heroact"><div class="btn primary" style="padding:0 14px">＋ Add to library</div></div>
+              </div>
+            </div>
+          </div></div>
+          <div class="sec">
+            <div class="sl">About this book</div>
+            <div class="card"><p>The Mahabharata retold in Bhima’s voice — the second son, always
+            second in turn, watching the epic from the inside…</p></div>
+            <div class="chips"><span class="chip">Mythology</span><span class="chip">Classic</span></div>
+          </div>
+          <div class="sec">
+            <div class="sl">Where to buy</div>
+            <div class="buy"><span>DC Books</span><span>Amazon</span><span>Flipkart</span></div>
+          </div>
+          <div class="sec">
+            <div class="sl">Translations</div>
+            <div class="edrow"><div class="mini" style="background:linear-gradient(150deg,#43617E,#22344A)"></div>
+              <div>Second Turn<div class="em">tr. P.K. Ravindranath · English</div></div></div>
+          </div>
+          <div class="fade"></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>C — hero-integrated</b>
+      Most compact; the ribbon reuses the shelf’s own bookmark vocabulary.
+      <span class="pro">+ Tightest hero; wishlist costs no vertical space</span>
+      <span class="con">− A ribbon toggle is easy to miss and hard to label</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">After adding</span><h2>The tabs come back — because now there’s a “yours”</h2></div>
+  <p class="desc">Whichever direction wins, adding the book is what creates the relationship the tab bar
+  describes. The page becomes the screen that exists today.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮ ▾</span></div>
+        <div class="body">
+          <div class="fp"><div class="rail"></div><div class="in">
+            <div class="back">‹</div>
+            <div class="cov">
+              <div class="cover"><span>രണ്ടാമൂഴം</span><div class="ribbon"></div></div>
+              <div>
+                <span class="eyebrow">Novel · Malayalam</span>
+                <h3>രണ്ടാമൂഴം</h3>
+                <div class="by">M.T. Vasudevan Nair</div>
+                <div class="meta">1984 · 288 pp · Malayalam</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 4.3 · 128 ratings</div>
+              </div>
+            </div>
+          </div></div>
+          <div class="tabs"><div class="on">YOURS</div><div>ABOUT</div></div>
+          <div class="sec">
+            <div class="card" style="margin-top:11px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--oxblood);
+                  background:#F3DFDA;padding:3px 9px;border-radius:999px">READING</span>
+                <span style="font-size:9.5px;color:var(--ink-soft)">Change ›</span>
+              </div>
+              <div style="height:7px;border-radius:99px;background:var(--paper-deep);margin-top:9px;overflow:hidden">
+                <div style="height:100%;width:38%;background:linear-gradient(90deg,var(--gold),var(--oxblood))"></div>
+              </div>
+              <div style="font-size:9px;color:var(--ink-soft);margin-top:5px">p. 109 of 288 · started 14 June</div>
+            </div>
+          </div>
+          <div class="sec"><div class="sl">Your review</div>
+            <div class="card"><p style="font-family:'Fraunces',serif;font-style:italic">Tap to rate and review…</p></div>
+          </div>
+          <div class="fade"></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Owned — unchanged from today</b>
+      Status, progress, review, notes, shelves, lending. The tab bar now describes something real.</p>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h3>What I’d pick, and why</h3>
+  <p><b>Direction B.</b> It reads calmest, it matches the app’s “quiet, unhurried” voice, and it avoids the
+  one thing this codebase has already been burned by — a floating layer that draws on top of modal sheets.
+  A <code>centerDocked</code> FAB was tried and reverted on 9 Jul for exactly that reason (it punched through
+  the lend sheet), and Direction A reintroduces a bottom-anchored floating bar into the same screen that
+  opens sheets for status, shelves and lending.</p>
+  <p>Direction B’s real cost is that the actions scroll away. That’s worth accepting here: this page is
+  usually short for an unowned book, and the reader who has scrolled to the buy links has already decided
+  something. If it turns out to matter, B can grow A’s pinned bar later as a scroll-triggered addition —
+  the reverse is a rewrite.</p>
+  <h3>Open questions for you</h3>
+  <ul>
+    <li><b>Should “Wishlist” be equal-weight with “Add to library”?</b> Mocked as secondary (outlined,
+      slate — the wishlist colour). It could be a plain text link if you want the primary action to
+      dominate more.</li>
+    <li><b>Does a borrowed book count as “not in library”?</b> Today an unowned book still shows its
+      lending card, so a book a friend lent you has history without an entry. That card is kept in all
+      three directions but isn’t drawn above.</li>
+    <li><b>After adding, does the page jump to the YOURS tab</b> or stay where the reader was? Staying put
+      is less jarring; jumping confirms the action landed.</li>
+  </ul>
+</div>
+
+</body>
+</html>
