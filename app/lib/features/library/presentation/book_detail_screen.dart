@@ -34,6 +34,7 @@ import '../cover_upload.dart';
 import '../reading_progress.dart';
 import '../reading_status.dart';
 import '../stop_session_flow.dart';
+import 'note_page.dart';
 import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
 import 'notes_journal_screen.dart';
@@ -1704,11 +1705,17 @@ class _ReadingCard extends ConsumerWidget {
     // because that's a reader deliberately putting the book down. Read and To
     // read stop it quietly: the page is about to be settled anyway.
     final active = ref.read(activeSessionProvider);
+    String? closingNoteSessionId;
     if (active?.libraryEntryId == entry.id && chosen != 'reading') {
       if (chosen == 'stopped') {
         await quickStopSession(context, ref);
       } else {
-        await ref.read(activeSessionProvider.notifier).stop();
+        // stop() still logs the sitting — only the page question is skipped,
+        // since Read fills the page in below and To read may clear it anyway.
+        final logged = await ref.read(activeSessionProvider.notifier).stop();
+        // Finishing a book on a live timer is the most note-worthy moment
+        // there is, and it was passing in silence (owner report, 22 Jul 2026).
+        if (chosen == 'read') closingNoteSessionId = logged?.sessionId;
       }
       if (!context.mounted) return;
     }
@@ -1746,6 +1753,22 @@ class _ReadingCard extends ConsumerWidget {
     // goes. (With a timer running the full stop flow above already asked.)
     if (chosen == 'stopped' && active?.libraryEntryId != entry.id && context.mounted) {
       await _editProgress(context, ref);
+    }
+    // The closing thought comes before the review prompt: it's about the
+    // sitting you just ended, while the review is about the whole book. Both
+    // are skippable — back out and nothing is lost.
+    if (closingNoteSessionId != null && context.mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<bool>(
+          builder: (_) => NotePage(
+            libraryEntryId: entry.id,
+            bookTitle: title,
+            sessionId: closingNoteSessionId,
+            currentPage: entry.currentPage,
+          ),
+        ),
+      );
+      if (!context.mounted) return;
     }
     if (chosen == 'read' && entry.status != 'read' && context.mounted) {
       await _maybePromptReview(context, ref);
