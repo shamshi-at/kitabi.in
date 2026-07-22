@@ -3,6 +3,12 @@ so Alembic autogenerate and callers can import them from one place."""
 
 from app.models.activity_log_entry import ActivityLogEntry
 from app.models.author import Author
+from app.models.author_claim import (
+    CLAIM_APPROVED,
+    CLAIM_PENDING,
+    CLAIM_REJECTED,
+    AuthorClaim,
+)
 from app.models.base import Base, CatalogMixin, SyncableMixin
 from app.models.conflict_history import ConflictHistory
 from app.models.connection import Connection
@@ -34,6 +40,10 @@ __all__ = [
     "CatalogMixin",
     "Profile",
     "Author",
+    "AuthorClaim",
+    "CLAIM_PENDING",
+    "CLAIM_APPROVED",
+    "CLAIM_REJECTED",
     "Publisher",
     "Genre",
     "Series",

@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.models import Author, Publisher
 from app.schemas.catalog import (
     AuthorCreate,
+    AuthorDetailOut,
     AuthorOut,
     AuthorWorksOut,
     CoverExtractIn,
@@ -386,7 +387,12 @@ async def create_author(payload: AuthorCreate, user: CurrentUser, db: DbSession)
     author = await catalog_service.create_author(
         db, created_by_user_id=uuid.UUID(user["id"]), **payload.model_dump(exclude_none=True)
     )
-    return AuthorOut.model_validate(author)
+    out = AuthorOut.model_validate(author)
+    # "This is me" here files a claim rather than linking, so the form can say
+    # "pending review" instead of implying the link took.
+    if payload.is_me and author.linked_user_id is None:
+        out.claim_pending = True
+    return out
 
 
 @router.post("/publishers", response_model=PublisherOut, status_code=status.HTTP_201_CREATED)
@@ -400,15 +406,23 @@ async def create_publisher(
 
 @router.post("/authors/{author_id}/link", response_model=AuthorOut)
 async def link_author(author_id: uuid.UUID, user: CurrentUser, db: DbSession) -> AuthorOut:
-    """ "This is me" on an existing, unclaimed Author row — first to claim
-    wins, no approval step (owner decision, scoped to an invited friend
-    circle — see docs/author-identity-and-moderation-plan.md)."""
-    author = await catalog_service.link_author_to_self(db, author_id, uuid.UUID(user["id"]))
-    return AuthorOut.model_validate(author)
+    """ "This is me" on an existing Author row — files a claim for manual
+    review (owner decision, 22 Jul 2026; app/models/author_claim.py).
+
+    The path keeps its old name so installs older than this deploy keep
+    working: they get an author whose `linked_user_id` is still null and simply
+    show it as unclaimed, which is exactly what everyone else now sees. The
+    reverse direction (app newer than API) is what the 426 update-gate covers.
+    """
+    await catalog_service.claim_author(db, author_id, uuid.UUID(user["id"]))
+    author = await db.get(Author, author_id)
+    out = AuthorOut.model_validate(author)
+    out.claim_pending = True
+    return out
 
 
 @router.get("/authors/{author_id}", response_model=AuthorWorksOut)
-async def get_author(author_id: uuid.UUID, db: DbSession) -> AuthorWorksOut:
+async def get_author(author_id: uuid.UUID, user: CurrentUser, db: DbSession) -> AuthorWorksOut:
     """Author browse page (S4c) — every catalog work by this author."""
     author = await db.get(Author, author_id)
     if author is None:
@@ -417,7 +431,11 @@ async def get_author(author_id: uuid.UUID, db: DbSession) -> AuthorWorksOut:
             detail={"code": "not_found", "message": "Author not found"},
         )
     works = await catalog_service.author_works(db, author_id)
-    return AuthorWorksOut(author=author, works=[work_summary(w) for w in works])
+    out = AuthorDetailOut.model_validate(author)
+    # Only this reader's own pending claim is ever disclosed.
+    pending = await catalog_service.pending_claim_author_ids(db, uuid.UUID(user["id"]), [author.id])
+    out.claim_pending = author.id in pending
+    return AuthorWorksOut(author=out, works=[work_summary(w) for w in works])
 
 
 @router.get("/publishers/{publisher_id}", response_model=PublisherWorksOut)

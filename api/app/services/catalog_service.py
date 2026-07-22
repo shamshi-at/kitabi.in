@@ -6,6 +6,7 @@ via the API when online (CLAUDE.md rule 2)."""
 
 import re
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
@@ -14,7 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import (
+    CLAIM_APPROVED,
+    CLAIM_PENDING,
+    CLAIM_REJECTED,
     Author,
+    AuthorClaim,
     Edition,
     Genre,
     Profile,
@@ -118,9 +123,9 @@ async def create_author(db: AsyncSession, **fields: object) -> Author:
     actually insert a new row. Idempotent on name, so a race just returns the
     existing canonical author rather than a duplicate.
 
-    `is_me=True` self-links the new row to `created_by_user_id` (the "This is
-    me" checkbox) — a no-op on the get-or-create-hit path, since an existing
-    author's link isn't overwritten by someone else creating a duplicate."""
+    `is_me=True` (the "This is me" checkbox) no longer links the row: it files
+    a pending [AuthorClaim] for `created_by_user_id`, on both the insert and
+    the get-or-create-hit path. See app/models/author_claim.py for why."""
     is_me = bool(fields.pop("is_me", False))
     created_by = fields.get("created_by_user_id")
     name = str(fields["name"]).strip()
@@ -128,33 +133,121 @@ async def create_author(db: AsyncSession, **fields: object) -> Author:
         await db.execute(select(Author).where(Author.name.ilike(name)))
     ).scalar_one_or_none()
     if existing is not None:
+        # Get-or-create hit: "This is me" on a name that already exists is the
+        # same unverifiable claim as tapping it on the author's page, so it
+        # queues too — otherwise typing an existing author's name into the add
+        # form would be a way around review.
+        if is_me and created_by is not None and existing.linked_user_id is None:
+            await record_claim(db, existing, created_by)
         return existing
     author = Author(**{**fields, "name": name})
-    if is_me and created_by is not None:
-        author.linked_user_id = created_by
     db.add(author)
     await db.commit()
     await db.refresh(author)
+    # Even on a brand-new row the link is queued, never applied (owner
+    # decision, 22 Jul 2026): applying it here would leave creating a duplicate
+    # Author for a famous name as an instant, unreviewed way to become them.
+    if is_me and created_by is not None:
+        await record_claim(db, author, created_by)
     return author
 
 
-async def link_author_to_self(db: AsyncSession, author_id: uuid.UUID, user_id: uuid.UUID) -> Author:
-    """ "This is me" on an existing, unclaimed Author row — first to claim
-    wins, atomically (the UPDATE's WHERE guards the race), no pending state.
-    Scoped to an invited friend circle for now — no evidence/approval step;
-    see docs/author-identity-and-moderation-plan.md."""
+async def claim_author(db: AsyncSession, author_id: uuid.UUID, user_id: uuid.UUID) -> AuthorClaim:
+    """ "This is me" on an existing Author row — queues a claim for manual
+    review instead of linking on the spot (owner decision, 22 Jul 2026).
+
+    Nothing about the shared row changes here: `authors.linked_user_id` is
+    written only by [approve_claim], so every other reader keeps seeing the old
+    value while this sits pending. Idempotent — re-claiming returns the
+    existing row rather than stacking duplicates.
+    """
     author = await db.get(Author, author_id)
     if author is None or author.deleted_at is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "not_found", "message": "Author not found"},
         )
-    stmt = (
-        update(Author)
-        .where(Author.id == author_id, Author.linked_user_id.is_(None))
-        .values(linked_user_id=user_id)
+    if author.linked_user_id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "already_yours", "message": "This author is already linked to you"},
+        )
+    if author.linked_user_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "already_linked",
+                "message": "This author is already linked to another reader",
+            },
+        )
+    return await record_claim(db, author, user_id)
+
+
+async def record_claim(db: AsyncSession, author: Author, user_id: uuid.UUID) -> AuthorClaim:
+    """Get-or-create this reader's claim on `author`.
+
+    A rejected claim is *not* silently reopened — a decision that has been made
+    should not be undone by tapping the button again; that needs a human.
+    """
+    existing = (
+        await db.execute(
+            select(AuthorClaim).where(
+                AuthorClaim.author_id == author.id, AuthorClaim.user_id == user_id
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    claim = AuthorClaim(author_id=author.id, user_id=user_id)
+    db.add(claim)
+    await db.commit()
+    await db.refresh(claim)
+    return claim
+
+
+async def pending_claim_author_ids(
+    db: AsyncSession, user_id: uuid.UUID, author_ids: Sequence[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Which of `author_ids` this reader has an unresolved claim on — the only
+    thing that makes a pending claim visible, and only to its claimant."""
+    if not author_ids:
+        return set()
+    rows = await db.execute(
+        select(AuthorClaim.author_id).where(
+            AuthorClaim.user_id == user_id,
+            AuthorClaim.status == CLAIM_PENDING,
+            AuthorClaim.author_id.in_(author_ids),
+        )
     )
-    result = await db.execute(stmt)
+    return set(rows.scalars().all())
+
+
+async def approve_claim(
+    db: AsyncSession, claim_id: uuid.UUID, decided_by_user_id: uuid.UUID
+) -> AuthorClaim:
+    """Approve a pending claim — the *only* path that writes
+    `authors.linked_user_id`, i.e. the only point the shared catalog changes.
+
+    No endpoint calls this yet: approval is manual for now (owner decision —
+    review UI comes later). The link is still guarded by `linked_user_id IS
+    NULL`, so a claim approved after someone else's cannot quietly overwrite it.
+    """
+    claim = await db.get(AuthorClaim, claim_id)
+    if claim is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "Claim not found"},
+        )
+    if claim.status != CLAIM_PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "already_decided", "message": f"Claim is already {claim.status}"},
+        )
+    result = await db.execute(
+        update(Author)
+        .where(Author.id == claim.author_id, Author.linked_user_id.is_(None))
+        .values(linked_user_id=claim.user_id)
+    )
     if result.rowcount == 0:
         await db.rollback()
         raise HTTPException(
@@ -164,9 +257,36 @@ async def link_author_to_self(db: AsyncSession, author_id: uuid.UUID, user_id: u
                 "message": "This author is already linked to another reader",
             },
         )
+    claim.status = CLAIM_APPROVED
+    claim.decided_at = datetime.now(UTC)
+    claim.decided_by_user_id = decided_by_user_id
     await db.commit()
-    await db.refresh(author)
-    return author
+    await db.refresh(claim)
+    return claim
+
+
+async def reject_claim(
+    db: AsyncSession, claim_id: uuid.UUID, decided_by_user_id: uuid.UUID
+) -> AuthorClaim:
+    """Reject a pending claim — leaves the shared row untouched, which is
+    already what every reader but the claimant has been seeing all along."""
+    claim = await db.get(AuthorClaim, claim_id)
+    if claim is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "Claim not found"},
+        )
+    if claim.status != CLAIM_PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "already_decided", "message": f"Claim is already {claim.status}"},
+        )
+    claim.status = CLAIM_REJECTED
+    claim.decided_at = datetime.now(UTC)
+    claim.decided_by_user_id = decided_by_user_id
+    await db.commit()
+    await db.refresh(claim)
+    return claim
 
 
 async def create_publisher(db: AsyncSession, **fields: object) -> Publisher:

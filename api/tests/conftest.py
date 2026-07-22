@@ -47,6 +47,7 @@ TABLES: list[str] = [
     "series",
     "genres",
     "publishers",
+    "author_claims",
     "authors",
 ]
 

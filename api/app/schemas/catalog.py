@@ -66,6 +66,12 @@ class AuthorOut(BaseModel):
     # The Profile who is this author, if self-linked — drives the 🔗 "on
     # Kitabi" badge and the "View their Kitabi profile" door.
     linked_user_id: uuid.UUID | None = None
+    # True only for the reader who filed an unresolved "This is me" claim on
+    # this author. Deliberately per-request and private: it is the *only* trace
+    # of a pending claim anyone sees, and everyone else must keep seeing the
+    # old `linked_user_id`. Never set from the ORM row — see
+    # catalog.py's `_with_claims`.
+    claim_pending: bool = False
 
 
 class AuthorDetailOut(AuthorOut):
@@ -92,8 +98,8 @@ class AuthorCreate(BaseModel):
     image_url: str | None = None
     primary_language: str | None = None
     bio: str | None = None
-    # "This is me" — the add-author form's checkbox, shown only when creating
-    # a brand-new author. Self-links the new row to the signed-in reader.
+    # "This is me" — the add-author form's checkbox. Files a claim for review;
+    # it does not link the row (app/models/author_claim.py).
     is_me: bool = False
 
 
