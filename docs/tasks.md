@@ -400,7 +400,19 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       **Simplified 14 Jul 2026** (owner: invited friend circle, not open
       sign-up) — no claim/evidence/approval workflow, no verified badge; the heavier
       version is shelved in `docs/author-identity-and-moderation-plan.md` for if this ever
-      opens beyond invited friends
+      opens beyond invited friends.
+      **Revised 22 Jul 2026** — the first-come rule is gone. "This is me" was hidden
+      (2fccf1f) as an unverifiable edit to shared catalog data, and is now back behind an
+      approval queue: both paths (create-time checkbox and the existing-author button) file
+      a pending `author_claims` row (migration `000029`, RLS) instead of writing
+      `authors.linked_user_id`. The claimant sees a "Pending review" notice via a
+      per-request `claim_pending` flag; every other reader keeps seeing the old value.
+      Only `catalog_service.approve_claim` writes the link
+- [ ] Author claim review UI — approval is **manual** today: no endpoint, no admin screen.
+      `catalog_service.approve_claim` / `reject_claim` are the whole decision path (tested),
+      so this is a router + screen over existing logic. Until then, approve from `psql`:
+      look up the pending row in `author_claims`, then call the service (or set
+      `authors.linked_user_id` and the claim's `status`/`decided_at` in one transaction)
 - [x] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — written server-side as a side
       effect of other syncable ops, pulled to the client; no feed UI yet (feature-map.md: "flip it
       public later")

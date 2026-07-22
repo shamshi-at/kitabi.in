@@ -12,6 +12,23 @@ below first.
 
 ---
 
+> **Superseded in part, 22 Jul 2026 — self-claims now queue for review.**
+> The design below deliberately had no claim workflow, on the reasoning that an
+> invited friend circle does the trust check outside the app. That no longer
+> holds: "This is me" was first hidden outright (commit 2fccf1f) because a
+> self-declared, unverifiable edit to *shared* catalog data invites misuse, and
+> is now re-enabled behind an approval queue (`author_claims`).
+>
+> What changed: **both** "This is me" paths — the create-time checkbox and the
+> one-tap link on an existing author — file a pending `AuthorClaim` instead of
+> writing `authors.linked_user_id`. The claimant sees `claim_pending`; every
+> other reader keeps seeing the old value. Only `catalog_service.approve_claim`
+> writes the link, and approval is manual (no endpoint, no admin UI yet).
+>
+> Everything else below — the `linked_user_id` column, `GET /users/{id}/works`,
+> the 🔗 badge, the Works tab, the mockups — stands unchanged. Read
+> "What this does *not* need" as history, not as current instruction.
+
 ## The simple version (build this)
 
 ### The insight
