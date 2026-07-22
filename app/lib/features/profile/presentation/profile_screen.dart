@@ -10,6 +10,7 @@ import '../../../core/auth/auth_providers.dart';
 import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/language_chips.dart';
 import '../../../core/widgets/net_image.dart';
 import '../../../data/api/api_client.dart';
@@ -40,7 +41,9 @@ class ProfileScreen extends ConsumerWidget {
         top: false,
         child: me.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('$err')),
+          // A raw `Text('$err')` used to put a DioException on screen here —
+          // most often the 401 the API client now refreshes past.
+          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(meProvider)),
           data: (profile) => _ProfileBody(profile: profile),
         ),
       ),
@@ -530,7 +533,9 @@ class _ReputationCard extends ConsumerWidget {
             height: 60,
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ),
-          error: (err, _) => SizedBox(height: 40, child: Center(child: Text('$err'))),
+          // Unsized: ErrorRetry (icon + message + button) is ~180px tall, so a
+          // fixed-height box would overflow it.
+          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(scoreProvider)),
           data: (s) {
             final total = (s['total'] as num?)?.toInt() ?? 0;
             final stats = <(String, int)>[

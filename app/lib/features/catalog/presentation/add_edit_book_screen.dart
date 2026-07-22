@@ -1459,15 +1459,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
           ],
           // Type and genre are primary — they power the library filter — but
           // the rows are a *shortcut*, not the vocabulary (mockup M10): a
-          // handful of chips, with the honest count beside the label opening
-          // the full picker. That's what keeps the form the same size whether
-          // the catalogue carries 10 genres or 500.
+          // handful of chips, then a "Search or add" chip at the end of the row
+          // opening the full picker. The door moved out of the label and into
+          // the row itself (owner request, 22 Jul 2026) — it reads as the next
+          // chip after the last option, which is where a reader who wants
+          // something not shown is already looking. That's what keeps the form
+          // the same size whether the catalogue carries 10 genres or 500; the
+          // honest total now greets them in the picker's own subtitle.
           SizedBox(height: 12),
-          _ChipRowHeader(
-            label: l10n.formFieldType,
-            total: _typeOptions.length,
-            onOpenAll: _openTypePicker,
-          ),
+          Text(l10n.formFieldType, style: _fieldLabelStyle),
           SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -1489,14 +1489,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
                     color: _form == form ? AppColors.oxblood : AppColors.line,
                   ),
                 ),
+              _MoreChip(onTap: _openTypePicker),
             ],
           ),
           SizedBox(height: 12),
-          _ChipRowHeader(
-            label: l10n.formFieldGenrePrimary,
-            total: _genreOptions.length,
-            onOpenAll: _openGenrePicker,
-          ),
+          Text(l10n.formFieldGenrePrimary, style: _fieldLabelStyle),
           SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -1528,6 +1525,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                         _selectedGenres.contains(genre) ? AppColors.oxblood : AppColors.line,
                   ),
                 ),
+              _MoreChip(onTap: _openGenrePicker),
             ],
           ),
           if (_readerGenres.isNotEmpty) ...[
@@ -3099,62 +3097,54 @@ class _ForkSheet extends StatelessWidget {
   }
 }
 
-/// M10 — a field label with the honest total beside it, opening the full
-/// picker. The count is the whole trick: it tells the reader the row is a
-/// shortcut without making them scroll to find that out.
-class _ChipRowHeader extends StatelessWidget {
-  const _ChipRowHeader({
-    required this.label,
-    required this.total,
-    required this.onOpenAll,
-  });
+/// M10 — the last chip on a Type/Genre row: the door to the full picker, where
+/// the reader can search the whole vocabulary or add a term that isn't in it.
+///
+/// It sits *in* the row rather than beside the label (owner request, 22 Jul
+/// 2026, replacing the "All 11 ⌕" pill) because a reader who can't find what
+/// they want is already looking at the end of the chips, not back up at the
+/// heading. Deliberately styled apart from the options either side of it —
+/// dashed-feel tinted fill, oxblood text — so it never reads as a selectable
+/// value called "Search or add".
+class _MoreChip extends StatelessWidget {
+  const _MoreChip({required this.onTap});
 
-  final String label;
-  final int total;
-  final VoidCallback onOpenAll;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        Expanded(child: Text(label, style: _fieldLabelStyle)),
-        // Reads as a control, not a caption (owner report, 21 Jul 2026: the
-        // bare "All 11 ⌕" didn't look clickable). A tinted pill with a border
-        // is the same affordance language the chips beside it already use.
-        Material(
-          color: AppColors.goldSoft,
-          borderRadius: BorderRadius.circular(99),
-          child: InkWell(
-            onTap: onOpenAll,
+    return Material(
+      color: AppColors.goldSoft,
+      borderRadius: BorderRadius.circular(99),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(99),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(99),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: AppColors.gold),
+            // Uniform border: a non-uniform one here would throw at paint time
+            // and draw a blank chip (CLAUDE.md, 21 Jul 2026).
+            border: Border.all(color: AppColors.gold),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search, size: 14, color: AppColors.oxblood),
+              SizedBox(width: 5),
+              Text(
+                l10n.formPickerMore,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.oxblood,
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.search, size: 13, color: AppColors.oxblood),
-                  SizedBox(width: 4),
-                  Text(
-                    l10n.formPickerAll(total),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.oxblood,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

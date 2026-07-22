@@ -181,6 +181,30 @@
   "@authorLinkFailed": {
     "description": "Error snackbar when self-linking an author fails"
   },
+  "authorClaimPending": "Pending review",
+  "@authorClaimPending": {
+    "description": "Badge shown only to the reader who claimed this author, while it awaits manual approval"
+  },
+  "authorClaimPendingNote": "We'll check this before it shows on the book for others.",
+  "@authorClaimPendingNote": {
+    "description": "Explains what the Pending review badge means to the claimant"
+  },
+  "authorClaimSent": "Sent for review",
+  "@authorClaimSent": {
+    "description": "Snackbar confirming a 'This is me' claim was filed"
+  },
+  "authorClaimAlreadyLinked": "Someone is already linked as this author",
+  "@authorClaimAlreadyLinked": {
+    "description": "Error snackbar when claiming an author that is already linked to a reader"
+  },
+  "pickerIsMe": "This is me",
+  "@pickerIsMe": {
+    "description": "Checkbox on the add-author form claiming the new author is the signed-in reader"
+  },
+  "pickerIsMeNote": "Checked claims are reviewed before they go live.",
+  "@pickerIsMeNote": {
+    "description": "Subtitle under the add-author 'This is me' checkbox"
+  },
   "authorWritingAs": "writing as {name}",
   "@authorWritingAs": {
     "description": "Shows an author's pen name under their real name",
@@ -761,6 +785,8 @@
   "@statusCleared": {"description": "Snackbar after clearing a book's sessions and notes"},
   "bookWishlistAdd": "Add to wishlist",
   "@bookWishlistAdd": {"description": "Tooltip on the title-bar bookmark when the book isn't wishlisted"},
+  "bookWishlistShort": "Wishlist",
+  "@bookWishlistShort": {"description": "Short label on the wishlist button in the action bar of a book that isn't in the library yet"},
   "bookWishlistRemove": "Remove from wishlist",
   "@bookWishlistRemove": {"description": "Tooltip on the title-bar bookmark when the book is wishlisted"},
   "bookWishlistAdded": "On your wishlist.",
@@ -2577,10 +2603,9 @@
     "description": "Subtitle of the type picker sheet",
     "placeholders": {"count": {"type": "int"}}
   },
-  "formPickerAll": "All {count}",
-  "@formPickerAll": {
-    "description": "The door beside the Type/Genre label opening the full picker — shows the honest total",
-    "placeholders": {"count": {"type": "int"}}
+  "formPickerMore": "Search or add",
+  "@formPickerMore": {
+    "description": "Last chip on the Type/Genre row — opens the full picker, where the reader can search every option or create one that isn't listed"
   },
   "formGenreYoursNote": "Your most-used genres first.",
   "@formGenreYoursNote": {"description": "Caption under the genre row explaining why those chips are there"},

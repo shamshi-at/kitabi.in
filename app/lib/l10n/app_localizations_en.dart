@@ -171,6 +171,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authorLinkFailed => 'Couldn\'t link this author right now';
 
   @override
+  String get authorClaimPending => 'Pending review';
+
+  @override
+  String get authorClaimPendingNote =>
+      'We\'ll check this before it shows on the book for others.';
+
+  @override
+  String get authorClaimSent => 'Sent for review';
+
+  @override
+  String get authorClaimAlreadyLinked =>
+      'Someone is already linked as this author';
+
+  @override
+  String get pickerIsMe => 'This is me';
+
+  @override
+  String get pickerIsMeNote =>
+      'Checked claims are reviewed before they go live.';
+
+  @override
   String authorWritingAs(String name) {
     return 'writing as $name';
   }
@@ -888,6 +909,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookWishlistAdd => 'Add to wishlist';
+
+  @override
+  String get bookWishlistShort => 'Wishlist';
 
   @override
   String get bookWishlistRemove => 'Remove from wishlist';
@@ -2892,9 +2916,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String formPickerAll(int count) {
-    return 'All $count';
-  }
+  String get formPickerMore => 'Search or add';
 
   @override
   String get formGenreYoursNote => 'Your most-used genres first.';

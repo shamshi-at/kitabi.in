@@ -11,15 +11,34 @@ const _apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http:/
 /// force old builds to upgrade. Keep in step with pubspec.yaml.
 const kAppVersion = '0.1.0';
 
+/// Reads the current access token. Null means "no session" — the request goes
+/// out unauthenticated rather than waiting on one.
+typedef TokenReader = String? Function();
+
+/// Refreshes the session, returning the new access token (or null if the
+/// refresh token is itself dead and the reader must sign in again).
+typedef SessionRefresher = Future<String?> Function();
+
 /// Thin Dio wrapper: attaches the JWT + app version on every request, and
 /// surfaces the 426 update-gate (CLAUDE.md) via [onUpdateRequired].
 class ApiClient {
-  ApiClient({this.onUpdateRequired}) : _dio = Dio(BaseOptions(baseUrl: _apiBaseUrl)) {
+  ApiClient({
+    this.onUpdateRequired,
+    TokenReader? readToken,
+    SessionRefresher? refreshSession,
+    Future<void> Function()? onAuthLost,
+  })  : _readToken = readToken ?? _supabaseToken,
+        _refreshSession = refreshSession ?? _supabaseRefresh,
+        _onAuthLost = onAuthLost ?? _supabaseSignOut,
+        _dio = Dio(BaseOptions(baseUrl: _apiBaseUrl)) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
           options.headers['X-App-Version'] = kAppVersion;
-          final token = Supabase.instance.client.auth.currentSession?.accessToken;
+          // Read per-request, never captured at construction: a token refreshed
+          // between two calls (Supabase refreshes on its own cadence, and the
+          // 401 handler below forces one) must be picked up by the next call.
+          final token = _readToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -29,6 +48,29 @@ class ApiClient {
           if (error.response?.statusCode == 426) {
             onUpdateRequired?.call();
             return handler.next(error);
+          }
+          // The access token expired (or the API rejected it). Refresh once and
+          // replay the request; if the refresh token is dead too, sign out so
+          // the router sends the reader to sign-in instead of leaving every
+          // screen showing a raw DioException.
+          if (error.response?.statusCode == 401 &&
+              error.requestOptions.extra['auth_retried'] != true) {
+            // No session at all: nothing to refresh, and signing out again
+            // would be noise. Let the caller render its own error state.
+            if (_readToken() == null) return handler.next(error);
+            final token = await _refreshOnce();
+            if (token == null) {
+              await _onAuthLost();
+              return handler.next(error);
+            }
+            // No need to set the header here — `fetch` re-runs onRequest, which
+            // re-reads the (now refreshed) token.
+            final opts = error.requestOptions..extra['auth_retried'] = true;
+            try {
+              return handler.resolve(await _dio.fetch<dynamic>(opts));
+            } on DioException catch (e) {
+              return handler.next(e);
+            }
           }
           // Retry transient network failures with exponential backoff (300ms,
           // 600ms, 1.2s). Only connection/timeout errors — never a real HTTP
@@ -59,7 +101,48 @@ class ApiClient {
   /// Called when the server rejects this build as too old (HTTP 426).
   final void Function()? onUpdateRequired;
 
+  final TokenReader _readToken;
+  final SessionRefresher _refreshSession;
+  final Future<void> Function() _onAuthLost;
   final Dio _dio;
+
+  /// Test seam: lets a test append a fake transport interceptor *behind* the
+  /// auth interceptor, so the 401 path runs exactly as it does in the app.
+  @visibleForTesting
+  Dio get dio => _dio;
+
+  static String? _supabaseToken() => Supabase.instance.client.auth.currentSession?.accessToken;
+
+  static Future<String?> _supabaseRefresh() async {
+    final res = await Supabase.instance.client.auth.refreshSession();
+    return res.session?.accessToken;
+  }
+
+  static Future<void> _supabaseSignOut() => Supabase.instance.client.auth.signOut();
+
+  Future<String?>? _refreshing;
+
+  /// Coalesces concurrent refreshes: a sync drain fires several requests at
+  /// once, so an expired token means N simultaneous 401s. Unlike the
+  /// drain-the-queue guard (CLAUDE.md, 7 Jul 2026), plain coalescing is correct
+  /// here — every caller wants the same thing, *a* fresh token now, so one that
+  /// joins mid-flight gets exactly the token it would have fetched itself.
+  Future<String?> _refreshOnce() {
+    final existing = _refreshing;
+    if (existing != null) return existing;
+    final started = () async {
+      try {
+        return await _refreshSession();
+      } catch (_) {
+        return null; // Refresh token rejected/expired — caller signs out.
+      }
+    }();
+    _refreshing = started;
+    started.whenComplete(() {
+      if (identical(_refreshing, started)) _refreshing = null;
+    });
+    return started;
+  }
 
   /// Idempotent — safe to call on every sign-in, not just the first.
   Future<void> bootstrap() => _dio.post('/auth/bootstrap');
@@ -415,9 +498,10 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
-  /// "This is me" — self-link an existing, unclaimed Author row to the
-  /// signed-in reader. First to claim wins; throws (409) if someone already
-  /// linked it.
+  /// "This is me" — files a claim on an existing Author row for manual review.
+  /// Does *not* link it: the response still carries the old `linked_user_id`,
+  /// plus `claim_pending: true` for this reader only. Throws 409 if someone is
+  /// already linked. (Path kept as `/link` so older installs keep working.)
   Future<Map<String, dynamic>> linkAuthor(String authorId) async {
     final res = await _dio.post('/catalog/authors/$authorId/link');
     return res.data as Map<String, dynamic>;

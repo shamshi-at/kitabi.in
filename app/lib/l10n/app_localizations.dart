@@ -376,6 +376,42 @@ abstract class AppLocalizations {
   /// **'Couldn\'t link this author right now'**
   String get authorLinkFailed;
 
+  /// Badge shown only to the reader who claimed this author, while it awaits manual approval
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get authorClaimPending;
+
+  /// Explains what the Pending review badge means to the claimant
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll check this before it shows on the book for others.'**
+  String get authorClaimPendingNote;
+
+  /// Snackbar confirming a 'This is me' claim was filed
+  ///
+  /// In en, this message translates to:
+  /// **'Sent for review'**
+  String get authorClaimSent;
+
+  /// Error snackbar when claiming an author that is already linked to a reader
+  ///
+  /// In en, this message translates to:
+  /// **'Someone is already linked as this author'**
+  String get authorClaimAlreadyLinked;
+
+  /// Checkbox on the add-author form claiming the new author is the signed-in reader
+  ///
+  /// In en, this message translates to:
+  /// **'This is me'**
+  String get pickerIsMe;
+
+  /// Subtitle under the add-author 'This is me' checkbox
+  ///
+  /// In en, this message translates to:
+  /// **'Checked claims are reviewed before they go live.'**
+  String get pickerIsMeNote;
+
   /// Shows an author's pen name under their real name
   ///
   /// In en, this message translates to:
@@ -1563,6 +1599,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add to wishlist'**
   String get bookWishlistAdd;
+
+  /// Short label on the wishlist button in the action bar of a book that isn't in the library yet
+  ///
+  /// In en, this message translates to:
+  /// **'Wishlist'**
+  String get bookWishlistShort;
 
   /// Tooltip on the title-bar bookmark when the book is wishlisted
   ///
@@ -4894,11 +4936,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 to choose from} other{{count} to choose from}}'**
   String pickerTypeSubtitle(int count);
 
-  /// The door beside the Type/Genre label opening the full picker — shows the honest total
+  /// Last chip on the Type/Genre row — opens the full picker, where the reader can search every option or create one that isn't listed
   ///
   /// In en, this message translates to:
-  /// **'All {count}'**
-  String formPickerAll(int count);
+  /// **'Search or add'**
+  String get formPickerMore;
 
   /// Caption under the genre row explaining why those chips are there
   ///

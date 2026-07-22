@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +42,9 @@ class AuthorBrowseScreen extends ConsumerWidget {
             final imageUrl = author['image_url'] as String?;
             final penName = author['pen_name'] as String?;
             final linkedUserId = author['linked_user_id'] as String?;
+            // Only ever true for the reader who filed the claim — the server
+            // discloses it to nobody else (api/app/models/author_claim.py).
+            final claimPending = author['claim_pending'] as bool? ?? false;
 
             return ListView(
               padding: EdgeInsets.all(20),
@@ -141,11 +145,14 @@ class AuthorBrowseScreen extends ConsumerWidget {
                     label: Text(l10n.authorBrowseViewProfile),
                     style: OutlinedButton.styleFrom(foregroundColor: AppColors.oxblood),
                   ),
-                // "This is me" is hidden until claims can actually be
-                // verified — self-declared authorship on a shared catalogue
-                // is an invitation to misuse (owner decision, 22 Jul 2026).
-                // The linking code below stays: nothing is deleted, the
-                // control just isn't offered.
+                // "This is me" is offered again now that it queues for review
+                // instead of applying on the spot (owner decision, 22 Jul
+                // 2026) — the misuse it was hidden for needs an approval to
+                // reach anyone else. Never shown on an author already linked.
+                if (linkedUserId == null)
+                  claimPending
+                      ? const _ClaimPendingNotice()
+                      : _LinkAuthorAction(authorId: authorId),
                 SizedBox(height: 20),
                 if (works.isEmpty)
                   Padding(
@@ -168,10 +175,55 @@ class AuthorBrowseScreen extends ConsumerWidget {
   }
 }
 
-/// "This is me" — self-links an unclaimed Author row to the signed-in reader
-/// (owner decision, 14 Jul 2026: invited friend circle, no claim/approval
-/// step — first to tap wins). Its own stateful widget just for the busy flag
-/// around the API call; the author page itself stays a plain ConsumerWidget.
+/// What the claimant — and only the claimant — sees while their "This is me"
+/// waits on a human. Everyone else sees the plain unclaimed author page, which
+/// is the point: an unverified claim must not change shared catalog data.
+class _ClaimPendingNotice extends StatelessWidget {
+  const _ClaimPendingNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.goldSoft,
+        borderRadius: BorderRadius.circular(10),
+        // Uniform border on purpose: a non-uniform one alongside borderRadius
+        // throws at paint time and renders a blank box (CLAUDE.md, 21 Jul).
+        border: Border.all(color: AppColors.gold),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.hourglass_top, size: 16, color: AppColors.gold),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.authorClaimPending,
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  l10n.authorClaimPendingNote,
+                  style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "This is me" — files a claim on an unclaimed Author row for manual review
+/// (owner decision, 22 Jul 2026; superseded the 14 Jul first-to-tap-wins
+/// rule). Its own stateful widget just for the busy flag around the API call;
+/// the author page itself stays a plain ConsumerWidget.
 class _LinkAuthorAction extends ConsumerStatefulWidget {
   const _LinkAuthorAction({required this.authorId});
 
@@ -186,15 +238,22 @@ class _LinkAuthorActionState extends ConsumerState<_LinkAuthorAction> {
 
   Future<void> _link() async {
     setState(() => _busy = true);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(apiClientProvider).linkAuthor(widget.authorId);
       ref.invalidate(authorWorksProvider(widget.authorId));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.authorClaimSent)));
+    } on DioException catch (err) {
+      // 409 is a real answer, not a failure: somebody is already linked here.
+      final code = (err.response?.data as Map?)?['code'];
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+          code == 'already_linked' ? l10n.authorClaimAlreadyLinked : l10n.authorLinkFailed,
+        ),
+      ));
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.authorLinkFailed)),
-        );
-      }
+      messenger.showSnackBar(SnackBar(content: Text(l10n.authorLinkFailed)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -412,10 +412,22 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
             ),
             const SizedBox(height: 8),
             PickerField(label: l10n.pickerFieldBio, controller: _bio, maxLines: 3),
-            // Hidden alongside the author page's "This is me" — the same
-            // unverifiable claim, and leaving this one standing would keep the
-            // misuse route open (owner decision, 22 Jul 2026). `_isMe` stays
-            // wired and simply reads false; restoring is one widget.
+            // Back alongside the author page's "This is me", and queued for
+            // review the same way — checking this files a claim, it does not
+            // link the row (owner decision, 22 Jul 2026).
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              value: _isMe,
+              onChanged: (v) => setState(() => _isMe = v ?? false),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: AppColors.oxblood,
+              title: Text(l10n.pickerIsMe, style: const TextStyle(fontSize: 14)),
+              subtitle: Text(
+                l10n.pickerIsMeNote,
+                style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
+              ),
+            ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,

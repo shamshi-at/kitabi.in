@@ -953,10 +953,10 @@ void main() {
   });
   // ── Type & Genre rows and their picker sheet (M10/M11) ───────────────────
   // The row is a shortcut, not the vocabulary: it stays ~6 chips however big
-  // the catalogue gets, and the sheet behind "All N" is where the rest lives
-  // — and where duplicate pressure is applied.
+  // the catalogue gets, and the sheet behind the row's trailing "Search or add"
+  // chip is where the rest lives — and where duplicate pressure is applied.
 
-  testWidgets('the genre row stays short and offers the whole catalogue behind All N',
+  testWidgets('the genre row stays short and offers the whole catalogue behind Search or add',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -969,7 +969,7 @@ void main() {
     // wall of chips — that's the whole point of the redesign.
     final genreChips = tester.widgetList<FilterChip>(find.byType(FilterChip)).length;
     expect(genreChips, lessThanOrEqualTo(12)); // 6 type + 6 genre
-    expect(find.textContaining('All '), findsNWidgets(2)); // one door per row
+    expect(find.text('Search or add'), findsNWidgets(2)); // one door per row
   });
 
   testWidgets('the genre sheet shows book counts so the established spelling wins',
@@ -981,7 +981,7 @@ void main() {
     await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.textContaining('All ').last); // Genre's door
+    await tester.tap(find.text('Search or add').last); // Genre's door
     await tester.pumpAndSettle();
 
     // The count is the mechanism, not decoration: 128 books makes "Science
@@ -999,7 +999,7 @@ void main() {
     await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.textContaining('All ').last);
+    await tester.tap(find.text('Search or add').last);
     await tester.pumpAndSettle();
 
     // Typing an existing genre in a different case must not invite the exact
@@ -1029,7 +1029,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'Sheet genre book');
-    await tester.tap(find.textContaining('All ').last);
+    await tester.tap(find.text('Search or add').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Science fiction'));
     await tester.pumpAndSettle();
@@ -1055,7 +1055,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'A Novella');
-    await tester.tap(find.textContaining('All ').first); // Type's door
+    await tester.tap(find.text('Search or add').first); // Type's door
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Novella');
     await tester.pumpAndSettle();
@@ -1077,7 +1077,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'Case folded');
-    await tester.tap(find.textContaining('All ').first);
+    await tester.tap(find.text('Search or add').first);
     await tester.pumpAndSettle();
     // "  novel " is really Novel — the sheet suppresses Create for an exact
     // case-insensitive match, so the only way through is the existing row,
