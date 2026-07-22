@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Kitabi — Beyond the Bookshelf | Book and Library Tracker</title>
-<meta name="description" content="Catalogue every book you own, track lending, and know what to read next. Import from Goodreads in minutes. Free and private. Launching soon.">
-<meta name="keywords" content="book tracker app, home library app, personal library, book lending tracker, reading tracker, Goodreads import, book catalogue app, Malayalam books, Indian languages reading app, Kitabi">
+<meta name="description" content="Catalogue every book you own with a barcode scan, track lending, log reading sessions, and search Malayalam, Tamil & English shelves in any script. Free & private.">
+<meta name="keywords" content="book tracker app, home library app, personal library, book lending tracker, reading tracker, reading timer app, book barcode scanner, Goodreads import, Goodreads alternative, book catalogue app, book collection manager, Malayalam books, Tamil books, Indian languages reading app, library app India, Kitabi">
 <meta name="author" content="Kitabi">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://kitabi.in/">
@@ -68,6 +68,21 @@
       "description": "Catalogue every book you own, keep a lending ledger with due-date reminders, track your reading in pages, import from Goodreads or a spreadsheet, and get recommendations that explain themselves. Private by default.",
       "operatingSystem": "ANDROID, IOS",
       "applicationCategory": "LifestyleApplication",
+      "featureList": [
+        "ISBN barcode scanning",
+        "Edition-level book cataloguing",
+        "Free lending ledger with due-date reminders",
+        "Borrowed shelf — track books friends lent you",
+        "Reading progress, statuses and timed reading sessions",
+        "Ratings, reviews and private notes, kept separate",
+        "Reading statistics, charts and a yearly reading goal",
+        "Goodreads and CSV import and export",
+        "Offline-first — works without internet, syncs later",
+        "Cross-script search across Malayalam, Tamil and English",
+        "Linked translations of the same work",
+        "Opt-in book recommendations that explain themselves",
+        "Shareable book cards and public book pages"
+      ],
       "releasedEvent": {
         "@type": "PublicationEvent",
         "name": "Launching soon"
@@ -76,6 +91,47 @@
       "publisher": {"@id": "https://kitabi.in/#org"},
       "image": "https://kitabi.in/kitabi-logo.png",
       "url": "https://kitabi.in/"
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://kitabi.in/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is Kitabi?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Kitabi is a personal library app for readers who own books. Catalogue your shelf by scanning barcodes, keep a lending ledger of who borrowed what, log your reading with a timer, and see your year in pages. It works offline and syncs across your devices."}
+        },
+        {
+          "@type": "Question",
+          "name": "Is Kitabi free?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Kitabi is free, including the lending ledger that other apps put behind a paywall. There are no ads and your library is never sold or shared."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can I import my Goodreads library into Kitabi?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Export your library from Goodreads as a CSV and import it in one tap — shelves, ratings, reviews and reading dates arrive mapped, not dumped. Any spreadsheet CSV works too, and you can export your whole library back out at any time."}
+        },
+        {
+          "@type": "Question",
+          "name": "Does Kitabi work offline?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Your library lives on your phone, so browsing, adding books and logging reading all work with no internet. Changes sync quietly when you are back online."}
+        },
+        {
+          "@type": "Question",
+          "name": "Which languages does Kitabi support?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Books in any language. Kitabi grew up on Malayalam, Tamil and English bookshelves — titles display correctly in their own script, search understands transliteration (typing 'Kayary' finds കയർ), and translations of the same work stay linked to each other."}
+        },
+        {
+          "@type": "Question",
+          "name": "Is my library public?",
+          "acceptedAnswer": {"@type": "Answer", "text": "No — Kitabi is private by default. Every visibility switch starts off. You choose what to share: a single review, your shelf, or nothing at all."}
+        },
+        {
+          "@type": "Question",
+          "name": "When does Kitabi launch?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Kitabi is launching soon on Android and iOS. The app will be announced right here at kitabi.in."}
+        }
+      ]
     }
   ]
 }
@@ -132,12 +188,14 @@ body{
 .reveal.right{transform:translateX(30px)}
 .reveal.in{opacity:1;transform:none}
 
-/* ---------- cinematic scroll-scrubbed hero ----------
-   The whole opening is one "video" scrubbed by scroll: --p (0→1) is set by JS
-   as the reader moves through the 240vh .cine section while .pin stays stuck.
-   Every layer derives its own timing from --p via  clamp(0,(--p - a)/b,1). */
-.cine{height:240vh;position:relative;--p:1}
-.pin{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;
+/* ---------- cinematic auto-playing hero ----------
+   The whole opening is one short "video" played once on load: JS animates
+   --p (0→1) over ~3s (skippable — any scroll/tap jumps to the end), then the
+   page scrolls normally. Every layer derives its own timing from --p via
+   clamp(0,(--p - a)/b,1). CSS default is the finished frame (--p:1) so the
+   hero is complete without JS. */
+.cine{position:relative;--p:1}
+.pin{position:relative;height:100vh;height:100svh;overflow:hidden;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:0 22px;text-align:center;color:var(--paper);
   background:radial-gradient(120vw 70vh at 75% -12%,#4A3526 0%,var(--night-2) 45%,var(--night) 100%);
@@ -166,12 +224,6 @@ body{
 .pitch{max-width:560px;margin:22px auto 0;font-size:clamp(16px,4.4vw,19px);line-height:1.65;color:#E9DCC2}
 .pitch b{color:#fff;font-weight:600}
 .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px}
-.cue1{position:absolute;bottom:max(26px,env(safe-area-inset-bottom));left:0;right:0;
-  font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#A08D6E;
-  opacity:calc(1 - clamp(0,(var(--p) - .02)/.1,1))}
-.cue1 .mouse{margin:0 auto 9px;width:26px;height:42px;border:2px solid rgba(239,227,200,.4);border-radius:14px;position:relative}
-.cue1 .mouse::after{content:"";position:absolute;left:50%;top:8px;width:4px;height:9px;margin-left:-2px;border-radius:2px;
-  background:var(--gold);animation:bob 1.6s ease-in-out infinite}
 .store{display:flex;align-items:center;gap:11px;text-align:left;background:var(--paper);color:var(--ink);
   border-radius:14px;padding:11px 18px;text-decoration:none;border:1px solid var(--paper);min-width:186px}
 .store .ic{flex-shrink:0}
@@ -442,6 +494,18 @@ body{
 .qarrow.l{left:16px}.qarrow.r{right:16px}
 @media(max-width:680px){.qarrow{display:none}.qslide{padding:0 26px}}
 
+/* ---------- faq ---------- */
+.faq{max-width:680px;margin:34px auto 0;text-align:left}
+.faq details{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.faq summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:12px;padding:15px 18px;
+  font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:15.5px;line-height:1.4}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";margin-left:auto;color:var(--gold);font-size:19px;font-weight:400;
+  flex-shrink:0;transition:transform .25s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq .fa{padding:0 18px 15px;font-size:13.5px;line-height:1.7;color:var(--ink-soft)}
+.faq .fa b{color:var(--ink);font-weight:600}
+
 /* closing cta */
 .close{padding:76px 22px 26px;text-align:center}
 .close .orn{color:var(--gold);font-size:18px;letter-spacing:8px}
@@ -455,10 +519,10 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 /* ---------- reduced motion: everything visible, nothing moves ---------- */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
-  .cue::after,.cue1 .mouse::after,.sess .dot{animation:none}
-  .cine{height:auto;--p:1 !important}
-  .pin{position:relative;height:auto;min-height:100svh;padding:max(56px,env(safe-area-inset-top)) 22px 84px}
-  .cue1,.drift{display:none}
+  .cue::after,.sess .dot{animation:none}
+  .cine{--p:1 !important}
+  .pin{height:auto;min-height:100svh;padding:max(56px,env(safe-area-inset-top)) 22px 84px}
+  .drift{display:none}
   .bookwrap{will-change:auto}
   .reveal,.reveal.left,.reveal.right{opacity:1;transform:none;transition:none}
   .scanout .so,.lrow,.nudge,.trio .tc,.iprow .mini{opacity:1;transform:none;transition:none}
@@ -468,6 +532,7 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
   .pbar i{width:62%;transition:none}
   .ipbar i{width:100%;transition:none}
   .tsvg path{stroke-dashoffset:0;transition:none}
+  .faq summary::after{transition:none}
   .nav{transition:none}
 }
 </style>
@@ -534,7 +599,6 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
     <div class="cue" aria-hidden="true"></div>
     <p class="cue-t" aria-hidden="true">Scroll the shelves</p>
   </div>
-  <div class="cue1" aria-hidden="true"><div class="mouse"></div>Scroll — the book opens</div>
 </div>
 </header>
 
@@ -621,6 +685,7 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
       <ul>
         <li><b>Lending records, not sticky notes</b> — every loan, dated and remembered</li>
         <li><b>A Borrowed shelf too</b> — the books friends trusted you with, both sides of the ledger</li>
+        <li><b>Lend to a friend on Kitabi</b> — the book appears on <b>their</b> Borrowed shelf, and a return ticks both ledgers at once</li>
         <li><b>Due-date reminders</b> — a quiet local notification, never a public shaming</li>
       </ul>
     </div>
@@ -890,6 +955,18 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
       <div class="feat reveal" style="--d:.4s"><div class="fi" style="background:#DEE7EF">🕊</div>
         <h3>Private by default</h3>
         <p>Free, no ads, no feed. Every visibility switch starts off. Your library is nobody’s product.</p></div>
+      <div class="feat reveal" style="--d:.45s"><div class="fi" style="background:var(--gold-soft)">🔤</div>
+        <h3>Any script, any spelling</h3>
+        <p>Type “Kayary” and find കയർ. Search understands transliteration, so every script on your shelf answers one search box.</p></div>
+      <div class="feat reveal" style="--d:.5s"><div class="fi" style="background:#E3EAD9">🎯</div>
+        <h3>A yearly reading goal</h3>
+        <p>Set the number, watch the ring fill — and learn when you actually read (“most on Wednesdays, around 9 PM”).</p></div>
+      <div class="feat reveal" style="--d:.55s"><div class="fi" style="background:#DEE7EF">🔗</div>
+        <h3>Every book gets a page</h3>
+        <p>Share any book as a kitabi.in link — cover, blurb, where to buy — that opens beautifully, app or no app.</p></div>
+      <div class="feat reveal" style="--d:.6s"><div class="fi" style="background:#F2DEDA">📤</div>
+        <h3>Your books leave with you</h3>
+        <p>One-tap CSV export of your whole library. Kitabi earns your shelf every day; it never locks it in.</p></div>
     </div>
   </section>
 </main>
@@ -904,6 +981,53 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
   </div>
   <div class="qdots" id="qdots" aria-hidden="true"></div>
   <button class="qarrow r" id="qnext" aria-label="Next quote">›</button>
+</section>
+
+<section class="wrap sect" id="faq" aria-labelledby="faqh">
+  <div class="reveal">
+    <span class="kicker">Questions, answered</span>
+    <h2 id="faqh">Frequently asked questions</h2>
+  </div>
+  <div class="faq reveal" style="--d:.1s">
+    <details>
+      <summary>What is Kitabi?</summary>
+      <p class="fa">Kitabi is a <b>personal library app</b> for readers who own books. Catalogue your
+      shelf by scanning barcodes, keep a lending ledger of who borrowed what, log your reading with
+      a timer, and see your year in pages. It works offline and syncs across your devices.</p>
+    </details>
+    <details>
+      <summary>Is Kitabi free?</summary>
+      <p class="fa">Yes. Kitabi is <b>free, including the lending ledger</b> that other apps put
+      behind a paywall. There are no ads and your library is never sold or shared.</p>
+    </details>
+    <details>
+      <summary>Can I import my Goodreads library into Kitabi?</summary>
+      <p class="fa">Yes. Export your library from Goodreads as a CSV and import it in one tap —
+      <b>shelves, ratings, reviews and reading dates arrive mapped</b>, not dumped. Any spreadsheet
+      CSV works too, and you can export your whole library back out at any time.</p>
+    </details>
+    <details>
+      <summary>Does Kitabi work offline?</summary>
+      <p class="fa">Yes. Your library lives on your phone, so browsing, adding books and logging
+      reading all <b>work with no internet</b>. Changes sync quietly when you’re back online.</p>
+    </details>
+    <details>
+      <summary>Which languages does Kitabi support?</summary>
+      <p class="fa">Books in any language. Kitabi grew up on <b>Malayalam, Tamil and English</b>
+      bookshelves — titles display correctly in their own script, search understands transliteration
+      (typing “Kayary” finds കയർ), and translations of the same work stay linked to each other.</p>
+    </details>
+    <details>
+      <summary>Is my library public?</summary>
+      <p class="fa">No — Kitabi is <b>private by default</b>. Every visibility switch starts off.
+      You choose what to share: a single review, your shelf, or nothing at all.</p>
+    </details>
+    <details>
+      <summary>When does Kitabi launch?</summary>
+      <p class="fa">Kitabi is <b>launching soon on Android and iOS</b>. The app will be announced
+      right here at kitabi.in.</p>
+    </details>
+  </div>
 </section>
 
 <section class="close" id="notify">
@@ -953,7 +1077,7 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   for (var j = 0; j < els.length; j++) io.observe(els[j]);
 })();
 
-/* ---------- reading-progress ribbon + sticky nav + hero scrub ---------- */
+/* ---------- reading-progress ribbon + sticky nav ---------- */
 (function () {
   var ribbon = document.getElementById('ribbon'),
       nav = document.getElementById('nav'),
@@ -966,17 +1090,42 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         y = window.scrollY || doc.scrollTop;
     ribbon.style.width = (max > 0 ? (y / max) * 100 : 0) + '%';
     nav.classList.toggle('show', y > cine.offsetHeight - window.innerHeight * 0.1);
-    if (!REDUCED) {
-      var span = Math.max(1, cine.offsetHeight - window.innerHeight),
-          p = Math.min(1, Math.max(0, y / span));
-      cine.style.setProperty('--p', p.toFixed(4));
-    }
   }
   window.addEventListener('scroll', function () {
     if (!ticking) { ticking = true; requestAnimationFrame(paint); }
   }, {passive: true});
   window.addEventListener('resize', paint, {passive: true});
   paint();
+})();
+
+/* ---------- hero opening: plays once on load, skippable ----------
+   Animates --p (the same 0→1 the layers already key off) over ~3.2s.
+   This script runs synchronously before first paint, so setting --p:0
+   here never flashes the finished frame; without JS the CSS default
+   (--p:1) shows the completed hero. Any scroll/tap/key skips to the end. */
+(function () {
+  if (REDUCED) return;
+  var cine = document.querySelector('.cine'),
+      DUR = 3200, t0 = null, raf = null, done = false;
+  var SKIP = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
+  function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function finish() {
+    if (done) return;
+    done = true;
+    if (raf) cancelAnimationFrame(raf);
+    cine.style.setProperty('--p', '1');
+    SKIP.forEach(function (e) { window.removeEventListener(e, finish); });
+  }
+  function step(ts) {
+    if (done) return;
+    if (t0 === null) t0 = ts;
+    var t = Math.min(1, (ts - t0) / DUR);
+    cine.style.setProperty('--p', ease(t).toFixed(4));
+    if (t < 1) raf = requestAnimationFrame(step); else finish();
+  }
+  cine.style.setProperty('--p', '0');
+  SKIP.forEach(function (e) { window.addEventListener(e, finish, {passive: true}); });
+  raf = requestAnimationFrame(step);
 })();
 
 /* ---------- stat counters ---------- */
