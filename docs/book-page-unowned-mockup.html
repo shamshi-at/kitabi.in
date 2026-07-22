@@ -120,6 +120,66 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   background:linear-gradient(180deg,rgba(246,240,227,0),var(--paper));pointer-events:none}
 .stickybar ~ .fade{display:none}
 
+/* ============================================================
+   ROUND 2 — button treatments for Direction A's pinned bar
+   ============================================================ */
+.bar2{position:absolute;left:0;right:0;bottom:0;padding:10px 13px 14px;
+  background:linear-gradient(180deg,rgba(246,240,227,.82),var(--paper) 42%);
+  border-top:1px solid var(--gold);display:flex;gap:9px;align-items:stretch}
+.bar2::before{content:"";position:absolute;left:0;right:0;top:2px;height:1px;background:rgba(184,134,43,.35)}
+
+/* — B1 The Gold Line: brand-echo, hairline inset on oxblood — */
+.b-gold{flex:1;position:relative;height:42px;border-radius:10px;background:linear-gradient(180deg,#8B3039,var(--oxblood) 55%,#6B222B);
+  box-shadow:0 5px 14px rgba(126,42,51,.32),inset 0 1px 0 rgba(255,255,255,.14);
+  display:flex;align-items:center;justify-content:center}
+.b-gold::after{content:"";position:absolute;inset:3.5px;border:1px solid rgba(240,226,194,.5);border-radius:6px;pointer-events:none}
+.b-gold span{font-size:10.5px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:#F6F0E3}
+.b-gold-2{flex:0 0 92px;position:relative;height:42px;border-radius:10px;background:transparent;
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+.b-gold-2::after{content:"";position:absolute;inset:3.5px;border:1px solid rgba(67,97,126,.28);border-radius:6px}
+.b-gold-2 span{font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--slate)}
+
+/* — B2 Foil & Serif: leather panel, gold foil serif — */
+.b-foil{flex:1;height:42px;border-radius:9px;background:linear-gradient(175deg,#7E2A33,#571E25);
+  box-shadow:0 5px 14px rgba(94,31,38,.34),inset 0 0 0 1px rgba(184,134,43,.55);
+  display:flex;align-items:center;justify-content:center;gap:7px}
+.b-foil span{font-family:'Fraunces',serif;font-size:14.5px;font-weight:550;letter-spacing:.04em;
+  color:#EFD9A4;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.b-foil i{color:#C9A253;font-style:normal;font-size:12px}
+.b-foil-2{flex:0 0 92px;height:42px;border-radius:9px;background:var(--card);
+  box-shadow:inset 0 0 0 1px var(--gold);display:flex;align-items:center;justify-content:center}
+.b-foil-2 span{font-family:'Fraunces',serif;font-size:13.5px;font-weight:550;color:var(--oxblood)}
+
+/* — B3 The Ribbon: bookmark tail cut into the primary — */
+.b-rib{flex:1;height:44px;position:relative;background:var(--oxblood);
+  clip-path:polygon(0 0,100% 0,100% 100%,calc(100% - 15px) calc(100% - 9px),0 100%);
+  border-radius:9px 9px 0 9px;box-shadow:0 5px 14px rgba(126,42,51,.3);
+  display:flex;align-items:center;justify-content:center;padding-right:10px}
+.b-rib span{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#F6F0E3}
+.b-rib::before{content:"";position:absolute;left:9px;top:9px;bottom:9px;width:2px;background:var(--gold);border-radius:2px}
+.b-rib-2{flex:0 0 92px;height:44px;border-radius:9px;border:1.5px solid var(--slate);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--slate)}
+.b-rib-2 .ic{font-size:13px;line-height:1}
+.b-rib-2 span{font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+
+/* — B4 The Stamp: double-rule ex-libris plate — */
+.b-stamp{flex:1;height:42px;border-radius:4px;background:var(--oxblood);position:relative;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(126,42,51,.28)}
+.b-stamp::after{content:"";position:absolute;inset:3px;border:1px solid rgba(246,240,227,.35);border-radius:2px}
+.b-stamp::before{content:"";position:absolute;inset:5.5px;border:1px solid rgba(246,240,227,.18);border-radius:1px}
+.b-stamp span{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#F6F0E3;position:relative}
+.b-stamp-2{flex:0 0 92px;height:42px;border-radius:4px;background:transparent;position:relative;
+  display:flex;align-items:center;justify-content:center;border:1px solid var(--stamp-grey)}
+.b-stamp-2::after{content:"";position:absolute;inset:3px;border:1px solid rgba(154,143,124,.45);border-radius:2px}
+.b-stamp-2 span{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* detail strip — buttons at 2x, off-device */
+.strip{display:flex;flex-wrap:wrap;gap:26px;margin-top:8px}
+.sw{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px 18px 16px;width:340px}
+.sw .lbl{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:12px}
+.sw .bar2{position:static;padding:0;background:none;border:0}
+.sw .bar2::before{display:none}
+
 .note{max-width:900px;margin:34px auto 0;padding:0 36px;font-size:13.5px;line-height:1.7;color:#5d5140}
 .note h3{font-family:'Fraunces',serif;font-size:19px;font-weight:500;margin-bottom:8px;color:var(--ink)}
 .note ul{margin:8px 0 0 18px}
@@ -367,18 +427,175 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   </div>
 </div>
 
+<div class="area" id="round2" style="margin-top:64px;border-top:2px solid var(--gold);padding-top:44px">
+  <div class="ah"><span class="an">Round 2</span><h2>Direction A, with buttons that belong here</h2></div>
+  <p class="desc">Direction A is picked. The placeholder bar used stock Material buttons — a flat fill and a
+  sans label, which is why it read as ordinary. Four treatments drawn from the theme’s own vocabulary:
+  the gold hairline inset from <code>logo.svg</code>, foil-stamped serif, the bookmark ribbon, and the
+  ex-libris stamp. The bar itself also changes — a gold hairline replaces the plain top border, and the
+  paper fades up behind it instead of stopping at a hard edge.</p>
+
+  <div class="row">
+    <!-- B1 -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮ ▾</span></div>
+        <div class="body">
+          <div class="fp"><div class="rail"></div><div class="in">
+            <div class="back">‹</div>
+            <div class="cov"><div class="cover"><span>രണ്ടാമൂഴം</span></div>
+              <div><span class="eyebrow">Novel · Malayalam</span>
+                <h3>രണ്ടാമൂഴം</h3><div class="by">M.T. Vasudevan Nair</div>
+                <div class="meta">1984 · 288 pp · Malayalam</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 4.3 · 128 ratings</div></div></div>
+          </div></div>
+          <div class="sec"><div class="sl">About this book</div>
+            <div class="card"><p>The Mahabharata retold in Bhima’s voice — the second son, always
+            second in turn, watching the epic from the inside…</p></div>
+            <div class="chips"><span class="chip">Mythology</span><span class="chip">Classic</span></div></div>
+          <div class="sec"><div class="sl">What readers say</div>
+            <div class="rev"><div class="av">A</div><div><div class="rt">Anu <span class="stars">★★★★★</span></div>
+              <div class="rb">“The finest Malayalam novel I’ve read this decade.”</div></div></div></div>
+        </div>
+        <div class="bar2">
+          <div class="b-gold"><span>Add to library</span></div>
+          <div class="b-gold-2"><span>Wishlist</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B1 — The Gold Line</b>
+      The brand mark’s own device: a gold hairline inset inside an oxblood tile, letterspaced caps.
+      <span class="pro">+ Directly echoes the logo; unmistakably Kitabi</span>
+      <span class="con">− The inset needs real pixels; risks looking busy at 1x on a small phone</span></p>
+    </div>
+
+    <!-- B2 -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮ ▾</span></div>
+        <div class="body">
+          <div class="fp"><div class="rail"></div><div class="in">
+            <div class="back">‹</div>
+            <div class="cov"><div class="cover"><span>രണ്ടാമൂഴം</span></div>
+              <div><span class="eyebrow">Novel · Malayalam</span>
+                <h3>രണ്ടാമൂഴം</h3><div class="by">M.T. Vasudevan Nair</div>
+                <div class="meta">1984 · 288 pp · Malayalam</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 4.3 · 128 ratings</div></div></div>
+          </div></div>
+          <div class="sec"><div class="sl">About this book</div>
+            <div class="card"><p>The Mahabharata retold in Bhima’s voice — the second son, always
+            second in turn, watching the epic from the inside…</p></div>
+            <div class="chips"><span class="chip">Mythology</span><span class="chip">Classic</span></div></div>
+          <div class="sec"><div class="sl">What readers say</div>
+            <div class="rev"><div class="av">A</div><div><div class="rt">Anu <span class="stars">★★★★★</span></div>
+              <div class="rb">“The finest Malayalam novel I’ve read this decade.”</div></div></div></div>
+        </div>
+        <div class="bar2">
+          <div class="b-foil"><i>❦</i><span>Add to library</span></div>
+          <div class="b-foil-2"><span>Wishlist</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B2 — Foil &amp; Serif</b>
+      Gold foil Fraunces on pressed leather, with the fleuron the design doc already calls for.
+      <span class="pro">+ The most literary; reads as a book, not an app. Foil on leather measures 6.7:1 — passes AA</span>
+      <span class="con">− Serif at button size is softer than caps; the ❦ renders as a colour emoji on some fonts</span></p>
+    </div>
+
+    <!-- B3 -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮ ▾</span></div>
+        <div class="body">
+          <div class="fp"><div class="rail"></div><div class="in">
+            <div class="back">‹</div>
+            <div class="cov"><div class="cover"><span>രണ്ടാമൂഴം</span></div>
+              <div><span class="eyebrow">Novel · Malayalam</span>
+                <h3>രണ്ടാമൂഴം</h3><div class="by">M.T. Vasudevan Nair</div>
+                <div class="meta">1984 · 288 pp · Malayalam</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 4.3 · 128 ratings</div></div></div>
+          </div></div>
+          <div class="sec"><div class="sl">About this book</div>
+            <div class="card"><p>The Mahabharata retold in Bhima’s voice — the second son, always
+            second in turn, watching the epic from the inside…</p></div>
+            <div class="chips"><span class="chip">Mythology</span><span class="chip">Classic</span></div></div>
+          <div class="sec"><div class="sl">What readers say</div>
+            <div class="rev"><div class="av">A</div><div><div class="rt">Anu <span class="stars">★★★★★</span></div>
+              <div class="rb">“The finest Malayalam novel I’ve read this decade.”</div></div></div></div>
+        </div>
+        <div class="bar2">
+          <div class="b-rib"><span>Add to library</span></div>
+          <div class="b-rib-2"><span class="ic">🔖</span><span>Wishlist</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B3 — The Ribbon</b>
+      The primary’s lower-right corner is notched into a bookmark tail, with a gold rule down its spine.
+      <span class="pro">+ Unique silhouette</span>
+      <span class="con">− Didn’t come off: at button width the notch reads as a <b>speech-bubble tail</b>, not a
+        bookmark. A ribbon needs to be taller than it is wide. Shown as drawn rather than quietly fixed.</span></p>
+    </div>
+
+    <!-- B4 -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮ ▾</span></div>
+        <div class="body">
+          <div class="fp"><div class="rail"></div><div class="in">
+            <div class="back">‹</div>
+            <div class="cov"><div class="cover"><span>രണ്ടാമൂഴം</span></div>
+              <div><span class="eyebrow">Novel · Malayalam</span>
+                <h3>രണ്ടാമൂഴം</h3><div class="by">M.T. Vasudevan Nair</div>
+                <div class="meta">1984 · 288 pp · Malayalam</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 4.3 · 128 ratings</div></div></div>
+          </div></div>
+          <div class="sec"><div class="sl">About this book</div>
+            <div class="card"><p>The Mahabharata retold in Bhima’s voice — the second son, always
+            second in turn, watching the epic from the inside…</p></div>
+            <div class="chips"><span class="chip">Mythology</span><span class="chip">Classic</span></div></div>
+          <div class="sec"><div class="sl">What readers say</div>
+            <div class="rev"><div class="av">A</div><div><div class="rt">Anu <span class="stars">★★★★★</span></div>
+              <div class="rb">“The finest Malayalam novel I’ve read this decade.”</div></div></div></div>
+        </div>
+        <div class="bar2">
+          <div class="b-stamp"><span>Add to library</span></div>
+          <div class="b-stamp-2"><span>Wish</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B4 — The Stamp</b>
+      A double-ruled ex-libris plate, near-square corners, wide letterspacing — a library stamp.
+      <span class="pro">+ Most distinctive; leans hardest into the archive idea</span>
+      <span class="con">− Square corners read “old web”; wide tracking cramps a long label</span></p>
+    </div>
+  </div>
+
+  <h3 style="font-family:'Fraunces',serif;font-size:20px;font-weight:500;margin:40px 0 4px">The bars up close</h3>
+  <p class="desc" style="margin-bottom:18px">Same four, off-device, so the detail is legible.</p>
+  <div class="strip">
+    <div class="sw"><div class="lbl">B1 — The Gold Line</div>
+      <div class="bar2"><div class="b-gold"><span>Add to library</span></div><div class="b-gold-2"><span>Wishlist</span></div></div></div>
+    <div class="sw"><div class="lbl">B2 — Foil &amp; Serif</div>
+      <div class="bar2"><div class="b-foil"><i>❦</i><span>Add to library</span></div><div class="b-foil-2"><span>Wishlist</span></div></div></div>
+    <div class="sw"><div class="lbl">B3 — The Ribbon</div>
+      <div class="bar2"><div class="b-rib"><span>Add to library</span></div><div class="b-rib-2"><span class="ic">🔖</span><span>Wishlist</span></div></div></div>
+    <div class="sw"><div class="lbl">B4 — The Stamp</div>
+      <div class="bar2"><div class="b-stamp"><span>Add to library</span></div><div class="b-stamp-2"><span>Wish</span></div></div></div>
+  </div>
+</div>
+
 <div class="note">
-  <h3>What I’d pick, and why</h3>
-  <p><b>Direction B.</b> It reads calmest, it matches the app’s “quiet, unhurried” voice, and it avoids the
-  one thing this codebase has already been burned by — a floating layer that draws on top of modal sheets.
-  A <code>centerDocked</code> FAB was tried and reverted on 9 Jul for exactly that reason (it punched through
-  the lend sheet), and Direction A reintroduces a bottom-anchored floating bar into the same screen that
-  opens sheets for status, shelves and lending.</p>
-  <p>Direction B’s real cost is that the actions scroll away. That’s worth accepting here: this page is
-  usually short for an unowned book, and the reader who has scrolled to the buy links has already decided
-  something. If it turns out to matter, B can grow A’s pinned bar later as a scroll-triggered addition —
-  the reverse is a rewrite.</p>
-  <h3>Open questions for you</h3>
+  <h3>Round 2 — which button</h3>
+  <p><b>B1, The Gold Line.</b> It borrows the mark’s own device — the gold hairline inset on an oxblood
+  tile — so the primary action is recognisably Kitabi without inventing new vocabulary. It is also the
+  safest at 1x on a small phone: letterspaced caps stay crisp where a serif softens.</p>
+  <p><b>B2 is the one to pick if you want more nerve.</b> Gold foil Fraunces on pressed leather is the most
+  literary thing here and the closest to the “paper and ink, not glass and glow” line in the design doc. I
+  checked the contrast rather than guessing: foil on leather is 6.7:1, comfortably past AA, so the only
+  real cost is that a serif reads softer than caps at 10px. If you like it, the ❦ should become a drawn
+  glyph — as a bare character it renders as a colour emoji on some systems.</p>
+  <p><b>B3 didn’t work</b> and I’ve left it in rather than quietly dropping it. At button proportions the
+  notch reads as a speech-bubble tail; a bookmark needs to be taller than it is wide, which a 42px action
+  bar can’t give it. <b>B4</b> is distinctive but its near-square corners read dated next to every other
+  rounded surface in the app.</p>
+  <p>All four labels pass WCAG AA at normal weight — the weakest is B4’s muted wishlist at 4.6:1.</p>
+  <h3>Still open, from round 1</h3>
   <ul>
     <li><b>Should “Wishlist” be equal-weight with “Add to library”?</b> Mocked as secondary (outlined,
       slate — the wishlist colour). It could be a plain text link if you want the primary action to
