@@ -1522,6 +1522,42 @@ abstract class AppLocalizations {
   /// **'Moved to your library — off your wishlist.'**
   String get bookMovedToLibrary;
 
+  /// Snackbar after finishing a book fills in the page count
+  ///
+  /// In en, this message translates to:
+  /// **'Marked read — p. {total} of {total}.'**
+  String statusReadAllPages(int total);
+
+  /// Dialog title when a book moves back to To read
+  ///
+  /// In en, this message translates to:
+  /// **'Start this book over?'**
+  String get statusClearTitle;
+
+  /// Dialog body asking whether to wipe sessions and notes
+  ///
+  /// In en, this message translates to:
+  /// **'Back to To read. Would you like to clear its reading log and notes as well, or keep them?'**
+  String get statusClearBody;
+
+  /// Button that keeps sessions and notes
+  ///
+  /// In en, this message translates to:
+  /// **'Keep them'**
+  String get statusClearKeep;
+
+  /// Button that clears sessions and notes
+  ///
+  /// In en, this message translates to:
+  /// **'Clear them'**
+  String get statusClearWipe;
+
+  /// Snackbar after clearing a book's sessions and notes
+  ///
+  /// In en, this message translates to:
+  /// **'Log and notes cleared.'**
+  String get statusCleared;
+
   /// Tooltip on the title-bar bookmark when the book isn't wishlisted
   ///
   /// In en, this message translates to:

@@ -48,6 +48,12 @@ Future<StopSessionResult?> showStopSessionSheet(
   return showModalBottomSheet<StopSessionResult>(
     context: context,
     isScrollControlled: true,
+    // Uncapped, a long sittings list pushed the header under the status bar
+    // (owner screenshot, 22 Jul 2026) — a modal sheet's SafeArea can't add top
+    // padding it was never given.
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.of(context).size.height * 0.9,
+    ),
     backgroundColor: AppColors.paper,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -226,8 +232,13 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
             ),
             // N3 — what this sitting already holds. They were saved as they
             // were written, so nothing here is at stake; Skip says so below.
-            if (sessionNotes.isNotEmpty) ...[
+            // Always offered, even for a sitting with no notes yet — the
+            // closing thought is often the only one you want to write, and it
+            // used to be reachable only if you'd already written another
+            // (owner report, 22 Jul 2026).
+            ...[
               const SizedBox(height: 14),
+              if (sessionNotes.isNotEmpty)
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -240,7 +251,7 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
+              if (sessionNotes.isNotEmpty) const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFFF6EEDC),
@@ -267,7 +278,9 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                         decoration: BoxDecoration(
-                          border: Border(top: BorderSide(color: const Color(0xFFE8DCC0))),
+                          border: sessionNotes.isEmpty
+                              ? null
+                              : Border(top: BorderSide(color: const Color(0xFFE8DCC0))),
                         ),
                         child: Text(
                           '+ ${l10n.notesClosingThought}',

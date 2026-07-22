@@ -1696,18 +1696,99 @@ class _ReadingCard extends ConsumerWidget {
   Future<void> _setStatus(BuildContext context, WidgetRef ref, String chosen) async {
     if (chosen == entry.status || !context.mounted) return;
     Haptics.selection();
+
+    // A running timer only makes sense while the book is Reading, so leaving
+    // that status ends the sitting rather than leaving a clock running on a
+    // book you just marked finished (owner report, 22 Jul 2026). Going to
+    // Stopped runs the full stop flow — page and notes, both skippable —
+    // because that's a reader deliberately putting the book down. Read and To
+    // read stop it quietly: the page is about to be settled anyway.
+    final active = ref.read(activeSessionProvider);
+    if (active?.libraryEntryId == entry.id && chosen != 'reading') {
+      if (chosen == 'stopped') {
+        await quickStopSession(context, ref);
+      } else {
+        await ref.read(activeSessionProvider.notifier).stop();
+      }
+      if (!context.mounted) return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final repo = await ref.read(libraryRepositoryProvider.future);
     await repo.updateStatus(entry.id, chosen);
     if (chosen == 'reading' && entry.startDate == null) {
       await repo.updateProgress(entry.id, startDate: DateTime.now());
     }
-    if (chosen == 'read' && entry.finishDate == null) {
-      await repo.updateProgress(entry.id, finishDate: DateTime.now());
+    if (chosen == 'read') {
+      if (entry.finishDate == null) {
+        await repo.updateProgress(entry.id, finishDate: DateTime.now());
+      }
+      // Finishing a book means you read all of it — leaving progress at p. 27
+      // of 200 on a book marked Read is a contradiction the reader would have
+      // to go fix by hand.
+      final total = ref.read(cachedBookProvider(entry.editionId)).valueOrNull?.pageCount;
+      if (total != null && total > 0 && (entry.currentPage ?? 0) < total) {
+        await repo.updateProgress(entry.id, currentPage: total);
+        messenger.showSnackBar(SnackBar(content: Text(l10n.statusReadAllPages(total))));
+      }
     }
     ref.invalidate(libraryEntryProvider(entry.editionId));
+
+    // Back to To read is the one transition that can mean "I'm starting this
+    // over" — so it asks, rather than assuming either way. Keeping is the
+    // default; clearing is never silent.
+    if (chosen == 'pending' && context.mounted) {
+      await _maybeClearHistory(context, ref);
+    }
+    // Putting a book down with no timer running still wants the page settled —
+    // Cancel skips it, and the notes card below is where a parting thought
+    // goes. (With a timer running the full stop flow above already asked.)
+    if (chosen == 'stopped' && active?.libraryEntryId != entry.id && context.mounted) {
+      await _editProgress(context, ref);
+    }
     if (chosen == 'read' && entry.status != 'read' && context.mounted) {
       await _maybePromptReview(context, ref);
     }
+  }
+
+  /// Offers to wipe this book's sittings and notes when it goes back to To
+  /// read. Dismissing the dialog keeps everything — the destructive answer has
+  /// to be chosen explicitly.
+  Future<void> _maybeClearHistory(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
+    final notesRepo = await ref.read(readingNotesRepositoryProvider.future);
+    final sessions = await sessionsRepo.watchForEntry(entry.id).first;
+    final notes = await notesRepo.watchForEntry(entry.id).first;
+    if ((sessions.isEmpty && notes.isEmpty) || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final wipe = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.statusClearTitle),
+        content: Text(l10n.statusClearBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.statusClearKeep)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.statusClearWipe, style: TextStyle(color: AppColors.oxbloodDeep)),
+          ),
+        ],
+      ),
+    );
+    if (wipe != true) return;
+    for (final s in sessions) {
+      await sessionsRepo.deleteSession(s.id);
+    }
+    for (final n in notes) {
+      await notesRepo.remove(n.id);
+    }
+    final repo = await ref.read(libraryRepositoryProvider.future);
+    await repo.updateProgress(entry.id, currentPage: 0);
+    ref.invalidate(libraryEntryProvider(entry.editionId));
+    messenger.showSnackBar(SnackBar(content: Text(l10n.statusCleared)));
   }
 
   Future<void> _editProgress(BuildContext context, WidgetRef ref) async {

@@ -866,6 +866,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookMovedToLibrary => 'Moved to your library — off your wishlist.';
 
   @override
+  String statusReadAllPages(int total) {
+    return 'Marked read — p. $total of $total.';
+  }
+
+  @override
+  String get statusClearTitle => 'Start this book over?';
+
+  @override
+  String get statusClearBody =>
+      'Back to To read. Would you like to clear its reading log and notes as well, or keep them?';
+
+  @override
+  String get statusClearKeep => 'Keep them';
+
+  @override
+  String get statusClearWipe => 'Clear them';
+
+  @override
+  String get statusCleared => 'Log and notes cleared.';
+
+  @override
   String get bookWishlistAdd => 'Add to wishlist';
 
   @override
