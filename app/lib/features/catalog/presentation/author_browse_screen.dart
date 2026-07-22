@@ -140,9 +140,12 @@ class AuthorBrowseScreen extends ConsumerWidget {
                     icon: Icon(Icons.person_outline, size: 16, color: AppColors.oxblood),
                     label: Text(l10n.authorBrowseViewProfile),
                     style: OutlinedButton.styleFrom(foregroundColor: AppColors.oxblood),
-                  )
-                else
-                  _LinkAuthorAction(authorId: authorId),
+                  ),
+                // "This is me" is hidden until claims can actually be
+                // verified — self-declared authorship on a shared catalogue
+                // is an invitation to misuse (owner decision, 22 Jul 2026).
+                // The linking code below stays: nothing is deleted, the
+                // control just isn't offered.
                 SizedBox(height: 20),
                 if (works.isEmpty)
                   Padding(

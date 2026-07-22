@@ -412,12 +412,10 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
             ),
             const SizedBox(height: 8),
             PickerField(label: l10n.pickerFieldBio, controller: _bio, maxLines: 3),
-            const SizedBox(height: 4),
-            PickerCheckbox(
-              label: l10n.authorPickerIsMe,
-              value: _isMe,
-              onChanged: (v) => setState(() => _isMe = v),
-            ),
+            // Hidden alongside the author page's "This is me" — the same
+            // unverifiable claim, and leaving this one standing would keep the
+            // misuse route open (owner decision, 22 Jul 2026). `_isMe` stays
+            // wired and simply reads false; restoring is one widget.
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
