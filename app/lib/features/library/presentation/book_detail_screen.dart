@@ -130,55 +130,86 @@ class _BookDetailBodyState extends ConsumerState<_BookDetailBody> {
     final publisher = edition?['publisher'] as Map<String, dynamic>?;
     final workId = work['id'] as String;
 
-    return ListView(
+    // A book with no library entry has no "yours" to show, so the tab bar
+    // describes a relationship the reader doesn't have yet. It's dropped
+    // entirely and the book introduces itself instead — details in full, with
+    // the two ways in pinned to the bottom (owner decision, 23 Jul 2026;
+    // docs/book-page-unowned-mockup.html, direction A + B2).
+    final unowned = entry.hasValue && entry.value == null;
+
+    final about = _AboutTabContent(
+      work: work,
+      edition: edition,
+      editionId: editionId,
+      genres: genres,
+    );
+
+    return Stack(
       children: [
-        _Frontispiece(
-          work: work,
-          edition: edition,
-          editionId: editionId,
-          authors: authors,
-          genres: genres,
-          publisher: publisher,
-          onTapRating: () => setState(() => _tab = _BookTab.about),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(13, 12, 13, 0),
-          child: _TabBar(selected: _tab, onChanged: (t) => setState(() => _tab = t)),
-        ),
-        SizedBox(height: 12),
-        Padding(
-          padding: EdgeInsets.fromLTRB(13, 0, 13, 24),
-          child: switch (_tab) {
-            _BookTab.yours => entry.when(
-                loading: () => Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(child: Text('$err')),
-                data: (libraryEntry) => libraryEntry == null
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _AddToLibraryButton(work: work, edition: edition ?? {'id': editionId}),
-                          // A borrowed (unowned) book still shows its history —
-                          // "from Anu · out now", close-out action and all.
-                          SizedBox(height: 8),
-                          _LendingCard(editionId: editionId),
-                        ],
-                      )
-                    : _YoursTabContent(
-                        entry: libraryEntry,
-                        workId: workId,
-                        title: work['title'] as String?,
-                        author: authors.isNotEmpty ? authors.first['name'] as String? : null,
-                        coverUrl: edition?['cover_url'] as String?,
-                      ),
+        ListView(
+          // Clear the pinned bar so the last section isn't trapped under it.
+          padding: EdgeInsets.only(bottom: unowned ? 84 : 0),
+          children: [
+            _Frontispiece(
+              work: work,
+              edition: edition,
+              editionId: editionId,
+              authors: authors,
+              genres: genres,
+              publisher: publisher,
+              onTapRating: unowned ? null : () => setState(() => _tab = _BookTab.about),
+            ),
+            if (unowned)
+              Padding(
+                padding: EdgeInsets.fromLTRB(13, 14, 13, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    about,
+                    // A borrowed (unowned) book still shows its history —
+                    // "from Anu · out now", close-out action and all.
+                    SizedBox(height: 8),
+                    _LendingCard(editionId: editionId),
+                  ],
+                ),
+              )
+            else ...[
+              Padding(
+                padding: EdgeInsets.fromLTRB(13, 12, 13, 0),
+                child: _TabBar(selected: _tab, onChanged: (t) => setState(() => _tab = t)),
               ),
-            _BookTab.about => _AboutTabContent(
-                work: work,
-                edition: edition,
-                editionId: editionId,
-                genres: genres,
+              SizedBox(height: 12),
+              Padding(
+                padding: EdgeInsets.fromLTRB(13, 0, 13, 24),
+                child: switch (_tab) {
+                  _BookTab.yours => entry.when(
+                      loading: () => Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(child: Text('$err')),
+                      // Non-null by construction here: a null entry is the
+                      // `unowned` branch above.
+                      data: (libraryEntry) => libraryEntry == null
+                          ? SizedBox.shrink()
+                          : _YoursTabContent(
+                              entry: libraryEntry,
+                              workId: workId,
+                              title: work['title'] as String?,
+                              author: authors.isNotEmpty ? authors.first['name'] as String? : null,
+                              coverUrl: edition?['cover_url'] as String?,
+                            ),
+                    ),
+                  _BookTab.about => about,
+                },
               ),
-          },
+            ],
+          ],
         ),
+        if (unowned)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _UnownedActionsBar(work: work, edition: edition ?? {'id': editionId}),
+          ),
       ],
     );
   }
@@ -262,7 +293,9 @@ class _Frontispiece extends ConsumerWidget {
   final List<Map<String, dynamic>> authors;
   final List<Map<String, dynamic>> genres;
   final Map<String, dynamic>? publisher;
-  final VoidCallback onTapRating;
+  /// Jumps to the About tab. Null on a book that isn't in the library — there
+  /// is no tab bar to jump to, so the rating cluster is plain text there.
+  final VoidCallback? onTapRating;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1387,11 +1420,28 @@ class _LibraryEntryMenu extends ConsumerWidget {
   }
 }
 
-class _AddToLibraryButton extends ConsumerWidget {
-  const _AddToLibraryButton({required this.work, required this.edition});
+/// The pinned action bar shown on a book that isn't in the reader's library.
+///
+/// "Foil & Serif" (mockup round 2, direction B2 — docs/book-page-unowned-mockup.html):
+/// the primary reads as a plate of pressed leather with a gold-foil serif label,
+/// the secondary as its paper counterpart.
+///
+/// The leather keeps its light-mode colours in dark mode on purpose, the way
+/// [AppColors.night] does for the scanner. It is a physical object rather than a
+/// themed surface — and the themed token can't carry it: `oxblood` lightens to
+/// #C06770 at night, where the foil drops to 2.8:1 and no label colour holds up
+/// across the gradient. Fixed leather keeps the foil at 6.7:1 in both themes.
+class _UnownedActionsBar extends ConsumerWidget {
+  const _UnownedActionsBar({required this.work, required this.edition});
 
   final Map<String, dynamic> work;
   final Map<String, dynamic> edition;
+
+  // Pressed leather + foil. Deliberately not AppColors — see the class doc.
+  static const _leather = Color(0xFF7E2A33);
+  static const _leatherDeep = Color(0xFF571E25);
+  static const _foil = Color(0xFFEFD9A4);
+  static const _foilDim = Color(0xFFC9A253);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1400,45 +1450,156 @@ class _AddToLibraryButton extends ConsumerWidget {
 
     // Cache before creating the entry so the grid/home cover tiles that
     // rebuild on the insert already find the catalog data (rule 2).
-    Future<void> addEntry({String status = 'pending'}) async {
+    Future<void> addEntry(String status) async {
       await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
       final repo = await ref.read(libraryRepositoryProvider.future);
       await repo.add(editionId: editionId, status: status);
       ref.invalidate(libraryEntryProvider(editionId));
     }
 
-    return Row(children: [
-      Expanded(
-        child: ElevatedButton(
-          onPressed: addEntry,
-          child: Text(l10n.bookAddToLibrary),
+    return Container(
+      padding: EdgeInsets.fromLTRB(13, 10, 13, 14),
+      decoration: BoxDecoration(
+        // Paper fades up behind the bar rather than stopping at a hard edge.
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.paper.withValues(alpha: 0.82), AppColors.paper],
+          stops: const [0, 0.42],
         ),
+        border: Border(top: BorderSide(color: AppColors.gold)),
       ),
-      SizedBox(width: 8),
-      // The other half of the question this page asks: owning it and wanting
-      // it are different answers, and wishlisting used to be reachable only
-      // through the status sheet — which U5 removed.
-      Tooltip(
-        message: l10n.bookWishlistAdd,
-        child: OutlinedButton(
-          onPressed: () async {
-            Haptics.selection();
-            final messenger = ScaffoldMessenger.of(context);
-            await addEntry(status: 'wishlist');
-            messenger.showSnackBar(SnackBar(content: Text(l10n.bookWishlistAdded)));
-          },
-          style: OutlinedButton.styleFrom(
-            minimumSize: Size(50, 46),
-            padding: EdgeInsets.zero,
-            side: BorderSide(color: AppColors.slate),
-            foregroundColor: AppColors.slate,
+      child: Row(
+        children: [
+          Expanded(
+            child: _LeatherPlate(
+              label: l10n.bookAddToLibrary,
+              onTap: () async {
+                Haptics.selection();
+                await addEntry('pending');
+              },
+            ),
           ),
-          child: Icon(Icons.bookmark_outline, size: 20),
-        ),
+          SizedBox(width: 9),
+          _PaperPlate(
+            label: l10n.bookWishlistShort,
+            onTap: () async {
+              Haptics.selection();
+              final messenger = ScaffoldMessenger.of(context);
+              await addEntry('wishlist');
+              messenger.showSnackBar(SnackBar(content: Text(l10n.bookWishlistAdded)));
+            },
+          ),
+        ],
       ),
-    ]);
+    );
   }
 }
+
+/// The primary: gold-foil Fraunces on pressed leather, with the ❦ the design
+/// doc asks for (already rendered as plain text elsewhere in the app).
+class _LeatherPlate extends StatelessWidget {
+  const _LeatherPlate({required this.label, required this.onTap});
+
+  final String label;
+  final Future<void> Function() onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(9),
+        child: Ink(
+          height: 46,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_UnownedActionsBar._leather, _UnownedActionsBar._leatherDeep],
+            ),
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.55)),
+            boxShadow: [
+              BoxShadow(
+                color: _UnownedActionsBar._leatherDeep.withValues(alpha: 0.34),
+                blurRadius: 14,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('❦', style: TextStyle(color: _UnownedActionsBar._foilDim, fontSize: 13)),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.fraunces(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: _UnownedActionsBar._foil,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The secondary: the paper counterpart to the leather plate — a gold hairline
+/// on card stock. Its label follows the theme (the foil does not), so it takes
+/// gold at night where oxblood would sit at 4.4:1 on the dark card.
+class _PaperPlate extends StatelessWidget {
+  const _PaperPlate({required this.label, required this.onTap});
+
+  final String label;
+  final Future<void> Function() onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(9),
+        child: Ink(
+          height: 46,
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: AppColors.gold),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.fraunces(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.dark ? AppColors.gold : AppColors.oxblood,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// _AddToLibraryButton lived here. It was the old in-page Add + icon-only
+// wishlist row, replaced by _UnownedActionsBar's pinned bar. Its wishlist
+// action was an unlabelled bookmark glyph whose only label sat in a Tooltip —
+// which on touch needs a long-press, so it effectively shipped unlabelled.
 
 /// The Yours tab's content: what's yours about this specific copy — status,
 /// progress, your review (with your own rating), notes, lending, tags. The

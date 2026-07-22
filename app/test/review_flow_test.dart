@@ -163,7 +163,9 @@ void main() {
     await settle(tester);
 
     expect(find.text('Add to my library'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.bookmark_outline));
+    // Wishlist is a labelled plate in the pinned bar now, not an icon whose
+    // only label lived in a Tooltip (so, on touch, no label at all).
+    await tester.tap(find.text('Wishlist'));
     await settle(tester);
 
     // Wishlisted: no reading stage, and the one move that matters.
@@ -273,14 +275,17 @@ void main() {
     await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
     await settle(tester);
 
-    // About is its own tab now — the Yours tab (status/review/notes/lending)
-    // shows by default.
-    await tester.tap(find.text('ABOUT'));
-    await settle(tester);
+    // This book isn't in the library, so there is no "yours" to tab between —
+    // the tab bar is gone and the book introduces itself straight away.
+    expect(find.text('YOURS'), findsNothing);
+    expect(find.text('ABOUT'), findsNothing);
 
     expect(find.text('ABOUT THIS BOOK'), findsOneWidget);
     expect(find.text('A sea-salted love story of Kuttanad.'), findsOneWidget);
     expect(find.text('Improve this entry'), findsOneWidget);
+    // ...with both ways in pinned to the bottom.
+    expect(find.text('Add to my library'), findsOneWidget);
+    expect(find.text('Wishlist'), findsOneWidget);
 
     await flushTree(tester);
   });
