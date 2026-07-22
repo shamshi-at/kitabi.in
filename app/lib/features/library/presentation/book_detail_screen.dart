@@ -1820,6 +1820,8 @@ class _ReadingCard extends ConsumerWidget {
     // progress can only ever be "p. 42", never a percentage.
     final knownTotal = ref.read(cachedBookProvider(entry.editionId)).valueOrNull?.pageCount;
     final controller = TextEditingController(text: entry.currentPage?.toString() ?? '');
+    // Pre-selected, so the autofocused field is overwritten by the first digit.
+    controller.selection = TextSelection(baseOffset: 0, extentOffset: controller.text.length);
     final totalController = TextEditingController();
     // The start date is stamped automatically the first time a book goes to
     // Reading — which is right, until it isn't: a book you began last month
@@ -1839,6 +1841,14 @@ class _ReadingCard extends ConsumerWidget {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: l10n.bookCurrentPage),
                 autofocus: true,
+                // Typing a new page should replace the old one, not append to
+                // it — nobody wants to backspace "127" to write "9" (owner
+                // report, 22 Jul 2026). Same replace-on-tap the stop sheet's
+                // page entry already uses.
+                onTap: () => controller.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: controller.text.length,
+                ),
               ),
               if (knownTotal == null)
                 TextField(
