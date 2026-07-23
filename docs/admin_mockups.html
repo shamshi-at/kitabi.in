@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi Admin — admin.kitabi.in mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Kitabi Admin — the back office for admin.kitabi.in
+   Same Reading Room tokens as the app (docs/screen-design.md),
+   but denser and desk-bound: this is a tool, not a reading room.
+   The one deliberate departure is the dark oxblood-brown rail —
+   it separates "operating Kitabi" from "using Kitabi" at a glance.
+   ============================================================ */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+  --panel:#332419; --panel-2:#241811;
+  --danger:#A03A2B;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:#E7DFCC;color:var(--ink);padding-bottom:90px}
+code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+
+/* ---------- page chrome ---------- */
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:58px 32px 46px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero .mark{width:54px;height:54px;border-radius:12px;background:var(--gold);color:#241811;
+  font-family:'Fraunces',serif;font-size:30px;font-weight:600;display:inline-flex;
+  align-items:center;justify-content:center;box-shadow:0 10px 28px rgba(0,0,0,.45)}
+.hero h1{font-family:'Fraunces',serif;font-size:42px;font-weight:400;margin:16px 0 6px}
+.hero .url{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--gold);letter-spacing:.5px}
+.hero .tag{font-size:15px;color:#CBB897;max-width:720px;margin:14px auto 0;line-height:1.65}
+.toc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:1040px;margin:26px auto 0;padding:0 24px}
+.toc a{font-size:12px;font-weight:600;color:#E9DCC2;text-decoration:none;
+  border:1px solid rgba(240,226,194,.28);padding:6px 13px;border-radius:999px;transition:.15s}
+.toc a:hover{background:var(--gold);color:#241811;border-color:var(--gold)}
+
+.area{max-width:1460px;margin:60px auto 0;padding:0 32px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.area h2{font-family:'Fraunces',serif;font-size:29px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:9px 0 24px;max-width:920px;font-size:14.5px;line-height:1.68}
+.row{display:flex;flex-wrap:wrap;gap:30px;align-items:flex-start}
+.cap{font-size:12px;color:#6d5f4b;margin-top:10px;max-width:1180px;line-height:1.6}
+.cap b{color:var(--ink)}
+
+/* ---------- the console frame ---------- */
+.win{width:1180px;background:var(--paper);border-radius:12px;overflow:hidden;
+  box-shadow:0 26px 60px rgba(60,42,25,.30);border:1px solid #cbbb9c}
+.win.narrow{width:560px}
+.chrome{height:34px;background:#DED2B7;display:flex;align-items:center;gap:7px;padding:0 13px;
+  border-bottom:1px solid #cbbb9c}
+.dot{width:10px;height:10px;border-radius:50%;background:#bfae8e}
+.chrome .addr{margin-left:12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#6d5f4b;
+  background:#F3EBD9;border:1px solid #cbbb9c;border-radius:5px;padding:3px 12px}
+.body{display:flex;min-height:690px}
+
+/* ---------- left rail ---------- */
+.rail{width:212px;background:var(--panel);color:#E7DBC4;padding:16px 0;flex-shrink:0;
+  display:flex;flex-direction:column}
+.rail .brand{display:flex;align-items:center;gap:9px;padding:0 16px 15px;border-bottom:1px solid rgba(240,226,194,.14)}
+.rail .brand i{width:28px;height:28px;border-radius:7px;background:var(--gold);color:#241811;
+  font-family:'Fraunces',serif;font-weight:600;font-size:17px;display:flex;align-items:center;
+  justify-content:center;font-style:normal}
+.rail .brand b{font-family:'Fraunces',serif;font-weight:500;font-size:15.5px}
+.rail .brand s{display:block;font-size:9.5px;letter-spacing:1.5px;color:#9d8b6c;text-decoration:none}
+.rail .grp{font-size:9px;letter-spacing:1.5px;color:#8d7c60;padding:16px 16px 7px;font-weight:700}
+.rail a{display:flex;align-items:center;gap:9px;padding:8px 16px;color:#D7C9AE;text-decoration:none;
+  font-size:13px;border-left:3px solid transparent}
+.rail a:hover{background:rgba(240,226,194,.06)}
+.rail a.on{background:rgba(184,134,43,.16);border-left-color:var(--gold);color:#F6F0E3;font-weight:600}
+.rail a .n{margin-left:auto;background:var(--oxblood);color:#fff;font-size:10px;font-weight:700;
+  border-radius:999px;padding:1px 7px}
+.rail .who{margin-top:auto;padding:13px 16px 0;border-top:1px solid rgba(240,226,194,.14);font-size:11.5px}
+.rail .who b{display:block;color:#F6F0E3;font-size:12.5px;font-weight:600}
+.rail .who s{text-decoration:none;color:#9d8b6c;font-size:10.5px}
+.rail .who .sa{display:inline-block;margin-top:5px;background:var(--gold);color:#241811;font-size:9px;
+  font-weight:700;letter-spacing:.8px;border-radius:3px;padding:2px 6px}
+
+/* ---------- main ---------- */
+.main{flex:1;background:var(--paper);min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:14px;padding:15px 22px;border-bottom:1px solid var(--line);
+  background:var(--card)}
+.top h3{font-family:'Fraunces',serif;font-size:19px;font-weight:500}
+.top .sub{font-size:11.5px;color:var(--ink-soft)}
+.top .sp{margin-left:auto;display:flex;gap:9px;align-items:center}
+.search{background:var(--paper-deep);border:1px solid var(--line);border-radius:7px;
+  padding:6px 12px;font-size:12.5px;color:var(--ink-soft);width:230px}
+.content{padding:20px 22px;overflow:auto}
+
+/* ---------- primitives ---------- */
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:7px;
+  padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn.p{background:var(--oxblood);border-color:var(--oxblood);color:#fff}
+.btn.d{background:#fff;border-color:#E3C4BE;color:var(--danger)}
+.btn.g{background:var(--moss);border-color:var(--moss);color:#fff}
+.btn.s{padding:4px 10px;font-size:11.5px}
+.pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px}
+.pill.pend{background:#F2E6C4;color:#8F681E}
+.pill.ok{background:#E3EAD9;color:var(--moss)}
+.pill.no{background:#F3DFDA;color:var(--oxblood)}
+.pill.info{background:#DEE7EF;color:var(--slate)}
+.pill.mute{background:#EAE4D6;color:var(--stamp-grey)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px}
+.lbl{font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);
+  font-weight:700;padding:9px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid #EFE7D6;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+td .t{font-weight:600}
+td .m{color:var(--ink-soft);font-size:11.5px}
+.tbl{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 14px}
+.kpi .v{font-family:'Fraunces',serif;font-size:29px;font-weight:500;line-height:1.05}
+.kpi .k{font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-soft);
+  font-weight:700;margin-top:5px}
+.kpi .d{font-size:11px;margin-top:6px;font-weight:600}
+.kpi .d.up{color:var(--moss)} .kpi .d.dn{color:var(--oxblood)} .kpi .d.fl{color:var(--stamp-grey)}
+
+/* ---------- charts (pure CSS/SVG) ---------- */
+.bars{display:flex;align-items:flex-end;gap:7px;height:132px;padding-top:6px}
+.bars div{flex:1;background:linear-gradient(180deg,var(--gold) 0%,var(--gold-soft) 100%);
+  border-radius:3px 3px 0 0;position:relative}
+.bars div span{position:absolute;bottom:-17px;left:0;right:0;text-align:center;font-size:9px;color:var(--ink-soft)}
+.legend2{display:flex;gap:14px;font-size:11px;color:var(--ink-soft);margin-top:22px}
+.legend2 i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px}
+
+/* ---------- misc ---------- */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.split3{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+.stack>*+*{margin-top:12px}
+.mod{border:1px solid var(--line);background:var(--card);border-radius:10px;overflow:hidden}
+.mod .hd{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--paper-deep);
+  border-bottom:1px solid var(--line)}
+.mod .hd b{font-size:13.5px}
+.mod .bd{padding:13px 14px}
+.diff{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px}
+.diff .was{background:#F6EFEA;border:1px solid #E9D6CE;border-radius:7px;padding:9px 11px}
+.diff .now{background:#EDF2E8;border:1px solid #D6E2CB;border-radius:7px;padding:9px 11px}
+.diff .lbl2{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+.diff .was .lbl2{color:#9A5A4C} .diff .now .lbl2{color:#4d6b42}
+
+.auth{padding:44px 40px;text-align:center}
+.auth .m2{width:46px;height:46px;border-radius:11px;background:var(--oxblood);color:var(--gold);
+  font-family:'Fraunces',serif;font-size:26px;font-weight:600;display:inline-flex;align-items:center;
+  justify-content:center;margin-bottom:16px}
+.auth h4{font-family:'Fraunces',serif;font-size:22px;font-weight:500;margin-bottom:6px}
+.auth p{font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:20px}
+.fld{text-align:left;margin-bottom:12px}
+.fld label{display:block;font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--ink-soft);font-weight:700;margin-bottom:5px}
+.fld .in{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  font-size:13px;color:var(--ink)}
+.fld .in.ph{color:#b3a68d}
+.otp{display:flex;gap:9px;justify-content:center;margin:6px 0 18px}
+.otp i{width:44px;height:54px;border:1px solid var(--line);background:var(--card);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;
+  font-size:22px;font-style:normal;color:var(--ink)}
+.otp i.e{color:#cdbfa5}
+.qr{width:132px;height:132px;background:
+  repeating-linear-gradient(0deg,#2B2118 0 6px,#fff 6px 12px),
+  repeating-linear-gradient(90deg,#2B2118 0 6px,transparent 6px 12px);
+  border:6px solid #fff;box-shadow:0 0 0 1px var(--line);border-radius:6px;margin:0 auto 14px}
+.recov{background:var(--paper-deep);border:1px dashed var(--line);border-radius:8px;padding:12px;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink-soft);
+  display:grid;grid-template-columns:1fr 1fr;gap:5px 16px;text-align:left}
+.note{background:#FBF6E8;border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:11px 14px;
+  font-size:12px;color:#6d5f4b;line-height:1.6}
+.notes{max-width:1180px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 26px}
+.notes h3{font-family:'Fraunces',serif;font-size:20px;font-weight:500;margin-bottom:12px}
+.notes h4{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--oxblood);
+  font-weight:700;margin:20px 0 8px}
+.notes p,.notes li{font-size:13.5px;line-height:1.72;color:#514434}
+.notes ul{padding-left:20px} .notes li{margin-bottom:6px}
+.notes code{background:var(--paper-deep);border:1px solid var(--line);border-radius:4px;
+  padding:1px 5px;font-size:12px}
+.q{background:#F3DFDA;border-left:3px solid var(--oxblood);border-radius:0 8px 8px 0;padding:12px 15px;
+  font-size:13px;line-height:1.65;color:#5E1F26;margin-top:10px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="mark">K</div>
+  <h1>Kitabi Admin</h1>
+  <div class="url">admin.kitabi.in</div>
+  <p class="tag">The back office: what the numbers say, what is waiting to be judged, and who is allowed
+  to judge it. Same Reading Room palette as the app so it never feels like a different product — but a
+  dark rail and a denser grid, because this is a desk, not a reading chair.</p>
+  <div class="toc">
+    <a href="#access">1 · Access</a>
+    <a href="#dash">2 · Dashboard</a>
+    <a href="#claims">3 · Author claims</a>
+    <a href="#edits">4 · Suggested edits</a>
+    <a href="#reports">5 · Reported content</a>
+    <a href="#catalog">6 · Catalog ops</a>
+    <a href="#readers">7 · Readers</a>
+    <a href="#admins">8 · Admin users</a>
+    <a href="#audit">9 · Audit log</a>
+    <a href="#health">10 · System health</a>
+    <a href="#model">Notes & data model</a>
+  </div>
+</div>
+
+<!-- ================= 1 · ACCESS ================= -->
+<div class="area" id="access">
+  <div class="ah"><span class="an">1 · Access</span><h2>Sign in, second factor, enrolment</h2></div>
+  <p class="desc">Admin auth is deliberately <b>separate from reader auth</b>. Readers sign in with Google
+  or Apple through Supabase; an admin signs in with an email, a password, and a six-digit code from an
+  authenticator app. Nothing about being a reader grants any admin power, and the admin table is not the
+  profiles table — so a compromised Google account cannot reach moderation.</p>
+
+  <div class="row">
+    <div>
+      <div class="win narrow">
+        <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+          <span class="addr">admin.kitabi.in/sign-in</span></div>
+        <div class="auth">
+          <div class="m2">K</div>
+          <h4>Kitabi Admin</h4>
+          <p>Staff access only. Reader accounts do not sign in here.</p>
+          <div class="fld"><label>Email</label><div class="in">at.shamshi@gmail.com</div></div>
+          <div class="fld"><label>Password</label><div class="in">••••••••••••</div></div>
+          <button class="btn p" style="width:100%;padding:11px;margin-top:4px">Continue</button>
+          <p style="margin:16px 0 0;font-size:11.5px">Forgotten password? Reset by email — the second
+          factor is still required afterwards.</p>
+        </div>
+      </div>
+      <p class="cap"><b>S1 · Sign in.</b> No "sign up" link anywhere: an admin exists only because another
+      admin invited them. Failed attempts are rate-limited and land in the audit log.</p>
+    </div>
+
+    <div>
+      <div class="win narrow">
+        <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+          <span class="addr">admin.kitabi.in/sign-in/2fa</span></div>
+        <div class="auth">
+          <div class="m2">K</div>
+          <h4>Two-factor code</h4>
+          <p>Open your authenticator app and enter the current code for <b>Kitabi Admin</b>.</p>
+          <div class="otp"><i>4</i><i>0</i><i>7</i><i>2</i><i class="e">–</i><i class="e">–</i></div>
+          <button class="btn p" style="width:100%;padding:11px">Verify</button>
+          <p style="margin:16px 0 0;font-size:11.5px">Lost your device? <b>Use a recovery code</b></p>
+        </div>
+      </div>
+      <p class="cap"><b>S2 · TOTP.</b> Standard RFC-6238, 30-second window, ±1 step of drift allowed.
+      A used code is refused for its whole window, so a shoulder-surfed code is worthless.</p>
+    </div>
+
+    <div>
+      <div class="win narrow">
+        <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+          <span class="addr">admin.kitabi.in/enrol</span></div>
+        <div class="auth">
+          <h4 style="margin-top:4px">Set up your authenticator</h4>
+          <p>Scan with Google Authenticator, 1Password, Aegis — any TOTP app.</p>
+          <div class="qr"></div>
+          <div class="fld"><label>Or enter this key</label>
+            <div class="in mono" style="font-size:12px;letter-spacing:1.5px">JBSW Y3DP EHPK 3PXP</div></div>
+          <div class="fld" style="margin-top:14px"><label>Recovery codes — save these now</label>
+            <div class="recov">
+              <span>4f2a-91cd</span><span>7b30-2e6f</span>
+              <span>a18c-45de</span><span>c902-77ab</span>
+              <span>e35b-16f0</span><span>d740-8c21</span>
+            </div>
+          </div>
+          <button class="btn p" style="width:100%;padding:11px;margin-top:6px">I have saved them — finish</button>
+        </div>
+      </div>
+      <p class="cap"><b>S3 · Enrolment.</b> Forced on first sign-in; an admin with no second factor can
+      reach nothing but this screen. Recovery codes are shown once, stored hashed, and each is single-use.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 2 · DASHBOARD ================= -->
+<div class="area" id="dash">
+  <div class="ah"><span class="an">2 · Dashboard</span><h2>What the numbers say</h2></div>
+  <p class="desc">The landing screen answers three questions in one glance: is the product growing, is the
+  catalog healthy, and is anything waiting on me. Everything here is read-only — the queues are one click away.</p>
+
+  <div class="win">
+    <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+      <span class="addr">admin.kitabi.in/</span></div>
+    <div class="body">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s style="font-size:9px;letter-spacing:1.4px;color:#9d8b6c">ADMIN</s></div></div>
+        <div class="grp">OVERVIEW</div>
+        <a class="on" href="#dash">◧ Dashboard</a>
+        <a href="#health">◈ System health</a>
+        <div class="grp">MODERATION</div>
+        <a href="#claims">✍ Author claims <span class="n">3</span></a>
+        <a href="#edits">✎ Suggested edits <span class="n">7</span></a>
+        <a href="#reports">⚑ Reported content <span class="n">2</span></a>
+        <div class="grp">CATALOG</div>
+        <a href="#catalog">▤ Works &amp; editions</a>
+        <a href="#catalog">⧉ Duplicates</a>
+        <a href="#catalog">◔ Quality gaps</a>
+        <div class="grp">PEOPLE</div>
+        <a href="#readers">☺ Readers</a>
+        <a href="#admins">⚿ Admin users</a>
+        <div class="grp">TRUST</div>
+        <a href="#audit">◇ Audit log</a>
+        <div class="who"><b>Shamsheer</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top">
+          <div><h3>Dashboard</h3><div class="sub">Thursday, 23 July 2026 · last refreshed 2 min ago</div></div>
+          <div class="sp"><span class="btn s">Last 30 days ▾</span><span class="btn s">Export CSV</span></div>
+        </div>
+        <div class="content">
+          <div class="kpis">
+            <div class="kpi"><div class="v">1,284</div><div class="k">Readers</div><div class="d up">▲ 12.4% vs prev</div></div>
+            <div class="kpi"><div class="v">417</div><div class="k">Active this week</div><div class="d up">▲ 6.1%</div></div>
+            <div class="kpi"><div class="v">21,908</div><div class="k">Works in catalog</div><div class="d up">▲ 100 seeded</div></div>
+            <div class="kpi"><div class="v">3,472</div><div class="k">Books shelved</div><div class="d up">▲ 8.8%</div></div>
+            <div class="kpi"><div class="v">12</div><div class="k">Awaiting review</div><div class="d dn">▲ 4 since Mon</div></div>
+          </div>
+
+          <div class="split3" style="margin-top:14px">
+            <div class="card">
+              <div class="lbl">Readers &amp; books added — last 12 weeks</div>
+              <div class="bars" style="margin-top:12px">
+                <div style="height:34%"></div><div style="height:41%"></div><div style="height:38%"></div>
+                <div style="height:52%"></div><div style="height:47%"></div><div style="height:61%"></div>
+                <div style="height:58%"></div><div style="height:72%"></div><div style="height:69%"></div>
+                <div style="height:84%"></div><div style="height:91%"></div><div style="height:100%"></div>
+              </div>
+              <div class="legend2"><span><i style="background:var(--gold)"></i>New readers</span>
+                <span><i style="background:var(--oxblood)"></i>Books shelved</span>
+                <span style="margin-left:auto;color:var(--moss);font-weight:600">Steady climb, no plateau yet</span></div>
+            </div>
+            <div class="card">
+              <div class="lbl">Catalog health</div>
+              <div class="stack" style="margin-top:11px;font-size:12.5px">
+                <div style="display:flex;justify-content:space-between"><span>With cover</span><b>38%</b></div>
+                <div style="height:6px;background:var(--paper-deep);border-radius:3px"><div style="width:38%;height:100%;background:var(--oxblood);border-radius:3px"></div></div>
+                <div style="display:flex;justify-content:space-between"><span>With description</span><b>31%</b></div>
+                <div style="height:6px;background:var(--paper-deep);border-radius:3px"><div style="width:31%;height:100%;background:var(--gold);border-radius:3px"></div></div>
+                <div style="display:flex;justify-content:space-between"><span>With ISBN</span><b>64%</b></div>
+                <div style="height:6px;background:var(--paper-deep);border-radius:3px"><div style="width:64%;height:100%;background:var(--moss);border-radius:3px"></div></div>
+                <div style="display:flex;justify-content:space-between"><span>Native script (Indic)</span><b>93%</b></div>
+                <div style="height:6px;background:var(--paper-deep);border-radius:3px"><div style="width:93%;height:100%;background:var(--slate);border-radius:3px"></div></div>
+              </div>
+              <div class="note" style="margin-top:12px">Covers are the weak column — thin pages are also
+              the slowest for Google to index.</div>
+            </div>
+          </div>
+
+          <div class="split" style="margin-top:14px">
+            <div class="tbl">
+              <table>
+                <tr><th colspan="3">Most shelved this month</th></tr>
+                <tr><td class="t">ചെമ്മീൻ</td><td class="m">Thakazhi</td><td style="text-align:right"><b>84</b></td></tr>
+                <tr><td class="t">രണ്ടു മുദ്ര</td><td class="m">Ambikasutan Mangad</td><td style="text-align:right"><b>61</b></td></tr>
+                <tr><td class="t">Ivory Throne</td><td class="m">Manu S. Pillai</td><td style="text-align:right"><b>47</b></td></tr>
+                <tr><td class="t">ആടുജീവിതം</td><td class="m">Benyamin</td><td style="text-align:right"><b>39</b></td></tr>
+              </table>
+            </div>
+            <div class="tbl">
+              <table>
+                <tr><th colspan="3">Reading activity</th></tr>
+                <tr><td class="t">Sessions logged</td><td class="m">last 7 days</td><td style="text-align:right"><b>2,140</b></td></tr>
+                <tr><td class="t">Hours read</td><td class="m">last 7 days</td><td style="text-align:right"><b>786</b></td></tr>
+                <tr><td class="t">Books finished</td><td class="m">last 7 days</td><td style="text-align:right"><b>96</b></td></tr>
+                <tr><td class="t">Loans out now</td><td class="m">17 overdue</td><td style="text-align:right"><b>203</b></td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>S4 · Dashboard.</b> The rail's red badges are the whole point of the screen — an admin
+  should be able to tell in one second whether anything is waiting. Numbers are illustrative.</p>
+</div>
+
+<!-- ================= 3 · AUTHOR CLAIMS ================= -->
+<div class="area" id="claims">
+  <div class="ah"><span class="an">3 · Moderation</span><h2>Author claims — "This is me"</h2></div>
+  <p class="desc">The queue that prompted this whole console. A reader taps "This is me" on an author page;
+  nothing about the shared catalog changes until an admin approves it, because self-declared authorship is
+  unverifiable and sits on data every reader sees. Approving is the <i>only</i> path that writes
+  <code>authors.linked_user_id</code>.</p>
+
+  <div class="win">
+    <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+      <span class="addr">admin.kitabi.in/moderation/claims</span></div>
+    <div class="body">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s style="font-size:9px;letter-spacing:1.4px;color:#9d8b6c">ADMIN</s></div></div>
+        <div class="grp">OVERVIEW</div>
+        <a href="#dash">◧ Dashboard</a><a href="#health">◈ System health</a>
+        <div class="grp">MODERATION</div>
+        <a class="on" href="#claims">✍ Author claims <span class="n">3</span></a>
+        <a href="#edits">✎ Suggested edits <span class="n">7</span></a>
+        <a href="#reports">⚑ Reported content <span class="n">2</span></a>
+        <div class="grp">CATALOG</div>
+        <a href="#catalog">▤ Works &amp; editions</a><a href="#catalog">⧉ Duplicates</a>
+        <div class="grp">PEOPLE</div>
+        <a href="#readers">☺ Readers</a><a href="#admins">⚿ Admin users</a>
+        <div class="grp">TRUST</div><a href="#audit">◇ Audit log</a>
+        <div class="who"><b>Shamsheer</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>Author claims</h3><div class="sub">3 pending · 24 decided all time</div></div>
+          <div class="sp"><span class="btn s">Pending ▾</span></div></div>
+        <div class="content stack">
+
+          <div class="mod">
+            <div class="hd"><span class="pill pend">Pending</span><b>N.S. Madhavan</b>
+              <span class="m" style="font-size:11.5px;color:var(--ink-soft)">claimed 2 hours ago</span></div>
+            <div class="bd">
+              <div class="split3">
+                <div>
+                  <div class="lbl">Claimed by</div>
+                  <div style="margin-top:6px;font-size:13px"><b>Anu Ravi</b> · @anuravi ·
+                    <span class="m">joined Mar 2026 · 41 books · 12 reviews · score 380</span></div>
+                  <div class="lbl" style="margin-top:14px">Corroboration</div>
+                  <ul style="margin:6px 0 0 18px;font-size:12.5px;line-height:1.7;color:#514434">
+                    <li>Profile is public, real name matches the author record</li>
+                    <li>Account is 4 months old, not created for this claim</li>
+                    <li><b>No</b> external verification — Kitabi has no identity proof</li>
+                  </ul>
+                </div>
+                <div>
+                  <div class="lbl">Author record</div>
+                  <div class="card" style="margin-top:6px;padding:11px">
+                    <div style="font-size:13px;font-weight:600">N.S. Madhavan</div>
+                    <div class="m" style="font-size:11.5px;margin-top:3px">14 works · Malayalam ·
+                      currently unclaimed</div>
+                    <div style="margin-top:9px"><span class="pill info">linked_user_id · null</span></div>
+                  </div>
+                  <div class="note" style="margin-top:10px">Approving writes the link and shows a 🔗 badge
+                  to every reader. It is reversible from the author's record, and logged.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:14px">
+                <button class="btn g">Approve — this is them</button>
+                <button class="btn d">Reject</button>
+                <button class="btn">Ask for proof</button>
+                <span style="margin-left:auto"><button class="btn s">Open reader profile ↗</button></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mod">
+            <div class="hd"><span class="pill no">Contested</span><b>Kamala Das</b>
+              <span style="font-size:11.5px;color:var(--ink-soft)">2 readers claim this author</span></div>
+            <div class="bd">
+              <div class="note" style="border-left-color:var(--oxblood);background:#F9EEEA">
+                Two pending claims on one author — the exact case the queue exists to settle. Approving
+                either one automatically rejects the other.</div>
+              <table style="margin-top:10px">
+                <tr><th>Reader</th><th>Account age</th><th>Contributions</th><th>Claimed</th><th></th></tr>
+                <tr><td class="t">Meera K · @meerak</td><td class="m">1 year</td><td class="m">88 books · 30 reviews</td>
+                  <td class="m">5 days ago</td><td style="text-align:right"><button class="btn s g">Approve</button></td></tr>
+                <tr><td class="t">newuser_2291</td><td class="m">2 days</td><td class="m">0 books · 0 reviews</td>
+                  <td class="m">1 day ago</td><td style="text-align:right"><button class="btn s d">Reject</button></td></tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="mod">
+            <div class="hd"><span class="pill ok">Approved</span><b>Benyamin</b>
+              <span style="font-size:11.5px;color:var(--ink-soft)">by Shamsheer · 19 Jul 2026</span></div>
+            <div class="bd" style="font-size:12.5px;color:var(--ink-soft)">
+              Linked to @benyamin_official. <button class="btn s d" style="margin-left:8px">Revoke link</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>S5 · Claims queue.</b> The card shows what an admin actually needs to judge: account age,
+  contribution history, and an honest note that <b>Kitabi holds no identity proof</b> — so the decision is
+  editorial, not forensic. "Ask for proof" parks the claim without deciding.</p>
+</div>
+
+<!-- ================= 4 · SUGGESTED EDITS ================= -->
+<div class="area" id="edits">
+  <div class="ah"><span class="an">4 · Moderation</span><h2>Suggested edits to the catalog</h2></div>
+  <p class="desc">Today the <i>contributor</i> of a book approves edits to it (V1 wiki moderation). This
+  screen is the escalation path: edits to seeded books nobody contributed, edits the contributor has left
+  sitting, and anything an admin wants to overrule.</p>
+
+  <div class="win">
+    <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+      <span class="addr">admin.kitabi.in/moderation/edits</span></div>
+    <div class="body">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s style="font-size:9px;letter-spacing:1.4px;color:#9d8b6c">ADMIN</s></div></div>
+        <div class="grp">MODERATION</div>
+        <a href="#claims">✍ Author claims <span class="n">3</span></a>
+        <a class="on" href="#edits">✎ Suggested edits <span class="n">7</span></a>
+        <a href="#reports">⚑ Reported content <span class="n">2</span></a>
+        <div class="grp">CATALOG</div><a href="#catalog">▤ Works &amp; editions</a>
+        <div class="grp">PEOPLE</div><a href="#readers">☺ Readers</a><a href="#admins">⚿ Admin users</a>
+        <div class="grp">TRUST</div><a href="#audit">◇ Audit log</a>
+        <div class="who"><b>Shamsheer</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>Suggested edits</h3><div class="sub">7 pending · 3 on seeded books with no owner</div></div>
+          <div class="sp"><input class="search" value="Filter by title or editor" disabled></div></div>
+        <div class="content stack">
+
+          <div class="mod">
+            <div class="hd"><span class="pill pend">Pending</span><b>കേരള സ്ഥലനാമകോശം</b>
+              <span style="font-size:11.5px;color:var(--ink-soft)">suggested by @vinodkp · 3 days ago</span>
+              <span class="pill mute" style="margin-left:auto">Seeded · no contributor</span></div>
+            <div class="bd">
+              <div class="diff">
+                <div class="was"><div class="lbl2">Current</div>
+                  <div><b>Description</b><br><span style="color:var(--ink-soft)">— empty —</span></div>
+                  <div style="margin-top:8px"><b>First published</b><br>1984</div></div>
+                <div class="now"><div class="lbl2">Proposed</div>
+                  <div><b>Description</b><br>A dictionary of Kerala's place names, tracing each to its
+                    Sanskrit, Dravidian or colonial root.</div>
+                  <div style="margin-top:8px"><b>First published</b><br>1982</div></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:13px">
+                <button class="btn g">Approve both</button>
+                <button class="btn">Approve description only</button>
+                <button class="btn d">Reject</button>
+                <span style="margin-left:auto"><button class="btn s">View book ↗</button></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mod">
+            <div class="hd"><span class="pill pend">Pending</span><b>ചെമ്മീൻ</b>
+              <span style="font-size:11.5px;color:var(--ink-soft)">suggested by @newuser_2291 · 1 day ago</span>
+              <span class="pill no" style="margin-left:auto">Flagged · low-trust account</span></div>
+            <div class="bd">
+              <div class="diff">
+                <div class="was"><div class="lbl2">Current</div><div><b>Title</b><br>ചെമ്മീൻ</div></div>
+                <div class="now"><div class="lbl2">Proposed</div><div><b>Title</b><br>CHEMMEEN BEST NOVEL!!!</div></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:13px">
+                <button class="btn d">Reject &amp; warn editor</button>
+                <button class="btn d">Reject &amp; suspend</button>
+                <button class="btn">Approve anyway</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>S6 · Edit review.</b> Field-level diff, and field-level approval — an edit that fixes the
+  blurb but gets the year wrong shouldn't have to be rejected wholesale.</p>
+</div>
+
+<!-- ================= 5 · REPORTS ================= -->
+<div class="area" id="reports">
+  <div class="ah"><span class="an">5 · Moderation</span><h2>Reported content</h2></div>
+  <p class="desc">Public reviews are the only reader-written text other readers can see, so they are the only
+  real abuse surface today. This queue is <b>[WIRED]</b> — build the report button and the table now, keep the
+  screen quiet until there is traffic.</p>
+
+  <div class="win">
+    <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+      <span class="addr">admin.kitabi.in/moderation/reports</span></div>
+    <div class="body">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s style="font-size:9px;letter-spacing:1.4px;color:#9d8b6c">ADMIN</s></div></div>
+        <div class="grp">MODERATION</div>
+        <a href="#claims">✍ Author claims <span class="n">3</span></a>
+        <a href="#edits">✎ Suggested edits <span class="n">7</span></a>
+        <a class="on" href="#reports">⚑ Reported content <span class="n">2</span></a>
+        <div class="grp">PEOPLE</div><a href="#readers">☺ Readers</a><a href="#admins">⚿ Admin users</a>
+        <div class="grp">TRUST</div><a href="#audit">◇ Audit log</a>
+        <div class="who"><b>Shamsheer</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>Reported content</h3><div class="sub">2 open reports</div></div></div>
+        <div class="content stack">
+          <div class="mod">
+            <div class="hd"><span class="pill no">Abuse</span><b>Review on "ആടുജീവിതം"</b>
+              <span style="font-size:11.5px;color:var(--ink-soft)">reported by 3 readers</span></div>
+            <div class="bd">
+              <div style="background:var(--paper-deep);border-radius:8px;padding:11px 13px;font-family:'Fraunces',serif;
+                font-style:italic;font-size:13.5px;line-height:1.6">
+                "Anyone who liked this book is an idiot and the author should be…"</div>
+              <div style="margin-top:9px;font-size:12px;color:var(--ink-soft)">
+                by <b>@newuser_2291</b> · posted 2 days ago · 1 prior warning</div>
+              <div style="display:flex;gap:8px;margin-top:13px">
+                <button class="btn d">Hide review</button>
+                <button class="btn d">Hide &amp; suspend author of review</button>
+                <button class="btn">Dismiss — not a violation</button>
+              </div>
+            </div>
+          </div>
+          <div class="mod">
+            <div class="hd"><span class="pill info">Spam</span><b>Review on "Ivory Throne"</b>
+              <span style="font-size:11.5px;color:var(--ink-soft)">reported by 1 reader</span></div>
+            <div class="bd" style="font-size:12.5px;color:var(--ink-soft)">
+              Contains an external purchase link. <span style="margin-left:6px">
+              <button class="btn s d">Hide</button> <button class="btn s">Dismiss</button></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>S7 · Reports.</b> Hiding sets a visibility flag — the row is never destroyed, so a wrong
+  call is reversible and the audit trail stays honest. Soft deletes only, same as everywhere else.</p>
+</div>
+
+<!-- ================= 6 · CATALOG ================= -->
+<div class="area" id="catalog">
+  <div class="ah"><span class="an">6 · Catalog</span><h2>Catalog operations</h2></div>
+  <p class="desc">The catalog is shared, server-authoritative data — the one place a mistake is visible to
+  everyone. This section is for finding and fixing it: search anything, merge the duplicates the trigram
+  index surfaces, and work through the quality gaps a bulk seed leaves behind.</p>
+
+  <div class="win">
+    <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+      <span class="addr">admin.kitabi.in/catalog?q=chemmeen</span></div>
+    <div class="body">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s style="font-size:9px;letter-spacing:1.4px;color:#9d8b6c">ADMIN</s></div></div>
+        <div class="grp">MODERATION</div>
+        <a href="#claims">✍ Author claims <span class="n">3</span></a><a href="#edits">✎ Suggested edits <span class="n">7</span></a>
+        <div class="grp">CATALOG</div>
+        <a class="on" href="#catalog">▤ Works &amp; editions</a>
+        <a href="#catalog">⧉ Duplicates <span class="n">9</span></a>
+        <a href="#catalog">◔ Quality gaps</a>
+        <div class="grp">PEOPLE</div><a href="#readers">☺ Readers</a><a href="#admins">⚿ Admin users</a>
+        <div class="grp">TRUST</div><a href="#audit">◇ Audit log</a>
+        <div class="who"><b>Shamsheer</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>Works &amp; editions</h3><div class="sub">21,908 works · 22,140 editions</div></div>
+          <div class="sp"><input class="search" value="chemmeen" disabled><span class="btn s">Filters ▾</span>
+            <span class="btn s p">+ Add work</span></div></div>
+        <div class="content">
+          <div class="note" style="margin-bottom:12px">Search here is the same spelling-insensitive fold the
+          app uses — <code>chemmeen</code>, <code>chemmin</code> and <code>ചെമ്മീൻ</code> all land on this row.</div>
+          <div class="tbl">
+            <table>
+              <tr><th style="width:34%">Title</th><th>Author</th><th>Lang</th><th>Editions</th><th>Shelved</th><th>Health</th><th></th></tr>
+              <tr><td><div class="t">ചെമ്മീൻ</div><div class="m mono">chemmeen · 1956</div></td>
+                <td class="m">തകഴി ശിവശങ്കരപ്പിള്ള</td><td class="m">Malayalam</td><td>3</td><td>84</td>
+                <td><span class="pill ok">Complete</span></td>
+                <td style="text-align:right"><button class="btn s">Edit</button></td></tr>
+              <tr><td><div class="t">Chemmeen (English)</div><div class="m mono">chemmeen english · 1962</div></td>
+                <td class="m">Thakazhi Sivasankara Pillai</td><td class="m">English</td><td>2</td><td>31</td>
+                <td><span class="pill pend">No cover</span></td>
+                <td style="text-align:right"><button class="btn s">Edit</button></td></tr>
+              <tr style="background:#FBF3E6"><td><div class="t">Chemeen</div><div class="m mono">chemin · 1956</div></td>
+                <td class="m">Thakazhi S. Pillai</td><td class="m">English</td><td>1</td><td>2</td>
+                <td><span class="pill no">Likely duplicate</span></td>
+                <td style="text-align:right"><button class="btn s p">Merge ⧉</button></td></tr>
+            </table>
+          </div>
+
+          <div class="split" style="margin-top:14px">
+            <div class="card">
+              <div class="lbl">Merge duplicates — preview</div>
+              <div style="margin-top:10px;font-size:12.5px;line-height:1.7">
+                <div><b>Keep:</b> ചെമ്മീൻ <span class="m">(84 shelved, 3 editions, complete)</span></div>
+                <div><b>Absorb:</b> Chemeen <span class="m">(2 shelved, 1 edition)</span></div>
+              </div>
+              <div class="note" style="margin-top:10px">2 library entries, 1 rating and 0 reviews move to the
+              kept work. The absorbed row is soft-deleted, never destroyed, and the merge is reversible from
+              the audit log.</div>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="btn p">Merge</button><button class="btn">Not duplicates</button></div>
+            </div>
+            <div class="card">
+              <div class="lbl">Quality gaps — worklist</div>
+              <table style="margin-top:6px">
+                <tr><td>Works with no cover</td><td style="text-align:right"><b>13,542</b></td>
+                  <td style="text-align:right"><button class="btn s">Open</button></td></tr>
+                <tr><td>Works with no description</td><td style="text-align:right"><b>15,109</b></td>
+                  <td style="text-align:right"><button class="btn s">Open</button></td></tr>
+                <tr><td>Romanized Indic titles</td><td style="text-align:right"><b>1,470</b></td>
+                  <td style="text-align:right"><button class="btn s">Open</button></td></tr>
+                <tr><td>Authors with no works</td><td style="text-align:right"><b>62</b></td>
+                  <td style="text-align:right"><button class="btn s">Open</button></td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>S8 · Catalog.</b> Merge is the highest-risk action in the whole console — it moves other
+  people's library entries — so it always previews what will move before it commits, and is reversible.</p>
+</div>
+
+<!-- ================= 7 · READERS ================= -->
+<div class="area" id="readers">
+  <div class="ah"><span class="an">7 · People</span><h2>Readers</h2></div>
+  <p class="desc">Support, not surveillance. An admin can find an account, see what it has contributed, and
+  act when it misbehaves — but a reader's <i>library</i> is private data and the console shows only what a
+  reader has already made public, plus counts. That restraint is a deliberate line, not an oversight.</p>
+
+  <div class="win">
+    <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+      <span class="addr">admin.kitabi.in/readers</span></div>
+    <div class="body">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s style="font-size:9px;letter-spacing:1.4px;color:#9d8b6c">ADMIN</s></div></div>
+        <div class="grp">MODERATION</div><a href="#claims">✍ Author claims <span class="n">3</span></a>
+        <div class="grp">PEOPLE</div>
+        <a class="on" href="#readers">☺ Readers</a><a href="#admins">⚿ Admin users</a>
+        <div class="grp">TRUST</div><a href="#audit">◇ Audit log</a>
+        <div class="who"><b>Shamsheer</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>Readers</h3><div class="sub">1,284 accounts · 3 suspended</div></div>
+          <div class="sp"><input class="search" value="Search name, @handle or email" disabled></div></div>
+        <div class="content">
+          <div class="tbl">
+            <table>
+              <tr><th>Reader</th><th>Joined</th><th>Books</th><th>Reviews</th><th>Score</th><th>Status</th><th></th></tr>
+              <tr><td><div class="t">Anu Ravi</div><div class="m">@anuravi · anu@example.com</div></td>
+                <td class="m">Mar 2026</td><td>41</td><td>12</td><td>380</td>
+                <td><span class="pill ok">Active</span></td>
+                <td style="text-align:right"><button class="btn s">View</button></td></tr>
+              <tr><td><div class="t">Meera K</div><div class="m">@meerak · meera@example.com</div></td>
+                <td class="m">Jul 2025</td><td>88</td><td>30</td><td>1,140</td>
+                <td><span class="pill ok">Active</span> <span class="pill info">Author 🔗</span></td>
+                <td style="text-align:right"><button class="btn s">View</button></td></tr>
+              <tr><td><div class="t">newuser_2291</div><div class="m">@newuser_2291 · n2291@example.com</div></td>
+                <td class="m">2 days ago</td><td>0</td><td>3</td><td>0</td>
+                <td><span class="pill no">1 warning</span></td>
+                <td style="text-align:right"><button class="btn s d">Suspend</button></td></tr>
+            </table>
+          </div>
+          <div class="split" style="margin-top:14px">
+            <div class="card">
+              <div class="lbl">Reader detail — Anu Ravi</div>
+              <table style="margin-top:6px">
+                <tr><td>Public profile</td><td style="text-align:right"><span class="pill ok">Visible</span></td></tr>
+                <tr><td>Public library</td><td style="text-align:right"><span class="pill mute">Private</span></td></tr>
+                <tr><td>Connections</td><td style="text-align:right"><b>14</b></td></tr>
+                <tr><td>Loans (out / in)</td><td style="text-align:right"><b>3 / 1</b></td></tr>
+                <tr><td>Catalog contributions</td><td style="text-align:right"><b>18 works · 6 authors</b></td></tr>
+              </table>
+              <div class="note" style="margin-top:11px">Her shelf is private, so it is not shown here — the
+              console reads exactly what another reader could see, plus aggregate counts.</div>
+            </div>
+            <div class="card">
+              <div class="lbl">Actions</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+                <button class="btn">Send password-less sign-in help</button>
+                <button class="btn">Reset username</button>
+                <button class="btn d">Warn</button>
+                <button class="btn d">Suspend account</button>
+                <button class="btn d">Delete account &amp; data</button>
+              </div>
+              <div class="note" style="margin-top:11px">Deletion is a GDPR-style erase: personal rows go,
+              catalog contributions stay but are unattributed. Super admin only, and always logged.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>S9 · Readers.</b> Every destructive action is on the right, in danger styling, and the
+  two irreversible ones are super-admin only.</p>
+</div>
+
+<!-- ================= 8 · ADMIN USERS ================= -->
+<div class="area" id="admins">
+  <div class="ah"><span class="an">8 · People</span><h2>Admin users &amp; roles</h2></div>
+  <p class="desc">Admins live in their own table with their own password and TOTP secret — never in
+  <code>profiles</code>. Three roles, because "everyone is a super admin" is how back offices get breached:
+  a <b>moderator</b> works the queues, an <b>editor</b> also fixes the catalog, a <b>super admin</b> can
+  additionally manage admins and erase data.</p>
+
+  <div class="win">
+    <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+      <span class="addr">admin.kitabi.in/admins</span></div>
+    <div class="body">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s style="font-size:9px;letter-spacing:1.4px;color:#9d8b6c">ADMIN</s></div></div>
+        <div class="grp">MODERATION</div><a href="#claims">✍ Author claims <span class="n">3</span></a>
+        <div class="grp">PEOPLE</div><a href="#readers">☺ Readers</a>
+        <a class="on" href="#admins">⚿ Admin users</a>
+        <div class="grp">TRUST</div><a href="#audit">◇ Audit log</a>
+        <div class="who"><b>Shamsheer</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>Admin users</h3><div class="sub">3 admins · 1 invitation outstanding</div></div>
+          <div class="sp"><span class="btn s p">+ Invite admin</span></div></div>
+        <div class="content">
+          <div class="tbl">
+            <table>
+              <tr><th>Admin</th><th>Role</th><th>2FA</th><th>Last sign-in</th><th>Added by</th><th></th></tr>
+              <tr><td><div class="t">Shamsheer</div><div class="m">at.shamshi@gmail.com</div></td>
+                <td><span class="pill" style="background:var(--gold-soft);color:#8F681E">Super admin</span></td>
+                <td><span class="pill ok">Enrolled</span></td><td class="m">today, 19:42</td>
+                <td class="m">— founder</td>
+                <td style="text-align:right"><span class="m">cannot remove self</span></td></tr>
+              <tr><td><div class="t">Rahul M</div><div class="m">rahul@example.com</div></td>
+                <td><span class="pill info">Editor</span></td>
+                <td><span class="pill ok">Enrolled</span></td><td class="m">yesterday</td>
+                <td class="m">Shamsheer</td>
+                <td style="text-align:right"><button class="btn s">Edit role</button>
+                  <button class="btn s d">Revoke</button></td></tr>
+              <tr><td><div class="t">Priya S</div><div class="m">priya@example.com</div></td>
+                <td><span class="pill mute">Moderator</span></td>
+                <td><span class="pill no">Not enrolled</span></td><td class="m">never</td>
+                <td class="m">Shamsheer</td>
+                <td style="text-align:right"><button class="btn s">Resend invite</button>
+                  <button class="btn s d">Revoke</button></td></tr>
+            </table>
+          </div>
+
+          <div class="split" style="margin-top:14px">
+            <div class="card">
+              <div class="lbl">Invite an admin</div>
+              <div class="fld" style="margin-top:9px"><label>Email</label><div class="in ph">name@example.com</div></div>
+              <div class="fld"><label>Role</label><div class="in">Moderator — works the moderation queues ▾</div></div>
+              <div class="note">They receive a single-use link, set their own password, and must enrol a
+              TOTP app before they can reach anything. The invite expires in 48 hours.</div>
+              <button class="btn p" style="margin-top:11px">Send invitation</button>
+            </div>
+            <div class="card">
+              <div class="lbl">What each role can do</div>
+              <table style="margin-top:6px;font-size:12px">
+                <tr><th></th><th style="text-align:center">Mod</th><th style="text-align:center">Editor</th><th style="text-align:center">Super</th></tr>
+                <tr><td>Work the moderation queues</td><td style="text-align:center">●</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr>
+                <tr><td>Edit / merge catalog</td><td style="text-align:center">○</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr>
+                <tr><td>Warn / suspend readers</td><td style="text-align:center">●</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr>
+                <tr><td>Delete a reader's data</td><td style="text-align:center">○</td><td style="text-align:center">○</td><td style="text-align:center">●</td></tr>
+                <tr><td>Manage admins &amp; roles</td><td style="text-align:center">○</td><td style="text-align:center">○</td><td style="text-align:center">●</td></tr>
+                <tr><td>Run a catalog seed</td><td style="text-align:center">○</td><td style="text-align:center">○</td><td style="text-align:center">●</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>S10 · Admins.</b> The <b>2FA column</b> is on the list on purpose — an admin who hasn't
+  enrolled is the weakest link, and it should be visible without opening anything. You cannot revoke or
+  demote yourself, so the last super admin can't be locked out.</p>
+</div>
+
+<!-- ================= 9 · AUDIT ================= -->
+<div class="area" id="audit">
+  <div class="ah"><span class="an">9 · Trust</span><h2>Audit log</h2></div>
+  <p class="desc">Every action that changes shared data or another person's account is written here, by whom,
+  with what it touched. Append-only: no admin, including a super admin, can edit or delete a line. This is
+  what makes a one-person moderation team defensible when it becomes a five-person one.</p>
+
+  <div class="win">
+    <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+      <span class="addr">admin.kitabi.in/audit</span></div>
+    <div class="body">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s style="font-size:9px;letter-spacing:1.4px;color:#9d8b6c">ADMIN</s></div></div>
+        <div class="grp">MODERATION</div><a href="#claims">✍ Author claims <span class="n">3</span></a>
+        <div class="grp">PEOPLE</div><a href="#readers">☺ Readers</a><a href="#admins">⚿ Admin users</a>
+        <div class="grp">TRUST</div><a class="on" href="#audit">◇ Audit log</a>
+        <div class="who"><b>Shamsheer</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>Audit log</h3><div class="sub">append-only · 1,842 entries</div></div>
+          <div class="sp"><input class="search" value="Filter by admin, action or target" disabled>
+            <span class="btn s">Export</span></div></div>
+        <div class="content">
+          <div class="tbl">
+            <table>
+              <tr><th style="width:130px">When</th><th>Admin</th><th>Action</th><th>Target</th><th>Result</th></tr>
+              <tr><td class="m mono">23 Jul 19:44</td><td class="t">Shamsheer</td>
+                <td><span class="pill ok">claim.approve</span></td><td class="m">author · Benyamin</td>
+                <td class="m">linked to @benyamin_official</td></tr>
+              <tr><td class="m mono">23 Jul 18:10</td><td class="t">Rahul M</td>
+                <td><span class="pill info">work.merge</span></td><td class="m">work · Chemeen → ചെമ്മീൻ</td>
+                <td class="m">2 entries moved</td></tr>
+              <tr><td class="m mono">23 Jul 17:55</td><td class="t">Rahul M</td>
+                <td><span class="pill no">review.hide</span></td><td class="m">review · #4412</td>
+                <td class="m">abuse report upheld</td></tr>
+              <tr><td class="m mono">23 Jul 09:02</td><td class="t">Shamsheer</td>
+                <td><span class="pill" style="background:var(--gold-soft);color:#8F681E">admin.invite</span></td>
+                <td class="m">priya@example.com · moderator</td><td class="m">invite sent</td></tr>
+              <tr><td class="m mono">22 Jul 21:30</td><td class="t">—</td>
+                <td><span class="pill mute">auth.fail</span></td><td class="m">at.shamshi@gmail.com</td>
+                <td class="m">bad password · 3rd attempt · from 49.37.x.x</td></tr>
+            </table>
+          </div>
+          <div class="note" style="margin-top:12px">Failed sign-ins are logged too. Five in fifteen minutes
+          locks the account and emails every super admin.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>S11 · Audit.</b> Reversible actions link back to the thing they changed, so "undo the
+  merge Rahul did yesterday" is a search, not an archaeology project.</p>
+</div>
+
+<!-- ================= 10 · HEALTH ================= -->
+<div class="area" id="health">
+  <div class="ah"><span class="an">10 · Overview</span><h2>System health</h2></div>
+  <p class="desc">The things that break quietly: a paused free-tier database, a backup that stopped running,
+  a sync queue backing up, an expired Apple sign-in secret. Each of these has bitten this project or its
+  sibling at least once, which is why they get a panel rather than a runbook.</p>
+
+  <div class="win">
+    <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
+      <span class="addr">admin.kitabi.in/health</span></div>
+    <div class="body">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s style="font-size:9px;letter-spacing:1.4px;color:#9d8b6c">ADMIN</s></div></div>
+        <div class="grp">OVERVIEW</div><a href="#dash">◧ Dashboard</a>
+        <a class="on" href="#health">◈ System health</a>
+        <div class="grp">MODERATION</div><a href="#claims">✍ Author claims <span class="n">3</span></a>
+        <div class="grp">TRUST</div><a href="#audit">◇ Audit log</a>
+        <div class="who"><b>Shamsheer</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>System health</h3><div class="sub">all checks live, none cached</div></div></div>
+        <div class="content">
+          <div class="split">
+            <div class="tbl">
+              <table>
+                <tr><th colspan="3">Services</th></tr>
+                <tr><td class="t">API · Railway</td><td class="m">p95 210 ms</td>
+                  <td style="text-align:right"><span class="pill ok">Healthy</span></td></tr>
+                <tr><td class="t">Database · Supabase</td><td class="m">418 MB of 500 MB</td>
+                  <td style="text-align:right"><span class="pill pend">84% full</span></td></tr>
+                <tr><td class="t">Nightly backup → R2</td><td class="m">today 04:07 · 22 MB</td>
+                  <td style="text-align:right"><span class="pill ok">Ran</span></td></tr>
+                <tr><td class="t">Apple sign-in secret</td><td class="m">expires 12 Nov 2026</td>
+                  <td style="text-align:right"><span class="pill ok">Valid</span></td></tr>
+                <tr><td class="t">FCM push</td><td class="m">1,102 live tokens</td>
+                  <td style="text-align:right"><span class="pill ok">Healthy</span></td></tr>
+                <tr><td class="t">Anthropic key · recs</td><td class="m">not configured</td>
+                  <td style="text-align:right"><span class="pill mute">Dormant</span></td></tr>
+              </table>
+            </div>
+            <div class="stack">
+              <div class="card">
+                <div class="lbl">Sync engine</div>
+                <table style="margin-top:6px">
+                  <tr><td>Ops pushed today</td><td style="text-align:right"><b>8,430</b></td></tr>
+                  <tr><td>Ops in error state</td><td style="text-align:right"><b style="color:var(--oxblood)">6</b></td></tr>
+                  <tr><td>Conflicts written</td><td style="text-align:right"><b>11</b></td></tr>
+                </table>
+                <button class="btn s" style="margin-top:9px">Inspect errored ops</button>
+              </div>
+              <div class="card">
+                <div class="lbl">Catalog seed</div>
+                <div style="margin-top:8px;font-size:12.5px;line-height:1.7">
+                  Last run <b>23 Jul 2026</b> · 100 Malayalam works<br>
+                  <span class="m">Tier 1 Indic · tier 2 top-N not yet run</span></div>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                  <button class="btn s">Seed history</button>
+                  <button class="btn s p">Run a seed…</button></div>
+                <div class="note" style="margin-top:10px">Super admin only. Shows the dry-run diff and
+                requires typing the row count before it commits.</div>
+              </div>
+            </div>
+          </div>
+          <div class="note" style="margin-top:14px;border-left-color:var(--oxblood);background:#F9EEEA">
+            <b>84% of the free tier.</b> At 500 MB Supabase stops accepting writes. Either prune or move to
+            Pro before the next seed — the tier-2 seed alone would add roughly 1 GB.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>S12 · Health.</b> Every row here is something that has actually gone wrong somewhere in
+  this project's history — the panel exists so the next time it does, it is visible before a user reports it.</p>
+</div>
+
+<!-- ================= NOTES ================= -->
+<div class="area" id="model">
+  <div class="ah"><span class="an">Notes</span><h2>What these mockups commit us to</h2></div>
+  <div class="notes">
+    <h3>The security model</h3>
+    <p>Admin identity is <b>completely separate</b> from reader identity. Readers are Supabase Auth rows with
+    Google/Apple sign-in; admins are rows in a new <code>admin_users</code> table with an Argon2id password
+    hash and a TOTP secret. There is no path from "I am signed into the app" to "I can moderate", and no
+    admin bootstrap endpoint — the first super admin (<code>at.shamshi@gmail.com</code>) is seeded by a
+    one-off script, everyone after that arrives by invitation.</p>
+    <ul>
+      <li><b>Password</b> — Argon2id, minimum 12 characters, checked against a breached-password list.</li>
+      <li><b>TOTP</b> — RFC-6238, 30-second step, ±1 drift, replay-refused. Enrolment is forced on first
+      sign-in; an unenrolled admin can reach nothing else.</li>
+      <li><b>Recovery codes</b> — eight, shown once, stored hashed, single-use.</li>
+      <li><b>Sessions</b> — short-lived, httpOnly + SameSite=Strict cookie, absolute 12-hour expiry,
+      re-authentication required for super-admin-only actions.</li>
+      <li><b>Lockout</b> — five failed attempts in fifteen minutes locks the account and emails every
+      super admin. All attempts, successful or not, hit the audit log.</li>
+    </ul>
+
+    <h4>New tables</h4>
+    <ul>
+      <li><code>admin_users</code> — id, email (unique), password_hash, totp_secret, totp_enrolled_at,
+      role, is_active, created_by, last_sign_in_at, timestamps.</li>
+      <li><code>admin_recovery_codes</code> — admin_id, code_hash, used_at.</li>
+      <li><code>admin_sessions</code> — admin_id, token_hash, expires_at, ip, user_agent.</li>
+      <li><code>admin_audit_log</code> — admin_id (nullable, for failed sign-ins), action, target_type,
+      target_id, summary, ip, created_at. <b>Append-only.</b></li>
+      <li><code>content_reports</code> — [WIRED] reporter_id, target_type, target_id, reason, status.</li>
+    </ul>
+    <p>All of them get RLS enabled with zero policies, like every other table — only the API touches them.</p>
+
+    <h4>What the console must never do</h4>
+    <ul>
+      <li>Show a reader's private shelf, notes or unpublished reviews. It reads what another reader could
+      see, plus aggregate counts. Support does not require voyeurism.</li>
+      <li>Hard-delete anything except an admin's own session. Hiding and merging are soft, reversible and logged.</li>
+      <li>Let an admin act on their own account in a way that could lock everyone out — no self-revoke, no
+      self-demote, and the last super admin cannot be removed.</li>
+    </ul>
+
+    <h4>Open questions for the technology round</h4>
+    <p>These mockups are deliberately stack-agnostic — every screen here is a table, a form, a card and a
+    couple of CSS bars, which almost anything can render. The decisions worth making deliberately:</p>
+    <div class="q"><b>1. Where does it run?</b> A separate small app on the existing Railway service (one
+    more container, no new bill) versus a static SPA on Cloudflare Pages talking to the API. The second
+    keeps hosting free but puts auth entirely in the browser; the first allows server-rendered,
+    cookie-session admin pages with no token in JavaScript — which is the safer shape for a back office.</div>
+    <div class="q"><b>2. Rendered where?</b> Server-rendered HTML from FastAPI (Jinja + a little htmx) reuses
+    the API's own auth, models and Python, adds no build step and no new language — very much in the spirit
+    of "cheap to run, cheap to maintain". A React/Vite SPA is more familiar and more interactive, at the
+    cost of a second toolchain and a token in the browser.</div>
+    <div class="q"><b>3. Charts.</b> Everything mocked here is achievable with CSS and inline SVG. A chart
+    library is the first dependency that will want to creep in — worth resisting until a screen genuinely
+    needs it.</div>
+    <p style="margin-top:14px"><b>Recommendation, for the next round:</b> FastAPI + Jinja + htmx, served
+    under <code>admin.kitabi.in</code> by the same Railway service. It reuses the session/auth code we would
+    have to write anyway, keeps the admin token out of JavaScript entirely, adds no monthly cost and no
+    second toolchain, and every screen above is comfortably within what server-rendered HTML does well.</p>
+  </div>
+</div>
+
+</body>
+</html>
