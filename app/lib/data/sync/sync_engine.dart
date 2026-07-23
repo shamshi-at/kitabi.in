@@ -83,6 +83,15 @@ class SyncEngine {
     } catch (_) {
       // Offline / catalog fetch failed — the next sync (or the grid) retries.
     }
+    // Same gap for OWNED books, and it was only healed by *visiting the library
+    // tab* — so Home rendered "…" for every title on a fresh install until you
+    // happened to go there (owner report, 23 Jul 2026). Hydration belongs to the
+    // pull, not to one screen: every surface reads the same cache.
+    try {
+      await cacheMissingLibraryBooks(db, api);
+    } catch (_) {
+      // Offline / catalog fetch failed — the next sync (or the grid) retries.
+    }
     // A pull can leave two active entries for one edition (an entry created on
     // another device/install upserts by id, next to the local one). Merge them
     // back into one; the merge enqueues ops, so mark a follow-up pass to push

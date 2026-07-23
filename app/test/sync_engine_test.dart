@@ -30,6 +30,36 @@ class _FakeApiClient extends ApiClient {
     return nextPushResults;
   }
 
+  final List<String> workByEditionCalls = [];
+
+  @override
+  Future<Map<String, dynamic>> getWorkByEdition(String editionId) async {
+    workByEditionCalls.add(editionId);
+    return {
+      'id': 'w-$editionId',
+      'title': 'Hydrated $editionId',
+      'subtitle': null,
+      'first_publish_year': null,
+      'authors': [
+        {'id': 'a1', 'name': 'An Author'},
+      ],
+      'genres': const <Map<String, dynamic>>[],
+      'editions': [
+        {
+          'id': editionId,
+          'isbn': null,
+          'language': null,
+          'page_count': null,
+          'format': null,
+          'cover_url': null,
+          'series_number': null,
+          'publisher': null,
+          'series': null,
+        },
+      ],
+    };
+  }
+
   @override
   Future<Map<String, dynamic>> syncPull({required int cursor, int limit = 500}) async {
     pullCalls++;
@@ -321,5 +351,44 @@ void main() {
 
     final entry = await db.libraryEntriesDao.getByEditionId('edition-1');
     expect(entry!.status, 'reading'); // local pending edit wins until it pushes
+  });
+
+  test('a pull hydrates the catalog cache for owned books, not just borrowed', () async {
+    // The fresh-install gap: a pull restores library_entries (synced) but
+    // cached_books is device-local, so every Home card rendered its
+    // `book?.title ?? '…'` fallback. Healing lived only in the library grid's
+    // initState, so Home stayed full of "…" until you visited that tab
+    // (owner report, 23 Jul 2026).
+    api.nextPull = {
+      'changes': [
+        {
+          'entity': 'library_entries',
+          'data': {
+            'id': 'entry-owned',
+            'user_id': 'user-1',
+            'edition_id': 'edition-owned',
+            'status': 'reading',
+            'start_date': null,
+            'finish_date': null,
+            'current_page': null,
+            'is_favorite': false,
+            'notes': null,
+            'created_at': '2026-07-23T10:00:00+00:00',
+            'updated_at': '2026-07-23T10:00:00+00:00',
+            'deleted_at': null,
+            'server_seq': 7,
+          },
+        },
+      ],
+      'next_cursor': 7,
+      'has_more': false,
+    };
+
+    await engine.syncNow('user-1');
+
+    final cached = await db.cachedBooksDao.getByEditionId('edition-owned');
+    expect(cached, isNotNull, reason: 'the pull must hydrate the owned book');
+    expect(cached!.title, 'Hydrated edition-owned');
+    expect(api.workByEditionCalls, contains('edition-owned'));
   });
 }
