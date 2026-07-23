@@ -333,8 +333,19 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
-- **23 Jul 2026** — **SEO layer + catalog seeding pipeline (uncommitted, this
-  session).** The public share pages are now search-engine-ready:
+- **23 Jul 2026** — **First real catalog seed landed on production.** 100
+  Malayalam works (+96 authors, 100 editions, 57 publishers) loaded via
+  `etl/05_load_prod.sh` on top of the existing test rows (owner chose
+  seed-on-top; test data still to be cleaned separately) — prod catalog went
+  97→**197 works**, 54→150 authors, 14→71 publishers. Verified live: search
+  finds the seeded titles by romanized query, the sitemap serves 197 works,
+  and a seeded book page renders 200 with full schema.org `Book` JSON-LD.
+  **Content-quality notes for the full seed:** OpenLibrary's Malayalam records
+  are romanized with diacritics (`Kēraḷa sthalanāmakōśaṃ`), *not* in Malayalam
+  script — search still matches (both sides romanize) but titles display
+  romanized; only 2/100 editions had covers and 30/100 works a description,
+  while ISBNs (37), page counts (95) and publishers (93) came through well.
+- **23 Jul 2026** — **SEO layer + catalog seeding pipeline.** The public share pages are now search-engine-ready:
   `GET /catalog/sitemap/index.xml` + paged `works-N`/`authors-N`/`publishers-N`
   urlsets (10k URLs/page, soft-delete-aware — `sitemap_service`, 7 tests, 209
   total green), proxied at `kitabi.in/sitemaps/*` by a new Pages Function and
