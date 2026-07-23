@@ -333,6 +333,25 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **23 Jul 2026** — **The catalog now stores Malayalam in native script.** The
+  seed arrived in OpenLibrary's ALA-LC romanization (`Kēraḷa sthalanāmakōśaṃ`);
+  `api/app/services/malayalam_script.py` converts it back via ISO 15919,
+  handling the four things the library alone gets wrong (anusvara written with
+  a dot *below*; ഴ/റ marked with COMBINING LOW LINE U+0332, not macron-below;
+  chillu forms; and the positional `r̲` — plain ര after a consonant, റ after a
+  vowel). It refuses rather than guesses on English titles and forces digits
+  back to Arabic. Backfilled on prod via `etl/06_backfill_script.py`:
+  **194 of 418 rows converted, 0 left romanized**, re-run is a no-op;
+  `03_transform.py` converts future seeds on the way in. Verified live —
+  cross-script search resolves both directions (`prashnangal` →
+  കവിതയുടെ പ്രശ്നങ്ങൾ, and `രണ്ടു` → രണ്ടു മുദ്ര) and book pages serve
+  Malayalam in their OG tags and JSON-LD. **Also fixed a latent search bug**
+  this would have multiplied: ITRANS spells ങ/ഞ as `~N`/`~n`, and no reader
+  types a tilde — doubled forms now collapse (മാങ്ങാട് → `mangat`,
+  കൊഴിഞ്ഞു → `kozhinju`). **Known residual:** a homorganic nasal before a
+  consonant comes out as a conjunct where native spelling often uses anusvara
+  (അമ്ബികാസുതൻ vs the usual അംബികാസുതൻ) — readable, and fixable later via
+  "Improve this entry" or a follow-up rule.
 - **23 Jul 2026** — **First real catalog seed landed on production.** 100
   Malayalam works (+96 authors, 100 editions, 57 publishers) loaded via
   `etl/05_load_prod.sh` on top of the existing test rows (owner chose
