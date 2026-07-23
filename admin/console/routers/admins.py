@@ -33,13 +33,9 @@ async def _super_admin_count(db: DbSession) -> int:
 
 
 @router.get("")
-async def list_admins(
-    request: Request, admin: RequireSuperAdmin, db: DbSession
-) -> HTMLResponse:
+async def list_admins(request: Request, admin: RequireSuperAdmin, db: DbSession) -> HTMLResponse:
     rows = (
-        (await db.execute(select(AdminUser).order_by(AdminUser.created_at.asc())))
-        .scalars()
-        .all()
+        (await db.execute(select(AdminUser).order_by(AdminUser.created_at.asc()))).scalars().all()
     )
     badges = await queries.nav_badges(db)
     flash = _pop_flash(request)
@@ -152,9 +148,7 @@ async def change_role(
         and role != ROLE_SUPER_ADMIN
         and await _super_admin_count(db) <= 1
     ):
-        _flash(
-            resp, "err", "This is the last super admin — promote someone else first."
-        )
+        _flash(resp, "err", "This is the last super admin — promote someone else first.")
         return resp
     old = target.role
     target.role = role
@@ -195,11 +189,7 @@ async def revoke_admin(
     from ..models_ref import AdminSession
 
     sessions = (
-        (
-            await db.execute(
-                select(AdminSession).where(AdminSession.admin_id == target.id)
-            )
-        )
+        (await db.execute(select(AdminSession).where(AdminSession.admin_id == target.id)))
         .scalars()
         .all()
     )

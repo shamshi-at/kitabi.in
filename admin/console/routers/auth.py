@@ -97,9 +97,7 @@ async def sign_in(
 
     # Uniform failure: never reveal whether the email exists.
     def deny(text="Incorrect email or password."):
-        return _render(
-            request, "sign_in.html", email=email, flash={"kind": "err", "text": text}
-        )
+        return _render(request, "sign_in.html", email=email, flash={"kind": "err", "text": text})
 
     if admin is None or not admin.is_active:
         await security.audit(
@@ -112,15 +110,11 @@ async def sign_in(
         )
         return deny()
     if security.is_locked(admin):
-        await security.audit(
-            db, "auth.fail", admin_id=admin.id, summary="locked out", ip=ip
-        )
+        await security.audit(db, "auth.fail", admin_id=admin.id, summary="locked out", ip=ip)
         return deny("Account temporarily locked. Try again later.")
     if not security.verify_password(password, admin.password_hash):
         await security.register_failure(db, admin)
-        await security.audit(
-            db, "auth.fail", admin_id=admin.id, summary="bad password", ip=ip
-        )
+        await security.audit(db, "auth.fail", admin_id=admin.id, summary="bad password", ip=ip)
         return deny()
 
     # Password OK. Issue the pending ticket; the session is still not created.
@@ -144,14 +138,10 @@ async def twofa_form(request: Request) -> HTMLResponse:
     return _render(request, "two_factor.html")
 
 
-async def _complete_sign_in(
-    request: Request, db: DbSession, admin: AdminUser
-) -> RedirectResponse:
+async def _complete_sign_in(request: Request, db: DbSession, admin: AdminUser) -> RedirectResponse:
     ip = client_ip(request)
     await security.register_success(db, admin)
-    token = await security.create_session(
-        db, admin.id, ip, request.headers.get("user-agent")
-    )
+    token = await security.create_session(db, admin.id, ip, request.headers.get("user-agent"))
     await security.audit(db, "auth.success", admin_id=admin.id, ip=ip)
     resp = RedirectResponse("/", status_code=303)
     resp.set_cookie(
@@ -200,9 +190,7 @@ async def recovery_form(request: Request) -> HTMLResponse:
 
 
 @router.post("/sign-in/recovery")
-async def recovery(
-    request: Request, db: DbSession, code: str = Form(...)
-) -> HTMLResponse:
+async def recovery(request: Request, db: DbSession, code: str = Form(...)) -> HTMLResponse:
     admin_id = _read_pending(request.cookies.get(PENDING_COOKIE))
     if admin_id is None:
         return RedirectResponse("/sign-in", status_code=303)
@@ -222,9 +210,7 @@ async def recovery(
             "recovery.html",
             flash={"kind": "err", "text": "That code is not valid or already used."},
         )
-    await security.audit(
-        db, "auth.recovery_used", admin_id=admin.id, ip=client_ip(request)
-    )
+    await security.audit(db, "auth.recovery_used", admin_id=admin.id, ip=client_ip(request))
     return await _complete_sign_in(request, db, admin)
 
 
@@ -238,9 +224,7 @@ async def enrol_form(request: Request, db: DbSession) -> HTMLResponse:
     admin_id = _read_pending(request.cookies.get(PENDING_COOKIE))
     # Also allow an already-signed-in-but-unenrolled admin (edge case).
     if admin_id is None:
-        admin = await security.session_admin(
-            db, request.cookies.get(config.COOKIE_NAME)
-        )
+        admin = await security.session_admin(db, request.cookies.get(config.COOKIE_NAME))
         admin_id = str(admin.id) if admin else None
     if admin_id is None:
         return RedirectResponse("/sign-in", status_code=303)
@@ -273,9 +257,7 @@ async def enrol_form(request: Request, db: DbSession) -> HTMLResponse:
 async def enrol(request: Request, db: DbSession, code: str = Form(...)) -> HTMLResponse:
     admin_id = _read_pending(request.cookies.get(PENDING_COOKIE))
     if admin_id is None:
-        admin = await security.session_admin(
-            db, request.cookies.get(config.COOKIE_NAME)
-        )
+        admin = await security.session_admin(db, request.cookies.get(config.COOKIE_NAME))
         admin_id = str(admin.id) if admin else None
     if admin_id is None:
         return RedirectResponse("/sign-in", status_code=303)

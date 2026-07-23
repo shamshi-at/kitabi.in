@@ -9,8 +9,8 @@ from .models_ref import (
     CLAIM_PENDING,
     REPORT_OPEN,
     AdminUser,
-    AuthorClaim,
     Author,
+    AuthorClaim,
     ContentReport,
     Edition,
     LibraryEntry,
@@ -29,9 +29,7 @@ async def _count(db: AsyncSession, stmt) -> int:
 async def pending_claims(db: AsyncSession) -> int:
     return int(
         await db.scalar(
-            select(func.count())
-            .select_from(AuthorClaim)
-            .where(AuthorClaim.status == CLAIM_PENDING)
+            select(func.count()).select_from(AuthorClaim).where(AuthorClaim.status == CLAIM_PENDING)
         )
         or 0
     )
@@ -42,9 +40,7 @@ async def pending_revisions(db: AsyncSession) -> int:
 
     return int(
         await db.scalar(
-            select(func.count())
-            .select_from(WorkRevision)
-            .where(WorkRevision.status == "pending")
+            select(func.count()).select_from(WorkRevision).where(WorkRevision.status == "pending")
         )
         or 0
     )
@@ -79,27 +75,20 @@ async def dashboard_stats(db: AsyncSession) -> dict:
     active = LibraryEntry.deleted_at.is_(None)
     readers = int(await db.scalar(select(func.count()).select_from(Profile)) or 0)
     works = int(
-        await db.scalar(
-            select(func.count()).select_from(Work).where(Work.deleted_at.is_(None))
-        )
+        await db.scalar(select(func.count()).select_from(Work).where(Work.deleted_at.is_(None)))
         or 0
     )
     editions = int(
         await db.scalar(
-            select(func.count())
-            .select_from(Edition)
-            .where(Edition.deleted_at.is_(None))
+            select(func.count()).select_from(Edition).where(Edition.deleted_at.is_(None))
         )
         or 0
     )
     shelved = int(
-        await db.scalar(select(func.count()).select_from(LibraryEntry).where(active))
-        or 0
+        await db.scalar(select(func.count()).select_from(LibraryEntry).where(active)) or 0
     )
     authors = int(
-        await db.scalar(
-            select(func.count()).select_from(Author).where(Author.deleted_at.is_(None))
-        )
+        await db.scalar(select(func.count()).select_from(Author).where(Author.deleted_at.is_(None)))
         or 0
     )
     admins = int(await db.scalar(select(func.count()).select_from(AdminUser)) or 0)

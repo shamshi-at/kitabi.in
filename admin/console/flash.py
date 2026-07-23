@@ -16,9 +16,7 @@ _COOKIE = "admin_flash"
 
 def set_flash(resp: Response, kind: str, text: str) -> None:
     payload = base64.urlsafe_b64encode(f"{kind}|{text}".encode()).decode()
-    resp.set_cookie(
-        _COOKIE, payload, max_age=10, httponly=True, samesite="strict", path="/"
-    )
+    resp.set_cookie(_COOKIE, payload, max_age=10, httponly=True, samesite="strict", path="/")
 
 
 def pop_flash(request: Request) -> dict | None:

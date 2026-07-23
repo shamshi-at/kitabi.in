@@ -46,9 +46,7 @@ def new_totp_secret() -> str:
 
 def totp_uri(secret: str, email: str) -> str:
     """otpauth:// URI to render as the enrolment QR."""
-    return pyotp.TOTP(secret).provisioning_uri(
-        name=email, issuer_name=config.TOTP_ISSUER
-    )
+    return pyotp.TOTP(secret).provisioning_uri(name=email, issuer_name=config.TOTP_ISSUER)
 
 
 def verify_totp(secret: str, code: str) -> bool:
@@ -95,27 +93,19 @@ async def consume_recovery_code(db: AsyncSession, admin_id, code: str) -> bool:
 async def store_recovery_codes(db: AsyncSession, admin_id, codes: list[str]) -> None:
     # Replace any prior set (re-enrolment invalidates old codes).
     existing = (
-        (
-            await db.execute(
-                select(AdminRecoveryCode).where(AdminRecoveryCode.admin_id == admin_id)
-            )
-        )
+        (await db.execute(select(AdminRecoveryCode).where(AdminRecoveryCode.admin_id == admin_id)))
         .scalars()
         .all()
     )
     for row in existing:
         await db.delete(row)
     for code in codes:
-        db.add(
-            AdminRecoveryCode(admin_id=admin_id, code_hash=_hash_token(code.lower()))
-        )
+        db.add(AdminRecoveryCode(admin_id=admin_id, code_hash=_hash_token(code.lower())))
     await db.commit()
 
 
 # ---- sessions ------------------------------------------------------------
-async def create_session(
-    db: AsyncSession, admin_id, ip: str | None, ua: str | None
-) -> str:
+async def create_session(db: AsyncSession, admin_id, ip: str | None, ua: str | None) -> str:
     """Mint a session; return the opaque token to put in the cookie (only its
     hash is stored)."""
     token = secrets.token_urlsafe(32)
@@ -137,9 +127,7 @@ async def session_admin(db: AsyncSession, token: str | None) -> AdminUser | None
     if not token:
         return None
     row = (
-        await db.execute(
-            select(AdminSession).where(AdminSession.token_hash == _hash_token(token))
-        )
+        await db.execute(select(AdminSession).where(AdminSession.token_hash == _hash_token(token)))
     ).scalar_one_or_none()
     if row is None or row.revoked_at is not None:
         return None
@@ -155,9 +143,7 @@ async def revoke_session(db: AsyncSession, token: str | None) -> None:
     if not token:
         return
     row = (
-        await db.execute(
-            select(AdminSession).where(AdminSession.token_hash == _hash_token(token))
-        )
+        await db.execute(select(AdminSession).where(AdminSession.token_hash == _hash_token(token)))
     ).scalar_one_or_none()
     if row is not None and row.revoked_at is None:
         row.revoked_at = datetime.now(UTC)
@@ -172,9 +158,7 @@ def is_locked(admin: AdminUser) -> bool:
 async def register_failure(db: AsyncSession, admin: AdminUser) -> None:
     admin.failed_attempts += 1
     if admin.failed_attempts >= config.MAX_FAILED_ATTEMPTS:
-        admin.locked_until = datetime.now(UTC) + timedelta(
-            minutes=config.LOCKOUT_MINUTES
-        )
+        admin.locked_until = datetime.now(UTC) + timedelta(minutes=config.LOCKOUT_MINUTES)
         admin.failed_attempts = 0
     await db.commit()
 

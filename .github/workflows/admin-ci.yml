@@ -1,0 +1,41 @@
+name: admin-ci
+
+# Also triggers on api/app changes: the console imports the API's models and
+# services (console/models_ref.py), so a change there can break admin at import
+# time — exactly the failure a green api-ci wouldn't catch.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "admin/**"
+      - "api/app/**"
+      - "api/requirements.txt"
+      - ".github/workflows/admin-ci.yml"
+  pull_request:
+    paths:
+      - "admin/**"
+      - "api/app/**"
+      - "api/requirements.txt"
+      - ".github/workflows/admin-ci.yml"
+
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: "3.12", cache: pip }
+      # The console reuses the API package, so install both dependency sets.
+      # requirements-dev carries ruff / black / pytest.
+      - run: pip install -r api/requirements-dev.txt -r admin/requirements.txt
+      - name: ruff
+        working-directory: admin
+        run: ruff check .
+      - name: black
+        working-directory: admin
+        run: black --check .
+      - name: pytest
+        working-directory: admin
+        run: pytest -q
+      - name: docker build (must always build — built from repo root)
+        run: docker build -f admin/Dockerfile -t kitabi-admin .

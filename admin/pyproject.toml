@@ -1,0 +1,19 @@
+[project]
+name = "kitabi-admin"
+version = "0.1.0"
+description = "Kitabi admin console — back office at admin.kitabi.in"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

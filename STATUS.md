@@ -254,7 +254,8 @@ parts, each with their own README and CI workflow:
 | **Apple Developer** | Apple sign-in | App ID `in.kitabi.kitabi` (Sign in with Apple capability), Services ID `in.kitabi.kitabi.web`, a Sign in with Apple key (Key ID + Team ID `62686X3746`) | Supabase → Authentication → Providers → Apple. Secret JWT regenerated via `api/scripts/gen_apple_secret.py` (expires ~6 months — no automation for this yet, see Open decisions) |
 | **Railway** | API hosting | Project `kitabi-api`, service `kitabi-api`, connected to `shamshi-at/kitabi.in` (branch `main`, Root Directory `api`) for git-based auto-deploy | `api/railway.json` (Dockerfile builder, `/healthz` healthcheck); env vars set directly in Railway dashboard (not in repo) |
 | **Cloudflare** | DNS (kitabi.in), landing page hosting | `api` CNAME → Railway target (proxied), SSL/TLS Full (strict); Pages project `kitabi-in` for the landing page | DNS: Cloudflare dashboard (manual). Pages deploy: `.github/workflows/deploy.yml`, secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` |
-| **GitHub Actions** | CI (lint/test/build checks only — not deployment) | `shamshi-at/kitabi.in` | `.github/workflows/api-ci.yml`, `app-ci.yml`, `deploy.yml` (landing only) |
+| **GitHub Actions** | CI (lint/test/build checks only — not deployment) | `shamshi-at/kitabi.in` | `.github/workflows/api-ci.yml`, `app-ci.yml`, `admin-ci.yml`, `deploy.yml` (landing only) |
+| **Railway (admin)** | Admin console hosting (`admin.kitabi.in`) | Same Railway project; a **second service** pointed at the same Supabase DB. Root Directory = repo root, Dockerfile `admin/Dockerfile` (bundles `api/app`), config `admin/railway.json`. **Not yet created in the dashboard** — see "admin console" below | `admin/railway.json` (Dockerfile builder, `/healthz`); `ENV=production` flips the Secure cookie flag |
 
 | **Firebase (FCM)** | Push notifications only (no other Firebase product) | Project `kitabi-in`; iOS + Android apps, bundle/package `in.kitabi.kitabi`; APNs `.p8` **Production** key uploaded | `GoogleService-Info.plist` (iOS) + `google-services.json` (Android) in the app; API sends via FCM HTTP v1 with `FIREBASE_CREDENTIALS` (service-account JSON) set in Railway — no `firebase-admin` dependency |
 
@@ -333,6 +334,25 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **23 Jul 2026** — **Admin console foundation + its CI/deploy plumbing**
+  (`admin/`, package `console`). A server-rendered back office (FastAPI + Jinja +
+  htmx) at `admin.kitabi.in`, reusing the API's models/db/services via a
+  `sys.path` shim (`console/models_ref.py`). Admin identity is separate from
+  readers by construction — `admin_users` (Argon2id + TOTP), recovery codes,
+  DB-backed sessions, append-only `admin_audit_log`, `[WIRED]` `content_reports`
+  (migration `000031`, RLS-enabled). **Built + verified live** (browser, dev DB):
+  password → forced TOTP enrolment → dashboard (live counts + catalog health) →
+  author-claims queue (wired to the API's `approve_claim`/`reject_claim`) →
+  admin-user management (create / role / revoke, with no-self-lockout guards) →
+  audit log. **Deferred as "Planned" stubs:** suggested-edit moderation,
+  reported content, catalog ops, reader support; plus email invites and (now
+  done) CI. **CI/deploy:** `admin-ci.yml` (ruff/black/pytest + docker build,
+  also triggered by `api/app/**` since the console imports it); `admin/railway.json`
+  for a second Railway service. The production image was run and serves
+  `/healthz` + the auth gate. **Still owner-only:** create the Railway service +
+  `admin.kitabi.in` DNS, run migration `000031` on prod, seed the founder
+  (`scripts/seed_super_admin.py`). Full design: `docs/admin_mockups.html`;
+  runbook: `admin/README.md`.
 - **23 Jul 2026** — **Search stops caring how you spell it** (release **build 89**).
   Two romanization bugs and one structural fix. (1) ITRANS marks the long vowels
   ീ/ൂ with an uppercase I/U that lowercasing flattened to a bare i/u, so

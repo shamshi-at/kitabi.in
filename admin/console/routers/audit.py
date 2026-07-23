@@ -15,15 +15,11 @@ router = APIRouter()
 
 
 @router.get("/audit")
-async def audit_log(
-    request: Request, admin: CurrentAdmin, db: DbSession
-) -> HTMLResponse:
+async def audit_log(request: Request, admin: CurrentAdmin, db: DbSession) -> HTMLResponse:
     rows = (
         (
             await db.execute(
-                select(AdminAuditLog)
-                .order_by(AdminAuditLog.created_at.desc())
-                .limit(200)
+                select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(200)
             )
         )
         .scalars()
@@ -38,9 +34,7 @@ async def audit_log(
 
 
 def _planned(key: str, title: str, blurb: str):
-    async def _view(
-        request: Request, admin: CurrentAdmin, db: DbSession
-    ) -> HTMLResponse:
+    async def _view(request: Request, admin: CurrentAdmin, db: DbSession) -> HTMLResponse:
         badges = await queries.nav_badges(db)
         return templates.TemplateResponse(
             request,
@@ -62,9 +56,9 @@ router.add_api_route(
     _planned(
         "edits",
         "Suggested edits",
-        "The escalation queue for catalog edits — seeded books with no contributor, and edits an admin wants "
-        "to overrule. Readers already review edits to books they added; this screen extends that to everything "
-        "else. Designed in the mockups (S6); wiring is the next slice.",
+        "The escalation queue for catalog edits — seeded books with no contributor, and edits an "
+        "admin wants to overrule. Readers already review edits to books they added; this screen "
+        "extends that to everything else. Designed in the mockups (S6); wiring is the next slice.",
     ),
     methods=["GET"],
 )
@@ -74,8 +68,9 @@ router.add_api_route(
     _planned(
         "reports",
         "Reported content",
-        "Reported public reviews. The content_reports table and the report action are already in the schema "
-        "([WIRED]); this queue stays quiet until the in-app report button ships and there is traffic.",
+        "Reported public reviews. The content_reports table and the report action are already in "
+        "the schema ([WIRED]); this queue stays quiet until the in-app report button ships and "
+        "there is traffic.",
     ),
     methods=["GET"],
 )
@@ -85,9 +80,9 @@ router.add_api_route(
     _planned(
         "catalog",
         "Works & editions",
-        "Catalog operations — search with the same spelling-fold the app uses, duplicate merge with a preview "
-        "of what moves, and a quality-gap worklist. The highest-risk screen (merge moves other readers' library "
-        "entries), so it is built last and most carefully.",
+        "Catalog operations — search with the same spelling-fold the app uses, duplicate merge "
+        "with a preview of what moves, and a quality-gap worklist. The highest-risk screen (merge "
+        "moves other readers' library entries), so it is built last and most carefully.",
     ),
     methods=["GET"],
 )
@@ -97,8 +92,8 @@ router.add_api_route(
     _planned(
         "readers",
         "Readers",
-        "Find an account, see its public identity and contribution counts, and act when it misbehaves — never "
-        "its private shelf. Support, not surveillance. Next slice.",
+        "Find an account, see its public identity and contribution counts, and act when it "
+        "misbehaves — never its private shelf. Support, not surveillance. Next slice.",
     ),
     methods=["GET"],
 )

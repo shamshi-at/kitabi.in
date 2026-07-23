@@ -6,6 +6,8 @@ and records who decided in the audit trail.
 
 import uuid
 
+# The claim decision path lives in the API service — reuse it, don't reimplement.
+from app.services import catalog_service  # noqa: E402
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
@@ -20,9 +22,6 @@ from ..models_ref import (
     Profile,
 )
 from ..templating import templates
-
-# The claim decision path lives in the API service — reuse it, don't reimplement.
-from app.services import catalog_service  # noqa: E402
 
 router = APIRouter(prefix="/moderation")
 
@@ -73,9 +72,7 @@ async def claims(request: Request, admin: CurrentAdmin, db: DbSession) -> HTMLRe
     items = await _pending_rows(db)
     decided = int(
         await db.scalar(
-            select(func.count())
-            .select_from(AuthorClaim)
-            .where(AuthorClaim.status != CLAIM_PENDING)
+            select(func.count()).select_from(AuthorClaim).where(AuthorClaim.status != CLAIM_PENDING)
         )
         or 0
     )
@@ -111,13 +108,15 @@ async def approve(
         set_flash(resp, "err", detail.get("message", "Could not approve this claim."))
         return resp
     author = await db.get(Author, claim.author_id) if claim else None
+    name = author.name if author else "?"
+    reader = claim.user_id if claim else "?"
     await security.audit(
         db,
         "claim.approve",
         admin_id=admin.id,
         target_type="author",
         target_id=str(claim.author_id) if claim else None,
-        summary=f"linked {author.name if author else '?'} to reader {claim.user_id if claim else '?'}",
+        summary=f"linked {name} to reader {reader}",
         ip=client_ip(request),
     )
     set_flash(resp, "ok", "Claim approved — the author is now linked.")

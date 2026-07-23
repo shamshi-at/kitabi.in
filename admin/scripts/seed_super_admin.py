@@ -21,14 +21,14 @@ import getpass
 import sys
 from pathlib import Path
 
-# Make both the admin package (console) and, through its bootstrap, the API
+# Make both the admin package (console) and, and through it the API
 # package importable. `console.models_ref` runs the sys.path shim that adds
 # api/ so `app.*` resolves to the API package.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # admin/
+from sqlalchemy import select  # noqa: E402
+
 from console import security  # noqa: E402
 from console.models_ref import ROLE_SUPER_ADMIN, AdminUser, SessionLocal  # noqa: E402
-
-from sqlalchemy import select  # noqa: E402
 
 
 async def _run(email: str, password: str, force: bool) -> None:
@@ -80,9 +80,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--email", required=True)
     ap.add_argument("--password", help="if omitted, prompts (twice)")
-    ap.add_argument(
-        "--force", action="store_true", help="also reset role to super_admin"
-    )
+    ap.add_argument("--force", action="store_true", help="also reset role to super_admin")
     args = ap.parse_args()
 
     password = args.password
