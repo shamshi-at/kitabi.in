@@ -63,7 +63,13 @@ def _prod_url() -> str:
 
 
 async def run(url: str, apply: bool) -> None:
-    conn = await asyncpg.connect(url, timeout=30)
+    # statement_cache_size=0 is mandatory against the Supavisor transaction
+    # pooler: asyncpg names its prepared statements (__asyncpg_stmt_1__), the
+    # pooler hands out a different backend per transaction, and a reused
+    # backend already holding that name fails with DuplicatePreparedStatement.
+    # It is flaky rather than deterministic — a run can succeed and the next
+    # one blow up on the first fetch — so it must be off, not merely lucky.
+    conn = await asyncpg.connect(url, timeout=30, statement_cache_size=0)
     try:
         total = converted = 0
         for table, text_col, translit_col in TABLES:
