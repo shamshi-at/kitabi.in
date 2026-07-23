@@ -1407,19 +1407,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
               ),
             ],
           ),
-          // Read the details off the covers — the rescue path for books no
-          // catalog knows, and the fast way to fill a blurb you never typed.
-          // "Scan back cover" captures the back page in one tap; "Fill in from
-          // photos" reuses covers already attached. Both prefill empty fields
-          // only (blurb → Description, printed form → Type).
-          SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: (_extracting || _uploadingBack) ? null : _scanBackCover,
-                icon: _uploadingBack
+          // Once a photo is up, offer to read the details off it — the rescue
+          // path for books no catalog knows. Prefills only empty fields.
+          if (_isOwnUpload(_coverUrl) || _isOwnUpload(_backCoverUrl)) ...[
+            SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: (_extracting || _uploadingBack) ? null : _fillFromPhotos,
+                icon: _extracting
                     ? SizedBox(
                         width: 14,
                         height: 14,
@@ -1428,35 +1424,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
                           color: AppColors.oxblood,
                         ),
                       )
-                    : Icon(Icons.document_scanner_outlined, size: 16, color: AppColors.oxblood),
-                label: Text(l10n.formScanBackCover),
+                    : Icon(Icons.auto_awesome, size: 16, color: AppColors.oxblood),
+                label: Text(l10n.formFillFromPhotos),
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   textStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                 ),
               ),
-              // Once a photo is already up, offer to read from what's attached.
-              if (_isOwnUpload(_coverUrl) || _isOwnUpload(_backCoverUrl))
-                OutlinedButton.icon(
-                  onPressed: (_extracting || _uploadingBack) ? null : _fillFromPhotos,
-                  icon: _extracting
-                      ? SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.oxblood,
-                          ),
-                        )
-                      : Icon(Icons.auto_awesome, size: 16, color: AppColors.oxblood),
-                  label: Text(l10n.formFillFromPhotos),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    textStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                  ),
-                ),
-            ],
-          ),
+            ),
+          ],
           SizedBox(height: 16),
           _Field(
             label: l10n.formFieldTitle,
@@ -1759,6 +1735,41 @@ class _BookFormState extends ConsumerState<_BookForm> {
                           maxLines: 4,
                           helper: l10n.formDescriptionHelp,
                           expandable: true,
+                          // Read the blurb (and the printed type) straight off
+                          // the back cover — a link beside the field it fills,
+                          // not a button lost among the covers.
+                          labelAction: InkWell(
+                            onTap: (_extracting || _uploadingBack) ? null : _scanBackCover,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(8, 2, 4, 2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  (_extracting || _uploadingBack)
+                                      ? SizedBox(
+                                          width: 12,
+                                          height: 12,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.oxblood,
+                                          ),
+                                        )
+                                      : Icon(Icons.document_scanner_outlined,
+                                          size: 12, color: AppColors.oxblood),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    l10n.formScanBackCover,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.oxblood,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -2410,6 +2421,7 @@ class _Field extends StatelessWidget {
     this.fillColor,
     this.maxLines = 1,
     this.expandable = false,
+    this.labelAction,
   });
 
   final String label;
@@ -2417,6 +2429,11 @@ class _Field extends StatelessWidget {
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
   final int maxLines;
+
+  /// An optional inline action rendered on the label row (right side, before
+  /// the expand affordance) — e.g. the Description field's "Scan back cover"
+  /// link. A link, not a button, so it sits quietly beside the field it fills.
+  final Widget? labelAction;
 
   /// Optional one-line hint under the field, for the fields users hesitate on
   /// (series, book number, …).
@@ -2438,9 +2455,13 @@ class _Field extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(
+            // The label; an inline action (e.g. Description's "Scan back cover")
+            // sits right beside it, while the expand affordance stays far right.
+            Flexible(
               child: Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10,
                   letterSpacing: 1,
@@ -2449,6 +2470,8 @@ class _Field extends StatelessWidget {
                 ),
               ),
             ),
+            ?labelAction,
+            const Spacer(),
             if (expandable)
               InkWell(
                 onTap: () => Navigator.of(context).push(
