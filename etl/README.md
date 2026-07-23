@@ -93,6 +93,68 @@ app's OpenLibrary path, converges instead of duplicating. All-or-nothing
 After a load, `ANALYZE works; ANALYZE editions; ANALYZE authors;` is worth
 running — the trigram GIN indexes benefit from fresh stats.
 
+## Quick test run (~100 Malayalam books, ~4.6 GB download)
+
+Validates the whole pipeline against the **local dev DB** before committing to
+a real seed. The trick that makes it cheap: only the *editions* dump needs to
+be big, so download a ranged prefix of it — but **works and authors must be
+the full dumps**.
+
+Why: languages live on editions, so a prefix of editions is a fine sample of
+Malayalam books. But the work keys it yields are scattered across the whole
+works dump, so a truncated works dump contains almost none of them — a
+prefix-only run emits `works.jsonl.gz: 0 works` and silently produces nothing.
+Measured rate: **~40 Malayalam works per 32 MB** of the editions dump.
+
+```bash
+cd ~/ol-dumps
+# editions: first 100 MB only  (~125 Malayalam works)
+curl -L -r 0-104857599 https://openlibrary.org/data/ol_dump_editions_latest.txt.gz -o ol_editions_prefix.txt.gz
+# works + authors: FULL, or the join finds nothing
+curl -LO https://openlibrary.org/data/ol_dump_works_latest.txt.gz     # ~4.0 GB
+curl -LO https://openlibrary.org/data/ol_dump_authors_latest.txt.gz   # ~0.5 GB
+```
+
+```bash
+cd /path/to/kitabi.in/etl
+PY=../api/.venv/bin/python; D=~/ol-dumps; OUT=$D/maltest
+
+$PY 02_filter.py --works $D/ol_dump_works_latest.txt.gz \
+    --editions $D/ol_editions_prefix.txt.gz \
+    --authors $D/ol_dump_authors_latest.txt.gz \
+    --languages mal --top 0 --max-works 100 --out-dir $OUT
+$PY 03_transform.py --in-dir $OUT --out-dir $OUT/csv
+```
+
+`--top 0` skips the popularity tier entirely; `--max-works 100` caps the keep
+set (cut by sorted key, so re-runs give the same 100).
+
+Load into the **local** DB — never prod for a test. There's no `psql` on the
+host, so go through the compose container:
+
+```bash
+cd /path/to/kitabi.in/api && docker compose up -d db
+DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:55442/kitabi" .venv/bin/alembic upgrade head
+docker cp ~/ol-dumps/maltest/csv api-db-1:/tmp/seedcsv
+docker cp ../etl/04_load.sql api-db-1:/tmp/seedcsv/
+docker exec -w /tmp/seedcsv api-db-1 psql -U postgres -d kitabi -f 04_load.sql
+```
+
+Check what landed, including that cross-script search will work:
+
+```bash
+docker exec api-db-1 psql -U postgres -d kitabi -c \
+  "select title, title_translit, language, first_publish_year from works limit 10;"
+docker exec api-db-1 psql -U postgres -d kitabi -c \
+  "select count(*) works, (select count(*) from editions) eds, (select count(*) from authors) authors from works;"
+```
+
+`title_translit` must be populated on Malayalam titles (e.g. കയർ → `kayar`) —
+if it's null or wrong, 03_transform.py wasn't run with `api/.venv/bin/python`
+and the romanized search column is broken. Re-running `04_load.sql` inserts 0
+rows, so it's safe to repeat. To start over:
+`TRUNCATE work_authors, editions, publishers, authors, works CASCADE;`
+
 ## Sizing before you commit to a tier
 
 `sample_stats.py` estimates row counts, field coverage, language mix, and the

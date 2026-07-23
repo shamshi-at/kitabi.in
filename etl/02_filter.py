@@ -50,6 +50,13 @@ def main() -> None:
         default=",".join(sorted(INDIC_LANG_CODES)),
         help="comma-separated MARC codes whose works are kept wholesale ('' to disable)",
     )
+    ap.add_argument(
+        "--max-works",
+        type=int,
+        default=0,
+        help="cap the keep set at N works (0 = no cap). For bounded test runs; "
+        "the cut is by sorted key, so the same inputs always give the same N.",
+    )
     ap.add_argument("--out-dir", required=True)
     args = ap.parse_args()
 
@@ -72,6 +79,9 @@ def main() -> None:
         print(f"tier 1 ({','.join(sorted(wanted_langs))}): {len(lang_works):,} works "
               f"(scanned {scanned:,} editions)")
         keep |= lang_works
+    if args.max_works and len(keep) > args.max_works:
+        keep = set(sorted(keep)[: args.max_works])
+        print(f"capped to --max-works {args.max_works:,}")
     print(f"keep set: {len(keep):,} works")
 
     # Works pass: write kept works, collect their author keys.
