@@ -1,4 +1,4 @@
-import { injectOg, fetchEntity, clamp } from '../_og.js';
+import { injectOg, fetchEntity, clamp, notFound } from '../_og.js';
 
 // /a/:id — Open Graph tags for a shared author: portrait, name, works count.
 export async function onRequest(context) {
@@ -9,9 +9,9 @@ export async function onRequest(context) {
 
   const shell = await env.ASSETS.fetch(new URL('/author', url));
 
-  const data = await fetchEntity(`/catalog/authors/${encodeURIComponent(id)}`);
+  const { data, missing } = await fetchEntity(`/catalog/authors/${encodeURIComponent(id)}`);
   const author = data && data.author;
-  if (!author) return shell;
+  if (!author) return missing ? notFound(shell) : shell;
 
   const name = author.name || 'Unknown author';
   const works = Array.isArray(data.works) ? data.works : [];

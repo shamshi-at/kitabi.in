@@ -1,4 +1,4 @@
-import { injectOg, fetchEntity, clamp } from '../_og.js';
+import { injectOg, fetchEntity, clamp, notFound } from '../_og.js';
 
 // /b/:id — inject real Open Graph tags for a shared book so link previews show
 // the cover, title (+ author) and a short blurb. Humans still get book.html and
@@ -12,8 +12,10 @@ export async function onRequest(context) {
   // Start from the static shell — it's what humans get and what we rewrite.
   const shell = await env.ASSETS.fetch(new URL('/book', url));
 
-  const data = await fetchEntity(`/catalog/works/${encodeURIComponent(id)}`);
-  if (!data || !data.id) return shell; // unknown/unavailable → generic preview
+  // Unknown book → a real 404 + noindex; API unreachable → the generic shell,
+  // unchanged, because a blip must not read to a crawler as "this book is gone".
+  const { data, missing } = await fetchEntity(`/catalog/works/${encodeURIComponent(id)}`);
+  if (!data || !data.id) return missing ? notFound(shell) : shell;
 
   const editions = Array.isArray(data.editions) ? data.editions : [];
   const ed = editions.find((e) => e && e.cover_url) || editions[0] || {};

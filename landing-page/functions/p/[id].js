@@ -1,4 +1,4 @@
-import { injectOg, fetchEntity } from '../_og.js';
+import { injectOg, fetchEntity, notFound } from '../_og.js';
 
 // /p/:id — Open Graph tags for a shared publisher: logo, name, titles count.
 export async function onRequest(context) {
@@ -9,9 +9,9 @@ export async function onRequest(context) {
 
   const shell = await env.ASSETS.fetch(new URL('/publisher', url));
 
-  const data = await fetchEntity(`/catalog/publishers/${encodeURIComponent(id)}`);
+  const { data, missing } = await fetchEntity(`/catalog/publishers/${encodeURIComponent(id)}`);
   const publisher = data && data.publisher;
-  if (!publisher) return shell;
+  if (!publisher) return missing ? notFound(shell) : shell;
 
   const name = publisher.name || 'Unknown publisher';
   const works = Array.isArray(data.works) ? data.works : [];

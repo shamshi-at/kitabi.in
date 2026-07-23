@@ -30,16 +30,36 @@ export function clamp(text, max) {
   return t.slice(0, max - 1).trimEnd() + '…';
 }
 
-// Fetch the entity JSON from the catalog API. Returns null on any failure so the
-// caller can fall back to serving the generic shell unchanged.
+// Fetch the entity JSON from the catalog API.
+//
+// Returns { data, missing }. `missing` is true ONLY when the API answered
+// definitively that there is no such entity (404/410) — a 5xx, a timeout, or a
+// network blip leaves it false. That distinction is the whole point: a missing
+// entity should tell crawlers "gone" (see notFound), but an API outage must
+// not, or one bad minute would deindex every real book page on the site.
 export async function fetchEntity(path) {
   try {
     const r = await fetch(`${API}${path}`, { headers: { Accept: 'application/json' } });
-    if (!r.ok) return null;
-    return await r.json();
+    if (r.ok) return { data: await r.json(), missing: false };
+    return { data: null, missing: r.status === 404 || r.status === 410 };
   } catch (_) {
-    return null;
+    return { data: null, missing: false };
   }
+}
+
+// The shell served as a real 404 for an entity that doesn't exist, with a
+// noindex so a crawler that already has the URL drops it instead of keeping a
+// generic "A book on Kitabi" page in the index. Without this the shell went out
+// as HTTP 200 — a soft 404, and one near-identical thin page per dead link.
+export function notFound(shell) {
+  const page = new HTMLRewriter()
+    .on('head', {
+      element(el) {
+        el.append('<meta name="robots" content="noindex">', { html: true });
+      },
+    })
+    .transform(shell);
+  return new Response(page.body, { status: 404, headers: page.headers });
 }
 
 // Rewrite the static shell's <head> with real OG / Twitter tags. `meta` carries
