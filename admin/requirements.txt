@@ -1,0 +1,17 @@
+# Admin console runtime — pinned (same discipline as api/requirements.txt).
+# Reuses the API's own deps (sqlalchemy, asyncpg, pydantic-settings…) by
+# importing the app package; these are the admin-only additions.
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+jinja2==3.1.4
+python-multipart==0.0.20
+argon2-cffi==23.1.0
+pyotp==2.9.0
+segno==1.6.1
+# Shared with the API (its container also installs these; pinned identically):
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+anyascii==0.3.3
+indic-transliteration==2.3.82

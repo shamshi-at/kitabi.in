@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Kitabi Admin{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block subheading %}Live counts · nothing cached{% endblock %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="v">{{ "{:,}".format(stats.readers) }}</div><div class="k">Readers</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(stats.works) }}</div><div class="k">Works</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(stats.authors) }}</div><div class="k">Authors</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(stats.shelved) }}</div><div class="k">Books shelved</div></div>
+  <div class="kpi"><div class="v">{{ stats.waiting }}</div><div class="k">Awaiting review</div></div>
+</div>
+
+<div class="split3" style="margin-top:14px">
+  <div class="card">
+    <div class="lbl">Waiting on you</div>
+    <table style="margin-top:8px">
+      <tr><td class="t">Author claims</td>
+        <td style="text-align:right">{% if stats.badges.claims %}<span class="pill pend">{{ stats.badges.claims }} pending</span>{% else %}<span class="pill ok">clear</span>{% endif %}</td>
+        <td style="text-align:right"><a class="btn s" href="/moderation/claims">Open</a></td></tr>
+      <tr><td class="t">Suggested edits</td>
+        <td style="text-align:right">{% if stats.badges.revisions %}<span class="pill pend">{{ stats.badges.revisions }} pending</span>{% else %}<span class="pill ok">clear</span>{% endif %}</td>
+        <td style="text-align:right"><a class="btn s" href="/moderation/edits">Open</a></td></tr>
+      <tr><td class="t">Reported content</td>
+        <td style="text-align:right">{% if stats.badges.reports %}<span class="pill no">{{ stats.badges.reports }} open</span>{% else %}<span class="pill ok">clear</span>{% endif %}</td>
+        <td style="text-align:right"><a class="btn s" href="/moderation/reports">Open</a></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="lbl">Catalog health</div>
+    <div class="stack" style="margin-top:11px;font-size:12.5px">
+      <div style="display:flex;justify-content:space-between"><span>With cover</span><b>{{ stats.health.cover_pct }}%</b></div>
+      <div class="bar"><i style="width:{{ stats.health.cover_pct }}%;background:var(--oxblood)"></i></div>
+      <div style="display:flex;justify-content:space-between"><span>With description</span><b>{{ stats.health.desc_pct }}%</b></div>
+      <div class="bar"><i style="width:{{ stats.health.desc_pct }}%;background:var(--gold)"></i></div>
+      <div style="display:flex;justify-content:space-between"><span>With ISBN</span><b>{{ stats.health.isbn_pct }}%</b></div>
+      <div class="bar"><i style="width:{{ stats.health.isbn_pct }}%;background:var(--moss)"></i></div>
+    </div>
+    <div class="note" style="margin-top:12px">{{ "{:,}".format(stats.works) }} works · {{ "{:,}".format(stats.editions) }} editions in the catalog.</div>
+  </div>
+</div>
+{% endblock %}

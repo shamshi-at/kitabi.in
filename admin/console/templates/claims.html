@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Author claims · Kitabi Admin{% endblock %}
+{% block heading %}Author claims{% endblock %}
+{% block subheading %}{{ items | length }} pending · {{ decided }} decided all time{% endblock %}
+{% block content %}
+{% if not items %}
+  <div class="card" style="text-align:center;padding:44px">
+    <div class="lbl">Nothing waiting</div>
+    <p style="margin-top:8px;color:var(--ink-soft);font-size:13px">No author claims to review.
+    A reader taps “This is me” on an author, and it lands here.</p>
+  </div>
+{% endif %}
+<div class="stack">
+{% for it in items %}
+  <div class="mod">
+    <div class="hd">
+      {% if it.rivals > 1 %}<span class="pill no">Contested</span>{% else %}<span class="pill pend">Pending</span>{% endif %}
+      <b>{{ it.author.name }}</b>
+      {% if it.already_linked %}<span class="pill mute" style="margin-left:auto">Already linked</span>{% endif %}
+    </div>
+    <div class="bd">
+      {% if it.rivals > 1 %}
+      <div class="note warn" style="margin-bottom:12px">{{ it.rivals }} readers claim this author.
+      Approving one automatically rejects the others.</div>
+      {% endif %}
+      <div class="split3">
+        <div>
+          <div class="lbl">Claimed by</div>
+          {% if it.profile %}
+          <div style="margin-top:6px;font-size:13px"><b>{{ it.profile.full_name or 'Unnamed reader' }}</b>
+            {% if it.profile.username %}· @{{ it.profile.username }}{% endif %}</div>
+          <div class="m" style="font-size:11.5px;margin-top:3px">
+            {{ it.profile.email }} · joined {{ it.profile.created_at.strftime('%b %Y') }}
+            {% if it.profile.profile_visible %}· <span class="pill ok">public profile</span>{% else %}· <span class="pill mute">private</span>{% endif %}
+          </div>
+          {% else %}
+          <div class="m" style="margin-top:6px">Reader profile not found (id {{ it.claim.user_id }})</div>
+          {% endif %}
+          <div class="note" style="margin-top:12px">Kitabi holds <b>no identity proof</b> — this decision
+          is editorial, not forensic. Approving writes the 🔗 link every reader sees; it is reversible
+          from the author record and logged.</div>
+        </div>
+        <div>
+          <div class="lbl">Author record</div>
+          <div class="card" style="margin-top:6px;padding:11px">
+            <div style="font-size:13px;font-weight:600">{{ it.author.name }}</div>
+            <div class="m" style="font-size:11.5px;margin-top:3px">
+              {% if it.author.primary_language %}{{ it.author.primary_language }} · {% endif %}
+              {% if it.already_linked %}linked{% else %}currently unclaimed{% endif %}</div>
+            <div style="margin-top:9px">
+              {% if it.already_linked %}<span class="pill info">linked_user_id set</span>
+              {% else %}<span class="pill mute">linked_user_id · null</span>{% endif %}</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <form method="post" action="/moderation/claims/{{ it.claim.id }}/approve">
+          <button class="btn g" {% if it.already_linked %}disabled{% endif %}>Approve — this is them</button>
+        </form>
+        <form method="post" action="/moderation/claims/{{ it.claim.id }}/reject">
+          <button class="btn d">Reject</button>
+        </form>
+        <span style="margin-left:auto;font-size:11.5px;color:var(--ink-soft);align-self:center">
+          claimed {{ it.claim.created_at.strftime('%d %b %Y') }}</span>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "auth_base.html" %}
+{% block title %}Sign in · Kitabi Admin{% endblock %}
+{% block content %}
+<h4>Kitabi Admin</h4>
+<p class="lead">Staff access only. Reader accounts do not sign in here.</p>
+<form method="post" action="/sign-in">
+  <div class="fld"><label>Email</label>
+    <input type="email" name="email" autocomplete="username" required autofocus
+      value="{{ email or '' }}"></div>
+  <div class="fld"><label>Password</label>
+    <input type="password" name="password" autocomplete="current-password" required></div>
+  <button class="btn p wfull" type="submit">Continue</button>
+</form>
+{% endblock %}

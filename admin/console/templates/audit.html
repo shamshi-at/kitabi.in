@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Audit log · Kitabi Admin{% endblock %}
+{% block heading %}Audit log{% endblock %}
+{% block subheading %}Append-only · newest first{% endblock %}
+{% block content %}
+<div class="tbl">
+  <table>
+    <tr><th style="width:150px">When (UTC)</th><th>Admin</th><th>Action</th><th>Target</th><th>Detail</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td class="m mono">{{ r.created_at.strftime('%d %b %H:%M:%S') }}</td>
+      <td class="m">{{ r.admin_id and (r.admin_id | string)[:8] or '—' }}</td>
+      <td>
+        {% set cls = 'ok' if r.action.startswith('claim.approve') or r.action == 'auth.success'
+          else ('no' if 'fail' in r.action or 'reject' in r.action or 'revoke' in r.action or 'hide' in r.action
+          else ('gold' if r.action.startswith('admin.') else 'info')) %}
+        <span class="pill {{ cls }}">{{ r.action }}</span>
+      </td>
+      <td class="m">{% if r.target_type %}{{ r.target_type }}{% if r.target_id %} · {{ (r.target_id)[:12] }}{% endif %}{% else %}—{% endif %}</td>
+      <td class="m">{{ r.summary or '' }}{% if r.ip %} <span style="color:#b3a68d">· {{ r.ip }}</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    {% if not rows %}<tr><td colspan="5" class="m" style="text-align:center;padding:30px">No entries yet.</td></tr>{% endif %}
+  </table>
+</div>
+<div class="note" style="margin-top:12px">Every moderation action and every sign-in attempt is written
+here and can never be edited or deleted — including by a super admin.</div>
+{% endblock %}

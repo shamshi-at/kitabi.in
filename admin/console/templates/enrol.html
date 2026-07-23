@@ -1,0 +1,22 @@
+{% extends "auth_base.html" %}
+{% block title %}Set up 2FA · Kitabi Admin{% endblock %}
+{% block content %}
+<h4>Set up your authenticator</h4>
+<p class="lead">Scan with Google Authenticator, 1Password, Aegis — any TOTP app — then enter the
+6-digit code it shows to confirm.</p>
+<div class="qr">{{ qr_svg | safe }}</div>
+<div class="fld"><label>Or enter this key manually</label>
+  <input class="mono" value="{{ secret_grouped }}" readonly style="letter-spacing:1.5px"></div>
+
+<div class="fld" style="margin-top:16px"><label>Recovery codes — save these now, shown once</label>
+  <div class="recov">
+    {% for code in recovery_codes %}<span>{{ code }}</span>{% endfor %}
+  </div>
+</div>
+
+<form method="post" action="/enrol">
+  <div class="fld" style="margin-top:14px"><label>Confirm with a code</label>
+    <input class="otp-in" name="code" inputmode="numeric" maxlength="6" pattern="[0-9]*" required></div>
+  <button class="btn p wfull" type="submit">I have saved my codes — finish</button>
+</form>
+{% endblock %}

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Kitabi Admin{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+{% macro navlink(href, label, key, badge=0) %}
+<a class="nav {% if active == key %}on{% endif %}" href="{{ href }}">{{ label }}
+  {% if badge %}<span class="n">{{ badge }}</span>{% endif %}</a>
+{% endmacro %}
+<div class="shell">
+  <nav class="rail">
+    <a class="brand" href="/"><i>K</i><div><b>Kitabi</b><s>ADMIN</s></div></a>
+    <div class="grp">OVERVIEW</div>
+    {{ navlink('/', 'Dashboard', 'dashboard') }}
+    <div class="grp">MODERATION</div>
+    {{ navlink('/moderation/claims', 'Author claims', 'claims', badges.claims) }}
+    {{ navlink('/moderation/edits', 'Suggested edits', 'edits', badges.revisions) }}
+    {{ navlink('/moderation/reports', 'Reported content', 'reports', badges.reports) }}
+    {% if admin.role in ['editor', 'super_admin'] %}
+    <div class="grp">CATALOG</div>
+    {{ navlink('/catalog', 'Works & editions', 'catalog') }}
+    {% endif %}
+    <div class="grp">PEOPLE</div>
+    {{ navlink('/readers', 'Readers', 'readers') }}
+    {% if admin.role == 'super_admin' %}
+    {{ navlink('/admins', 'Admin users', 'admins') }}
+    {% endif %}
+    <div class="grp">TRUST</div>
+    {{ navlink('/audit', 'Audit log', 'audit') }}
+    <div class="who">
+      <b>{{ admin.email.split('@')[0] }}</b><s>{{ admin.email }}</s><br>
+      <span class="role">{{ admin.role.replace('_', ' ') }}</span>
+      <a class="out" href="/sign-out">Sign out</a>
+    </div>
+  </nav>
+  <div class="main">
+    <div class="top">
+      <div><h3>{% block heading %}{% endblock %}</h3>
+        <div class="sub">{% block subheading %}{% endblock %}</div></div>
+      <div class="sp">{% block topactions %}{% endblock %}</div>
+    </div>
+    <div class="content">
+      {% if flash %}<div class="flash {{ flash.kind }}">{{ flash.text }}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

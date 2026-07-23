@@ -2,6 +2,20 @@
 so Alembic autogenerate and callers can import them from one place."""
 
 from app.models.activity_log_entry import ActivityLogEntry
+from app.models.admin import (
+    ADMIN_ROLES,
+    REPORT_DISMISSED,
+    REPORT_OPEN,
+    REPORT_UPHELD,
+    ROLE_EDITOR,
+    ROLE_MODERATOR,
+    ROLE_SUPER_ADMIN,
+    AdminAuditLog,
+    AdminRecoveryCode,
+    AdminSession,
+    AdminUser,
+    ContentReport,
+)
 from app.models.author import Author
 from app.models.author_claim import (
     CLAIM_APPROVED,
@@ -66,4 +80,16 @@ __all__ = [
     "SyncOp",
     "ConflictHistory",
     "WorkRevision",
+    "AdminUser",
+    "AdminRecoveryCode",
+    "AdminSession",
+    "AdminAuditLog",
+    "ContentReport",
+    "ADMIN_ROLES",
+    "ROLE_MODERATOR",
+    "ROLE_EDITOR",
+    "ROLE_SUPER_ADMIN",
+    "REPORT_OPEN",
+    "REPORT_UPHELD",
+    "REPORT_DISMISSED",
 ]

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Admin users · Kitabi Admin{% endblock %}
+{% block heading %}Admin users{% endblock %}
+{% block subheading %}{{ admins | length }} admins{% endblock %}
+{% block content %}
+{% if created %}
+<div class="note" style="margin-bottom:14px;border-left-color:var(--oxblood)">
+  <b>Temporary password for {{ created.email }}</b> — shown once, share it securely:
+  <code style="font-size:13px">{{ created.password }}</code>. They sign in with this and enrol an
+  authenticator on first sign-in.
+</div>
+{% endif %}
+
+<div class="tbl">
+  <table>
+    <tr><th>Admin</th><th>Role</th><th>2FA</th><th>Last sign-in</th><th>Status</th><th></th></tr>
+    {% for a in admins %}
+    <tr>
+      <td><div class="t">{{ a.email.split('@')[0] }}</div><div class="m">{{ a.email }}</div></td>
+      <td>
+        <form method="post" action="/admins/{{ a.id }}/role" style="display:inline-flex;gap:6px;align-items:center">
+          <select name="role" style="padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit">
+            {% for r in roles %}<option value="{{ r }}" {% if a.role == r %}selected{% endif %}>{{ r.replace('_',' ') }}</option>{% endfor %}
+          </select>
+          <button class="btn s">Set</button>
+        </form>
+      </td>
+      <td>{% if a.totp_enrolled_at %}<span class="pill ok">Enrolled</span>{% else %}<span class="pill no">Not enrolled</span>{% endif %}</td>
+      <td class="m">{% if a.last_sign_in_at %}{{ a.last_sign_in_at.strftime('%d %b, %H:%M') }}{% else %}never{% endif %}</td>
+      <td>{% if a.is_active %}<span class="pill ok">Active</span>{% else %}<span class="pill mute">Revoked</span>{% endif %}</td>
+      <td style="text-align:right">
+        {% if a.id == admin.id %}<span class="m">you</span>
+        {% elif a.is_active %}
+        <form method="post" action="/admins/{{ a.id }}/revoke" style="display:inline"
+          onsubmit="return confirm('Revoke access for {{ a.email }}?')">
+          <button class="btn s d">Revoke</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="split" style="margin-top:14px">
+  <div class="card">
+    <div class="lbl">Create an admin</div>
+    <form method="post" action="/admins/create">
+      <div class="fld" style="margin-top:9px"><label>Email</label>
+        <input type="email" name="email" placeholder="name@example.com" required></div>
+      <div class="fld"><label>Role</label>
+        <select name="role">
+          <option value="moderator">Moderator — works the moderation queues</option>
+          <option value="editor">Editor — also fixes the catalog</option>
+          <option value="super_admin">Super admin — also manages admins &amp; data</option>
+        </select></div>
+      <div class="note">A one-time password is generated and shown here for you to hand over. They enrol
+      a TOTP app on first sign-in before they can reach anything.</div>
+      <button class="btn p" style="margin-top:11px">Create admin</button>
+    </form>
+  </div>
+  <div class="card">
+    <div class="lbl">What each role can do</div>
+    <table style="margin-top:6px;font-size:12px">
+      <tr><th></th><th style="text-align:center">Mod</th><th style="text-align:center">Editor</th><th style="text-align:center">Super</th></tr>
+      <tr><td>Work the moderation queues</td><td style="text-align:center">●</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr>
+      <tr><td>Edit / merge catalog</td><td style="text-align:center">○</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr>
+      <tr><td>Warn / suspend readers</td><td style="text-align:center">●</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr>
+      <tr><td>Delete a reader's data</td><td style="text-align:center">○</td><td style="text-align:center">○</td><td style="text-align:center">●</td></tr>
+      <tr><td>Manage admins &amp; roles</td><td style="text-align:center">○</td><td style="text-align:center">○</td><td style="text-align:center">●</td></tr>
+    </table>
+    <div class="note" style="margin-top:11px">You cannot revoke or demote yourself, and the last super
+    admin cannot be removed — so the console can never lock everyone out.</div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "auth_base.html" %}
+{% block title %}Recovery code · Kitabi Admin{% endblock %}
+{% block content %}
+<h4>Use a recovery code</h4>
+<p class="lead">Enter one of the single-use codes you saved when you set up your authenticator.
+Each works only once.</p>
+<form method="post" action="/sign-in/recovery">
+  <div class="fld"><label>Recovery code</label>
+    <input name="code" class="mono" placeholder="4f2a-91cd" required autofocus
+      style="letter-spacing:2px"></div>
+  <button class="btn p wfull" type="submit">Verify</button>
+</form>
+<p style="margin-top:16px"><a class="muted-link" href="/sign-in/2fa">Back to authenticator code</a></p>
+{% endblock %}
