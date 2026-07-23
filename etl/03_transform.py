@@ -47,6 +47,7 @@ from ol_stream import (
 # warning, because a wrong translit silently breaks cross-script search.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "api"))
 try:
+    from app.services.malayalam_script import to_malayalam_script
     from app.services.translit import transliterate
 except ImportError:  # pragma: no cover — wrong interpreter
     print(
@@ -57,6 +58,16 @@ except ImportError:  # pragma: no cover — wrong interpreter
 
     def transliterate(text):  # type: ignore[misc]
         return text.strip().lower() or None if isinstance(text, str) else None
+
+    def to_malayalam_script(text):  # type: ignore[misc]
+        return None
+
+
+def native_script(text: str | None) -> str | None:
+    """OpenLibrary romanizes Malayalam (`Kēraḷa sthalanāmakōśaṃ`); store the
+    native script instead. Returns [text] unchanged when there's nothing to
+    convert — an English title, or one already in script."""
+    return to_malayalam_script(text) or text
 
 
 NS = uuid.uuid5(uuid.NAMESPACE_URL, "https://openlibrary.org")
@@ -194,9 +205,10 @@ def main() -> None:
         kept_work_ids.add(wid)
         lang = majority_lang(work_langs.get(key))
         desc = ol_text(work.get("description"))
+        native = native_script(title)
         works_csv.writerow(row({
             "id": wid, "created_at": NOW, "updated_at": NOW, "deleted_at": None,
-            "title": title, "title_translit": transliterate(title),
+            "title": native, "title_translit": transliterate(native),
             "subtitle": ol_text(work.get("subtitle")),
             "description": desc[:DESC_MAX] if desc else None,
             "language": lang,
@@ -227,9 +239,10 @@ def main() -> None:
         seen_author_ids[key] = aid
         langs = author_langs.get(key)
         bio = ol_text(author.get("bio"))
+        native = native_script(_WS.sub(" ", name))
         authors_csv.writerow(row({
             "id": aid, "created_at": NOW, "updated_at": NOW, "deleted_at": None,
-            "name": _WS.sub(" ", name), "name_translit": transliterate(name),
+            "name": native, "name_translit": transliterate(native),
             "pen_name": None, "image_url": cover_url_of(author, kind="a"),
             "primary_language": langs.most_common(1)[0][0] if langs else None,
             "bio": bio[:DESC_MAX] if bio else None,
@@ -269,10 +282,11 @@ def main() -> None:
                 low = name.lower()
                 if low not in publisher_ids:
                     publisher_ids[low] = str(uuid.uuid5(NS, f"publisher:{low}"))
+                    native = native_script(name)
                     publishers_csv.writerow(row({
                         "id": publisher_ids[low], "created_at": NOW, "updated_at": NOW,
-                        "deleted_at": None, "name": name,
-                        "name_translit": transliterate(name), "logo_url": None,
+                        "deleted_at": None, "name": native,
+                        "name_translit": transliterate(native), "logo_url": None,
                         "primary_language": None, "external_source": "openlibrary",
                         "external_id": None,
                     }))

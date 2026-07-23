@@ -26,6 +26,14 @@ from indic_transliteration.sanscript import SCHEMES
 
 _WHITESPACE = re.compile(r"\s+")
 
+# ITRANS spells the two Indic nasals with a tilde — ~N for ങ, ~n for ഞ — and a
+# tilde is something no reader ever types, so it has to go before the value
+# becomes a search key. The doubled forms are collapsed first because the
+# geminates are what actually occur in Malayalam (the -ങ്ങൾ plural, ഞ്ഞ), and
+# collapsing them lands on the spelling people really use: മാങ്ങാട് →
+# "mangat" not "mangngat", കൊഴിഞ്ഞു → "kozhinju" not "kozhinjnju".
+_ITRANS_NASALS = [("~N~N", "ng"), ("~n~n", "nj"), ("~N", "ng"), ("~n", "nj")]
+
 
 def _indic_scheme(text: str) -> str | None:
     """The sanscript scheme name when [text] is in a Brahmic (Indic) script —
@@ -55,6 +63,8 @@ def transliterate(text: str | None) -> str | None:
             value = sanscript.transliterate(value, scheme, sanscript.ITRANS)
         except Exception:  # noqa: BLE001 — fall back to the plain char map
             pass
+        for itrans, plain in _ITRANS_NASALS:
+            value = value.replace(itrans, plain)
     value = anyascii(value)
     value = _WHITESPACE.sub(" ", value).strip().lower()
     return value or None

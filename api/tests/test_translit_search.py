@@ -14,6 +14,17 @@ def test_transliterate_romanizes_indic_and_lowercases_latin():
     assert transliterate("   ") is None
 
 
+def test_itrans_nasal_tildes_never_reach_the_search_key():
+    """ITRANS spells ങ/ഞ as ~N/~n. A tilde is not on anyone's keyboard, so it
+    must not survive into a column readers' queries are matched against —
+    doubled forms collapse to the spelling people actually type."""
+    for source in ("ഞാൻ", "മാങ്ങാട്", "കൊഴിഞ്ഞു", "ശങ്കരൻ"):
+        assert "~" not in transliterate(source)
+    assert transliterate("ഞാൻ") == "njan"
+    assert transliterate("മാങ്ങാട്") == "mangat"
+    assert transliterate("കൊഴിഞ്ഞു") == "kozhinju"
+
+
 async def _seed(client) -> None:
     for payload in (
         {
