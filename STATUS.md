@@ -333,6 +333,34 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **23 Jul 2026** — **Search stops caring how you spell it** (release **build 89**).
+  Two romanization bugs and one structural fix. (1) ITRANS marks the long vowels
+  ീ/ൂ with an uppercase I/U that lowercasing flattened to a bare i/u, so
+  അപൂർണ്ണൻ was stored as "apurnnan" — "Apoornn" scored 0.27 against it and
+  found nothing, while "Apoornna" scraped over pg_trgm's 0.3 similarity
+  threshold, which is why one extra letter looked like magic (owner report).
+  Long vowels now double; ചെമ്മീൻ romanizes to "chemmeen", *identical* to the
+  Latin spelling. (2) Tamil was romanized with Sanskrit consonant values —
+  "பொன்னியின் செல்வன்" stored as "bhonniyin jhelvan" (0.42 similarity to what a
+  reader types) and "சிலப்பதிகாரம்" as "jhilabhbhadhigharam" (0.13, unfindable);
+  the superscripted scheme fixes both. (3) **The fold** (migration `000030`,
+  `*_fold` columns, GIN-trigram-indexed): a spelling skeleton collapsing long/short
+  vowels, aspiration, the ch/sh/s sibilants, gemination, v/w and the m/n nasal, applied
+  to the stored value *and* the query, so any romanization reaches the book.
+  Measured before building — 13/20 realistic typings fold to an exact hit; 197
+  titles yield 194 distinct folds (the one collision being a single word spelled
+  two ways), so recall rose without costing precision. Verified live on prod:
+  ചോര is found by chora/sora/chhora, പ്രണാമം by pranamam/pranaamam/branamam,
+  and the reported "Apoornn" now returns അപൂർണ്ണൻ first.
+- **23 Jul 2026** — **Home showed "…" for every title on a fresh install.** Not a
+  font or rendering bug: `book?.title ?? '…'` is the fallback for a missing
+  `cached_books` row, and that cache is device-local while `library_entries`
+  are synced. `cacheMissingLibraryBooks` already existed to heal it but was
+  wired only into the **library grid's** initState, so Home stayed broken until
+  you visited that tab — while `cacheBorrowedBooks`, the identical gap for
+  borrowed books, had been in the sync pass since July. Hydration now runs on
+  the pull, where every surface benefits. (CLAUDE.md's "a feature added to one
+  entry point must be added to all of them", again.)
 - **23 Jul 2026** — **The catalog now stores Malayalam in native script.** The
   seed arrived in OpenLibrary's ALA-LC romanization (`Kēraḷa sthalanāmakōśaṃ`);
   `api/app/services/malayalam_script.py` converts it back via ISO 15919,
