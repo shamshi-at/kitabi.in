@@ -60,3 +60,18 @@ async def get_current_user(
         "avatar_url": avatar_url,
         "full_name": user_meta.get("full_name") or user_meta.get("name"),
     }
+
+
+async def get_optional_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+) -> dict | None:
+    """`get_current_user` for endpoints that are public but richer when signed
+    in — an anonymous caller gets None instead of a 401.
+
+    A token that is *present but invalid* still 401s: that's a broken or
+    expired client, not an anonymous visitor, and silently downgrading it to
+    anonymous would hide the app's own auth failures.
+    """
+    if credentials is None:
+        return None
+    return await get_current_user(credentials)

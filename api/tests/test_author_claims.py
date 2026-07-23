@@ -12,7 +12,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app.core.db import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_user
 from app.main import create_app
 from app.models import CLAIM_PENDING, Author, AuthorClaim
 from app.services import catalog_service
@@ -27,6 +27,9 @@ def _client(db_sessionmaker, who: dict) -> AsyncClient:
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_current_user] = lambda: who
+    # get_author reads the reader through get_optional_user (it is public) —
+    # override both, or this "signed-in" client reads as anonymous there.
+    app.dependency_overrides[get_optional_user] = lambda: who
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
 

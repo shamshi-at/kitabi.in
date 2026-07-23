@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.core.db import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_user
 from app.main import create_app
 from app.services.openlibrary_client import get_openlibrary_client
 
@@ -167,6 +167,10 @@ async def client(db_sessionmaker, user, fake_ol_client) -> AsyncIterator[AsyncCl
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_current_user] = lambda: user
+    # Public-but-richer-when-signed-in endpoints resolve the reader through
+    # get_optional_user, which never reaches get_current_user's override —
+    # without this, a "signed-in" client would read as anonymous on them.
+    app.dependency_overrides[get_optional_user] = lambda: user
     app.dependency_overrides[get_openlibrary_client] = lambda: fake_ol_client
 
     transport = ASGITransport(app=app)

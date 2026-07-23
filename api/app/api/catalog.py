@@ -8,7 +8,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, OptionalUser
 from app.core.config import get_settings
 from app.models import Author, Publisher
 from app.schemas.catalog import (
@@ -422,8 +422,16 @@ async def link_author(author_id: uuid.UUID, user: CurrentUser, db: DbSession) ->
 
 
 @router.get("/authors/{author_id}", response_model=AuthorWorksOut)
-async def get_author(author_id: uuid.UUID, user: CurrentUser, db: DbSession) -> AuthorWorksOut:
-    """Author browse page (S4c) — every catalog work by this author."""
+async def get_author(author_id: uuid.UUID, user: OptionalUser, db: DbSession) -> AuthorWorksOut:
+    """Author browse page (S4c) — every catalog work by this author.
+
+    Public, like the sibling work/publisher pages: requiring auth here silently
+    broke kitabi.in/a/:id, whose edge function fetches anonymously to build the
+    share preview and now the schema.org JSON-LD (found 23 Jul 2026 — author
+    links had never previewed). Everything returned is Layer-1 catalog data
+    except `linked_user_id`, a Supabase user id, which is withheld from
+    anonymous callers rather than published to crawlers.
+    """
     author = await db.get(Author, author_id)
     if author is None:
         raise HTTPException(
@@ -432,9 +440,14 @@ async def get_author(author_id: uuid.UUID, user: CurrentUser, db: DbSession) -> 
         )
     works = await catalog_service.author_works(db, author_id)
     out = AuthorDetailOut.model_validate(author)
-    # Only this reader's own pending claim is ever disclosed.
-    pending = await catalog_service.pending_claim_author_ids(db, uuid.UUID(user["id"]), [author.id])
-    out.claim_pending = author.id in pending
+    if user is None:
+        out.linked_user_id = None
+    else:
+        # Only this reader's own pending claim is ever disclosed.
+        pending = await catalog_service.pending_claim_author_ids(
+            db, uuid.UUID(user["id"]), [author.id]
+        )
+        out.claim_pending = author.id in pending
     return AuthorWorksOut(author=out, works=[work_summary(w) for w in works])
 
 
