@@ -4,11 +4,16 @@
 {% block subheading %}Live counts · nothing cached{% endblock %}
 {% block content %}
 <div class="kpis">
-  <div class="kpi"><div class="v">{{ "{:,}".format(stats.readers) }}</div><div class="k">Readers</div></div>
+  <a class="kpi" href="/readers"><div class="v">{{ "{:,}".format(stats.readers) }}</div><div class="k">Readers</div></a>
+  {% if admin.role in ['editor', 'super_admin'] %}
+  <a class="kpi" href="/catalog"><div class="v">{{ "{:,}".format(stats.works) }}</div><div class="k">Works</div></a>
+  <a class="kpi" href="/catalog"><div class="v">{{ "{:,}".format(stats.authors) }}</div><div class="k">Authors</div></a>
+  {% else %}
   <div class="kpi"><div class="v">{{ "{:,}".format(stats.works) }}</div><div class="k">Works</div></div>
   <div class="kpi"><div class="v">{{ "{:,}".format(stats.authors) }}</div><div class="k">Authors</div></div>
+  {% endif %}
   <div class="kpi"><div class="v">{{ "{:,}".format(stats.shelved) }}</div><div class="k">Books shelved</div></div>
-  <div class="kpi"><div class="v">{{ stats.waiting }}</div><div class="k">Awaiting review</div></div>
+  <a class="kpi" href="/moderation/claims"><div class="v">{{ stats.waiting }}</div><div class="k">Awaiting review</div></a>
 </div>
 
 <div class="split3" style="margin-top:14px">

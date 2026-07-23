@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Kitabi mark — "The Gold Line": open book with a ribbon bookmark and one gold
+       line on the recto page ("the line that stays with you"). Oxblood tile, gold
+       hairline inset. Reading Room palette, pure vector, no fonts, no letters. -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/>
+  <rect x="34" y="34" width="444" height="444" rx="96" fill="none" stroke="#B8862B" stroke-width="3" opacity=".55"/>
+
+  <!-- pages -->
+  <path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/>
+  <path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/>
+  <rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/>
+
+  <!-- text lines; one gold on the recto -->
+  <g stroke="#D9CBAA" stroke-width="9" stroke-linecap="round">
+    <path d="M150 214 H214"/><path d="M150 252 H214"/><path d="M150 290 H196"/>
+    <path d="M298 214 H362"/><path d="M316 290 H362"/>
+  </g>
+  <path d="M298 252 H362" stroke="#B8862B" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- ribbon bookmark -->
+  <path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/>
+</svg>
