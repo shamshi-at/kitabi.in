@@ -13,6 +13,11 @@ SESSION_TTL_HOURS = 12
 MAX_FAILED_ATTEMPTS = 5
 LOCKOUT_MINUTES = 15
 
+# Minimum admin password length. Kept modest (owner decision, 24 Jul 2026)
+# because mandatory TOTP + the 5-attempt lockout carry the real weight; the
+# password alone never grants access.
+MIN_PASSWORD_LENGTH = 8
+
 # TOTP + recovery.
 TOTP_ISSUER = "Kitabi Admin"
 RECOVERY_CODE_COUNT = 8

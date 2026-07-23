@@ -996,7 +996,7 @@ td .m{color:var(--ink-soft);font-size:11.5px}
     admin bootstrap endpoint — the first super admin (<code>at.shamshi@gmail.com</code>) is seeded by a
     one-off script, everyone after that arrives by invitation.</p>
     <ul>
-      <li><b>Password</b> — Argon2id, minimum 12 characters, checked against a breached-password list.</li>
+      <li><b>Password</b> — Argon2id, minimum 8 characters (owner decision — TOTP carries the weight).</li>
       <li><b>TOTP</b> — RFC-6238, 30-second step, ±1 drift, replay-refused. Enrolment is forced on first
       sign-in; an unenrolled admin can reach nothing else.</li>
       <li><b>Recovery codes</b> — eight, shown once, stored hashed, single-use.</li>

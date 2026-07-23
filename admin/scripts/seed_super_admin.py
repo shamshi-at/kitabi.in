@@ -21,13 +21,13 @@ import getpass
 import sys
 from pathlib import Path
 
-# Make both the admin package (console) and, and through it the API
-# package importable. `console.models_ref` runs the sys.path shim that adds
-# api/ so `app.*` resolves to the API package.
+# Make the admin package (console) — and through it the API package —
+# importable. `console.models_ref` runs the sys.path shim that adds api/ so
+# `app.*` resolves to the API package.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # admin/
 from sqlalchemy import select  # noqa: E402
 
-from console import security  # noqa: E402
+from console import config, security  # noqa: E402
 from console.models_ref import ROLE_SUPER_ADMIN, AdminUser, SessionLocal  # noqa: E402
 
 
@@ -83,13 +83,15 @@ def main() -> None:
     ap.add_argument("--force", action="store_true", help="also reset role to super_admin")
     args = ap.parse_args()
 
+    minlen = config.MIN_PASSWORD_LENGTH
     password = args.password
     if not password:
-        password = getpass.getpass("Password (min 12 chars): ")
-        if len(password) < 12:
-            raise SystemExit("Password must be at least 12 characters.")
+        password = getpass.getpass(f"Password (min {minlen} chars): ")
         if password != getpass.getpass("Confirm password: "):
             raise SystemExit("Passwords did not match.")
+    # Enforce the minimum on both paths (interactive and --password).
+    if len(password) < minlen:
+        raise SystemExit(f"Password must be at least {minlen} characters.")
 
     asyncio.run(_run(args.email, password, args.force))
 
