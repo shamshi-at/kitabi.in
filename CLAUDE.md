@@ -43,6 +43,7 @@ This folder is the single root for all three parts:
 | `landing-page/` | `landing/` | Static "launching soon" page at kitabi.in | Live |
 | `api/` | `backend/` | FastAPI — catalog, personal library, auth, sync, recommendations | Scaffolded (health endpoint, JWT verify, Alembic, tests, Docker) |
 | `app/` | `app/` | Flutter mobile app — the primary platform (web comes later) | Scaffolded (Riverpod + go_router + l10n, placeholder home) |
+| `etl/` | — | OpenLibrary bulk-dump → curated catalog seed pipeline (offline scripts, run locally with `api/.venv`) | Scaffolded, smoke-tested |
 
 Keep this structure: new parts get their own top-level directory; nothing app- or
 api-specific lands at root. Product docs (feature-map.md) and repo docs live at root.

@@ -11,7 +11,7 @@
 > tokens. This document summarizes and cross-links all of them plus the live/deployed state
 > those docs don't cover.
 
-**Last updated:** 10 Jul 2026
+**Last updated:** 23 Jul 2026
 
 ---
 
@@ -240,6 +240,7 @@ parts, each with their own README and CI workflow:
 | `landing-page/` | Static "launching soon" site | **Live** at kitabi.in |
 | `api/` | FastAPI backend | **Live** at api.kitabi.in — auth/profile + shared catalog (search, ISBN lookup, add/edit, author/publisher browse) |
 | `app/` | Flutter mobile app | Auth flow + library-first home + catalog screens working (global search across library/books/authors/publishers, ISBN scan → adds to library, add/edit form with author/publisher **picker pages**, author/publisher browse, shareable book/author/publisher links) + personal-library grid & book detail |
+| `etl/` | OpenLibrary bulk-dump → curated catalog seed pipeline (offline scripts, run locally) | Scaffolded, smoke-tested end-to-end against dump samples + local Postgres |
 | `docs/` | Mockups, design tokens, task checklist | — |
 
 ---
@@ -332,6 +333,26 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **23 Jul 2026** — **SEO layer + catalog seeding pipeline (uncommitted, this
+  session).** The public share pages are now search-engine-ready:
+  `GET /catalog/sitemap/index.xml` + paged `works-N`/`authors-N`/`publishers-N`
+  urlsets (10k URLs/page, soft-delete-aware — `sitemap_service`, 7 tests, 209
+  total green), proxied at `kitabi.in/sitemaps/*` by a new Pages Function and
+  announced in `robots.txt`; the `/b` `/a` `/p` share functions now inject
+  schema.org JSON-LD (`Book` with per-edition `workExample` / `Person` /
+  `Organization`) and `rel=canonical` alongside the existing OG tags. New
+  top-level **`etl/`**: a streaming OpenLibrary bulk-dump pipeline
+  (popularity → filter → transform → idempotent `04_load.sql`) that seeds a
+  *curated* catalog — every Indic-language work + top-N popular works, ≤5
+  best editions each, deterministic uuid5 ids, translit computed with the
+  API's own `transliterate` (COPY bypasses the ORM hooks). Smoke-tested
+  end-to-end on 32 MB dump prefixes into the local dev Postgres (5,012 works
+  loaded; re-running the load inserts 0 — converges). Measured from samples:
+  the full dumps are ~41M works / ~55M editions (~45–60 GB in Postgres —
+  never loadable on Supabase free, hence the tiers); the recommended
+  ~600k-work seed lands ~1.2–1.5 GB (needs Supabase Pro), a 100k slim cut
+  sits near the free tier. Still open: Google Search Console registration,
+  running the real seed, slug URLs on share links.
 - **19 Jul 2026** — **The reading status/session cards merge into one, with a
   proper reading log** (owner pick "B" from a 3-option mockup). One `_ReadingCard`
   now carries the status pill, a gold→oxblood progress bar, started + inline edit,
