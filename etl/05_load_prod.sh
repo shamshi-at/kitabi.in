@@ -85,8 +85,15 @@ echo
 echo "This INSERTS into the production catalog. Existing rows are left alone"
 echo "(matched by openlibrary external_id), and the whole load is one"
 echo "transaction — but it is still production."
-read -r -p 'Type "SEED PROD" to continue: ' reply
-[[ "$reply" == "SEED PROD" ]] || { echo "aborted."; exit 1; }
+# Non-interactive path for scripted runs. Deliberately requires the same exact
+# phrase, so it can't be satisfied by a stray truthy value; piping the phrase
+# into the prompt instead is NOT viable — the docker runs above attach stdin.
+if [[ "${SEED_PROD_YES:-}" == "SEED PROD" ]]; then
+    echo 'confirmed via SEED_PROD_YES'
+else
+    read -r -p 'Type "SEED PROD" to continue: ' reply
+    [[ "$reply" == "SEED PROD" ]] || { echo "aborted."; exit 1; }
+fi
 
 psql_prod -v ON_ERROR_STOP=1 -f /sql/04_load.sql
 
