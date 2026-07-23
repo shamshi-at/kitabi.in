@@ -12,9 +12,10 @@ Dry run by default: prints every change it would make and touches nothing.
     python 06_backfill_script.py --apply         # write
     python 06_backfill_script.py --local         # target the dev DB instead
 
-Rows are only rewritten when `to_malayalam_script` returns something — an
-English title on a Malayalam work, or a row already in script, is left alone.
-Re-running after an --apply is a no-op for the same reason, so it's safe to
+A row is rewritten when its text converts, or when only its romanized search
+key is stale — so this also refreshes rows an earlier run already converted
+after the romanization rules improve. An English title on a Malayalam work is
+left alone. Re-running once everything is current is a no-op, so it's safe to
 repeat.
 """
 
@@ -74,14 +75,21 @@ async def run(url: str, apply: bool) -> None:
         total = converted = 0
         for table, text_col, translit_col in TABLES:
             rows = await conn.fetch(
-                f"select id, {text_col} as val from {table} where deleted_at is null"
+                f"select id, {text_col} as val, {translit_col} as tr"
+                f" from {table} where deleted_at is null"
             )
             changes = []
             for r in rows:
                 total += 1
-                native = to_malayalam_script(r["val"])
-                if native and native != r["val"]:
-                    changes.append((r["id"], native, transliterate(native)))
+                native = to_malayalam_script(r["val"]) or r["val"]
+                romanized = transliterate(native)
+                # Rewrite when the text changes OR when only the search key is
+                # stale — a row converted by an earlier run still needs its
+                # translit refreshed when the romanization rules improve
+                # (the ee/oo long vowels, the nasal tildes), and for those
+                # rows to_malayalam_script now correctly returns None.
+                if native != r["val"] or romanized != r["tr"]:
+                    changes.append((r["id"], native, romanized))
             converted += len(changes)
             print(f"\n{table}: {len(changes)} of {len(rows)} rows to convert")
             for _id, native, _t in changes[:5]:

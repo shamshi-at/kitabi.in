@@ -34,6 +34,16 @@ _WHITESPACE = re.compile(r"\s+")
 # "mangat" not "mangngat", കൊഴിഞ്ഞു → "kozhinju" not "kozhinjnju".
 _ITRANS_NASALS = [("~N~N", "ng"), ("~n~n", "nj"), ("~N", "ng"), ("~n", "nj")]
 
+# ITRANS marks the long vowels ീ/ൂ with an uppercase I/U, which lowercasing
+# then flattens to a bare "i"/"u" — but nobody types Malayalam that way. The
+# Manglish convention doubles them: ചെമ്മീൻ is typed "chemmeen", not
+# "chemmin"; അപൂർണ്ണൻ is "apoornnan", not "apurnnan". Storing the single
+# letter cost real matches — "Apoornn" scored 0.27 against "apurnnan" and
+# found nothing, where it scores 0.88 against "apoornnan" (owner report,
+# 23 Jul 2026). Uppercase I/U are long vowels only in ITRANS; the uppercase
+# retroflex consonants (T/D/N/S/L) are deliberately left alone.
+_ITRANS_LONG_VOWELS = [("I", "ee"), ("U", "oo")]
+
 
 def _indic_scheme(text: str) -> str | None:
     """The sanscript scheme name when [text] is in a Brahmic (Indic) script —
@@ -63,7 +73,9 @@ def transliterate(text: str | None) -> str | None:
             value = sanscript.transliterate(value, scheme, sanscript.ITRANS)
         except Exception:  # noqa: BLE001 — fall back to the plain char map
             pass
-        for itrans, plain in _ITRANS_NASALS:
+        # Nasals first: their ITRANS spelling (~N) contains an uppercase letter
+        # the long-vowel pass must not see.
+        for itrans, plain in _ITRANS_NASALS + _ITRANS_LONG_VOWELS:
             value = value.replace(itrans, plain)
     value = anyascii(value)
     value = _WHITESPACE.sub(" ", value).strip().lower()

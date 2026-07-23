@@ -25,6 +25,20 @@ def test_itrans_nasal_tildes_never_reach_the_search_key():
     assert transliterate("കൊഴിഞ്ഞു") == "kozhinju"
 
 
+def test_long_vowels_use_the_manglish_doubling():
+    """ITRANS marks ീ/ൂ with an uppercase I/U that lowercasing flattens to a
+    bare i/u — but nobody types Malayalam that way, and the single letter cost
+    real matches: "Apoornn" scored 0.27 against "apurnnan" and found nothing
+    (owner report, 23 Jul 2026)."""
+    assert transliterate("അപൂർണ്ണൻ") == "apoornnan"
+    assert transliterate("ചെമ്മീൻ") == "chemmeen"
+    # The payoff: a Malayalam title and its Latin spelling now produce the
+    # *same* key, so the two scripts meet exactly instead of merely near-missing.
+    assert transliterate("ചെമ്മീൻ") == transliterate("Chemmeen")
+    # Short vowels are untouched — കയർ stays the CLAUDE.md canonical example.
+    assert transliterate("കയർ") == "kayar"
+
+
 async def _seed(client) -> None:
     for payload in (
         {
