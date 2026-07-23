@@ -45,6 +45,14 @@ _ITRANS_NASALS = [("~N~N", "ng"), ("~n~n", "nj"), ("~N", "ng"), ("~n", "nj")]
 _ITRANS_LONG_VOWELS = [("I", "ee"), ("U", "oo")]
 
 
+# Tamil writes one letter per place of articulation — ப covers pa/ba, ச covers
+# sa/cha/ja — and the plain `tamil` scheme resolves each to its *Sanskrit*
+# voiced-aspirate value, so "பொன்னியின் செல்வன்" romanized to "bhonniyin
+# jhelvan" and no reader could ever have found it. The superscripted variant
+# resolves them to the unvoiced Tamil readings ("ponniyin chelvan").
+_SCHEME_OVERRIDES = {"tamil": "tamil_superscripted"}
+
+
 def _indic_scheme(text: str) -> str | None:
     """The sanscript scheme name when [text] is in a Brahmic (Indic) script —
     None for Latin/other, which `detect` reports as a *roman* scheme guess."""
@@ -55,7 +63,7 @@ def _indic_scheme(text: str) -> str | None:
     scheme = SCHEMES.get(name)
     if scheme is None or getattr(scheme, "is_roman", True):
         return None
-    return name
+    return _SCHEME_OVERRIDES.get(name, name)
 
 
 def transliterate(text: str | None) -> str | None:

@@ -39,6 +39,26 @@ def test_long_vowels_use_the_manglish_doubling():
     assert transliterate("കയർ") == "kayar"
 
 
+def test_tamil_uses_its_own_consonant_readings():
+    """Tamil writes one letter per place of articulation (ப = pa/ba, ச =
+    sa/cha/ja). The plain `tamil` scheme resolves those to Sanskrit voiced
+    aspirates — "பொன்னியின் செல்வன்" became "bhonniyin jhelvan", which no
+    reader could match (0.42 similarity against what they'd type, and 0.13 for
+    சிலப்பதிகாரம்). The superscripted scheme gives the Tamil readings."""
+    assert transliterate("பொன்னியின் செல்வன்") == "ponniyin chelvan"
+    assert transliterate("சிலப்பதிகாரம்") == "chilappatikaram"
+    assert transliterate("திருக்குறள்") == "tirukkural"
+
+
+def test_other_indic_scripts_still_romanize():
+    """The romanization is not Malayalam-only — every Brahmic script routes
+    through the same ITRANS path, so the ee/oo and nasal fixes apply to all."""
+    assert transliterate("మహాప్రస్థానం") == "mahaprasthanam"  # Telugu
+    assert transliterate("ಕರ್ವಾಲೋ") == "karvalo"  # Kannada
+    assert transliterate("গীতাঞ্জলি").startswith("geet")  # Bengali — long ee
+    assert transliterate("गोदान") == "godana"  # Devanagari
+
+
 async def _seed(client) -> None:
     for payload in (
         {
