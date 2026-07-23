@@ -334,6 +334,24 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **24 Jul 2026** — **Admin console — the remaining screens, all wired.** The
+  four "Planned" stubs are now real, verified live: **suggested-edit
+  moderation** (every pending `work_revision`, decided via the API's
+  `decide_revision` with a new `admin_override` for seeded/orphaned books);
+  **reported content** (open `content_reports` → uphold hides the review with a
+  `server_seq` bump so it re-syncs, or dismiss; [WIRED], quiet until the report
+  button ships); **catalog ops** (spelling-fold search, a quality-gap worklist,
+  and **duplicate merge** — `merge_preview`/`merge_works` in catalog_service,
+  moving editions + ratings/reviews and folding author/genre links, soft-
+  deleting the absorbed work, all in one transaction with a type-MERGE
+  confirm; editor+ only); and **reader support** (search + detail showing only
+  public data + contribution counts, plus **suspend/unsuspend** via new
+  `profiles.suspended_at` — migration `000032` — enforced in the API's
+  `get_current_user`, which now rejects a suspended reader 403 while leaving
+  new/profile-less users unaffected). Hard reader deletion is deliberately not
+  a button. New tests: merge (3), suspension (3) — 259 API + 8 admin, both
+  images build. Reader-suspension is a change to the live reader API's hot path,
+  covered by tests proving active/suspended/no-profile all behave.
 - **23 Jul 2026** — **Admin console foundation + its CI/deploy plumbing**
   (`admin/`, package `console`). A server-rendered back office (FastAPI + Jinja +
   htmx) at `admin.kitabi.in`, reusing the API's models/db/services via a

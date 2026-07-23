@@ -52,3 +52,6 @@ class Profile(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    # Set by an admin (admin console) to lock a reader out of the API while
+    # keeping their data. Null = active. Enforced in core.security.get_current_user.
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

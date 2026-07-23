@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Readers · Kitabi Admin{% endblock %}
+{% block heading %}Readers{% endblock %}
+{% block subheading %}{{ "{:,}".format(total) }} accounts{% endblock %}
+{% block topactions %}
+<form method="get" action="/readers"><input class="search" name="q" value="{{ q }}"
+  placeholder="Search name, @handle or email" style="width:260px"></form>
+{% endblock %}
+{% block content %}
+<div class="tbl">
+  <table>
+    <tr><th>Reader</th><th>Joined</th><th>Status</th><th></th></tr>
+    {% for p in rows %}
+    <tr>
+      <td><div class="t">{{ p.full_name or 'Unnamed reader' }}</div>
+        <div class="m">{% if p.username %}@{{ p.username }} · {% endif %}{{ p.email }}</div></td>
+      <td class="m">{{ p.created_at.strftime('%b %Y') }}</td>
+      <td>{% if p.suspended_at %}<span class="pill no">Suspended</span>{% else %}<span class="pill ok">Active</span>{% endif %}</td>
+      <td style="text-align:right"><a class="btn s" href="/readers/{{ p.id }}">View</a></td>
+    </tr>
+    {% endfor %}
+    {% if not rows %}<tr><td colspan="4" class="m" style="text-align:center;padding:24px">
+      {% if q %}No readers match “{{ q }}”.{% else %}No readers yet.{% endif %}</td></tr>{% endif %}
+  </table>
+</div>
+{% endblock %}

@@ -18,7 +18,9 @@ from app.models import (  # noqa: E402
     CLAIM_APPROVED,
     CLAIM_PENDING,
     CLAIM_REJECTED,
+    REPORT_DISMISSED,
     REPORT_OPEN,
+    REPORT_UPHELD,
     ROLE_EDITOR,
     ROLE_MODERATOR,
     ROLE_SUPER_ADMIN,
@@ -37,6 +39,7 @@ from app.models import (  # noqa: E402
     ReadingSession,
     Review,
     Work,
+    WorkRevision,
 )
 
 __all__ = [
@@ -46,11 +49,14 @@ __all__ = [
     "AdminSession",
     "AdminAuditLog",
     "ContentReport",
+    "WorkRevision",
     "ADMIN_ROLES",
     "ROLE_MODERATOR",
     "ROLE_EDITOR",
     "ROLE_SUPER_ADMIN",
     "REPORT_OPEN",
+    "REPORT_UPHELD",
+    "REPORT_DISMISSED",
     "Author",
     "AuthorClaim",
     "CLAIM_PENDING",

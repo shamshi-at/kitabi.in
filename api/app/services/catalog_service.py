@@ -22,13 +22,17 @@ from app.models import (
     AuthorClaim,
     Edition,
     Genre,
+    LibraryEntry,
     Profile,
     Publisher,
+    Rating,
+    Review,
     Series,
     Work,
     WorkRevision,
     work_authors,
     work_genres,
+    work_translators,
 )
 from app.schemas.catalog import (
     WORK_FORMS,
@@ -498,10 +502,18 @@ async def pending_revisions_for_approver(
 
 
 async def decide_revision(
-    db: AsyncSession, revision_id: uuid.UUID, approver_id: uuid.UUID, *, approve: bool
+    db: AsyncSession,
+    revision_id: uuid.UUID,
+    approver_id: uuid.UUID,
+    *,
+    approve: bool,
+    admin_override: bool = False,
 ) -> Work:
     """Approve (apply the queued WorkUpdate) or reject a pending revision.
-    Only the Work's contributor may decide. Returns the live Work either way."""
+    Only the Work's contributor may decide — unless `admin_override`, the
+    escalation path the admin console uses to decide edits on seeded books that
+    have no contributor, or ones a contributor has left sitting. Returns the
+    live Work either way."""
     revision = await db.get(WorkRevision, revision_id)
     if revision is None or revision.status != "pending":
         raise HTTPException(
@@ -509,7 +521,7 @@ async def decide_revision(
             detail={"code": "not_found", "message": "Revision not found"},
         )
     work = await get_work_or_404(db, revision.work_id)
-    if work.created_by_user_id != approver_id:
+    if not admin_override and work.created_by_user_id != approver_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
@@ -524,6 +536,110 @@ async def decide_revision(
         return await update_work(db, work, WorkUpdate(**revision.payload))
     await db.commit()
     return work
+
+
+async def _merge_pair(
+    db: AsyncSession, keep_id: uuid.UUID, absorb_id: uuid.UUID
+) -> tuple[Work, Work]:
+    """Validate a merge: both Works exist, are live, and are distinct."""
+    if keep_id == absorb_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "same_work", "message": "Cannot merge a work into itself"},
+        )
+    keep = await db.get(Work, keep_id)
+    absorb = await db.get(Work, absorb_id)
+    for w in (keep, absorb):
+        if w is None or w.deleted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "not_found", "message": "Work not found"},
+            )
+    return keep, absorb
+
+
+async def merge_preview(db: AsyncSession, keep_id: uuid.UUID, absorb_id: uuid.UUID) -> dict:
+    """What a merge would move from `absorb` onto `keep` — shown before it runs,
+    because merge touches other readers' library data and must not be a
+    surprise. Library entries and reading sessions ride on the editions (they
+    key off edition_id / library_entry_id), so moving the editions carries
+    them; only ratings and reviews reference the Work directly."""
+    keep, absorb = await _merge_pair(db, keep_id, absorb_id)
+
+    async def n(model, work_id):  # noqa: ANN001
+        return int(
+            await db.scalar(select(func.count()).select_from(model).where(model.work_id == work_id))
+            or 0
+        )
+
+    editions = await n(Edition, absorb_id)
+    entries = int(
+        await db.scalar(
+            select(func.count())
+            .select_from(LibraryEntry)
+            .where(
+                LibraryEntry.edition_id.in_(select(Edition.id).where(Edition.work_id == absorb_id))
+            )
+        )
+        or 0
+    )
+    return {
+        "keep": keep,
+        "absorb": absorb,
+        "editions": editions,
+        "ratings": await n(Rating, absorb_id),
+        "reviews": await n(Review, absorb_id),
+        "library_entries": entries,
+    }
+
+
+async def merge_works(db: AsyncSession, keep_id: uuid.UUID, absorb_id: uuid.UUID) -> dict:
+    """Merge `absorb` into `keep`: repoint its editions (Layer 1) and its
+    ratings/reviews (Layer 2), fold its author/genre/translator links in
+    without duplicating, then soft-delete it. One transaction. Layer-2 rows get
+    a fresh server_seq so the change pulls to devices; the absorbed Work is
+    soft-deleted (rule 3), never destroyed, so a mistaken merge is recoverable.
+    """
+    keep, absorb = await _merge_pair(db, keep_id, absorb_id)
+    now = datetime.now(UTC)
+    seq = text("nextval('sync_seq')")  # volatile → a distinct value per row
+
+    await db.execute(
+        update(Edition).where(Edition.work_id == absorb_id).values(work_id=keep_id, updated_at=now)
+    )
+    for model in (Rating, Review):
+        await db.execute(
+            update(model)
+            .where(model.work_id == absorb_id)
+            .values(work_id=keep_id, server_seq=seq, updated_at=now)
+        )
+    # Association tables: drop pairs that would duplicate on `keep`, move the rest.
+    for join in (work_authors, work_genres, work_translators):
+        col = "author_id" if join is not work_genres else "genre_id"
+        await db.execute(
+            text(
+                f"DELETE FROM {join.name} a WHERE a.work_id = :absorb AND EXISTS "
+                f"(SELECT 1 FROM {join.name} k WHERE k.work_id = :keep AND k.{col} = a.{col})"
+            ),
+            {"absorb": absorb_id, "keep": keep_id},
+        )
+        await db.execute(
+            text(f"UPDATE {join.name} SET work_id = :keep WHERE work_id = :absorb"),
+            {"keep": keep_id, "absorb": absorb_id},
+        )
+    # A translation that pointed at the absorbed work now points at the keeper.
+    await db.execute(
+        update(Work).where(Work.original_work_id == absorb_id).values(original_work_id=keep_id)
+    )
+    absorb.deleted_at = now
+    absorb.updated_at = now
+    await db.commit()
+    return {
+        "keep_id": str(keep_id),
+        "absorb_id": str(absorb_id),
+        "absorbed_title": absorb.title,
+        "keep_title": keep.title,
+    }
 
 
 async def update_edition(db: AsyncSession, edition: Edition, patch: EditionUpdate) -> Edition:

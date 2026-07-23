@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ p.full_name or p.email }} · Kitabi Admin{% endblock %}
+{% block heading %}{{ p.full_name or 'Unnamed reader' }}{% endblock %}
+{% block subheading %}{% if p.username %}@{{ p.username }} · {% endif %}{{ p.email }}{% endblock %}
+{% block topactions %}<a class="btn s" href="/readers">← All readers</a>{% endblock %}
+{% block content %}
+{% if p.suspended_at %}
+<div class="flash err" style="margin-bottom:14px">Suspended {{ p.suspended_at.strftime('%d %b %Y') }} —
+locked out of the app until reinstated.</div>
+{% endif %}
+<div class="split">
+  <div class="card">
+    <div class="lbl">Reader detail</div>
+    <table style="margin-top:6px">
+      <tr><td>Public profile</td><td style="text-align:right">
+        {% if p.profile_visible %}<span class="pill ok">Visible</span>{% else %}<span class="pill mute">Private</span>{% endif %}</td></tr>
+      <tr><td>Public library</td><td style="text-align:right">
+        {% if p.library_visible %}<span class="pill ok">Visible</span>{% else %}<span class="pill mute">Private</span>{% endif %}</td></tr>
+      <tr><td>Joined</td><td style="text-align:right">{{ p.created_at.strftime('%d %b %Y') }}</td></tr>
+      <tr><td>Status</td><td style="text-align:right">
+        {% if p.suspended_at %}<span class="pill no">Suspended</span>{% else %}<span class="pill ok">Active</span>{% endif %}</td></tr>
+    </table>
+    <div class="note" style="margin-top:11px">Only what this reader has made public is shown, plus
+    the counts below. Their private shelf and notes are never displayed here.</div>
+  </div>
+  <div class="card">
+    <div class="lbl">Contributions &amp; activity</div>
+    <table style="margin-top:6px">
+      <tr><td>Score</td><td style="text-align:right"><b>{{ score.total }}</b></td></tr>
+      <tr><td>Books added to catalog</td><td style="text-align:right"><b>{{ score.books_added }}</b></td></tr>
+      <tr><td>Authors added</td><td style="text-align:right"><b>{{ score.authors_added }}</b></td></tr>
+      <tr><td>Reviews written</td><td style="text-align:right"><b>{{ score.reviews_written }}</b></td></tr>
+      <tr><td>Books tracked</td><td style="text-align:right"><b>{{ score.books_tracked }}</b></td></tr>
+      <tr><td>Books finished</td><td style="text-align:right"><b>{{ score.books_finished }}</b></td></tr>
+      <tr><td>Lending records</td><td style="text-align:right"><b>{{ score.lending_records }}</b></td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px;max-width:520px">
+  <div class="lbl">Moderation</div>
+  <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+    {% if p.suspended_at %}
+    <form method="post" action="/readers/{{ p.id }}/unsuspend">
+      <button class="btn g">Lift suspension</button></form>
+    {% else %}
+    <form method="post" action="/readers/{{ p.id }}/suspend"
+      onsubmit="return confirm('Suspend {{ p.email }}? They will be locked out of the app.')">
+      <button class="btn d">Suspend account</button></form>
+    {% endif %}
+  </div>
+  <div class="note" style="margin-top:11px">Suspension is reversible and keeps all their data.
+  Permanent deletion is deliberately not a button here — a full data erasure is a separate,
+  considered operation.</div>
+</div>
+{% endblock %}

@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .deps import RedirectException
-from .routers import admins, audit, auth, claims, dashboard
+from .routers import admins, audit, auth, catalog, claims, dashboard, edits, readers, reports
 from .templating import templates
 
 app = FastAPI(title="Kitabi Admin", docs_url=None, redoc_url=None, openapi_url=None)
@@ -31,6 +31,10 @@ async def _redirect(_: Request, exc: RedirectException) -> RedirectResponse:
 app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(claims.router)
+app.include_router(edits.router)
+app.include_router(reports.router)
+app.include_router(catalog.router)
+app.include_router(readers.router)
 app.include_router(admins.router)
 app.include_router(audit.router)
 

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Reported content · Kitabi Admin{% endblock %}
+{% block heading %}Reported content{% endblock %}
+{% block subheading %}{{ items | length }} open{% endblock %}
+{% block content %}
+{% if not items %}
+  <div class="card" style="text-align:center;padding:44px">
+    <div class="lbl">Nothing reported</div>
+    <p style="margin-top:8px;color:var(--ink-soft);font-size:13px">No open reports. Reader reports of
+    public reviews land here.</p>
+  </div>
+{% endif %}
+<div class="stack">
+{% for it in items %}
+  <div class="mod">
+    <div class="hd">
+      {% if it.reasons %}<span class="pill no">{{ it.reasons | join(', ') }}</span>{% else %}<span class="pill no">Reported</span>{% endif %}
+      <b>Review by {{ it.author }}</b>
+      <span style="font-size:11.5px;color:var(--ink-soft)">flagged by {{ it.count }} reader{{ 's' if it.count != 1 }}</span>
+      {% if not it.review.visible %}<span class="pill mute" style="margin-left:auto">Already hidden</span>{% endif %}
+    </div>
+    <div class="bd">
+      <div style="background:var(--paper-deep);border-radius:8px;padding:11px 13px;font-family:'Fraunces',serif;
+        font-style:italic;font-size:13.5px;line-height:1.6">"{{ it.review.body }}"</div>
+      <div style="display:flex;gap:8px;margin-top:13px">
+        {% if it.review.visible %}
+        <form method="post" action="/moderation/reports/{{ it.review.id }}/uphold">
+          <button class="btn d">Hide review</button></form>
+        {% endif %}
+        <form method="post" action="/moderation/reports/{{ it.review.id }}/dismiss">
+          <button class="btn">Dismiss — not a violation</button></form>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

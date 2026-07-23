@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Suggested edits · Kitabi Admin{% endblock %}
+{% block heading %}Suggested edits{% endblock %}
+{% block subheading %}{{ items | length }} pending{% endblock %}
+{% block content %}
+{% if not items %}
+  <div class="card" style="text-align:center;padding:44px">
+    <div class="lbl">Nothing waiting</div>
+    <p style="margin-top:8px;color:var(--ink-soft);font-size:13px">No catalog edits to review.</p>
+  </div>
+{% endif %}
+<div class="stack">
+{% for it in items %}
+  <div class="mod">
+    <div class="hd"><span class="pill pend">Pending</span><b>{{ it.title }}</b>
+      {% if it.proposer %}<span style="font-size:11.5px;color:var(--ink-soft)">suggested by {{ it.proposer }}</span>{% endif %}
+      {% if it.orphan %}<span class="pill mute" style="margin-left:auto">Seeded · no contributor</span>{% endif %}
+    </div>
+    <div class="bd">
+      <div class="diff">
+        <div class="was"><div class="lbl">Current</div>
+          {% for field, value in it.current.items() %}
+            <div style="margin-top:6px"><b>{{ field }}</b><br>
+              <span style="color:var(--ink-soft)">{{ value if value not in (none, '') else '— empty —' }}</span></div>
+          {% endfor %}
+        </div>
+        <div class="now"><div class="lbl">Proposed</div>
+          {% for field, value in it.rev.payload.items() %}
+            <div style="margin-top:6px"><b>{{ field }}</b><br>{{ value if value not in (none, '') else '— empty —' }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:13px">
+        <form method="post" action="/moderation/edits/{{ it.rev.id }}/approve">
+          <button class="btn g">Approve &amp; apply</button></form>
+        <form method="post" action="/moderation/edits/{{ it.rev.id }}/reject">
+          <button class="btn d">Reject</button></form>
+        <span style="margin-left:auto;font-size:11.5px;color:var(--ink-soft);align-self:center">
+          {{ it.rev.created_at.strftime('%d %b %Y') }}</span>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

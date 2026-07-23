@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Merge · Kitabi Admin{% endblock %}
+{% block heading %}Merge duplicate works{% endblock %}
+{% block subheading %}Review what moves before it commits{% endblock %}
+{% block content %}
+<div class="card" style="max-width:720px">
+  <div class="split">
+    <div>
+      <div class="lbl">Keep</div>
+      <div style="margin-top:6px;font-size:15px;font-weight:600">{{ p.keep.title }}</div>
+      <div class="m mono" style="font-size:10.5px;margin-top:3px">{{ p.keep.id }}</div>
+    </div>
+    <div>
+      <div class="lbl">Absorb (soft-deleted after)</div>
+      <div style="margin-top:6px;font-size:15px;font-weight:600">{{ p.absorb.title }}</div>
+      <div class="m mono" style="font-size:10.5px;margin-top:3px">{{ p.absorb.id }}</div>
+    </div>
+  </div>
+
+  <div class="note warn" style="margin-top:16px">
+    Moving from <b>{{ p.absorb.title }}</b> onto <b>{{ p.keep.title }}</b>:
+    <b>{{ p.editions }}</b> edition{{ 's' if p.editions != 1 }},
+    <b>{{ p.ratings }}</b> rating{{ 's' if p.ratings != 1 }},
+    <b>{{ p.reviews }}</b> review{{ 's' if p.reviews != 1 }},
+    and <b>{{ p.library_entries }}</b> reader library {{ 'entry' if p.library_entries == 1 else 'entries' }}
+    (which ride on the editions). The absorbed work is soft-deleted, never destroyed.
+  </div>
+
+  <form method="post" action="/catalog/merge" style="margin-top:16px">
+    <input type="hidden" name="keep" value="{{ keep }}">
+    <input type="hidden" name="absorb" value="{{ absorb }}">
+    <div class="fld"><label>Type MERGE to confirm</label>
+      <input name="confirm" autocomplete="off" placeholder="MERGE" style="max-width:200px"
+        oninput="document.getElementById('go').disabled = this.value !== 'MERGE'"></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn p" id="go" disabled>Merge</button>
+      <a class="btn" href="/catalog">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

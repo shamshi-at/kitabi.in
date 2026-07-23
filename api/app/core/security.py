@@ -11,8 +11,11 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWKClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.db import get_db
 
 _bearer = HTTPBearer(auto_error=False)
 _jwks_client: PyJWKClient | None = None
@@ -35,6 +38,7 @@ def _unauthorized(message: str) -> HTTPException:
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
     if credentials is None:
         raise _unauthorized("Missing bearer token")
@@ -51,6 +55,19 @@ async def get_current_user(
         )
     except jwt.PyJWTError as exc:
         raise _unauthorized("Invalid or expired token") from exc
+
+    # Admin suspension lock-out (admin console). A cheap PK lookup on a small
+    # table; a reader who has no profile row yet (mid-bootstrap) is treated as
+    # active, so this never blocks a legitimate first-time sign-in.
+    from app.models.profile import Profile  # local import avoids a models import cycle
+
+    suspended_at = await db.scalar(select(Profile.suspended_at).where(Profile.id == claims["sub"]))
+    if suspended_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "account_suspended", "message": "This account has been suspended."},
+        )
+
     user_meta = claims.get("user_metadata") or {}
     # Google puts avatar in 'avatar_url'; Apple has no picture.
     avatar_url = user_meta.get("avatar_url") or user_meta.get("picture")
@@ -64,6 +81,7 @@ async def get_current_user(
 
 async def get_optional_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict | None:
     """`get_current_user` for endpoints that are public but richer when signed
     in — an anonymous caller gets None instead of a 401.
@@ -74,4 +92,4 @@ async def get_optional_user(
     """
     if credentials is None:
         return None
-    return await get_current_user(credentials)
+    return await get_current_user(credentials, db)
