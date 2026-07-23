@@ -12,6 +12,7 @@ from app.api.deps import CurrentUser, DbSession, OptionalUser
 from app.core.config import get_settings
 from app.models import Author, Publisher
 from app.schemas.catalog import (
+    AuthorClaimOut,
     AuthorCreate,
     AuthorDetailOut,
     AuthorOut,
@@ -419,6 +420,30 @@ async def link_author(author_id: uuid.UUID, user: CurrentUser, db: DbSession) ->
     out = AuthorOut.model_validate(author)
     out.claim_pending = True
     return out
+
+
+@router.get("/claims/mine", response_model=list[AuthorClaimOut])
+async def my_author_claims(user: CurrentUser, db: DbSession) -> list[AuthorClaimOut]:
+    """The reader's own "This is me" claims. Filing one used to be a dead end —
+    the button said "pending review" and there was nowhere to see it, and no way
+    back from a mis-tap (owner report, 23 Jul 2026)."""
+    rows = await catalog_service.my_claims(db, uuid.UUID(user["id"]))
+    return [
+        AuthorClaimOut(
+            id=claim.id,
+            author_id=author.id,
+            author_name=author.name,
+            status=claim.status,
+            created_at=claim.created_at,
+        )
+        for claim, author in rows
+    ]
+
+
+@router.delete("/claims/{claim_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def withdraw_author_claim(claim_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
+    """Take back one's own unreviewed claim. Only pending, only your own."""
+    await catalog_service.withdraw_claim(db, claim_id, uuid.UUID(user["id"]))
 
 
 @router.get("/authors/{author_id}", response_model=AuthorWorksOut)

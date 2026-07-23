@@ -11,8 +11,20 @@ class _FakeApiClient extends ApiClient {
   String? approvedId;
   String? rejectedId;
 
+  List<Map<String, dynamic>> claims = [];
+  String? withdrawnId;
+
   @override
   Future<List<Map<String, dynamic>>> pendingRevisions() async => pending;
+
+  @override
+  Future<List<Map<String, dynamic>>> myAuthorClaims() async => claims;
+
+  @override
+  Future<void> withdrawAuthorClaim(String claimId) async {
+    withdrawnId = claimId;
+    claims = [];
+  }
 
   @override
   Future<void> approveRevision(String revisionId) async {
@@ -84,5 +96,53 @@ void main() {
 
     expect(fake.rejectedId, 'rev-1');
     expect(find.text('Edit rejected.'), findsOneWidget);
+  });
+
+  // A filed "This is me" claim had nowhere to show and no way back — the
+  // button said "pending review", this screen listed revisions only, and a
+  // mis-tap was permanent (owner report, 23 Jul 2026).
+  Map<String, dynamic> claim({String status = 'pending'}) => {
+        'id': 'claim-1',
+        'author_id': 'a-1',
+        'author_name': 'Kamala Das',
+        'status': status,
+        'created_at': '2026-07-23T10:00:00Z',
+      };
+
+  testWidgets('a pending claim is listed with a way to withdraw it', (tester) async {
+    final fake = _FakeApiClient()..claims = [claim()];
+    await tester.pumpWidget(_wrap(fake));
+    await tester.pumpAndSettle();
+
+    expect(find.text('YOUR AUTHOR CLAIMS'), findsOneWidget);
+    expect(find.text('Kamala Das'), findsOneWidget);
+    expect(find.text('Waiting for review'), findsOneWidget);
+    expect(find.text('Withdraw'), findsOneWidget);
+  });
+
+  testWidgets('withdrawing asks first, then removes the claim', (tester) async {
+    final fake = _FakeApiClient()..claims = [claim()];
+    await tester.pumpWidget(_wrap(fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Withdraw'));
+    await tester.pumpAndSettle();
+    expect(find.text('Withdraw this claim?'), findsOneWidget);
+
+    await tester.tap(find.text('Withdraw').last);
+    await tester.pumpAndSettle();
+
+    expect(fake.withdrawnId, 'claim-1');
+    expect(find.text('Claim withdrawn'), findsOneWidget);
+    expect(find.text('Kamala Das'), findsNothing);
+  });
+
+  testWidgets('a decided claim shows its outcome and cannot be withdrawn', (tester) async {
+    final fake = _FakeApiClient()..claims = [claim(status: 'rejected')];
+    await tester.pumpWidget(_wrap(fake));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Not approved'), findsOneWidget);
+    expect(find.text('Withdraw'), findsNothing);
   });
 }

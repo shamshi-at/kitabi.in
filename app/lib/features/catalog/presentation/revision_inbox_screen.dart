@@ -16,6 +16,14 @@ final _pendingRevisionsProvider =
   return ref.watch(apiClientProvider).pendingRevisions();
 });
 
+/// The reader's own "This is me" author claims. Filing one used to be a dead
+/// end — the button said "pending review" and this screen, the only place a
+/// reader would think to look, listed work revisions only (owner report,
+/// 23 Jul 2026).
+final _myClaimsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
+  return ref.watch(apiClientProvider).myAuthorClaims();
+});
+
 class RevisionInboxScreen extends ConsumerWidget {
   const RevisionInboxScreen({super.key});
 
@@ -23,31 +31,172 @@ class RevisionInboxScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final revisions = ref.watch(_pendingRevisionsProvider);
+    final claims = ref.watch(_myClaimsProvider);
+
+    // Both lists live on one screen because both answer "what did I send in,
+    // and where has it got to?" — the question that brought the reader here.
+    final claimItems = claims.valueOrNull ?? const <Map<String, dynamic>>[];
 
     return Scaffold(
       backgroundColor: AppColors.paper,
       appBar: AppBar(title: Text(l10n.revisionsTitle)),
-      body: revisions.when(
-        loading: () => ListSkeleton(),
-        error: (err, _) =>
-            ErrorRetry(onRetry: () => ref.invalidate(_pendingRevisionsProvider)),
-        data: (items) => items.isEmpty
-            ? Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text(
-                    l10n.revisionsEmpty,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.inkSoft, fontSize: 13.5, height: 1.5),
-                  ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(_pendingRevisionsProvider);
+          ref.invalidate(_myClaimsProvider);
+        },
+        child: revisions.when(
+          loading: () => ListSkeleton(),
+          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(_pendingRevisionsProvider)),
+          data: (items) => (items.isEmpty && claimItems.isEmpty)
+              ? ListView(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(32, 96, 32, 32),
+                      child: Text(
+                        l10n.revisionsEmpty,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.inkSoft,
+                          fontSize: 13.5,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : ListView(
+                  padding: EdgeInsets.all(14),
+                  children: [
+                    if (claimItems.isNotEmpty) ...[
+                      _SectionHeader(label: l10n.claimsSectionTitle),
+                      for (final claim in claimItems) ...[
+                        _ClaimCard(claim: claim),
+                        SizedBox(height: 10),
+                      ],
+                    ],
+                    if (items.isNotEmpty) ...[
+                      if (claimItems.isNotEmpty) SizedBox(height: 8),
+                      _SectionHeader(label: l10n.revisionsSectionTitle),
+                      for (final revision in items) ...[
+                        _RevisionCard(revision: revision),
+                        SizedBox(height: 10),
+                      ],
+                    ],
+                  ],
                 ),
-              )
-            : ListView.separated(
-                padding: EdgeInsets.all(14),
-                itemCount: items.length,
-                separatorBuilder: (_, _) => SizedBox(height: 10),
-                itemBuilder: (context, i) => _RevisionCard(revision: items[i]),
-              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10, left: 2),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: AppColors.inkSoft,
+          fontSize: 11,
+          letterSpacing: 1.1,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// One claim, with the way back out of it. Withdraw shows only while the claim
+/// is still pending — a decided one is not the claimant's to undo.
+class _ClaimCard extends ConsumerStatefulWidget {
+  const _ClaimCard({required this.claim});
+
+  final Map<String, dynamic> claim;
+
+  @override
+  ConsumerState<_ClaimCard> createState() => _ClaimCardState();
+}
+
+class _ClaimCardState extends ConsumerState<_ClaimCard> {
+  bool _busy = false;
+
+  Future<void> _withdraw() async {
+    final l10n = AppLocalizations.of(context)!;
+    final name = widget.claim['author_name'] as String? ?? '';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.claimsWithdrawTitle),
+        content: Text(l10n.claimsWithdrawBody(name)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.claimsWithdraw)),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(apiClientProvider).withdrawAuthorClaim(widget.claim['id'] as String);
+      Haptics.success();
+      ref.invalidate(_myClaimsProvider);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.claimsWithdrawn)));
+    } catch (_) {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final status = widget.claim['status'] as String? ?? 'pending';
+    final pending = status == 'pending';
+    final statusLabel = switch (status) {
+      'approved' => l10n.claimsApproved,
+      'rejected' => l10n.claimsRejected,
+      _ => l10n.claimsPending,
+    };
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        border: Border.all(color: AppColors.line),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: EdgeInsets.fromLTRB(14, 12, 8, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.claim['author_name'] as String? ?? '',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  statusLabel,
+                  style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+                ),
+              ],
+            ),
+          ),
+          if (pending)
+            TextButton(
+              onPressed: _busy ? null : _withdraw,
+              child: Text(l10n.claimsWithdraw),
+            ),
+        ],
       ),
     );
   }

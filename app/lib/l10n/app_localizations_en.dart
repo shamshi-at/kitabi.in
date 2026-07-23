@@ -649,6 +649,35 @@ class AppLocalizationsEn extends AppLocalizations {
       'Nothing to review — suggested edits to books you added will appear here.';
 
   @override
+  String get claimsSectionTitle => 'YOUR AUTHOR CLAIMS';
+
+  @override
+  String get claimsPending => 'Waiting for review';
+
+  @override
+  String get claimsApproved => 'Approved';
+
+  @override
+  String get claimsRejected => 'Not approved';
+
+  @override
+  String get claimsWithdraw => 'Withdraw';
+
+  @override
+  String get claimsWithdrawTitle => 'Withdraw this claim?';
+
+  @override
+  String claimsWithdrawBody(String name) {
+    return '$name will no longer be marked as waiting for review. You can claim it again later.';
+  }
+
+  @override
+  String get claimsWithdrawn => 'Claim withdrawn';
+
+  @override
+  String get revisionsSectionTitle => 'SUGGESTED EDITS';
+
+  @override
   String revisionsProposedBy(String name) {
     return 'Suggested by $name';
   }

@@ -437,6 +437,19 @@ class ApiClient {
     await _dio.post('/catalog/revisions/$revisionId/reject');
   }
 
+  /// This reader's own "This is me" author claims, pending or decided. Parsed
+  /// eagerly, element by element, so a payload-shape change fails here at the
+  /// boundary rather than deep inside a build() (CLAUDE.md, 21 Jul 2026).
+  Future<List<Map<String, dynamic>>> myAuthorClaims() async {
+    final res = await _dio.get('/catalog/claims/mine');
+    return [for (final row in (res.data as List)) Map<String, dynamic>.from(row as Map)];
+  }
+
+  /// Take back an unreviewed claim — the accidental-tap escape hatch.
+  Future<void> withdrawAuthorClaim(String claimId) async {
+    await _dio.delete('/catalog/claims/$claimId');
+  }
+
   /// Typeahead for the add/edit form's author field (dropdown-cum-add-new).
   Future<List<Map<String, dynamic>>> searchAuthors(String query) async {
     final res = await _dio.get('/catalog/authors', queryParameters: {'q': query});

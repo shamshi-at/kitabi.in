@@ -1192,6 +1192,60 @@ abstract class AppLocalizations {
   /// **'Nothing to review — suggested edits to books you added will appear here.'**
   String get revisionsEmpty;
 
+  /// Section header listing the reader's own This-is-me claims
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR AUTHOR CLAIMS'**
+  String get claimsSectionTitle;
+
+  /// Status line on a pending author claim
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for review'**
+  String get claimsPending;
+
+  /// Status line on an approved author claim
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get claimsApproved;
+
+  /// Status line on a rejected author claim
+  ///
+  /// In en, this message translates to:
+  /// **'Not approved'**
+  String get claimsRejected;
+
+  /// Button that takes back an unreviewed author claim
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw'**
+  String get claimsWithdraw;
+
+  /// Confirm dialog title for withdrawing a claim
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw this claim?'**
+  String get claimsWithdrawTitle;
+
+  /// Confirm dialog body for withdrawing a claim
+  ///
+  /// In en, this message translates to:
+  /// **'{name} will no longer be marked as waiting for review. You can claim it again later.'**
+  String claimsWithdrawBody(String name);
+
+  /// Snackbar after withdrawing a claim
+  ///
+  /// In en, this message translates to:
+  /// **'Claim withdrawn'**
+  String get claimsWithdrawn;
+
+  /// Section header above pending work revisions
+  ///
+  /// In en, this message translates to:
+  /// **'SUGGESTED EDITS'**
+  String get revisionsSectionTitle;
+
   /// Who proposed a pending edit
   ///
   /// In en, this message translates to:

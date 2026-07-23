@@ -299,6 +299,17 @@ class WorkRevisionOut(BaseModel):
     created_at: datetime
 
 
+class AuthorClaimOut(BaseModel):
+    """One of the reader's own "This is me" claims, for the screen that lets
+    them see it is pending and take it back."""
+
+    id: uuid.UUID
+    author_id: uuid.UUID
+    author_name: str
+    status: str
+    created_at: datetime
+
+
 class EditionCreate(BaseModel):
     """Add another printing/ISBN to an existing Work — the edition-level library
     (a paperback of a book you own in hardcover, a regional reprint, …)."""

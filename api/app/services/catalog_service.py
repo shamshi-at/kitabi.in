@@ -222,6 +222,50 @@ async def pending_claim_author_ids(
     return set(rows.scalars().all())
 
 
+async def my_claims(db: AsyncSession, user_id: uuid.UUID) -> list[tuple[AuthorClaim, Author]]:
+    """This reader's own "This is me" claims, newest first, each with its
+    Author — a claim was otherwise invisible the moment it was filed: the
+    button said "pending review" and there was nowhere to go and look
+    (owner report, 23 Jul 2026). Only ever the caller's own rows."""
+    rows = await db.execute(
+        select(AuthorClaim, Author)
+        .join(Author, Author.id == AuthorClaim.author_id)
+        .where(AuthorClaim.user_id == user_id)
+        .order_by(AuthorClaim.created_at.desc())
+    )
+    return [(claim, author) for claim, author in rows.all()]
+
+
+async def withdraw_claim(db: AsyncSession, claim_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    """Take back one's own *unreviewed* claim — the accidental-tap escape hatch.
+
+    Hard-deletes the row rather than marking it: nothing was ever decided, so
+    the honest end state is "this was never asked", and it frees the
+    (author_id, user_id) unique pair so a genuine claim can be filed later.
+    Deliberately refuses a claim that has already been decided — allowing that
+    would let a rejected claimant erase the rejection and re-file, which is
+    exactly what `record_claim` declines to do by reopening.
+    """
+    claim = await db.get(AuthorClaim, claim_id)
+    if claim is None or claim.user_id != user_id:
+        # Someone else's claim is reported as missing, not forbidden — its
+        # existence isn't the caller's business.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "Claim not found"},
+        )
+    if claim.status != CLAIM_PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "already_decided",
+                "message": f"Claim is already {claim.status} and cannot be withdrawn",
+            },
+        )
+    await db.delete(claim)
+    await db.commit()
+
+
 async def approve_claim(
     db: AsyncSession, claim_id: uuid.UUID, decided_by_user_id: uuid.UUID
 ) -> AuthorClaim:
