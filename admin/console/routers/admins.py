@@ -11,11 +11,11 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
 
-from .. import queries, security
+from .. import mail, queries, security
 from ..deps import DbSession, RequireSuperAdmin, client_ip
 from ..flash import pop_flash as _pop_flash
 from ..flash import set_flash as _flash
-from ..models_ref import ADMIN_ROLES, ROLE_SUPER_ADMIN, AdminUser
+from ..models_ref import ADMIN_ROLES, ROLE_SUPER_ADMIN, TOKEN_INVITE, AdminUser
 from ..templating import templates
 
 router = APIRouter(prefix="/admins")
@@ -39,7 +39,7 @@ async def list_admins(request: Request, admin: RequireSuperAdmin, db: DbSession)
     )
     badges = await queries.nav_badges(db)
     flash = _pop_flash(request)
-    created = _pop_created(request)
+    invited = _pop_invited(request)
     resp = templates.TemplateResponse(
         request,
         "admins.html",
@@ -49,24 +49,24 @@ async def list_admins(request: Request, admin: RequireSuperAdmin, db: DbSession)
             "badges": badges,
             "admins": rows,
             "roles": ADMIN_ROLES,
-            "created": created,
+            "invited": invited,
             "flash": flash,
         },
     )
-    # One-shot: clear so a refresh doesn't re-show the flash or the temp password.
+    # One-shot: clear so a refresh doesn't re-show the flash or the invite link.
     if flash:
         resp.delete_cookie("admin_flash", path="/")
-    if created:
-        resp.delete_cookie("admin_created", path="/")
+    if invited:
+        resp.delete_cookie("admin_invite", path="/")
     return resp
 
 
-def _pop_created(request: Request) -> dict | None:
-    raw = request.cookies.get("admin_created")
+def _pop_invited(request: Request) -> dict | None:
+    raw = request.cookies.get("admin_invite")
     if not raw:
         return None
-    email, _, pw = raw.partition("|")
-    return {"email": email, "password": pw}
+    email, _, link = raw.partition("|")
+    return {"email": email, "link": link}
 
 
 @router.post("/create")
@@ -89,41 +89,53 @@ async def create_admin(
         _flash(resp, "err", "An admin with that email already exists.")
         return resp
 
-    # A strong temporary password, shown once for the super admin to hand over.
+    # Create the row with an unusable random password — the invitee sets their
+    # own via the emailed link (they can't sign in until they do).
     import secrets
 
-    temp = secrets.token_urlsafe(12)
     new = AdminUser(
         email=email,
-        password_hash=security.hash_password(temp),
+        password_hash=security.hash_password(secrets.token_urlsafe(24)),
         role=role,
         created_by_admin_id=admin.id,
     )
     db.add(new)
     await db.commit()
+
+    token = security.new_url_token()
+    await security.create_auth_token(db, new.id, TOKEN_INVITE, token, ttl_minutes=48 * 60)
+    link = f"{mail.base_url()}/invite/{token}"
+    mail.send(
+        email,
+        "You've been invited to Kitabi Admin",
+        f"You've been added as a {role.replace('_', ' ')} on Kitabi Admin.\n\nSet up your "
+        f"account (valid 48 hours):\n\n{link}\n\nYou'll choose a password and set up an "
+        f"authenticator app.",
+    )
     await security.audit(
         db,
-        "admin.create",
+        "admin.invite",
         admin_id=admin.id,
         target_type="admin",
         target_id=str(new.id),
         summary=f"{email} as {role}",
         ip=client_ip(request),
     )
-    # Carry the one-time password back to the page via a short cookie.
-    resp.set_cookie(
-        "admin_created",
-        f"{email}|{temp}",
-        max_age=30,
-        httponly=True,
-        samesite="strict",
-        path="/",
-    )
-    _flash(
-        resp,
-        "ok",
-        "Admin created. Share the temporary password securely — it is shown once.",
-    )
+
+    if mail.is_configured():
+        _flash(resp, "ok", f"Invitation emailed to {email}.")
+    else:
+        # No mail transport yet — surface the link so the super admin can share
+        # it out of band (and it's also in the server log).
+        resp.set_cookie(
+            "admin_invite",
+            f"{email}|{link}",
+            max_age=60,
+            httponly=True,
+            samesite="strict",
+            path="/",
+        )
+        _flash(resp, "ok", "Admin invited. Email isn't configured — copy the setup link below.")
     return resp
 
 

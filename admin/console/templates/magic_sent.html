@@ -1,0 +1,8 @@
+{% extends "auth_base.html" %}
+{% block title %}Link sent · Kitabi Admin{% endblock %}
+{% block content %}
+<h4>Check your email</h4>
+<p class="lead">If <b>{{ email }}</b> is an admin account, a one-time sign-in link is on its way.
+It works once and expires in 15 minutes.</p>
+<a class="btn p wfull" href="/sign-in">Back to sign in</a>
+{% endblock %}

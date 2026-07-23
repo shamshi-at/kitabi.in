@@ -36,12 +36,8 @@ def client_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
 
 
-async def current_admin(request: Request, db: DbSession) -> AdminUser:
-    """The signed-in, fully-enrolled admin, or a redirect to the right gate.
-
-    An admin with no confirmed TOTP is sent to enrolment — they can reach
-    nothing else until their authenticator is set up.
-    """
+async def _resolve_admin(request: Request, db: AsyncSession) -> AdminUser:
+    """The signed-in, TOTP-enrolled admin, or a redirect to the right gate."""
     token = request.cookies.get(config.COOKIE_NAME)
     admin = await security.session_admin(db, token)
     if admin is None:
@@ -51,7 +47,24 @@ async def current_admin(request: Request, db: DbSession) -> AdminUser:
     return admin
 
 
+async def current_admin(request: Request, db: DbSession) -> AdminUser:
+    """The admin for a normal page. An admin flagged must_change_password (they
+    signed in with a forgot-password OTP) is forced to set a real password
+    before reaching anything else."""
+    admin = await _resolve_admin(request, db)
+    if admin.must_change_password:
+        raise RedirectException("/account/force-password")
+    return admin
+
+
+async def current_admin_changing(request: Request, db: DbSession) -> AdminUser:
+    """Like current_admin but WITHOUT the must_change redirect — for the
+    force-password page itself, so it doesn't bounce to itself in a loop."""
+    return await _resolve_admin(request, db)
+
+
 CurrentAdmin = Annotated[AdminUser, Depends(current_admin)]
+CurrentAdminChanging = Annotated[AdminUser, Depends(current_admin_changing)]
 
 # Role ranking for the "at least this role" gates.
 _RANK = {"moderator": 0, ROLE_EDITOR: 1, ROLE_SUPER_ADMIN: 2}

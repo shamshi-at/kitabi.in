@@ -334,6 +334,22 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **24 Jul 2026** — **Admin console — global search + the email sign-in suite.**
+  A global command-search in every page's top bar (focus `/`, arrow/enter),
+  role-aware, recommending actions, books, authors, publishers and readers over
+  the spelling-insensitive fold. In-portal password change. And the email
+  sign-in trio, all behind a **dormant mail sender** (owner chose: build now,
+  pick a transport later — CLAUDE.md rule 8; until SMTP env is set, the code/
+  link is logged to the server and the flows work end to end): **forgot
+  password** emails a 30-min OTP that is accepted as a temporary password and
+  forces a real change on next load (`admin_users.must_change_password`);
+  **passwordless magic link** (15-min, single-use, TOTP still required);
+  **email invites** replace the hand-delivered temp password (48h setup link;
+  the link is surfaced on the admins page while mail is dormant). Migration
+  `000033` (`admin_auth_tokens`, `must_change_password`). All flows verified
+  live end to end on the dev DB (OTP→TOTP→forced-change, magic single-use,
+  invite→set-password→enrol). Real send is stdlib smtplib — no new dependency,
+  no bill until SMTP creds are added. 259 API + 10 admin tests, images build.
 - **24 Jul 2026** — **Admin console — the remaining screens, all wired.** The
   four "Planned" stubs are now real, verified live: **suggested-edit
   moderation** (every pending `work_revision`, decided via the API's

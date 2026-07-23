@@ -16,7 +16,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import config
-from .models_ref import AdminAuditLog, AdminRecoveryCode, AdminSession, AdminUser
+from .models_ref import (
+    AdminAuditLog,
+    AdminAuthToken,
+    AdminRecoveryCode,
+    AdminSession,
+    AdminUser,
+)
 
 _ph = PasswordHasher(
     time_cost=config.ARGON2_TIME_COST,
@@ -102,6 +108,112 @@ async def store_recovery_codes(db: AsyncSession, admin_id, codes: list[str]) -> 
     for code in codes:
         db.add(AdminRecoveryCode(admin_id=admin_id, code_hash=_hash_token(code.lower())))
     await db.commit()
+
+
+# ---- one-time auth tokens (reset OTP / magic link / invite) --------------
+def new_otp() -> str:
+    """A 6-digit numeric code — the forgot-password temp password, easy to type
+    from an email. Guessing is bounded: it's scoped to one account, single-use,
+    30-minute, and the account still locks out after repeated failures."""
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def new_url_token() -> str:
+    """A long opaque token for magic-link / invite URLs."""
+    return secrets.token_urlsafe(32)
+
+
+async def create_auth_token(
+    db: AsyncSession, admin_id, purpose: str, plaintext: str, ttl_minutes: int
+) -> None:
+    """Store the hash of a freshly-minted token. Any older unused tokens of the
+    same purpose for this admin are invalidated first, so only the newest works."""
+    stale = (
+        (
+            await db.execute(
+                select(AdminAuthToken).where(
+                    AdminAuthToken.admin_id == admin_id,
+                    AdminAuthToken.purpose == purpose,
+                    AdminAuthToken.used_at.is_(None),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for row in stale:
+        row.used_at = datetime.now(UTC)
+    db.add(
+        AdminAuthToken(
+            admin_id=admin_id,
+            purpose=purpose,
+            token_hash=_hash_token(plaintext),
+            expires_at=datetime.now(UTC) + timedelta(minutes=ttl_minutes),
+        )
+    )
+    await db.commit()
+
+
+async def consume_reset_otp(db: AsyncSession, admin_id, otp: str) -> bool:
+    """Spend a matching reset OTP for this specific admin (scoped, so a code
+    can't be brute-forced across accounts). Constant-time hash compare."""
+    from .models_ref import TOKEN_RESET
+
+    target = _hash_token(otp.strip())
+    rows = (
+        (
+            await db.execute(
+                select(AdminAuthToken).where(
+                    AdminAuthToken.admin_id == admin_id,
+                    AdminAuthToken.purpose == TOKEN_RESET,
+                    AdminAuthToken.used_at.is_(None),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    now = datetime.now(UTC)
+    for row in rows:
+        if row.expires_at > now and hmac.compare_digest(row.token_hash, target):
+            row.used_at = now
+            await db.commit()
+            return True
+    return False
+
+
+async def peek_url_token(db: AsyncSession, purpose: str, token: str) -> AdminUser | None:
+    """Validate a URL token WITHOUT spending it — for the GET that shows the
+    invite setup form, so a page load doesn't burn the token. The POST consumes."""
+    row = (
+        await db.execute(
+            select(AdminAuthToken).where(
+                AdminAuthToken.token_hash == _hash_token(token.strip()),
+                AdminAuthToken.purpose == purpose,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None or row.used_at is not None or row.expires_at <= datetime.now(UTC):
+        return None
+    return await db.get(AdminUser, row.admin_id)
+
+
+async def consume_url_token(db: AsyncSession, purpose: str, token: str) -> AdminUser | None:
+    """Spend a magic-link / invite token (unique URL token, looked up by hash)
+    and return its admin, or None if invalid/expired/used."""
+    row = (
+        await db.execute(
+            select(AdminAuthToken).where(
+                AdminAuthToken.token_hash == _hash_token(token.strip()),
+                AdminAuthToken.purpose == purpose,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None or row.used_at is not None or row.expires_at <= datetime.now(UTC):
+        return None
+    row.used_at = datetime.now(UTC)
+    await db.commit()
+    return await db.get(AdminUser, row.admin_id)
 
 
 # ---- sessions ------------------------------------------------------------

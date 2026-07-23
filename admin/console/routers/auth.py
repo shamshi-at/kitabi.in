@@ -16,10 +16,11 @@ import time
 import segno
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import select
 
-from .. import config, security
+from .. import config, mail, security
 from ..deps import DbSession, client_ip
-from ..models_ref import AdminUser
+from ..models_ref import TOKEN_INVITE, TOKEN_MAGIC, TOKEN_RESET, AdminUser
 from ..templating import templates
 
 router = APIRouter()
@@ -89,8 +90,6 @@ async def sign_in(
 ) -> HTMLResponse:
     ip = client_ip(request)
     email = email.strip().lower()
-    from sqlalchemy import select
-
     admin = (
         await db.execute(select(AdminUser).where(AdminUser.email == email))
     ).scalar_one_or_none()
@@ -112,7 +111,17 @@ async def sign_in(
     if security.is_locked(admin):
         await security.audit(db, "auth.fail", admin_id=admin.id, summary="locked out", ip=ip)
         return deny("Account temporarily locked. Try again later.")
-    if not security.verify_password(password, admin.password_hash):
+    # The password field accepts the real password OR a valid forgot-password
+    # OTP (a temporary password). An OTP sign-in flags a forced change.
+    if security.verify_password(password, admin.password_hash):
+        pass
+    elif await security.consume_reset_otp(db, admin.id, password):
+        admin.must_change_password = True
+        await db.commit()
+        await security.audit(
+            db, "auth.otp", admin_id=admin.id, summary="signed in with reset OTP", ip=ip
+        )
+    else:
         await security.register_failure(db, admin)
         await security.audit(db, "auth.fail", admin_id=admin.id, summary="bad password", ip=ip)
         return deny()
@@ -284,6 +293,129 @@ async def enrol(request: Request, db: DbSession, code: str = Form(...)) -> HTMLR
     await db.commit()
     await security.audit(db, "admin.enrol", admin_id=admin.id, ip=client_ip(request))
     return await _complete_sign_in(request, db, admin)
+
+
+# ---- forgot password (OTP as a temporary password) ----------------------
+@router.get("/forgot")
+async def forgot_form(request: Request) -> HTMLResponse:
+    return _render(request, "forgot.html")
+
+
+@router.post("/forgot")
+async def forgot(request: Request, db: DbSession, email: str = Form(...)) -> HTMLResponse:
+    email = email.strip().lower()
+    admin = (
+        await db.execute(select(AdminUser).where(AdminUser.email == email))
+    ).scalar_one_or_none()
+    # Only send to a real, active admin — but always show the same confirmation,
+    # so this can't be used to probe which emails are admins.
+    if admin is not None and admin.is_active:
+        otp = security.new_otp()
+        await security.create_auth_token(db, admin.id, TOKEN_RESET, otp, ttl_minutes=30)
+        mail.send(
+            email,
+            "Your Kitabi Admin sign-in code",
+            f"Your one-time sign-in code is {otp}\n\nIt expires in 30 minutes. Enter it in the "
+            f"password field at {mail.base_url()}/sign-in — you'll be asked to set a new password "
+            f"right after.\n\nIf you didn't request this, ignore this email.",
+        )
+        await security.audit(db, "auth.reset_requested", admin_id=admin.id, ip=client_ip(request))
+    return _render(request, "forgot_sent.html", email=email)
+
+
+# ---- passwordless magic link --------------------------------------------
+@router.get("/magic")
+async def magic_form(request: Request) -> HTMLResponse:
+    return _render(request, "magic.html")
+
+
+@router.post("/magic")
+async def magic(request: Request, db: DbSession, email: str = Form(...)) -> HTMLResponse:
+    email = email.strip().lower()
+    admin = (
+        await db.execute(select(AdminUser).where(AdminUser.email == email))
+    ).scalar_one_or_none()
+    if admin is not None and admin.is_active:
+        token = security.new_url_token()
+        await security.create_auth_token(db, admin.id, TOKEN_MAGIC, token, ttl_minutes=15)
+        link = f"{mail.base_url()}/magic/{token}"
+        mail.send(
+            email,
+            "Your Kitabi Admin sign-in link",
+            f"Sign in to Kitabi Admin:\n\n{link}\n\nThis link works once and expires in 15 "
+            f"minutes. You'll still confirm your authenticator code after.\n\nIf you didn't "
+            f"request this, ignore this email.",
+        )
+        await security.audit(db, "auth.magic_requested", admin_id=admin.id, ip=client_ip(request))
+    return _render(request, "magic_sent.html", email=email)
+
+
+@router.get("/magic/{token}")
+async def magic_consume(request: Request, db: DbSession, token: str) -> HTMLResponse:
+    admin = await security.consume_url_token(db, TOKEN_MAGIC, token)
+    if admin is None or not admin.is_active:
+        return _render(
+            request,
+            "sign_in.html",
+            flash={"kind": "err", "text": "That sign-in link is invalid or has expired."},
+        )
+    # Link proves email possession — the password step. Still require TOTP.
+    dest = "/enrol" if admin.totp_enrolled_at is None else "/sign-in/2fa"
+    resp = RedirectResponse(dest, status_code=303)
+    resp.set_cookie(
+        PENDING_COOKIE, _sign_pending(str(admin.id)), max_age=_PENDING_TTL, **_cookie_kwargs()
+    )
+    await security.audit(db, "auth.magic_used", admin_id=admin.id, ip=client_ip(request))
+    return resp
+
+
+# ---- invite setup (public, token-gated) ---------------------------------
+@router.get("/invite/{token}")
+async def invite_form(request: Request, db: DbSession, token: str) -> HTMLResponse:
+    admin = await security.peek_url_token(db, TOKEN_INVITE, token)
+    if admin is None:
+        return _render(
+            request,
+            "sign_in.html",
+            flash={"kind": "err", "text": "That invitation is invalid or has expired."},
+        )
+    return _render(
+        request, "invite.html", token=token, email=admin.email, minlen=config.MIN_PASSWORD_LENGTH
+    )
+
+
+@router.post("/invite/{token}")
+async def invite_setup(
+    request: Request, db: DbSession, token: str, password: str = Form(...), confirm: str = Form(...)
+) -> HTMLResponse:
+    admin = await security.peek_url_token(db, TOKEN_INVITE, token)
+    if admin is None:
+        return _render(
+            request,
+            "sign_in.html",
+            flash={"kind": "err", "text": "That invitation is invalid or has expired."},
+        )
+    err = None
+    if len(password) < config.MIN_PASSWORD_LENGTH:
+        err = f"Password must be at least {config.MIN_PASSWORD_LENGTH} characters."
+    elif password != confirm:
+        err = "The passwords don't match."
+    if err:
+        return _render(
+            request,
+            "invite.html",
+            token=token,
+            email=admin.email,
+            minlen=config.MIN_PASSWORD_LENGTH,
+            flash={"kind": "err", "text": err},
+        )
+    # Spend the token and set the password. They then sign in → forced TOTP enrol.
+    await security.consume_url_token(db, TOKEN_INVITE, token)
+    admin.password_hash = security.hash_password(password)
+    await db.commit()
+    await security.audit(db, "admin.invite_accepted", admin_id=admin.id, ip=client_ip(request))
+    resp = RedirectResponse("/sign-in", status_code=303)
+    return resp
 
 
 # ---- sign out ------------------------------------------------------------

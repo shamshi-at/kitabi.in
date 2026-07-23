@@ -3,11 +3,11 @@
 {% block heading %}Admin users{% endblock %}
 {% block subheading %}{{ admins | length }} admins{% endblock %}
 {% block content %}
-{% if created %}
+{% if invited %}
 <div class="note" style="margin-bottom:14px;border-left-color:var(--oxblood)">
-  <b>Temporary password for {{ created.email }}</b> — shown once, share it securely:
-  <code style="font-size:13px">{{ created.password }}</code>. They sign in with this and enrol an
-  authenticator on first sign-in.
+  <b>Setup link for {{ invited.email }}</b> — email isn't configured yet, so share this securely
+  (valid 48 hours; also in the server log):<br>
+  <code style="font-size:12px;word-break:break-all">{{ invited.link }}</code>
 </div>
 {% endif %}
 
@@ -53,7 +53,7 @@
           <option value="editor">Editor — also fixes the catalog</option>
           <option value="super_admin">Super admin — also manages admins &amp; data</option>
         </select></div>
-      <div class="note">A one-time password is generated and shown here for you to hand over. They enrol
+      <div class="note">They get an emailed setup link (valid 48h) to choose a password and enrol
       a TOTP app on first sign-in before they can reach anything.</div>
       <button class="btn p" style="margin-top:11px">Create admin</button>
     </form>

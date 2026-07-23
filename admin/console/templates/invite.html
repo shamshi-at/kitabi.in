@@ -1,0 +1,14 @@
+{% extends "auth_base.html" %}
+{% block title %}Set up your account · Kitabi Admin{% endblock %}
+{% block content %}
+<h4>Welcome to Kitabi Admin</h4>
+<p class="lead">Setting up <b>{{ email }}</b>. Choose a password — after you sign in you'll set up
+an authenticator app for two-factor.</p>
+<form method="post" action="/invite/{{ token }}">
+  <div class="fld"><label>Password (min {{ minlen }} chars)</label>
+    <input type="password" name="password" autocomplete="new-password" required autofocus></div>
+  <div class="fld"><label>Confirm password</label>
+    <input type="password" name="confirm" autocomplete="new-password" required></div>
+  <button class="btn p wfull" type="submit">Create my account</button>
+</form>
+{% endblock %}

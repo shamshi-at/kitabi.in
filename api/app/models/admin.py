@@ -46,6 +46,9 @@ class AdminUser(Base):
     # Brute-force guard: N failures locks the account until locked_until.
     failed_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    # Set true after a forgot-password OTP sign-in (the OTP is a temporary
+    # password); the console forces a real password change before anything else.
+    must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -109,6 +112,33 @@ class AdminAuditLog(Base):
     ip: Mapped[str | None] = mapped_column(String, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )
+
+
+# Token purposes for admin_auth_tokens.
+TOKEN_RESET = "reset"  # forgot-password OTP (short code, acts as a temp password)
+TOKEN_MAGIC = "magic"  # passwordless "sign in with email link"
+TOKEN_INVITE = "invite"  # new-admin setup link
+
+
+class AdminAuthToken(Base):
+    """One-time, expiring token backing the email sign-in flows — forgot-password
+    OTP, magic link, and invite setup. Only the hash is stored; the plaintext
+    lives only in the email (or, while no transport is configured, the server
+    log). Single-use: `used_at` is stamped the moment it's spent."""
+
+    __tablename__ = "admin_auth_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    admin_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("admin_users.id"), nullable=False, index=True
+    )
+    purpose: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
 

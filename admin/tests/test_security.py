@@ -74,6 +74,18 @@ def test_pending_ticket_expires():
         time.time = real
 
 
+def test_reset_otp_is_six_digits():
+    for _ in range(20):
+        otp = security.new_otp()
+        assert len(otp) == 6 and otp.isdigit()
+
+
+def test_url_tokens_are_long_and_unique():
+    toks = {security.new_url_token() for _ in range(50)}
+    assert len(toks) == 50
+    assert all(len(t) >= 32 for t in toks)
+
+
 def test_role_ranking_orders_least_to_most():
     from console.deps import _RANK
     from console.models_ref import ROLE_EDITOR, ROLE_MODERATOR, ROLE_SUPER_ADMIN

@@ -1,0 +1,13 @@
+{% extends "auth_base.html" %}
+{% block title %}Email sign-in link · Kitabi Admin{% endblock %}
+{% block content %}
+<h4>Sign in with an email link</h4>
+<p class="lead">Enter your admin email and we'll send a one-time link (valid 15 minutes) that signs
+you in — no password needed. You'll still confirm your authenticator code.</p>
+<form method="post" action="/magic">
+  <div class="fld"><label>Email</label>
+    <input type="email" name="email" autocomplete="username" required autofocus></div>
+  <button class="btn p wfull" type="submit">Email me a link</button>
+</form>
+<p style="margin-top:16px"><a class="muted-link" href="/sign-in">Back to sign in</a></p>
+{% endblock %}

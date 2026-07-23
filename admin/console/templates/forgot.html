@@ -1,0 +1,13 @@
+{% extends "auth_base.html" %}
+{% block title %}Forgot password · Kitabi Admin{% endblock %}
+{% block content %}
+<h4>Forgot your password?</h4>
+<p class="lead">Enter your admin email and we'll send a one-time sign-in code (valid 30 minutes).
+You'll set a new password right after signing in.</p>
+<form method="post" action="/forgot">
+  <div class="fld"><label>Email</label>
+    <input type="email" name="email" autocomplete="username" required autofocus></div>
+  <button class="btn p wfull" type="submit">Send me a code</button>
+</form>
+<p style="margin-top:16px"><a class="muted-link" href="/sign-in">Back to sign in</a></p>
+{% endblock %}
