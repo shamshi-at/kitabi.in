@@ -16,7 +16,18 @@ from sqlalchemy import func, select
 from .. import queries, security
 from ..deps import DbSession, RequireEditor, client_ip
 from ..flash import pop_flash, set_flash
-from ..models_ref import Author, Edition, LibraryEntry, Work
+from ..models_ref import (
+    CLAIM_PENDING,
+    Author,
+    AuthorClaim,
+    Edition,
+    LibraryEntry,
+    Profile,
+    Publisher,
+    Rating,
+    Review,
+    Work,
+)
 from ..templating import templates
 
 router = APIRouter(prefix="/catalog")
@@ -89,6 +100,141 @@ async def catalog(
     if flash:
         resp.delete_cookie("admin_flash", path="/")
     return resp
+
+
+@router.get("/works/{work_id}")
+async def book_detail(
+    request: Request, admin: RequireEditor, db: DbSession, work_id: uuid.UUID
+) -> HTMLResponse:
+    try:
+        work = await catalog_service.get_work_or_404(db, work_id)
+    except Exception:  # noqa: BLE001
+        resp = RedirectResponse("/catalog", status_code=303)
+        set_flash(resp, "err", "Work not found.")
+        return resp
+    ratings = int(
+        await db.scalar(select(func.count()).select_from(Rating).where(Rating.work_id == work_id))
+        or 0
+    )
+    reviews = int(
+        await db.scalar(select(func.count()).select_from(Review).where(Review.work_id == work_id))
+        or 0
+    )
+    shelved = int(
+        await db.scalar(
+            select(func.count())
+            .select_from(LibraryEntry)
+            .where(
+                LibraryEntry.edition_id.in_(select(Edition.id).where(Edition.work_id == work_id))
+            )
+        )
+        or 0
+    )
+    badges = await queries.nav_badges(db)
+    return templates.TemplateResponse(
+        request,
+        "book_detail.html",
+        {
+            "admin": admin,
+            "active": "catalog",
+            "badges": badges,
+            "w": work,
+            "ratings": ratings,
+            "reviews": reviews,
+            "shelved": shelved,
+        },
+    )
+
+
+@router.get("/authors")
+async def authors(
+    request: Request, admin: RequireEditor, db: DbSession, q: str = Query(default="")
+) -> HTMLResponse:
+    q = q.strip()
+    rows = (
+        await catalog_service.search_authors(db, q, limit=100)
+        if q
+        else await catalog_service.browse_authors(db, 60, 0, popular=True)
+    )
+    badges = await queries.nav_badges(db)
+    return templates.TemplateResponse(
+        request,
+        "authors.html",
+        {"admin": admin, "active": "authors", "badges": badges, "q": q, "rows": rows},
+    )
+
+
+@router.get("/authors/{author_id}")
+async def author_detail(
+    request: Request, admin: RequireEditor, db: DbSession, author_id: uuid.UUID
+) -> HTMLResponse:
+    author = await db.get(Author, author_id)
+    if author is None:
+        resp = RedirectResponse("/catalog/authors", status_code=303)
+        set_flash(resp, "err", "Author not found.")
+        return resp
+    works = await catalog_service.author_works(db, author_id)
+    linked = None
+    if author.linked_user_id is not None:
+        linked = await db.get(Profile, author.linked_user_id)
+    pending_claims = int(
+        await db.scalar(
+            select(func.count())
+            .select_from(AuthorClaim)
+            .where(AuthorClaim.author_id == author_id, AuthorClaim.status == CLAIM_PENDING)
+        )
+        or 0
+    )
+    badges = await queries.nav_badges(db)
+    return templates.TemplateResponse(
+        request,
+        "author_detail.html",
+        {
+            "admin": admin,
+            "active": "authors",
+            "badges": badges,
+            "a": author,
+            "works": works,
+            "linked": linked,
+            "pending_claims": pending_claims,
+        },
+    )
+
+
+@router.get("/publishers")
+async def publishers(
+    request: Request, admin: RequireEditor, db: DbSession, q: str = Query(default="")
+) -> HTMLResponse:
+    q = q.strip()
+    rows = (
+        await catalog_service.search_publishers(db, q, limit=100)
+        if q
+        else await catalog_service.browse_publishers(db, 60, 0, popular=True)
+    )
+    badges = await queries.nav_badges(db)
+    return templates.TemplateResponse(
+        request,
+        "publishers.html",
+        {"admin": admin, "active": "publishers", "badges": badges, "q": q, "rows": rows},
+    )
+
+
+@router.get("/publishers/{publisher_id}")
+async def publisher_detail(
+    request: Request, admin: RequireEditor, db: DbSession, publisher_id: uuid.UUID
+) -> HTMLResponse:
+    publisher = await db.get(Publisher, publisher_id)
+    if publisher is None:
+        resp = RedirectResponse("/catalog/publishers", status_code=303)
+        set_flash(resp, "err", "Publisher not found.")
+        return resp
+    works = await catalog_service.publisher_works(db, publisher_id)
+    badges = await queries.nav_badges(db)
+    return templates.TemplateResponse(
+        request,
+        "publisher_detail.html",
+        {"admin": admin, "active": "publishers", "badges": badges, "p": publisher, "works": works},
+    )
 
 
 @router.get("/merge")

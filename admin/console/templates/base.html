@@ -27,6 +27,8 @@
     {% if admin.role in ['editor', 'super_admin'] %}
     <div class="grp">CATALOG</div>
     {{ navlink('/catalog', 'Works & editions', 'catalog') }}
+    {{ navlink('/catalog/authors', 'Authors', 'authors') }}
+    {{ navlink('/catalog/publishers', 'Publishers', 'publishers') }}
     {% endif %}
     <div class="grp">PEOPLE</div>
     {{ navlink('/readers', 'Readers', 'readers') }}

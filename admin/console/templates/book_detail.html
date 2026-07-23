@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ w.title }} · Kitabi Admin{% endblock %}
+{% block heading %}{{ w.title }}{% endblock %}
+{% block subheading %}{{ w.title_translit or '' }}{% if w.first_publish_year %} · {{ w.first_publish_year }}{% endif %}{% endblock %}
+{% block topactions %}<a class="btn s" href="/catalog">← Catalog</a>{% endblock %}
+{% block content %}
+<div class="split">
+  <div class="card">
+    <div class="lbl">Work</div>
+    <table style="margin-top:6px">
+      <tr><td>Authors</td><td style="text-align:right">
+        {% for a in w.authors %}<a href="/catalog/authors/{{ a.id }}">{{ a.pen_name or a.name }}</a>{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</td></tr>
+      {% if w.translators %}<tr><td>Translators</td><td style="text-align:right">
+        {% for t in w.translators %}<a href="/catalog/authors/{{ t.id }}">{{ t.name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>{% endif %}
+      <tr><td>Language</td><td style="text-align:right">{{ w.language or '—' }}</td></tr>
+      <tr><td>Type (form)</td><td style="text-align:right">{{ w.form or '—' }}</td></tr>
+      <tr><td>Genres</td><td style="text-align:right">{{ w.genres | map(attribute='name') | join(', ') if w.genres else '—' }}</td></tr>
+      <tr><td>Shelved by readers</td><td style="text-align:right"><b>{{ shelved }}</b></td></tr>
+      <tr><td>Ratings / reviews</td><td style="text-align:right"><b>{{ ratings }}</b> / <b>{{ reviews }}</b></td></tr>
+      <tr><td>Source</td><td style="text-align:right">{{ w.external_source or 'reader-added' }}</td></tr>
+    </table>
+    <div class="lbl" style="margin-top:14px">Description</div>
+    <p style="margin-top:6px;font-size:13px;line-height:1.6;color:{{ 'var(--ink)' if w.description else 'var(--ink-soft)' }}">
+      {{ w.description or '— none —' }}</p>
+    <div style="margin-top:14px"><a class="btn s" href="/catalog?q={{ w.title_translit or w.title }}">Find a duplicate to merge</a></div>
+    <div class="note" style="margin-top:10px">Work id <span class="mono">{{ w.id }}</span></div>
+  </div>
+  <div class="card">
+    <div class="lbl">Editions ({{ w.editions | length }})</div>
+    <div class="tbl" style="margin-top:8px;border:none">
+      <table>
+        <tr><th>ISBN</th><th>Publisher</th><th>Lang</th><th>Pages</th><th>Cover</th></tr>
+        {% for e in w.editions %}
+        <tr>
+          <td class="mono" style="font-size:11px">{{ e.isbn or '—' }}</td>
+          <td class="m">{% if e.publisher %}<a href="/catalog/publishers/{{ e.publisher.id }}">{{ e.publisher.name }}</a>{% else %}—{% endif %}</td>
+          <td class="m">{{ e.language or '—' }}</td>
+          <td>{{ e.page_count or '—' }}</td>
+          <td>{% if e.cover_url %}<a href="{{ e.cover_url }}" target="_blank" rel="noopener">view</a>{% else %}<span class="pill mute">none</span>{% endif %}</td>
+        </tr>
+        {% else %}<tr><td colspan="5" class="m">No editions.</td></tr>{% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

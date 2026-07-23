@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Publishers · Kitabi Admin{% endblock %}
+{% block heading %}Publishers{% endblock %}
+{% block subheading %}{% if q %}Results for “{{ q }}”{% else %}Most editions first{% endif %} · search is spelling-insensitive{% endblock %}
+{% block topactions %}
+<form method="get" action="/catalog/publishers"><input class="search" name="q" value="{{ q }}"
+  placeholder="Search publisher name" style="width:260px"></form>
+{% endblock %}
+{% block content %}
+<div class="tbl">
+  <table>
+    <tr><th style="width:56%">Name</th><th>Language</th><th>Publisher id</th></tr>
+    {% for p in rows %}
+    <tr>
+      <td><a class="t" href="/catalog/publishers/{{ p.id }}" style="text-decoration:none">{{ p.name }}</a>
+        <div class="m mono">{{ p.name_translit or '' }}</div></td>
+      <td class="m">{{ p.primary_language or '—' }}</td>
+      <td class="mono" style="font-size:10.5px;color:var(--ink-soft)">{{ p.id }}</td>
+    </tr>
+    {% else %}<tr><td colspan="3" class="m" style="text-align:center;padding:24px">
+      {% if q %}No publishers match “{{ q }}”.{% else %}No publishers yet.{% endif %}</td></tr>{% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Authors · Kitabi Admin{% endblock %}
+{% block heading %}Authors{% endblock %}
+{% block subheading %}{% if q %}Results for “{{ q }}”{% else %}Most works first{% endif %} · search is spelling-insensitive{% endblock %}
+{% block topactions %}
+<form method="get" action="/catalog/authors"><input class="search" name="q" value="{{ q }}"
+  placeholder="Search author name" style="width:260px"></form>
+{% endblock %}
+{% block content %}
+<div class="tbl">
+  <table>
+    <tr><th style="width:44%">Name</th><th>Language</th><th>On Kitabi</th><th>Author id</th></tr>
+    {% for a in rows %}
+    <tr>
+      <td><a class="t" href="/catalog/authors/{{ a.id }}" style="text-decoration:none">{{ a.name }}</a>
+        <div class="m mono">{{ a.name_translit or '' }}{% if a.pen_name %} · “{{ a.pen_name }}”{% endif %}</div></td>
+      <td class="m">{{ a.primary_language or '—' }}</td>
+      <td>{% if a.linked_user_id %}<span class="pill info">🔗 linked</span>{% else %}<span class="m">—</span>{% endif %}</td>
+      <td class="mono" style="font-size:10.5px;color:var(--ink-soft)">{{ a.id }}</td>
+    </tr>
+    {% else %}<tr><td colspan="4" class="m" style="text-align:center;padding:24px">
+      {% if q %}No authors match “{{ q }}”.{% else %}No authors yet.{% endif %}</td></tr>{% endfor %}
+  </table>
+</div>
+{% endblock %}

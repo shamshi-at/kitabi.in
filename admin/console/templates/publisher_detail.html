@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }} · Kitabi Admin{% endblock %}
+{% block heading %}{{ p.name }}{% endblock %}
+{% block subheading %}{{ p.name_translit or '' }}{% endblock %}
+{% block topactions %}<a class="btn s" href="/catalog/publishers">← Publishers</a>{% endblock %}
+{% block content %}
+<div class="split">
+  <div class="card">
+    <div class="lbl">Publisher</div>
+    <table style="margin-top:6px">
+      <tr><td>Primary language</td><td style="text-align:right">{{ p.primary_language or '—' }}</td></tr>
+      <tr><td>Works in catalog</td><td style="text-align:right"><b>{{ works | length }}</b></td></tr>
+      <tr><td>Source</td><td style="text-align:right">{{ p.external_source or 'reader-added' }}</td></tr>
+    </table>
+    <div class="note" style="margin-top:12px">Publisher id <span class="mono">{{ p.id }}</span></div>
+  </div>
+  <div class="card">
+    <div class="lbl">Works ({{ works | length }})</div>
+    <div class="tbl" style="margin-top:8px;border:none">
+      <table>
+        <tr><th>Title</th><th>Year</th></tr>
+        {% for w in works %}
+        <tr><td><a href="/catalog/works/{{ w.id }}">{{ w.title }}</a>
+          <div class="m mono">{{ w.title_translit or '' }}</div></td>
+          <td class="m">{{ w.first_publish_year or '—' }}</td></tr>
+        {% else %}<tr><td colspan="2" class="m">No works from this publisher.</td></tr>{% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

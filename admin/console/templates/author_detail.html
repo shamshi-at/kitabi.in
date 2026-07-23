@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ a.name }} · Kitabi Admin{% endblock %}
+{% block heading %}{{ a.name }}{% endblock %}
+{% block subheading %}{{ a.name_translit or '' }}{% if a.pen_name %} · writes as “{{ a.pen_name }}”{% endif %}{% endblock %}
+{% block topactions %}<a class="btn s" href="/catalog/authors">← Authors</a>{% endblock %}
+{% block content %}
+<div class="split">
+  <div class="card">
+    <div class="lbl">Author</div>
+    <table style="margin-top:6px">
+      <tr><td>Primary language</td><td style="text-align:right">{{ a.primary_language or '—' }}</td></tr>
+      <tr><td>Works in catalog</td><td style="text-align:right"><b>{{ works | length }}</b></td></tr>
+      <tr><td>On Kitabi</td><td style="text-align:right">
+        {% if linked %}<a href="/readers/{{ linked.id }}">{{ linked.full_name or ('@' ~ linked.username) or linked.email }}</a> <span class="pill info">🔗</span>
+        {% else %}<span class="m">not linked</span>{% endif %}</td></tr>
+      {% if pending_claims %}<tr><td>Pending claims</td><td style="text-align:right">
+        <a href="/moderation/claims"><span class="pill pend">{{ pending_claims }} to review</span></a></td></tr>{% endif %}
+      <tr><td>Source</td><td style="text-align:right">{{ a.external_source or 'reader-added' }}</td></tr>
+    </table>
+    {% if a.bio %}<div class="lbl" style="margin-top:14px">Bio</div>
+      <p style="margin-top:6px;font-size:13px;line-height:1.6">{{ a.bio }}</p>{% endif %}
+    <div class="note" style="margin-top:12px">Author id <span class="mono">{{ a.id }}</span></div>
+  </div>
+  <div class="card">
+    <div class="lbl">Works ({{ works | length }})</div>
+    <div class="tbl" style="margin-top:8px;border:none">
+      <table>
+        <tr><th>Title</th><th>Year</th></tr>
+        {% for w in works %}
+        <tr><td><a href="/catalog/works/{{ w.id }}">{{ w.title }}</a>
+          <div class="m mono">{{ w.title_translit or '' }}</div></td>
+          <td class="m">{{ w.first_publish_year or '—' }}</td></tr>
+        {% else %}<tr><td colspan="2" class="m">No works linked.</td></tr>{% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

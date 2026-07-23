@@ -37,7 +37,7 @@
     <tr><th style="width:38%">Title</th><th>Author</th><th>Editions</th><th>Shelved</th><th>Work id</th></tr>
     {% for r in rows %}
     <tr>
-      <td><div class="t">{{ r.w.title }}</div>
+      <td><a class="t" href="/catalog/works/{{ r.w.id }}" style="text-decoration:none">{{ r.w.title }}</a>
         <div class="m mono">{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}</div></td>
       <td class="m">{{ r.author }}</td>
       <td>{{ r.editions }}</td>
