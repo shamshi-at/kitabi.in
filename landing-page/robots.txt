@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://kitabi.in/sitemap.xml
+Sitemap: https://kitabi.in/sitemaps/index.xml

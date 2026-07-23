@@ -16,6 +16,7 @@ from app.api import (
     health,
     me,
     recommendations,
+    sitemap,
     sync,
     users,
 )
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(connections.router)
     app.include_router(devices.router)
     app.include_router(catalog.router)
+    app.include_router(sitemap.router)
     app.include_router(recommendations.router)
     app.include_router(import_api.router)
     app.include_router(sync.router)

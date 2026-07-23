@@ -23,11 +23,19 @@ export async function onRequest(context) {
       : 'An author on Kitabi.';
   }
 
+  // schema.org Person for search engines — omit anything the API left null.
+  const jsonLd = { '@context': 'https://schema.org', '@type': 'Person', name };
+  if (author.pen_name) jsonLd.alternateName = author.pen_name;
+  if (author.image_url) jsonLd.image = author.image_url;
+  if (author.bio) jsonLd.description = clamp(author.bio, 500);
+
   return injectOg(shell, {
     pageTitle: `${name} — Kitabi`,
     title: name,
     description,
     url: canonical,
     image: author.image_url || null,
+    canonical,
+    jsonLd,
   });
 }

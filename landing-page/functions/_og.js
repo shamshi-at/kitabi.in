@@ -43,7 +43,9 @@ export async function fetchEntity(path) {
 }
 
 // Rewrite the static shell's <head> with real OG / Twitter tags. `meta` carries
-// { pageTitle, title, description, url, image, card }. `image` is optional.
+// { pageTitle, title, description, url, image, card, canonical, jsonLd }.
+// `image`, `canonical` (a <link rel="canonical">) and `jsonLd` (an object,
+// emitted as an application/ld+json script for search engines) are optional.
 export function injectOg(shell, meta) {
   const image = meta.image ? attr(meta.image) : '';
   const url = attr(meta.url);
@@ -85,6 +87,14 @@ export function injectOg(shell, meta) {
           tags.push(`<meta property="og:image:secure_url" content="${image}">`);
           tags.push(`<meta property="og:image:alt" content="${title}">`);
           tags.push(`<meta name="twitter:image" content="${image}">`);
+        }
+        if (meta.canonical) {
+          tags.push(`<link rel="canonical" href="${attr(meta.canonical)}">`);
+        }
+        if (meta.jsonLd) {
+          // Escape < so the JSON can never close the script tag early.
+          const json = JSON.stringify(meta.jsonLd).replace(/</g, '\\u003c');
+          tags.push(`<script type="application/ld+json">${json}</script>`);
         }
         el.append(tags.join(''), { html: true });
       },

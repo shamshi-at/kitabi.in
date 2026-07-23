@@ -21,11 +21,17 @@ export async function onRequest(context) {
     ? `${works.length} ${works.length === 1 ? 'title' : 'titles'} on Kitabi.`
     : 'A publisher on Kitabi.';
 
+  // schema.org Organization for search engines — logo only when present.
+  const jsonLd = { '@context': 'https://schema.org', '@type': 'Organization', name };
+  if (publisher.logo_url) jsonLd.logo = publisher.logo_url;
+
   return injectOg(shell, {
     pageTitle: `${name} — Kitabi`,
     title: name,
     description,
     url: canonical,
     image: publisher.logo_url || null,
+    canonical,
+    jsonLd,
   });
 }

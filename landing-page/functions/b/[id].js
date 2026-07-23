@@ -25,6 +25,39 @@ export async function onRequest(context) {
 
   const title = data.title || 'Untitled';
 
+  // schema.org Book for search engines — only fields the API actually
+  // returned; null/empty fields are omitted entirely.
+  const jsonLd = { '@context': 'https://schema.org', '@type': 'Book', name: title };
+  const authorNames = authors.map((a) => a.pen_name || a.name).filter(Boolean);
+  if (authorNames.length) {
+    jsonLd.author = authorNames.map((n) => ({ '@type': 'Person', name: n }));
+  }
+  if (data.language) jsonLd.inLanguage = data.language;
+  if (data.first_publish_year) jsonLd.datePublished = String(data.first_publish_year);
+  if (data.description) jsonLd.description = clamp(data.description, 500);
+  if (ed.cover_url) jsonLd.image = ed.cover_url;
+  const FORMATS = {
+    paperback: 'https://schema.org/Paperback',
+    hardcover: 'https://schema.org/Hardcover',
+    ebook: 'https://schema.org/EBook',
+  };
+  const workExample = editions
+    .map((e) => {
+      if (!e) return null;
+      const ex = { '@type': 'Book' };
+      if (e.isbn) ex.isbn = e.isbn;
+      if (e.page_count) ex.numberOfPages = e.page_count;
+      const key = String(e.format || '').toLowerCase();
+      const format = Object.hasOwn(FORMATS, key) ? FORMATS[key] : null;
+      if (format) ex.bookFormat = format;
+      if (e.publisher && e.publisher.name) {
+        ex.publisher = { '@type': 'Organization', name: e.publisher.name };
+      }
+      return Object.keys(ex).length > 1 ? ex : null; // nothing beyond @type → skip
+    })
+    .filter(Boolean);
+  if (workExample.length) jsonLd.workExample = workExample;
+
   // Prefer the real blurb; otherwise assemble author · publisher · year context.
   let description = data.description ? clamp(data.description, 200) : '';
   if (!description) {
@@ -41,5 +74,7 @@ export async function onRequest(context) {
     description,
     url: canonical,
     image: ed.cover_url || null,
+    canonical,
+    jsonLd,
   });
 }
