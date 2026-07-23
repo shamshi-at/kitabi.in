@@ -142,3 +142,13 @@ def test_clean_gates_form_to_the_vocabulary():
     assert _clean({"form": " Poetry "})["form"] == "Poetry"
     assert _clean({"form": "Romantic saga"})["form"] is None
     assert _clean({})["form"] is None
+
+
+def test_cover_extract_out_surfaces_the_detected_type():
+    """The response schema must carry `form` — the back cover's printed literary
+    form (നോവൽ → Novel) is the Type the form prefills; a schema that drops it
+    (as it silently did before) means the reader never gets the type."""
+    from app.schemas.catalog import CoverExtractOut
+
+    out = CoverExtractOut(**_clean({"title": "x", "form": "Novel"}))
+    assert out.form == "Novel"

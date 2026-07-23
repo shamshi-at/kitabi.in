@@ -681,6 +681,39 @@ class _BookFormState extends ConsumerState<_BookForm> {
     }
   }
 
+  /// One-tap "read the back": photograph the book's back cover, upload it, set
+  /// it as the back cover, then run the same extraction — the blurb goes in the
+  /// Description and the printed literary form ("നോവൽ" → Novel) fills the Type.
+  /// Meant for a book already in your library whose description you never
+  /// typed; still fills only empty fields, so your own text is never clobbered.
+  Future<void> _scanBackCover() async {
+    final source = await showImageSourceSheet(context);
+    if (source == null || !mounted) return;
+    // Capture + upload first — it shows its own camera/crop UI, so raise the
+    // back slot's spinner rather than the full "reading your cover" overlay.
+    setState(() => _uploadingBack = true);
+    String? url;
+    try {
+      url = await pickCropUploadImage(
+          source: source, folder: 'covers', ratio: CropRatio.cover);
+    } catch (err) {
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          duration: const Duration(seconds: 6),
+          content: Text('${l10n.coverUploadFailed}\n${_briefError(err)}'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingBack = false);
+    }
+    if (url == null || !mounted) return;
+    // Show the freshly-photographed back cover in its slot, then read it — the
+    // shared path already sends back_url (an own-upload) to the extractor.
+    setState(() => _backCoverUrl = url);
+    await _fillFromPhotos();
+  }
+
   /// Prefill empty fields from the extraction result. Returns whether anything
   /// was actually filled (nothing readable → the caller says so).
   bool _applyExtracted(Map<String, dynamic> fields) {
@@ -1374,15 +1407,19 @@ class _BookFormState extends ConsumerState<_BookForm> {
               ),
             ],
           ),
-          // Once a photo is up, offer to read the details off it — the rescue
-          // path for books no catalog knows. Prefills only empty fields.
-          if (_isOwnUpload(_coverUrl) || _isOwnUpload(_backCoverUrl)) ...[
-            SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: _extracting ? null : _fillFromPhotos,
-                icon: _extracting
+          // Read the details off the covers — the rescue path for books no
+          // catalog knows, and the fast way to fill a blurb you never typed.
+          // "Scan back cover" captures the back page in one tap; "Fill in from
+          // photos" reuses covers already attached. Both prefill empty fields
+          // only (blurb → Description, printed form → Type).
+          SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: (_extracting || _uploadingBack) ? null : _scanBackCover,
+                icon: _uploadingBack
                     ? SizedBox(
                         width: 14,
                         height: 14,
@@ -1391,15 +1428,35 @@ class _BookFormState extends ConsumerState<_BookForm> {
                           color: AppColors.oxblood,
                         ),
                       )
-                    : Icon(Icons.auto_awesome, size: 16, color: AppColors.oxblood),
-                label: Text(l10n.formFillFromPhotos),
+                    : Icon(Icons.document_scanner_outlined, size: 16, color: AppColors.oxblood),
+                label: Text(l10n.formScanBackCover),
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   textStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                 ),
               ),
-            ),
-          ],
+              // Once a photo is already up, offer to read from what's attached.
+              if (_isOwnUpload(_coverUrl) || _isOwnUpload(_backCoverUrl))
+                OutlinedButton.icon(
+                  onPressed: (_extracting || _uploadingBack) ? null : _fillFromPhotos,
+                  icon: _extracting
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.oxblood,
+                          ),
+                        )
+                      : Icon(Icons.auto_awesome, size: 16, color: AppColors.oxblood),
+                  label: Text(l10n.formFillFromPhotos),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    textStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+            ],
+          ),
           SizedBox(height: 16),
           _Field(
             label: l10n.formFieldTitle,

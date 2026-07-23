@@ -2610,6 +2610,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formFillFromPhotos => 'Fill in from photos';
 
   @override
+  String get formScanBackCover => 'Scan back cover';
+
+  @override
   String get formSimilarHeader => 'Already in the catalog?';
 
   @override
@@ -2621,7 +2624,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get formExtractingSubtitle =>
-      'Pulling the title, author, publisher, and blurb';
+      'Pulling the title, author, publisher, blurb, and type';
 
   @override
   String get formExtractNothing =>

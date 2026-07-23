@@ -384,6 +384,10 @@ class CoverExtractOut(BaseModel):
     series_name: str | None = None
     series_number: int | None = None
     language: str | None = None
+    # The literary form ("Type"), read off the back cover when it names one
+    # (e.g. a Malayalam നോവൽ → "Novel"); one of WORK_FORMS or None. The service
+    # already computes this — surfacing it here lets the form prefill the Type.
+    form: str | None = None
     isbn: str | None = None
 
 

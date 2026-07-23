@@ -4450,6 +4450,12 @@ abstract class AppLocalizations {
   /// **'Fill in from photos'**
   String get formFillFromPhotos;
 
+  /// Button under the cover slots: photograph the book's back cover to read its blurb (description) and type, and prefill the empty fields
+  ///
+  /// In en, this message translates to:
+  /// **'Scan back cover'**
+  String get formScanBackCover;
+
   /// Header of the quiet duplicate-suggestions panel under the title field on the add-book form
   ///
   /// In en, this message translates to:
@@ -4471,7 +4477,7 @@ abstract class AppLocalizations {
   /// Subtitle under the extraction loader
   ///
   /// In en, this message translates to:
-  /// **'Pulling the title, author, publisher, and blurb'**
+  /// **'Pulling the title, author, publisher, blurb, and type'**
   String get formExtractingSubtitle;
 
   /// Snackbar when extraction returned nothing usable (or every field was already filled)
