@@ -18,8 +18,23 @@ Supavisor-pooler / no-IPv6 rules apply as everywhere else.
 import argparse
 import asyncio
 import getpass
+import os
 import sys
 from pathlib import Path
+
+# Target the API's configured database regardless of where this is run from.
+# The API's settings resolve `.env` relative to the CWD, so running this script
+# from admin/ found no .env and silently fell back to the localhost dev default
+# — seeding the wrong database (bit us seeding the prod founder, 24 Jul 2026).
+# Load api/.env by ABSOLUTE path into the environment BEFORE app.core.db is
+# imported (its engine is built from the settings at import time). An already-set
+# DATABASE_URL (e.g. injected on Railway) always wins.
+_API_ENV = Path(__file__).resolve().parents[2] / "api" / ".env"
+if not os.environ.get("DATABASE_URL") and _API_ENV.exists():
+    for _line in _API_ENV.read_text().splitlines():
+        if _line.startswith("DATABASE_URL="):
+            os.environ["DATABASE_URL"] = _line.split("=", 1)[1].strip().strip("\"'")
+            break
 
 # Make the admin package (console) — and through it the API package —
 # importable. `console.models_ref` runs the sys.path shim that adds api/ so
@@ -82,6 +97,13 @@ def main() -> None:
     ap.add_argument("--password", help="if omitted, prompts (twice)")
     ap.add_argument("--force", action="store_true", help="also reset role to super_admin")
     args = ap.parse_args()
+
+    # Show which database we're about to write to (host only, no credentials),
+    # so seeding the wrong DB is caught before a password is even typed.
+    import re
+
+    host = re.sub(r"://[^@]*@", "://", os.environ.get("DATABASE_URL", "localhost-default"))
+    print(f"Target database: {host}")
 
     minlen = config.MIN_PASSWORD_LENGTH
     password = args.password
