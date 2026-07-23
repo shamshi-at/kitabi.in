@@ -1,0 +1,28 @@
+{% macro group(title, items) %}
+{% if items %}<div class="gs-group">{{ title }}</div>{% endif %}
+{% endmacro %}
+{% if not q %}
+  <div class="gs-hint">Type to search books, authors, publishers, readers — or an action.</div>
+{% elif not has_any %}
+  <div class="gs-hint">No matches for “{{ q }}”.</div>
+{% else %}
+  {% if actions %}<div class="gs-group">ACTIONS</div>
+    {% for a in actions %}<a class="gs-item" href="{{ a.href }}"><span class="gs-ic">›</span>{{ a.label }}</a>{% endfor %}
+  {% endif %}
+  {% if books %}<div class="gs-group">BOOKS</div>
+    {% for b in books %}<a class="gs-item" href="/catalog/works/{{ b.id }}">
+      <span class="gs-ic">▤</span><span>{{ b.title }}<span class="gs-sub">{{ b.title_translit or '' }}{% if b.first_publish_year %} · {{ b.first_publish_year }}{% endif %}</span></span></a>{% endfor %}
+  {% endif %}
+  {% if authors %}<div class="gs-group">AUTHORS</div>
+    {% for a in authors %}<a class="gs-item" href="/catalog/authors/{{ a.id }}">
+      <span class="gs-ic">✎</span><span>{{ a.name }}<span class="gs-sub">{{ a.name_translit or '' }}</span></span></a>{% endfor %}
+  {% endif %}
+  {% if publishers %}<div class="gs-group">PUBLISHERS</div>
+    {% for p in publishers %}<a class="gs-item" href="/catalog/publishers/{{ p.id }}">
+      <span class="gs-ic">◈</span><span>{{ p.name }}<span class="gs-sub">{{ p.name_translit or '' }}</span></span></a>{% endfor %}
+  {% endif %}
+  {% if readers %}<div class="gs-group">READERS</div>
+    {% for r in readers %}<a class="gs-item" href="/readers/{{ r.id }}">
+      <span class="gs-ic">☺</span><span>{{ r.full_name or 'Unnamed reader' }}<span class="gs-sub">{% if r.username %}@{{ r.username }} · {% endif %}{{ r.email }}</span></span></a>{% endfor %}
+  {% endif %}
+{% endif %}
