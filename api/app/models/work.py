@@ -57,6 +57,11 @@ class Work(CatalogMixin, Base):
     # ("Kayary" finds "കയർ"). Maintained by app/models/translit_hooks.py on
     # every insert/update; GIN-trigram-indexed by migration 000020.
     title_translit: Mapped[str | None] = mapped_column(String, default=None)
+    # The spelling-insensitive skeleton of `title_translit` (services/translit.py
+    # `fold`) — collapses the long/short vowel, aspiration, sibilant and
+    # gemination choices readers make differently, so "chemmin" and "chemmeen"
+    # reach the same row. GIN-trigram-indexed by migration 000030.
+    title_fold: Mapped[str | None] = mapped_column(String, default=None)
     subtitle: Mapped[str | None] = mapped_column(String, default=None)
     description: Mapped[str | None] = mapped_column(String, default=None)
     language: Mapped[str | None] = mapped_column(String, default=None)

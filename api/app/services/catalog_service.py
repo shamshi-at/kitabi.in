@@ -38,7 +38,7 @@ from app.schemas.catalog import (
     WorkUpdate,
 )
 from app.services.openlibrary_client import OpenLibraryClient, normalize_isbn_lookup
-from app.services.translit import transliterate
+from app.services.translit import fold, transliterate
 
 _ISBN_RE = re.compile(r"^[0-9]{9}[0-9X]$|^[0-9]{13}$")
 
@@ -570,14 +570,26 @@ async def search_local(
                 _fuzzy_match(Work.title_translit, qt),
                 _fuzzy_match(Author.name_translit, qt),
             )
+        # …and the fold, which absorbs the spelling choices a romanized query
+        # makes differently from ours ("chemmin" vs "chemmeen", "selvan" vs
+        # "chelvan"). Cheap to add: same GIN trigram machinery, own column.
+        qf = fold(q)
+        if qf is not None:
+            match = or_(
+                match,
+                _fuzzy_match(Work.title_fold, qf),
+                _fuzzy_match(Author.name_fold, qf),
+            )
     else:
         match = or_(Work.title.ilike(f"%{q}%"), Author.name.ilike(f"%{q}%"))
-        qt = None
+        qt = qf = None
     # Postgres's greatest() ignores NULLs, so works without authors (outer
     # join) still rank by their title score.
     best = [_rank(Work.title, q), _rank(Author.name, q)]
     if qt is not None:
         best += [_rank(Work.title_translit, qt), _rank(Author.name_translit, qt)]
+    if qf is not None:
+        best += [_rank(Work.title_fold, qf), _rank(Author.name_fold, qf)]
     score = func.max(func.greatest(*best))
     ranked = (
         select(Work.id, score.label("score"))
@@ -624,10 +636,12 @@ async def find_similar_works(db: AsyncSession, title: str, limit: int = 5) -> li
     # already exists must surface the existing book.
     await _relax_word_similarity(db)
     qt = transliterate(q)
+    qf = fold(q)
     score = func.greatest(
         func.similarity(Work.title, q),
         func.word_similarity(q, Work.title),
         *([_rank(Work.title_translit, qt)] if qt is not None else []),
+        *([_rank(Work.title_fold, qf)] if qf is not None else []),
     )
     match = or_(
         Work.title.ilike(f"%{q}%"),
@@ -636,6 +650,8 @@ async def find_similar_works(db: AsyncSession, title: str, limit: int = 5) -> li
     )
     if qt is not None:
         match = or_(match, _fuzzy_match(Work.title_translit, qt))
+    if qf is not None:
+        match = or_(match, _fuzzy_match(Work.title_fold, qf))
     stmt = (
         select(Work)
         .options(*_SUMMARY_OPTIONS)
@@ -776,15 +792,20 @@ async def browse_publishers(
     return list((await db.execute(stmt)).scalars().all())
 
 
-def _name_match_and_rank(name_col, translit_col, q: str):  # noqa: ANN001
-    """Fuzzy predicate + rank over a name column and its romanized twin —
-    shared by the author/publisher searches so both are cross-script."""
+def _name_match_and_rank(name_col, translit_col, fold_col, q: str):  # noqa: ANN001
+    """Fuzzy predicate + rank over a name column, its romanized twin and its
+    spelling-insensitive fold — shared by the author/publisher searches so both
+    are cross-script and spelling-tolerant."""
     qt = transliterate(q)
+    qf = fold(q)
     match = _fuzzy_match(name_col, q)
     ranks = [_rank(name_col, q)]
     if qt is not None:
         match = or_(match, _fuzzy_match(translit_col, qt))
         ranks.append(_rank(translit_col, qt))
+    if qf is not None:
+        match = or_(match, _fuzzy_match(fold_col, qf))
+        ranks.append(_rank(fold_col, qf))
     return match, func.greatest(*ranks)
 
 
@@ -796,7 +817,7 @@ async def search_authors(db: AsyncSession, query: str, limit: int = 10) -> list[
     if not q:
         return []
     await _relax_word_similarity(db)
-    match, rank = _name_match_and_rank(Author.name, Author.name_translit, q)
+    match, rank = _name_match_and_rank(Author.name, Author.name_translit, Author.name_fold, q)
     stmt = select(Author).where(match).order_by(rank.desc(), Author.name).limit(limit)
     return list((await db.execute(stmt)).scalars().all())
 
@@ -807,7 +828,9 @@ async def search_publishers(db: AsyncSession, query: str, limit: int = 10) -> li
     if not q:
         return []
     await _relax_word_similarity(db)
-    match, rank = _name_match_and_rank(Publisher.name, Publisher.name_translit, q)
+    match, rank = _name_match_and_rank(
+        Publisher.name, Publisher.name_translit, Publisher.name_fold, q
+    )
     stmt = select(Publisher).where(match).order_by(rank.desc(), Publisher.name).limit(limit)
     return list((await db.execute(stmt)).scalars().all())
 

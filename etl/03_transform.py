@@ -48,7 +48,7 @@ from ol_stream import (
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "api"))
 try:
     from app.services.malayalam_script import to_malayalam_script
-    from app.services.translit import transliterate
+    from app.services.translit import fold, transliterate
 except ImportError:  # pragma: no cover — wrong interpreter
     print(
         "WARNING: could not import app.services.translit — run with api/.venv/bin/python.\n"
@@ -60,6 +60,9 @@ except ImportError:  # pragma: no cover — wrong interpreter
         return text.strip().lower() or None if isinstance(text, str) else None
 
     def to_malayalam_script(text):  # type: ignore[misc]
+        return None
+
+    def fold(text):  # type: ignore[misc]
         return None
 
 
@@ -76,18 +79,18 @@ DESC_MAX = 5000
 _WS = re.compile(r"\s+")
 
 WORK_COLS = [
-    "id", "created_at", "updated_at", "deleted_at", "title", "title_translit", "subtitle",
+    "id", "created_at", "updated_at", "deleted_at", "title", "title_translit", "title_fold", "subtitle",
     "description", "language", "first_publish_year", "form", "aggregate_rating",
     "translation_group_id", "original_work_id", "external_source", "external_id",
     "created_by_user_id",
 ]
 AUTHOR_COLS = [
-    "id", "created_at", "updated_at", "deleted_at", "name", "name_translit", "pen_name",
+    "id", "created_at", "updated_at", "deleted_at", "name", "name_translit", "name_fold", "pen_name",
     "image_url", "primary_language", "bio", "external_source", "external_id",
     "created_by_user_id", "linked_user_id",
 ]
 PUBLISHER_COLS = [
-    "id", "created_at", "updated_at", "deleted_at", "name", "name_translit", "logo_url",
+    "id", "created_at", "updated_at", "deleted_at", "name", "name_translit", "name_fold", "logo_url",
     "primary_language", "external_source", "external_id",
 ]
 EDITION_COLS = [
@@ -209,6 +212,7 @@ def main() -> None:
         works_csv.writerow(row({
             "id": wid, "created_at": NOW, "updated_at": NOW, "deleted_at": None,
             "title": native, "title_translit": transliterate(native),
+            "title_fold": fold(native),
             "subtitle": ol_text(work.get("subtitle")),
             "description": desc[:DESC_MAX] if desc else None,
             "language": lang,
@@ -243,6 +247,7 @@ def main() -> None:
         authors_csv.writerow(row({
             "id": aid, "created_at": NOW, "updated_at": NOW, "deleted_at": None,
             "name": native, "name_translit": transliterate(native),
+            "name_fold": fold(native),
             "pen_name": None, "image_url": cover_url_of(author, kind="a"),
             "primary_language": langs.most_common(1)[0][0] if langs else None,
             "bio": bio[:DESC_MAX] if bio else None,
@@ -286,7 +291,8 @@ def main() -> None:
                     publishers_csv.writerow(row({
                         "id": publisher_ids[low], "created_at": NOW, "updated_at": NOW,
                         "deleted_at": None, "name": native,
-                        "name_translit": transliterate(native), "logo_url": None,
+                        "name_translit": transliterate(native),
+                        "name_fold": fold(native), "logo_url": None,
                         "primary_language": None, "external_source": "openlibrary",
                         "external_id": None,
                     }))

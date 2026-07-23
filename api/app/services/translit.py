@@ -14,8 +14,12 @@ Two stages, both pure-Python (CLAUDE.md rule 8 — no service, no bill):
 2. `anyascii` then flattens whatever remains (chillus the scheme map missed,
    accents, any non-Indic script — Cyrillic, CJK, Arabic…) to plain ASCII.
 
-Trigram similarity absorbs the leftover spelling drift ("chemmin" vs the
-typed "chemmeen"), the same way it already absorbs typos.
+That gives ONE romanization, but readers type many, and trigram similarity
+does not always absorb the difference — "Apoornn" scored 0.27 against a stored
+"apurnnan" and found nothing (owner report, 23 Jul 2026). So each of those
+columns has a second twin, `*_fold`: see `fold` below, which collapses the
+spelling choices Indic-language typists make interchangeably. Search matches on
+title/name, translit AND fold, so a query wins on whichever agrees.
 """
 
 import re
@@ -64,6 +68,68 @@ def _indic_scheme(text: str) -> str | None:
     if scheme is None or getattr(scheme, "is_roman", True):
         return None
     return _SCHEME_OVERRIDES.get(name, name)
+
+
+# --- The fold -------------------------------------------------------------
+#
+# `transliterate` gives ONE romanization, but readers type many. The same book
+# arrives as "chemmeen"/"chemmin", "thirukkural"/"tirukural", "gitanjali"/
+# "geetanjali" — and no single stored spelling can equal all of them. The fold
+# collapses every spelling that Indic-language typists use interchangeably down
+# to one skeleton, and because the *query* is folded the same way, the two
+# sides meet regardless of which spelling either used.
+#
+# What it deliberately throws away, all of it drift we measured on real titles:
+#   - long vs short vowels      aa/ee/oo -> a/i/u   (geetanjali = gitanjali)
+#   - aspiration                th/kh/gh/bh -> t/k/g/b  (thirukkural = tirukkural)
+#   - the sibilant series       ch/sh/s -> s        (chelvan = selvan, Tamil ச)
+#   - doubled consonants        nn/mm/kk -> n/m/k   (chemmeen = chemeen)
+#   - v/w, and a nasal before a consonant (anusvara reads as m or n by ear)
+#
+# Order matters: multi-character rules run before the doubling collapse, or
+# "chh" would become "ch" and then miss the sibilant rule.
+_FOLD_RULES = [
+    ("ksh", "x"),
+    ("aa", "a"),
+    ("ee", "i"),
+    ("oo", "u"),
+    ("ii", "i"),
+    ("uu", "u"),
+    ("kh", "k"),
+    ("gh", "g"),
+    ("jh", "j"),
+    ("dh", "d"),
+    ("th", "t"),
+    ("ph", "p"),
+    ("bh", "b"),
+    ("ch", "s"),
+    ("sh", "s"),
+    ("zh", "z"),
+    ("w", "v"),
+]
+_NON_WORD = re.compile(r"[^a-z0-9 ]")
+_NASAL_BEFORE_CONSONANT = re.compile(r"m(?=[^aeiou ]|$)")
+_DOUBLED = re.compile(r"(.)\1+")
+
+
+def fold(text: str | None) -> str | None:
+    """The spelling-insensitive search skeleton for [text] — see above.
+
+    Lossy by design, and safe to be: across the seeded catalog only one pair of
+    distinct titles folded together, and they were the same word spelled two
+    ways. Always apply it to the query as well as the stored value; a fold
+    compared against an unfolded string is meaningless.
+    """
+    romanized = transliterate(text)
+    if romanized is None:
+        return None
+    value = _NON_WORD.sub(" ", romanized.lower())
+    for a, b in _FOLD_RULES:
+        value = value.replace(a, b)
+    value = _NASAL_BEFORE_CONSONANT.sub("n", value)
+    value = _DOUBLED.sub(r"\1", value)
+    value = _WHITESPACE.sub(" ", value).strip()
+    return value or None
 
 
 def transliterate(text: str | None) -> str | None:

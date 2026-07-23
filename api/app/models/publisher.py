@@ -15,6 +15,8 @@ class Publisher(CatalogMixin, Base):
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
     # Cross-script search form of `name` — see Work.title_translit.
     name_translit: Mapped[str | None] = mapped_column(String, default=None)
+    # Spelling-insensitive search skeleton — see Work.title_fold.
+    name_fold: Mapped[str | None] = mapped_column(String, default=None)
     logo_url: Mapped[str | None] = mapped_column(String, default=None)
     # The language this house mainly publishes in — parity with Author so the
     # publisher picker can show the same at-a-glance detail.

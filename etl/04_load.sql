@@ -18,7 +18,7 @@ BEGIN;
 CREATE TEMP TABLE stage_works (
     id uuid PRIMARY KEY,
     created_at timestamptz, updated_at timestamptz, deleted_at timestamptz,
-    title text, title_translit text, subtitle text, description text,
+    title text, title_translit text, title_fold text, subtitle text, description text,
     language text, first_publish_year int, form text, aggregate_rating float8,
     translation_group_id uuid, original_work_id uuid,
     external_source text, external_id text, created_by_user_id uuid
@@ -27,7 +27,7 @@ CREATE TEMP TABLE stage_works (
 CREATE TEMP TABLE stage_authors (
     id uuid PRIMARY KEY,
     created_at timestamptz, updated_at timestamptz, deleted_at timestamptz,
-    name text, name_translit text, pen_name text, image_url text,
+    name text, name_translit text, name_fold text, pen_name text, image_url text,
     primary_language text, bio text,
     external_source text, external_id text,
     created_by_user_id uuid, linked_user_id uuid
@@ -36,7 +36,7 @@ CREATE TEMP TABLE stage_authors (
 CREATE TEMP TABLE stage_publishers (
     id uuid PRIMARY KEY,
     created_at timestamptz, updated_at timestamptz, deleted_at timestamptz,
-    name text, name_translit text, logo_url text, primary_language text,
+    name text, name_translit text, name_fold text, logo_url text, primary_language text,
     external_source text, external_id text
 ) ON COMMIT DROP;
 
@@ -61,11 +61,11 @@ CREATE TEMP TABLE stage_work_authors (
 
 -- ------------------------------------------------------- works + author rows
 INSERT INTO works (id, created_at, updated_at, deleted_at, title, title_translit,
-                   subtitle, description, language, first_publish_year, form,
+                   title_fold, subtitle, description, language, first_publish_year, form,
                    aggregate_rating, translation_group_id, original_work_id,
                    external_source, external_id, created_by_user_id)
 SELECT s.id, s.created_at, s.updated_at, s.deleted_at, s.title, s.title_translit,
-       s.subtitle, s.description, s.language, s.first_publish_year, s.form,
+       s.title_fold, s.subtitle, s.description, s.language, s.first_publish_year, s.form,
        s.aggregate_rating, s.translation_group_id, s.original_work_id,
        s.external_source, s.external_id, s.created_by_user_id
 FROM stage_works s
@@ -74,10 +74,10 @@ WHERE NOT EXISTS (SELECT 1 FROM works w
                     AND w.external_id = s.external_id);
 
 INSERT INTO authors (id, created_at, updated_at, deleted_at, name, name_translit,
-                     pen_name, image_url, primary_language, bio,
+                     name_fold, pen_name, image_url, primary_language, bio,
                      external_source, external_id, created_by_user_id, linked_user_id)
 SELECT s.id, s.created_at, s.updated_at, s.deleted_at, s.name, s.name_translit,
-       s.pen_name, s.image_url, s.primary_language, s.bio,
+       s.name_fold, s.pen_name, s.image_url, s.primary_language, s.bio,
        s.external_source, s.external_id, s.created_by_user_id, s.linked_user_id
 FROM stage_authors s
 WHERE NOT EXISTS (SELECT 1 FROM authors a
@@ -85,9 +85,9 @@ WHERE NOT EXISTS (SELECT 1 FROM authors a
                     AND a.external_id = s.external_id);
 
 INSERT INTO publishers (id, created_at, updated_at, deleted_at, name, name_translit,
-                        logo_url, primary_language, external_source, external_id)
+                        name_fold, logo_url, primary_language, external_source, external_id)
 SELECT s.id, s.created_at, s.updated_at, s.deleted_at, s.name, s.name_translit,
-       s.logo_url, s.primary_language, s.external_source, s.external_id
+       s.name_fold, s.logo_url, s.primary_language, s.external_source, s.external_id
 FROM stage_publishers s
 WHERE NOT EXISTS (SELECT 1 FROM publishers p
                   WHERE lower(p.name) = lower(s.name) AND p.deleted_at IS NULL);

@@ -32,18 +32,18 @@ try:
     import asyncpg
 
     from app.services.malayalam_script import to_malayalam_script
-    from app.services.translit import transliterate
+    from app.services.translit import fold, transliterate
 except ImportError as exc:  # pragma: no cover
     print(f"run this with api/.venv/bin/python ({exc})", file=sys.stderr)
     raise SystemExit(1) from exc
 
 LOCAL_URL = "postgresql://postgres:postgres@localhost:55442/kitabi"
 
-# table -> (text column, romanized column)
+# table -> (text column, romanized column, spelling-fold column)
 TABLES = [
-    ("works", "title", "title_translit"),
-    ("authors", "name", "name_translit"),
-    ("publishers", "name", "name_translit"),
+    ("works", "title", "title_translit", "title_fold"),
+    ("authors", "name", "name_translit", "name_fold"),
+    ("publishers", "name", "name_translit", "name_fold"),
 ]
 
 
@@ -73,9 +73,9 @@ async def run(url: str, apply: bool) -> None:
     conn = await asyncpg.connect(url, timeout=30, statement_cache_size=0)
     try:
         total = converted = 0
-        for table, text_col, translit_col in TABLES:
+        for table, text_col, translit_col, fold_col in TABLES:
             rows = await conn.fetch(
-                f"select id, {text_col} as val, {translit_col} as tr"
+                f"select id, {text_col} as val, {translit_col} as tr, {fold_col} as fl"
                 f" from {table} where deleted_at is null"
             )
             changes = []
@@ -83,16 +83,17 @@ async def run(url: str, apply: bool) -> None:
                 total += 1
                 native = to_malayalam_script(r["val"]) or r["val"]
                 romanized = transliterate(native)
+                folded = fold(native)
                 # Rewrite when the text changes OR when only the search key is
                 # stale — a row converted by an earlier run still needs its
                 # translit refreshed when the romanization rules improve
                 # (the ee/oo long vowels, the nasal tildes), and for those
                 # rows to_malayalam_script now correctly returns None.
-                if native != r["val"] or romanized != r["tr"]:
-                    changes.append((r["id"], native, romanized))
+                if native != r["val"] or romanized != r["tr"] or folded != r["fl"]:
+                    changes.append((r["id"], native, romanized, folded))
             converted += len(changes)
             print(f"\n{table}: {len(changes)} of {len(rows)} rows to convert")
-            for _id, native, _t in changes[:5]:
+            for _id, native, *_rest in changes[:5]:
                 print(f"    -> {native[:60]}")
             if len(changes) > 5:
                 print(f"    … and {len(changes) - 5} more")
@@ -103,7 +104,7 @@ async def run(url: str, apply: bool) -> None:
                 async with conn.transaction():
                     await conn.executemany(
                         f"update {table} set {text_col}=$2, {translit_col}=$3,"
-                        f" updated_at=now() where id=$1",
+                        f" {fold_col}=$4, updated_at=now() where id=$1",
                         changes,
                     )
                 print(f"    applied {len(changes)}")
