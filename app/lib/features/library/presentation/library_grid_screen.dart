@@ -28,11 +28,17 @@ import 'shelf_sheets.dart';
 /// filter and sort live on the expanding floating control instead, so they're
 /// reachable from the bottom of a long shelf.
 class LibraryGridScreen extends ConsumerStatefulWidget {
-  const LibraryGridScreen({super.key, this.initialStatus});
+  const LibraryGridScreen({super.key, this.initialStatus, this.initialShelf});
 
   /// A status to pre-filter by (from the home "Read"/"Wishlist" shelf cards,
   /// which deep-link here as /library?status=read).
   final String? initialStatus;
+
+  /// A personal shelf (tag id) to open on arrival — deep-linked from the book
+  /// page's shelf card (`/library?shelf=<tagId>`), so tapping a book's shelf
+  /// lands on that shelf's page. The name is resolved from the tag list once
+  /// it's loaded (see [_pendingShelfId]).
+  final String? initialShelf;
 
   @override
   ConsumerState<LibraryGridScreen> createState() => _LibraryGridScreenState();
@@ -69,15 +75,26 @@ class _ShelfSpec {
 }
 
 class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
-  late LibraryFilter _filter = widget.initialStatus == null
-      ? const LibraryFilter()
-      : LibraryFilter(statuses: {widget.initialStatus!});
+  late LibraryFilter _filter = _initialFilter();
 
   /// This session's view-mode override; null = follow the persisted
-  /// preference. A status deep-link always lands on the grid.
-  late bool? _shelvesOverride = widget.initialStatus == null ? null : false;
+  /// preference. A status or shelf deep-link always lands on the grid.
+  late bool? _shelvesOverride =
+      (widget.initialStatus == null && widget.initialShelf == null) ? null : false;
 
   _OpenShelf? _openShelf;
+
+  /// A deep-linked shelf (tag id) still awaiting the tag list, so its display
+  /// name can be resolved before it's "opened" (header + back affordance).
+  /// Cleared once applied. See [_applyPendingShelf].
+  late String? _pendingShelfId = widget.initialShelf;
+
+  /// The starting filter: a deep-linked shelf wins, then a status, else none.
+  LibraryFilter _initialFilter() {
+    if (widget.initialShelf != null) return LibraryFilter(shelf: widget.initialShelf);
+    if (widget.initialStatus != null) return LibraryFilter(statuses: {widget.initialStatus!});
+    return const LibraryFilter();
+  }
 
   /// 'recent' (createdAt desc — the default), 'title', or 'author'.
   String _sort = 'recent';
@@ -140,7 +157,16 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
     // the read filter instead of leaving it stuck selected. A status link also
     // forces the grid: home's "Read" card promises a grid of read books, not
     // the shelves overview with a hidden filter.
-    if (widget.initialStatus != old.initialStatus) {
+    // A fresh shelf deep-link (tapping a different book's shelf while the
+    // library tab is already alive) re-opens on the same State instance.
+    if (widget.initialShelf != old.initialShelf && widget.initialShelf != null) {
+      setState(() {
+        _openShelf = null;
+        _pendingShelfId = widget.initialShelf;
+        _filter = LibraryFilter(shelf: widget.initialShelf);
+        _shelvesOverride = false;
+      });
+    } else if (widget.initialStatus != old.initialStatus) {
       setState(() {
         _openShelf = null;
         _filter = widget.initialStatus == null
@@ -149,6 +175,34 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
         if (widget.initialStatus != null) _shelvesOverride = false;
       });
     }
+  }
+
+  /// Resolve a deep-linked shelf's name from the loaded tag list and open it
+  /// (so the header shows its name with a back affordance). The filter already
+  /// narrows to it from arrival — this just dresses it as an opened shelf. Runs
+  /// once, after a post-frame so it doesn't setState mid-build; a tag that no
+  /// longer exists is dropped, leaving the reader on the plain grid.
+  void _applyPendingShelf(List<PersonalTag> shelves) {
+    final id = _pendingShelfId;
+    if (id == null || shelves.isEmpty) return;
+    PersonalTag? match;
+    for (final s in shelves) {
+      if (s.id == id) {
+        match = s;
+        break;
+      }
+    }
+    _pendingShelfId = null;
+    if (match == null) return;
+    final name = match.name;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _openShelfTile(_ShelfSpec(
+        label: name,
+        books: const [],
+        open: (label: name, tagId: id, status: null, fav: false),
+      ));
+    });
   }
 
   void _setShelvesView(bool shelves) {
@@ -360,6 +414,10 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
               _coverRefreshTried = true;
               WidgetsBinding.instance.addPostFrameCallback((_) => _refreshMissingCovers());
             }
+
+            // A deep-linked shelf (from a book's shelf card) opens as soon as
+            // the tag list is available — the filter already narrows to it.
+            _applyPendingShelf(shelves);
 
             final shelvesView = _openShelf == null && (_shelvesOverride ?? prefersShelves);
             final filtered =

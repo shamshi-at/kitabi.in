@@ -3571,6 +3571,9 @@ class _ShelfCard extends ConsumerWidget {
     // its own cover so the little bookcase is never empty.
     final previews = (others.isNotEmpty ? others : onShelf).take(3).toList();
 
+    // Tapping the shelf itself opens that shelf's page (the library grid,
+    // narrowed to it); "Move" is the only affordance that changes the shelf.
+    void openShelf() => context.go('${Routes.library}?shelf=${assignment.tagId}');
     void move() => showShelfPickerSheet(context, entryId: entry.id);
 
     return Container(
@@ -3603,7 +3606,7 @@ class _ShelfCard extends ConsumerWidget {
                   children: [
                     GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: move,
+                      onTap: openShelf,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
