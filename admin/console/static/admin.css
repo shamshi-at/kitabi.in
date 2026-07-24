@@ -16,7 +16,8 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 /* ---- shell ---- */
 .shell{display:flex;min-height:100vh}
 .rail{width:216px;background:var(--panel);color:#E7DBC4;padding:16px 0;flex-shrink:0;
-  display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;height:100dvh;
+  overflow-y:auto}
 .rail .brand{display:flex;align-items:center;gap:9px;padding:0 16px 15px;
   border-bottom:1px solid rgba(240,226,194,.14);text-decoration:none}
 .rail .brand .logo{width:30px;height:30px;border-radius:8px;display:block;flex-shrink:0}
@@ -192,7 +193,7 @@ a.healthrow .bar{margin-top:6px}
 /* ---- responsive ---- */
 @media (max-width:1024px){
   .railtoggle{display:flex}
-  .rail{position:fixed;top:0;left:0;height:100vh;z-index:120;
+  .rail{position:fixed;top:0;left:0;height:100vh;height:100dvh;z-index:120;
     transform:translateX(-100%);transition:transform .22s ease;
     box-shadow:0 0 40px rgba(0,0,0,.4)}
   .shell.rail-open .rail{transform:translateX(0)}
