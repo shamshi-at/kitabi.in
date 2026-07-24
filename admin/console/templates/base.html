@@ -8,16 +8,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/logo.svg?v=2" type="image/svg+xml">
-<link rel="stylesheet" href="/static/admin.css?v=4">
-<script src="/static/admin.js?v=2" defer></script>
+<link rel="stylesheet" href="/static/admin.css?v=5">
+<script src="/static/admin.js?v=3" defer></script>
 </head>
 <body>
 {% macro navlink(href, label, key, badge=0) %}
 <a class="nav {% if active == key %}on{% endif %}" href="{{ href }}">{{ label }}
   {% if badge %}<span class="n">{{ badge }}</span>{% endif %}</a>
 {% endmacro %}
-<div class="shell">
-  <nav class="rail">
+<div class="shell" id="shell">
+  <div class="rail-scrim" id="railScrim" hidden></div>
+  <nav class="rail" id="rail">
     <a class="brand" href="/"><img class="logo" src="/static/logo.svg" alt="Kitabi"><div><b>Kitabi</b><s>ADMIN</s></div></a>
     <div class="grp">OVERVIEW</div>
     {{ navlink('/', 'Dashboard', 'dashboard') }}
@@ -47,7 +48,9 @@
   </nav>
   <div class="main">
     <div class="top">
-      <div><h3>{% block heading %}{% endblock %}</h3>
+      <button class="railtoggle" id="railToggle" type="button" aria-label="Menu" aria-controls="rail">
+        <span></span><span></span><span></span></button>
+      <div class="top-title"><h3>{% block heading %}{% endblock %}</h3>
         <div class="sub">{% block subheading %}{% endblock %}</div></div>
       <div class="gsearch">
         <input id="gsearch" type="text" autocomplete="off" spellcheck="false"

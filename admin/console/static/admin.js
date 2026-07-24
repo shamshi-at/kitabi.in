@@ -84,6 +84,40 @@
   });
 })();
 
+// Mobile nav — the sidebar rail is off-canvas below the tablet breakpoint; the
+// hamburger in the top bar slides it in over a scrim. Closes on scrim tap, on a
+// nav link tap, and on Escape, so it never traps the user on a small screen.
+(function () {
+  const shell = document.getElementById("shell");
+  const toggle = document.getElementById("railToggle");
+  const scrim = document.getElementById("railScrim");
+  const rail = document.getElementById("rail");
+  if (!shell || !toggle || !scrim || !rail) return;
+
+  function open() {
+    shell.classList.add("rail-open");
+    scrim.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+  }
+  function close() {
+    shell.classList.remove("rail-open");
+    scrim.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  }
+  function isOpen() {
+    return shell.classList.contains("rail-open");
+  }
+
+  toggle.addEventListener("click", () => (isOpen() ? close() : open()));
+  scrim.addEventListener("click", close);
+  rail.addEventListener("click", (e) => {
+    if (e.target.closest("a")) close();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isOpen()) close();
+  });
+})();
+
 // Six-box one-time-code input: auto-advance, backspace-to-previous, paste-fills,
 // and it keeps a hidden `code` field in sync (that's what the form submits).
 // Auto-submits the moment all six digits are present.
