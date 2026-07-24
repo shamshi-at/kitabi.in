@@ -63,9 +63,15 @@ def _read_pending(token: str | None) -> str | None:
 
 
 def _cookie_kwargs() -> dict:
+    # SameSite=Lax, not Strict: the pending-2FA and session cookies must survive
+    # a top-level navigation INTO the console from off-site — clicking the magic
+    # link (or an OTP/invite link) in an email is cross-site, and a Strict cookie
+    # isn't sent on that entry, so the pending cookie vanished and the magic link
+    # bounced to the login page (owner report, 24 Jul 2026). Lax still blocks the
+    # cross-site POST that CSRF needs — every state-changing action here is a POST.
     return {
         "httponly": True,
-        "samesite": "strict",
+        "samesite": "lax",
         "secure": config.is_production(),
         "path": "/",
     }

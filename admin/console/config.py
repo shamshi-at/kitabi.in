@@ -3,7 +3,8 @@ the admin-specific knobs (session lifetime, lockout, cookie name)."""
 
 import os
 
-# Session cookie. httpOnly + SameSite=Strict + Secure in production. The value
+# Session cookie. httpOnly + SameSite=Lax + Secure in production (Lax so email
+# sign-in links work — see auth._cookie_kwargs). The value
 # is an opaque token; the session lives in the DB (admin_sessions).
 COOKIE_NAME = "kitabi_admin"
 # Absolute session lifetime — a back-office session should not live for days.
