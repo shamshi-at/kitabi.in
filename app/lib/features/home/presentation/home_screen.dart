@@ -9,6 +9,7 @@ import '../../../core/notifications/reading_timer_notifications.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/pulsing_dot.dart';
 import '../../../core/widgets/quote_card.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
@@ -59,10 +60,30 @@ class HomeScreen extends ConsumerWidget {
                     tooltip: l10n.browseEntry,
                     onPressed: () => context.push(Routes.catalogBrowse),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.person_outline, color: AppColors.oxblood),
-                    tooltip: l10n.profileEntry,
-                    onPressed: () => context.push(Routes.profile),
+                  // A blinking dot rides the profile icon until the reader has
+                  // picked a username — a quiet nudge toward finishing setup.
+                  Builder(
+                    builder: (context) {
+                      final me = ref.watch(meProvider).valueOrNull;
+                      final needsUsername = me != null && me['username'] == null;
+                      final button = IconButton(
+                        icon: Icon(Icons.person_outline, color: AppColors.oxblood),
+                        tooltip: l10n.profileEntry,
+                        onPressed: () => context.push(Routes.profile),
+                      );
+                      if (!needsUsername) return button;
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          button,
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: IgnorePointer(child: PulsingDot()),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

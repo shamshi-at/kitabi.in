@@ -13,6 +13,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/language_chips.dart';
 import '../../../core/widgets/net_image.dart';
+import '../../../core/widgets/pulsing_dot.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../import_books/csv_export.dart';
@@ -174,11 +175,14 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                                 fontWeight: FontWeight.w600,
                               ),
                             )
-                          else
+                          else ...[
+                            PulsingDot(size: 7),
+                            SizedBox(width: 6),
                             Text(
                               l10n.profileUsernameSet,
                               style: TextStyle(color: AppColors.oxblood, fontSize: 13),
                             ),
+                          ],
                           SizedBox(width: 4),
                           Icon(Icons.edit, size: 12, color: AppColors.inkSoft),
                         ],
