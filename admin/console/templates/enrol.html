@@ -15,8 +15,8 @@
 </div>
 
 <form method="post" action="/enrol">
-  <div class="fld" style="margin-top:14px"><label>Confirm with a code</label>
-    <input class="otp-in" name="code" inputmode="numeric" maxlength="6" pattern="[0-9]*" required></div>
+  <label class="otp-label" style="margin-top:14px">Confirm with a code</label>
+  {% include "_otp_boxes.html" %}
   <button class="btn p wfull" type="submit">I have saved my codes — finish</button>
 </form>
 {% endblock %}

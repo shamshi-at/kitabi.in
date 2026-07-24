@@ -1,0 +1,9 @@
+{# Six-box one-time-code input. admin.js (data-otp) wires auto-advance, paste,
+   backspace, and syncs the hidden `code` field the form submits. #}
+<div class="otp-boxes" data-otp>
+  {% for i in range(6) %}
+  <input class="otp-box" inputmode="numeric" pattern="[0-9]*" maxlength="1"
+    {% if i == 0 %}autocomplete="one-time-code" autofocus{% endif %}>
+  {% endfor %}
+  <input type="hidden" name="code">
+</div>

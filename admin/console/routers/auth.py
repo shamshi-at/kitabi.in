@@ -355,14 +355,20 @@ async def magic_consume(request: Request, db: DbSession, token: str) -> HTMLResp
             "sign_in.html",
             flash={"kind": "err", "text": "That sign-in link is invalid or has expired."},
         )
-    # Link proves email possession — the password step. Still require TOTP.
-    dest = "/enrol" if admin.totp_enrolled_at is None else "/sign-in/2fa"
-    resp = RedirectResponse(dest, status_code=303)
-    resp.set_cookie(
-        PENDING_COOKIE, _sign_pending(str(admin.id)), max_age=_PENDING_TTL, **_cookie_kwargs()
-    )
     await security.audit(db, "auth.magic_used", admin_id=admin.id, ip=client_ip(request))
-    return resp
+    # A never-enrolled admin still has to set up an authenticator once (it backs
+    # password sign-in later) — carry them there via the pending ticket.
+    if admin.totp_enrolled_at is None:
+        resp = RedirectResponse("/enrol", status_code=303)
+        resp.set_cookie(
+            PENDING_COOKIE, _sign_pending(str(admin.id)), max_age=_PENDING_TTL, **_cookie_kwargs()
+        )
+        return resp
+    # Owner decision (24 Jul 2026): a valid magic link is a complete sign-in on
+    # its own — no TOTP prompt. The link proves control of the verified admin
+    # inbox, so inbox security is the factor here. Password sign-in still
+    # requires TOTP.
+    return await _complete_sign_in(request, db, admin)
 
 
 # ---- invite setup (public, token-gated) ---------------------------------

@@ -141,6 +141,15 @@ a.kpi:hover{border-color:#c9b48a;box-shadow:0 6px 16px rgba(60,42,25,.10);transf
   padding:10px 12px;font-size:13px;color:var(--ink);font-family:inherit}
 .fld input:focus,.fld select:focus{outline:none;border-color:var(--gold)}
 .otp-in{letter-spacing:12px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:22px}
+/* 6-box one-time-code input */
+.otp-label{display:block;font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--ink-soft);font-weight:700;margin-bottom:8px;text-align:left}
+.otp-boxes{display:flex;gap:8px;justify-content:space-between;margin:0 0 18px}
+.otp-boxes .otp-box{width:100%;aspect-ratio:3/4;min-width:0;text-align:center;
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:24px;color:var(--ink);
+  background:var(--card);border:1px solid var(--line);border-radius:10px;padding:0}
+.otp-boxes .otp-box:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.18)}
+.otp-boxes .otp-box.filled{border-color:var(--oxblood)}
 .qr{display:flex;justify-content:center;margin:0 auto 14px}
 .qr svg{width:150px;height:150px;background:#fff;padding:8px;border-radius:8px;border:1px solid var(--line)}
 .recov{background:var(--paper-deep);border:1px dashed var(--line);border-radius:8px;padding:12px;

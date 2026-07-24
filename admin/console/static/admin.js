@@ -83,3 +83,48 @@
     if (input.value.trim() && box.innerHTML) box.hidden = false;
   });
 })();
+
+// Six-box one-time-code input: auto-advance, backspace-to-previous, paste-fills,
+// and it keeps a hidden `code` field in sync (that's what the form submits).
+// Auto-submits the moment all six digits are present.
+(function () {
+  document.querySelectorAll("[data-otp]").forEach(function (wrap) {
+    const boxes = Array.from(wrap.querySelectorAll(".otp-box"));
+    const hidden = wrap.querySelector('input[type="hidden"]');
+    const form = wrap.closest("form");
+    if (!boxes.length || !hidden) return;
+
+    function sync() {
+      hidden.value = boxes.map((b) => b.value).join("");
+      boxes.forEach((b) => b.classList.toggle("filled", !!b.value));
+      if (hidden.value.length === boxes.length && form) {
+        (form.requestSubmit ? form.requestSubmit() : form.submit());
+      }
+    }
+
+    boxes.forEach((box, i) => {
+      box.addEventListener("input", () => {
+        box.value = box.value.replace(/\D/g, "").slice(0, 1);
+        if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+        sync();
+      });
+      box.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !box.value && i > 0) {
+          boxes[i - 1].focus();
+        }
+      });
+      box.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const digits = (e.clipboardData.getData("text") || "")
+          .replace(/\D/g, "")
+          .slice(0, boxes.length)
+          .split("");
+        digits.forEach((d, j) => {
+          if (boxes[j]) boxes[j].value = d;
+        });
+        boxes[Math.min(digits.length, boxes.length - 1)].focus();
+        sync();
+      });
+    });
+  });
+})();

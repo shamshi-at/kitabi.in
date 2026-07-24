@@ -4,9 +4,8 @@
 <h4>Two-factor code</h4>
 <p class="lead">Enter the current 6-digit code from your authenticator app for <b>Kitabi Admin</b>.</p>
 <form method="post" action="/sign-in/2fa">
-  <div class="fld"><label>Authentication code</label>
-    <input class="otp-in" name="code" inputmode="numeric" autocomplete="one-time-code"
-      maxlength="6" pattern="[0-9]*" required autofocus></div>
+  <label class="otp-label">Authentication code</label>
+  {% include "_otp_boxes.html" %}
   <button class="btn p wfull" type="submit">Verify</button>
 </form>
 <p style="margin-top:16px"><a class="muted-link" href="/sign-in/recovery">Lost your device? Use a recovery code</a></p>
