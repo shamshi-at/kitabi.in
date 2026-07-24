@@ -20,7 +20,9 @@ from email.message import EmailMessage
 log = logging.getLogger("kitabi.admin.mail")
 
 RESEND_ENDPOINT = "https://api.resend.com/emails"
-_DEFAULT_FROM = "Kitabi Admin <noreply@kitabi.in>"
+# Fallback sender; the MAIL_FROM env var overrides it. Must be on the domain
+# verified in Resend (kitabi.in).
+_DEFAULT_FROM = "Kitabi <hello@kitabi.in>"
 
 
 def base_url() -> str:
@@ -37,24 +39,29 @@ def is_configured() -> bool:
     return bool(os.getenv("RESEND_API_KEY") or os.getenv("SMTP_HOST"))
 
 
-def _send_resend(api_key: str, to: str, subject: str, body: str) -> None:
+def _send_resend(api_key: str, to: str, subject: str, body: str, html: str | None) -> None:
     import httpx  # available via the API's deps; lazy so import doesn't require it
 
+    payload = {"from": _from(), "to": [to], "subject": subject, "text": body}
+    if html:
+        payload["html"] = html
     resp = httpx.post(
         RESEND_ENDPOINT,
         headers={"Authorization": f"Bearer {api_key}"},
-        json={"from": _from(), "to": [to], "subject": subject, "text": body},
+        json=payload,
         timeout=15,
     )
     resp.raise_for_status()
 
 
-def _send_smtp(to: str, subject: str, body: str) -> None:
+def _send_smtp(to: str, subject: str, body: str, html: str | None) -> None:
     msg = EmailMessage()
     msg["From"] = _from()
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
+    if html:
+        msg.add_alternative(html, subtype="html")  # multipart/alternative
     host = os.environ["SMTP_HOST"]
     port = int(os.getenv("SMTP_PORT", "587"))
     with smtplib.SMTP(host, port, timeout=15) as s:
@@ -65,13 +72,16 @@ def _send_smtp(to: str, subject: str, body: str) -> None:
         s.send_message(msg)
 
 
-def send(to: str, subject: str, body: str) -> None:
+def send(to: str, subject: str, body: str, html: str | None = None) -> None:
+    """`body` is the plain-text part (always sent); `html` is the optional
+    branded alternative. Text-only clients and better deliverability both want
+    the text present, so it stays even when html is given."""
     api_key = os.getenv("RESEND_API_KEY")
     try:
         if api_key:
-            _send_resend(api_key, to, subject, body)
+            _send_resend(api_key, to, subject, body, html)
         elif os.getenv("SMTP_HOST"):
-            _send_smtp(to, subject, body)
+            _send_smtp(to, subject, body, html)
         else:
             log.warning(
                 "[MAIL dormant — no transport configured] to=%s subject=%r\n%s", to, subject, body

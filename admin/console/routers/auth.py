@@ -18,7 +18,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 
-from .. import config, mail, security
+from .. import config, emails, mail, security
 from ..deps import DbSession, client_ip
 from ..models_ref import TOKEN_INVITE, TOKEN_MAGIC, TOKEN_RESET, AdminUser
 from ..templating import templates
@@ -312,13 +312,8 @@ async def forgot(request: Request, db: DbSession, email: str = Form(...)) -> HTM
     if admin is not None and admin.is_active:
         otp = security.new_otp()
         await security.create_auth_token(db, admin.id, TOKEN_RESET, otp, ttl_minutes=30)
-        mail.send(
-            email,
-            "Your Kitabi Admin sign-in code",
-            f"Your one-time sign-in code is {otp}\n\nIt expires in 30 minutes. Enter it in the "
-            f"password field at {mail.base_url()}/sign-in — you'll be asked to set a new password "
-            f"right after.\n\nIf you didn't request this, ignore this email.",
-        )
+        subject, text, html = emails.reset_email(otp, mail.base_url())
+        mail.send(email, subject, text, html=html)
         await security.audit(db, "auth.reset_requested", admin_id=admin.id, ip=client_ip(request))
     return _render(request, "forgot_sent.html", email=email)
 
@@ -339,13 +334,8 @@ async def magic(request: Request, db: DbSession, email: str = Form(...)) -> HTML
         token = security.new_url_token()
         await security.create_auth_token(db, admin.id, TOKEN_MAGIC, token, ttl_minutes=15)
         link = f"{mail.base_url()}/magic/{token}"
-        mail.send(
-            email,
-            "Your Kitabi Admin sign-in link",
-            f"Sign in to Kitabi Admin:\n\n{link}\n\nThis link works once and expires in 15 "
-            f"minutes. You'll still confirm your authenticator code after.\n\nIf you didn't "
-            f"request this, ignore this email.",
-        )
+        subject, text, html = emails.magic_email(link)
+        mail.send(email, subject, text, html=html)
         await security.audit(db, "auth.magic_requested", admin_id=admin.id, ip=client_ip(request))
     return _render(request, "magic_sent.html", email=email)
 

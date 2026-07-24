@@ -11,9 +11,16 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
 
+[tool.ruff.lint.per-file-ignores]
+# Email bodies are table-layout HTML with inline styles — the lines are long by
+# nature and don't wrap without corrupting the markup.
+"console/emails.py" = ["E501"]
+
 [tool.black]
 line-length = 100
 target-version = ["py312"]
+# emails.py holds long inline-style HTML strings black shouldn't try to reflow.
+force-exclude = "console/emails.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

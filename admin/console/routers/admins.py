@@ -11,7 +11,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
 
-from .. import mail, queries, security
+from .. import emails, mail, queries, security
 from ..deps import DbSession, RequireSuperAdmin, client_ip
 from ..flash import pop_flash as _pop_flash
 from ..flash import set_flash as _flash
@@ -105,13 +105,8 @@ async def create_admin(
     token = security.new_url_token()
     await security.create_auth_token(db, new.id, TOKEN_INVITE, token, ttl_minutes=48 * 60)
     link = f"{mail.base_url()}/invite/{token}"
-    mail.send(
-        email,
-        "You've been invited to Kitabi Admin",
-        f"You've been added as a {role.replace('_', ' ')} on Kitabi Admin.\n\nSet up your "
-        f"account (valid 48 hours):\n\n{link}\n\nYou'll choose a password and set up an "
-        f"authenticator app.",
-    )
+    subject, text, html = emails.invite_email(link, role)
+    mail.send(email, subject, text, html=html)
     await security.audit(
         db,
         "admin.invite",
