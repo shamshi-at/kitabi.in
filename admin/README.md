@@ -70,16 +70,41 @@ On Railway this is a **second service** (Root Directory = repo root, Dockerfile
 `admin.kitabi.in` domain in front. It runs no migrations — the API service owns
 Alembic. `ENV=production` flips the session cookie to `Secure`.
 
+## Email (Resend)
+
+The sign-in flows (forgot-password OTP, magic link, invites) send email via
+`console/mail.py`. With no transport configured they run **dormant** — the code/
+link is written to the server log so the flows still work. To send for real:
+
+1. **Resend → add domain** `kitabi.in` (or a subdomain like `mail.kitabi.in`).
+   Resend shows SPF/DKIM (and DMARC) DNS records.
+2. **Cloudflare → add those records** for `kitabi.in`, wait for Resend to verify.
+3. **Resend → create an API key** (send-only).
+4. **Railway (admin service) → set env vars:**
+   ```
+   RESEND_API_KEY=re_...            # the key — never commit it
+   MAIL_FROM=Kitabi Admin <noreply@kitabi.in>   # a verified-domain sender
+   ADMIN_BASE_URL=https://admin.kitabi.in       # so emailed links resolve
+   ```
+   That's it — the console prefers the Resend HTTP API when `RESEND_API_KEY` is
+   set (no outbound-SMTP-port issues on Railway). SMTP is still supported as a
+   fallback (`SMTP_HOST/PORT/USER/PASSWORD`) if you ever prefer it.
+
+Keep **promotional** email on a *separate* provider and sending subdomain (e.g.
+`news.kitabi.in`) so a marketing reputation hit can never affect these
+transactional messages.
+
 ## What's built vs. planned
 
 **Built and working:** the auth stack (password + forced TOTP + recovery codes +
-DB sessions + lockout + audit), the dashboard (live counts + catalog health),
-the **author-claims queue** (wired to the API's own `approve_claim`/
-`reject_claim`, contested-claim aware), **admin-user management** (create /
-role / revoke, with no-self-lockout guards), and the **audit log** view.
+DB sessions + lockout + audit); the email sign-in flows (forgot-password OTP,
+passwordless magic link, email invites — via Resend, dormant until configured);
+in-portal + forced password change; a global command-search (actions / books /
+authors / publishers / readers); the dashboard; the three moderation queues
+(author claims, suggested edits, reported content); catalog ops (search /
+book·author·publisher pages / duplicate merge / quality gaps); reader support
+(search / detail / suspend); admin-user management; and the audit log.
 
-**Designed (in the mockups) but not yet wired** — each is a "Planned" stub in the
-nav today: suggested-edit moderation, reported-content queue, catalog operations
-(search/merge/quality-gaps), and the reader support screen. Also deferred:
-email-based admin invitations (needs a mail integration — rule 8), and the CI +
-Railway deploy wiring.
+**Deferred:** promotional/marketing email (separate provider + consent, its own
+project), and reader-facing report/notification triggers that would feed the
+reported-content queue.
