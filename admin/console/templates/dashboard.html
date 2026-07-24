@@ -7,7 +7,7 @@
   <a class="kpi" href="/readers"><div class="v">{{ "{:,}".format(stats.readers) }}</div><div class="k">Readers</div></a>
   {% if admin.role in ['editor', 'super_admin'] %}
   <a class="kpi" href="/catalog"><div class="v">{{ "{:,}".format(stats.works) }}</div><div class="k">Works</div></a>
-  <a class="kpi" href="/catalog"><div class="v">{{ "{:,}".format(stats.authors) }}</div><div class="k">Authors</div></a>
+  <a class="kpi" href="/catalog/authors"><div class="v">{{ "{:,}".format(stats.authors) }}</div><div class="k">Authors</div></a>
   {% else %}
   <div class="kpi"><div class="v">{{ "{:,}".format(stats.works) }}</div><div class="k">Works</div></div>
   <div class="kpi"><div class="v">{{ "{:,}".format(stats.authors) }}</div><div class="k">Authors</div></div>
@@ -33,13 +33,25 @@
   </div>
   <div class="card">
     <div class="lbl">Catalog health</div>
-    <div class="stack" style="margin-top:11px;font-size:12.5px">
-      <div style="display:flex;justify-content:space-between"><span>With cover</span><b>{{ stats.health.cover_pct }}%</b></div>
-      <div class="bar"><i style="width:{{ stats.health.cover_pct }}%;background:var(--oxblood)"></i></div>
-      <div style="display:flex;justify-content:space-between"><span>With description</span><b>{{ stats.health.desc_pct }}%</b></div>
-      <div class="bar"><i style="width:{{ stats.health.desc_pct }}%;background:var(--gold)"></i></div>
-      <div style="display:flex;justify-content:space-between"><span>With ISBN</span><b>{{ stats.health.isbn_pct }}%</b></div>
-      <div class="bar"><i style="width:{{ stats.health.isbn_pct }}%;background:var(--moss)"></i></div>
+    <div class="stack healthbars" style="margin-top:11px;font-size:12.5px">
+      {% if admin.role in ['editor', 'super_admin'] %}
+      <a class="healthrow" href="/catalog?filter=no_cover" title="Open the works still missing a cover">
+        <div class="hr-top"><span>With cover</span><b>{{ stats.health.cover_pct }}%</b></div>
+        <div class="bar"><i style="width:{{ stats.health.cover_pct }}%;background:var(--oxblood)"></i></div></a>
+      <a class="healthrow" href="/catalog?filter=no_desc" title="Open the works still missing a description">
+        <div class="hr-top"><span>With description</span><b>{{ stats.health.desc_pct }}%</b></div>
+        <div class="bar"><i style="width:{{ stats.health.desc_pct }}%;background:var(--gold)"></i></div></a>
+      <a class="healthrow" href="/catalog?filter=no_isbn" title="Open the works still missing an ISBN">
+        <div class="hr-top"><span>With ISBN</span><b>{{ stats.health.isbn_pct }}%</b></div>
+        <div class="bar"><i style="width:{{ stats.health.isbn_pct }}%;background:var(--moss)"></i></div></a>
+      {% else %}
+      <div><div class="hr-top"><span>With cover</span><b>{{ stats.health.cover_pct }}%</b></div>
+        <div class="bar"><i style="width:{{ stats.health.cover_pct }}%;background:var(--oxblood)"></i></div></div>
+      <div><div class="hr-top"><span>With description</span><b>{{ stats.health.desc_pct }}%</b></div>
+        <div class="bar"><i style="width:{{ stats.health.desc_pct }}%;background:var(--gold)"></i></div></div>
+      <div><div class="hr-top"><span>With ISBN</span><b>{{ stats.health.isbn_pct }}%</b></div>
+        <div class="bar"><i style="width:{{ stats.health.isbn_pct }}%;background:var(--moss)"></i></div></div>
+      {% endif %}
     </div>
     <div class="note" style="margin-top:12px">{{ "{:,}".format(stats.works) }} works · {{ "{:,}".format(stats.editions) }} editions in the catalog.</div>
   </div>

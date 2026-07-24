@@ -25,15 +25,28 @@ locked out of the app until reinstated.</div>
   </div>
   <div class="card">
     <div class="lbl">Contributions &amp; activity</div>
-    <table style="margin-top:6px">
+    <table class="linkrows" style="margin-top:6px">
       <tr><td>Score</td><td style="text-align:right"><b>{{ score.total }}</b></td></tr>
+      {% if admin.role in ['editor', 'super_admin'] and score.books_added %}
+      <tr><td><a href="/catalog?added_by={{ p.id }}">Books added to catalog</a></td>
+        <td style="text-align:right"><a href="/catalog?added_by={{ p.id }}"><b>{{ score.books_added }}</b></a></td></tr>
+      {% else %}
       <tr><td>Books added to catalog</td><td style="text-align:right"><b>{{ score.books_added }}</b></td></tr>
+      {% endif %}
+      {% if admin.role in ['editor', 'super_admin'] and score.authors_added %}
+      <tr><td><a href="/catalog/authors?added_by={{ p.id }}">Authors added</a></td>
+        <td style="text-align:right"><a href="/catalog/authors?added_by={{ p.id }}"><b>{{ score.authors_added }}</b></a></td></tr>
+      {% else %}
       <tr><td>Authors added</td><td style="text-align:right"><b>{{ score.authors_added }}</b></td></tr>
+      {% endif %}
       <tr><td>Reviews written</td><td style="text-align:right"><b>{{ score.reviews_written }}</b></td></tr>
       <tr><td>Books tracked</td><td style="text-align:right"><b>{{ score.books_tracked }}</b></td></tr>
       <tr><td>Books finished</td><td style="text-align:right"><b>{{ score.books_finished }}</b></td></tr>
       <tr><td>Lending records</td><td style="text-align:right"><b>{{ score.lending_records }}</b></td></tr>
     </table>
+    <div class="note" style="margin-top:11px">Public catalog contributions link through to what they
+    added. Private library counts (tracked, finished, lending) are totals only — the console never
+    opens a reader's private shelf.</div>
   </div>
 </div>
 

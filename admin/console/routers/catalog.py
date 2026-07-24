@@ -12,6 +12,7 @@ from app.services import catalog_service  # noqa: E402
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 
 from .. import queries, security
 from ..deps import DbSession, RequireEditor, client_ip
@@ -60,12 +61,75 @@ async def _work_rows(db: DbSession, works: list) -> list[dict]:
     return rows
 
 
+# The quality-gap worklists the dashboard health bars and the catalog gap card
+# both link into. Each key mirrors exactly the count shown on the cards, so the
+# worklist a click opens matches the number the reader clicked.
+GAP_LABELS = {
+    "no_cover": "Editions with no cover",
+    "no_desc": "Works with no description",
+    "no_isbn": "Editions with no ISBN",
+}
+
+
+def _gap_stmt(gap: str):  # noqa: ANN201 — SQLAlchemy Select
+    base = select(Work).options(selectinload(Work.authors)).where(Work.deleted_at.is_(None))
+    if gap == "no_desc":
+        return base.where(Work.description.is_(None))
+    if gap == "no_cover":
+        return base.where(
+            Work.id.in_(
+                select(Edition.work_id).where(
+                    Edition.deleted_at.is_(None), Edition.cover_url.is_(None)
+                )
+            )
+        )
+    if gap == "no_isbn":
+        return base.where(
+            Work.id.in_(
+                select(Edition.work_id).where(Edition.deleted_at.is_(None), Edition.isbn.is_(None))
+            )
+        )
+    return None
+
+
+async def _adder_name(db: DbSession, user_id: uuid.UUID) -> str:
+    p = await db.get(Profile, user_id)
+    return (p.full_name or p.email) if p else str(user_id)[:8]
+
+
 @router.get("")
 async def catalog(
-    request: Request, admin: RequireEditor, db: DbSession, q: str = Query(default="")
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    q: str = Query(default=""),
+    gap: str = Query(default="", alias="filter"),
+    added_by: Annotated[uuid.UUID | None, Query()] = None,
 ) -> HTMLResponse:
     q = q.strip()
-    works = await catalog_service.search_local(db, q) if q else []
+    filter_label = None
+    if added_by is not None:
+        works = list(
+            (
+                await db.execute(
+                    select(Work)
+                    .options(selectinload(Work.authors))
+                    .where(Work.created_by_user_id == added_by, Work.deleted_at.is_(None))
+                    .order_by(Work.title.asc())
+                    .limit(300)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        filter_label = f"Works added by {await _adder_name(db, added_by)}"
+    elif gap in GAP_LABELS:
+        works = list(
+            (await db.execute(_gap_stmt(gap).order_by(Work.title.asc()).limit(300))).scalars().all()
+        )
+        filter_label = GAP_LABELS[gap]
+    else:
+        works = await catalog_service.search_local(db, q) if q else []
     rows = await _work_rows(db, works)
 
     # Quality gaps — the columns a bulk seed leaves thin.
@@ -94,6 +158,9 @@ async def catalog(
             "q": q,
             "rows": rows,
             "gaps": gaps,
+            "gap": gap,
+            "added_by": added_by,
+            "filter_label": filter_label,
             "flash": flash,
         },
     )
@@ -148,19 +215,64 @@ async def book_detail(
 
 @router.get("/authors")
 async def authors(
-    request: Request, admin: RequireEditor, db: DbSession, q: str = Query(default="")
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    q: str = Query(default=""),
+    gap: str = Query(default="", alias="filter"),
+    added_by: Annotated[uuid.UUID | None, Query()] = None,
 ) -> HTMLResponse:
     q = q.strip()
-    rows = (
-        await catalog_service.search_authors(db, q, limit=100)
-        if q
-        else await catalog_service.browse_authors(db, 60, 0, popular=True)
-    )
+    filter_label = None
+    if added_by is not None:
+        rows = list(
+            (
+                await db.execute(
+                    select(Author)
+                    .where(Author.created_by_user_id == added_by, Author.deleted_at.is_(None))
+                    .order_by(Author.name.asc())
+                    .limit(300)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        filter_label = f"Authors added by {await _adder_name(db, added_by)}"
+    elif gap == "no_works":
+        rows = list(
+            (
+                await db.execute(
+                    select(Author)
+                    .where(
+                        Author.deleted_at.is_(None),
+                        ~Author.id.in_(
+                            select(func.distinct(catalog_service.work_authors.c.author_id))
+                        ),
+                    )
+                    .order_by(Author.name.asc())
+                    .limit(300)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        filter_label = "Authors with no works"
+    elif q:
+        rows = await catalog_service.search_authors(db, q, limit=100)
+    else:
+        rows = await catalog_service.browse_authors(db, 60, 0, popular=True)
     badges = await queries.nav_badges(db)
     return templates.TemplateResponse(
         request,
         "authors.html",
-        {"admin": admin, "active": "authors", "badges": badges, "q": q, "rows": rows},
+        {
+            "admin": admin,
+            "active": "authors",
+            "badges": badges,
+            "q": q,
+            "rows": rows,
+            "filter_label": filter_label,
+        },
     )
 
 

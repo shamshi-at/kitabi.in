@@ -7,6 +7,13 @@
   placeholder="Search author name" style="width:260px"></form>
 {% endblock %}
 {% block content %}
+{% if filter_label %}
+<div class="worklist-head">
+  <div><span class="lbl">Worklist</span>
+    <b>{{ filter_label }}</b> · {{ rows | length }} shown{% if rows | length == 300 %} (first 300){% endif %}</div>
+  <a class="btn s" href="/catalog/authors">← All authors</a>
+</div>
+{% endif %}
 <div class="tbl">
   <table>
     <tr><th style="width:44%">Name</th><th>Language</th><th>On Kitabi</th><th>Author id</th></tr>
