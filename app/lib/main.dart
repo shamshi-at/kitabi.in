@@ -16,6 +16,7 @@ import 'core/theme/app_theme.dart';
 import 'data/sync/background_sync.dart';
 import 'data/sync/connectivity_sync.dart';
 import 'data/sync/sync_providers.dart';
+import 'features/library/providers/reading_timer_providers.dart';
 import 'features/settings/theme_mode_provider.dart';
 import 'l10n/app_localizations.dart';
 
@@ -79,6 +80,11 @@ class _KitabiAppState extends ConsumerState<KitabiApp> with WidgetsBindingObserv
     // shelf is up to date the moment the user looks at it.
     if (state == AppLifecycleState.resumed) {
       ref.read(syncTriggerProvider)();
+      // The lock-screen reading clock and the database can disagree while we
+      // were away: a check-in's "No, stop it" and the auto-stop task both stop
+      // a sitting from a background isolate that can't reach the live-activity
+      // channel. Coming back is the moment to make them agree again.
+      unawaited(ref.read(activeSessionProvider.notifier).reconcile());
     }
   }
 

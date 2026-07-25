@@ -3216,4 +3216,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get paceFilterAssumedNote =>
       'Estimates use a typical pace until you\'ve timed a few sittings.';
+
+  @override
+  String timerLiveProgress(int page, int total) {
+    return 'p. $page of $total';
+  }
+
+  @override
+  String timerLiveProgressPage(int page) {
+    return 'p. $page';
+  }
+
+  @override
+  String get timerLiveRunning => 'Reading now';
+
+  @override
+  String get timerLiveElapsed => 'Reading';
 }

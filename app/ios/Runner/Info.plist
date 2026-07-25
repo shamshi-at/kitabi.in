@@ -16,6 +16,10 @@
 		<string>6.0</string>
 		<key>CFBundleName</key>
 		<string>kitabi</string>
+		<!-- ActivityKit: the reading timer's lock-screen / Dynamic Island clock.
+		     Without this key the system refuses every Activity.request. -->
+		<key>NSSupportsLiveActivities</key>
+		<true/>
 		<!-- FCM: allow background processing of remote notifications. -->
 		<key>UIBackgroundModes</key>
 		<array>

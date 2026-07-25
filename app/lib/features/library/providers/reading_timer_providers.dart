@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/notifications/reading_live_activity.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repositories.dart';
 import '../../../data/repositories/repository_providers.dart';
@@ -135,6 +136,11 @@ Future<LoggedSession?> stopAndLogActiveSession(
     final notifications = NotificationService(FlutterLocalNotificationsPlugin());
     await notifications.cancel(readingCheckInNotificationId(entryId));
     await Workmanager().cancelByUniqueName(readingEnforcementTaskName(entryId));
+    // The lock-screen clock dies with the sitting, from whichever path stopped
+    // it. On iOS a background isolate has no method channel for this, so the
+    // call is a silent no-op there and `ActiveSessionController.reconcile`
+    // clears the leftover activity the next time the app is foregrounded.
+    await ReadingLiveActivity().end();
   } catch (_) {}
 
   return LoggedSession(
@@ -185,6 +191,52 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
       id: sessionId,
       pageStart: int.tryParse(pageStartRaw ?? ''),
     );
+    // A session restored after a kill+reopen still has its clock running, so
+    // the lock-screen surface has to come back with it.
+    await _showLive(entryId, startedAt);
+  }
+
+  /// Puts the running sitting back on the lock screen, or clears a stale one.
+  ///
+  /// Both halves matter. A sitting stopped from a background isolate (the
+  /// check-in's "No, stop it", the workmanager auto-stop) writes straight to
+  /// the database and never reaches the live-activity channel — without this,
+  /// a finished sitting would keep counting on the lock screen until the
+  /// reader started another one. Called on hydrate and on every foreground
+  /// resume, both of which are cheap and idempotent.
+  Future<void> reconcile() async {
+    final db = ref.read(appDatabaseProvider);
+    final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
+    final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
+    final startedAt = startedRaw == null ? null : DateTime.tryParse(startedRaw);
+    if (entryId == null || startedAt == null) {
+      await ReadingLiveActivity().end();
+      return;
+    }
+    await _showLive(entryId, startedAt);
+  }
+
+  /// The book's title/author/pages come from a direct query rather than a
+  /// stream provider: this runs at the moment a sitting starts, and an
+  /// autoDispose stream that hasn't emitted yet would hand back nothing (the
+  /// 19 Jul 2026 lesson — don't trust "there's usually a value there").
+  Future<void> _showLive(String libraryEntryId, DateTime startedAt) async {
+    try {
+      final db = ref.read(appDatabaseProvider);
+      final entry = await db.libraryEntriesDao.getById(libraryEntryId);
+      if (entry == null) return;
+      final book = await db.cachedBooksDao.getByEditionId(entry.editionId);
+      await ReadingLiveActivity().start(
+        libraryEntryId: libraryEntryId,
+        title: book?.title ?? '',
+        author: book?.authorNames,
+        startedAt: startedAt,
+        currentPage: entry.currentPage,
+        pageCount: book?.pageCount,
+      );
+    } catch (_) {
+      // Decoration, never the sitting itself.
+    }
   }
 
   /// Starts a session on [libraryEntryId] — auto-stopping (and logging)
@@ -215,6 +267,7 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
       id: sessionId,
       pageStart: pageStart,
     );
+    await _showLive(libraryEntryId, startedAt);
   }
 
   /// Stops the running session (if any), logs it via the repository, and

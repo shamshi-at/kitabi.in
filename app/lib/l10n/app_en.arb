@@ -2811,5 +2811,20 @@
     "placeholders": {"count": {"type": "int"}}
   },
   "paceFilterAssumedNote": "Estimates use a typical pace until you've timed a few sittings.",
-  "@paceFilterAssumedNote": {"description": "Filter-sheet note shown while the reader's own pace isn't measured yet"}
+  "@paceFilterAssumedNote": {"description": "Filter-sheet note shown while the reader's own pace isn't measured yet"},
+
+  "timerLiveProgress": "p. {page} of {total}",
+  "@timerLiveProgress": {
+    "description": "Line under the live reading clock on the lock screen when the book's length is known",
+    "placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "timerLiveProgressPage": "p. {page}",
+  "@timerLiveProgressPage": {
+    "description": "Line under the live reading clock when only the current page is known",
+    "placeholders": {"page": {"type": "int"}}
+  },
+  "timerLiveRunning": "Reading now",
+  "@timerLiveRunning": {"description": "Line under the live reading clock when no page has been recorded"},
+  "timerLiveElapsed": "Reading",
+  "@timerLiveElapsed": {"description": "Label above the elapsed time on the iOS Live Activity lock-screen card"}
 }

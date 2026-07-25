@@ -393,6 +393,33 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   already-rounded `kitabi-logo.png`, since the splash background color (paper) plus a
   centered rounded tile is exactly what `SplashScreen` renders in-app — the point is
   to match, not to avoid double-masking.
+- **A low-importance Android notification is *collapsed into a silent dot* on the
+  lock screen** — the content is there, but nothing readable is. Bit the reading
+  timer's lock-screen clock (26 Jul 2026): `Importance.low` felt right for a surface
+  that must never buzz, and `dumpsys notification` happily confirmed the notification
+  existed with all the right flags, but the actual lock screen showed a grey circle in
+  the collapsed row and no clock at all — the one thing the feature exists for. Use
+  `Importance.defaultImportance` with `playSound: false`, `enableVibration: false` and
+  `silent: true` for anything that must be *readable* while quiet. Two corollaries:
+  `dumpsys` is not verification (screenshot the lock screen), and **a channel's
+  importance is fixed at creation** — changing the code does nothing on a device that
+  already has the channel, so re-verify only after `adb uninstall`.
+- **Under the UIScene lifecycle `AppDelegate.window` is nil in
+  `didFinishLaunchingWithOptions`** — the scene creates the window afterwards. Any
+  channel registered via `window?.rootViewController as? FlutterViewController`
+  silently never registers, and every call over it no-ops with nothing in the logs
+  (caught by reading `SceneDelegate.swift` before shipping, 26 Jul 2026 — no test or
+  archive build would have). This app has `UIApplicationSceneManifest` +
+  `FlutterSceneDelegate`, so register custom channels through the registrar instead:
+  `registrar(forPlugin: "…")?.messenger()`, which needs no window.
+- **A new iOS app-extension target can be added without opening Xcode** — CocoaPods
+  already brings the `xcodeproj` Ruby gem (1.28), so a ~60-line script creates the
+  target, its build configs, the shared source file membership (a Live Activity's
+  `ActivityAttributes` has to compile into *both* app and widget), the frameworks and
+  the "Embed App Extensions" entry, idempotently. Copy the settings from the
+  `NotificationService` target that's already there — including
+  `EXCLUDED_ARCHS[sdk=iphonesimulator*] = arm64`, or the extension's arch set won't
+  match the app's Rosetta-simulator build and embedding fails.
 
 ## Open decisions
 

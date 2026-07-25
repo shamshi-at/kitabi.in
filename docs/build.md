@@ -157,6 +157,13 @@ Upload via Apple Transporter or `xcrun altool --upload-app`. Notes:
   **Android emulator**, not the iOS Simulator.
 - TestFlight/production APNs push needs a **Production** APNs key uploaded to
   Firebase and the `aps-environment` entitlement set to `production`.
+- The app embeds **two** app extensions: `NotificationService` (push) and
+  `ReadingActivity` (the reading timer's Live Activity widget, iOS 16.2+). Both are
+  in `Runner.xcodeproj` already; if a target ever has to be re-created, do it with
+  the `xcodeproj` Ruby gem CocoaPods ships rather than by hand-editing the pbxproj —
+  and give it the same `EXCLUDED_ARCHS[sdk=iphonesimulator*] = arm64` as the app.
+  An extension's version must track the app's (both include `Flutter/Generated.xcconfig`
+  for `FLUTTER_BUILD_NAME`/`NUMBER`), or App Store Connect rejects the upload.
 
 ### Build a release Android AAB
 

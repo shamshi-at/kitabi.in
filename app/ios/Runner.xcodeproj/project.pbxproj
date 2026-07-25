@@ -12,15 +12,24 @@
 		16F993C6E3557839A1071F8A /* NotificationService.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 7A131F30AF33E3C60AE81A75 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, CodeSignOnCopy, ); }; };
 		28033314F41A1481F2195C61 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70FD791194560C3D9384A593 /* NotificationService.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
+		35FA0FDC6136C6219687EF83 /* ReadingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C650667D61DC05E874C6ED7F /* ReadingActivityAttributes.swift */; };
 		383E703D6071D8231F84530D /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4FB24128ADFFD06A29F47579 /* Pods_RunnerTests.framework */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		71411F9BC0A808A0CBC96CD2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B57EC7C241882106F20F13E /* Foundation.framework */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
+		8928CB0EAC1AFAB4AA40F8E2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11BBB0FB025F21ADD880DC58 /* WidgetKit.framework */; };
+		8CDE7D20555F10B807C7B88C /* ReadingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C650667D61DC05E874C6ED7F /* ReadingActivityAttributes.swift */; };
+		8D5F7FFBE7F0281AEB1453CF /* ReadingActivity.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 8882627F174474D1747CBCA6 /* ReadingActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, CodeSignOnCopy, ); }; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A3B1C9604AE52492DB15AEC5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B57EC7C241882106F20F13E /* Foundation.framework */; };
+		A82DB538417424ACA3C44614 /* ReadingActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 900E9E527DEC5A622FC364F8 /* ReadingActivityController.swift */; };
+		AA08BCAF184657C83D6E342A /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA2BAAD998B020A6FEA14061 /* ActivityKit.framework */; };
+		B35B64023AB2A5D7E8892B04 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 91843ABF79240AD3D2469819 /* SwiftUI.framework */; };
+		D475254C192EF7EE8AB0CEC0 /* ReadingActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FE6BF53F5DD6C39E5C018E6 /* ReadingActivityWidget.swift */; };
 		FCAB100000000000000000B1 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FCAB100000000000000000A1 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +48,13 @@
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
 		};
+		F40C7E203E301EA24B67F0C1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FF6F2402E8F5C1B1D55DE96B;
+			remoteInfo = ReadingActivity;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -49,6 +65,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				16F993C6E3557839A1071F8A /* NotificationService.appex in Embed App Extensions */,
+				8D5F7FFBE7F0281AEB1453CF /* ReadingActivity.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -66,8 +83,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		11BBB0FB025F21ADD880DC58 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		1A0957917254D55BF37A82CA /* ReadingActivity.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = ReadingActivity.xcconfig; sourceTree = "<group>"; };
+		2571EE8717B44226FD356719 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2D134CFA2DCB824E79F96D48 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -76,6 +96,7 @@
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		4153CF2DF562F747E3004280 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4FB24128ADFFD06A29F47579 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4FE6BF53F5DD6C39E5C018E6 /* ReadingActivityWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReadingActivityWidget.swift; sourceTree = "<group>"; };
 		5B57EC7C241882106F20F13E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		70FD791194560C3D9384A593 /* NotificationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -85,6 +106,9 @@
 		7A131F30AF33E3C60AE81A75 /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A5C252F31210949CA93301F /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
+		8882627F174474D1747CBCA6 /* ReadingActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReadingActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		900E9E527DEC5A622FC364F8 /* ReadingActivityController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReadingActivityController.swift; sourceTree = "<group>"; };
+		91843ABF79240AD3D2469819 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -92,6 +116,8 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA2BAAD998B020A6FEA14061 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
+		C650667D61DC05E874C6ED7F /* ReadingActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReadingActivityAttributes.swift; sourceTree = "<group>"; };
 		E37D683291AC92A5B4026ACE /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		E6E28479D7F559ED3DB86881 /* NotificationService.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = NotificationService.xcconfig; sourceTree = "<group>"; };
 		EF066909EEB7E6428B963C12 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
@@ -117,6 +143,17 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E2C47AF1F310C9AD05FC14DF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				71411F9BC0A808A0CBC96CD2 /* Foundation.framework in Frameworks */,
+				8928CB0EAC1AFAB4AA40F8E2 /* WidgetKit.framework in Frameworks */,
+				B35B64023AB2A5D7E8892B04 /* SwiftUI.framework in Frameworks */,
+				AA08BCAF184657C83D6E342A /* ActivityKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F6268A75EFD710CD7B1D2FC8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -134,6 +171,9 @@
 				4153CF2DF562F747E3004280 /* Pods_Runner.framework */,
 				4FB24128ADFFD06A29F47579 /* Pods_RunnerTests.framework */,
 				22C8BD428766235CB0401B59 /* iOS */,
+				11BBB0FB025F21ADD880DC58 /* WidgetKit.framework */,
+				91843ABF79240AD3D2469819 /* SwiftUI.framework */,
+				AA2BAAD998B020A6FEA14061 /* ActivityKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -152,6 +192,18 @@
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 			);
 			path = RunnerTests;
+			sourceTree = "<group>";
+		};
+		3D1CFBA4680262FD535189EA /* ReadingActivity */ = {
+			isa = PBXGroup;
+			children = (
+				C650667D61DC05E874C6ED7F /* ReadingActivityAttributes.swift */,
+				4FE6BF53F5DD6C39E5C018E6 /* ReadingActivityWidget.swift */,
+				2571EE8717B44226FD356719 /* Info.plist */,
+				1A0957917254D55BF37A82CA /* ReadingActivity.xcconfig */,
+			);
+			name = ReadingActivity;
+			path = ReadingActivity;
 			sourceTree = "<group>";
 		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
@@ -176,6 +228,7 @@
 				F60E4E9E6919D28A89A4866E /* Pods */,
 				0A122E16C3ED10537BC31A5C /* Frameworks */,
 				E491DC1460BFAD8F8333B97F /* NotificationService */,
+				3D1CFBA4680262FD535189EA /* ReadingActivity */,
 			);
 			sourceTree = "<group>";
 		};
@@ -185,6 +238,7 @@
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 				7A131F30AF33E3C60AE81A75 /* NotificationService.appex */,
+				8882627F174474D1747CBCA6 /* ReadingActivity.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -202,6 +256,7 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				900E9E527DEC5A622FC364F8 /* ReadingActivityController.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -272,6 +327,7 @@
 			);
 			dependencies = (
 				0C7BBC2CE0885AD0FEBDEC8B /* PBXTargetDependency */,
+				5DA990D5DA353AAA28793379 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -296,6 +352,23 @@
 			name = NotificationService;
 			productName = NotificationService;
 			productReference = 7A131F30AF33E3C60AE81A75 /* NotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		FF6F2402E8F5C1B1D55DE96B /* ReadingActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 13DBCA47796AD150FA6F1232 /* Build configuration list for PBXNativeTarget "ReadingActivity" */;
+			buildPhases = (
+				C2E4DD0893E96F550AB57E46 /* Sources */,
+				E2C47AF1F310C9AD05FC14DF /* Frameworks */,
+				AB4F1E0E957283CB67BF62CF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReadingActivity;
+			productName = ReadingActivity;
+			productReference = 8882627F174474D1747CBCA6 /* ReadingActivity.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -337,6 +410,7 @@
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
 				CF6CF3EB6247408C2280730C /* NotificationService */,
+				FF6F2402E8F5C1B1D55DE96B /* ReadingActivity */,
 			);
 		};
 /* End PBXProject section */
@@ -365,6 +439,13 @@
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB4F1E0E957283CB67BF62CF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -506,6 +587,17 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
+				35FA0FDC6136C6219687EF83 /* ReadingActivityAttributes.swift in Sources */,
+				A82DB538417424ACA3C44614 /* ReadingActivityController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C2E4DD0893E96F550AB57E46 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8CDE7D20555F10B807C7B88C /* ReadingActivityAttributes.swift in Sources */,
+				D475254C192EF7EE8AB0CEC0 /* ReadingActivityWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -522,6 +614,12 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		5DA990D5DA353AAA28793379 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ReadingActivity;
+			target = FF6F2402E8F5C1B1D55DE96B /* ReadingActivity */;
+			targetProxy = F40C7E203E301EA24B67F0C1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -545,6 +643,37 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		1AEC909DAEEAD92BE97AA1EC /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1A0957917254D55BF37A82CA /* ReadingActivity.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = 62686X3746;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ReadingActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Reading;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = in.kitabi.kitabi.ReadingActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Profile;
+		};
 		249021D3217E4FDB00AE95B9 /* Profile */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -621,6 +750,36 @@
 			};
 			name = Profile;
 		};
+		2589894108E766BEC3F3D605 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1A0957917254D55BF37A82CA /* ReadingActivity.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = 62686X3746;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ReadingActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Reading;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = in.kitabi.kitabi.ReadingActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		331C8088294A63A400263BE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 7A5C252F31210949CA93301F /* Pods-RunnerTests.debug.xcconfig */;
@@ -670,6 +829,37 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
 			};
 			name = Profile;
+		};
+		48370AFB12EE1626096AA4E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1A0957917254D55BF37A82CA /* ReadingActivity.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = 62686X3746;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ReadingActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Reading;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = in.kitabi.kitabi.ReadingActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
 		};
 		4A5550383C67D2478CDC04DC /* Profile */ = {
 			isa = XCBuildConfiguration;
@@ -925,6 +1115,16 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		13DBCA47796AD150FA6F1232 /* Build configuration list for PBXNativeTarget "ReadingActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				48370AFB12EE1626096AA4E7 /* Release */,
+				2589894108E766BEC3F3D605 /* Debug */,
+				1AEC909DAEEAD92BE97AA1EC /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

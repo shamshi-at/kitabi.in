@@ -24,6 +24,16 @@ import flutter_local_notifications
     // stranded — getAPNSToken() stayed null forever, so no FCM token was ever issued
     // on iOS while Android (no APNs dependency) worked fine.
     GeneratedPluginRegistrant.register(with: self)
+    // The reading Live Activity's own channel — the lock-screen clock while a
+    // sitting runs. Registered through the plugin registrar, NOT through
+    // `window?.rootViewController`: this app uses the UIScene lifecycle
+    // (UIApplicationSceneManifest + FlutterSceneDelegate), so the window is
+    // created by the scene *after* this method runs and would be nil here —
+    // the channel would silently never register and every Live Activity call
+    // would no-op with nothing to show for it.
+    if let registrar = registrar(forPlugin: "ReadingActivityController") {
+      ReadingActivityController.register(with: registrar.messenger())
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

@@ -334,6 +334,31 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **26 Jul 2026** — **The reading sitting, on the lock screen.** One Dart API
+  (`ReadingLiveActivity`), two deliberately different mechanisms. **iOS** gets a
+  real **Live Activity**: a new `ReadingActivity` widget extension (ActivityKit +
+  WidgetKit, iOS 16.2+) drawing a lock-screen card and a Dynamic Island
+  presentation in the Reading Room palette, with the elapsed time as a SwiftUI
+  `Text(timerInterval:)` so the system ticks it and the app is never woken to
+  keep it honest. The target was added to `Runner.xcodeproj` by script (the
+  `xcodeproj` gem CocoaPods already ships), mirroring the existing
+  `NotificationService` extension; `ReadingActivityController.swift` drives it
+  over a method channel. **Android has no Live Activities API below Android 16**,
+  so its equivalent is an **ongoing notification with a chronometer** — same
+  promise (the clock is readable without unlocking), different mechanism, and the
+  code says so rather than pretending they're one feature. Wired to the single
+  start path and the single stop path, plus a reconcile on every resume so a
+  sitting stopped from a background isolate can't leave a clock running.
+  **Verified on the Android emulator against a real lock screen** (00:25 → 01:47
+  while locked and backgrounded, gone the moment the sitting stopped); the iOS
+  side is verified as far as an archive can go — the extension compiles, signs
+  and embeds in the shipped IPA — with the on-device lock-screen render still to
+  be checked on a real iPhone. Two bugs found and fixed on the way, neither of
+  which any test would have caught: a low-importance notification is collapsed
+  into a silent *dot* on the Android lock screen (the clock invisible), and under
+  the UIScene lifecycle `AppDelegate.window` is nil at launch, so registering the
+  channel through it would have meant iOS silently never starting an activity at
+  all. Both are now in CLAUDE.md's lessons.
 - **26 Jul 2026** — **"Time to finish" — every book page answers *can I finish
   this?*** Every timed sitting already stored `duration_seconds` and a page
   range; that is now a **reading pace**, and the pace is the reader's own, never

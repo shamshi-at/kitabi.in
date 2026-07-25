@@ -19,6 +19,7 @@ class NotificationService {
 
   static const _channelId = 'lending_reminders';
   static const _checkInChannelId = 'reading_checkins';
+  static const _readingSessionChannelId = 'reading_session_live';
 
   Future<void> _ensureReady() async {
     if (_ready) return;
@@ -152,6 +153,59 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
+    );
+  }
+
+  /// The live reading clock on Android: an **ongoing** notification the system
+  /// ticks itself (`usesChronometer` counting from [startedAt]), which is what
+  /// Android has instead of an iOS Live Activity. Low importance so it never
+  /// buzzes, public so it's readable on a locked screen, and un-swipeable
+  /// while the sitting runs.
+  ///
+  /// Lives here rather than in `ReadingLiveActivity` because posting it needs
+  /// [_ensureReady] — a sitting can start before anything else has scheduled a
+  /// notification, and an uninitialised plugin silently drops the call.
+  Future<void> showReadingSession({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime startedAt,
+    required String payload,
+  }) async {
+    await _ensureReady();
+    await _plugin.show(
+      id,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _readingSessionChannelId,
+          'Reading session',
+          channelDescription: 'The live clock while a reading session is running',
+          // Default importance, not low. Low sounds right ("don't make a
+          // fuss") but Android files a low-importance notification into the
+          // collapsed *silent* row on the lock screen — a dot, with the clock
+          // invisible, which is the one thing this feature exists to show
+          // (caught on the emulator lock screen, 26 Jul 2026). Default
+          // importance renders the card; `playSound`/`enableVibration` off and
+          // `silent` keep it from making any noise about it.
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+          playSound: false,
+          enableVibration: false,
+          silent: true,
+          ongoing: true,
+          autoCancel: false,
+          usesChronometer: true,
+          when: startedAt.millisecondsSinceEpoch,
+          showWhen: true,
+          onlyAlertOnce: true,
+          visibility: NotificationVisibility.public,
+          category: AndroidNotificationCategory.progress,
+        ),
+        iOS: const DarwinNotificationDetails(presentAlert: false, presentBadge: false),
+      ),
       payload: payload,
     );
   }

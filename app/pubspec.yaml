@@ -77,6 +77,12 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Test-only, and already in the lock file as a transitive dependency of
+  # flutter_local_notifications: the reading-session notification test has to
+  # register the Android platform implementation by hand, because a macOS test
+  # host otherwise makes every `show` call a silent no-op and the test would
+  # pass while asserting nothing.
+  flutter_local_notifications_platform_interface: ^8.0.0
   flutter_lints: ^6.0.0
   build_runner: ^2.4.13
   drift_dev: ^2.22.1

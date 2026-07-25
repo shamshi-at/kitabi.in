@@ -5355,6 +5355,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Estimates use a typical pace until you\'ve timed a few sittings.'**
   String get paceFilterAssumedNote;
+
+  /// Line under the live reading clock on the lock screen when the book's length is known
+  ///
+  /// In en, this message translates to:
+  /// **'p. {page} of {total}'**
+  String timerLiveProgress(int page, int total);
+
+  /// Line under the live reading clock when only the current page is known
+  ///
+  /// In en, this message translates to:
+  /// **'p. {page}'**
+  String timerLiveProgressPage(int page);
+
+  /// Line under the live reading clock when no page has been recorded
+  ///
+  /// In en, this message translates to:
+  /// **'Reading now'**
+  String get timerLiveRunning;
+
+  /// Label above the elapsed time on the iOS Live Activity lock-screen card
+  ///
+  /// In en, this message translates to:
+  /// **'Reading'**
+  String get timerLiveElapsed;
 }
 
 class _AppLocalizationsDelegate

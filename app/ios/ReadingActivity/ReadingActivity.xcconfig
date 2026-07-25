@@ -1,0 +1,6 @@
+// Pulls in FLUTTER_BUILD_NAME / FLUTTER_BUILD_NUMBER so the extension's version
+// stays in lockstep with the app (App Store rejects a version mismatch between an
+// app and its embedded extension) — same reason NotificationService includes it.
+// Deliberately does NOT include the Pods xcconfig: the widget links nothing from
+// the app's pods, only ActivityKit / WidgetKit / SwiftUI.
+#include "../Flutter/Generated.xcconfig"

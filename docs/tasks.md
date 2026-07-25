@@ -582,6 +582,18 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       facet** (buckets, cover time tags, and an honest "N can't be estimated" count).
       Deliberately **not** a crowd average — see the note in docs/screen-design.md;
       the shared figure stays locked until enough readers have logged pages
+- [x] **The sitting on the lock screen** — one `ReadingLiveActivity` API, two
+      mechanisms, because the platforms genuinely differ. **iOS:** a real Live
+      Activity — new `ReadingActivity` widget extension (ActivityKit + WidgetKit,
+      iOS 16.2+, added to `Runner.xcodeproj` by script), lock-screen card and Dynamic
+      Island in the Reading Room palette, driven from `ReadingActivityController.swift`
+      over a method channel. **Android:** an ongoing notification the system ticks
+      itself (`usesChronometer` from the sitting's start), which is Android's
+      equivalent below Android 16. Started in `ActiveSessionController.start`, ended in
+      `stopAndLogActiveSession` (the one stop path), and reconciled on every resume so
+      a background-isolate stop can't leave a clock running on the lock screen.
+      Follow-up: Android 16 promoted "Live Updates" (`Notification.ProgressStyle`)
+      once the notifications plugin exposes it
 
 ## Phase 7 — Recommendations & share
 
