@@ -37,6 +37,7 @@ class ShelfCover extends StatelessWidget {
     this.lentToName,
     this.borrowedFromName,
     this.returned = false,
+    this.timeTag,
   });
 
   final String title;
@@ -48,6 +49,11 @@ class ShelfCover extends StatelessWidget {
   final String? lentToName;
   final String? borrowedFromName;
   final bool returned;
+
+  /// "4h 20m" — how long this book would take the reader, shown only while a
+  /// time-to-finish filter is on (Area 13, P5). Bottom-right, so it never
+  /// fights the status pill (bottom-left) or the favourite ribbon (top-right).
+  final String? timeTag;
 
   @override
   Widget build(BuildContext context) {
@@ -100,6 +106,29 @@ class ShelfCover extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.4,
                   color: AppColors.stampGrey,
+                ),
+              ),
+            ),
+          ),
+        if (timeTag != null)
+          Positioned(
+            right: 4,
+            bottom: 5,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xF0F0E2C2),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(color: Color(0x33000000), blurRadius: 3, offset: Offset(0, 1)),
+                ],
+              ),
+              child: Text(
+                timeTag!,
+                style: TextStyle(
+                  fontSize: 7,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF8F681E),
                 ),
               ),
             ),

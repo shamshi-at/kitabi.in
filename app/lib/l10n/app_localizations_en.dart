@@ -3009,4 +3009,211 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browseFabLabel => 'Search and filter the catalogue';
+
+  @override
+  String get paceLabel => 'Time to finish';
+
+  @override
+  String get paceLabelYours => 'your pace';
+
+  @override
+  String get paceLabelAssumed => 'not yours yet';
+
+  @override
+  String get paceOfReading => 'of reading';
+
+  @override
+  String get paceLeft => 'left';
+
+  @override
+  String pacePages(int count) {
+    return '$count pages';
+  }
+
+  @override
+  String paceSittings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '≈ $count sittings',
+      one: '≈ 1 sitting',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get paceSittingsUnit => 'sittings';
+
+  @override
+  String paceWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '≈ $count weeks',
+      one: '≈ 1 week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String paceDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '≈ $count days',
+      one: '≈ 1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get paceAtYourRate => 'at your rate';
+
+  @override
+  String paceYourPaceLine(String pph, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Your pace $pph pages/hour, from $count sittings.',
+      one: 'Your pace $pph pages/hour, from 1 sitting.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String paceLanguageLine(String language, String pph) {
+    return 'Your pace in $language: $pph pages/hour.';
+  }
+
+  @override
+  String paceWeeklyHabit(String duration) {
+    return 'You\'ve read $duration a week lately.';
+  }
+
+  @override
+  String paceAssumedValue(String pph) {
+    return 'at a typical $pph pages/hour';
+  }
+
+  @override
+  String paceAssumedHint(int have, int need) {
+    return '$have of $need timed sittings. Log a page when you stop and this becomes your number.';
+  }
+
+  @override
+  String paceFinishAround(String date) {
+    return 'Keep this up and you\'d finish around $date';
+  }
+
+  @override
+  String paceBookPaceLine(String pph, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Measured on this book: $pph pages/hour over $count sittings.',
+      one: 'Measured on this book: $pph pages/hour over 1 sitting.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String paceVsUsual(String pph) {
+    return 'Your usual is $pph.';
+  }
+
+  @override
+  String get paceNoPageCount =>
+      'Nobody has told the catalogue how long this book is.';
+
+  @override
+  String get paceNoPageCountSub =>
+      'Your pace is fine — it\'s the pages that are missing.';
+
+  @override
+  String get paceAddPageCount => 'How long is it?';
+
+  @override
+  String get paceAddPageCountHint =>
+      'Check the last numbered page. It fixes this for every reader of this edition, not just you.';
+
+  @override
+  String get paceHiddenFromFilters => 'Hidden from time-to-finish filters';
+
+  @override
+  String get paceFinished => 'Finished';
+
+  @override
+  String get paceYouReadItIn => 'you read it in';
+
+  @override
+  String paceActualSittings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sittings',
+      one: '1 sitting',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String paceCalibration(String estimate) {
+    return 'At your usual pace this would have been $estimate.';
+  }
+
+  @override
+  String paceCalibrationOver(int percent, String pph) {
+    return 'You ran $percent% over — $pph pages/hour here.';
+  }
+
+  @override
+  String paceCalibrationUnder(int percent, String pph) {
+    return 'You came in $percent% under — $pph pages/hour here.';
+  }
+
+  @override
+  String paceStripValue(String duration) {
+    return '≈ $duration for you';
+  }
+
+  @override
+  String paceStripAssumed(String duration) {
+    return '≈ $duration at a typical pace';
+  }
+
+  @override
+  String get paceFilterLabel => 'Time to finish';
+
+  @override
+  String get paceFilterAny => 'Any';
+
+  @override
+  String paceFilterUnder(int hours) {
+    return 'Under ${hours}h';
+  }
+
+  @override
+  String paceFilterRange(int from, int to) {
+    return '$from – ${to}h';
+  }
+
+  @override
+  String paceFilterOver(int hours) {
+    return '${hours}h +';
+  }
+
+  @override
+  String paceFilterExcluded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books have no page count, so they can\'t be estimated.',
+      one: '1 book has no page count, so it can\'t be estimated.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get paceFilterAssumedNote =>
+      'Estimates use a typical pace until you\'ve timed a few sittings.';
 }

@@ -571,6 +571,17 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [x] Reading goal ring (personal, e.g. 30 books/year) — S10. Progress ring (read ÷ goal),
       goal stored device-local in `key_values` (default 30, tap to edit)
 - [x] Year selector (2026 / 2025 / all time) — S10
+- [x] **Time to finish** (Area 13, P1–P9) — the reader's own pace, from sittings that
+      recorded a page range, turned into hours / sittings / weeks. Pure
+      `computeReadingPace` + `estimateFinish` (`features/insights/reading_pace.dart`,
+      16 unit tests) behind a reactive `readingPaceProvider`; one `TimeToFinish` widget
+      covers every state — total, remaining + finish date, the book's own pace, the
+      finished book's *actual* with a calibration line, the assumed-pace state, and the
+      no-page-count prompt. Rides inside `_ReadingCard` on an owned book and as a gold
+      strip on the frontispiece of one you don't own. Library gains a **time-to-finish
+      facet** (buckets, cover time tags, and an honest "N can't be estimated" count).
+      Deliberately **not** a crowd average — see the note in docs/screen-design.md;
+      the shared figure stays locked until enough readers have logged pages
 
 ## Phase 7 — Recommendations & share
 

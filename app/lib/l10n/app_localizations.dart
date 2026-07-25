@@ -5121,6 +5121,240 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search and filter the catalogue'**
   String get browseFabLabel;
+
+  /// Section label on the reading card for the time-to-finish estimate
+  ///
+  /// In en, this message translates to:
+  /// **'Time to finish'**
+  String get paceLabel;
+
+  /// Qualifier after the Time to finish label when the estimate uses the reader's measured pace
+  ///
+  /// In en, this message translates to:
+  /// **'your pace'**
+  String get paceLabelYours;
+
+  /// Qualifier after the Time to finish label when the pace is the typical fallback, not measured
+  ///
+  /// In en, this message translates to:
+  /// **'not yours yet'**
+  String get paceLabelAssumed;
+
+  /// Caption beside the total estimate on a book that hasn't been started
+  ///
+  /// In en, this message translates to:
+  /// **'of reading'**
+  String get paceOfReading;
+
+  /// Caption beside the remaining-time estimate on a book in progress
+  ///
+  /// In en, this message translates to:
+  /// **'left'**
+  String get paceLeft;
+
+  /// Page count under the estimate caption
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pages'**
+  String pacePages(int count);
+
+  /// Estimate expressed in typical reading sittings
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{≈ 1 sitting} other{≈ {count} sittings}}'**
+  String paceSittings(int count);
+
+  /// Label under the sittings figure
+  ///
+  /// In en, this message translates to:
+  /// **'sittings'**
+  String get paceSittingsUnit;
+
+  /// Estimate expressed in weeks at the reader's recent reading rate
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{≈ 1 week} other{≈ {count} weeks}}'**
+  String paceWeeks(int count);
+
+  /// Estimate in days, used instead of weeks when it is under a fortnight
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{≈ 1 day} other{≈ {count} days}}'**
+  String paceDays(int count);
+
+  /// Label under the weeks figure, naming what it is based on
+  ///
+  /// In en, this message translates to:
+  /// **'at your rate'**
+  String get paceAtYourRate;
+
+  /// Footnote naming the measured pace and its sample size
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Your pace {pph} pages/hour, from 1 sitting.} other{Your pace {pph} pages/hour, from {count} sittings.}}'**
+  String paceYourPaceLine(String pph, int count);
+
+  /// Footnote when the estimate used a language-specific pace
+  ///
+  /// In en, this message translates to:
+  /// **'Your pace in {language}: {pph} pages/hour.'**
+  String paceLanguageLine(String language, String pph);
+
+  /// Footnote naming the weekly reading habit behind the weeks figure
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve read {duration} a week lately.'**
+  String paceWeeklyHabit(String duration);
+
+  /// Caption beside an estimate built on the typical fallback pace
+  ///
+  /// In en, this message translates to:
+  /// **'at a typical {pph} pages/hour'**
+  String paceAssumedValue(String pph);
+
+  /// Explains that the estimate is borrowed until the reader has enough measured sittings
+  ///
+  /// In en, this message translates to:
+  /// **'{have} of {need} timed sittings. Log a page when you stop and this becomes your number.'**
+  String paceAssumedHint(int have, int need);
+
+  /// Projected finish date from the remaining time and the weekly habit
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this up and you\'d finish around {date}'**
+  String paceFinishAround(String date);
+
+  /// Footnote when the estimate used the book's own measured pace
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Measured on this book: {pph} pages/hour over 1 sitting.} other{Measured on this book: {pph} pages/hour over {count} sittings.}}'**
+  String paceBookPaceLine(String pph, int count);
+
+  /// Comparison of this book's pace against the reader's overall pace
+  ///
+  /// In en, this message translates to:
+  /// **'Your usual is {pph}.'**
+  String paceVsUsual(String pph);
+
+  /// Shown instead of an estimate when the edition has no page count
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody has told the catalogue how long this book is.'**
+  String get paceNoPageCount;
+
+  /// Clarifies that the missing half is the page count, not the reader's pace
+  ///
+  /// In en, this message translates to:
+  /// **'Your pace is fine — it\'s the pages that are missing.'**
+  String get paceNoPageCountSub;
+
+  /// Prompt asking the reader for the edition's page count
+  ///
+  /// In en, this message translates to:
+  /// **'How long is it?'**
+  String get paceAddPageCount;
+
+  /// Explains that a page count improves the shared catalogue, not just this reader's copy
+  ///
+  /// In en, this message translates to:
+  /// **'Check the last numbered page. It fixes this for every reader of this edition, not just you.'**
+  String get paceAddPageCountHint;
+
+  /// Tells the reader this book is excluded from the library's time filter
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden from time-to-finish filters'**
+  String get paceHiddenFromFilters;
+
+  /// Label on the actual reading time of a book that has been read
+  ///
+  /// In en, this message translates to:
+  /// **'Finished'**
+  String get paceFinished;
+
+  /// Caption beside the actual total time on a finished book
+  ///
+  /// In en, this message translates to:
+  /// **'you read it in'**
+  String get paceYouReadItIn;
+
+  /// Number of sittings a finished book took
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 sitting} other{{count} sittings}}'**
+  String paceActualSittings(int count);
+
+  /// Compares what the estimate would have said against the actual time taken
+  ///
+  /// In en, this message translates to:
+  /// **'At your usual pace this would have been {estimate}.'**
+  String paceCalibration(String estimate);
+
+  /// Says the book took longer than the reader's usual pace predicted
+  ///
+  /// In en, this message translates to:
+  /// **'You ran {percent}% over — {pph} pages/hour here.'**
+  String paceCalibrationOver(int percent, String pph);
+
+  /// Says the book took less time than the reader's usual pace predicted
+  ///
+  /// In en, this message translates to:
+  /// **'You came in {percent}% under — {pph} pages/hour here.'**
+  String paceCalibrationUnder(int percent, String pph);
+
+  /// The one-line estimate on a book the reader doesn't own
+  ///
+  /// In en, this message translates to:
+  /// **'≈ {duration} for you'**
+  String paceStripValue(String duration);
+
+  /// The one-line estimate on an unowned book, before the reader's pace is known
+  ///
+  /// In en, this message translates to:
+  /// **'≈ {duration} at a typical pace'**
+  String paceStripAssumed(String duration);
+
+  /// Library filter section label for the time-to-finish buckets
+  ///
+  /// In en, this message translates to:
+  /// **'Time to finish'**
+  String get paceFilterLabel;
+
+  /// Time-to-finish filter chip that applies no time limit
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get paceFilterAny;
+
+  /// Time-to-finish filter chip for books estimated under a number of hours
+  ///
+  /// In en, this message translates to:
+  /// **'Under {hours}h'**
+  String paceFilterUnder(int hours);
+
+  /// Time-to-finish filter chip for books estimated between two hour figures
+  ///
+  /// In en, this message translates to:
+  /// **'{from} – {to}h'**
+  String paceFilterRange(int from, int to);
+
+  /// Time-to-finish filter chip for books estimated over a number of hours
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h +'**
+  String paceFilterOver(int hours);
+
+  /// Honest footnote naming how many books the time filter had to leave out
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 book has no page count, so it can\'t be estimated.} other{{count} books have no page count, so they can\'t be estimated.}}'**
+  String paceFilterExcluded(int count);
+
+  /// Filter-sheet note shown while the reader's own pace isn't measured yet
+  ///
+  /// In en, this message translates to:
+  /// **'Estimates use a typical pace until you\'ve timed a few sittings.'**
+  String get paceFilterAssumedNote;
 }
 
 class _AppLocalizationsDelegate

@@ -373,6 +373,11 @@ class ReadingSessionsRepository extends Repo {
   Future<List<ReadingSession>> sessionsSince(DateTime since) =>
       db.readingSessionsDao.allSince(since);
 
+  /// Reactive twin of [sessionsSince] — feeds the reading-pace figure, which
+  /// must refresh the moment any of the four logging routes writes a sitting.
+  Stream<List<ReadingSession>> watchSessionsSince(DateTime since) =>
+      db.readingSessionsDao.watchAllSince(since);
+
   Future<int> totalSecondsSince(DateTime since) async {
     final sessions = await sessionsSince(since);
     return sessions.fold<int>(0, (sum, s) => sum + s.durationSeconds);

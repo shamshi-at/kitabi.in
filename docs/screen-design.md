@@ -284,6 +284,45 @@ camera; everything else stays paper.
   no shelf, the same card quiets to "Not on a shelf yet · Choose a shelf". The
   fan falls back to the book's own cover when it's the only one on the shelf.
 
+- **"Time to finish" is your pace, never a crowd average** (designed 26 Jul 2026,
+  mockups **P1–P6**, Area 13). Every timed sitting already stores `duration_seconds`
+  plus a page range, which is exactly enough to answer *can I finish this one?* —
+  but the honest answer is measured on **you**, not on other readers: with a handful
+  of users, a "community average" would be one person's sittings wearing a plural
+  noun, the same reason mockup **4h** refuses a Trending row. The estimate rides
+  *inside* the existing `_ReadingCard` (the book page does not grow a box) in three
+  units, because they answer different questions: **hours** is the fact, **sittings**
+  is what it feels like, and **weeks** — the gold one — is the only one that knows
+  the reader manages 5h 20m a week rather than 20. Pace resolves most-specific-first:
+  this book's own sittings → this language → overall (trailing 90 days) → a stated
+  typical 40 pp/h. On a book in progress the number flips to **time remaining** plus
+  a finish date. Every figure is auditable one tap away (**P3**), with its sample
+  size beside it, and the crowd row sits there *locked* until ≥5 readers have logged
+  pages — designed now, dormant now. The filter is the same arithmetic backwards
+  (**P4**): buckets for browsing, and a **date that becomes an hours budget**
+  ("by Sun 2 Aug — about 5h 20m at your recent rate"), which is where a borrowed
+  book's due-back date will drop in. Books with no page count can't be estimated, so
+  the sheet and the result grid **say how many and offer them anyway** rather than
+  silently shrinking the shelf. **P6** is the state every reader starts in and the
+  one the feature lives or dies on: a grey, dashed, explicitly borrowed number with a
+  "1 of 3 sittings" bar toward owning it — it must visibly change when it becomes
+  real, and it carries the same off switch the recommendation cards do.
+  **It appears on *every* book page, because it only needs two inputs** — the
+  edition's page count (Layer 1, present whether or not you own the book) and one
+  global pace number (all your sittings, not this book's). So: inside `_ReadingCard`
+  when there's an entry (**P1**/**P2**), as a **one-line gold strip under the
+  frontispiece metadata** on an unowned catalogue book (**P7**) where there is no
+  reading card and it must not compete with the pinned Add bar — and that is where it
+  earns the most, since it's the *deciding* screen. A finished book stops estimating
+  and shows the **actual** in moss, plus the line that makes the whole feature
+  trustworthy: **it marks its own homework** ("guessed 6h 05m, you ran 9% over",
+  **P8**). Missing data is only ever the *page count*, never the pace, so **P9** says
+  which half is missing, asks for the one number that fixes it for every reader of
+  that edition, and shows the book its own row in P4's "6 can't be estimated" count.
+  All nine states are one widget with one state machine over
+  `(pageCount, currentPage, status, paceSampleSize)` — four surfaces built separately
+  is exactly how the progress-entry points drifted (see Lessons learned).
+
 ## Screen inventory (v1)
 
 1. Sign in (Google/Apple) · 2. CSV import · 3. Home dashboard · 4. Global search ·

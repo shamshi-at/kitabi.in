@@ -156,7 +156,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   </div>
   <nav class="toc">
     <a href="#welcome">Welcome</a><a href="#home">Home</a><a href="#library">Library</a>
-    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a><a href="#extras">Extras</a><a href="#translations">Translations</a><a href="#creating">Creating</a><a href="#stopping">Stopping</a><a href="#notes">Notes</a><a href="#status">Status</a>
+    <a href="#lending">Lending</a><a href="#insights">Insights</a><a href="#profile">Profile</a><a href="#extras">Extras</a><a href="#translations">Translations</a><a href="#creating">Creating</a><a href="#stopping">Stopping</a><a href="#notes">Notes</a><a href="#status">Status</a><a href="#pace">Time to finish</a>
   </nav>
 </header>
 
@@ -3038,6 +3038,476 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       clock on it, so there's never a moment where starting and stopping are two different controls
       in two different places. The secondary slot shifts with it, from editing the page to taking a
       note, which is what you actually want mid-session.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= AREA 13 — TIME TO FINISH ================= -->
+<section class="area" id="pace">
+  <div class="ah"><span class="an">Area 13</span><h2>Time to finish — the question every shelf asks</h2></div>
+  <p class="desc">Every timed sitting already records <code>duration_seconds</code> and a page range,
+  so Kitabi can answer the question a reader actually stands in front of their shelf asking:
+  <b>can I finish this one?</b> The honest answer is <b>not</b> a crowd average — one reader's
+  sittings are not "average reading time", and mockup <b>4h</b> already established the rule that a
+  row sorted by nothing doesn't ship. It's <b>your</b> pace: pages per hour, measured from sittings
+  where you noted a page, turned into hours, sittings, and — the number that decides things —
+  <i>weeks, against how much you actually read lately</i>. The filter is the same arithmetic run
+  backwards: a date becomes an hours budget, and the library shows what fits inside it.</p>
+  <div class="row">
+
+    <!-- P1. The estimate on an unread book -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar" style="background:var(--paper-deep)"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="overflow:hidden">
+          <div style="background:var(--paper-deep);padding:6px 13px 11px;display:flex;gap:10px">
+            <div class="cover" style="width:50px;height:73px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:7px">The Covenant of Water</div><div class="ca">Verghese</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="h-serif" style="font-size:14px;line-height:1.2">The Covenant of Water</div>
+              <div class="sub" style="margin-top:2px"><span style="color:var(--oxblood);font-weight:600">Abraham Verghese</span> · 2023</div>
+              <div class="sub" style="font-size:8.5px">724 pp · English</div>
+              <span class="stamp tbr" style="margin-top:5px">To read</span>
+            </div>
+          </div>
+
+          <div style="padding:10px 13px;display:flex;flex-direction:column;gap:8px">
+
+            <div class="card" style="padding:0;overflow:hidden">
+              <div style="background:var(--paper-deep);padding:6px 10px;display:flex;justify-content:space-between;align-items:center">
+                <div class="sub" style="font-size:7px;letter-spacing:1.2px">◷ TIME TO FINISH · YOUR PACE</div>
+                <span style="font-size:8px;color:var(--oxblood);font-weight:700">?</span>
+              </div>
+              <div style="padding:10px">
+                <div style="display:flex;align-items:baseline;gap:7px">
+                  <div class="h-serif" style="font-size:30px;color:var(--oxblood);line-height:1">17h 15m</div>
+                  <div class="sub" style="font-size:8.5px;line-height:1.35">of reading<br>724 pages</div>
+                </div>
+                <div style="display:flex;gap:5px;margin-top:9px">
+                  <div style="flex:1;border:1px solid var(--line);border-radius:9px;padding:6px 4px;text-align:center;background:var(--paper)">
+                    <div style="font-size:11px;font-weight:700">≈ 14</div><div class="sub" style="font-size:7px;margin-top:1px">sittings</div>
+                  </div>
+                  <div style="flex:1;border:1px solid var(--gold);border-radius:9px;padding:6px 4px;text-align:center;background:var(--gold-soft)">
+                    <div style="font-size:11px;font-weight:700;color:#8F681E">≈ 3 weeks</div><div class="sub" style="font-size:7px;margin-top:1px;color:#8a6f34">at your rate</div>
+                  </div>
+                </div>
+                <div class="sub" style="font-size:7.5px;margin-top:8px;line-height:1.5">Your pace <b style="color:var(--ink)">42 pages/hour</b> · your usual sitting <b style="color:var(--ink)">1h 12m</b> · you've read <b style="color:var(--ink)">5h 20m a week</b> lately.</div>
+              </div>
+            </div>
+
+            <div class="btn" style="padding:10px">▶ Start reading</div>
+            <div class="card" style="padding:8px;background:#F6EEDC;border-color:#E8DCC0">
+              <div class="sub" style="font-size:7.5px;line-height:1.5">This is the longest book on your To-read shelf. <b style="color:var(--ink)">Chemmeen</b> would take you an evening.</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P1 · How long will this take me?</b> The estimate rides <i>inside</i> the
+      reading card — the book page does not grow another box. Three units, because they answer
+      different questions: <b>hours</b> is the raw fact, <b>sittings</b> is what it feels like, and
+      <b>weeks</b> — gold, because it's the one that decides — is the only one that knows you read
+      5h 20m a week and not 20. The pace line underneath is not decoration: an estimate you can't
+      audit is a horoscope.</p>
+    </div>
+
+    <!-- P2. Mid-book: what's left -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar" style="background:var(--paper-deep)"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="overflow:hidden">
+          <div style="background:var(--paper-deep);padding:6px 13px 11px;display:flex;gap:10px">
+            <div class="cover" style="width:50px;height:73px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:7px">The Covenant of Water</div><div class="ca">Verghese</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="h-serif" style="font-size:14px;line-height:1.2">The Covenant of Water</div>
+              <div class="sub" style="margin-top:2px">Abraham Verghese · 2023</div>
+              <span class="stamp reading" style="margin-top:5px">Reading</span>
+            </div>
+          </div>
+
+          <div style="padding:10px 13px;display:flex;flex-direction:column;gap:8px">
+            <div class="card" style="padding:10px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between">
+                <div style="font-size:11px;font-weight:700">p. 302 of 724</div><span class="sub" style="font-size:8px">42%</span>
+              </div>
+              <div style="height:5px;border-radius:99px;background:var(--paper-deep);margin-top:5px;overflow:hidden"><div style="width:42%;height:100%;background:linear-gradient(90deg,var(--gold),var(--oxblood))"></div></div>
+
+              <div class="rule" style="margin:10px 0 8px"></div>
+
+              <div style="display:flex;align-items:baseline;gap:7px">
+                <div class="h-serif" style="font-size:26px;color:var(--oxblood);line-height:1">12h 05m</div>
+                <div class="sub" style="font-size:8.5px;line-height:1.35">left<br>422 pages</div>
+              </div>
+              <div class="card" style="margin-top:9px;padding:7px 9px;background:var(--paper-deep);display:flex;align-items:center;gap:7px">
+                <span style="font-size:11px">⌸</span>
+                <div style="flex:1;font-size:8.5px;line-height:1.45">Keep this up and you'd finish <b>around Tue 11 Aug</b><div class="sub" style="font-size:7.5px">≈ 10 more sittings</div></div>
+              </div>
+              <div class="sub" style="font-size:7.5px;margin-top:8px;line-height:1.5">Measured on <b style="color:var(--ink)">this book</b>: 35 pages/hour over 5 sittings — slower than your usual 42.</div>
+
+              <div style="display:flex;gap:6px;margin-top:10px">
+                <div class="btn" style="flex:2.2;padding:10px;font-size:10.5px">▶ Start a session</div>
+                <div style="flex:1;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--oxblood);font-size:9px;font-weight:600">✎ Page</div>
+              </div>
+            </div>
+            <div class="sub" style="font-size:7.5px;text-align:center">Last read yesterday · 5 sessions · 3h 22m ›</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P2 · What's left, not what it costs</b> Once you've started, the total is the
+      wrong number — <b>time remaining</b> is the one you want, and it gets measured on
+      <i>this book</i> (35 pp/h over its own 5 sittings) rather than your average, because a dense
+      book is dense for you specifically. The finish date is the payoff and the honesty at once: it
+      only exists because the app knows both your pace and your weekly habit, and the line under it
+      says exactly which sittings produced it.</p>
+    </div>
+
+    <!-- P3. The estimate, opened -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.32)">
+          <div style="position:absolute;left:0;right:0;bottom:0;top:132px;background:var(--paper);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 15px 16px;display:flex;flex-direction:column">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 11px"></div>
+            <div class="h-serif" style="font-size:15px">Where 17h 15m comes from</div>
+            <div class="sub" style="font-size:8px;margin-top:1px">Nothing here is a guess about other people.</div>
+
+            <div style="display:flex;gap:4px;margin-top:10px">
+              <span class="chip on" style="font-size:8px">Hours</span><span class="chip" style="font-size:8px">Sittings</span><span class="chip" style="font-size:8px">Weeks</span>
+            </div>
+
+            <div class="card" style="margin-top:10px;padding:0">
+              <div style="display:flex;align-items:center;padding:8px 10px;gap:8px">
+                <div style="flex:1;font-size:9px">This book<div class="sub" style="font-size:7.5px">catalogue page count</div></div>
+                <div style="font-size:10px;font-weight:700">724 pp</div>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;align-items:center;padding:8px 10px;gap:8px;background:var(--gold-soft)">
+                <div style="flex:1;font-size:9px;font-weight:600">Your pace, overall<div class="sub" style="font-size:7.5px;color:#8a6f34">38 sittings · last 90 days</div></div>
+                <div style="font-size:10px;font-weight:700;color:#8F681E">42 pp/h</div>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;align-items:center;padding:8px 10px;gap:8px">
+                <div style="flex:1;font-size:9px">Your pace in English<div class="sub" style="font-size:7.5px">26 pp/h in മലയാളം — scripts differ</div></div>
+                <div style="font-size:10px;font-weight:700">44 pp/h</div>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;align-items:center;padding:8px 10px;gap:8px">
+                <div style="flex:1;font-size:9px">How much you read<div class="sub" style="font-size:7.5px">average of the last 6 weeks</div></div>
+                <div style="font-size:10px;font-weight:700">5h 20m / wk</div>
+              </div>
+              <div style="border-top:1px solid var(--line);display:flex;align-items:center;padding:8px 10px;gap:8px;opacity:.5">
+                <div style="flex:1;font-size:9px">Other readers of this book<div class="sub" style="font-size:7.5px">needs 5 readers with pages — 1 so far</div></div>
+                <div class="sub" style="font-size:9px">🔒</div>
+              </div>
+            </div>
+
+            <div class="sub" style="font-size:7.5px;margin-top:9px;line-height:1.55">Only sittings where you noted a page can measure pace — the other 12 still count toward your week. Turn estimates off in Profile and every line above disappears.</div>
+            <div style="margin-top:auto"><div class="btn soft" style="padding:9px;font-size:9.5px;border:1px solid var(--line)">Close</div></div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P3 · The audit, one tap away</b> Reached from P1's "?". Each row is a number
+      the app can defend, with the sample size beside it. The <b>language row</b> earns its place in
+      an <code>.in</code> app — 44 pp/h in English against 26 in മലയാളം is a real effect, and an
+      estimate that ignored it would be wrong on half the shelf. The greyed row is the idea this
+      feature started as: a <i>crowd</i> average, locked until five readers have actually logged
+      pages, saying so plainly instead of averaging one person and calling it "average".</p>
+    </div>
+
+    <!-- P4. The filter -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative">
+          <div style="filter:blur(2px) brightness(.92);padding:6px 13px">
+            <div class="pgtitle">My Library</div>
+            <div class="card" style="height:44px;margin-top:8px"></div>
+            <div class="card" style="height:44px;margin-top:7px"></div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:13px 15px 16px;box-shadow:0 -12px 30px rgba(43,33,24,.18)">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 9px"></div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <div class="h-serif" style="font-size:15px">Filter</div>
+              <span style="font-size:8.5px;color:var(--oxblood);font-weight:700">Clear all</span>
+            </div>
+
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:10px 0 4px">◷ TIME TO FINISH · at your pace</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="chip" style="font-size:8px">Any</span><span class="chip" style="font-size:8px">＜3h</span><span class="chip on" style="font-size:8px">3–8h</span><span class="chip" style="font-size:8px">8–15h</span><span class="chip" style="font-size:8px">15h＋</span>
+            </div>
+
+            <div class="card" style="margin-top:8px;padding:8px 10px;border-color:#E5D3A6;background:var(--gold-soft)">
+              <div style="display:flex;align-items:center;gap:7px">
+                <span style="font-size:11px">⌸</span>
+                <div style="flex:1;font-size:9px;font-weight:600;color:#8F681E">Finish by <span style="text-decoration:underline">Sun 2 Aug</span></div>
+                <span style="font-size:9px;color:#8F681E">›</span>
+              </div>
+              <div class="sub" style="font-size:7.5px;margin-top:4px;color:#8a6f34;line-height:1.45">That's about <b>5h 20m</b> of reading at your recent rate — a week away, and you read 5h 20m a week.</div>
+            </div>
+
+            <div class="sub" style="font-size:7.5px;letter-spacing:1px;margin:10px 0 4px">STATUS</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="chip" style="font-size:8px">Reading</span><span class="chip on" style="font-size:8px">To read</span><span class="chip" style="font-size:8px">Read</span><span class="chip" style="font-size:8px">Wishlist</span>
+            </div>
+
+            <div class="btn" style="margin-top:11px">Show 12 books</div>
+            <div class="sub" style="font-size:7.5px;margin-top:8px;text-align:center;line-height:1.5">6 books have no page count, so they can't be estimated — <span style="color:var(--oxblood);font-weight:700">show them too</span></div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P4 · The filter is the arithmetic, backwards</b> Buckets for browsing, but
+      the gold row is the real feature: <b>a date is an hours budget</b>. "By Sun 2 Aug" only means
+      something because the app knows you read 5h 20m a week — so it says that out loud rather than
+      quietly filtering on a number you can't see. The footer is non-negotiable (CLAUDE.md's
+      no-silent-caps rule): books with no page count are <i>excluded</i>, so the sheet says how many
+      and offers them anyway. Next door: a borrowed book's <b>due-back date</b> drops straight into
+      this field.</p>
+    </div>
+
+    <!-- P5. The result -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;align-items:center;gap:7px;margin-top:9px">
+            <span style="font-size:12px;color:var(--oxblood)">‹</span>
+            <div><div class="h-serif" style="font-size:14px">Before Sun 2 Aug</div>
+            <div class="sub" style="font-size:8px">12 books · shortest first · ◷ 5h 20m to spend</div></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:11px">
+            <div>
+              <div class="cover" style="height:76px;background:linear-gradient(150deg,#7E4A2A,#4A2716);color:#F0E2C2"><div class="ct" style="font-size:6px">Chemmeen</div><div class="ca">Pillai</div></div>
+              <div style="text-align:center;font-size:8px;font-weight:700;color:var(--oxblood);margin-top:4px">1h 50m</div>
+            </div>
+            <div>
+              <div class="cover" style="height:76px;background:linear-gradient(150deg,#4a5a3a,#28331e);color:#E2E8D6"><div class="ct" style="font-size:6px">Mattathi</div><div class="ca">Kunhabdulla</div></div>
+              <div style="text-align:center;font-size:8px;font-weight:700;color:var(--oxblood);margin-top:4px">2h 30m</div>
+            </div>
+            <div>
+              <div class="cover" style="height:76px;background:linear-gradient(150deg,#3F4E63,#212C3B);color:#DCE5F0"><div class="ct" style="font-size:6px">The Bell Jar</div><div class="ca">Plath</div></div>
+              <div style="text-align:center;font-size:8px;font-weight:700;color:var(--oxblood);margin-top:4px">3h 05m</div>
+            </div>
+            <div>
+              <div class="cover" style="height:76px;background:linear-gradient(150deg,#6B3550,#3A1B2C);color:#F2DCE8"><div class="ct" style="font-size:6px">Ente Katha</div><div class="ca">Das</div></div>
+              <div style="text-align:center;font-size:8px;font-weight:700;color:var(--oxblood);margin-top:4px">4h 20m</div>
+            </div>
+            <div>
+              <div class="cover" style="height:76px;background:linear-gradient(150deg,#2E5350,#16302E);color:#D6EAE6"><div class="ct" style="font-size:6px">Small Things Like These</div><div class="ca">Keegan</div></div>
+              <div style="text-align:center;font-size:8px;font-weight:700;color:var(--oxblood);margin-top:4px">4h 45m</div>
+            </div>
+            <div>
+              <div class="cover" style="height:76px;background:linear-gradient(150deg,#63512E,#332913);color:#F0E6CC"><div class="ct" style="font-size:6px">Goat Days</div><div class="ca">Benyamin</div></div>
+              <div style="text-align:center;font-size:8px;font-weight:700;color:var(--oxblood);margin-top:4px">5h 10m</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:11px;padding:8px 10px;background:var(--paper-deep);display:flex;align-items:center;gap:7px">
+            <span style="font-size:11px">◷</span>
+            <div style="flex:1;font-size:8.5px;line-height:1.45">6 more can't be estimated — <b>no page count yet</b><div class="sub" style="font-size:7.5px">Add one and they join this list</div></div>
+            <span style="font-size:8.5px;font-weight:700;color:var(--oxblood)">Show</span>
+          </div>
+
+          <div class="sub" style="font-size:7.5px;margin-top:9px;text-align:center;line-height:1.5">Estimates use your pace, so this list changes as you do.</div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div><div class="on"><span class="ic">▦</span>Library</div>
+          <div><span class="fab">＋</span></div><div><span class="ic">⇄</span>Lending</div><div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P5 · The shelf, answered</b> The same cover grid as <b>5</b> — no new screen,
+      just a filtered one — with the estimate as a small oxblood line under each cover and shortest
+      first, because the ordering <i>is</i> the answer. The excluded books get a card rather than
+      silence, and the closing line sets the expectation that these numbers move: the more you read,
+      the truer the shelf gets.</p>
+    </div>
+
+    <!-- P6. Before we know your pace -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar" style="background:var(--paper-deep)"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="overflow:hidden">
+          <div style="background:var(--paper-deep);padding:6px 13px 11px;display:flex;gap:10px">
+            <div class="cover" style="width:50px;height:73px;background:linear-gradient(150deg,#274036,#16281f);color:#EFE6C8"><div class="ct" style="font-size:7px">The Covenant of Water</div><div class="ca">Verghese</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="h-serif" style="font-size:14px;line-height:1.2">The Covenant of Water</div>
+              <div class="sub" style="margin-top:2px">Abraham Verghese · 2023</div>
+              <div class="sub" style="font-size:8.5px">724 pp · English</div>
+              <span class="stamp tbr" style="margin-top:5px">To read</span>
+            </div>
+          </div>
+
+          <div style="padding:10px 13px;display:flex;flex-direction:column;gap:8px">
+            <div class="card" style="padding:0;overflow:hidden;border-style:dashed">
+              <div style="background:var(--paper-deep);padding:6px 10px">
+                <div class="sub" style="font-size:7px;letter-spacing:1.2px">◷ TIME TO FINISH · not yours yet</div>
+              </div>
+              <div style="padding:10px">
+                <div style="display:flex;align-items:baseline;gap:7px">
+                  <div class="h-serif" style="font-size:30px;color:var(--stamp-grey);line-height:1">≈ 18h</div>
+                  <div class="sub" style="font-size:8.5px;line-height:1.35">at a typical<br>40 pages/hour</div>
+                </div>
+                <div style="height:4px;border-radius:99px;background:var(--paper-deep);margin-top:10px;overflow:hidden"><div style="width:33%;height:100%;background:var(--gold)"></div></div>
+                <div class="sub" style="font-size:7.5px;margin-top:5px;line-height:1.5"><b style="color:var(--ink)">1 of 3 timed sittings.</b> Log a page when you stop and this becomes <i>your</i> number — most readers land 20% either side of it.</div>
+              </div>
+            </div>
+
+            <div class="btn" style="padding:10px">▶ Start reading</div>
+            <div class="sub" style="font-size:7.5px;text-align:center;line-height:1.5">Don't want estimates? <span style="color:var(--oxblood);font-weight:700">Turn them off</span> — the shelf goes back to page counts.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P6 · The state every reader starts in</b> The one screen this feature lives
+      or dies on. A grey, dashed, explicitly <i>borrowed</i> number — 40 pp/h, stated as such — with
+      a progress bar toward owning it, because "1 of 3 sittings" turns the caveat into a reason to
+      use the timer. It never quietly hardens into a personal figure: the card changes colour when
+      it becomes real. And the off switch sits right there, the same way the recommendation cards
+      carry theirs.</p>
+    </div>
+
+    <!-- P7. A book you don't own -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar" style="background:var(--paper-deep)"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="overflow:hidden;position:relative">
+          <div style="background:var(--paper-deep);padding:6px 13px 11px;display:flex;gap:10px">
+            <div class="cover" style="width:50px;height:73px;background:linear-gradient(150deg,#5C3A24,#3A2114);color:#F0E2C2"><div class="ct" style="font-size:7px">Kaalam</div><div class="ca">M.T.</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="h-serif" style="font-size:14px;line-height:1.2">Kaalam</div>
+              <div class="sub" style="margin-top:2px"><span style="color:var(--oxblood);font-weight:600">M.T. Vasudevan Nair</span> · 1969</div>
+              <div class="sub" style="font-size:8.5px"><span style="color:var(--oxblood);font-weight:600">Current Books</span> · 232 pp · മലയാളം</div>
+              <div class="stars" style="margin-top:3px;font-size:11px">★★★★<span class="off">★</span> <span style="color:var(--ink-soft);font-size:8px;font-family:'Inter'">4.3 · 18 readers</span></div>
+            </div>
+          </div>
+
+          <div style="padding:9px 13px 0">
+            <div style="display:flex;align-items:center;gap:7px;border:1px solid #E5D3A6;background:var(--gold-soft);border-radius:10px;padding:7px 9px">
+              <span style="font-size:11px;color:#8F681E">◷</span>
+              <div style="flex:1;font-size:9.5px;font-weight:600;color:#8F681E">≈ 8h 55m for you<div class="sub" style="font-size:7.5px;color:#8a6f34;font-weight:400">about 7 sittings · your pace in മലയാളം, 26 pp/h</div></div>
+              <span style="font-size:9px;color:#8F681E;font-weight:700">?</span>
+            </div>
+          </div>
+
+          <div style="padding:10px 13px">
+            <div class="sub" style="font-size:7px;letter-spacing:1.2px">ABOUT</div>
+            <div style="font-size:9px;line-height:1.55;margin-top:4px;color:var(--ink)">Sethu leaves Kudallur for the city, and the village he keeps promising to return to becomes the measure of everything he does instead…</div>
+            <div style="display:flex;gap:4px;margin-top:9px">
+              <span class="chip" style="font-size:8px">Fiction</span><span class="chip" style="font-size:8px">Classic</span><span class="chip" style="font-size:8px">Kerala</span>
+            </div>
+            <div class="rule" style="margin:11px 0 8px"></div>
+            <div class="sub" style="font-size:7px;letter-spacing:1.2px">READERS' REVIEWS · 6</div>
+            <div class="quote" style="font-size:9px;margin-top:4px">"The most honest unlikeable narrator in Malayalam…"</div>
+          </div>
+
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:9px 13px;display:flex;gap:7px">
+            <div class="btn" style="flex:1;padding:9px;font-size:10px">＋ Add to library</div>
+            <div class="btn ghost" style="flex:0 0 76px;padding:9px;font-size:10px;border-color:var(--slate);color:var(--slate)">Wishlist</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P7 · A book you don't own — where this matters most</b> The estimate needs
+      only <i>two</i> things: the edition's page count (shared catalogue, on every book page) and
+      your pace (one number, from all your sittings). Neither needs you to own the book — so the
+      catalogue page gets it too, and this is the moment it's worth the most: <b>deciding</b>. With
+      no reading card to live in, it becomes one gold strip under the metadata, deliberately not
+      competing with the pinned Add bar. Note it used your <b>മലയാളം</b> pace, not your English one.</p>
+    </div>
+
+    <!-- P8. A book you finished -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar" style="background:var(--paper-deep)"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="overflow:hidden">
+          <div style="background:var(--paper-deep);padding:6px 13px 11px;display:flex;gap:10px">
+            <div class="cover" style="width:50px;height:73px;background:linear-gradient(150deg,#63512E,#332913);color:#F0E6CC"><div class="ct" style="font-size:7px">Goat Days</div><div class="ca">Benyamin</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="h-serif" style="font-size:14px;line-height:1.2">Goat Days</div>
+              <div class="sub" style="margin-top:2px">Benyamin · 255 pp</div>
+              <div class="stars" style="margin-top:3px;font-size:11px">★★★★★ <span style="color:var(--ink-soft);font-size:8px;font-family:'Inter'">your rating</span></div>
+              <span class="stamp read" style="margin-top:4px">Read</span>
+            </div>
+          </div>
+
+          <div style="padding:10px 13px;display:flex;flex-direction:column;gap:8px">
+            <div class="card" style="padding:0;overflow:hidden">
+              <div style="background:#E3EAD9;padding:6px 10px">
+                <div class="sub" style="font-size:7px;letter-spacing:1.2px;color:var(--moss)">✓ FINISHED · 12 – 29 JUN</div>
+              </div>
+              <div style="padding:10px">
+                <div style="display:flex;align-items:baseline;gap:7px">
+                  <div class="h-serif" style="font-size:28px;color:var(--moss);line-height:1">6h 40m</div>
+                  <div class="sub" style="font-size:8.5px;line-height:1.35">you read it in<br>7 sittings · 18 days</div>
+                </div>
+                <div class="card" style="margin-top:9px;padding:7px 9px;background:var(--paper-deep);display:flex;align-items:center;gap:7px">
+                  <span style="font-size:11px">◷</span>
+                  <div style="flex:1;font-size:8.5px;line-height:1.45">Kitabi guessed <b>6h 05m</b> before you started<div class="sub" style="font-size:7.5px">You ran 9% over — 38 pp/h here against your usual 42</div></div>
+                </div>
+                <div class="sub" style="font-size:7.5px;margin-top:8px;text-align:center">Reading log · 7 sittings ›</div>
+              </div>
+            </div>
+
+            <div class="card" style="padding:8px;border-color:#E5D3A6;background:var(--gold-soft)">
+              <div class="sub" style="font-size:7.5px;line-height:1.55;color:#8a6f34">Your 6h 40m is one of the numbers that will one day answer <b style="color:#8F681E">other readers'</b> "how long is this?" — nothing is shared until enough people have logged one.</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P8 · Once you've finished, it stops being an estimate</b> A read book shows
+      the <b>actual</b>, in moss, with the same three units — and then does the thing that makes the
+      whole feature trustworthy: it <b>marks its own homework</b>. "Guessed 6h 05m, you ran 9% over"
+      is a calibration line the reader can check, and it's how the pace model quietly improves
+      without a settings screen. It's also the honest place to say what P3's locked row means: your
+      finished times are the raw material of the crowd average, and they stay yours until there
+      are enough of them.</p>
+    </div>
+
+    <!-- P9. No page count -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar" style="background:var(--paper-deep)"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="overflow:hidden">
+          <div style="background:var(--paper-deep);padding:6px 13px 11px;display:flex;gap:10px">
+            <div class="cover" style="width:50px;height:73px;background:linear-gradient(150deg,#4a5a3a,#28331e);color:#E2E8D6"><div class="ct" style="font-size:6.5px">Ormakkurippukal</div><div class="ca">Basheer</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="h-serif" style="font-size:14px;line-height:1.2">Ormakkurippukal</div>
+              <div class="sub" style="margin-top:2px">Vaikom Muhammad Basheer</div>
+              <div class="sub" style="font-size:8.5px">— pp · മലയാളം</div>
+              <span class="stamp tbr" style="margin-top:5px">To read</span>
+            </div>
+          </div>
+
+          <div style="padding:10px 13px;display:flex;flex-direction:column;gap:8px">
+            <div class="card" style="padding:0;overflow:hidden">
+              <div style="background:var(--paper-deep);padding:6px 10px">
+                <div class="sub" style="font-size:7px;letter-spacing:1.2px">◷ TIME TO FINISH</div>
+              </div>
+              <div style="padding:10px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div class="h-serif" style="font-size:22px;color:var(--stamp-grey);line-height:1">—</div>
+                  <div style="flex:1;font-size:9px;line-height:1.45">Nobody has told the catalogue how long this book is.<div class="sub" style="font-size:7.5px">Your pace is fine — it's the pages that are missing.</div></div>
+                </div>
+                <div class="card" style="margin-top:10px;padding:8px 10px;border-color:#E5D3A6;background:var(--gold-soft)">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="flex:1;font-size:9px;font-weight:600;color:#8F681E">How long is it?</div>
+                    <div style="background:var(--card);border-radius:8px;padding:3px 14px;font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:var(--oxblood);border:1px solid #E5D3A6">···</div>
+                    <div class="sub" style="font-size:8px;color:#8a6f34">pages</div>
+                  </div>
+                  <div class="sub" style="font-size:7.5px;margin-top:4px;color:#8a6f34;line-height:1.45">Check the last numbered page. It fixes this for every reader of this edition, not just you.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="btn" style="padding:10px">▶ Start reading</div>
+            <div class="card" style="padding:8px;background:var(--paper-deep);display:flex;align-items:center;gap:7px">
+              <span style="font-size:11px;color:var(--stamp-grey)">⌕</span>
+              <div style="flex:1;font-size:8.5px;line-height:1.45">Hidden from <b>time-to-finish filters</b><div class="sub" style="font-size:7.5px">One of the 6 the filter sheet counted</div></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P9 · The one thing that can actually be missing</b> Pace is never missing
+      (P6 covers that) — the <i>page count</i> is, and roughly a third of regional editions arrive
+      from OpenLibrary without one. So the card doesn't vanish or fake a number: it says which half
+      is missing, asks for the one number that fixes it, and states the shared-catalogue payoff the
+      same way R2 and the add form do. The grey row closes the loop with <b>P4</b> — this is one of
+      the "6 books that can't be estimated", told from the book's side, so the count on the filter
+      sheet is never a mystery.</p>
     </div>
 
   </div>

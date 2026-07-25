@@ -31,6 +31,7 @@ import '../../lending/presentation/sheet_fields.dart';
 import '../../lending/reminder.dart';
 import '../../share/presentation/share_book_sheet.dart';
 import '../cover_upload.dart';
+import '../widgets/time_to_finish.dart';
 import '../reading_progress.dart';
 import '../reading_status.dart';
 import '../stop_session_flow.dart';
@@ -158,6 +159,7 @@ class _BookDetailBodyState extends ConsumerState<_BookDetailBody> {
               genres: genres,
               publisher: publisher,
               onTapRating: unowned ? null : () => setState(() => _tab = _BookTab.about),
+              showEstimate: unowned,
             ),
             if (unowned)
               Padding(
@@ -285,6 +287,7 @@ class _Frontispiece extends ConsumerWidget {
     required this.genres,
     required this.publisher,
     required this.onTapRating,
+    this.showEstimate = false,
   });
 
   final Map<String, dynamic> work;
@@ -296,6 +299,12 @@ class _Frontispiece extends ConsumerWidget {
   /// Jumps to the About tab. Null on a book that isn't in the library — there
   /// is no tab bar to jump to, so the rating cluster is plain text there.
   final VoidCallback? onTapRating;
+
+  /// P7: on a book the reader doesn't own there is no reading card for the
+  /// time-to-finish estimate to live in, so it rides here as one line — and
+  /// this is the screen where it's worth the most, because it's the deciding
+  /// one. An owned book gets it inside the reading card instead, never twice.
+  final bool showEstimate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -539,6 +548,15 @@ class _Frontispiece extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (showEstimate)
+                  Padding(
+                    padding: EdgeInsets.only(top: 12),
+                    child: TimeToFinish(
+                      pageCount: edition?['page_count'] as int?,
+                      language: edition?['language'] as String?,
+                      variant: TimeToFinishVariant.strip,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -2286,6 +2304,18 @@ class _ReadingCard extends ConsumerWidget {
               ]),
             ),
           ]),
+          // How long this book costs *you* (Area 13). Sits with the progress
+          // it's derived from rather than in a card of its own — the book page
+          // does not grow another box. It owns its divider, so the states that
+          // render nothing (a read book with no timed sittings) don't leave a
+          // rule hanging.
+          TimeToFinish(
+            pageCount: total,
+            language: book?.language,
+            entry: entry,
+            onAddPageCount: () => _editProgress(context, ref),
+            dividerAbove: true,
+          ),
           // One control that changes state in place: Start reading becomes
           // Stop & log with the running clock on it, so starting and stopping
           // are never two buttons in two places (U5). It shows whatever the

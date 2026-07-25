@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/format_duration.dart';
 import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/router/tab_reset.dart';
@@ -16,6 +17,7 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../insights/providers/insights_providers.dart';
 import '../providers/library_providers.dart';
 import '../reading_status.dart';
 import 'library_filter_sheet.dart';
@@ -256,6 +258,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
       context,
       hits: all,
       current: _filter,
+      pace: ref.read(readingPaceProvider),
       shelves: shelves,
       shelvesOf: shelvesOf,
     );
@@ -420,8 +423,12 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
             _applyPendingShelf(shelves);
 
             final shelvesView = _openShelf == null && (_shelvesOverride ?? prefersShelves);
-            final filtered =
-                _sorted(all.where((h) => _filter.matches(h, shelvesOf: shelvesOf)).toList());
+            // Watched, not read: the pace moves as sittings are logged, and a
+            // time-filtered grid has to move with it.
+            final pace = ref.watch(readingPaceProvider);
+            final filtered = _sorted(all
+                .where((h) => _filter.matches(h, shelvesOf: shelvesOf, pace: pace))
+                .toList());
             final sortedShelves = [...shelves]
               ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
@@ -541,11 +548,47 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                               // entries now (15 Jul 2026) — one grid, banded by
                               // _LibraryGridItem, not a separate lending-sourced
                               // section.
-                              (context, index) => _LibraryGridItem(hit: filtered[index]),
+                              (context, index) => _LibraryGridItem(
+                                hit: filtered[index],
+                                // The estimate only rides the cover when the
+                                // reader asked a time question — otherwise the
+                                // shelf grows a number nobody asked for.
+                                estimate: _filter.finish == null
+                                    ? null
+                                    : estimateSecondsFor(filtered[index], pace),
+                              ),
                               childCount: filtered.length,
                             ),
                           ),
                         ),
+                      // The books the time facet had to leave out, named rather
+                      // than silently dropped (P5).
+                      if (_filter.finish != null)
+                        Builder(builder: (context) {
+                          final excluded = unestimatableCount(all, _filter,
+                              pace: pace, shelvesOf: shelvesOf);
+                          if (excluded == 0) return SliverToBoxAdapter(child: SizedBox.shrink());
+                          return SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(20, 0, 20, 96),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.search_off, size: 14, color: AppColors.stampGrey),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      l10n.paceFilterExcluded(excluded),
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.stampGrey,
+                                          height: 1.4),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
                     ],
                   ),
                   ),
@@ -1055,9 +1098,14 @@ class _NewShelfTile extends StatelessWidget {
 }
 
 class _LibraryGridItem extends ConsumerWidget {
-  const _LibraryGridItem({required this.hit});
+  const _LibraryGridItem({required this.hit, this.estimate});
 
   final LibraryHit hit;
+
+  /// Seconds left in this book at the reader's pace — set only while a
+  /// time-to-finish filter is on, so the ordering and the tag answer the same
+  /// question the reader just asked.
+  final int? estimate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1101,6 +1149,8 @@ class _LibraryGridItem extends ConsumerWidget {
         lentToName: activeLending?.borrowerName,
         borrowedFromName: isReturned ? null : borrowRecord?.borrowerName,
         returned: isReturned,
+        timeTag:
+            estimate == null ? null : formatDuration(Duration(seconds: estimate!)),
       ),
     );
   }

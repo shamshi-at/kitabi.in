@@ -181,6 +181,16 @@ class ReadingSessionsDao extends DatabaseAccessor<AppDatabase> with _$ReadingSes
       )..where((t) => t.startedAt.isBiggerOrEqualValue(since) & t.deletedAt.isNull()))
           .get();
 
+  /// The same set, watched — the reading-pace figure behind every "time to
+  /// finish" estimate has to move the moment a sitting is logged, and sittings
+  /// are written from four different routes (timer, mini-bar, quick stop,
+  /// manual log). A one-shot fetch here is the 19 Jul 2026 stale-provider bug
+  /// waiting to happen again.
+  Stream<List<ReadingSession>> watchAllSince(DateTime since) => (select(
+        readingSessions,
+      )..where((t) => t.startedAt.isBiggerOrEqualValue(since) & t.deletedAt.isNull()))
+          .watch();
+
   Future<void> insertOne(ReadingSessionsCompanion row) => into(readingSessions).insert(row);
 
   Future<void> patch(String id, ReadingSessionsCompanion patch) =>

@@ -2666,5 +2666,150 @@
   "browseFilterAllTitle": "All",
   "@browseFilterAllTitle": {"description": "Catalogue filter chip that clears a single facet (type/genre/language)"},
   "browseFabLabel": "Search and filter the catalogue",
-  "@browseFabLabel": {"description": "Accessibility label for the catalogue floating search/filter control"}
+  "@browseFabLabel": {"description": "Accessibility label for the catalogue floating search/filter control"},
+
+  "paceLabel": "Time to finish",
+  "@paceLabel": {"description": "Section label on the reading card for the time-to-finish estimate"},
+  "paceLabelYours": "your pace",
+  "@paceLabelYours": {"description": "Qualifier after the Time to finish label when the estimate uses the reader's measured pace"},
+  "paceLabelAssumed": "not yours yet",
+  "@paceLabelAssumed": {"description": "Qualifier after the Time to finish label when the pace is the typical fallback, not measured"},
+  "paceOfReading": "of reading",
+  "@paceOfReading": {"description": "Caption beside the total estimate on a book that hasn't been started"},
+  "paceLeft": "left",
+  "@paceLeft": {"description": "Caption beside the remaining-time estimate on a book in progress"},
+  "pacePages": "{count} pages",
+  "@pacePages": {
+    "description": "Page count under the estimate caption",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "paceSittings": "{count, plural, =1{≈ 1 sitting} other{≈ {count} sittings}}",
+  "@paceSittings": {
+    "description": "Estimate expressed in typical reading sittings",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "paceSittingsUnit": "sittings",
+  "@paceSittingsUnit": {"description": "Label under the sittings figure"},
+  "paceWeeks": "{count, plural, =1{≈ 1 week} other{≈ {count} weeks}}",
+  "@paceWeeks": {
+    "description": "Estimate expressed in weeks at the reader's recent reading rate",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "paceDays": "{count, plural, =1{≈ 1 day} other{≈ {count} days}}",
+  "@paceDays": {
+    "description": "Estimate in days, used instead of weeks when it is under a fortnight",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "paceAtYourRate": "at your rate",
+  "@paceAtYourRate": {"description": "Label under the weeks figure, naming what it is based on"},
+  "paceYourPaceLine": "{count, plural, =1{Your pace {pph} pages/hour, from 1 sitting.} other{Your pace {pph} pages/hour, from {count} sittings.}}",
+  "@paceYourPaceLine": {
+    "description": "Footnote naming the measured pace and its sample size",
+    "placeholders": {"pph": {"type": "String"}, "count": {"type": "int"}}
+  },
+  "paceLanguageLine": "Your pace in {language}: {pph} pages/hour.",
+  "@paceLanguageLine": {
+    "description": "Footnote when the estimate used a language-specific pace",
+    "placeholders": {"language": {"type": "String"}, "pph": {"type": "String"}}
+  },
+  "paceWeeklyHabit": "You've read {duration} a week lately.",
+  "@paceWeeklyHabit": {
+    "description": "Footnote naming the weekly reading habit behind the weeks figure",
+    "placeholders": {"duration": {"type": "String"}}
+  },
+  "paceAssumedValue": "at a typical {pph} pages/hour",
+  "@paceAssumedValue": {
+    "description": "Caption beside an estimate built on the typical fallback pace",
+    "placeholders": {"pph": {"type": "String"}}
+  },
+  "paceAssumedHint": "{have} of {need} timed sittings. Log a page when you stop and this becomes your number.",
+  "@paceAssumedHint": {
+    "description": "Explains that the estimate is borrowed until the reader has enough measured sittings",
+    "placeholders": {"have": {"type": "int"}, "need": {"type": "int"}}
+  },
+  "paceFinishAround": "Keep this up and you'd finish around {date}",
+  "@paceFinishAround": {
+    "description": "Projected finish date from the remaining time and the weekly habit",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "paceBookPaceLine": "{count, plural, =1{Measured on this book: {pph} pages/hour over 1 sitting.} other{Measured on this book: {pph} pages/hour over {count} sittings.}}",
+  "@paceBookPaceLine": {
+    "description": "Footnote when the estimate used the book's own measured pace",
+    "placeholders": {"pph": {"type": "String"}, "count": {"type": "int"}}
+  },
+  "paceVsUsual": "Your usual is {pph}.",
+  "@paceVsUsual": {
+    "description": "Comparison of this book's pace against the reader's overall pace",
+    "placeholders": {"pph": {"type": "String"}}
+  },
+  "paceNoPageCount": "Nobody has told the catalogue how long this book is.",
+  "@paceNoPageCount": {"description": "Shown instead of an estimate when the edition has no page count"},
+  "paceNoPageCountSub": "Your pace is fine — it's the pages that are missing.",
+  "@paceNoPageCountSub": {"description": "Clarifies that the missing half is the page count, not the reader's pace"},
+  "paceAddPageCount": "How long is it?",
+  "@paceAddPageCount": {"description": "Prompt asking the reader for the edition's page count"},
+  "paceAddPageCountHint": "Check the last numbered page. It fixes this for every reader of this edition, not just you.",
+  "@paceAddPageCountHint": {"description": "Explains that a page count improves the shared catalogue, not just this reader's copy"},
+  "paceHiddenFromFilters": "Hidden from time-to-finish filters",
+  "@paceHiddenFromFilters": {"description": "Tells the reader this book is excluded from the library's time filter"},
+  "paceFinished": "Finished",
+  "@paceFinished": {"description": "Label on the actual reading time of a book that has been read"},
+  "paceYouReadItIn": "you read it in",
+  "@paceYouReadItIn": {"description": "Caption beside the actual total time on a finished book"},
+  "paceActualSittings": "{count, plural, =1{1 sitting} other{{count} sittings}}",
+  "@paceActualSittings": {
+    "description": "Number of sittings a finished book took",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "paceCalibration": "At your usual pace this would have been {estimate}.",
+  "@paceCalibration": {
+    "description": "Compares what the estimate would have said against the actual time taken",
+    "placeholders": {"estimate": {"type": "String"}}
+  },
+  "paceCalibrationOver": "You ran {percent}% over — {pph} pages/hour here.",
+  "@paceCalibrationOver": {
+    "description": "Says the book took longer than the reader's usual pace predicted",
+    "placeholders": {"percent": {"type": "int"}, "pph": {"type": "String"}}
+  },
+  "paceCalibrationUnder": "You came in {percent}% under — {pph} pages/hour here.",
+  "@paceCalibrationUnder": {
+    "description": "Says the book took less time than the reader's usual pace predicted",
+    "placeholders": {"percent": {"type": "int"}, "pph": {"type": "String"}}
+  },
+  "paceStripValue": "≈ {duration} for you",
+  "@paceStripValue": {
+    "description": "The one-line estimate on a book the reader doesn't own",
+    "placeholders": {"duration": {"type": "String"}}
+  },
+  "paceStripAssumed": "≈ {duration} at a typical pace",
+  "@paceStripAssumed": {
+    "description": "The one-line estimate on an unowned book, before the reader's pace is known",
+    "placeholders": {"duration": {"type": "String"}}
+  },
+  "paceFilterLabel": "Time to finish",
+  "@paceFilterLabel": {"description": "Library filter section label for the time-to-finish buckets"},
+  "paceFilterAny": "Any",
+  "@paceFilterAny": {"description": "Time-to-finish filter chip that applies no time limit"},
+  "paceFilterUnder": "Under {hours}h",
+  "@paceFilterUnder": {
+    "description": "Time-to-finish filter chip for books estimated under a number of hours",
+    "placeholders": {"hours": {"type": "int"}}
+  },
+  "paceFilterRange": "{from} – {to}h",
+  "@paceFilterRange": {
+    "description": "Time-to-finish filter chip for books estimated between two hour figures",
+    "placeholders": {"from": {"type": "int"}, "to": {"type": "int"}}
+  },
+  "paceFilterOver": "{hours}h +",
+  "@paceFilterOver": {
+    "description": "Time-to-finish filter chip for books estimated over a number of hours",
+    "placeholders": {"hours": {"type": "int"}}
+  },
+  "paceFilterExcluded": "{count, plural, =1{1 book has no page count, so it can't be estimated.} other{{count} books have no page count, so they can't be estimated.}}",
+  "@paceFilterExcluded": {
+    "description": "Honest footnote naming how many books the time filter had to leave out",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "paceFilterAssumedNote": "Estimates use a typical pace until you've timed a few sittings.",
+  "@paceFilterAssumedNote": {"description": "Filter-sheet note shown while the reader's own pace isn't measured yet"}
 }
