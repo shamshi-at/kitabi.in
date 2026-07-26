@@ -334,6 +334,20 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **26 Jul 2026** — **Two reading-log bugs, both from trusting a snapshot.**
+  (1) The first sitting showed **"no page noted"** in the reading log while the
+  progress bar showed the page: the sitting's own `pageEnd` and the entry's
+  `currentPage` sat behind one "has the page changed?" guard, so ending on the
+  page the entry already held wrote neither — which is the normal shape of a
+  first sitting, since readers note their page before starting the clock. Two
+  records, two guards now. (2) The stop sheet **kept asking for the total pages**
+  on a book whose length the catalogue already had: the timer took `pageCount`
+  from route `extra`, and the entry point the owner was actually using — the
+  Live Activity — navigates by URL with no extra at all, so it always looked
+  like an unknown length (and the screen also had no title or cover). The timer
+  now resolves the book from Drift, with `extra` as a first-frame hint only;
+  `quickStopSession` got the same treatment for its stale autoDispose-provider
+  snapshot. Both regression tests were checked by reverting the fix.
 - **26 Jul 2026** — **Fixed: the Live Activity tap hit "Page Not Found."** The
   first cut wired the tap through `DeepLinkListener` (app_links) and tested it
   there — but Flutter's engine hands an incoming deep link *straight to

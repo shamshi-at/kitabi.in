@@ -423,6 +423,25 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   widget test written against rendering passes against the bug — assert on
   `matches.length`; and after writing any guard like this, disable it and watch the
   test fail before believing it.
+- **A screen must not take its data from route `extra` when an OS-level entry
+  point can reach it.** `extra` is a snapshot the *caller* assembles, and the
+  callers that matter most can't assemble one: a tap on the iOS Live Activity or
+  the Android ongoing notification navigates by URL with no extra at all. The
+  reading timer took title/cover/`pageCount` that way, so a sitting opened from
+  the lock screen believed the book had no page count and asked for the total on
+  **every** stop — while the book page, reading the same book from Drift, showed
+  it correctly (owner report, 26 Jul 2026). Route arguments are a first-frame
+  hint; the database is the answer. The same applies to a pre-computed provider
+  snapshot handed across an await (`quickStopSession` had the identical bug from
+  an autoDispose provider that had not emitted).
+- **Two different records need two different guards.** The timer's `_savePage`
+  skipped writing *both* the sitting's `pageEnd` and the entry's `currentPage`
+  under one "has the page changed?" check, so a sitting that ended on the page
+  the entry already held wrote neither — the reading log said "no page noted"
+  while the progress bar showed the page (owner report, 26 Jul 2026). That is
+  the *normal* shape of a first sitting, because readers set their page before
+  starting the clock. A guard that means "progress didn't move" must never also
+  suppress the log entry that says where a sitting ended.
 - **Flutter's engine hands an incoming deep link straight to go_router as a
   *whole URI* — scheme and host included — so a custom-scheme link needs a route
   the router can match, or it lands on "Page Not Found".** The iOS Live Activity's

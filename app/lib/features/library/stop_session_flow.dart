@@ -49,6 +49,19 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   container.invalidate(weeklyReadingSecondsProvider);
   if (logged == null || !context.mounted) return;
 
+  // Re-read the book from the database rather than trusting the pre-stop
+  // provider snapshot: `activeSessionBookProvider` is autoDispose and composes
+  // two streams, so a `read` without a live listener can hand back a null book
+  // — and a null page count makes the sheet ask "how long is this book?" for a
+  // book whose length the catalogue already knows (owner report, 26 Jul 2026).
+  final storedEntry = await db.libraryEntriesDao.getById(logged.libraryEntryId);
+  final storedBook = storedEntry == null
+      ? null
+      : await db.cachedBooksDao.getByEditionId(storedEntry.editionId);
+  final resolvedPageCount = storedBook?.pageCount ?? pageCount;
+  final resolvedCurrentPage = storedEntry?.currentPage ?? currentPage;
+  if (!context.mounted) return;
+
   // R1/R2 — a sheet, not an AlertDialog whose whole content was one cramped
   // Row. The entry block is shared with the timer's wax-seal face so the two
   // can't drift (CLAUDE.md: the four progress surfaces have drifted before).
@@ -57,11 +70,11 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
     libraryEntryId: logged.libraryEntryId,
     loggedSessionId: logged.sessionId,
     duration: Duration(seconds: logged.durationSeconds),
-    title: activeBook?.book?.title,
-    coverUrl: activeBook?.book?.coverUrl,
-    currentPage: currentPage,
-    pageCount: pageCount,
-    pageStart: logged.pageStart ?? currentPage,
+    title: storedBook?.title ?? activeBook?.book?.title,
+    coverUrl: storedBook?.coverUrl ?? activeBook?.book?.coverUrl,
+    currentPage: resolvedCurrentPage,
+    pageCount: resolvedPageCount,
+    pageStart: logged.pageStart ?? resolvedCurrentPage,
   );
   if (result == null) return; // skipped / dismissed
 
@@ -70,15 +83,21 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   // shared Edition (mirror locally + push to the catalog); the edition id comes
   // from the logged entry directly, not a pre-stop snapshot that may be null.
   final total = result.total;
-  if (pageCount == null && total != null) {
+  if (resolvedPageCount == null && total != null) {
     final entry = await db.libraryEntriesDao.getById(logged.libraryEntryId);
     if (entry != null) await saveBookTotalPages(db, api, entry.editionId, total);
   }
 
   final page = result.page;
-  if (page != null && page != currentPage) {
+  if (page != null) {
+    // Always record where the sitting ended, even when the entry's progress
+    // doesn't move — the log and the progress bar are two different records,
+    // and one guard over both left sittings showing "no page noted" (owner
+    // report, 26 Jul 2026; same fix in the timer's own _savePage).
     await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
-    await libraryRepo.updateProgress(logged.libraryEntryId, currentPage: page);
+    if (page != resolvedCurrentPage) {
+      await libraryRepo.updateProgress(logged.libraryEntryId, currentPage: page);
+    }
   }
 
   // The page is settled first, so finishing only has the status, the date and

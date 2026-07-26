@@ -74,11 +74,52 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// written by Done *or* by the back gesture, which also saves.
   PageEntryError? _pageError;
 
+  /// The book and shelf entry, read from the database rather than taken on
+  /// trust from the route's `extra`.
+  ///
+  /// `extra` is a snapshot the *caller* assembled, and the callers that matter
+  /// most can't assemble one: a tap on the iOS Live Activity (and on the
+  /// Android ongoing notification) navigates by URL, with no extra at all. The
+  /// screen then believed the book had no page count and asked for the total on
+  /// every single stop — while the book page, reading from the database, showed
+  /// it perfectly (owner report, 26 Jul 2026). It also went in with no title
+  /// and no cover. Extra is now only a first-frame hint; the database is the
+  /// answer.
+  CachedBook? _book;
+  LibraryEntry? _entry;
+
+  String? get _title => _book?.title ?? widget.title;
+  String? get _coverUrl => _book?.coverUrl ?? widget.coverUrl;
+  int? get _pageCount => _book?.pageCount ?? widget.pageCount;
+  int? get _currentPage => _entry?.currentPage ?? widget.currentPage;
+
+  Future<void> _resolveBook() async {
+    try {
+      final db = ref.read(appDatabaseProvider);
+      final entry = await db.libraryEntriesDao.getById(widget.libraryEntryId);
+      if (entry == null || !mounted) return;
+      final book = await db.cachedBooksDao.getByEditionId(entry.editionId);
+      if (!mounted) return;
+      setState(() {
+        _entry = entry;
+        _book = book;
+        // Only seed the field the reader hasn't touched — never overwrite a
+        // page they've already typed.
+        if (_pageController.text.trim().isEmpty && entry.currentPage != null) {
+          _pageController.text = '${entry.currentPage}';
+        }
+      });
+    } catch (_) {
+      // Falls back to whatever `extra` carried.
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
     _seedHandIfReady();
+    unawaited(_resolveBook());
   }
 
   // Same deterministic forgot-to-stop safety net as the mini-bar
@@ -155,7 +196,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// local mirror is written either way, so their progress works offline and
   /// reconciles the next time this book is re-cached.
   Future<void> _saveTotalPages() async {
-    if (widget.pageCount != null) return; // already known — the field isn't shown
+    if (_pageCount != null) return; // already known — the field isn't shown
     final total = int.tryParse(_totalController.text.trim());
     if (total == null || total <= 0) return;
     // Look the entry up directly (awaited) rather than off a stream provider
@@ -190,9 +231,16 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     // has to hold here — otherwise leaving by gesture is a way around it.
     if (_pageError != null) return;
     final entry = await ref.read(appDatabaseProvider).libraryEntriesDao.getById(widget.libraryEntryId);
-    if (page == entry?.currentPage) return; // genuinely unchanged — nothing to write
+    // The sitting's own end page is always recorded — it and the entry's
+    // progress are two different facts. They were behind one "unchanged"
+    // guard, so a sitting that ended on the page the entry *already* held
+    // wrote neither: the reading log said "no page noted" while the progress
+    // bar showed the page (owner report, 26 Jul 2026). That is the normal
+    // shape of a first sitting, where the reader set their page before
+    // starting the clock.
     final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
     await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
+    if (page == entry?.currentPage) return; // progress genuinely unchanged
     final libraryRepo = await ref.read(libraryRepositoryProvider.future);
     await libraryRepo.updateProgress(widget.libraryEntryId, currentPage: page);
   }
@@ -232,7 +280,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     final l10n = AppLocalizations.of(context)!;
     setState(() => _saving = true);
 
-    final total = widget.pageCount;
+    final total = _pageCount;
     if (total != null && total > 0) {
       _pageController.text = '$total';
       // Forced from the book's own length, so any staleness in the typed-page
@@ -284,10 +332,10 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
       MaterialPageRoute<bool>(
         builder: (_) => NotePage(
           libraryEntryId: active.libraryEntryId,
-          bookTitle: widget.title,
+          bookTitle: _title,
           sessionId: active.id,
           sessionStartedAt: active.startedAt,
-          currentPage: widget.currentPage,
+          currentPage: _currentPage,
           noteIndex: count + 1,
         ),
       ),
@@ -326,8 +374,8 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
         body: SafeArea(
           child: _logged == null
               ? _RunningFace(
-                title: widget.title,
-                coverUrl: widget.coverUrl,
+                title: _title,
+                coverUrl: _coverUrl,
                 startedAt: active?.startedAt,
                 onClose: _leave,
                 hand: _hand,
@@ -336,12 +384,12 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
                 noteCount: sessionNotes.length,
               )
               : _LoggedFace(
-                  title: widget.title,
-                  coverUrl: widget.coverUrl,
+                  title: _title,
+                  coverUrl: _coverUrl,
                   logged: _logged!,
                   pageController: _pageController,
                   pageFocusNode: _pageFocusNode,
-                  pageCount: widget.pageCount,
+                  pageCount: _pageCount,
                   totalController: _totalController,
                   saving: _saving || _pageError != null,
                   onDone: _done,
