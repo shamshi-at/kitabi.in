@@ -334,6 +334,19 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **26 Jul 2026** — **Fixed: the Live Activity tap hit "Page Not Found."** The
+  first cut wired the tap through `DeepLinkListener` (app_links) and tested it
+  there — but Flutter's engine hands an incoming deep link *straight to
+  go_router*, as a whole URI including scheme and host, so
+  `in.kitabi.kitabi://reading-timer/:id` reached a router with no route by that
+  name and rendered a GoException error page on the phone (owner report). Every
+  test passed because none of them drove the router. The rewrite now happens in
+  the router's top-level `redirect`, which runs even for an unmatched location;
+  the regression test drives a real `GoRouter` with the exact URI from the report
+  and was checked by disabling the fix. Because that delivery is a *replace*
+  rather than a push, the timer's exits also became `canPop() ? pop() : go(home)`
+  — a top-level route arrived at from outside has nothing beneath it, and a bare
+  pop stranded the reader on the timer.
 - **26 Jul 2026** — **The live surface is a door, and the timer can finish a
   book.** Tapping the lock-screen clock now opens *that book's* timer: on iOS
   through a `widgetURL` on the Live Activity

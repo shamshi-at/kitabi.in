@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/format_duration.dart';
 import '../../../core/haptics.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
@@ -196,10 +197,23 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     await libraryRepo.updateProgress(widget.libraryEntryId, currentPage: page);
   }
 
+  /// Leave the timer. Normally a pop, but this route can also be *arrived at*
+  /// rather than pushed — an external link (the iOS Live Activity's tap URL)
+  /// is delivered to the router as a navigation, which replaces the stack
+  /// instead of stacking onto it. There is then nothing to pop, and a bare
+  /// `pop()` left the reader stranded on the timer with no way out.
+  void _leave() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(Routes.home);
+    }
+  }
+
   Future<void> _done() async {
     if (_logged != null) setState(() => _saving = true);
     await _savePage();
-    if (mounted) context.pop();
+    if (mounted) _leave();
   }
 
   /// "I finished the book" — the other way off this face. Stopping the clock
@@ -241,7 +255,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
           ? l10n.timerMarkFinishedDone
           : l10n.statusReadAllPages(result.pagesFilledTo!)),
     ));
-    if (mounted) context.pop();
+    if (mounted) _leave();
   }
 
   /// N1 -> N2. Opens the note page without touching the session: the clock
@@ -315,6 +329,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
                 title: widget.title,
                 coverUrl: widget.coverUrl,
                 startedAt: active?.startedAt,
+                onClose: _leave,
                 hand: _hand,
                 onStop: _stop,
                 onNote: active == null ? null : () => _openNote(active),
@@ -344,6 +359,7 @@ class _RunningFace extends StatelessWidget {
     required this.title,
     required this.coverUrl,
     required this.startedAt,
+    required this.onClose,
     required this.hand,
     required this.onStop,
     required this.onNote,
@@ -355,6 +371,10 @@ class _RunningFace extends StatelessWidget {
   final DateTime? startedAt;
   final AnimationController hand;
   final VoidCallback onStop;
+
+  /// Leaving the timer — a pop when this route was pushed, Home when it was
+  /// *navigated to* from outside and there is nothing beneath it.
+  final VoidCallback onClose;
 
   /// Opens the note page (N1 -> N2). Null hides the pill.
   final VoidCallback? onNote;
@@ -385,7 +405,7 @@ class _RunningFace extends StatelessWidget {
             children: [
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.white70),
-                onPressed: () => Navigator.of(context).maybePop(),
+                onPressed: onClose,
               ),
             ],
           ),

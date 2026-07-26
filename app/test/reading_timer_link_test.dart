@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kitabi/core/deep_links.dart';
+import 'package:kitabi/core/router/app_router.dart';
 
 /// A tap on the iOS Live Activity arrives as a custom-scheme link, and that
 /// scheme is *shared with the Supabase OAuth callback*. Getting this wrong

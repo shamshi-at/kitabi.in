@@ -42,11 +42,6 @@ class DeepLinkListener {
 
   static const _hosts = {'kitabi.in', 'www.kitabi.in'};
 
-  /// The app's own scheme (declared in `CFBundleURLTypes`), shared with the
-  /// Supabase OAuth callback — hence the separate host below.
-  static const appScheme = 'in.kitabi.kitabi';
-  static const timerHost = 'reading-timer';
-
   /// Window in which an identical link counts as the cold-start echo rather
   /// than a deliberate second tap.
   static const _echoWindow = Duration(milliseconds: 1500);
@@ -106,7 +101,7 @@ class DeepLinkListener {
   /// its ongoing notification carries the entry id as a payload and
   /// `_openReadingTimer` has always routed it.
   bool _handleReadingTimer(Uri uri) {
-    if (!uri.isScheme(appScheme) || uri.host != timerHost) return false;
+    if (!uri.isScheme(kAppScheme) || uri.host != kReadingTimerHost) return false;
     final route = readingTimerRouteFor(uri);
     if (route == null) return true;
 
@@ -131,21 +126,6 @@ class DeepLinkListener {
     _sub?.cancel();
     _lifecycle?.dispose();
   }
-}
-
-/// The route an iOS Live Activity tap maps to, or null when the link isn't
-/// one of ours. Pulled out of the listener so the rule can be tested without a
-/// platform channel — and so the *scheme* check stays visible: this scheme is
-/// shared with the Supabase OAuth callback, and swallowing one of those links
-/// would break sign-in rather than the timer.
-String? readingTimerRouteFor(Uri uri) {
-  if (!uri.isScheme(DeepLinkListener.appScheme) ||
-      uri.host != DeepLinkListener.timerHost) {
-    return null;
-  }
-  final id = uri.pathSegments.isEmpty ? '' : uri.pathSegments.first;
-  if (id.isEmpty) return null;
-  return Routes.readingTimerPath(id);
 }
 
 /// Activates the content deep-link listener once. `ref.watch` this high in the

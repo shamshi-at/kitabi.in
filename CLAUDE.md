@@ -423,6 +423,19 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   widget test written against rendering passes against the bug — assert on
   `matches.length`; and after writing any guard like this, disable it and watch the
   test fail before believing it.
+- **Flutter's engine hands an incoming deep link straight to go_router as a
+  *whole URI* — scheme and host included — so a custom-scheme link needs a route
+  the router can match, or it lands on "Page Not Found".** The iOS Live Activity's
+  tap URL (`in.kitabi.kitabi://reading-timer/:id`) went nowhere near
+  `DeepLinkListener`/app_links, which is where all its tests were pointed — they
+  passed against a feature that was broken on the phone (owner report, 26 Jul 2026).
+  Rewrite such a URI in the router's **top-level `redirect`** (it runs even for an
+  unmatched location, so it can rescue one), not only in the app_links listener.
+  Corollaries: the engine's delivery is a *replace*, not a push, so a top-level
+  route reached that way has nothing beneath it — `pop()` strands the reader and
+  every exit needs `canPop() ? pop() : go(home)`; and any test for a deep link must
+  drive the **router** with the raw URI, because a test against the listener never
+  touches the path the OS actually uses.
 - **An external navigation (notification tap, deep link) must never push a route
   that's already on top.** Tapping the live reading notification while the timer was
   open stacked a second copy; when the top one stopped the sitting, the *buried*

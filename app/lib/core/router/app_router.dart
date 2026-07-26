@@ -103,6 +103,27 @@ void openPersonLoans(BuildContext context, {String? userId, required String name
   context.push(Routes.connectionLoans, extra: {'userId': userId, 'name': name});
 }
 
+/// The app's own URL scheme (declared in iOS `CFBundleURLTypes`), shared with
+/// the Supabase OAuth callback — hence the separate host below, so the two can
+/// never be confused for one another.
+const kAppScheme = 'in.kitabi.kitabi';
+const kReadingTimerHost = 'reading-timer';
+
+/// The route an iOS Live Activity tap maps to, or null when the link isn't
+/// one of ours. Pulled out of the listener so the rule can be tested without a
+/// platform channel — and so the *scheme* check stays visible: this scheme is
+/// shared with the Supabase OAuth callback, and swallowing one of those links
+/// would break sign-in rather than the timer.
+String? readingTimerRouteFor(Uri uri) {
+  if (!uri.isScheme(kAppScheme) ||
+      uri.host != kReadingTimerHost) {
+    return null;
+  }
+  final id = uri.pathSegments.isEmpty ? '' : uri.pathSegments.first;
+  if (id.isEmpty) return null;
+  return Routes.readingTimerPath(id);
+}
+
 /// A navigation target that arrived before the router was usable — a
 /// notification tap or universal link on a cold start. Navigating immediately
 /// gets swallowed: the redirect below pins everything to splash until auth +
@@ -168,6 +189,21 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: Routes.splash,
     refreshListenable: refresh,
     redirect: (context, state) {
+      // An external link can arrive here as a *whole URI* — scheme, host and
+      // all — because Flutter's engine hands incoming deep links straight to
+      // the router, which has no route named `in.kitabi.kitabi://…` and shows
+      // "Page Not Found". That is what a tap on the iOS Live Activity did
+      // (owner report, 26 Jul 2026): the widget's own tap URL never reached
+      // `DeepLinkListener` at all, so testing that listener proved nothing
+      // about the real delivery path. Rewriting it here catches the link
+      // whichever way it arrives, and parking it means a *cold-start* tap
+      // survives the splash/bootstrap gates below instead of landing on Home.
+      final external = readingTimerRouteFor(state.uri);
+      if (external != null) {
+        pendingExternalTarget = external;
+        return external;
+      }
+
       final loc = state.matchedLocation;
 
       // A 426 from the API locks the app onto the update screen (version gate).
@@ -241,6 +277,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
         return Routes.home;
       }
+      // Arrived, and no gate sent us elsewhere — so a parked target has been
+      // honoured and must not fire again later (the next trip through
+      // splash/sign-in would otherwise re-open it out of nowhere).
+      if (pendingExternalTarget == loc) pendingExternalTarget = null;
       return null;
     },
     routes: [
