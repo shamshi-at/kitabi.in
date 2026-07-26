@@ -594,6 +594,17 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       a background-isolate stop can't leave a clock running on the lock screen.
       Follow-up: Android 16 promoted "Live Updates" (`Notification.ProgressStyle`)
       once the notifications plugin exposes it
+- [x] **Tapping the live surface opens that book's timer** — iOS via a
+      `widgetURL` on the Live Activity (`in.kitabi.kitabi://reading-timer/:id`,
+      its own host so the Supabase OAuth callback on the same scheme is
+      untouched); Android already carried the entry id as a notification
+      payload. Fixed the duplicate-route bug this exposed: `navigateFromExternal`
+      now refuses to push the route already on top
+- [x] **"I finished the book" on the stop faces** — the timer's wax-seal face and
+      the shared quick-stop sheet both offer it, in moss and secondary to the
+      ordinary way out, so stopping is never blocked. Marks the book Read,
+      stamps the finish date, and settles the last page — all through one
+      `markBookFinished`, which the book page's status row now uses too
 
 ## Phase 7 — Recommendations & share
 

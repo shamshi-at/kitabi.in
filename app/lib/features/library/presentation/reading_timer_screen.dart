@@ -15,6 +15,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../providers/library_providers.dart';
+import '../mark_finished.dart';
 import '../providers/reading_timer_providers.dart';
 import '../reading_progress.dart';
 import 'note_page.dart';
@@ -201,6 +202,48 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     if (mounted) context.pop();
   }
 
+  /// "I finished the book" — the other way off this face. Stopping the clock
+  /// and finishing the book are different claims, and until now the timer could
+  /// only make the first one: a reader who closed the last page had to stop,
+  /// leave, find the book, and change its status by hand (owner request,
+  /// 26 Jul 2026).
+  ///
+  /// The page is settled *before* the status, and settled to the total when the
+  /// catalogue knows it — a sitting that ended the book ended on its last page,
+  /// so the session's own page range should say so too, not just the entry's
+  /// progress. Everything after that is [markBookFinished], shared with the
+  /// book page and the quick-stop sheet so the three can't drift.
+  Future<void> _markFinished() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _saving = true);
+
+    final total = widget.pageCount;
+    if (total != null && total > 0) {
+      _pageController.text = '$total';
+      // Forced from the book's own length, so any staleness in the typed-page
+      // validation no longer applies — and _savePage refuses to run while an
+      // error is outstanding.
+      _pageError = null;
+    }
+    await _savePage();
+
+    final db = ref.read(appDatabaseProvider);
+    final repo = await ref.read(libraryRepositoryProvider.future);
+    final result = await markBookFinished(
+      db: db,
+      repo: repo,
+      libraryEntryId: widget.libraryEntryId,
+    );
+
+    messenger.showSnackBar(SnackBar(
+      content: Text(result.pagesFilledTo == null
+          ? l10n.timerMarkFinishedDone
+          : l10n.statusReadAllPages(result.pagesFilledTo!)),
+    ));
+    if (mounted) context.pop();
+  }
+
   /// N1 -> N2. Opens the note page without touching the session: the clock
   /// keeps running, and this method deliberately has no stop/pause path.
   Future<void> _openNote(ActiveSession active) async {
@@ -287,6 +330,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
                   totalController: _totalController,
                   saving: _saving || _pageError != null,
                   onDone: _done,
+                  onFinished: _markFinished,
                   onValidityChanged: (err) => setState(() => _pageError = err),
                 ),
         ),
@@ -637,6 +681,7 @@ class _LoggedFace extends ConsumerWidget {
     required this.totalController,
     required this.saving,
     required this.onDone,
+    required this.onFinished,
     required this.onValidityChanged,
   });
 
@@ -651,6 +696,9 @@ class _LoggedFace extends ConsumerWidget {
   final TextEditingController totalController;
   final bool saving;
   final VoidCallback onDone;
+
+  /// "I finished the book" — see `_markFinished`.
+  final VoidCallback onFinished;
 
   /// Fires when the typed page becomes (in)valid, so Done can be disabled
   /// rather than silently walking the reader's progress backwards.
@@ -772,6 +820,36 @@ class _LoggedFace extends ConsumerWidget {
                     ),
                   )
                 ],
+              ),
+            ),
+          ),
+          // Finishing sits *above* Done and in moss, not oxblood: it's the
+          // rarer, larger claim ("that was the last page"), so it has to be
+          // findable without ever competing with the ordinary way out.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
+            child: SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.moss,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                onPressed: saving ? null : onFinished,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '✓  ${l10n.timerMarkFinished}',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.timerMarkFinishedHint,
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

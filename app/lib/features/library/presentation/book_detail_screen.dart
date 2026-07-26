@@ -36,6 +36,7 @@ import '../reading_progress.dart';
 import '../reading_status.dart';
 import '../stop_session_flow.dart';
 import 'note_page.dart';
+import '../mark_finished.dart';
 import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
 import 'notes_journal_screen.dart';
@@ -1907,16 +1908,19 @@ class _ReadingCard extends ConsumerWidget {
       await repo.updateProgress(entry.id, startDate: DateTime.now());
     }
     if (chosen == 'read') {
-      if (entry.finishDate == null) {
-        await repo.updateProgress(entry.id, finishDate: DateTime.now());
-      }
-      // Finishing a book means you read all of it — leaving progress at p. 27
-      // of 200 on a book marked Read is a contradiction the reader would have
-      // to go fix by hand.
-      final total = ref.read(cachedBookProvider(entry.editionId)).valueOrNull?.pageCount;
-      if (total != null && total > 0 && (entry.currentPage ?? 0) < total) {
-        await repo.updateProgress(entry.id, currentPage: total);
-        messenger.showSnackBar(SnackBar(content: Text(l10n.statusReadAllPages(total))));
+      // The finish date and the progress that has to agree with it live in one
+      // shared place now — the timer's wax-seal face and the quick-stop sheet
+      // can mark a book finished too, and three copies of these rules is
+      // exactly how the progress surfaces drifted before.
+      final finished = await markBookFinished(
+        db: ref.read(appDatabaseProvider),
+        repo: repo,
+        libraryEntryId: entry.id,
+      );
+      if (finished.pagesFilledTo != null) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.statusReadAllPages(finished.pagesFilledTo!))),
+        );
       }
     }
     ref.invalidate(libraryEntryProvider(entry.editionId));

@@ -13,12 +13,19 @@ import 'session_page_entry.dart';
 
 /// What the reader entered before the sheet closed.
 class StopSessionResult {
-  const StopSessionResult({this.page, this.total});
+  const StopSessionResult({this.page, this.total, this.finished = false});
 
   final int? page;
 
   /// Only set when the book had no page count and the reader supplied one.
   final int? total;
+
+  /// The reader closed the last page, not just the app — the caller applies
+  /// [markBookFinished] on top of the ordinary page save. Deliberately part of
+  /// this one shared result rather than a second sheet, so the mini-bar, the
+  /// Home card and the timer all offer finishing in the same breath as
+  /// stopping.
+  final bool finished;
 }
 
 /// Sittings for one book, newest first — powers R3's log. No new query: the
@@ -119,6 +126,22 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
       StopSessionResult(
         page: int.tryParse(_pageController.text.trim()),
         total: int.tryParse(_totalController.text.trim()),
+      ),
+    );
+  }
+
+  /// A sitting that ended the book ended on its last page, so the page goes out
+  /// as the total when the catalogue knows it — the session's own range should
+  /// say what happened, not just the entry's progress.
+  void _finish() {
+    final total = widget.pageCount ?? int.tryParse(_totalController.text.trim());
+    Navigator.of(context).pop(
+      StopSessionResult(
+        page: (total != null && total > 0)
+            ? total
+            : int.tryParse(_pageController.text.trim()),
+        total: int.tryParse(_totalController.text.trim()),
+        finished: true,
       ),
     );
   }
@@ -306,7 +329,35 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
                 child: Text(l10n.stopSavePage),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
+            // Moss, and secondary to Save: the larger, rarer claim, findable
+            // without ever competing with the ordinary way out. Same action,
+            // same words as the timer's wax-seal face.
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: _error != null ? null : _finish,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.moss,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '\u2713  ${l10n.timerMarkFinished}',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      l10n.timerMarkFinishedHint,
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => Navigator.of(context).pop(),

@@ -5,6 +5,7 @@ import '../../core/haptics.dart';
 import '../../data/api/api_client.dart';
 import '../../data/repositories/repository_providers.dart';
 import '../../data/sync/sync_providers.dart';
+import 'mark_finished.dart';
 import 'providers/reading_timer_providers.dart';
 import 'presentation/stop_session_sheet.dart';
 import 'reading_progress.dart';
@@ -75,7 +76,19 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   }
 
   final page = result.page;
-  if (page == null || page == currentPage) return;
-  await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
-  await libraryRepo.updateProgress(logged.libraryEntryId, currentPage: page);
+  if (page != null && page != currentPage) {
+    await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
+    await libraryRepo.updateProgress(logged.libraryEntryId, currentPage: page);
+  }
+
+  // The page is settled first, so finishing only has the status, the date and
+  // any leftover progress gap to close. Same shared call the timer's wax-seal
+  // face and the book page's status row make.
+  if (result.finished) {
+    await markBookFinished(
+      db: db,
+      repo: libraryRepo,
+      libraryEntryId: logged.libraryEntryId,
+    );
+  }
 }

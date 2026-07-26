@@ -89,6 +89,17 @@ private struct LockScreenCard: View {
   }
 }
 
+/// Where a tap goes: this book's running timer. The custom scheme is the one
+/// already declared in the app's `CFBundleURLTypes`; `reading-timer` is its own
+/// host so it can never be confused with the Supabase OAuth callback that
+/// shares the scheme. `DeepLinkListener` on the Dart side turns it into the
+/// `/reading-timer/:id` route.
+@available(iOS 16.2, *)
+private func timerURL(_ libraryEntryId: String) -> URL? {
+  guard !libraryEntryId.isEmpty else { return nil }
+  return URL(string: "in.kitabi.kitabi://reading-timer/\(libraryEntryId)")
+}
+
 @available(iOS 16.2, *)
 struct ReadingActivityWidget: Widget {
   var body: some WidgetConfiguration {
@@ -96,6 +107,7 @@ struct ReadingActivityWidget: Widget {
       LockScreenCard(context: context)
         .activityBackgroundTint(Ink.paper)
         .activitySystemActionForegroundColor(Ink.oxblood)
+        .widgetURL(timerURL(context.attributes.libraryEntryId))
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
@@ -122,6 +134,7 @@ struct ReadingActivityWidget: Widget {
         Image(systemName: "book.closed.fill")
           .foregroundColor(Ink.gold)
       }
+      .widgetURL(timerURL(context.attributes.libraryEntryId))
       .keylineTint(Ink.gold)
     }
   }

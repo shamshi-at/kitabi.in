@@ -3231,5 +3231,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timerLiveRunning => 'Reading now';
 
   @override
+  String get timerMarkFinished => 'I finished the book';
+
+  @override
+  String get timerMarkFinishedHint => 'Marks it Read and settles the last page';
+
+  @override
+  String get timerMarkFinishedDone => 'Marked as Read';
+
+  @override
   String get timerLiveElapsed => 'Reading';
 }

@@ -5374,6 +5374,24 @@ abstract class AppLocalizations {
   /// **'Reading now'**
   String get timerLiveRunning;
 
+  /// Button on the stop/wax-seal face that marks the book Read
+  ///
+  /// In en, this message translates to:
+  /// **'I finished the book'**
+  String get timerMarkFinished;
+
+  /// One-line explanation under the finished-the-book button
+  ///
+  /// In en, this message translates to:
+  /// **'Marks it Read and settles the last page'**
+  String get timerMarkFinishedHint;
+
+  /// Confirmation after finishing a book from the timer
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as Read'**
+  String get timerMarkFinishedDone;
+
   /// Label above the elapsed time on the iOS Live Activity lock-screen card
   ///
   /// In en, this message translates to:

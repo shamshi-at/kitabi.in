@@ -23,4 +23,8 @@ struct ReadingActivityAttributes: ActivityAttributes {
   var title: String
   var author: String?
   var startedAt: Date
+
+  /// Which sitting this is — the widget turns it into the deep link that
+  /// opens this book's timer when the card is tapped.
+  var libraryEntryId: String
 }

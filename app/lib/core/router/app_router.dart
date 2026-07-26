@@ -114,12 +114,29 @@ String? pendingExternalTarget;
 /// away when the app is up, or parked in [pendingExternalTarget] for the
 /// redirect to consume when the session is still booting.
 void navigateFromExternal(GoRouter router, String location) {
-  final current = router.routerDelegate.currentConfiguration.uri.path;
+  final config = router.routerDelegate.currentConfiguration;
+  final current = config.uri.path;
   if (current == Routes.splash || current == Routes.signIn) {
     pendingExternalTarget = location;
-  } else {
-    router.push(location);
+    return;
   }
+  // Already there — the OS has done the only thing left to do by bringing the
+  // app forward. Pushing again stacks a second copy of the same screen, and
+  // for the reading timer that is actively destructive: the buried copy's
+  // "someone else stopped this sitting" guard fires when the top one stops and
+  // pops it, so Stop & log threw the reader back to Home instead of showing
+  // the page question (found tapping the live notification on an Android
+  // emulator, 26 Jul 2026 — every route these handlers reach has the same
+  // duplicate-stacking hazard, so the guard belongs here).
+  //
+  // It has to be the *top match*, not `uri.path`: go_router leaves `uri` on
+  // the last declarative location, so after an imperative `push` it still
+  // reads "/home" and a comparison against it would never fire (this guard was
+  // written that way first, and was dead code — caught by probing the match
+  // list rather than by trusting the field name).
+  final top = config.matches.isEmpty ? current : config.matches.last.matchedLocation;
+  if (top == location) return;
+  router.push(location);
 }
 
 /// Re-runs the router's redirect whenever auth or bootstrap state changes

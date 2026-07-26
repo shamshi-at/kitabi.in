@@ -2825,6 +2825,13 @@
   },
   "timerLiveRunning": "Reading now",
   "@timerLiveRunning": {"description": "Line under the live reading clock when no page has been recorded"},
+  "timerMarkFinished": "I finished the book",
+  "@timerMarkFinished": {"description": "Button on the stop/wax-seal face that marks the book Read"},
+  "timerMarkFinishedHint": "Marks it Read and settles the last page",
+  "@timerMarkFinishedHint": {"description": "One-line explanation under the finished-the-book button"},
+  "timerMarkFinishedDone": "Marked as Read",
+  "@timerMarkFinishedDone": {"description": "Confirmation after finishing a book from the timer"},
+
   "timerLiveElapsed": "Reading",
   "@timerLiveElapsed": {"description": "Label above the elapsed time on the iOS Live Activity lock-screen card"}
 }

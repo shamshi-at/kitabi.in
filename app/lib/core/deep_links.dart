@@ -42,6 +42,11 @@ class DeepLinkListener {
 
   static const _hosts = {'kitabi.in', 'www.kitabi.in'};
 
+  /// The app's own scheme (declared in `CFBundleURLTypes`), shared with the
+  /// Supabase OAuth callback — hence the separate host below.
+  static const appScheme = 'in.kitabi.kitabi';
+  static const timerHost = 'reading-timer';
+
   /// Window in which an identical link counts as the cold-start echo rather
   /// than a deliberate second tap.
   static const _echoWindow = Duration(milliseconds: 1500);
@@ -66,6 +71,7 @@ class DeepLinkListener {
   }
 
   void _handle(Uri uri) {
+    if (_handleReadingTimer(uri)) return;
     if (!uri.isScheme('https') || !_hosts.contains(uri.host)) return;
     final segments = uri.pathSegments;
     if (segments.length < 2) return;
@@ -90,10 +96,56 @@ class DeepLinkListener {
     navigateFromExternal(router, '/${segments[0]}/$id');
   }
 
+  /// `in.kitabi.kitabi://reading-timer/:libraryEntryId` — a tap on the iOS
+  /// Live Activity (lock screen or Dynamic Island). Returns whether this link
+  /// was ours, so the https branch below never sees it.
+  ///
+  /// The scheme is shared with the Supabase OAuth callback, which is why the
+  /// host is checked and not just the scheme: `login-callback` links keep going
+  /// to supabase_flutter's own listener untouched. Android needs none of this —
+  /// its ongoing notification carries the entry id as a payload and
+  /// `_openReadingTimer` has always routed it.
+  bool _handleReadingTimer(Uri uri) {
+    if (!uri.isScheme(appScheme) || uri.host != timerHost) return false;
+    final route = readingTimerRouteFor(uri);
+    if (route == null) return true;
+
+    // The activity sits on the lock screen for a whole sitting, so the same
+    // card can legitimately be tapped again minutes later — but a cold start
+    // still delivers one tap twice (stream + getInitialLink), so it needs the
+    // same echo guard as a shared link.
+    final now = DateTime.now();
+    if (uri == _lastHandled &&
+        _lastHandledAt != null &&
+        now.difference(_lastHandledAt!) < _echoWindow) {
+      return true;
+    }
+    _lastHandled = uri;
+    _lastHandledAt = now;
+
+    navigateFromExternal(_ref.read(routerProvider), route);
+    return true;
+  }
+
   void dispose() {
     _sub?.cancel();
     _lifecycle?.dispose();
   }
+}
+
+/// The route an iOS Live Activity tap maps to, or null when the link isn't
+/// one of ours. Pulled out of the listener so the rule can be tested without a
+/// platform channel — and so the *scheme* check stays visible: this scheme is
+/// shared with the Supabase OAuth callback, and swallowing one of those links
+/// would break sign-in rather than the timer.
+String? readingTimerRouteFor(Uri uri) {
+  if (!uri.isScheme(DeepLinkListener.appScheme) ||
+      uri.host != DeepLinkListener.timerHost) {
+    return null;
+  }
+  final id = uri.pathSegments.isEmpty ? '' : uri.pathSegments.first;
+  if (id.isEmpty) return null;
+  return Routes.readingTimerPath(id);
 }
 
 /// Activates the content deep-link listener once. `ref.watch` this high in the

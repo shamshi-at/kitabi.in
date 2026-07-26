@@ -55,7 +55,8 @@ enum ReadingActivityController {
     let attributes = ReadingActivityAttributes(
       title: args["title"] as? String ?? "",
       author: args["author"] as? String,
-      startedAt: startedAt
+      startedAt: startedAt,
+      libraryEntryId: args["libraryEntryId"] as? String ?? ""
     )
     let state = ReadingActivityAttributes.ContentState(
       currentPage: args["currentPage"] as? Int,

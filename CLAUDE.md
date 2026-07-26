@@ -412,6 +412,24 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   archive build would have). This app has `UIApplicationSceneManifest` +
   `FlutterSceneDelegate`, so register custom channels through the registrar instead:
   `registrar(forPlugin: "…")?.messenger()`, which needs no window.
+- **go_router's `currentConfiguration.uri` does NOT follow an imperative
+  `push`** — it stays on the last *declarative* location, so after
+  `router.push('/reading-timer/x')` it still reads `/home`. A guard written as
+  `if (currentConfiguration.uri.path == location) return;` is therefore dead code
+  that silently never fires (written exactly that way here on 26 Jul 2026, and it
+  "passed" an on-device check by coincidence). The top of the stack is
+  `currentConfiguration.matches.last.matchedLocation`. Two corollaries: a stacked
+  duplicate route is *offstage*, so `find.text` reports one widget either way and a
+  widget test written against rendering passes against the bug — assert on
+  `matches.length`; and after writing any guard like this, disable it and watch the
+  test fail before believing it.
+- **An external navigation (notification tap, deep link) must never push a route
+  that's already on top.** Tapping the live reading notification while the timer was
+  open stacked a second copy; when the top one stopped the sitting, the *buried*
+  copy's "someone else stopped this" guard fired and popped the top one, so
+  Stop & log threw the reader out to Home instead of showing the page question
+  (26 Jul 2026). The guard belongs in `navigateFromExternal`, not in each screen —
+  every route those handlers reach has the same hazard.
 - **A new iOS app-extension target can be added without opening Xcode** — CocoaPods
   already brings the `xcodeproj` Ruby gem (1.28), so a ~60-line script creates the
   target, its build configs, the shared source file membership (a Live Activity's

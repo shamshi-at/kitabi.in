@@ -334,6 +334,24 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **26 Jul 2026** — **The live surface is a door, and the timer can finish a
+  book.** Tapping the lock-screen clock now opens *that book's* timer: on iOS
+  through a `widgetURL` on the Live Activity
+  (`in.kitabi.kitabi://reading-timer/:id` — its own host, so the Supabase OAuth
+  callback sharing that scheme is untouched), on Android through the entry id the
+  ongoing notification already carried. Doing it exposed a real bug, found only by
+  tapping the notification on a device: the tap pushed a **second copy** of the
+  timer route, and when the top one stopped the sitting the buried copy's
+  "someone else stopped this" guard popped it — so Stop & log threw the reader
+  back to Home instead of asking for the page. `navigateFromExternal` now refuses
+  to push the route already on top (using the match list, because go_router's
+  `uri` doesn't follow an imperative push — the first version of that guard was
+  dead code). Separately, both stop faces gained **"I finished the book"**: moss,
+  secondary to the ordinary way out so stopping is never blocked, marking the book
+  Read, stamping the finish date and settling the last page through one shared
+  `markBookFinished` that the book page's status row now uses too. Verified end to
+  end on the emulator: notification tap → timer → stop → finish → the book page
+  showing Read, p. 724 of 724, and the finished state of the time-to-finish card.
 - **26 Jul 2026** — **The reading sitting, on the lock screen.** One Dart API
   (`ReadingLiveActivity`), two deliberately different mechanisms. **iOS** gets a
   real **Live Activity**: a new `ReadingActivity` widget extension (ActivityKit +
