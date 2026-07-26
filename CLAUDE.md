@@ -451,6 +451,20 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   `NotificationService` target that's already there — including
   `EXCLUDED_ARCHS[sdk=iphonesimulator*] = arm64`, or the extension's arch set won't
   match the app's Rosetta-simulator build and embedding fails.
+- **An Anthropic reply's `content[0]` is not necessarily a text block, and
+  `max_tokens` caps thinking *and* prose together.** `resp.json()["content"][0]["text"]`
+  500'd `/catalog/cover-extract` in production with `KeyError: 'text'` (26 Jul 2026):
+  `content` is a list of *typed* blocks, and a model that thinks emits
+  `{"type": "thinking", "thinking", "signature"}` first — no `text` key anywhere in it.
+  Thinking is on by default from Sonnet 5 / Opus 5 onward, so the bump from Haiku 4.5
+  to `claude-sonnet-5` (commit ced7bd6) armed the bug without changing a line of the
+  parsing. Two rules: walk the blocks and take the first one whose `type == "text"`
+  (`anthropic_client.reply_text`, shared by recs + extraction) — a refusal is HTTP 200
+  with an *empty* `content`, so "" must degrade to "no fields", never a 500; and a
+  budget sized for prose (1024) is spent by thinking before any prose is written, so a
+  transcription-style call should send `thinking: {"type": "disabled"}` explicitly
+  rather than inherit the model's default. Reproduced live before fixing — a thinking
+  reply really does come back as `blocks=['thinking']`, `stop_reason=max_tokens`.
 
 ## Open decisions
 

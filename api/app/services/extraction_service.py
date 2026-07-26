@@ -21,8 +21,7 @@ import httpx
 
 from app.core.config import Settings
 from app.schemas.catalog import WORK_FORMS
-
-_ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+from app.services.anthropic_client import ANTHROPIC_URL, headers, reply_text
 
 _SYSTEM = (
     "You read photographs of a physical book's front and/or back cover and "
@@ -156,22 +155,24 @@ async def extract_from_covers(
     client = client or httpx.AsyncClient(timeout=45.0)
     try:
         resp = await client.post(
-            _ANTHROPIC_URL,
-            headers={
-                "x-api-key": settings.anthropic_api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
+            ANTHROPIC_URL,
+            headers=headers(settings),
             json={
                 "model": settings.extraction_model,
-                "max_tokens": 1024,
+                "max_tokens": 2048,
+                # Transcription, not reasoning — and `max_tokens` caps thinking
+                # and prose *together*, so an adaptive-thinking model (the
+                # default on Sonnet 5+) can spend the whole budget deliberating
+                # and return a reply with no text block in it at all. Off keeps
+                # the budget for the JSON and the call inside our 45s timeout.
+                "thinking": {"type": "disabled"},
                 "system": _SYSTEM,
                 "messages": [{"role": "user", "content": content}],
             },
         )
         resp.raise_for_status()
-        text = resp.json()["content"][0]["text"]
-        return _clean(_extract_object(text))
+        # No text block (refusal, truncation) → "" → no fields, not a 500.
+        return _clean(_extract_object(reply_text(resp.json())))
     finally:
         if owns_client:
             await client.aclose()

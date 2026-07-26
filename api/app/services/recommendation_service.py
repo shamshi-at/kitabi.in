@@ -17,8 +17,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings, get_settings
 from app.models import Edition, LibraryEntry, Rating, Work
-
-_ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+from app.services.anthropic_client import ANTHROPIC_URL, headers, reply_text
 
 _SYSTEM = (
     "You are Kitabi's book recommender. Given a reader's rated books and a list "
@@ -105,12 +104,8 @@ async def _generate_picks(
     client = client or httpx.AsyncClient(timeout=30.0)
     try:
         resp = await client.post(
-            _ANTHROPIC_URL,
-            headers={
-                "x-api-key": settings.anthropic_api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
+            ANTHROPIC_URL,
+            headers=headers(settings),
             json={
                 "model": settings.recs_model,
                 "max_tokens": 1024,
@@ -119,8 +114,8 @@ async def _generate_picks(
             },
         )
         resp.raise_for_status()
-        text = resp.json()["content"][0]["text"]
-        return _extract_json(text)
+        # No text block (thinking-only reply, refusal) → "" → no picks, not a 500.
+        return _extract_json(reply_text(resp.json()))
     finally:
         if owns_client:
             await client.aclose()
