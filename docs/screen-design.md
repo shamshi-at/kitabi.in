@@ -91,6 +91,26 @@ camera; everything else stays paper.
   reached from a book you've actually read) share the same gold-framed layout and
   destinations row; a toggle on the per-book card folds your rating/note in when you
   have them, so it's one mental model, not two features.
+- **Insights is period cards, one flagship shape reused** (redesigned 27 Jul 2026,
+  mockups **10a–10g**). A period selector — Today · Week · Month · 3 months · 6 months ·
+  Year — sits above one flagship card whose *content* changes per window but whose
+  shape never does: eyebrow (the window), a headline written as a sentence before it's
+  shown as a number, the hero stat, a visualization sized to the window (streak dots
+  for a day, a 7-bar chart for a week, a weekday-aligned calendar heatmap for a month, a
+  trend line for 3/6 months, the existing goal ring + detail charts for a year), and a
+  closing encouraging line on the dark accent panel (`#3A2C1E`, same tile the
+  reading-time-insight card already uses). Year is the one period that keeps its
+  existing bars/donut/most-read-author charts below the flagship card rather than
+  replacing them — this redesign changes what's above the fold, not the detail below
+  it. A third member joins the share-card family: every flagship card carries a small
+  gold-soft share glyph (⇲, matching the book page's) that opens a **Story/Square**
+  image-and-caption sheet — same gold-framed rasterised-card pattern as the per-book
+  share sheet, same editable-caption-plus-Copy/Share footer, captured through the same
+  `captureAndShareCard` at the same 3× pixel density. Two lines in the mockups are
+  flagged as needing a small new derived stat rather than existing data: the daily
+  streak (consecutive days with a logged sitting) and a period's percentile against
+  its own history ("busier than 9 of your last 10 weeks") — both computed the same
+  client-side way as everything else in `insights_stats.dart` / `reading_time_stats.dart`.
 - **Counterparty names are doors too** (added 7 Jul 2026) — any borrower/lender
   name on a loan (ledger cards, book page lending history) is tinted oxblood and
   tappable, opening the loans-with-that-person page. Linked Kitabi users match by

@@ -138,6 +138,21 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
 .quote{font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);line-height:1.5}
 .kbadge{font-size:7.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
   color:var(--gold);background:#3A2C1E;padding:3px 8px;border-radius:999px}
+
+/* Insights redesign — period summary cards & the share-as-image flow */
+.periodrow{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px}
+.shareicon{width:24px;height:24px;border-radius:7px;background:var(--gold-soft);color:var(--oxblood);
+  display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.eyebrow{font-size:8px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--oxblood)}
+.encourage{background:#3A2C1E;border-radius:10px;padding:9px 10px;display:flex;gap:8px;align-items:flex-start}
+.encourage .quote{color:#EFE3C8;font-size:10px;line-height:1.5}
+.daydot{width:9px;height:9px;border-radius:50%;background:var(--paper-deep);border:1px solid var(--line)}
+.daydot.on{background:var(--gold);border-color:var(--gold)}
+.daydot.today{border-color:var(--oxblood);border-width:1.5px}
+.heatcell{aspect-ratio:1;border-radius:3px;background:var(--paper-deep)}
+.heatcell.on{background:var(--gold)}
+.heatcell.future{background:transparent;border:1px dashed var(--line)}
+
 </style>
 </head>
 <body>
@@ -1239,32 +1254,258 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
 <!-- ================= AREA 5 — INSIGHTS ================= -->
 <section class="area" id="insights">
   <div class="ah"><span class="an">Area 5</span><h2>Insights — your year in pages</h2></div>
-  <p class="desc">Clean stats without trying to out-StoryGraph StoryGraph, plus the quiet
-  differentiator: recommendations that always show their reasoning and are opt-in.</p>
+  <p class="desc">Redesigned (27 Jul 2026) around one question readers actually ask — <i>how's my
+  reading going?</i> — at whatever grain they mean it: today, this week, this month, this
+  quarter, this year. One flagship card answers it for whichever window is picked, written as a
+  sentence before it's shown as a number, with a share glyph that turns the answer into an image.
+  The detailed charts (10e) still live below the year card — this redesign changes what's above
+  the fold, not what Insights eventually shows.</p>
   <div class="row">
 
-    <!-- 10. Stats -->
+    <!-- 10a. Today -->
     <div class="shot">
       <div class="phone"><div class="scr">
         <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
         <div class="body">
           <div class="pgtitle">Insights</div>
-          <div class="chiprow" style="margin-top:6px"><span class="chip on">2026</span><span class="chip">2025</span><span class="chip">All time</span></div>
-          <div class="card" style="padding:11px 12px;display:flex;align-items:center;gap:10px">
-            <div style="flex:1">
-              <div class="h-serif" style="font-size:23px">24 <span style="font-size:11px;color:var(--ink-soft)">books</span></div>
-              <div class="sub" style="font-size:8px">8,412 pages · longest: 724 pp</div>
-              <svg viewBox="0 0 120 24" style="width:100%;height:20px;margin-top:4px" aria-hidden="true">
-                <polyline points="2,19 13,15 24,17 35,9 46,12 57,5 68,11 79,3 90,8 101,6 112,9 118,7"
-                  fill="none" stroke="#B8862B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <div class="sub" style="font-size:6.5px;letter-spacing:1px">PAGES PER MONTH</div>
+          <div class="periodrow" style="margin-top:6px">
+            <span class="chip on">Today</span><span class="chip">Week</span><span class="chip">Month</span>
+            <span class="chip">3 months</span><span class="chip">6 months</span><span class="chip">2026 ▾</span>
+          </div>
+          <div class="card" style="margin-top:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <span class="eyebrow">MON · 27 JUL</span>
+              <div class="shareicon">⇲</div>
             </div>
-            <div style="width:58px;text-align:center">
-              <div style="width:50px;height:50px;border-radius:50%;background:conic-gradient(var(--moss) 0 80%,var(--paper-deep) 80% 100%);position:relative;margin:0 auto">
-                <span style="position:absolute;inset:7px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700">80%</span>
+            <div class="h-serif" style="font-size:15px;margin-top:5px">An hour well spent.</div>
+            <div style="display:flex;align-items:flex-end;gap:12px;margin-top:9px">
+              <div>
+                <div class="h-serif" style="font-size:29px;color:var(--oxblood);line-height:1">42<span style="font-size:13px">m</span></div>
+                <div class="sub" style="font-size:8px">read today</div>
               </div>
-              <div class="sub" style="font-size:6.5px;letter-spacing:.8px;margin-top:3px">GOAL · 30 BOOKS</div>
+              <div style="flex:1;padding-bottom:3px">
+                <div style="font-size:11px;font-weight:700;color:var(--moss)">+42 pages</div>
+                <div class="sub" style="font-size:8.5px">p. 260 → 302 · <i>Naalukettu</i></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:4px;margin-top:11px">
+              <span class="daydot on"></span><span class="daydot"></span><span class="daydot"></span>
+              <span class="daydot on"></span><span class="daydot on"></span><span class="daydot on"></span>
+              <span class="daydot on today"></span>
+            </div>
+            <div class="encourage" style="margin-top:9px">
+              <span style="font-size:11px">🔥</span>
+              <span class="quote">5 days running — your longest streak this year.</span>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>10a · Today</b> The thinnest window gets the warmest treatment: a streak
+      (new — consecutive days with a logged sitting) instead of a chart, because one day has no
+      trend to show. <span style="color:var(--oxblood)">⇲</span> shares just this card. A dayless
+      reader sees the encouraging line invert gently: <i>"Naalukettu is waiting at p. 260 —
+      pick it back up?"</i> rather than a guilt-trip.</p>
+    </div>
+
+    <!-- 10b. Week -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:6px">
+            <span class="chip">Today</span><span class="chip on">Week</span><span class="chip">Month</span>
+            <span class="chip">3 months</span><span class="chip">6 months</span><span class="chip">2026 ▾</span>
+          </div>
+          <div class="card" style="margin-top:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <span class="eyebrow">THIS WEEK</span>
+              <div class="shareicon">⇲</div>
+            </div>
+            <div class="h-serif" style="font-size:15px;margin-top:5px">Your steadiest week yet.</div>
+            <div style="display:flex;align-items:baseline;gap:6px;margin-top:9px">
+              <div class="h-serif" style="font-size:27px;color:var(--oxblood)">3h 40m</div>
+              <span style="font-size:9.5px;color:var(--moss);font-weight:700">▲ 48m vs last week</span>
+            </div>
+            <div class="sub" style="font-size:9px;margin-top:1px">214 pages · 3 sittings</div>
+            <div style="display:flex;align-items:flex-end;gap:4px;height:46px;margin-top:11px">
+              <div style="flex:1;background:var(--gold-soft);border-radius:3px 3px 0 0;height:22%"></div>
+              <div style="flex:1;background:var(--gold-soft);border-radius:3px 3px 0 0;height:38%"></div>
+              <div style="flex:1;background:var(--gold-soft);border-radius:3px 3px 0 0;height:8%"></div>
+              <div style="flex:1;background:var(--gold);border-radius:3px 3px 0 0;height:55%"></div>
+              <div style="flex:1;background:var(--gold-soft);border-radius:3px 3px 0 0;height:30%"></div>
+              <div style="flex:1;background:var(--gold-soft);border-radius:3px 3px 0 0;height:8%"></div>
+              <div style="flex:1;background:var(--oxblood);border-radius:3px 3px 0 0;height:100%"></div>
+            </div>
+            <div style="display:flex;gap:4px;font-size:7.5px;color:var(--ink-soft);margin-top:3px">
+              <span style="flex:1;text-align:center">M</span><span style="flex:1;text-align:center">T</span>
+              <span style="flex:1;text-align:center">W</span><span style="flex:1;text-align:center">T</span>
+              <span style="flex:1;text-align:center">F</span><span style="flex:1;text-align:center">S</span>
+              <span style="flex:1;text-align:center">S</span>
+            </div>
+            <div class="encourage" style="margin-top:10px">
+              <span style="font-size:11px">📈</span>
+              <span class="quote">Busier than 9 of your last 10 weeks.</span>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>10b · Week</b> The vs-last-week delta and the seven-bar chart already exist
+      (<code>_ReadingTimeSection</code>) — this card is that data, reframed as the headline instead
+      of something a reader scrolls past. "Busier than 9 of your last 10 weeks" needs one new
+      figure: a percentile over each week's total minutes, computed the same way as the streak.</p>
+    </div>
+
+    <!-- 10c. Month -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:6px">
+            <span class="chip">Today</span><span class="chip">Week</span><span class="chip on">Month</span>
+            <span class="chip">3 months</span><span class="chip">6 months</span><span class="chip">2026 ▾</span>
+          </div>
+          <div class="card" style="margin-top:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <span class="eyebrow">JULY 2026</span>
+              <div class="shareicon">⇲</div>
+            </div>
+            <div class="h-serif" style="font-size:15px;margin-top:5px">A month for Malayalam classics.</div>
+            <div style="display:flex;align-items:flex-end;gap:12px;margin-top:9px">
+              <div>
+                <div class="h-serif" style="font-size:29px;color:var(--oxblood);line-height:1">4</div>
+                <div class="sub" style="font-size:8px">books finished</div>
+              </div>
+              <div style="flex:1;padding-bottom:3px">
+                <div style="font-size:11px;font-weight:700">1,340 pages</div>
+                <div class="sub" style="font-size:8.5px">22 of 27 days read</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:11px">
+              <div style="visibility:hidden"></div><div style="visibility:hidden"></div><div style="visibility:hidden"></div>
+              <div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell"></div>
+              <div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell"></div><div class="heatcell on"></div><div class="heatcell on"></div>
+              <div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell"></div><div class="heatcell on"></div><div class="heatcell on"></div>
+              <div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell"></div><div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell on"></div><div class="heatcell on"></div>
+              <div class="heatcell on" style="border:1.5px solid var(--oxblood)"></div><div class="heatcell future"></div><div class="heatcell future"></div><div class="heatcell future"></div><div class="heatcell future"></div><div style="visibility:hidden"></div><div style="visibility:hidden"></div>
+            </div>
+            <div class="encourage" style="margin-top:10px">
+              <span style="font-size:11px">📚</span>
+              <span class="quote">22 days with a book in hand — your best month yet.</span>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>10c · Month</b> The one new visualization: a calendar heatmap, real
+      weekday-aligned (a reader recognises "that gap was the week I was travelling" faster on a
+      grid than a bar chart), oxblood ring on today. The headline naming <i>what</i> was read
+      ("Malayalam classics") is the one line here with no data source yet — it needs a per-period
+      language/genre mix, same shape as the existing all-time donut, scoped to the card's window.
+      Where that mix is flat or thin, the headline falls back to the plain "4 books this month."</p>
+    </div>
+
+    <!-- 10d. 3 months -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:6px">
+            <span class="chip">Today</span><span class="chip">Week</span><span class="chip">Month</span>
+            <span class="chip on">3 months</span><span class="chip">6 months</span><span class="chip">2026 ▾</span>
+          </div>
+          <div class="card" style="margin-top:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <span class="eyebrow">LAST 3 MONTHS</span>
+              <div class="shareicon">⇲</div>
+            </div>
+            <div class="h-serif" style="font-size:15px;margin-top:5px">Your best quarter this year.</div>
+            <div style="display:flex;align-items:flex-end;gap:12px;margin-top:9px">
+              <div>
+                <div class="h-serif" style="font-size:29px;color:var(--oxblood);line-height:1">9</div>
+                <div class="sub" style="font-size:8px">books finished</div>
+              </div>
+              <div style="flex:1;padding-bottom:3px">
+                <div style="font-size:11px;font-weight:700">3,120 pages</div>
+                <div class="sub" style="font-size:8.5px">61 hours reading</div>
+              </div>
+            </div>
+            <svg viewBox="0 0 240 46" style="width:100%;height:46px;margin-top:10px" aria-hidden="true">
+              <polyline points="4,36 24,33 44,34 64,27 84,29 104,20 124,22 144,14 164,16 184,9 204,7 224,4"
+                fill="none" stroke="#7E2A33" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="224" cy="4" r="3.2" fill="#7E2A33"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-size:7.5px;color:var(--ink-soft);margin-top:2px">
+              <span>MAY</span><span>JUN</span><span>JUL</span>
+            </div>
+            <div class="encourage" style="margin-top:10px">
+              <span style="font-size:11px">↗</span>
+              <span class="quote">Pace has climbed three months running.</span>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>10d · 3 months</b> A trailing window, not a calendar quarter — "last 3
+      months" always means something, where "Q3" needs the reader to do date math first. Weekly
+      pace line instead of the month's day-by-day heat, since 90-odd cells would be noise at this
+      width. <b>6 months</b> is the same card, same line chart widened to weekly points over 26
+      weeks — not mocked separately, because nothing about the shape changes, only the window.</p>
+    </div>
+
+    <!-- 10e. Year -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:6px">
+            <span class="chip">Today</span><span class="chip">Week</span><span class="chip">Month</span>
+            <span class="chip">3 months</span><span class="chip">6 months</span><span class="chip on">2026 ▾</span>
+          </div>
+          <div class="card" style="margin-top:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <span class="eyebrow">2026</span>
+              <div class="shareicon">⇲</div>
+            </div>
+            <div class="h-serif" style="font-size:15px;margin-top:5px">Ahead of your own pace.</div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:9px">
+              <div style="width:52px;height:52px;border-radius:50%;background:conic-gradient(var(--moss) 0 80%,var(--paper-deep) 80% 100%);position:relative;flex-shrink:0">
+                <span style="position:absolute;inset:7px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">80%</span>
+              </div>
+              <div>
+                <div class="h-serif" style="font-size:20px;color:var(--oxblood);line-height:1">24 <span style="font-size:11px;color:var(--ink-soft);font-family:'Inter'">of 30 books</span></div>
+                <div class="sub" style="font-size:8.5px;margin-top:2px">8,412 pages · longest 724 pp</div>
+                <div style="font-size:9.5px;font-weight:700;color:var(--moss);margin-top:2px">3 books ahead of pace</div>
+              </div>
             </div>
           </div>
           <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin:11px 0 5px">Books per month</div>
@@ -1316,9 +1557,87 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <div class="on"><span class="ic">◔</span>Insights</div>
         </div>
       </div></div>
-      <p class="cap"><b>10 · Stats</b> All three V1 visualizations — bars (books/month), donut
-      (languages), line (pages/month) — plus a personal reading-goal ring, flat and paper-toned.
-      No dashboard gloss.</p>
+      <p class="cap"><b>10e · Year</b> The one period that keeps its detail charts below the
+      flagship card — bars, donut, most-read author, all unchanged from the previous design, just
+      moved beneath the new headline. "2026 ▾" opens the same 2026/2025/All-time picker the old
+      chip row offered; tapping <span style="color:var(--oxblood)">⇲</span> here shares only the
+      flagship card (goal ring + headline + pace line), not the charts underneath — see 10f.</p>
+    </div>
+
+    <!-- 10f. Share sheet -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.32)">
+          <div style="position:absolute;left:0;right:0;bottom:0;top:60px;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:12px 16px 16px;display:flex;flex-direction:column">
+            <div style="width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 12px"></div>
+            <div class="h-serif" style="font-size:14px">Share your year</div>
+            <div style="display:flex;gap:6px;margin:9px 0 11px">
+              <span class="chip on" style="flex:1;text-align:center">Story</span>
+              <span class="chip" style="flex:1;text-align:center">Square</span>
+            </div>
+            <div style="align-self:center;width:118px;height:210px;background:var(--paper);border:1.5px solid var(--gold);border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:0 10px 22px rgba(43,33,24,.28)">
+              <span class="orn" style="font-size:9px;margin:0">❦</span>
+              <div class="h-serif" style="font-size:30px;color:var(--oxblood);margin-top:10px;line-height:1">24</div>
+              <div style="font-size:6.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin-top:2px">BOOKS</div>
+              <div class="sub" style="font-size:6px;margin-top:5px">8,412 pages · 2026</div>
+              <div class="quote" style="font-size:7px;margin-top:10px;line-height:1.4">A year, mostly spent elsewhere.</div>
+              <div style="flex:1"></div>
+              <div style="display:flex;align-items:center;gap:3px">
+                <svg viewBox="0 0 512 512" style="width:9px;height:9px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/></svg>
+                <span style="font-size:6px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+              </div>
+            </div>
+            <div style="margin-top:12px">
+              <div class="sub" style="font-size:8px;letter-spacing:1px;margin-bottom:5px">CAPTION</div>
+              <div style="background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:9.5px;line-height:1.5;display:flex;gap:6px">
+                <span style="flex:1">24 books and 8,412 pages so far in 2026 — logged with Kitabi. 📖</span>
+                <span style="color:var(--ink-soft)">✎</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <div class="btn ghost" style="flex:1;padding:9px;font-size:9.5px;border-width:1.5px">Copy caption</div>
+              <div class="btn" style="flex:1;padding:9px;font-size:9.5px">⇲ Share image</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>10f · Share sheet</b> Opens from any period card's <span
+      style="color:var(--oxblood)">⇲</span>. Story/Square is an aspect toggle on the same rasterised
+      card — same pattern as the book share sheet's rating toggle, one visual family. The caption is
+      pre-filled and editable before either button fires, exactly like the book share sheet's Copy
+      Link / Share Card pair: Share image rasterises the preview via <code>RepaintBoundary</code>
+      and hands it to the OS sheet (<code>captureAndShareCard</code>, reused as-is); the caption text
+      always rides along so a recipient who can't render the image still reads the number.</p>
+    </div>
+
+    <!-- 10g. The shared image -->
+    <div class="shot">
+      <div style="width:190px;height:338px;border-radius:16px;background:var(--paper);border:1.5px solid var(--gold);
+        box-shadow:0 22px 46px rgba(43,33,24,.38),0 4px 10px rgba(43,33,24,.22);padding:24px 18px;
+        display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden">
+        <div style="position:absolute;inset:0;background:radial-gradient(160px 160px at 50% 38%,rgba(184,134,43,.14),transparent 70%)"></div>
+        <span class="orn" style="font-size:13px;margin:0;position:relative">❦</span>
+        <div class="h-serif" style="font-size:56px;color:var(--oxblood);margin-top:26px;line-height:1;position:relative">24</div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ink-soft);margin-top:4px;position:relative">BOOKS</div>
+        <div class="sub" style="font-size:9.5px;margin-top:12px;position:relative">8,412 pages · 214 hours · 2026</div>
+        <div class="quote" style="font-size:11.5px;margin-top:18px;line-height:1.5;position:relative">A year, mostly spent elsewhere.</div>
+        <div style="flex:1"></div>
+        <div class="rule" style="width:40px;margin:14px 0 10px;position:relative"></div>
+        <div style="display:flex;align-items:center;gap:5px;position:relative">
+          <svg viewBox="0 0 512 512" style="width:13px;height:13px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/><path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/></svg>
+          <span style="font-size:9px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+        <div class="sub" style="font-size:7px;margin-top:2px;position:relative">beyond the bookshelf</div>
+      </div>
+      <p class="cap"><b>10g · The shared image</b> What lands in the recipient's feed or story —
+      captured at 3× pixel density (<code>toImage(pixelRatio: 3)</code>, the book card's own
+      setting) so it's crisp at full screen, not just in the sheet's small preview. Paper, ink,
+      one oxblood numeral, the gold hairline frame from the per-book card — a reader who's never
+      opened Kitabi should still recognise it as a quiet, literary thing, not a growth-hacked
+      "Wrapped" graphic. The closing line ("A year, mostly spent elsewhere.") is a short pool of
+      per-period literary lines, same rotation mechanism as the existing daily reading-fact card —
+      not generated per reader, just varied enough not to repeat.</p>
     </div>
 
     <!-- 11. Recommendations -->
