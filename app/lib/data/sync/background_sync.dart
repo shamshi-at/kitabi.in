@@ -71,6 +71,23 @@ Future<void> _runReadingTimerEnforcement(Map<String, dynamic>? inputData) async 
   final currentEntryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
   if (currentEntryId != entryId) return;
 
+  // Re-arming this task is not the only thing a "Yes, still reading" does, and
+  // it isn't the thing to trust: a replaced one-off task can still fire on its
+  // old schedule (and on iOS the whole mechanism is best-effort). The recorded
+  // answer is the authority, so check it here too rather than stopping a
+  // sitting the reader has just confirmed (owner report, 26 Jul 2026).
+  final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
+  final startedAt = startedRaw == null ? null : DateTime.tryParse(startedRaw);
+  if (startedAt != null) {
+    final confirmedRaw = await db.keyValuesDao.getValue(activeSessionConfirmedKey);
+    final overdue = readingSessionOverdue(
+      startedAt: startedAt,
+      confirmedAt: confirmedRaw == null ? null : DateTime.tryParse(confirmedRaw),
+      now: DateTime.now(),
+    );
+    if (!overdue) return;
+  }
+
   await stopReadingSessionAndNotify(db: db, userId: userId, libraryEntryId: entryId);
 }
 

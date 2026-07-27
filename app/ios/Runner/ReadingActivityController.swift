@@ -62,11 +62,22 @@ enum ReadingActivityController {
       currentPage: args["currentPage"] as? Int,
       pageCount: args["pageCount"] as? Int
     )
+    // After this instant the card is no longer trustworthy: a sitting stopped
+    // from a background isolate can't reach this channel to end the activity,
+    // so the lock screen would keep counting a sitting that is already over.
+    // Marking it stale lets iOS show it as outdated rather than confidently
+    // wrong; the app refreshes it on the next resume.
+    var staleDate: Date?
+    if let seconds = args["staleAt"] as? Double {
+      staleDate = Date(timeIntervalSince1970: seconds)
+    } else if let seconds = args["staleAt"] as? Int {
+      staleDate = Date(timeIntervalSince1970: TimeInterval(seconds))
+    }
 
     do {
       current = try Activity.request(
         attributes: attributes,
-        content: ActivityContent(state: state, staleDate: nil),
+        content: ActivityContent(state: state, staleDate: staleDate),
         pushType: nil
       )
     } catch {

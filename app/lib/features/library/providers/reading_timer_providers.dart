@@ -19,6 +19,17 @@ const activeSessionEntryKey = 'active_session_entry_id';
 const activeSessionStartedKey = 'active_session_started_at';
 const activeSessionPageStartKey = 'active_session_page_start';
 
+/// When the reader last answered "Yes, still reading" to a check-in.
+///
+/// Without this, answering Yes was *cosmetic*: it re-armed the notification and
+/// the enforcement task, but every in-app surface still measured the sitting's
+/// age from `startedAt`, so the deterministic safety net stopped the sitting at
+/// start + 90 minutes anyway — the moment any ticking surface came on screen
+/// (owner report, 26 Jul 2026: opened the timer from the Live Activity and was
+/// told it had stopped). A confirmation has to move the deadline for *every*
+/// mechanism, not just the two background ones.
+const activeSessionConfirmedKey = 'active_session_confirmed_at';
+
 /// The sitting's UUID, minted when it *starts* rather than when it's logged —
 /// a note written mid-session has to reference a real session id, and the row
 /// only appears on stop (rule 4: UUIDs are client-side anyway).
@@ -46,6 +57,23 @@ int readingAutoStoppedNotificationId(String libraryEntryId) =>
     ('reading_autostopped_$libraryEntryId').hashCode & 0x7fffffff;
 String readingEnforcementTaskName(String libraryEntryId) =>
     'kitabi.readingTimerAutoStop.$libraryEntryId';
+
+/// The instant a running sitting becomes overdue and may be auto-stopped:
+/// 90 minutes after it started, or after the reader last said they were still
+/// reading — whichever is later. Pure so every mechanism (the in-app tick, the
+/// workmanager task) can agree on one answer.
+DateTime readingSessionDeadline({required DateTime startedAt, DateTime? confirmedAt}) {
+  final base =
+      (confirmedAt != null && confirmedAt.isAfter(startedAt)) ? confirmedAt : startedAt;
+  return base.add(readingCheckInDelay + readingCheckInGrace);
+}
+
+bool readingSessionOverdue({
+  required DateTime startedAt,
+  DateTime? confirmedAt,
+  required DateTime now,
+}) =>
+    !now.isBefore(readingSessionDeadline(startedAt: startedAt, confirmedAt: confirmedAt));
 
 /// The one reading session currently running, if any — device-local
 /// (KeyValues), never synced until it's stopped and logged as a
@@ -125,6 +153,7 @@ Future<LoggedSession?> stopAndLogActiveSession(
   await db.keyValuesDao.deleteValue(activeSessionStartedKey);
   await db.keyValuesDao.deleteValue(activeSessionPageStartKey);
   await db.keyValuesDao.deleteValue(activeSessionIdKey);
+  await db.keyValuesDao.deleteValue(activeSessionConfirmedKey);
 
   // Every stop path — manual, quick-stop, "No", or auto-stop — goes through
   // here, so this is the one place that needs to cancel the check-in
@@ -226,6 +255,7 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
       final entry = await db.libraryEntriesDao.getById(libraryEntryId);
       if (entry == null) return;
       final book = await db.cachedBooksDao.getByEditionId(entry.editionId);
+      final confirmedRaw = await db.keyValuesDao.getValue(activeSessionConfirmedKey);
       await ReadingLiveActivity().start(
         libraryEntryId: libraryEntryId,
         title: book?.title ?? '',
@@ -233,6 +263,10 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
         startedAt: startedAt,
         currentPage: entry.currentPage,
         pageCount: book?.pageCount,
+        staleAt: readingSessionDeadline(
+          startedAt: startedAt,
+          confirmedAt: confirmedRaw == null ? null : DateTime.tryParse(confirmedRaw),
+        ),
       );
     } catch (_) {
       // Decoration, never the sitting itself.
@@ -258,6 +292,7 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
     await db.keyValuesDao.setValue(activeSessionEntryKey, libraryEntryId);
     await db.keyValuesDao.setValue(activeSessionStartedKey, startedAt.toIso8601String());
     await db.keyValuesDao.setValue(activeSessionIdKey, sessionId);
+    await db.keyValuesDao.deleteValue(activeSessionConfirmedKey);
     if (pageStart != null) {
       await db.keyValuesDao.setValue(activeSessionPageStartKey, '$pageStart');
     }
@@ -350,8 +385,13 @@ Future<LoggedSession?> checkReadingTimerSafetyNet(WidgetRef ref) async {
     return null;
   }
 
-  final elapsed = DateTime.now().difference(active.startedAt);
-  if (elapsed < readingCheckInDelay + readingCheckInGrace) return null;
+  final confirmedRaw = await db.keyValuesDao.getValue(activeSessionConfirmedKey);
+  final overdue = readingSessionOverdue(
+    startedAt: active.startedAt,
+    confirmedAt: confirmedRaw == null ? null : DateTime.tryParse(confirmedRaw),
+    now: DateTime.now(),
+  );
+  if (!overdue) return null;
   return notifier.stop();
 }
 

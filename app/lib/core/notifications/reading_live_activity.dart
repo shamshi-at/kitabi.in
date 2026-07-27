@@ -54,6 +54,7 @@ class ReadingLiveActivity {
     required DateTime startedAt,
     int? currentPage,
     int? pageCount,
+    DateTime? staleAt,
   }) async {
     if (_platform == TargetPlatform.iOS) {
       await _invoke('start', {
@@ -63,6 +64,12 @@ class ReadingLiveActivity {
         'startedAt': startedAt.millisecondsSinceEpoch ~/ 1000,
         'currentPage': currentPage,
         'pageCount': pageCount,
+        // When a sitting is stopped from a background isolate there is no
+        // method channel to end the activity with, so the lock screen would go
+        // on counting a sitting that no longer exists (owner report, 26 Jul
+        // 2026). A stale date makes iOS render it as outdated instead of
+        // confidently wrong; `reconcile()` refreshes it on the next resume.
+        'staleAt': staleAt == null ? null : staleAt.millisecondsSinceEpoch ~/ 1000,
       });
       return;
     }

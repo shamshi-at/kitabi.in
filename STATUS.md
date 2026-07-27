@@ -334,6 +334,16 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **26 Jul 2026** — **Fixed: "Yes, still reading" didn't keep the sitting
+  alive.** Answering the check-in re-armed the notification and the workmanager
+  auto-stop but recorded nothing, so the *in-app* safety net — which measures a
+  sitting's age from `startedAt` on every tick of any live surface — still
+  stopped it at start + 90 minutes; opening the timer was enough to trigger it.
+  The answer is now persisted and one pure deadline helper is shared by the
+  in-app guard and the background task, so a confirmation moves every mechanism.
+  The lock-screen card also gained a `staleDate` at the deadline: a sitting
+  stopped from a background isolate can't reach the ActivityKit channel, so the
+  card had been counting on past the end of a sitting that no longer existed.
 - **26 Jul 2026** — **Two reading-log bugs, both from trusting a snapshot.**
   (1) The first sitting showed **"no page noted"** in the reading log while the
   progress bar showed the page: the sitting's own `pageEnd` and the entry's

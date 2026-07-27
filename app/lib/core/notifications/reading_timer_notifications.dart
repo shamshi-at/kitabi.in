@@ -120,9 +120,19 @@ Future<void> _handle(NotificationResponse response) async {
       await stopReadingSessionAndNotify(db: db, userId: userId, libraryEntryId: entryId);
     } else {
       final l10n = lookupAppLocalizations(const Locale('en'));
+      // Record the answer before re-arming. Re-arming alone only moves the two
+      // *background* mechanisms; the in-app safety net measures the sitting's
+      // age itself and would still stop it at start + 90 minutes, which is
+      // exactly what happened to a reader who answered Yes and then opened the
+      // timer to be told it had stopped (26 Jul 2026).
+      final confirmedAt = DateTime.now();
+      await db.keyValuesDao.setValue(
+        activeSessionConfirmedKey,
+        confirmedAt.toIso8601String(),
+      );
       await armReadingTimerSafetyNet(
         libraryEntryId: entryId,
-        from: DateTime.now(),
+        from: confirmedAt,
         title: l10n.timerCheckInTitle,
         body: l10n.timerCheckInBody,
         yesLabel: l10n.timerCheckInYes,

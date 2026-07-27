@@ -423,6 +423,19 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   widget test written against rendering passes against the bug — assert on
   `matches.length`; and after writing any guard like this, disable it and watch the
   test fail before believing it.
+- **A "still doing it?" confirmation has to move the deadline for *every* stop
+  mechanism, not just the ones it re-arms.** Tapping "Yes, still reading" on the
+  reading check-in re-armed the notification and the workmanager auto-stop, but
+  recorded nothing — and the in-app deterministic safety net measures a sitting's
+  age from `startedAt` itself, on every tick of any live surface. So the sitting
+  was still killed at start + 90 minutes, and merely *opening* the timer was
+  enough to trigger it (owner report, 26 Jul 2026). The answer is now persisted
+  (`active_session_confirmed_at`) and one pure `readingSessionDeadline` /
+  `readingSessionOverdue` pair is consulted by the in-app guard *and* the
+  background task. Corollary: a background isolate can stop a sitting but cannot
+  reach the iOS Live Activity channel, so the lock-screen card kept counting a
+  sitting that was already over — give the activity a `staleDate` at the deadline
+  so iOS renders it as outdated instead of confidently wrong.
 - **A screen must not take its data from route `extra` when an OS-level entry
   point can reach it.** `extra` is a snapshot the *caller* assembles, and the
   callers that matter most can't assemble one: a tap on the iOS Live Activity or
