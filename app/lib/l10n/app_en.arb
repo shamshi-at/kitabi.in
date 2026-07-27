@@ -546,6 +546,10 @@
   "@bookReviewVisibilityPublic": {
     "description": "Review visibility toggle option"
   },
+  "bookReviewShareTooltip": "Share my review",
+  "@bookReviewShareTooltip": {
+    "description": "Tooltip on the review card's share glyph, shown once a review exists"
+  },
   "bookEditReview": "Edit review",
   "@bookEditReview": {
     "description": "Dialog title for editing a review"
@@ -2285,6 +2289,8 @@
   "@insightsPagesGained": {"description": "Pages read within the selected period, shown as a gain", "placeholders": {"count": {"type": "int"}}},
   "insightsStreakDays": "{days, plural, =1{1 day running} other{{days} days running}}",
   "@insightsStreakDays": {"description": "Consecutive-day reading streak on the daily card", "placeholders": {"days": {"type": "int"}}},
+  "insightsStreakPill": "{days, plural, =1{1-day streak} other{{days}-day streak}}",
+  "@insightsStreakPill": {"description": "Compact streak badge on the shareable period image", "placeholders": {"days": {"type": "int"}}},
   "insightsNoSessionToday": "No sitting yet today — even a few pages count.",
   "@insightsNoSessionToday": {"description": "Daily card's gentle nudge when there is no streak to report"},
   "insightsBooksFinished": "{count, plural, =0{No books finished} =1{1 book finished} other{{count} books finished}}",

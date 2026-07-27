@@ -43,6 +43,23 @@ class PeriodSelector extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
+          // Year leads the row — it's the scope-setting chip (2026 / 2025 /
+          // all time), so it reads first even though Today is what's
+          // selected by default.
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: _YearChip(
+              label: l10n.insightsPeriodYear,
+              allTimeLabel: l10n.insightsAllTime,
+              selected: selected == InsightsPeriod.year,
+              selectedYear: selectedYear,
+              thisYear: thisYear,
+              onChanged: (year) {
+                onYearSelected(year);
+                onSelected(InsightsPeriod.year);
+              },
+            ),
+          ),
           for (final (period, label) in chips)
             Padding(
               padding: const EdgeInsets.only(right: 6),
@@ -52,17 +69,6 @@ class PeriodSelector extends StatelessWidget {
                 onTap: () => onSelected(period),
               ),
             ),
-          _YearChip(
-            label: l10n.insightsPeriodYear,
-            allTimeLabel: l10n.insightsAllTime,
-            selected: selected == InsightsPeriod.year,
-            selectedYear: selectedYear,
-            thisYear: thisYear,
-            onChanged: (year) {
-              onYearSelected(year);
-              onSelected(InsightsPeriod.year);
-            },
-          ),
         ],
       ),
     );

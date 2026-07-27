@@ -982,6 +982,12 @@ abstract class AppLocalizations {
   /// **'Public'**
   String get bookReviewVisibilityPublic;
 
+  /// Tooltip on the review card's share glyph, shown once a review exists
+  ///
+  /// In en, this message translates to:
+  /// **'Share my review'**
+  String get bookReviewShareTooltip;
+
   /// Dialog title for editing a review
   ///
   /// In en, this message translates to:
@@ -4257,6 +4263,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{days, plural, =1{1 day running} other{{days} days running}}'**
   String insightsStreakDays(int days);
+
+  /// Compact streak badge on the shareable period image
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1-day streak} other{{days}-day streak}}'**
+  String insightsStreakPill(int days);
 
   /// Daily card's gentle nudge when there is no streak to report
   ///

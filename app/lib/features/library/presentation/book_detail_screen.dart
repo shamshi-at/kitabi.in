@@ -3079,11 +3079,32 @@ class _ReviewCard extends ConsumerWidget {
   final String workId;
   final Map<String, dynamic> reviewExtra;
 
+  /// Reuses the general per-book share sheet (6c) rather than a bespoke flow
+  /// — [showShareBookSheet]'s "include my rating & note" toggle already
+  /// defaults on whenever a personal rating exists, so handing it the
+  /// review here just skips the trip to the page's own share icon and the
+  /// extra tap to flip that toggle. A book page reached only through the
+  /// review card's tap-to-edit gesture never had a direct way to *share*
+  /// what was just written — this is that entry point.
+  void _shareReview(BuildContext context, WidgetRef ref, {required int? rating, required String body}) {
+    showShareBookSheet(
+      context,
+      title: reviewExtra['title'] as String? ?? '',
+      author: reviewExtra['author'] as String? ?? '',
+      shareUrl: bookShareUrl(workId),
+      coverUrl: reviewExtra['coverUrl'] as String?,
+      personalRating: rating,
+      personalReview: body,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final review = ref.watch(reviewProvider(workId));
     final current = review.valueOrNull;
+    final rating = ref.watch(ratingProvider(workId)).valueOrNull;
+    final hasReview = current != null && current.body.trim().isNotEmpty;
 
     // One tap (on the label or body — not the rating stars, which have their
     // own tap targets) opens the dedicated rate & review page; rating + review
@@ -3094,31 +3115,58 @@ class _ReviewCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Opaque so the whole label row (not just the text glyphs) opens
-          // the editor — the rating row below keeps its own star tap targets
-          // and is deliberately left outside this detector.
-          GestureDetector(
-            onTap: openEditor,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.bookReviewLabel,
-                      style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+          Padding(
+            padding: EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                // Opaque so the whole label (not just the text glyphs) opens
+                // the editor — the rating row below keeps its own star tap
+                // targets, and the share button beside it is a separate
+                // target on purpose, so tapping Share never opens the editor.
+                Expanded(
+                  child: GestureDetector(
+                    onTap: openEditor,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.bookReviewLabel,
+                            style: TextStyle(fontSize: 9, color: AppColors.inkSoft, letterSpacing: 1),
+                          ),
+                        ),
+                        if (current != null)
+                          Text(
+                            current.visible
+                                ? l10n.bookReviewVisibilityPublic
+                                : l10n.bookReviewVisibilityPrivate,
+                            style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                          ),
+                      ],
                     ),
                   ),
-                  if (current != null)
-                    Text(
-                      current.visible
-                          ? l10n.bookReviewVisibilityPublic
-                          : l10n.bookReviewVisibilityPrivate,
-                      style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
+                ),
+                if (hasReview) ...[
+                  SizedBox(width: 8),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _shareReview(context, ref, rating: rating?.value, body: current.body),
+                      borderRadius: BorderRadius.circular(7),
+                      child: Tooltip(
+                        message: l10n.bookReviewShareTooltip,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration:
+                              BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(7)),
+                          child: Icon(Icons.ios_share, size: 12, color: AppColors.oxblood),
+                        ),
+                      ),
                     ),
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
           _RatingRow(workId: workId),

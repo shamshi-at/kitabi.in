@@ -545,4 +545,45 @@ void main() {
 
     await flushTree(tester);
   });
+
+  testWidgets('review card gets a share glyph once a review exists, and shares it',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      final libraryRepo = LibraryRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await libraryRepo.add(editionId: _editionId, status: 'read');
+      final ratings = RatingsRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await ratings.setRating(_workId, 4);
+      final reviews = ReviewsRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await reviews.upsert(_workId, body: 'A sea-salted classic.', visible: true);
+    });
+
+    await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
+    await settle(tester);
+
+    // No share glyph before a review exists — the tooltip is the only text
+    // marker on an icon-only button, so it's what distinguishes this glyph
+    // from the page's own top-of-page share icon.
+    expect(find.byTooltip('Share my review'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Share my review'));
+    await settle(tester);
+
+    // Opens the general book share sheet, pre-loaded with the review as the
+    // personal-endorsement body — not the editor (a separate tap target),
+    // and not the catalogue blurb.
+    expect(find.text('Share this book'), findsOneWidget);
+    // Both the review card underneath and the share card in the sheet show
+    // the same text — the sheet doesn't unmount the page behind it.
+    expect(find.text('A sea-salted classic.'), findsWidgets);
+    expect(find.text('Chemmeen'), findsWidgets);
+    // Confirms the share glyph's own tap target, not the label row's
+    // opaque tap-to-edit zone underneath it, is what actually fired.
+    expect(find.text('Rate & review'), findsNothing);
+
+    await flushTree(tester);
+  });
 }

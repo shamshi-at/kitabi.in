@@ -38,7 +38,10 @@ class InsightsScreen extends ConsumerStatefulWidget {
 }
 
 class _InsightsScreenState extends ConsumerState<InsightsScreen> {
-  InsightsPeriod _period = InsightsPeriod.year;
+  // Today, not Year — the current date is what a reader most often means by
+  // "how's my reading going?", even though Year leads the chip row (it's the
+  // scope-setting chip, not the default view).
+  InsightsPeriod _period = InsightsPeriod.today;
   // Only meaningful while _period is year; null means "all time".
   late int? _year = DateTime.now().year;
 
@@ -140,13 +143,45 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
       heroLabel: heroLabel,
       subLine: subLine,
       initialCaption: _buildCaption(l10n, summary, isDuration: isDuration),
+      pill: _sharePill(l10n, summary),
     );
+  }
+
+  /// The one extra fact worth badging on the shared image (10i) — a streak
+  /// for Today, a vs-last-week delta for Week. Null for every other period:
+  /// nothing computed for Month/3-6-months is distinctive enough to badge
+  /// without just repeating the sub-line.
+  String? _sharePill(AppLocalizations l10n, PeriodSummary summary) {
+    switch (_period) {
+      case InsightsPeriod.today:
+        final streak = summary.streakDays ?? 0;
+        return streak > 0 ? l10n.insightsStreakPill(streak) : null;
+      case InsightsPeriod.week:
+        final previous = summary.previousTotalSeconds;
+        if (previous == null || previous == 0) return null;
+        final diff = summary.totalSeconds - previous;
+        final arrow = diff >= 0 ? '▲' : '▼';
+        return '$arrow ${l10n.insightsVsLastWeek(formatDuration(Duration(seconds: diff.abs())))}';
+      case InsightsPeriod.month:
+      case InsightsPeriod.threeMonths:
+      case InsightsPeriod.sixMonths:
+      case InsightsPeriod.year:
+        return null;
+    }
   }
 
   void _shareYear(InsightsStats stats, PeriodSummary yearSummary) {
     final l10n = AppLocalizations.of(context)!;
     final pages = l10n.bookLogTotalPages(stats.pagesRead);
     final duration = formatDuration(Duration(seconds: yearSummary.totalSeconds));
+    final thisYear = DateTime.now().year;
+    String? pill;
+    if (_year == thisYear) {
+      final goal = ref.read(readingGoalProvider).valueOrNull ?? 30;
+      final diff = _paceDiff(stats.booksRead, goal);
+      if (diff > 0) pill = l10n.insightsAhead(diff);
+      if (diff < 0) pill = l10n.insightsBehind(-diff);
+    }
     showSharePeriodSheet(
       context,
       heroValue: '${stats.booksRead}',
@@ -156,6 +191,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
           : l10n.insightsShareSubLineYear(pages, duration, _year!),
       initialCaption: '${l10n.insightsBooksFinished(stats.booksRead)}, ${pages.toLowerCase()} '
           '${l10n.insightsShareCaptionSuffix}',
+      pill: pill,
     );
   }
 

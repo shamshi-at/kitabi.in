@@ -17,6 +17,7 @@ Future<void> showSharePeriodSheet(
   required String heroLabel,
   required String subLine,
   required String initialCaption,
+  String? pill,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -28,6 +29,7 @@ Future<void> showSharePeriodSheet(
       heroLabel: heroLabel,
       subLine: subLine,
       initialCaption: initialCaption,
+      pill: pill,
     ),
   );
 }
@@ -38,12 +40,14 @@ class _SharePeriodSheet extends StatefulWidget {
     required this.heroLabel,
     required this.subLine,
     required this.initialCaption,
+    this.pill,
   });
 
   final String heroValue;
   final String heroLabel;
   final String subLine;
   final String initialCaption;
+  final String? pill;
 
   @override
   State<_SharePeriodSheet> createState() => _SharePeriodSheetState();
@@ -151,6 +155,7 @@ class _SharePeriodSheetState extends State<_SharePeriodSheet> {
                     heroLabel: widget.heroLabel,
                     subLine: widget.subLine,
                     closingLine: _closingLine(l10n),
+                    pill: widget.pill,
                     square: _square,
                   ),
                 ),

@@ -541,6 +541,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookReviewVisibilityPublic => 'Public';
 
   @override
+  String get bookReviewShareTooltip => 'Share my review';
+
+  @override
   String get bookEditReview => 'Edit review';
 
   @override
@@ -2519,6 +2522,17 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other: '$days days running',
       one: '1 day running',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightsStreakPill(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days-day streak',
+      one: '1-day streak',
     );
     return '$_temp0';
   }
