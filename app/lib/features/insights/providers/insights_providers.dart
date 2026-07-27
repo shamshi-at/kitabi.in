@@ -22,14 +22,6 @@ final readingGoalProvider = FutureProvider.autoDispose<int>((ref) async {
   return repo.readingGoal();
 });
 
-/// Every reading session ever logged — small enough a dataset (minutes-long
-/// sessions, not one per page) that computing weekly/narrative stats client
-/// side over the full history beats adding a second, date-scoped fetch path.
-final allReadingSessionsProvider = FutureProvider.autoDispose<List<ReadingSession>>((ref) async {
-  final repo = await ref.watch(readingSessionsRepositoryProvider.future);
-  return repo.sessionsSince(DateTime(2000));
-});
-
 /// The same history, watched. Every "time to finish" estimate hangs off this,
 /// and sittings are written from four routes that don't own the screens
 /// showing the estimate — a one-shot fetch would leave a book page quoting a
@@ -38,6 +30,14 @@ final readingSessionsStreamProvider =
     StreamProvider.autoDispose<List<ReadingSession>>((ref) async* {
   final repo = await ref.watch(readingSessionsRepositoryProvider.future);
   yield* repo.watchSessionsSince(DateTime(2000));
+});
+
+/// workId -> the reader's own star rating, across every rated Work — the
+/// period cards' finished-books strip needs this to badge a cover, not a
+/// per-book lookup.
+final ratingsByWorkIdProvider = StreamProvider.autoDispose<Map<String, int>>((ref) async* {
+  final repo = await ref.watch(ratingsRepositoryProvider.future);
+  yield* repo.watchAllByWorkId();
 });
 
 /// The reader's own reading pace (Area 13). One computation for the whole app:

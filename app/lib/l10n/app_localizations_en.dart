@@ -2448,6 +2448,132 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsGoalDialogHint => 'Books per year';
 
   @override
+  String get insightsPeriodToday => 'Today';
+
+  @override
+  String get insightsPeriodWeek => 'Week';
+
+  @override
+  String get insightsPeriodMonth => 'Month';
+
+  @override
+  String get insightsPeriod3Months => '3 months';
+
+  @override
+  String get insightsPeriod6Months => '6 months';
+
+  @override
+  String get insightsPeriodYear => 'Year';
+
+  @override
+  String get insightsEyebrowThisWeek => 'This week';
+
+  @override
+  String get insightsEyebrowLast3Months => 'Last 3 months';
+
+  @override
+  String get insightsEyebrowLast6Months => 'Last 6 months';
+
+  @override
+  String get insightsPeriodTodayHeadline => 'Today\'s sitting.';
+
+  @override
+  String get insightsPeriodWeekHeadline => 'This week, in books.';
+
+  @override
+  String get insightsPeriodMonthHeadline => 'This month, so far.';
+
+  @override
+  String get insightsPeriodMultiMonthHeadline => 'A good stretch of reading.';
+
+  @override
+  String get insightsYearHeadlineAhead => 'Ahead of your own pace.';
+
+  @override
+  String get insightsYearHeadlineOnTrack => 'Right on your own pace.';
+
+  @override
+  String get insightsYearHeadlineBehind => 'Behind your own pace, for now.';
+
+  @override
+  String get insightsYearHeadlineAllTime => 'Your library, so far.';
+
+  @override
+  String get insightsReadToday => 'read today';
+
+  @override
+  String insightsPagesGained(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count pages',
+      one: '+1 page',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightsStreakDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days running',
+      one: '1 day running',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insightsNoSessionToday =>
+      'No sitting yet today — even a few pages count.';
+
+  @override
+  String insightsBooksFinished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books finished',
+      one: '1 book finished',
+      zero: 'No books finished',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightsDaysRead(int read, int elapsed) {
+    return '$read of $elapsed days read';
+  }
+
+  @override
+  String insightsHoursReading(String duration) {
+    return '$duration reading';
+  }
+
+  @override
+  String get insightsShareTooltip => 'Share';
+
+  @override
+  String insightsBooksLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'books',
+      one: 'book',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightsShareSubLineAllTime(String pages, String duration) {
+    return '$pages · $duration · all time';
+  }
+
+  @override
+  String insightsShareSubLineYear(String pages, String duration, int year) {
+    return '$pages · $duration · $year';
+  }
+
+  @override
   String get homeUpdateProgress => 'Update progress';
 
   @override
@@ -2752,6 +2878,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareFailed => 'Couldn\'t open the share sheet. Try again.';
+
+  @override
+  String get insightsShareSheetTitle => 'Share your reading';
+
+  @override
+  String get insightsShareFormatStory => 'Story';
+
+  @override
+  String get insightsShareFormatSquare => 'Square';
+
+  @override
+  String get insightsShareCaptionLabel => 'Caption';
+
+  @override
+  String get insightsShareCopyCaption => 'Copy caption';
+
+  @override
+  String get insightsShareImageButton => 'Share image';
+
+  @override
+  String get insightsShareCaptionCopied => 'Caption copied';
+
+  @override
+  String get insightsShareCaptionSuffix => '— logged with Kitabi.';
+
+  @override
+  String get insightsShareLine1 => 'Time well spent, one page at a time.';
+
+  @override
+  String get insightsShareLine2 => 'Some days are made of paper.';
+
+  @override
+  String get insightsShareLine3 => 'A little further into the story.';
+
+  @override
+  String get insightsShareLine4 => 'Quietly, a few more chapters.';
+
+  @override
+  String get insightsShareLine5 => 'Books first, everything else after.';
 
   @override
   String get workPickerTitle => 'Choose a book';

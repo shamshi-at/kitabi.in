@@ -4138,6 +4138,174 @@ abstract class AppLocalizations {
   /// **'Books per year'**
   String get insightsGoalDialogHint;
 
+  /// Period-selector chip and eyebrow for the daily card
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get insightsPeriodToday;
+
+  /// Period-selector chip label for the weekly card
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get insightsPeriodWeek;
+
+  /// Period-selector chip label for the monthly card
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get insightsPeriodMonth;
+
+  /// Period-selector chip label for the trailing-3-month card
+  ///
+  /// In en, this message translates to:
+  /// **'3 months'**
+  String get insightsPeriod3Months;
+
+  /// Period-selector chip label for the trailing-6-month card
+  ///
+  /// In en, this message translates to:
+  /// **'6 months'**
+  String get insightsPeriod6Months;
+
+  /// Period-selector chip label for the yearly card
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get insightsPeriodYear;
+
+  /// Eyebrow on the weekly flagship card
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get insightsEyebrowThisWeek;
+
+  /// Eyebrow on the trailing-3-month flagship card
+  ///
+  /// In en, this message translates to:
+  /// **'Last 3 months'**
+  String get insightsEyebrowLast3Months;
+
+  /// Eyebrow on the trailing-6-month flagship card
+  ///
+  /// In en, this message translates to:
+  /// **'Last 6 months'**
+  String get insightsEyebrowLast6Months;
+
+  /// Headline on the daily flagship card
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s sitting.'**
+  String get insightsPeriodTodayHeadline;
+
+  /// Headline on the weekly flagship card
+  ///
+  /// In en, this message translates to:
+  /// **'This week, in books.'**
+  String get insightsPeriodWeekHeadline;
+
+  /// Headline on the monthly flagship card
+  ///
+  /// In en, this message translates to:
+  /// **'This month, so far.'**
+  String get insightsPeriodMonthHeadline;
+
+  /// Headline shared by the 3- and 6-month flagship cards
+  ///
+  /// In en, this message translates to:
+  /// **'A good stretch of reading.'**
+  String get insightsPeriodMultiMonthHeadline;
+
+  /// Yearly flagship headline when ahead of the goal's expected pace
+  ///
+  /// In en, this message translates to:
+  /// **'Ahead of your own pace.'**
+  String get insightsYearHeadlineAhead;
+
+  /// Yearly flagship headline when exactly on the goal's expected pace
+  ///
+  /// In en, this message translates to:
+  /// **'Right on your own pace.'**
+  String get insightsYearHeadlineOnTrack;
+
+  /// Yearly flagship headline when behind the goal's expected pace
+  ///
+  /// In en, this message translates to:
+  /// **'Behind your own pace, for now.'**
+  String get insightsYearHeadlineBehind;
+
+  /// Yearly flagship headline when All time is selected instead of one year
+  ///
+  /// In en, this message translates to:
+  /// **'Your library, so far.'**
+  String get insightsYearHeadlineAllTime;
+
+  /// Sub-label under the daily card's minutes-read hero number
+  ///
+  /// In en, this message translates to:
+  /// **'read today'**
+  String get insightsReadToday;
+
+  /// Pages read within the selected period, shown as a gain
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{+1 page} other{+{count} pages}}'**
+  String insightsPagesGained(int count);
+
+  /// Consecutive-day reading streak on the daily card
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day running} other{{days} days running}}'**
+  String insightsStreakDays(int days);
+
+  /// Daily card's gentle nudge when there is no streak to report
+  ///
+  /// In en, this message translates to:
+  /// **'No sitting yet today — even a few pages count.'**
+  String get insightsNoSessionToday;
+
+  /// Hero figure on the monthly/multi-month cards
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No books finished} =1{1 book finished} other{{count} books finished}}'**
+  String insightsBooksFinished(int count);
+
+  /// Monthly card's day-coverage figure
+  ///
+  /// In en, this message translates to:
+  /// **'{read} of {elapsed} days read'**
+  String insightsDaysRead(int read, int elapsed);
+
+  /// Multi-month card's total-time figure
+  ///
+  /// In en, this message translates to:
+  /// **'{duration} reading'**
+  String insightsHoursReading(String duration);
+
+  /// Tooltip on the flagship card's share glyph
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get insightsShareTooltip;
+
+  /// Bare unit label under the big numeral on the shareable period image
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{book} other{books}}'**
+  String insightsBooksLabel(int count);
+
+  /// Shareable image sub-line for the all-time year window
+  ///
+  /// In en, this message translates to:
+  /// **'{pages} · {duration} · all time'**
+  String insightsShareSubLineAllTime(String pages, String duration);
+
+  /// Shareable image sub-line for a specific year window
+  ///
+  /// In en, this message translates to:
+  /// **'{pages} · {duration} · {year}'**
+  String insightsShareSubLineYear(String pages, String duration, int year);
+
   /// Quick page-update action on the currently-reading card
   ///
   /// In en, this message translates to:
@@ -4665,6 +4833,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open the share sheet. Try again.'**
   String get shareFailed;
+
+  /// Title of the period-card share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Share your reading'**
+  String get insightsShareSheetTitle;
+
+  /// Portrait aspect toggle on the period share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Story'**
+  String get insightsShareFormatStory;
+
+  /// Square aspect toggle on the period share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get insightsShareFormatSquare;
+
+  /// Label above the editable caption field on the period share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Caption'**
+  String get insightsShareCaptionLabel;
+
+  /// Outlined button copying the caption text to the clipboard
+  ///
+  /// In en, this message translates to:
+  /// **'Copy caption'**
+  String get insightsShareCopyCaption;
+
+  /// Primary button that rasterises and shares the period card
+  ///
+  /// In en, this message translates to:
+  /// **'Share image'**
+  String get insightsShareImageButton;
+
+  /// Snackbar after Copy caption
+  ///
+  /// In en, this message translates to:
+  /// **'Caption copied'**
+  String get insightsShareCaptionCopied;
+
+  /// Trailing line appended to every pre-filled period-card caption
+  ///
+  /// In en, this message translates to:
+  /// **'— logged with Kitabi.'**
+  String get insightsShareCaptionSuffix;
+
+  /// Rotating literary line on the shareable period image
+  ///
+  /// In en, this message translates to:
+  /// **'Time well spent, one page at a time.'**
+  String get insightsShareLine1;
+
+  /// Rotating literary line on the shareable period image
+  ///
+  /// In en, this message translates to:
+  /// **'Some days are made of paper.'**
+  String get insightsShareLine2;
+
+  /// Rotating literary line on the shareable period image
+  ///
+  /// In en, this message translates to:
+  /// **'A little further into the story.'**
+  String get insightsShareLine3;
+
+  /// Rotating literary line on the shareable period image
+  ///
+  /// In en, this message translates to:
+  /// **'Quietly, a few more chapters.'**
+  String get insightsShareLine4;
+
+  /// Rotating literary line on the shareable period image
+  ///
+  /// In en, this message translates to:
+  /// **'Books first, everything else after.'**
+  String get insightsShareLine5;
 
   /// Title of the work picker used when linking a translation
   ///

@@ -228,6 +228,12 @@ class RatingsRepository extends Repo {
 
   Stream<Rating?> watchForWork(String workId) => db.ratingsDao.watchForWork(workId);
 
+  /// workId -> value, across every rated Work — the shape Insights' finished-
+  /// books strip needs (one lookup per cover, not one stream per cover).
+  Stream<Map<String, int>> watchAllByWorkId() => db.ratingsDao
+      .watchAll()
+      .map((rows) => {for (final r in rows) r.workId: r.value});
+
   /// One rating per work — updates the existing row if there is one.
   Future<void> setRating(String workId, int value) async {
     final existing = await db.ratingsDao.watchForWork(workId).first;

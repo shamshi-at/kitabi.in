@@ -11,18 +11,25 @@ import '../../../data/api/api_client.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../share/presentation/share_period_sheet.dart';
 import '../insights_stats.dart';
+import '../period.dart';
+import '../period_summary.dart';
 import '../providers/insights_providers.dart';
 import '../reading_time_stats.dart';
+import 'finished_books_strip.dart';
+import 'period_selector.dart';
+import 'period_summary_card.dart';
 
 /// Single-letter month labels for the books-per-month bar chart axis.
 const _monthLetters = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 
-/// S10 — insights, the reader's almanac. Reading goal ring, a year selector,
-/// headline stats, superlatives (most-read author, longest book), charts, and
-/// a daily rotating reading fact — which also makes the page worth opening on
-/// day one: a fresh reader gets the settable goal ring, the fact, and a
-/// preview of what grows here, never a bare "no data".
+/// S10 — insights, the reader's almanac. Redesigned 27 Jul 2026 around one
+/// flagship card reused across every window a reader might mean by "how's my
+/// reading going?" — Today, Week, Month, 3/6 months, Year. Year is the one
+/// period that keeps the pre-redesign detail below it (goal ring's charts,
+/// superlatives, the daily rotating reading fact) — this redesign changes
+/// what's above the fold, not what Insights eventually shows underneath.
 class InsightsScreen extends ConsumerStatefulWidget {
   const InsightsScreen({super.key});
 
@@ -31,7 +38,8 @@ class InsightsScreen extends ConsumerStatefulWidget {
 }
 
 class _InsightsScreenState extends ConsumerState<InsightsScreen> {
-  // Default to the current year; null means "all time".
+  InsightsPeriod _period = InsightsPeriod.year;
+  // Only meaningful while _period is year; null means "all time".
   late int? _year = DateTime.now().year;
 
   Future<void> _editGoal(int current) async {
@@ -62,14 +70,30 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     ref.invalidate(readingGoalProvider);
   }
 
-  /// Where the reader is vs. an even pace through the year.
+  /// Where the reader is vs. an even pace through the year — the sub-line
+  /// under the goal ring ("3 ahead of pace").
   String _paceNote(AppLocalizations l10n, int read, int goal) {
+    final diff = _paceDiff(read, goal);
+    if (diff == 0) return l10n.insightsOnTrack;
+    return diff > 0 ? l10n.insightsAhead(diff) : l10n.insightsBehind(-diff);
+  }
+
+  /// The year card's headline — the same pace comparison as [_paceNote], one
+  /// register up (a plain sentence rather than a number). Only meaningful for
+  /// the current year; a past year or all time has no "pace" left to keep.
+  String _yearHeadline(AppLocalizations l10n, {required int read, required int goal, required bool isPaceable}) {
+    if (!isPaceable) return l10n.insightsYearHeadlineAllTime;
+    final diff = _paceDiff(read, goal);
+    if (diff > 0) return l10n.insightsYearHeadlineAhead;
+    if (diff < 0) return l10n.insightsYearHeadlineBehind;
+    return l10n.insightsYearHeadlineOnTrack;
+  }
+
+  int _paceDiff(int read, int goal) {
     final now = DateTime.now();
     final dayOfYear = now.difference(DateTime(now.year)).inDays + 1;
     final expected = (goal * dayOfYear / 365).floor();
-    final diff = read - expected;
-    if (diff == 0) return l10n.insightsOnTrack;
-    return diff > 0 ? l10n.insightsAhead(diff) : l10n.insightsBehind(-diff);
+    return read - expected;
   }
 
   /// Cached books store author *names*, not ids, so the most-read-author tile
@@ -96,11 +120,69 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     if (context.mounted) context.push(Routes.catalogSearch);
   }
 
+  /// Assembles the share sheet's inputs from whichever card is on screen.
+  /// Deliberately generic over period (see [PeriodShareCard]'s own doc): the
+  /// caller — here — is the one place that knows which figure is most
+  /// flattering for a given window, everything downstream just lays it out.
+  void _sharePeriod(PeriodSummary summary) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDuration = _period == InsightsPeriod.today || _period == InsightsPeriod.week;
+    final heroValue =
+        isDuration ? formatDuration(Duration(seconds: summary.totalSeconds)) : '${summary.booksFinishedCount}';
+    final heroLabel = isDuration ? '' : l10n.insightsBooksLabel(summary.booksFinishedCount);
+    final subLine = isDuration
+        ? '${l10n.bookLogTotalPages(summary.pagesRead)} · ${l10n.bookLogSessions(summary.sittingsCount)}'
+        : '${l10n.bookLogTotalPages(summary.pagesRead)} · '
+            '${l10n.insightsHoursReading(formatDuration(Duration(seconds: summary.totalSeconds)))}';
+    showSharePeriodSheet(
+      context,
+      heroValue: heroValue,
+      heroLabel: heroLabel,
+      subLine: subLine,
+      initialCaption: _buildCaption(l10n, summary, isDuration: isDuration),
+    );
+  }
+
+  void _shareYear(InsightsStats stats, PeriodSummary yearSummary) {
+    final l10n = AppLocalizations.of(context)!;
+    final pages = l10n.bookLogTotalPages(stats.pagesRead);
+    final duration = formatDuration(Duration(seconds: yearSummary.totalSeconds));
+    showSharePeriodSheet(
+      context,
+      heroValue: '${stats.booksRead}',
+      heroLabel: l10n.insightsBooksLabel(stats.booksRead),
+      subLine: _year == null
+          ? l10n.insightsShareSubLineAllTime(pages, duration)
+          : l10n.insightsShareSubLineYear(pages, duration, _year!),
+      initialCaption: '${l10n.insightsBooksFinished(stats.booksRead)}, ${pages.toLowerCase()} '
+          '${l10n.insightsShareCaptionSuffix}',
+    );
+  }
+
+  /// Leads with whichever figure the card itself leads with — [isDuration]
+  /// must match [_sharePeriod]'s own hero choice, or the caption ends up
+  /// claiming a different headline number than the image right above it (a
+  /// book that happened to finish today isn't why the Today card exists).
+  String _buildCaption(AppLocalizations l10n, PeriodSummary summary, {required bool isDuration}) {
+    final parts = <String>[];
+    if (isDuration) {
+      parts.add(formatDuration(Duration(seconds: summary.totalSeconds)));
+      if (summary.pagesRead > 0) parts.add(l10n.bookLogTotalPages(summary.pagesRead));
+      if (summary.booksFinishedCount > 0) parts.add(l10n.insightsBooksFinished(summary.booksFinishedCount));
+    } else {
+      parts.add(l10n.insightsBooksFinished(summary.booksFinishedCount));
+      if (summary.pagesRead > 0) parts.add(l10n.bookLogTotalPages(summary.pagesRead));
+    }
+    return '${parts.join(', ')} ${l10n.insightsShareCaptionSuffix}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final data = ref.watch(libraryWithBooksProvider);
     final goal = ref.watch(readingGoalProvider).valueOrNull ?? 30;
+    final sessions = ref.watch(readingSessionsStreamProvider).valueOrNull;
+    final ratings = ref.watch(ratingsByWorkIdProvider).valueOrNull ?? const {};
     final thisYear = DateTime.now().year;
 
     return Scaffold(
@@ -113,122 +195,117 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             if (hits.isEmpty) {
               return _FreshInsights(goal: goal, onEditGoal: () => _editGoal(goal));
             }
-            final stats = computeInsights(hits, year: _year);
+
+            final range = rangeFor(_period, year: _year);
+            final periodSummary = sessions == null
+                ? null
+                : computePeriodSummary(
+                    period: _period,
+                    range: range,
+                    sessions: sessions,
+                    hits: hits,
+                    ratingsByWorkId: ratings,
+                  );
+            final timeStats = sessions == null ? null : computeReadingTimeStats(sessions);
+            final yearStats = _period == InsightsPeriod.year ? computeInsights(hits, year: _year) : null;
+
             return ListView(
               padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
               children: [
                 Text(l10n.insightsTitle, style: Theme.of(context).textTheme.titleLarge),
                 SizedBox(height: 12),
-                _YearSelector(
-                  year: _year,
+                PeriodSelector(
+                  selected: _period,
+                  onSelected: (p) => setState(() => _period = p),
+                  selectedYear: _year,
+                  onYearSelected: (y) => setState(() => _year = y),
                   thisYear: thisYear,
-                  allTimeLabel: l10n.insightsAllTime,
-                  onChanged: (y) => setState(() => _year = y),
-                ),
-                SizedBox(height: 16),
-                _GoalRing(
-                  booksRead: stats.booksRead,
-                  goal: goal,
-                  showTarget: _year != null,
-                  targetCaption: l10n.insightsGoalRing(goal),
-                  totalCaption: l10n.insightsBooksReadTotal,
-                  paceNote: _year == thisYear ? _paceNote(l10n, stats.booksRead, goal) : null,
-                  onTap: () => _editGoal(goal),
                 ),
                 SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatTile(
-                        value: '${stats.pagesRead}',
-                        label: l10n.insightsPagesRead,
-                        color: AppColors.slate,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: _StatTile(
-                        value: '${stats.currentlyReading}',
-                        label: l10n.insightsReadingNow,
-                        color: AppColors.oxblood,
-                      ),
-                    ),
-                    if (stats.avgPagesPerBook > 0) ...[
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: _StatTile(
-                          value: '${stats.avgPagesPerBook}',
-                          label: l10n.insightsAvgPages,
-                          color: AppColors.moss,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                // The superlatives — the almanac lines readers quote.
-                if (stats.topAuthor != null || stats.longestBookPages > 0) ...[
-                  SizedBox(height: 8),
-                  Row(
-                    children: [
-                      if (stats.topAuthor != null)
-                        Expanded(
-                          child: _SuperlativeTile(
-                            icon: Icons.workspace_premium_outlined,
-                            title: stats.topAuthor!,
-                            caption:
-                                '${l10n.insightsTopAuthor} · ${stats.topAuthorCount}',
-                            color: AppColors.gold,
-                            // Names are doors everywhere else; they were dead
-                            // text here (owner report, 21 Jul 2026). Cached
-                            // books hold author *names*, not ids, so resolve
-                            // the name to a page on tap.
-                            onTap: () => _openAuthor(context, ref, stats.topAuthor!),
-                          ),
-                        ),
-                      if (stats.topAuthor != null && stats.longestBookPages > 0)
-                        SizedBox(width: 8),
-                      if (stats.longestBookPages > 0)
-                        Expanded(
-                          child: _SuperlativeTile(
-                            icon: Icons.straighten,
-                            title: stats.longestBookTitle ?? '',
-                            caption:
-                                '${l10n.insightsLongestBook} · ${stats.longestBookPages} pp',
-                            color: AppColors.slate,
-                            onTap: stats.longestBookWorkId == null ||
-                                    stats.longestBookEditionId == null
-                                ? null
-                                : () => context.push(
-                                      Routes.bookDetailPath(
-                                        stats.longestBookWorkId!,
-                                        stats.longestBookEditionId!,
-                                      ),
-                                    ),
-                          ),
-                        ),
-                    ],
+                if (periodSummary == null)
+                  ListSkeleton()
+                else if (yearStats != null) ...[
+                  _YearCard(
+                    stats: yearStats,
+                    yearSummary: periodSummary,
+                    goal: goal,
+                    year: _year,
+                    thisYear: thisYear,
+                    headlineBuilder: _yearHeadline,
+                    paceNoteBuilder: _paceNote,
+                    onEditGoal: () => _editGoal(goal),
+                    onShare: _shareYear,
                   ),
+                  // The superlatives — the almanac lines readers quote.
+                  if (yearStats.topAuthor != null || yearStats.longestBookPages > 0) ...[
+                    SizedBox(height: 14),
+                    Row(
+                      children: [
+                        if (yearStats.topAuthor != null)
+                          Expanded(
+                            child: _SuperlativeTile(
+                              icon: Icons.workspace_premium_outlined,
+                              title: yearStats.topAuthor!,
+                              caption: '${l10n.insightsTopAuthor} · ${yearStats.topAuthorCount}',
+                              color: AppColors.gold,
+                              onTap: () => _openAuthor(context, ref, yearStats.topAuthor!),
+                            ),
+                          ),
+                        if (yearStats.topAuthor != null && yearStats.longestBookPages > 0) SizedBox(width: 8),
+                        if (yearStats.longestBookPages > 0)
+                          Expanded(
+                            child: _SuperlativeTile(
+                              icon: Icons.straighten,
+                              title: yearStats.longestBookTitle ?? '',
+                              caption: '${l10n.insightsLongestBook} · ${yearStats.longestBookPages} pp',
+                              color: AppColors.slate,
+                              onTap: yearStats.longestBookWorkId == null || yearStats.longestBookEditionId == null
+                                  ? null
+                                  : () => context.push(
+                                        Routes.bookDetailPath(
+                                          yearStats.longestBookWorkId!,
+                                          yearStats.longestBookEditionId!,
+                                        ),
+                                      ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  if (yearStats.busiestMonthCount > 0) ...[
+                    SizedBox(height: 18),
+                    _ChartLabel(l10n.insightsPerMonth),
+                    SizedBox(height: 10),
+                    _MonthBars(counts: yearStats.booksPerMonth, max: yearStats.busiestMonthCount),
+                  ],
+                  if (yearStats.peakPagesMonth > 0) ...[
+                    SizedBox(height: 18),
+                    _ChartLabel(l10n.insightsPagesPerMonth),
+                    SizedBox(height: 10),
+                    _PagesLine(pages: yearStats.pagesPerMonth, max: yearStats.peakPagesMonth),
+                  ],
+                  if (yearStats.languageMix.length > 1) ...[
+                    SizedBox(height: 18),
+                    _ChartLabel(l10n.insightsLanguages),
+                    SizedBox(height: 10),
+                    _LanguageDonut(mix: yearStats.languageMix),
+                  ],
+                  if (timeStats?.busiestWeekday != null && timeStats?.busiestHour != null) ...[
+                    SizedBox(height: 18),
+                    _BusiestTimeInsight(weekday: timeStats!.busiestWeekday!, hour: timeStats.busiestHour!),
+                  ],
+                ] else ...[
+                  PeriodSummaryCard(
+                    period: _period,
+                    range: range,
+                    summary: periodSummary,
+                    onShare: () => _sharePeriod(periodSummary),
+                  ),
+                  if (periodSummary.booksFinished.isNotEmpty) ...[
+                    SizedBox(height: 12),
+                    FinishedBooksStrip(books: periodSummary.booksFinished),
+                  ],
                 ],
-                if (_year != null && stats.busiestMonthCount > 0) ...[
-                  SizedBox(height: 18),
-                  _ChartLabel(l10n.insightsPerMonth),
-                  SizedBox(height: 10),
-                  _MonthBars(counts: stats.booksPerMonth, max: stats.busiestMonthCount),
-                ],
-                if (_year != null && stats.peakPagesMonth > 0) ...[
-                  SizedBox(height: 18),
-                  _ChartLabel(l10n.insightsPagesPerMonth),
-                  SizedBox(height: 10),
-                  _PagesLine(pages: stats.pagesPerMonth, max: stats.peakPagesMonth),
-                ],
-                if (stats.languageMix.length > 1) ...[
-                  SizedBox(height: 18),
-                  _ChartLabel(l10n.insightsLanguages),
-                  SizedBox(height: 10),
-                  _LanguageDonut(mix: stats.languageMix),
-                ],
-                SizedBox(height: 18),
-                _ReadingTimeSection(),
                 SizedBox(height: 18),
                 _ReadingFactCard(),
               ],
@@ -240,53 +317,168 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
   }
 }
 
-class _YearSelector extends StatelessWidget {
-  const _YearSelector({
+/// The year period's flagship header — eyebrow, a pace-derived headline, the
+/// goal ring, and the share glyph. Everything below it (bars, donut,
+/// superlatives) is assembled by the screen itself, since only Year keeps
+/// that detail.
+class _YearCard extends StatelessWidget {
+  const _YearCard({
+    required this.stats,
+    required this.yearSummary,
+    required this.goal,
     required this.year,
     required this.thisYear,
-    required this.allTimeLabel,
-    required this.onChanged,
+    required this.headlineBuilder,
+    required this.paceNoteBuilder,
+    required this.onEditGoal,
+    required this.onShare,
   });
 
+  final InsightsStats stats;
+  final PeriodSummary yearSummary;
+  final int goal;
   final int? year;
   final int thisYear;
-  final String allTimeLabel;
-  final ValueChanged<int?> onChanged;
+  final String Function(AppLocalizations, {required int read, required int goal, required bool isPaceable})
+      headlineBuilder;
+  final String Function(AppLocalizations, int read, int goal) paceNoteBuilder;
+  final VoidCallback onEditGoal;
+  final void Function(InsightsStats stats, PeriodSummary yearSummary) onShare;
 
   @override
   Widget build(BuildContext context) {
-    final options = <(String, int?)>[
-      ('$thisYear', thisYear),
-      ('${thisYear - 1}', thisYear - 1),
-      (allTimeLabel, null),
-    ];
-    return Row(
-      children: [
-        for (final (label, value) in options)
-          Padding(
-            padding: EdgeInsets.only(right: 6),
-            child: GestureDetector(
-              onTap: () => onChanged(value),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: year == value ? AppColors.ink : AppColors.card,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: year == value ? AppColors.ink : AppColors.line),
-                ),
+    final l10n = AppLocalizations.of(context)!;
+    final isPaceable = year == thisYear;
+    return Container(
+      padding: EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
                 child: Text(
-                  label,
+                  year == null ? l10n.insightsAllTime.toUpperCase() : '$year',
                   style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: year == value ? AppColors.paper : AppColors.ink,
+                    fontSize: 8,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.4,
+                    color: AppColors.oxblood,
                   ),
                 ),
               ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onShare(stats, yearSummary),
+                  borderRadius: BorderRadius.circular(7),
+                  child: Tooltip(
+                    message: l10n.insightsShareTooltip,
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(7)),
+                      child: Icon(Icons.ios_share, size: 13, color: AppColors.oxblood),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 5),
+          Text(
+            headlineBuilder(l10n, read: stats.booksRead, goal: goal, isPaceable: isPaceable),
+            style: GoogleFonts.fraunces(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink),
+          ),
+          SizedBox(height: 10),
+          _GoalRing(
+            booksRead: stats.booksRead,
+            goal: goal,
+            showTarget: year != null,
+            targetCaption: l10n.insightsGoalRing(goal),
+            totalCaption: l10n.insightsBooksReadTotal,
+            paceNote: isPaceable ? paceNoteBuilder(l10n, stats.booksRead, goal) : null,
+            onTap: onEditGoal,
+          ),
+          SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _StatTile(value: '${stats.pagesRead}', label: l10n.insightsPagesRead, color: AppColors.slate),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: _StatTile(
+                  value: '${stats.currentlyReading}',
+                  label: l10n.insightsReadingNow,
+                  color: AppColors.oxblood,
+                ),
+              ),
+              if (stats.avgPagesPerBook > 0) ...[
+                SizedBox(width: 8),
+                Expanded(
+                  child: _StatTile(
+                    value: '${stats.avgPagesPerBook}',
+                    label: l10n.insightsAvgPages,
+                    color: AppColors.moss,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The all-time "you read most on Thursdays, often around 9–10 PM" note —
+/// pulled out of the old always-visible weekly chart (superseded by the Week
+/// period card) but kept, because it's a genuine all-time pattern, not a
+/// per-week one. Lives under Year alongside the other superlatives.
+class _BusiestTimeInsight extends StatelessWidget {
+  const _BusiestTimeInsight({required this.weekday, required this.hour});
+
+  final int weekday;
+  final int hour;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final monday = DateTime(2026, 1, 5); // an arbitrary real Monday.
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AppColors.night, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.auto_awesome, size: 14, color: AppColors.gold),
+          SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              l10n.insightsReadingTimeInsight(
+                DateFormat.EEEE().format(monday.add(Duration(days: weekday - 1))),
+                _hourRangeLabel(hour),
+              ),
+              style: TextStyle(color: Color(0xFFEFE3C8), fontSize: 11.5, height: 1.5),
             ),
           ),
-      ],
+        ],
+      ),
     );
+  }
+
+  /// "9–10 PM" — locale-aware hour formatting either side of a plain dash.
+  String _hourRangeLabel(int hour) {
+    final start = DateFormat.j().format(DateTime(2026, 1, 1, hour));
+    final end = DateFormat.j().format(DateTime(2026, 1, 1, (hour + 1) % 24));
+    return '$start–$end';
   }
 }
 
@@ -559,183 +751,6 @@ class _LinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _LinePainter old) => old.pages != pages || old.max != max;
-}
-
-/// Weekly reading-time chart, pulled forward from the v1.5 parking lot
-/// (10 Jul 2026, owner request) alongside the reading-timer feature itself.
-/// Gated on having logged at least one session, same "don't show a chart
-/// with nothing on it" convention as the rest of this screen.
-class _ReadingTimeSection extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final sessions = ref.watch(allReadingSessionsProvider).valueOrNull;
-    if (sessions == null || sessions.isEmpty) return const SizedBox.shrink();
-
-    final stats = computeReadingTimeStats(sessions);
-    final max = stats.secondsByDayThisWeek.reduce((a, b) => a > b ? a : b);
-    final delta = stats.thisWeekSeconds - stats.lastWeekSeconds;
-    // The real current week's Monday — used only to pull correctly-ordered
-    // weekday names out of DateFormat, never displayed as a date itself.
-    final now = DateTime.now();
-    final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ChartLabel(l10n.insightsReadingTime),
-        SizedBox(height: 10),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              l10n.insightsWeekTotal(formatDuration(Duration(seconds: stats.thisWeekSeconds))),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            if (stats.lastWeekSeconds > 0) ...[
-              SizedBox(width: 8),
-              Icon(
-                delta >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 11,
-                color: delta >= 0 ? AppColors.moss : AppColors.inkSoft,
-              ),
-              Text(
-                l10n.insightsVsLastWeek(formatDuration(Duration(seconds: delta.abs()))),
-                style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
-              ),
-            ],
-          ],
-        ),
-        SizedBox(height: 10),
-        SizedBox(
-          height: 80,
-          width: double.infinity,
-          child: CustomPaint(painter: _AreaPainter(stats.secondsByDayThisWeek, max)),
-        ),
-        SizedBox(height: 4),
-        Row(
-          children: [
-            for (var i = 0; i < 7; i++)
-              Expanded(
-                child: Text(
-                  DateFormat.E().format(monday.add(Duration(days: i))),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
-                ),
-              ),
-          ],
-        ),
-        if (stats.totalPagesThisWeek != null) ...[
-          SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.auto_stories_outlined, size: 12, color: AppColors.inkSoft),
-              SizedBox(width: 5),
-              Text(
-                stats.pagesPerHour != null
-                    ? '${l10n.insightsPagesThisWeek(stats.totalPagesThisWeek!)} · '
-                        '${l10n.insightsPagesPace(stats.pagesPerHour!.round().toString())}'
-                    : l10n.insightsPagesThisWeek(stats.totalPagesThisWeek!),
-                style: TextStyle(fontSize: 11, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-        ],
-        if (stats.busiestWeekday != null && stats.busiestHour != null) ...[
-          SizedBox(height: 12),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.night, borderRadius: BorderRadius.circular(12)),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.auto_awesome, size: 14, color: AppColors.gold),
-                SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    l10n.insightsReadingTimeInsight(
-                      DateFormat.EEEE().format(monday.add(Duration(days: stats.busiestWeekday! - 1))),
-                      _hourRangeLabel(stats.busiestHour!),
-                    ),
-                    style: TextStyle(color: Color(0xFFEFE3C8), fontSize: 11.5, height: 1.5),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  /// "9–10 PM" — locale-aware hour formatting either side of a plain dash.
-  String _hourRangeLabel(int hour) {
-    final start = DateFormat.j().format(DateTime(2026, 1, 1, hour));
-    final end = DateFormat.j().format(DateTime(2026, 1, 1, (hour + 1) % 24));
-    return '$start–$end';
-  }
-}
-
-class _AreaPainter extends CustomPainter {
-  _AreaPainter(this.seconds, this.max);
-
-  final List<int> seconds;
-  final int max;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final baseline = Paint()
-      ..color = AppColors.line
-      ..strokeWidth = 1;
-    canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), baseline);
-
-    if (max == 0) return;
-
-    final points = <Offset>[
-      for (var i = 0; i < 7; i++)
-        Offset(
-          size.width * (i / 6),
-          size.height - (seconds[i] / max) * size.height * 0.88,
-        ),
-    ];
-
-    final fillPath = Path()
-      ..moveTo(points.first.dx, size.height)
-      ..lineTo(points.first.dx, points.first.dy);
-    for (final p in points.skip(1)) {
-      fillPath.lineTo(p.dx, p.dy);
-    }
-    fillPath
-      ..lineTo(points.last.dx, size.height)
-      ..close();
-    final fill = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [AppColors.gold.withValues(alpha: 0.32), AppColors.gold.withValues(alpha: 0)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawPath(fillPath, fill);
-
-    final line = Paint()
-      ..color = AppColors.gold
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(Path()..addPolygon(points, false), line);
-
-    var peakIdx = 0;
-    for (var i = 1; i < 7; i++) {
-      if (seconds[i] > seconds[peakIdx]) peakIdx = i;
-    }
-    if (seconds[peakIdx] > 0) {
-      canvas.drawCircle(points[peakIdx], 4, Paint()..color = AppColors.oxblood);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _AreaPainter old) => old.seconds != seconds || old.max != max;
 }
 
 class _LanguageDonut extends StatelessWidget {

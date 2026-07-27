@@ -114,6 +114,11 @@ class RatingsDao extends DatabaseAccessor<AppDatabase> with _$RatingsDaoMixin {
       )..where((t) => t.workId.equals(workId) & t.deletedAt.isNull()))
           .watchSingleOrNull();
 
+  /// Every active rating, across every Work — Insights' finished-books strip
+  /// needs a workId->value map, not one lookup per book.
+  Stream<List<Rating>> watchAll() =>
+      (select(ratings)..where((t) => t.deletedAt.isNull())).watch();
+
   Future<void> insertOne(RatingsCompanion row) => into(ratings).insert(row);
 
   Future<void> patch(String id, RatingsCompanion patch) =>
