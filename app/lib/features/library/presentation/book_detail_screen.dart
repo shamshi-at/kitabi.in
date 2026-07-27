@@ -34,6 +34,7 @@ import '../cover_upload.dart';
 import '../widgets/time_to_finish.dart';
 import '../reading_progress.dart';
 import '../reading_status.dart';
+import '../session_pages.dart';
 import '../stop_session_flow.dart';
 import 'note_page.dart';
 import '../mark_finished.dart';
@@ -2461,6 +2462,7 @@ class _ReadingLogSheet extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final sessions = ref.watch(_recentSessionsProvider(entryId)).valueOrNull ?? const <ReadingSession>[];
     final totalSecs = sessions.fold<int>(0, (a, s) => a + s.durationSeconds);
+    final totalPages = totalPagesRead(sessions);
 
     return SafeArea(
       child: ConstrainedBox(
@@ -2482,7 +2484,11 @@ class _ReadingLogSheet extends ConsumerWidget {
                   Text(l10n.bookReadingLogTitle, style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 2),
                   Text(
-                    '${l10n.bookLogSessions(sessions.length)} · ${formatDuration(Duration(seconds: totalSecs))}',
+                    [
+                      l10n.bookLogSessions(sessions.length),
+                      formatDuration(Duration(seconds: totalSecs)),
+                      if (totalPages != null) l10n.bookLogTotalPages(totalPages),
+                    ].join(' · '),
                     style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
                   ),
                   if (sessions.isNotEmpty) ...[
@@ -2550,9 +2556,14 @@ class _ReadingLogSheet extends ConsumerWidget {
   }
 }
 
-/// One sitting in the log: the clock span it covered, the pages it moved
-/// through, its length,
-/// and a delete for the stray micro-sessions.
+/// One sitting in the log: the clock span it covered and the pages it moved
+/// through on the left, its length and the pages it gained on the right, and a
+/// delete for the stray micro-sessions.
+///
+/// The gain stacks under the duration rather than taking a fourth column of its
+/// own (as the mockup's narrower row does) — it mirrors the left column's two
+/// lines and costs no width, which the row hasn't got to spare now that the
+/// time is a span rather than a single clock reading.
 class _LogRow extends StatelessWidget {
   const _LogRow({required this.session, required this.onDelete});
 
@@ -2571,6 +2582,7 @@ class _LogRow extends StatelessWidget {
     final ps = session.pageStart;
     final pe = session.pageEnd;
     final pages = (ps != null && pe != null && pe > ps) ? l10n.bookLogPages(ps, pe) : l10n.bookLogNoPages;
+    final gained = sessionPagesRead(session);
 
     return Container(
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.line))),
@@ -2593,11 +2605,28 @@ class _LogRow extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            formatDuration(Duration(seconds: session.durationSeconds)),
-            style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.oxblood,
-                fontFeatures: const [FontFeature.tabularFigures()]),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                formatDuration(Duration(seconds: session.durationSeconds)),
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.oxblood,
+                    fontFeatures: const [FontFeature.tabularFigures()]),
+              ),
+              if (gained != null)
+                Semantics(
+                  label: l10n.bookLogPagesReadA11y(gained),
+                  child: ExcludeSemantics(
+                    child: Text(
+                      l10n.bookLogPagesRead(gained),
+                      style: TextStyle(
+                          fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.moss,
+                          fontFeatures: const [FontFeature.tabularFigures()]),
+                    ),
+                  ),
+                ),
+            ],
           ),
           SizedBox(width: 2),
           IconButton(

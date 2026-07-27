@@ -483,6 +483,33 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String bookLogPagesRead(int count) {
+    return '+$count';
+  }
+
+  @override
+  String bookLogPagesReadA11y(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pages read',
+      one: '1 page read',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookLogTotalPages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pages',
+      one: '1 page',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get bookLogNoPages => 'Page not noted';
 
   @override

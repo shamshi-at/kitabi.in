@@ -904,6 +904,24 @@ abstract class AppLocalizations {
   /// **'p. {from} → {to}'**
   String bookLogPages(int from, int to);
 
+  /// Pages a single sitting moved through, shown beside its length
+  ///
+  /// In en, this message translates to:
+  /// **'+{count}'**
+  String bookLogPagesRead(int count);
+
+  /// Screen-reader label for the compact +N pages figure
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 page read} other{{count} pages read}}'**
+  String bookLogPagesReadA11y(int count);
+
+  /// Total pages across all sittings, in the reading-log header
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 page} other{{count} pages}}'**
+  String bookLogTotalPages(int count);
+
   /// Shown for a session that logged no page range
   ///
   /// In en, this message translates to:
