@@ -1259,7 +1259,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   quarter, this year. One flagship card answers it for whichever window is picked, written as a
   sentence before it's shown as a number, with a share glyph that turns the answer into an image.
   The detailed charts (10e) still live below the year card — this redesign changes what's above
-  the fold, not what Insights eventually shows.</p>
+  the fold, not what Insights eventually shows. <b>Year leads the chip row</b> (it's the
+  scope-setting choice — 2026, 2025, or all time — so it reads first) but <b>Today is what's
+  selected when the screen opens</b> (updated 27 Jul 2026): the current date is what a reader
+  most often means by the question above, even though it isn't the leftmost chip.</p>
   <div class="row">
 
     <!-- 10a. Today -->
@@ -1269,8 +1272,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         <div class="body">
           <div class="pgtitle">Insights</div>
           <div class="periodrow" style="margin-top:6px">
-            <span class="chip on">Today</span><span class="chip">Week</span><span class="chip">Month</span>
-            <span class="chip">3 months</span><span class="chip">6 months</span><span class="chip">2026 ▾</span>
+            <span class="chip">2026 ▾</span><span class="chip on">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
           </div>
           <div class="card" style="margin-top:10px;padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1307,11 +1310,13 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <div class="on"><span class="ic">◔</span>Insights</div>
         </div>
       </div></div>
-      <p class="cap"><b>10a · Today</b> The thinnest window gets the warmest treatment: a streak
-      (new — consecutive days with a logged sitting) instead of a chart, because one day has no
-      trend to show. <span style="color:var(--oxblood)">⇲</span> shares just this card. A dayless
-      reader sees the encouraging line invert gently: <i>"Naalukettu is waiting at p. 260 —
-      pick it back up?"</i> rather than a guilt-trip.</p>
+      <p class="cap"><b>10a · Today</b> What the screen opens on (updated 27 Jul 2026) — the
+      current date is what a reader most often means by "how's my reading going?", even though
+      Year leads the chip row above it. The thinnest window gets the warmest treatment: a streak
+      (consecutive days with a logged sitting) instead of a chart, because one day has no trend
+      to show. <span style="color:var(--oxblood)">⇲</span> shares just this card. A dayless reader
+      sees a plain nudge instead — <i>"No sitting yet today — even a few pages count"</i> — rather
+      than a guilt-trip or a claim about which book is waiting (the card doesn't know that).</p>
     </div>
 
     <!-- 10b. Week -->
@@ -1321,8 +1326,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         <div class="body">
           <div class="pgtitle">Insights</div>
           <div class="periodrow" style="margin-top:6px">
-            <span class="chip">Today</span><span class="chip on">Week</span><span class="chip">Month</span>
-            <span class="chip">3 months</span><span class="chip">6 months</span><span class="chip">2026 ▾</span>
+            <span class="chip">2026 ▾</span><span class="chip">Today</span><span class="chip on">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
           </div>
           <div class="card" style="margin-top:10px;padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1377,8 +1382,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         <div class="body">
           <div class="pgtitle">Insights</div>
           <div class="periodrow" style="margin-top:6px">
-            <span class="chip">Today</span><span class="chip">Week</span><span class="chip on">Month</span>
-            <span class="chip">3 months</span><span class="chip">6 months</span><span class="chip">2026 ▾</span>
+            <span class="chip">2026 ▾</span><span class="chip">Today</span><span class="chip">Week</span>
+            <span class="chip on">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
           </div>
           <div class="card" style="margin-top:10px;padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1433,8 +1438,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         <div class="body">
           <div class="pgtitle">Insights</div>
           <div class="periodrow" style="margin-top:6px">
-            <span class="chip">Today</span><span class="chip">Week</span><span class="chip">Month</span>
-            <span class="chip on">3 months</span><span class="chip">6 months</span><span class="chip">2026 ▾</span>
+            <span class="chip">2026 ▾</span><span class="chip">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip on">3 months</span><span class="chip">6 months</span>
           </div>
           <div class="card" style="margin-top:10px;padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1488,8 +1493,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
         <div class="body">
           <div class="pgtitle">Insights</div>
           <div class="periodrow" style="margin-top:6px">
-            <span class="chip">Today</span><span class="chip">Week</span><span class="chip">Month</span>
-            <span class="chip">3 months</span><span class="chip">6 months</span><span class="chip on">2026 ▾</span>
+            <span class="chip on">2026 ▾</span><span class="chip">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
           </div>
           <div class="card" style="margin-top:10px;padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1639,6 +1644,123 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       per-period literary lines, same rotation mechanism as the existing daily reading-fact card —
       not generated per reader, just varied enough not to repeat.</p>
     </div>
+
+  </div>
+
+  <div class="ah" style="margin-top:36px"><span class="an">Area 5b</span>
+  <h2 style="font-size:22px">The shared image, less plain</h2></div>
+  <p class="desc">Built exactly as 10g, the real card reads as correct but thin — a numeral, a
+  line of stats, an italic sentence. Three directions to add real presence without adding density
+  (the owner's own rule from the covers-strip conversation still applies here: richer, not
+  busier). Not a decision yet — 10h and 10i each earn their keep on a different subset of
+  periods; 10j is a pure visual upgrade that costs nothing and could ship under any of them.</p>
+  <div class="row">
+
+    <!-- 10h. Option A — cover motif -->
+    <div class="shot">
+      <div style="width:190px;height:338px;border-radius:16px;background:var(--paper);border:1.5px solid var(--gold);
+        box-shadow:0 22px 46px rgba(43,33,24,.38),0 4px 10px rgba(43,33,24,.22);padding:22px 18px 20px;
+        display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden">
+        <span class="orn" style="font-size:11px;margin:0">❦</span>
+        <div class="h-serif" style="font-size:38px;color:var(--oxblood);margin-top:14px;line-height:1">2</div>
+        <div style="font-size:8.5px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink-soft);margin-top:3px">Books finished</div>
+        <div class="sub" style="font-size:8.5px;margin-top:8px">153 pages · July 2026</div>
+        <div style="display:flex;justify-content:center;margin-top:16px;height:70px;position:relative;width:100%">
+          <div style="position:absolute;left:50%;transform:translateX(-38px) rotate(-7deg);width:48px;height:68px;border-radius:3px 6px 6px 3px;background:linear-gradient(150deg,#7E2A33,#4A161C);box-shadow:0 6px 12px rgba(43,33,24,.3);display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px">
+            <span style="font-size:7px;color:var(--gold)">★5</span>
+          </div>
+          <div style="position:absolute;left:50%;transform:translateX(-10px) rotate(6deg);width:48px;height:68px;border-radius:3px 6px 6px 3px;background:linear-gradient(150deg,#5d461a,#3a2c10);box-shadow:0 8px 14px rgba(43,33,24,.34);display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px">
+            <span style="font-size:7px;color:var(--gold)">★4</span>
+          </div>
+        </div>
+        <div class="quote" style="font-size:10px;margin-top:16px;line-height:1.5">A little further into the story.</div>
+        <div style="flex:1"></div>
+        <div class="rule" style="width:32px;margin:10px 0 8px"></div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <svg viewBox="0 0 512 512" style="width:11px;height:11px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/></svg>
+          <span style="font-size:8px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap"><b>10h · Option A — cover motif</b> Two of the reader's own covers, tilted
+      like they'd been set down on a desk, star rating tucked at the base. Ties the image to real
+      books instead of an abstract count — the single best answer to "so simple." Only works when
+      the window actually has finished books, though: it's a strong Month/3-6-month/Year card and
+      a dead end for Today/Week, which finish a book on maybe one day in ten. Needs the
+      already-built <code>FinishedBooksStrip</code> data, just re-laid-out for a portrait canvas
+      instead of a horizontal scroll.</p>
+    </div>
+
+    <!-- 10i. Option B — streak/stat pill -->
+    <div class="shot">
+      <div style="width:190px;height:338px;border-radius:16px;background:var(--paper);border:1.5px solid var(--gold);
+        box-shadow:0 22px 46px rgba(43,33,24,.38),0 4px 10px rgba(43,33,24,.22);padding:24px 18px;
+        display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden">
+        <span class="orn" style="font-size:12px;margin:0">❦</span>
+        <div style="margin-top:14px;background:var(--gold-soft);border-radius:99px;padding:4px 12px;display:flex;align-items:center;gap:4px">
+          <span style="font-size:9px">🔥</span>
+          <span style="font-size:8.5px;font-weight:700;letter-spacing:.6px;color:var(--oxblood)">6-DAY STREAK</span>
+        </div>
+        <div class="h-serif" style="font-size:48px;color:var(--oxblood);margin-top:16px;line-height:1">25m</div>
+        <div style="font-size:8.5px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink-soft);margin-top:4px">Read today</div>
+        <div class="sub" style="font-size:9.5px;margin-top:10px">10 pages · 1 session</div>
+        <div class="quote" style="font-size:11.5px;margin-top:18px;line-height:1.5">A little further into the story.</div>
+        <div style="flex:1"></div>
+        <div class="rule" style="width:36px;margin:12px 0 9px"></div>
+        <div style="display:flex;align-items:center;gap:5px">
+          <svg viewBox="0 0 512 512" style="width:12px;height:12px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/></svg>
+          <span style="font-size:8.5px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap"><b>10i · Option B — one stat pill</b> Exactly one extra fact, badged above
+      the numeral rather than added as a second line of text — the streak here, but the same slot
+      works for whatever's most flattering per period (Year could badge "ahead of pace", Week
+      could badge the vs-last-week delta). Universal — every period has <i>some</i> fact worth a
+      badge, or the pill just doesn't render. The safer, smaller change: same layout as what's
+      shipped, one new element, no re-lay-out for portrait.</p>
+    </div>
+
+    <!-- 10j. Option C — richer frame -->
+    <div class="shot">
+      <div style="width:190px;height:338px;border-radius:16px;background:var(--paper);
+        border:1.5px solid var(--gold);box-shadow:0 22px 46px rgba(43,33,24,.38),0 4px 10px rgba(43,33,24,.22);
+        padding:10px;position:relative;overflow:hidden">
+        <div style="position:absolute;inset:0;background:radial-gradient(170px 170px at 50% 40%,rgba(184,134,43,.16),transparent 72%)"></div>
+        <div style="position:absolute;inset:10px;border:0.75px solid var(--gold);border-radius:10px"></div>
+        <span class="orn" style="font-size:9px;position:absolute;top:16px;left:18px;margin:0;opacity:.7">❦</span>
+        <span class="orn" style="font-size:9px;position:absolute;top:16px;right:18px;margin:0;opacity:.7">❦</span>
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;height:100%;padding:22px 12px 14px;position:relative">
+          <div class="h-serif" style="font-size:54px;color:var(--oxblood);margin-top:22px;line-height:1">24</div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ink-soft);margin-top:4px">Books</div>
+          <div class="sub" style="font-size:9.5px;margin-top:12px">8,412 pages · 214 hours · 2026</div>
+          <div class="quote" style="font-size:11px;margin-top:18px;line-height:1.5">A year, mostly spent elsewhere.</div>
+          <div style="flex:1"></div>
+          <span class="orn" style="font-size:8px;margin:0 0 8px;opacity:.6">❦ ❦ ❦</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <svg viewBox="0 0 512 512" style="width:12px;height:12px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/></svg>
+            <span style="font-size:8.5px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>10j · Option C — a second frame</b> No new data — a soft gold vignette
+      behind the numeral, a thin inset rule, two small corner fleurons, a triple-❦ close instead
+      of a bare rule. Pure decoration, which is exactly why it's the one that costs nothing:
+      applies under every period and under Options A or B equally. Honest note: the shipped card
+      today (10g) is <i>plainer</i> than this frame's own earlier mockup promised — the vignette
+      never made it into <code>PeriodShareCard</code>. This is that gap, closed.</p>
+    </div>
+
+  </div>
+  <div class="row" style="margin-top:-6px">
+    <div class="card" style="max-width:900px;padding:14px 18px;font-size:12.5px;color:#6d5f4b;line-height:1.65">
+      <b style="color:var(--ink)">Recommendation.</b> B + C together: the one-stat pill costs a
+      single new element and works on every period unmodified; the second frame is free and stacks
+      under it or under A with no conflict. A (covers) is the highest-ceiling option but should
+      wait — it needs a portrait-specific layout, not just new props on the existing card, and it
+      has no good answer for a Today/Week card with nothing finished yet.
+    </div>
+  </div>
+
+  <div class="row">
 
     <!-- 11. Recommendations -->
     <div class="shot">
