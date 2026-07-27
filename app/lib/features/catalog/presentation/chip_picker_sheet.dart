@@ -76,10 +76,20 @@ class _ChipPickerSheetState extends State<ChipPickerSheet> {
   List<PickerOption> get _matches {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return widget.options;
-    return [
+    final hits = [
       for (final option in widget.options)
         if (option.name.toLowerCase().contains(q)) option,
     ];
+    // Searched matches rank by book count, established spelling first —
+    // "Science fiction · 128" must beat a near-duplicate with 2. Options
+    // without counts (a closed vocabulary) keep their given order — the
+    // index tiebreak makes the sort stable (List.sort isn't).
+    final indexed = hits.indexed.toList();
+    indexed.sort((a, b) {
+      final byCount = (b.$2.count ?? -1).compareTo(a.$2.count ?? -1);
+      return byCount != 0 ? byCount : a.$1.compareTo(b.$1);
+    });
+    return [for (final (_, option) in indexed) option];
   }
 
   /// Offer to create only when the typed text isn't already an option —
@@ -132,12 +142,9 @@ class _ChipPickerSheetState extends State<ChipPickerSheet> {
                 children: [
                   Text(
                     widget.title,
-                    style: TextStyle(
-                      fontFamily: 'Fraunces',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.ink,
-                    ),
+                    // The theme's titleLarge really is Fraunces — a raw
+                    // fontFamily literal silently fell back to the default sans.
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 18),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -169,6 +176,12 @@ class _ChipPickerSheetState extends State<ChipPickerSheet> {
                 controller: scrollController,
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                 children: [
+                  if (!widget.multiSelect) ...[
+                    // The way *out* of a single-select — without this, a
+                    // chosen value could never be cleared from the sheet.
+                    _NoneRow(onTap: () => Navigator.of(context).pop(<String>{})),
+                    const SizedBox(height: 10),
+                  ],
                   if (matches.isNotEmpty) ...[
                     Text(
                       l10n.pickerAlreadyHere.toUpperCase(),
@@ -315,6 +328,41 @@ class _OptionRow extends StatelessWidget {
                 l10n.pickerBookCount(option.count!),
                 style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The subdued clear row on a single-select sheet — pops an empty set, which
+/// callers read as "no value".
+class _NoneRow extends StatelessWidget {
+  const _NoneRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.block, size: 15, color: AppColors.inkSoft),
+            const SizedBox(width: 10),
+            Text(
+              l10n.pickerNone,
+              style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+            ),
           ],
         ),
       ),

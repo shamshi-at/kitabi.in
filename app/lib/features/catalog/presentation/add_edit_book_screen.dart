@@ -8,8 +8,10 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/image_crop.dart';
 import '../../../core/languages.dart';
+import '../../../core/quiet_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/select_sheet.dart';
 import '../../../core/widgets/typeset_cover.dart';
@@ -23,14 +25,13 @@ import '../catalog_image_upload.dart';
 import '../providers/catalog_providers.dart';
 import '../work_forms.dart';
 import 'chip_picker_sheet.dart';
-import '../../../core/widgets/net_image.dart';
+import 'form_widgets.dart';
 
 /// S4d — form to add a new catalog Work + first Edition, or edit an existing one:
 /// title, authors, publisher, genres, and edition-level fields (ISBN, format,
 /// cover). Contributions flow through the API when online (catalog is
-/// server-authoritative, CLAUDE.md rule 2).
-const _formats = ['Paperback', 'Hardcover', 'eBook', 'Audiobook'];
-
+/// server-authoritative, CLAUDE.md rule 2). Formats live in
+/// [kEditionFormats] (form_widgets.dart), shared with the add-edition screen.
 const _commonGenres = [
   'Fiction',
   'Non-fiction',
@@ -98,8 +99,8 @@ class AddEditBookScreen extends ConsumerWidget {
       backgroundColor: AppColors.paper,
       body: SafeArea(
         child: work.when(
-          loading: () => Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('$err')),
+          loading: () => ListSkeleton(),
+          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId!))),
           data: (body) => _BookForm(initialWork: body),
         ),
       ),
@@ -137,7 +138,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
   // Genres the reader added themselves — chips on the same row as the
   // suggestions (they used to live in a free-text field underneath).
   final List<String> _customGenreList = [];
-  late String _format;
+  // Optional; null when unset. No silent default — a reader who never chose a
+  // format saves none, instead of every book quietly becoming a Paperback.
+  String? _format;
   // Optional; null when unset. A dropdown, not free text — so the catalog stays
   // consistent ("Malayalam", not "malayalam"/"mal"/"Malyalam").
   String? _language;
@@ -203,8 +206,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
   // trigram search quietly surfaces near-matches already in the catalog.
   List<Map<String, dynamic>> _similar = const [];
   bool _similarDismissed = false;
+  // What the title was when the panel was dismissed — clearing the title or
+  // typing a substantially different one re-arms the check.
+  String _similarDismissedQuery = '';
   Timer? _similarDebounce;
   int _similarSeq = 0;
+
+  // Unsaved-changes guard: a fingerprint of the form as it was seeded, so any
+  // divergence means "dirty". [_confirmedLeave] lets the post-save pops (and a
+  // confirmed discard) through without re-asking.
+  late String _cleanFingerprint;
+  bool _confirmedLeave = false;
+  bool _discardDialogOpen = false;
 
   Map<String, dynamic>? get _edition {
     final editions = widget.initialWork?['editions'] as List?;
@@ -262,7 +275,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _isbn = TextEditingController(
       text: edition?['isbn'] as String? ?? widget.initialIsbn ?? '',
     );
-    _format = edition?['format'] as String? ?? _formats.first;
+    _format = edition?['format'] as String?;
     _form = work?['form'] as String?;
     // Edit mode has content everywhere; a carried-in scanned ISBN lives inside
     // the details section, so it must be visible from the start too.
@@ -281,7 +294,69 @@ class _BookFormState extends ConsumerState<_BookForm> {
     // as a selected chip on edit, not vanish for being off-list.
     _selectedGenres = {...genreNames};
     _customGenreList.addAll(genreNames.where((g) => !_commonGenres.contains(g)));
+    _cleanFingerprint = _fingerprint();
     _loadGenreVocabulary();
+  }
+
+  /// Everything the reader can change, joined into one comparable string —
+  /// the unsaved-changes guard fires only when this diverges from the value
+  /// captured right after the form was seeded.
+  String _fingerprint() => [
+        _title.text,
+        _description.text,
+        _series.text,
+        _seriesNumber.text,
+        _pages.text,
+        _isbn.text,
+        _format ?? '',
+        _language ?? '',
+        _form ?? '',
+        '$_hasSeries',
+        (_selectedGenres.toList()..sort()).join('|'),
+        [for (final a in _authors) a['name']].join('|'),
+        [for (final t in _translators) t['name']].join('|'),
+        _publisher?['name'] ?? '',
+        _original?['id'] ?? '',
+        _coverUrl ?? '',
+        _backCoverUrl ?? '',
+      ].join('\u0000');
+
+  bool get _dirty => _fingerprint() != _cleanFingerprint;
+
+  /// One exit path for the back arrow, the system back gesture and the edge
+  /// swipe: leave immediately when nothing would be lost, otherwise ask.
+  Future<void> _maybeLeave() async {
+    if (_discardDialogOpen) return;
+    if (_confirmedLeave || !_dirty) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    _discardDialogOpen = true;
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          widget.initialWork == null ? l10n.formDiscardTitle : l10n.formDiscardEditTitle,
+        ),
+        content: Text(l10n.formDiscardBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              l10n.formDiscardConfirm,
+              style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+    _discardDialogOpen = false;
+    if (discard == true && mounted) {
+      _confirmedLeave = true;
+      Navigator.of(context).pop();
+    }
   }
 
   /// Both halves of the genre row's vocabulary, best-effort: the reader's own
@@ -305,9 +380,21 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// nothing blocks, nothing pops — matches slide in below the field and a
   /// dismiss hides them for the rest of this form.
   void _onTitleChangedForSimilar() {
-    if (_similarDismissed) return;
-    _similarDebounce?.cancel();
     final q = _title.text.trim();
+    if (_similarDismissed) {
+      // A dismissal answers the question for *that* title only. Clearing the
+      // field or typing a substantially different title re-arms the check —
+      // unless an original is linked, which settles the question for good.
+      final now = q.toLowerCase();
+      final then = _similarDismissedQuery;
+      final related = now.isNotEmpty && (now.contains(then) || then.contains(now));
+      if (_original == null && !related) {
+        _similarDismissed = false;
+      } else {
+        return;
+      }
+    }
+    _similarDebounce?.cancel();
     if (q.length < 3) {
       if (_similar.isNotEmpty && mounted) setState(() => _similar = const []);
       return;
@@ -455,7 +542,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
           }
         });
       case 'different':
-        setState(() => _similarDismissed = true);
+        setState(() {
+          _similarDismissed = true;
+          _similarDismissedQuery = _title.text.trim().toLowerCase();
+        });
     }
   }
 
@@ -479,13 +569,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.forkOwnThisAdded)),
       );
+      _confirmedLeave = true; // the fork replaced this screen — nothing to guard
       context.pushReplacement(
         Routes.bookDetailPath(work['id'] as String, editionId),
       );
     } catch (err) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err')));
-      }
+      if (mounted) showQuietError(context, l10n.quickAddFailed, err);
     }
   }
 
@@ -538,9 +627,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
 
   List<String> get _visibleGenres => _genreOptions.take(_kVisibleChips).toList();
 
-  /// Open the full Type picker — a closed vocabulary, so single-select with
-  /// no create row. "Other" still exists for naming a Type we don't cover;
-  /// it lives inside the sheet's own flow via [_pickCustomForm].
+  /// Open the full Type picker — a closed vocabulary (kWorkForms), so
+  /// single-select with no create row: the sheet is a chooser, not a door for
+  /// new vocabulary. An off-list value already on the book stays pickable via
+  /// [_typeOptions], so old data never vanishes.
   Future<void> _openTypePicker() async {
     final picked = await showModalBottomSheet<Set<String>>(
       context: context,
@@ -554,9 +644,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
         options: [for (final f in _typeOptions) PickerOption(f)],
         selected: {?_form},
         multiSelect: false,
-        // A Type outside the vocabulary is still allowed — the server folds
-        // case ("novel" → "Novel"), so this can't fork the facet on spelling.
-        allowCreate: true,
+        allowCreate: false,
       ),
     );
     if (picked == null || !mounted) return;
@@ -698,11 +786,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
           source: source, folder: 'covers', ratio: CropRatio.cover);
     } catch (err) {
       if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          duration: const Duration(seconds: 6),
-          content: Text('${l10n.coverUploadFailed}\n${_briefError(err)}'),
-        ));
+        showQuietError(context, AppLocalizations.of(context)!.coverUploadFailed, err);
       }
     } finally {
       if (mounted) setState(() => _uploadingBack = false);
@@ -778,14 +862,6 @@ class _BookFormState extends ConsumerState<_BookForm> {
     return filled;
   }
 
-  /// A one-line, human-ish reason from an exception for a diagnostic snackbar —
-  /// the Supabase Storage message ("bucket not found", "new row violates
-  /// policy"), a Dio status, or the exception's own string.
-  String _briefError(Object err) {
-    final s = err.toString();
-    return s.length > 140 ? '${s.substring(0, 140)}…' : s;
-  }
-
   void _applyScannedWork(Map<String, dynamic> work) {
     final editions = work['editions'] as List?;
     final edition =
@@ -822,7 +898,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
         final isbn = edition['isbn'] as String?;
         if (isbn != null && isbn.isNotEmpty) _isbn.text = isbn;
         final format = edition['format'] as String?;
-        if (format != null && _formats.contains(format)) _format = format;
+        if (format != null && kEditionFormats.contains(format)) _format = format;
         final cover = edition['cover_url'] as String?;
         if (cover != null) _coverUrl = cover;
         final back = edition['back_cover_url'] as String?;
@@ -884,12 +960,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         final base = action == CoverAction.adjust ? l10n.coverAdjustFailed : l10n.coverUploadFailed;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          duration: const Duration(seconds: 6),
-          // Include a concise real reason — cover upload/crop couldn't be tested
-          // on a real device before shipping, so surface what actually failed.
-          content: Text('$base\n${_briefError(err)}'),
-        ));
+        // Include a concise real reason — cover upload/crop couldn't be tested
+        // on a real device before shipping, so surface what actually failed.
+        showQuietError(context, base, err);
       }
     } finally {
       if (mounted) setState(() => back ? _uploadingBack = false : _uploadingFront = false);
@@ -997,7 +1070,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
               'back_cover_url': _backCoverUrl,
             if (pageCount != null && pageCount != _initialPageCount) 'page_count': pageCount,
             if (isbn != null && isbn != _initialIsbn) 'isbn': isbn,
-            if (_format != _initialFormat) 'format': _format,
+            // Never null an existing format out — same rule as covers.
+            if (_format != null && _format != _initialFormat) 'format': _format,
             if (seriesName != null && seriesName != _initialSeriesName) 'series_name': seriesName,
             if (seriesNumber != null && seriesNumber != _initialSeriesNumber)
               'series_number': seriesNumber,
@@ -1035,17 +1109,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
               duration: const Duration(seconds: 5),
             ));
           }
+          _confirmedLeave = true; // saved — nothing left for the guard to protect
           context.pop();
         }
       }
     } catch (err) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err')));
-      }
+      if (mounted) showQuietError(context, AppLocalizations.of(context)!.formSaveFailed, err);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
     if (created != null && mounted) {
+      // Saved — leaving now loses nothing, so the guard stands down.
+      _confirmedLeave = true;
       // Pick mode: someone is waiting on this book (the borrow sheet's "not in
       // the catalog?" path). Hand it straight back and close — the standalone
       // popup's "Add to library"/"Create another" are the wrong next steps
@@ -1079,7 +1154,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
       _publisher = null;
       _language = null;
       _form = null;
-      _format = _formats.first;
+      _format = null;
       _hasSeries = false;
       _detailsExpanded = false;
       _prefillSource = null;
@@ -1090,7 +1165,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
       _initialBackCoverUrl = null;
       _similar = const [];
       _similarDismissed = false;
+      _similarDismissedQuery = '';
     });
+    // A blank form has nothing to lose — re-baseline the unsaved guard.
+    _cleanFingerprint = _fingerprint();
+    _confirmedLeave = false;
   }
 
   /// The just-created book's confirmation popup: its metadata, an
@@ -1131,9 +1210,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
               setDialogState(() => phase = 'added');
             } catch (err) {
               setDialogState(() => phase = 'idle');
-              if (ctx.mounted) {
-                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('$err')));
-              }
+              if (ctx.mounted) showQuietError(ctx, l10n.quickAddFailed, err);
             }
           }
 
@@ -1295,7 +1372,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
             children: [
               IconButton(
                 icon: Icon(Icons.arrow_back, color: AppColors.ink),
-                onPressed: () => context.pop(),
+                onPressed: _maybeLeave,
               ),
               Expanded(
                 child: Column(
@@ -1317,6 +1394,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
               ),
             ],
           ),
+          // M5 — editing a shared entry is announced *before* typing, not
+          // after saving. Ownership isn't in the payload, so the phrasing
+          // covers both cases: the reader's own book publishes live, another
+          // reader's goes to its contributor for review.
+          if (isEdit) ...[
+            SizedBox(height: 8),
+            _EditReviewBanner(message: l10n.formEditReviewBanner),
+          ],
           // The capture strip — the two paths that fill the form lead,
           // full-width, before any field (they used to hide mid-form: scan as
           // a small icon inside the ISBN field, photos only after an upload).
@@ -1380,7 +1465,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _CoverSlot(
+              CoverSlot(
                 label: l10n.formCoverFront,
                 imageUrl: _coverUrl,
                 busy: _uploadingFront,
@@ -1392,7 +1477,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                 onTap: () => _onCoverTap(back: false),
               ),
               SizedBox(width: 12),
-              _CoverSlot(
+              CoverSlot(
                 label: l10n.formCoverBack,
                 imageUrl: _backCoverUrl,
                 busy: _uploadingBack,
@@ -1434,7 +1519,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
             ),
           ],
           SizedBox(height: 16),
-          _Field(
+          FormTextField(
             label: l10n.formFieldTitle,
             controller: _title,
             validator: (v) => (v == null || v.trim().isEmpty) ? l10n.formTitleRequired : null,
@@ -1447,7 +1532,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
             SizedBox(height: 8),
             _SimilarWorksPanel(
               works: _similar,
-              onDismiss: () => setState(() => _similarDismissed = true),
+              onDismiss: () => setState(() {
+                _similarDismissed = true;
+                _similarDismissedQuery = _title.text.trim().toLowerCase();
+              }),
               onPick: _openFork,
             ),
           ],
@@ -1500,7 +1588,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
           // the same size whether the catalogue carries 10 genres or 500; the
           // honest total now greets them in the picker's own subtitle.
           SizedBox(height: 12),
-          Text(l10n.formFieldType, style: _fieldLabelStyle),
+          Text(l10n.formFieldType, style: formFieldLabelStyle),
           SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -1526,7 +1614,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
             ],
           ),
           SizedBox(height: 12),
-          Text(l10n.formFieldGenrePrimary, style: _fieldLabelStyle),
+          Text(l10n.formFieldGenrePrimary, style: formFieldLabelStyle),
           SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -1534,7 +1622,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
             children: [
               for (final genre in _visibleGenres)
                 FilterChip(
-                  label: Text(genre, style: TextStyle(fontSize: 12)),
+                  label: Text(localizedGenre(l10n, genre), style: TextStyle(fontSize: 12)),
                   showCheckmark: false,
                   selected: _selectedGenres.contains(genre),
                   onSelected: (sel) => setState(() {
@@ -1653,7 +1741,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                                   children: [
                                     Expanded(
                                       flex: 14,
-                                      child: _Field(
+                                      child: FormTextField(
                                         label: l10n.formFieldSeries,
                                         controller: _series,
                                         fillColor: AppColors.card,
@@ -1663,7 +1751,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                                     SizedBox(width: 8),
                                     Expanded(
                                       flex: 9,
-                                      child: _Field(
+                                      child: FormTextField(
                                         label: l10n.formFieldBookNumber,
                                         controller: _seriesNumber,
                                         keyboardType: TextInputType.number,
@@ -1683,7 +1771,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                           children: [
                             Expanded(
                               flex: 14,
-                              child: _PickerButtonField(
+                              child: PickerButtonField(
                                 label: l10n.formFieldPublisher,
                                 value: _publisher?['name'] as String?,
                                 placeholder: l10n.formPublisherChoose,
@@ -1696,7 +1784,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                             SizedBox(width: 8),
                             Expanded(
                               flex: 10,
-                              child: _Field(
+                              child: FormTextField(
                                 label: l10n.formFieldPages,
                                 controller: _pages,
                                 keyboardType: TextInputType.number,
@@ -1710,7 +1798,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                           children: [
                             Expanded(
                               flex: 14,
-                              child: _IsbnScanField(
+                              child: IsbnScanField(
                                 controller: _isbn,
                                 onScan: _scanIsbn,
                                 scanning: _scanning,
@@ -1719,17 +1807,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
                             SizedBox(width: 8),
                             Expanded(
                               flex: 10,
-                              child: _DropdownField(
-                                label: l10n.formFieldFormat,
+                              child: FormatField(
                                 value: _format,
-                                options: _formats,
                                 onChanged: (v) => setState(() => _format = v),
                               ),
                             ),
                           ],
                         ),
                         SizedBox(height: 10),
-                        _Field(
+                        FormTextField(
                           label: l10n.formFieldDescription,
                           controller: _description,
                           maxLines: 4,
@@ -1786,16 +1872,27 @@ class _BookFormState extends ConsumerState<_BookForm> {
     // While the covers are being read, a full-screen "reading your cover"
     // overlay sits above everything (the scan takes a few seconds on the
     // vision model) — far more legible than the little button spinner.
-    return Stack(
+    //
+    // PopScope guards the system back gesture and edge swipe; the header's
+    // back arrow routes through the same [_maybeLeave], so one swipe can
+    // never silently discard a half-typed book.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _maybeLeave();
+      },
+      child: Stack(
       children: [
         Column(
           children: [
             Expanded(child: form),
-            _SaveBar(
+            FormSaveBar(
               saving: _saving,
               onSave: _save,
               label: l10n.formSave,
-              hint: l10n.formSaveHint,
+              // The create hint promises the shared catalogue; the edit path
+              // says where an edit actually goes (M5).
+              hint: isEdit ? l10n.formSaveHintEdit : l10n.formSaveHint,
             ),
           ],
         ),
@@ -1806,53 +1903,42 @@ class _BookFormState extends ConsumerState<_BookForm> {
             author: _authors.isEmpty ? null : _authors.first['name'] as String?,
           ),
       ],
+      ),
     );
   }
 }
 
-/// The sticky save bar under the scrolling form — the primary action is never
-/// below the fold, and the one-line note spells out that saving publishes to
-/// the shared catalog.
-class _SaveBar extends StatelessWidget {
-  const _SaveBar({
-    required this.saving,
-    required this.onSave,
-    required this.label,
-    required this.hint,
-  });
+/// M5 — the quiet gold notice at the top of the *edit* form: this is a shared
+/// entry, and an edit to another reader's contribution goes to them for
+/// review. Shown before typing, not sprung after saving.
+class _EditReviewBanner extends StatelessWidget {
+  const _EditReviewBanner({required this.message});
 
-  final bool saving;
-  final VoidCallback onSave;
-  final String label;
-  final String hint;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        border: Border(top: BorderSide(color: AppColors.line)),
+        color: AppColors.goldSoft,
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ElevatedButton(
-            onPressed: saving ? null : onSave,
-            child: saving
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
-                  )
-                : Text(label),
-          ),
-          SizedBox(height: 5),
-          Text(
-            hint,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+          Icon(Icons.fact_check_outlined, size: 14, color: AppColors.goldInk),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+                color: AppColors.goldInk,
+              ),
+            ),
           ),
         ],
       ),
@@ -1869,7 +1955,7 @@ class _PrefillBanner extends StatelessWidget {
   final VoidCallback onDismiss;
 
   // The gold-on-goldSoft ink the status pills already use for "To read".
-  static const _ink = Color(0xFF8F681E);
+  static Color get _ink => AppColors.goldInk;
 
   @override
   Widget build(BuildContext context) {
@@ -2149,107 +2235,6 @@ class _ExtractingOverlayState extends State<_ExtractingOverlay>
   }
 }
 
-// Runtime (not const): AppColors.inkSoft resolves per active theme.
-TextStyle get _fieldLabelStyle => TextStyle(
-      fontSize: 10,
-      letterSpacing: 1,
-      color: AppColors.inkSoft,
-      fontWeight: FontWeight.w600,
-    );
-
-/// A single labelled, tappable cover thumbnail (front or back) on the add-book
-/// form. Shows the captured photo when there is one; the front otherwise falls
-/// back to the live typeset preview, the back to an "add a photo" placeholder.
-/// The camera badge signals it's tappable to shoot/replace.
-class _CoverSlot extends StatelessWidget {
-  const _CoverSlot({
-    required this.label,
-    required this.imageUrl,
-    required this.busy,
-    required this.onTap,
-    this.title,
-    this.author,
-    this.width = 46,
-    this.height = 69, // 2:3
-  });
-
-  final String label;
-  final String? imageUrl;
-  final bool busy;
-  final VoidCallback onTap;
-  final String? title;
-  final String? author;
-
-  /// The front slot renders larger (the mockup's 64×96 hero slot); the back
-  /// stays a small companion tile.
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final w = width;
-    final h = height;
-    // What the slot shows without (or instead of) a photo — the front falls
-    // back to the live typeset preview, the back to an "add a photo" tile.
-    Widget fallback() => title != null
-        ? TypesetCover(title: title!, author: author, width: w, height: h)
-        : Container(
-            width: w,
-            height: h,
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Icon(Icons.add_a_photo_outlined, size: 18, color: AppColors.inkSoft),
-          );
-    final preview = imageUrl != null
-        ? ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: netImage(
-              imageUrl!,
-              width: w,
-              height: h,
-              fit: BoxFit.cover,
-              // A dead URL degrades to the typeset/placeholder tile, never a
-              // broken-image error box.
-              errorBuilder: (_, _, _) => fallback(),
-            ),
-          )
-        : fallback();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: _fieldLabelStyle),
-        SizedBox(height: 4),
-        GestureDetector(
-          onTap: busy ? null : onTap,
-          child: Stack(
-            children: [
-              preview,
-              Positioned(
-                right: 2,
-                bottom: 2,
-                child: Container(
-                  padding: EdgeInsets.all(3),
-                  decoration: BoxDecoration(color: AppColors.oxblood, shape: BoxShape.circle),
-                  child: busy
-                      ? SizedBox(
-                          width: 10,
-                          height: 10,
-                          child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.paper),
-                        )
-                      : Icon(Icons.photo_camera, size: 10, color: AppColors.paper),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// Author input (S7b) — chips for the authors already chosen (each carries its
 /// catalog id) plus a button that opens the full author picker page, where you
 /// search existing authors (with portrait + language) or add a new one.
@@ -2272,7 +2257,7 @@ class _AuthorField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.formFieldAuthor, style: _fieldLabelStyle),
+        Text(l10n.formFieldAuthor, style: formFieldLabelStyle),
         SizedBox(height: 4),
         // Once an author is chosen the big button collapses into a compact ＋
         // chip riding the same wrap — the chips are the field now.
@@ -2345,317 +2330,6 @@ class _AuthorField extends StatelessWidget {
   }
 }
 
-/// A labelled, tappable field that opens a picker page and shows the chosen
-/// value (or a placeholder) — used for the publisher field on the add-book
-/// form. A clear button removes the current selection.
-class _PickerButtonField extends StatelessWidget {
-  const _PickerButtonField({
-    required this.label,
-    required this.value,
-    required this.placeholder,
-    required this.onTap,
-    this.onClear,
-  });
-
-  final String label;
-  final String? value;
-  final String placeholder;
-  final VoidCallback onTap;
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasValue = value != null && value!.isNotEmpty;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: _fieldLabelStyle),
-        SizedBox(height: 4),
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    hasValue ? value! : placeholder,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: hasValue ? AppColors.ink : AppColors.inkSoft,
-                    ),
-                  ),
-                ),
-                if (hasValue && onClear != null)
-                  GestureDetector(
-                    onTap: onClear,
-                    child: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
-                  )
-                else
-                  Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Field extends StatelessWidget {
-  const _Field({
-    required this.label,
-    required this.controller,
-    this.validator,
-    this.keyboardType,
-    this.helper,
-    this.fillColor,
-    this.maxLines = 1,
-    this.expandable = false,
-    this.labelAction,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final String? Function(String?)? validator;
-  final TextInputType? keyboardType;
-  final int maxLines;
-
-  /// An optional inline action rendered on the label row (right side, before
-  /// the expand affordance) — e.g. the Description field's "Scan back cover"
-  /// link. A link, not a button, so it sits quietly beside the field it fills.
-  final Widget? labelAction;
-
-  /// Optional one-line hint under the field, for the fields users hesitate on
-  /// (series, book number, …).
-  final String? helper;
-
-  /// Override the fill — e.g. `card` when the field sits inside a `paperDeep`
-  /// well (the series group) so it still reads as an input.
-  final Color? fillColor;
-
-  /// Long-text fields (description) get an expand affordance that opens the
-  /// same controller in a full-screen editor.
-  final bool expandable;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            // The label; an inline action (e.g. Description's "Scan back cover")
-            // sits right beside it, while the expand affordance stays far right.
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10,
-                  letterSpacing: 1,
-                  color: AppColors.inkSoft,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            ?labelAction,
-            const Spacer(),
-            if (expandable)
-              InkWell(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    fullscreenDialog: true,
-                    builder: (_) => _FullScreenTextEditor(
-                      title: label,
-                      controller: controller,
-                      hint: helper,
-                    ),
-                  ),
-                ),
-                borderRadius: BorderRadius.circular(6),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.open_in_full, size: 12, color: AppColors.oxblood),
-                      SizedBox(width: 4),
-                      Text(
-                        l10n.formFieldExpand,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.oxblood,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-        SizedBox(height: 4),
-        TextFormField(
-          textCapitalization: TextCapitalization.sentences,
-          controller: controller,
-          validator: validator,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: fillColor ?? AppColors.card,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppColors.line),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppColors.line),
-            ),
-          ),
-        ),
-        if (helper != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 3, left: 2),
-            child: Text(
-              helper!,
-              style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// Full-screen editor for long text (the description blurb) — shares the
-/// form field's controller, so everything typed here is already in the form
-/// when it pops; Done just closes it.
-class _FullScreenTextEditor extends StatelessWidget {
-  const _FullScreenTextEditor({required this.title, required this.controller, this.hint});
-
-  final String title;
-  final TextEditingController controller;
-  final String? hint;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
-      backgroundColor: AppColors.paper,
-      appBar: AppBar(
-        title: Text(title),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              l10n.formEditorDone,
-              style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: TextField(
-            controller: controller,
-            maxLines: null,
-            expands: true,
-            autofocus: true,
-            textAlignVertical: TextAlignVertical.top,
-            keyboardType: TextInputType.multiline,
-            textCapitalization: TextCapitalization.sentences,
-            style: TextStyle(fontSize: 14, color: AppColors.ink, height: 1.5),
-            decoration: InputDecoration(
-              hintText: hint,
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// ISBN field with a built-in Scan button (S7b). Scanning is the primary path —
-/// the camera fills in the ISBN (and the rest of the book) — but the field stays
-/// fully editable so a user can correct or type it by hand.
-class _IsbnScanField extends StatelessWidget {
-  const _IsbnScanField({
-    required this.controller,
-    required this.onScan,
-    required this.scanning,
-  });
-
-  final TextEditingController controller;
-  final VoidCallback onScan;
-  final bool scanning;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(l10n.formFieldIsbn, style: _fieldLabelStyle),
-        SizedBox(height: 4),
-        TextFormField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: AppColors.card,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            suffixIcon: IconButton(
-              onPressed: scanning ? null : onScan,
-              tooltip: l10n.formIsbnScan,
-              icon: scanning
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.oxblood),
-                    )
-                  : Icon(Icons.qr_code_scanner, size: 20, color: AppColors.oxblood),
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppColors.line),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppColors.line),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 3, left: 2),
-          child: Text(
-            l10n.formIsbnScanHelp,
-            style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// The "Part of a series" toggle that reveals/hides the series fields, with a
 /// one-line sub-label so it's clear when to switch it on.
 class _SeriesToggle extends StatelessWidget {
@@ -2704,42 +2378,6 @@ class _SeriesToggle extends StatelessWidget {
             activeTrackColor: AppColors.oxblood,
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A non-null option field (e.g. Format). Tapping it opens a themed bottom-sheet
-/// picker instead of the platform Material dropdown, and its box matches the
-/// height of the text fields it sits beside.
-class _DropdownField extends StatelessWidget {
-  const _DropdownField({
-    required this.label,
-    required this.value,
-    required this.options,
-    required this.onChanged,
-  });
-
-  final String label;
-  final String value;
-  final List<String> options;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return SelectField(
-      label: label,
-      displayValue: value,
-      isPlaceholder: false,
-      onTap: () => openSelectSheet(
-        context,
-        title: l10n.pickerChoose(label.toLowerCase()),
-        options: [for (final o in options) SelectOption(o, o)],
-        current: value,
-        onChanged: (v) {
-          if (v != null) onChanged(v);
-        },
       ),
     );
   }
@@ -2820,7 +2458,7 @@ class _TranslatedFromField extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.formFieldTranslatedFrom, style: _fieldLabelStyle),
+          Text(l10n.formFieldTranslatedFrom, style: formFieldLabelStyle),
           SizedBox(height: 4),
           InkWell(
             onTap: onLink,
@@ -2877,7 +2515,7 @@ class _TranslatedFromField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.formFieldTranslatedFrom, style: _fieldLabelStyle),
+        Text(l10n.formFieldTranslatedFrom, style: formFieldLabelStyle),
         SizedBox(height: 4),
         // Left accent rule as an inner clipped bar — borderRadius plus a
         // non-uniform Border throws at paint time.
@@ -2955,7 +2593,7 @@ class _TranslatorField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.formFieldTranslator, style: _fieldLabelStyle),
+        Text(l10n.formFieldTranslator, style: formFieldLabelStyle),
         SizedBox(height: 4),
         if (translators.isNotEmpty)
           Wrap(

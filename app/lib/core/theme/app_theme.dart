@@ -27,7 +27,26 @@ abstract final class AppColors {
   static Color get moss => _p(0xFF48663F, 0xFF83A876);
   static Color get slate => _p(0xFF43617E, 0xFF7A9CC0);
   static Color get stampGrey => _p(0xFF9A8F7C, 0xFF8A8070);
+
+  /// Darker gold ink — text on [goldSoft] fills ([gold] itself fails contrast).
+  static Color get goldInk => _p(0xFF8F681E, 0xFFDDB86B);
+
+  /// Personal-note "slip paper" and its rule — dashed private-note surfaces.
+  static Color get slip => _p(0xFFF6EEDC, 0xFF261E12);
+  static Color get slipLine => _p(0xFFE8DCC0, 0xFF3E3220);
+
   static const night = Color(0xFF241811); // the scanner overlay, always dark
+
+  /// The single dark accent panel (AI pick, quote card, insight closers) —
+  /// constant in both themes, per the token table in screen-design.md.
+  static const darkPanel = Color(0xFF3A2C1E);
+
+  /// Text/accents on constant-dark surfaces ([night], [darkPanel]). Constant on
+  /// purpose: brightness-aware tokens on a constant surface is how the dark-mode
+  /// cream-on-cream bugs happened.
+  static const onDark = Color(0xFFEFE3C8);
+  static const onDarkSoft = Color(0xFFC9B891);
+  static const nightGold = Color(0xFFE3B14C);
 }
 
 /// Builds the theme for the given brightness. Sets [AppColors.dark] first so the

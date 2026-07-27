@@ -121,7 +121,11 @@ void main() {
     expect(find.byType(TextField), findsWidgets); // the page sheet is up
 
     // Type the page reached (the big numeral is the first field) and save.
+    // The pump between typing and tapping matters: with an empty sheet "Save
+    // the page" is disabled (Skip is the exit), and it re-enables on the
+    // frame after the first digit lands.
     await tester.enterText(find.byType(TextField).first, '42');
+    await settle();
     await tester.tap(find.text('Save the page'));
     await settle();
 

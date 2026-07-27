@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/quiet_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../data/api/api_client.dart';
@@ -30,6 +31,9 @@ class _PublisherPickerScreenState extends ConsumerState<PublisherPickerScreen> {
   List<Map<String, dynamic>> _results = [];
   List<Map<String, dynamic>> _suggestions = [];
   bool _loading = false;
+  // A failed search is an error row with retry, never the empty state — the
+  // empty copy invites the duplicate the picker exists to prevent.
+  bool _errored = false;
   bool _adding = false;
 
   @override
@@ -66,13 +70,21 @@ class _PublisherPickerScreenState extends ConsumerState<PublisherPickerScreen> {
   }
 
   Future<void> _fetch(String query) async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _errored = false;
+    });
     try {
       final rows = await ref.read(apiClientProvider).searchPublishers(query);
       if (!mounted || query != _query) return;
       setState(() => _results = rows);
     } catch (_) {
-      if (mounted) setState(() => _results = []);
+      if (mounted && query == _query) {
+        setState(() {
+          _results = [];
+          _errored = true;
+        });
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -81,7 +93,7 @@ class _PublisherPickerScreenState extends ConsumerState<PublisherPickerScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final showEmpty = _query.isNotEmpty && !_loading && _results.isEmpty;
+    final showEmpty = _query.isNotEmpty && !_loading && !_errored && _results.isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -137,6 +149,7 @@ class _PublisherPickerScreenState extends ConsumerState<PublisherPickerScreen> {
                       publisher: publisher,
                       onTap: () => context.pop(publisher),
                     ),
+                  if (_errored && !_loading) PickerErrorRow(onRetry: () => _fetch(_query)),
                   if (showEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -294,7 +307,7 @@ class _AddNewPublisherSectionState extends ConsumerState<_AddNewPublisherSection
       if (mounted) context.pop(publisher);
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err')));
+        showQuietError(context, AppLocalizations.of(context)!.pickerSavePublisherFailed, err);
         setState(() => _saving = false);
       }
     }
@@ -333,7 +346,7 @@ class _AddNewPublisherSectionState extends ConsumerState<_AddNewPublisherSection
               validator: (v) => (v == null || v.trim().isEmpty) ? l10n.pickerNameRequired : null,
             ),
             const SizedBox(height: 8),
-            PickerLanguageDropdown(
+            PickerLanguageField(
               label: l10n.pickerFieldLanguage,
               value: _language,
               hint: l10n.pickerLanguageHint,

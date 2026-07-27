@@ -27,7 +27,7 @@ void main() {
     expect(find.text('The Covenant of Water'), findsWidgets); // card + typeset cover
     expect(find.text('Abraham Verghese'), findsWidgets);
     expect(find.textContaining('sweeping saga'), findsOneWidget);
-    expect(find.text('catalog avg'), findsOneWidget);
+    expect(find.text('catalogue avg'), findsOneWidget);
   });
 
   testWidgets('personal-endorsement card swaps the blurb for the review and "your rating"',

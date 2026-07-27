@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 
+export '../../../core/widgets/sheet_grabber.dart' show SheetGrabber;
+
 /// Shared form-field building blocks for the lend (S9) and log-borrowed (S8c)
 /// bottom sheets, so the two flows stay visually identical.
 InputDecoration sheetInputDecoration(String hint) => InputDecoration(
@@ -75,26 +77,6 @@ class SheetDateField extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// The little grab-handle at the top of a modal sheet.
-class SheetGrabber extends StatelessWidget {
-  const SheetGrabber({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 32,
-        height: 4,
-        margin: EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: AppColors.line,
-          borderRadius: BorderRadius.circular(99),
-        ),
-      ),
     );
   }
 }

@@ -28,13 +28,60 @@ class AuthorBrowseScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final data = ref.watch(authorWorksProvider(authorId));
 
+    // The back-arrow header lives outside `data.when`, so a slow or failed
+    // load never strands the reader on a chrome-less page.
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: SafeArea(
-        child: data.when(
-          loading: () => ListSkeleton(),
-          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(authorWorksProvider(authorId))),
-          data: (body) {
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.arrow_back, color: AppColors.ink),
+                    onPressed: () => context.pop(),
+                  ),
+                  Text(
+                    l10n.authorBrowseLabel,
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelMedium
+                        ?.copyWith(color: AppColors.inkSoft),
+                  ),
+                  Spacer(),
+                  if (data.valueOrNull != null)
+                    Builder(builder: (context) {
+                      final body = data.value!;
+                      final author = body['author'] as Map<String, dynamic>;
+                      final works = (body['works'] as List).cast<Map<String, dynamic>>();
+                      final name = author['name'] as String;
+                      return IconButton(
+                        // Adaptive share glyph — ios_share reads wrong on Android.
+                        icon: Icon(Icons.share_outlined, color: AppColors.oxblood),
+                        tooltip: l10n.shareAction,
+                        onPressed: () => showEntityShareSheet(
+                          context,
+                          eyebrow: l10n.shareAuthorEyebrow,
+                          name: name,
+                          subtitle: l10n.authorBrowseWorksCount(works.length),
+                          shareUrl: authorShareUrl(authorId),
+                          shareText: l10n.shareAuthorLinkText(name, authorShareUrl(authorId)),
+                          imageUrl: author['image_url'] as String?,
+                          circular: true,
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            ),
+            Expanded(
+              child: data.when(
+                loading: () => ListSkeleton(),
+                error: (err, _) =>
+                    ErrorRetry(onRetry: () => ref.invalidate(authorWorksProvider(authorId))),
+                data: (body) {
             final author = body['author'] as Map<String, dynamic>;
             final works = (body['works'] as List).cast<Map<String, dynamic>>();
             final name = author['name'] as String;
@@ -46,40 +93,9 @@ class AuthorBrowseScreen extends ConsumerWidget {
             // discloses it to nobody else (api/app/models/author_claim.py).
             final claimPending = author['claim_pending'] as bool? ?? false;
 
-            return ListView(
-              padding: EdgeInsets.all(20),
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.arrow_back, color: AppColors.ink),
-                      onPressed: () => context.pop(),
-                    ),
-                    Text(
-                      l10n.authorBrowseLabel,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelMedium
-                          ?.copyWith(color: AppColors.inkSoft),
-                    ),
-                    Spacer(),
-                    IconButton(
-                      icon: Icon(Icons.ios_share, color: AppColors.oxblood),
-                      tooltip: l10n.shareAction,
-                      onPressed: () => showEntityShareSheet(
-                        context,
-                        eyebrow: l10n.shareAuthorEyebrow,
-                        name: name,
-                        subtitle: l10n.authorBrowseWorksCount(works.length),
-                        shareUrl: authorShareUrl(authorId),
-                        shareText: l10n.shareAuthorLinkText(name, authorShareUrl(authorId)),
-                        imageUrl: imageUrl,
-                        circular: true,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
+                  return ListView(
+                    padding: EdgeInsets.fromLTRB(20, 4, 20, 20),
+                    children: [
                 Row(
                   children: [
                     CircleAvatar(
@@ -90,7 +106,7 @@ class AuthorBrowseScreen extends ConsumerWidget {
                           ? Text(
                               initials,
                               style: TextStyle(
-                                color: Color(0xFF8F681E),
+                                color: AppColors.goldInk,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 18,
                               ),
@@ -166,9 +182,12 @@ class AuthorBrowseScreen extends ConsumerWidget {
                   )
                 else
                   for (final work in works) CatalogResultTile(work: work),
-              ],
-            );
-          },
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -264,6 +283,9 @@ class _LinkAuthorActionState extends ConsumerState<_LinkAuthorAction> {
     final l10n = AppLocalizations.of(context)!;
     return OutlinedButton.icon(
       onPressed: _busy ? null : _link,
+      // Oxblood — filing a claim on a shared author row is a real action,
+      // not a quiet default button.
+      style: OutlinedButton.styleFrom(foregroundColor: AppColors.oxblood),
       icon: _busy
           ? SizedBox(
               width: 14,

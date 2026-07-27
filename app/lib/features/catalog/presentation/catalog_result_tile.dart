@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/haptics.dart';
+import '../../../core/quiet_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
@@ -67,19 +68,26 @@ class CatalogResultTile extends ConsumerWidget {
                         ),
                         if (authors.isNotEmpty)
                           Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               for (final (i, author) in authors.indexed) ...[
                                 if (i > 0)
                                   Text(', ', style: TextStyle(color: AppColors.inkSoft)),
+                                // Padded so the oxblood name-link is a real
+                                // target, not an 12px-tall strip.
                                 GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
                                   onTap: () => context
                                       .push(Routes.authorBrowsePath(author['id'] as String)),
-                                  child: Text(
-                                    author['name'] as String,
-                                    style: TextStyle(
-                                      color: AppColors.oxblood,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 6),
+                                    child: Text(
+                                      author['name'] as String,
+                                      style: TextStyle(
+                                        color: AppColors.oxblood,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -87,34 +95,41 @@ class CatalogResultTile extends ConsumerWidget {
                             ],
                           ),
                         if (publisher != null || year != null)
-                          Padding(
-                            padding: EdgeInsets.only(top: 2),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (publisher != null)
-                                  GestureDetector(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Flexible + ellipsis: a long imprint name must
+                              // truncate, not RenderFlex-overflow the row.
+                              if (publisher != null)
+                                Flexible(
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
                                     onTap: () => context.push(
                                       Routes.publisherBrowsePath(publisher['id'] as String),
                                     ),
-                                    child: Text(
-                                      publisher['name'] as String,
-                                      style:
-                                          TextStyle(color: AppColors.oxblood, fontSize: 11),
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 6),
+                                      child: Text(
+                                        publisher['name'] as String,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style:
+                                            TextStyle(color: AppColors.oxblood, fontSize: 11),
+                                      ),
                                     ),
                                   ),
-                                if (publisher != null && year != null)
-                                  Text(
-                                    ' · ',
-                                    style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
-                                  ),
-                                if (year != null)
-                                  Text(
-                                    '$year',
-                                    style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
-                                  ),
-                              ],
-                            ),
+                                ),
+                              if (publisher != null && year != null)
+                                Text(
+                                  ' · ',
+                                  style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                                ),
+                              if (year != null)
+                                Text(
+                                  '$year',
+                                  style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                                ),
+                            ],
                           ),
                       ],
                     ),
@@ -151,12 +166,18 @@ class _QuickAdd extends ConsumerWidget {
       icon: Icon(Icons.add_circle_outline, color: AppColors.oxblood),
       tooltip: AppLocalizations.of(context)!.bookAddToLibrary,
       onPressed: () async {
-        Haptics.success();
-        final edition = work['edition'] as Map<String, dynamic>;
-        await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
-        final repo = await ref.read(libraryRepositoryProvider.future);
-        await repo.add(editionId: editionId);
-        ref.invalidate(libraryEntryProvider(editionId));
+        final l10n = AppLocalizations.of(context)!;
+        try {
+          final edition = work['edition'] as Map<String, dynamic>;
+          await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+          final repo = await ref.read(libraryRepositoryProvider.future);
+          await repo.add(editionId: editionId);
+          // Success feedback only after the write actually landed.
+          Haptics.success();
+          ref.invalidate(libraryEntryProvider(editionId));
+        } catch (err) {
+          if (context.mounted) showQuietError(context, l10n.quickAddFailed, err);
+        }
       },
     );
   }

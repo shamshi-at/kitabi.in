@@ -175,7 +175,9 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
           onChanged: _onChanged,
           decoration: sheetInputDecoration(widget.hint).copyWith(
             prefixIcon: Icon(
-              linked ? Icons.verified_user : Icons.search,
+              // A link icon, not a verification shield — Kitabi links
+              // accounts, it doesn't vouch for people.
+              linked ? Icons.link : Icons.search,
               size: 18,
               color: linked ? AppColors.moss : AppColors.inkSoft,
             ),

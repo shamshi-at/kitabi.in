@@ -12,9 +12,11 @@ import '../../../data/api/api_client.dart';
 import '../../../data/db/catalog_cache.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
+import '../../../core/quiet_error.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
 import 'catalog_entity_tiles.dart';
+import 'chip_picker_sheet.dart';
 
 /// Discover (S4/browse) — wander the whole catalog: every book, author and
 /// publisher. Rebuilt 18 Jul 2026 to match the library's "cool" feel (owner
@@ -46,6 +48,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
   List<String> _languages = [];
   List<String> _forms = [];
   List<String> _genres = [];
+  // The same genres with their work counts — the "All N" door's picker ranks
+  // and annotates by count, so the established spelling wins.
+  List<Map<String, dynamic>> _genreRows = [];
 
   @override
   void initState() {
@@ -64,10 +69,11 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
       if (mounted) setState(() => _forms = v);
     }).catchError((_) {});
     api.browseGenres().then((v) {
-      // The filter only needs the names; the counts are for the add form's
-      // genre picker.
       if (mounted) {
-        setState(() => _genres = [for (final g in v) g['name'] as String]);
+        setState(() {
+          _genreRows = v;
+          _genres = [for (final g in v) g['name'] as String];
+        });
       }
     }).catchError((_) {});
   }
@@ -94,6 +100,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
         languages: _languages,
         forms: _forms,
         genres: _genres,
+        genreRows: _genreRows,
       ),
     );
     if (result == null) return;
@@ -492,8 +499,8 @@ class _CatalogGridCell extends StatelessWidget {
                       ),
                       if (editionId != null)
                         Positioned(
-                          top: 4,
-                          right: 4,
+                          top: -4,
+                          right: -4,
                           child: _QuickAddBadge(work: work, editionId: editionId),
                         ),
                     ],
@@ -545,35 +552,51 @@ class _QuickAddBadge extends ConsumerWidget {
   final Map<String, dynamic> work;
   final String editionId;
 
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final edition = work['edition'] as Map<String, dynamic>;
+      await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+      final repo = await ref.read(libraryRepositoryProvider.future);
+      await repo.add(editionId: editionId);
+      // Success feedback only after the write actually landed.
+      Haptics.success();
+      ref.invalidate(libraryEntryProvider(editionId));
+    } catch (err) {
+      if (context.mounted) showQuietError(context, l10n.quickAddFailed, err);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final owned = ref.watch(libraryEntryProvider(editionId)).valueOrNull != null;
+    // A 40px transparent target around the 24px visual circle — mis-taps were
+    // opening the book instead of adding it.
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: owned
-          ? null
-          : () async {
-              Haptics.success();
-              final edition = work['edition'] as Map<String, dynamic>;
-              await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
-              final repo = await ref.read(libraryRepositoryProvider.future);
-              await repo.add(editionId: editionId);
-              ref.invalidate(libraryEntryProvider(editionId));
-            },
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: owned ? AppColors.moss : const Color(0xF2FFFCF4),
-          shape: BoxShape.circle,
-          boxShadow: const [
-            BoxShadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 1)),
-          ],
-        ),
-        child: Icon(
-          owned ? Icons.check : Icons.add,
-          size: 15,
-          color: owned ? Colors.white : AppColors.oxblood,
+      onTap: owned ? null : () => _add(context, ref),
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: Center(
+          child: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              // Theme-aware: `card` keeps the badge legible on night covers
+              // instead of a hardcoded near-white disc.
+              color: owned ? AppColors.moss : AppColors.card.withValues(alpha: 0.95),
+              shape: BoxShape.circle,
+              boxShadow: const [
+                BoxShadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 1)),
+              ],
+            ),
+            child: Icon(
+              owned ? Icons.check : Icons.add,
+              size: 15,
+              color: owned ? Colors.white : AppColors.oxblood,
+            ),
+          ),
         ),
       ),
     );
@@ -600,12 +623,14 @@ class _CatalogFilterSheet extends StatefulWidget {
     required this.languages,
     required this.forms,
     required this.genres,
+    required this.genreRows,
   });
 
   final _CatalogFacets current;
   final List<String> languages;
   final List<String> forms;
   final List<String> genres;
+  final List<Map<String, dynamic>> genreRows;
 
   @override
   State<_CatalogFilterSheet> createState() => _CatalogFilterSheetState();
@@ -616,6 +641,61 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
   late String? _language = widget.current.language;
   late String? _form = widget.current.form;
   late String? _genre = widget.current.genre;
+
+  // M10: chips are a shortcut, not the vocabulary — the row shows a handful
+  // and the "All N" door opens the full searchable picker.
+  static const _kVisibleFacetChips = 6;
+
+  /// The first [_kVisibleFacetChips] options with the selected one guaranteed
+  /// a seat, so the active facet can never hide behind the door.
+  List<String> _visible(List<String> options, String? selected) {
+    final ordered = [
+      if (selected != null && options.contains(selected)) selected,
+      ...options.where((o) => o != selected),
+    ];
+    return ordered.take(_kVisibleFacetChips).toList();
+  }
+
+  /// The "All N ⌕" door — the same [ChipPickerSheet] the add form taught,
+  /// in single-select mode; its subdued None row clears the facet. A dismiss
+  /// changes nothing. Filtering itself stays server-side: this only picks the
+  /// facet value that [_PagedCatalogView] re-queries with.
+  Future<void> _openFacetPicker({required bool genre}) async {
+    final l10n = AppLocalizations.of(context)!;
+    final title = genre
+        ? l10n.pickerChoose(l10n.libraryFilterGenre.toLowerCase())
+        : l10n.pickerChoose(l10n.libraryFilterLanguage.toLowerCase());
+    final options = genre
+        ? [
+            for (final g in widget.genreRows)
+              PickerOption(g['name'] as String? ?? '', count: g['work_count'] as int?),
+          ]
+        : [for (final lang in widget.languages) PickerOption(lang)];
+    final picked = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => ChipPickerSheet(
+        title: title,
+        options: options,
+        selected: {?(genre ? _genre : _language)},
+        multiSelect: false,
+        allowCreate: false,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      final value = picked.isEmpty ? null : picked.first;
+      if (genre) {
+        _genre = value;
+      } else {
+        _language = value;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -688,10 +768,16 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                 _ChipRow(
                   options: [
                     (null, l10n.browseFilterAllTitle),
-                    for (final g in widget.genres) (g, g),
+                    for (final g in _visible(widget.genres, _genre)) (g, g),
                   ],
                   selected: _genre,
                   onSelect: (v) => setState(() => _genre = v),
+                  trailing: widget.genres.length > _kVisibleFacetChips
+                      ? _AllDoorChip(
+                          label: l10n.browseFilterAllCount(widget.genres.length),
+                          onTap: () => _openFacetPicker(genre: true),
+                        )
+                      : null,
                 ),
               ],
               if (widget.languages.isNotEmpty) ...[
@@ -699,10 +785,16 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                 _ChipRow(
                   options: [
                     (null, l10n.browseFilterAllTitle),
-                    for (final lang in widget.languages) (lang, lang),
+                    for (final lang in _visible(widget.languages, _language)) (lang, lang),
                   ],
                   selected: _language,
                   onSelect: (v) => setState(() => _language = v),
+                  trailing: widget.languages.length > _kVisibleFacetChips
+                      ? _AllDoorChip(
+                          label: l10n.browseFilterAllCount(widget.languages.length),
+                          onTap: () => _openFacetPicker(genre: false),
+                        )
+                      : null,
                 ),
               ],
               const SizedBox(height: 18),
@@ -714,7 +806,6 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.oxblood,
-                    foregroundColor: AppColors.paper,
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
@@ -755,11 +846,19 @@ class _FacetLabel extends StatelessWidget {
 /// A single-select chip row — the sheet's one control shape, reused for sort,
 /// type, genre and language. [T] is the value; a chip's [label] is what shows.
 class _ChipRow<T> extends StatelessWidget {
-  const _ChipRow({required this.options, required this.selected, required this.onSelect});
+  const _ChipRow({
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+    this.trailing,
+  });
 
   final List<(T, String)> options;
   final T selected;
   final ValueChanged<T> onSelect;
+
+  /// The optional "All N ⌕" door at the end of a capped row.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -789,7 +888,52 @@ class _ChipRow<T> extends StatelessWidget {
               ),
             ),
           ),
+        ?trailing,
       ],
+    );
+  }
+}
+
+/// The "All N ⌕" chip at the end of a capped facet row — visually the add
+/// form's "Search or add" door, opening the full picker.
+class _AllDoorChip extends StatelessWidget {
+  const _AllDoorChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.goldSoft,
+      borderRadius: BorderRadius.circular(99),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(99),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(99),
+            // Uniform border on purpose (CLAUDE.md, 21 Jul 2026).
+            border: Border.all(color: AppColors.gold),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search, size: 13, color: AppColors.oxblood),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.oxblood,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

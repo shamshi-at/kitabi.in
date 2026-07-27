@@ -49,7 +49,7 @@ void main() {
     expect(find.text('open'), findsOneWidget);
   });
 
-  testWidgets('single-page viewer shows no page dots', (tester) async {
+  testWidgets('single-page viewer shows no page dots and no caption', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -69,7 +69,22 @@ void main() {
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    expect(find.text('FRONT COVER'), findsOneWidget);
+    // "Front cover" only means something once there's a back to tell apart.
+    expect(find.text('FRONT COVER'), findsNothing);
+    expect(find.byType(PageView), findsOneWidget);
     expect(find.byType(AnimatedContainer), findsNothing); // the dots
+  });
+
+  testWidgets('tapping outside the image dismisses the viewer', (tester) async {
+    await tester.pumpWidget(_host());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PageView), findsOneWidget);
+
+    // Tap the empty backdrop well away from the (48px, centred) image.
+    await tester.tapAt(const Offset(20, 500));
+    await tester.pumpAndSettle();
+    expect(find.byType(PageView), findsNothing);
+    expect(find.text('open'), findsOneWidget);
   });
 }

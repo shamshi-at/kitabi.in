@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/section_label.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../l10n/app_localizations.dart';
 import '../period_summary.dart';
 
 /// The books finished in the selected window, as covers rather than another
@@ -23,6 +25,20 @@ class FinishedBooksStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (books.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // A plain "Finished" (no period wording): "Finished this 3 months"
+        // conjugates badly across the windows, and the card's own eyebrow
+        // already names the window right above.
+        SectionLabel(l10n.insightsFinishedSection, padding: const EdgeInsets.only(bottom: 6)),
+        _strip(),
+      ],
+    );
+  }
+
+  Widget _strip() {
     return SizedBox(
       height: _coverHeight + 6,
       child: ListView.separated(

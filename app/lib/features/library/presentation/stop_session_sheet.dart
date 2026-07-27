@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/format_duration.dart';
+import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
+import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../providers/library_providers.dart';
 import '../../../l10n/app_localizations.dart';
-import 'note_page.dart';
+import 'session_log_row.dart';
+import 'session_notes_block.dart';
 import 'session_page_entry.dart';
 
 /// What the reader entered before the sheet closed.
@@ -106,12 +109,18 @@ class _StopSessionSheet extends ConsumerStatefulWidget {
 }
 
 class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
+  // Both fields feed the Save button's enablement (an empty sheet has nothing
+  // to save), so typing must rebuild.
   late final _pageController =
-      TextEditingController(text: widget.currentPage?.toString() ?? '');
-  final _totalController = TextEditingController();
+      TextEditingController(text: widget.currentPage?.toString() ?? '')
+        ..addListener(_onFieldChanged);
+  late final _totalController = TextEditingController()
+    ..addListener(_onFieldChanged);
   final _pageFocusNode = FocusNode();
   PageEntryError? _error;
   bool _showingLog = false;
+
+  void _onFieldChanged() => setState(() {});
 
   @override
   void dispose() {
@@ -119,6 +128,15 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
     _totalController.dispose();
     _pageFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _deleteSession(ReadingSession session) async {
+    Haptics.selection();
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = await ref.read(readingSessionsRepositoryProvider.future);
+    await repo.deleteSession(session.id);
+    messenger.showSnackBar(SnackBar(content: Text(l10n.bookLogDeleted)));
   }
 
   void _save() {
@@ -160,6 +178,7 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
         title: widget.title,
         sessions: sessions,
         onBack: () => setState(() => _showingLog = false),
+        onDelete: _deleteSession,
       );
     }
 
@@ -258,70 +277,30 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
             // Always offered, even for a sitting with no notes yet — the
             // closing thought is often the only one you want to write, and it
             // used to be reachable only if you'd already written another
-            // (owner report, 22 Jul 2026).
-            ...[
-              const SizedBox(height: 14),
-              if (sessionNotes.isNotEmpty)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  l10n.notesSectionThisSitting(sessionNotes.length).toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.1,
-                    color: AppColors.inkSoft,
-                  ),
-                ),
-              ),
-              if (sessionNotes.isNotEmpty) const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF6EEDC),
-                  borderRadius: BorderRadius.circular(11),
-                  border: Border.all(color: const Color(0xFFE8DCC0)),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    for (final note in sessionNotes)
-                      _StopNoteRow(note: note, entryId: widget.libraryEntryId),
-                    InkWell(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<bool>(
-                          builder: (_) => NotePage(
-                            libraryEntryId: widget.libraryEntryId,
-                            bookTitle: widget.title,
-                            sessionId: widget.loggedSessionId,
-                            currentPage: int.tryParse(_pageController.text.trim()),
-                          ),
-                        ),
-                      ),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-                        decoration: BoxDecoration(
-                          border: sessionNotes.isEmpty
-                              ? null
-                              : Border(top: BorderSide(color: const Color(0xFFE8DCC0))),
-                        ),
-                        child: Text(
-                          '+ ${l10n.notesClosingThought}',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            // (owner report, 22 Jul 2026). Shared with the timer's wax-seal
+            // face via [SessionNotesBlock].
+            const SizedBox(height: 14),
+            SessionNotesBlock(
+              notes: sessionNotes,
+              libraryEntryId: widget.libraryEntryId,
+              sessionId: widget.loggedSessionId,
+              bookTitle: widget.title,
+              currentPage: () => int.tryParse(_pageController.text.trim()),
+            ),
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
                 // A page that would walk progress backwards can't be saved —
-                // the entry widget says why, right under the number.
-                onPressed: _error != null ? null : _save,
+                // the entry widget says why, right under the number. And with
+                // both fields empty there is nothing to save: Skip is the
+                // honest exit, so a Save that would silently do the same is
+                // disabled rather than pretending.
+                onPressed: (_error != null ||
+                        (int.tryParse(_pageController.text.trim()) == null &&
+                            int.tryParse(_totalController.text.trim()) == null))
+                    ? null
+                    : _save,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.oxblood,
                   padding: const EdgeInsets.symmetric(vertical: 13),
@@ -361,17 +340,25 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => Navigator.of(context).pop(),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  // Skip says what it costs rather than being a bare word.
-                  sessionNotes.isNotEmpty
-                      ? l10n.stopSkipNotesSafe(sessionNotes.length)
-                      : (widget.currentPage != null
-                          ? l10n.stopSkipWithPage(widget.currentPage!)
-                          : l10n.stopSkipNoPage),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+              // A comfortable target — Skip is small type doing real work.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Center(
+                  child: Text(
+                    // Skip says what it costs rather than being a bare word —
+                    // and when notes *and* a page are both in play, it names
+                    // both costs, not just the notes.
+                    sessionNotes.isNotEmpty
+                        ? (widget.currentPage != null
+                            ? l10n.stopSkipNotesAndPage(
+                                sessionNotes.length, widget.currentPage!)
+                            : l10n.stopSkipNotesSafe(sessionNotes.length))
+                        : (widget.currentPage != null
+                            ? l10n.stopSkipWithPage(widget.currentPage!)
+                            : l10n.stopSkipNoPage),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                  ),
                 ),
               ),
             ),
@@ -391,11 +378,16 @@ class SessionsLog extends StatelessWidget {
     required this.title,
     required this.sessions,
     required this.onBack,
+    required this.onDelete,
   });
 
   final String? title;
   final List<ReadingSession> sessions;
   final VoidCallback onBack;
+
+  /// Soft-deletes one sitting — the stray micro-sessions. Same affordance as
+  /// the book page's reading log (they share [SessionLogRow]).
+  final Future<void> Function(ReadingSession session) onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -454,13 +446,15 @@ class SessionsLog extends StatelessWidget {
                   border: Border.all(color: AppColors.line),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: ListView.separated(
+                child: ListView.builder(
                   shrinkWrap: true,
                   itemCount: sessions.length,
-                  separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.line),
-                  itemBuilder: (context, i) => _SessionRow(
+                  itemBuilder: (context, i) => SessionLogRow(
                     session: sessions[i],
+                    primary: _dayLabel(context, sessions[i].endedAt),
                     highlight: i == 0,
+                    divider: i < sessions.length - 1,
+                    onDelete: () => onDelete(sessions[i]),
                   ),
                 ),
               ),
@@ -487,76 +481,6 @@ class SessionsLog extends StatelessWidget {
       ),
     );
   }
-}
-
-class _SessionRow extends StatelessWidget {
-  const _SessionRow({required this.session, required this.highlight});
-
-  final ReadingSession session;
-  final bool highlight;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final from = session.pageStart;
-    final to = session.pageEnd;
-    final delta = (from != null && to != null && to > from) ? to - from : null;
-    final noted = from != null && to != null;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      color: highlight ? AppColors.goldSoft : null,
-      // A skipped sitting is still a sitting — greyed, never dropped, so the
-      // record doesn't imply the reader failed to do something.
-      child: Opacity(
-        opacity: noted ? 1 : .55,
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _dayLabel(context, session.endedAt),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: highlight ? FontWeight.w700 : FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    formatDuration(Duration(seconds: session.durationSeconds)),
-                    style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
-                  ),
-                ],
-              ),
-            ),
-            if (noted)
-              Text(
-                'p. $from → $to',
-                style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
-              )
-            else
-              Text(
-                l10n.stopSessionsNoPage,
-                style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
-              ),
-            SizedBox(
-              width: 34,
-              child: Text(
-                delta != null ? '+$delta' : '—',
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: delta != null ? AppColors.moss : AppColors.inkSoft,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   String _dayLabel(BuildContext context, DateTime endedAt) {
     final l10n = AppLocalizations.of(context)!;
@@ -572,54 +496,5 @@ class _SessionRow extends StatelessWidget {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return '${local.day} ${months[local.month - 1]}';
-  }
-}
-
-
-/// One already-saved note on the stop sheet — tappable, because the reader may
-/// want to finish a thought they jotted mid-sentence.
-class _StopNoteRow extends StatelessWidget {
-  const _StopNoteRow({required this.note, required this.entryId});
-
-  final ReadingNote note;
-  final String entryId;
-
-  @override
-  Widget build(BuildContext context) {
-    final pages = note.pageStart == null
-        ? null
-        : (note.pageEnd == null
-            ? 'p. ${note.pageStart}'
-            : 'p. ${note.pageStart}-${note.pageEnd}');
-    return InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<bool>(
-          builder: (_) => NotePage(
-                libraryEntryId: entryId,
-                existing: note,
-                startReadOnly: true,
-              ),
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                note.body,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11.5, height: 1.45),
-              ),
-            ),
-            if (pages != null) ...[
-              const SizedBox(width: 8),
-              Text(pages, style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft)),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../theme/app_theme.dart';
 import 'net_image.dart';
 import 'ticker_text.dart';
+
+// The typeset cover's own dark gradient is a constant surface, so its type and
+// hairline stay the light-palette gold values in both themes (and in share
+// captures) — never the brightness-aware AppColors getters.
+const _coverCream = Color(0xFFF0E2C2);
+const _coverGold = Color(0xFFB8862B);
 
 /// One frame for every cover in the app (docs/screen-design.md): a real
 /// cover image fills it edge-to-edge; with no `coverUrl`, this renders a
@@ -140,7 +145,10 @@ class TypesetCover extends StatelessWidget {
                   maxLines: 3,
                   startDelay: _tickDelay,
                   style: GoogleFonts.fraunces(
-                    color: AppColors.goldSoft,
+                    // Constant, not AppColors.goldSoft: the derived gradient is
+                    // always dark (lightness ≤ .34), so the type must stay
+                    // cream in dark mode and inside rasterised share cards.
+                    color: _coverCream,
                     // Scale with width; the max clamp keeps a big grid cover
                     // from a giant title, the min keeps a tiny chip legible
                     // without overflowing its 44px box.
@@ -151,7 +159,7 @@ class TypesetCover extends StatelessWidget {
                 ),
                 SizedBox(height: h * 0.04),
                 // A gold hairline — the "one line that stays with you".
-                Container(width: w * 0.34, height: 1, color: AppColors.gold),
+                Container(width: w * 0.34, height: 1, color: _coverGold),
               ],
             ),
           ),
@@ -162,7 +170,7 @@ class TypesetCover extends StatelessWidget {
                 author!.toUpperCase(),
                 startDelay: _tickDelay,
                 style: TextStyle(
-                  color: AppColors.goldSoft.withValues(alpha: 0.85),
+                  color: _coverCream.withValues(alpha: 0.85),
                   fontSize: (w * 0.1).clamp(6.0, 12.0),
                   letterSpacing: 0.4,
                 ),

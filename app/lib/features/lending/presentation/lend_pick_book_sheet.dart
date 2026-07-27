@@ -9,6 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../../library/providers/library_providers.dart';
 import 'lend_sheet.dart';
+import 'sheet_fields.dart';
 
 /// Pick which owned book to lend, then hand off to [showLendSheet]. Lets the
 /// user start a lend straight from the ledger (S8) instead of only from a book's
@@ -95,17 +96,7 @@ class _LendPickBookSheetState extends ConsumerState<_LendPickBookSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 32,
-                height: 4,
-                margin: EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-            ),
+            SheetGrabber(),
             Text(l10n.lendingPickTitle, style: Theme.of(context).textTheme.titleLarge),
             SizedBox(height: 10),
             TextField(
@@ -135,7 +126,10 @@ class _LendPickBookSheetState extends ConsumerState<_LendPickBookSheet> {
                 padding: EdgeInsets.symmetric(vertical: 28),
                 child: Center(
                   child: Text(
-                    l10n.lendingPickEmpty,
+                    // A typed query that matched nothing names itself — the
+                    // generic "add a book first" line would be a lie when the
+                    // shelf just doesn't have *this* book.
+                    q.isEmpty ? l10n.lendingPickEmpty : l10n.lendingPickNoMatch(_query.trim()),
                     textAlign: TextAlign.center,
                     style: Theme.of(context)
                         .textTheme

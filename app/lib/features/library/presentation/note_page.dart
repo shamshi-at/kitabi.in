@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/format_duration.dart';
 import '../../../core/haptics.dart';
@@ -81,7 +82,12 @@ class _NotePageState extends ConsumerState<NotePage> {
   void initState() {
     super.initState();
     final existing = widget.existing;
-    _body = TextEditingController(text: existing?.body ?? '');
+    _body = TextEditingController(text: existing?.body ?? '')
+      // Save is disabled while the body is empty — rebuild as the text moves
+      // across that line.
+      ..addListener(() {
+        if (mounted) setState(() {});
+      });
     _from = TextEditingController(
       text: (existing?.pageStart ?? (existing == null ? widget.currentPage : null))?.toString() ??
           '',
@@ -168,6 +174,9 @@ class _NotePageState extends ConsumerState<NotePage> {
     final elapsed = widget.sessionStartedAt == null
         ? Duration.zero
         : DateTime.now().difference(widget.sessionStartedAt!);
+    // An empty thought can't be saved — the button says so by being disabled
+    // instead of silently no-oping.
+    final canSave = !_saving && _body.text.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -181,14 +190,14 @@ class _NotePageState extends ConsumerState<NotePage> {
                 widget.noteIndex ?? 1,
               ),
               onClose: () => Navigator.of(context).pop(),
-              onSave: _saving ? null : _save,
+              onSave: canSave ? _save : null,
             ) else _PastHeader(
               title: _isEditing
                   ? l10n.noteWrittenOn(_monthDay(widget.existing!.createdAt))
                   : (widget.bookTitle ?? ''),
               subtitle: widget.sessionSummary,
               onBack: () => Navigator.of(context).pop(),
-              onSave: _saving ? null : _save,
+              onSave: canSave ? _save : null,
               // Reading: the action is Edit. Editing: it's Save.
               reading: _reading,
               onEdit: () => setState(() => _reading = false),
@@ -221,9 +230,9 @@ class _NotePageState extends ConsumerState<NotePage> {
                       constraints: const BoxConstraints(minHeight: 200),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF6EEDC),
+                        color: AppColors.slip,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE8DCC0)),
+                        border: Border.all(color: AppColors.slipLine),
                       ),
                       child: TextField(
                         controller: _body,
@@ -310,13 +319,17 @@ class _NotePageState extends ConsumerState<NotePage> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: _saving ? null : _save,
+                        onPressed: canSave ? _save : null,
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.oxblood,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: Text(
-                          _isEditing ? l10n.noteSaveChanges : l10n.noteSaveKeepReading,
+                          // "…keep reading" is only true while a sitting is
+                          // actually running.
+                          _isEditing
+                              ? l10n.noteSaveChanges
+                              : (live ? l10n.noteSaveKeepReading : l10n.noteSave),
                         ),
                       ),
                     ),
@@ -338,7 +351,9 @@ class _NotePageState extends ConsumerState<NotePage> {
                             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                             child: Text(
                               l10n.noteDelete,
-                              style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                              // Same size as the helper captions, but the
+                              // destructive tint says it isn't one of them.
+                              style: TextStyle(fontSize: 12, color: AppColors.oxblood),
                             ),
                           ),
                         ),
@@ -374,15 +389,19 @@ class _LiveHeader extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       color: const Color(0xFF17120C),
-      padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+      padding: const EdgeInsets.fromLTRB(0, 0, 2, 0),
       child: Row(
         children: [
           GestureDetector(
             onTap: onClose,
             behavior: HitTestBehavior.opaque,
-            child: const Icon(Icons.close, size: 18, color: Color(0xFF8C7C64)),
+            // Padded to a ≥44px target — the glyph stays 18px.
+            child: const Padding(
+              padding: EdgeInsets.all(13),
+              child: Icon(Icons.close, size: 18, color: Color(0xFF8C7C64)),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,17 +413,18 @@ class _LiveHeader extends StatelessWidget {
                       height: 6,
                       decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Color(0xFFE3B14C),
+                        color: AppColors.nightGold,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       formatDuration(elapsed),
-                      style: const TextStyle(
-                        fontFamily: 'Fraunces',
+                      // GoogleFonts registers its own family names — a bare
+                      // fontFamily: 'Fraunces' silently fell back to the sans.
+                      style: GoogleFonts.fraunces(
                         fontSize: 17,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFFEDE3D0),
+                        color: const Color(0xFFEDE3D0),
                       ),
                     ),
                     const SizedBox(width: 7),
@@ -426,12 +446,16 @@ class _LiveHeader extends StatelessWidget {
           GestureDetector(
             onTap: onSave,
             behavior: HitTestBehavior.opaque,
-            child: Text(
-              l10n.bookSave,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFFE3B14C),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+              child: Text(
+                l10n.bookSave,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.nightGold
+                      .withValues(alpha: onSave == null ? 0.45 : 1),
+                ),
               ),
             ),
           ),
@@ -464,15 +488,19 @@ class _PastHeader extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       color: AppColors.paperDeep,
-      padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+      padding: const EdgeInsets.fromLTRB(0, 0, 2, 0),
       child: Row(
         children: [
           GestureDetector(
             onTap: onBack,
             behavior: HitTestBehavior.opaque,
-            child: Icon(Icons.arrow_back, size: 18, color: AppColors.inkSoft),
+            // Padded to a ≥44px target — the glyph stays 18px.
+            child: Padding(
+              padding: const EdgeInsets.all(13),
+              child: Icon(Icons.arrow_back, size: 18, color: AppColors.inkSoft),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -496,22 +524,27 @@ class _PastHeader extends StatelessWidget {
           GestureDetector(
             onTap: reading ? onEdit : onSave,
             behavior: HitTestBehavior.opaque,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (reading) ...[
-                  Icon(Icons.edit_outlined, size: 14, color: AppColors.oxblood),
-                  const SizedBox(width: 4),
-                ],
-                Text(
-                  reading ? l10n.noteEdit : l10n.bookSave,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.oxblood,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (reading) ...[
+                    Icon(Icons.edit_outlined, size: 14, color: AppColors.oxblood),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    reading ? l10n.noteEdit : l10n.bookSave,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.oxblood.withValues(
+                        alpha: (!reading && onSave == null) ? 0.45 : 1,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -563,8 +596,7 @@ class _PageBoxState extends State<_PageBox> {
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         textAlign: TextAlign.center,
-        style: TextStyle(
-          fontFamily: 'Fraunces',
+        style: GoogleFonts.fraunces(
           fontSize: 17,
           fontWeight: FontWeight.w600,
           color: AppColors.oxblood,

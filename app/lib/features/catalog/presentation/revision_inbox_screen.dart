@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/haptics.dart';
+import '../../../core/quiet_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
+import '../providers/catalog_providers.dart';
+import 'picker_widgets.dart';
 
 /// Pending edits to books this reader contributed (wiki moderation, V1: the
 /// contributor is the approver — proper moderation comes with the community
@@ -37,55 +40,110 @@ class RevisionInboxScreen extends ConsumerWidget {
     // and where has it got to?" — the question that brought the reader here.
     final claimItems = claims.valueOrNull ?? const <Map<String, dynamic>>[];
 
+    // A claims fetch failure surfaces as a quiet inline row — silently hiding
+    // the section read as "no claims", which is a different answer.
+    final claimsErrored = claims.hasError;
+
     return Scaffold(
       backgroundColor: AppColors.paper,
-      appBar: AppBar(title: Text(l10n.revisionsTitle)),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(_pendingRevisionsProvider);
-          ref.invalidate(_myClaimsProvider);
-        },
-        child: revisions.when(
-          loading: () => ListSkeleton(),
-          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(_pendingRevisionsProvider)),
-          data: (items) => (items.isEmpty && claimItems.isEmpty)
-              ? ListView(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(32, 96, 32, 32),
-                      child: Text(
-                        l10n.revisionsEmpty,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.inkSoft,
-                          fontSize: 13.5,
-                          height: 1.5,
+      // The same back-arrow header row the sibling catalog screens use,
+      // instead of a stock Material AppBar.
+      body: SafeArea(
+        child: Column(
+          children: [
+            PickerHeader(title: l10n.revisionsTitle),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(_pendingRevisionsProvider);
+                  ref.invalidate(_myClaimsProvider);
+                },
+                child: revisions.when(
+                  loading: () => ListSkeleton(),
+                  error: (err, _) =>
+                      ErrorRetry(onRetry: () => ref.invalidate(_pendingRevisionsProvider)),
+                  data: (items) => (items.isEmpty && claimItems.isEmpty && !claimsErrored)
+                      ? ListView(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(32, 96, 32, 32),
+                              child: Text(
+                                l10n.revisionsEmpty,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppColors.inkSoft,
+                                  fontSize: 13.5,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView(
+                          padding: EdgeInsets.all(14),
+                          children: [
+                            if (claimsErrored) ...[
+                              _SectionHeader(label: l10n.claimsSectionTitle),
+                              _ClaimsErrorRow(
+                                onRetry: () => ref.invalidate(_myClaimsProvider),
+                              ),
+                              SizedBox(height: 10),
+                            ] else if (claimItems.isNotEmpty) ...[
+                              _SectionHeader(label: l10n.claimsSectionTitle),
+                              for (final claim in claimItems) ...[
+                                _ClaimCard(claim: claim),
+                                SizedBox(height: 10),
+                              ],
+                            ],
+                            if (items.isNotEmpty) ...[
+                              if (claimItems.isNotEmpty || claimsErrored) SizedBox(height: 8),
+                              _SectionHeader(label: l10n.revisionsSectionTitle),
+                              for (final revision in items) ...[
+                                _RevisionCard(revision: revision),
+                                SizedBox(height: 10),
+                              ],
+                            ],
+                          ],
                         ),
-                      ),
-                    ),
-                  ],
-                )
-              : ListView(
-                  padding: EdgeInsets.all(14),
-                  children: [
-                    if (claimItems.isNotEmpty) ...[
-                      _SectionHeader(label: l10n.claimsSectionTitle),
-                      for (final claim in claimItems) ...[
-                        _ClaimCard(claim: claim),
-                        SizedBox(height: 10),
-                      ],
-                    ],
-                    if (items.isNotEmpty) ...[
-                      if (claimItems.isNotEmpty) SizedBox(height: 8),
-                      _SectionHeader(label: l10n.revisionsSectionTitle),
-                      for (final revision in items) ...[
-                        _RevisionCard(revision: revision),
-                        SizedBox(height: 10),
-                      ],
-                    ],
-                  ],
                 ),
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+/// The claims section's quiet inline failure — a sentence and a retry, in
+/// place of the cards, never in place of the whole screen.
+class _ClaimsErrorRow extends StatelessWidget {
+  const _ClaimsErrorRow({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: EdgeInsets.fromLTRB(14, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        border: Border.all(color: AppColors.line),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 16, color: AppColors.inkSoft),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              l10n.claimsLoadFailed,
+              style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: Text(l10n.commonRetry)),
+        ],
       ),
     );
   }
@@ -150,8 +208,11 @@ class _ClaimCardState extends ConsumerState<_ClaimCard> {
       Haptics.success();
       ref.invalidate(_myClaimsProvider);
       messenger.showSnackBar(SnackBar(content: Text(l10n.claimsWithdrawn)));
-    } catch (_) {
-      if (mounted) setState(() => _busy = false);
+    } catch (err) {
+      if (mounted) {
+        showQuietError(context, l10n.claimsWithdrawFailed, err);
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -229,7 +290,14 @@ class _RevisionCardState extends ConsumerState<_RevisionCard> {
       );
       ref.invalidate(_pendingRevisionsProvider);
     } catch (err) {
-      messenger.showSnackBar(SnackBar(content: Text('$err')));
+      messenger.showSnackBar(SnackBar(
+        duration: const Duration(seconds: 5),
+        content: Text(
+          briefError(err).isEmpty
+              ? l10n.revisionsDecideFailed
+              : '${l10n.revisionsDecideFailed}\n${briefError(err)}',
+        ),
+      ));
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -247,11 +315,37 @@ class _RevisionCardState extends ConsumerState<_RevisionCard> {
   String _fieldValue(dynamic value) =>
       value is List ? value.join(', ') : (value?.toString() ?? '—');
 
+  /// What the live Work currently holds for a payload key — null when the key
+  /// can't be mapped (author/translator ids), which falls back to showing the
+  /// proposed value alone.
+  dynamic _currentValue(Map<String, dynamic>? work, String key) {
+    if (work == null) return null;
+    return switch (key) {
+      'title' => work['title'],
+      'subtitle' => work['subtitle'],
+      'description' => work['description'],
+      'language' => work['language'],
+      'first_publish_year' => work['first_publish_year'],
+      'form' => work['form'],
+      'genre_names' => [
+          for (final g in (work['genres'] as List? ?? const []))
+            (g as Map)['name'],
+        ],
+      _ => null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final payload = (widget.revision['payload'] as Map).cast<String, dynamic>();
     final proposer = widget.revision['proposed_by_name'] as String?;
+    // M6 — a revision is a *diff*, so fetch the live Work and show old → new.
+    // Best-effort: while it loads (or if it can't), the proposed values alone
+    // still render, exactly as before.
+    final workId = widget.revision['work_id'] as String?;
+    final currentWork =
+        workId == null ? null : ref.watch(workProvider(workId)).valueOrNull;
 
     return Container(
       padding: EdgeInsets.all(12),
@@ -277,26 +371,51 @@ class _RevisionCardState extends ConsumerState<_RevisionCard> {
             ),
           SizedBox(height: 8),
           for (final entry in payload.entries)
-            Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: RichText(
-                text: TextSpan(
-                  style: TextStyle(fontSize: 12.5, color: AppColors.ink, height: 1.4),
-                  children: [
-                    TextSpan(
-                      text: '${_fieldLabel(l10n, entry.key)}  ',
-                      style: TextStyle(
-                        fontSize: 10,
-                        letterSpacing: 0.8,
-                        color: AppColors.inkSoft,
-                        fontWeight: FontWeight.w700,
-                      ),
+            Builder(builder: (context) {
+              final proposed = _fieldValue(entry.value);
+              final current = _currentValue(currentWork, entry.key);
+              final currentText = current == null ? null : _fieldValue(current);
+              final unchanged = currentText != null && currentText == proposed;
+              return Padding(
+                padding: EdgeInsets.only(bottom: 4),
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      // A field the revision doesn't actually change is dimmed
+                      // — the eye goes to what would move.
+                      color: unchanged ? AppColors.inkSoft : AppColors.ink,
+                      height: 1.4,
                     ),
-                    TextSpan(text: _fieldValue(entry.value)),
-                  ],
+                    children: [
+                      TextSpan(
+                        text: '${_fieldLabel(l10n, entry.key)}  ',
+                        style: TextStyle(
+                          fontSize: 10,
+                          letterSpacing: 0.8,
+                          color: AppColors.inkSoft,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (currentText != null && !unchanged) ...[
+                        TextSpan(
+                          text: currentText,
+                          style: TextStyle(
+                            color: AppColors.inkSoft,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        TextSpan(
+                          text: '  →  ',
+                          style: TextStyle(color: AppColors.inkSoft),
+                        ),
+                      ],
+                      TextSpan(text: proposed),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            }),
           SizedBox(height: 6),
           Row(
             children: [

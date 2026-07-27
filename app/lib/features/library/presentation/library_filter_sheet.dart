@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/section_label.dart';
 import '../../../data/db/database.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../insights/reading_pace.dart';
@@ -293,30 +294,28 @@ class _FilterSheetState extends State<_FilterSheet> {
     final forms = _availableForms;
     final genres = _availableGenres;
 
+    // The header and the live-count apply button stay pinned; only the facet
+    // rows scroll — "Show N books" is the sheet's feedback loop and must stay
+    // visible while chips are toggled.
     return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 12,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 18,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 32,
-                height: 4,
-                margin: EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(99),
-                ),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 32,
+              height: 4,
+              margin: EdgeInsets.only(top: 12, bottom: 12),
+              decoration: BoxDecoration(
+                color: AppColors.line,
+                borderRadius: BorderRadius.circular(99),
               ),
             ),
-            Row(
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
               children: [
                 Expanded(
                   child: Text(l10n.libraryFilterTitle,
@@ -337,8 +336,15 @@ class _FilterSheetState extends State<_FilterSheet> {
                   ),
               ],
             ),
-            SizedBox(height: 8),
-            _Label(l10n.libraryFilterStatus),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+            SectionLabel(l10n.libraryFilterStatus, padding: EdgeInsets.only(bottom: 6)),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -347,13 +353,18 @@ class _FilterSheetState extends State<_FilterSheet> {
                   _Chip(
                     label: readingStatusLabel(status),
                     selected: _statuses.contains(status),
+                    // The per-status ink vocabulary the shelves and status
+                    // tiles already speak. Constant inks take a constant
+                    // light label (paper would invert at night).
+                    selectedFill: readingStatusInk(status),
+                    selectedText: const Color(0xFFF6F0E3),
                     onTap: () => _toggle(_statuses, status),
                   ),
               ],
             ),
             if (languages.isNotEmpty) ...[
               SizedBox(height: 14),
-              _Label(l10n.libraryFilterLanguage),
+              SectionLabel(l10n.libraryFilterLanguage, padding: EdgeInsets.only(bottom: 6)),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -369,7 +380,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             ],
             if (widget.shelves.isNotEmpty) ...[
               SizedBox(height: 14),
-              _Label(l10n.libraryFilterShelf),
+              SectionLabel(l10n.libraryFilterShelf, padding: EdgeInsets.only(bottom: 6)),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -388,7 +399,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             ],
             if (forms.isNotEmpty) ...[
               SizedBox(height: 14),
-              _Label(l10n.libraryFilterType),
+              SectionLabel(l10n.libraryFilterType, padding: EdgeInsets.only(bottom: 6)),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -404,7 +415,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             ],
             if (genres.isNotEmpty) ...[
               SizedBox(height: 14),
-              _Label(l10n.libraryFilterGenre),
+              SectionLabel(l10n.libraryFilterGenre, padding: EdgeInsets.only(bottom: 6)),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -421,7 +432,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             // Time to finish (P4). Sits last among the chip rows because it's
             // the one facet that depends on the reader rather than the book.
             SizedBox(height: 14),
-            _Label('◷ ${l10n.paceFilterLabel}'),
+            SectionLabel('◷ ${l10n.paceFilterLabel}', padding: EdgeInsets.only(bottom: 6)),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -459,75 +470,82 @@ class _FilterSheetState extends State<_FilterSheet> {
                   style: TextStyle(fontSize: 10.5, color: AppColors.stampGrey, height: 1.4),
                 ),
               ),
-            SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.libraryFilterFavouritesOnly),
-              value: _favouritesOnly,
-              activeThumbColor: AppColors.gold,
-              onChanged: (v) => setState(() => _favouritesOnly = v),
+            // Favourites — a chip like every other facet here, not the sheet's
+            // lone Switch. Gold-tinted when on, matching the ribbon it stands for.
+            SizedBox(height: 14),
+            SectionLabel(l10n.libraryShelfFavourites, padding: EdgeInsets.only(bottom: 6)),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _Chip(
+                  label: l10n.libraryFilterFavouritesOnly,
+                  selected: _favouritesOnly,
+                  selectedFill: AppColors.goldSoft,
+                  selectedBorder: AppColors.gold,
+                  selectedText: AppColors.goldInk,
+                  onTap: () => setState(() => _favouritesOnly = !_favouritesOnly),
+                ),
+              ],
             ),
-            SizedBox(height: 8),
-            SizedBox(
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 18),
+            child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(_working),
                 child: Text(l10n.libraryFilterShow(count)),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Label extends StatelessWidget {
-  const _Label(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 6),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontSize: 9,
-          letterSpacing: 1,
-          color: AppColors.inkSoft,
-          fontWeight: FontWeight.w700,
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.selected, required this.onTap});
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.selectedFill,
+    this.selectedBorder,
+    this.selectedText,
+  });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
+  /// Selected-state overrides — a status chip takes its status ink, the
+  /// favourites chip its gold tint. Default stays the oxblood house chip.
+  final Color? selectedFill;
+  final Color? selectedBorder;
+  final Color? selectedText;
+
   @override
   Widget build(BuildContext context) {
+    final fill = selectedFill ?? AppColors.oxblood;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.oxblood : AppColors.paper,
+          color: selected ? fill : AppColors.paper,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? AppColors.oxblood : AppColors.line),
+          border: Border.all(color: selected ? (selectedBorder ?? fill) : AppColors.line),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: selected ? AppColors.paper : AppColors.ink,
+            color: selected ? (selectedText ?? AppColors.paper) : AppColors.ink,
           ),
         ),
       ),

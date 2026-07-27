@@ -148,23 +148,47 @@ abstract class AppLocalizations {
   /// **'Opening your reading room…'**
   String get splashLoading;
 
-  /// Rotating literary quote on the sign-in screen
+  /// Rotating literary quote on the sign-in screen and home quote card
   ///
   /// In en, this message translates to:
   /// **'A reader lives a thousand lives before he dies.'**
   String get signInQuote1;
 
-  /// Rotating literary quote on the sign-in screen
+  /// Attribution for signInQuote1
+  ///
+  /// In en, this message translates to:
+  /// **'George R.R. Martin'**
+  String get signInQuote1Author;
+
+  /// Rotating literary quote on the sign-in screen and home quote card
   ///
   /// In en, this message translates to:
   /// **'I have always imagined that Paradise will be a kind of library.'**
   String get signInQuote2;
 
-  /// Rotating literary quote on the sign-in screen (Kafka, German)
+  /// Attribution for signInQuote2
   ///
   /// In en, this message translates to:
-  /// **'Ein Buch muss die Axt sein für das gefrorene Meer in uns.'**
+  /// **'Jorge Luis Borges'**
+  String get signInQuote2Author;
+
+  /// Rotating literary quote on the sign-in screen and home quote card (Kafka, English rendering)
+  ///
+  /// In en, this message translates to:
+  /// **'A book must be the axe for the frozen sea within us.'**
   String get signInQuote3;
+
+  /// Attribution for signInQuote3
+  ///
+  /// In en, this message translates to:
+  /// **'Franz Kafka'**
+  String get signInQuote3Author;
+
+  /// Hint after the attribution on the home quote card; uppercased in code
+  ///
+  /// In en, this message translates to:
+  /// **'Tap for a new one'**
+  String get quoteTapForNew;
 
   /// Google sign-in button
   ///
@@ -190,10 +214,10 @@ abstract class AppLocalizations {
   /// **'Couldn\'t sign in. Please try again.'**
   String get signInError;
 
-  /// Section header on the profile screen's visibility switchboard
+  /// Section header on the profile screen's visibility switchboard; uppercased in code
   ///
   /// In en, this message translates to:
-  /// **'VISIBILITY · everything starts private'**
+  /// **'Visibility · everything starts private'**
   String get profileVisibilityHeader;
 
   /// Label on the visibility pill when a setting is public
@@ -268,6 +292,18 @@ abstract class AppLocalizations {
   /// **'View my public profile'**
   String get profileViewPublicEntry;
 
+  /// Title of the sign-out confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out?'**
+  String get signOutConfirmTitle;
+
+  /// Body of the sign-out confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Your library stays on this device and picks up where you left off when you sign back in.'**
+  String get signOutConfirmBody;
+
   /// Sign-out action on the profile screen
   ///
   /// In en, this message translates to:
@@ -286,6 +322,12 @@ abstract class AppLocalizations {
   /// **'This deletes your Kitabi account and library. This can\'t be undone.'**
   String get profileDeleteAccountConfirm;
 
+  /// Appended to the reading-since line on the profile header
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 book} other{{count} books}}'**
+  String profileBooksCount(int count);
+
   /// Profile subtitle
   ///
   /// In en, this message translates to:
@@ -301,13 +343,13 @@ abstract class AppLocalizations {
   /// Section header above catalog-only search results
   ///
   /// In en, this message translates to:
-  /// **'IN THE CATALOG'**
+  /// **'In the catalogue'**
   String get catalogSearchSectionCatalog;
 
   /// Section header above personal-library search matches
   ///
   /// In en, this message translates to:
-  /// **'IN YOUR LIBRARY · {count}'**
+  /// **'In your library · {count}'**
   String catalogSearchSectionLibrary(int count);
 
   /// Empty state on the catalog search screen
@@ -349,7 +391,7 @@ abstract class AppLocalizations {
   /// Subheader on the author browse screen
   ///
   /// In en, this message translates to:
-  /// **'{count} {count, plural, one{work} other{works}} in the catalog'**
+  /// **'{count} {count, plural, one{work} other{works}} in the catalogue'**
   String authorBrowseWorksCount(int count);
 
   /// Small pill on an author's name marking them as a linked, registered Kitabi reader
@@ -427,7 +469,7 @@ abstract class AppLocalizations {
   /// Subheader on the publisher browse screen
   ///
   /// In en, this message translates to:
-  /// **'{count} {count, plural, one{title} other{titles}} in the catalog'**
+  /// **'{count} {count, plural, one{title} other{titles}} in the catalogue'**
   String publisherBrowseWorksCount(int count);
 
   /// Empty state on author/publisher browse screens
@@ -463,7 +505,7 @@ abstract class AppLocalizations {
   /// Shown in place of the camera preview when the camera can't start (e.g. permission denied) and the Search/Add fallback buttons are visible
   ///
   /// In en, this message translates to:
-  /// **'Camera unavailable — you can search the catalog or add the book manually below.'**
+  /// **'Camera unavailable — you can search the catalogue or add the book manually below.'**
   String get scanCameraUnavailable;
 
   /// Camera-failure message when the scanner was opened from the add-book form (no fallback buttons on screen)
@@ -505,7 +547,7 @@ abstract class AppLocalizations {
   /// Subheader clarifying the catalog entry is shared, not personal
   ///
   /// In en, this message translates to:
-  /// **'catalog entry · shared'**
+  /// **'catalogue entry · shared'**
   String get formSubtitle;
 
   /// Form field label
@@ -549,6 +591,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick one or more. We\'ll list these first when you add a book — you can change them anytime in your profile.'**
   String get langPickerSubtitle;
+
+  /// SnackBar when saving the picked languages fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save — try again.'**
+  String get langPickerSaveError;
+
+  /// Quiet hint above the disabled Continue button while nothing is selected
+  ///
+  /// In en, this message translates to:
+  /// **'Pick at least one'**
+  String get langPickerPickOne;
 
   /// Button to save the picked reading languages and continue
   ///
@@ -637,7 +691,7 @@ abstract class AppLocalizations {
   /// One-line helper under the capture strip on the add-book form
   ///
   /// In en, this message translates to:
-  /// **'Either one fills the form — everything stays editable. Or just type:'**
+  /// **'Either one fills the form, or just type — everything stays editable.'**
   String get formCaptureHelp;
 
   /// Section label for the single-select literary form (Novel, Short stories, ...) chips
@@ -709,13 +763,13 @@ abstract class AppLocalizations {
   /// One-line consequence note under the sticky Save button on the add-book form
   ///
   /// In en, this message translates to:
-  /// **'Saved books join the shared catalog for every reader'**
+  /// **'Saved books join the shared catalogue for every reader'**
   String get formSaveHint;
 
   /// Submit button on the add/edit catalog form
   ///
   /// In en, this message translates to:
-  /// **'Save to catalog'**
+  /// **'Save to catalogue'**
   String get formSave;
 
   /// Validation message for the title field
@@ -843,12 +897,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'WHERE IT STANDS'**
   String get bookWhereItStands;
-
-  /// Caption under the status tiles explaining they change status directly
-  ///
-  /// In en, this message translates to:
-  /// **'Four states, one tap each.'**
-  String get bookStatusHint;
 
   /// Primary button that marks the book as reading and opens the timer
   ///
@@ -1096,11 +1144,29 @@ abstract class AppLocalizations {
   /// **'Public reviews will be visible to others when Kitabi\'s community features launch.'**
   String get reviewVisibilityHint;
 
-  /// Snackbar after the review editor saves
+  /// Snackbar after the review editor saves a review body
   ///
   /// In en, this message translates to:
   /// **'Review saved'**
   String get reviewSaved;
+
+  /// Snackbar after the review editor removes a review whose body was emptied
+  ///
+  /// In en, this message translates to:
+  /// **'Review deleted'**
+  String get reviewDeleted;
+
+  /// Snackbar when only the star rating changed on the review editor
+  ///
+  /// In en, this message translates to:
+  /// **'Rating saved'**
+  String get ratingSaved;
+
+  /// Snackbar when a second tap on the selected star removed the rating
+  ///
+  /// In en, this message translates to:
+  /// **'Rating cleared'**
+  String get ratingCleared;
 
   /// Title of the popup shown after marking a book as read, inviting a rating/review
   ///
@@ -1150,10 +1216,28 @@ abstract class AppLocalizations {
   /// **'Back cover'**
   String get coverBackLabel;
 
+  /// Small stamp on a shelf cover for a borrowed book that has been given back — uppercased in code
+  ///
+  /// In en, this message translates to:
+  /// **'Returned'**
+  String get coverReturnedStamp;
+
+  /// Band across a shelf cover for a book lent out — uppercased in code
+  ///
+  /// In en, this message translates to:
+  /// **'With {name}'**
+  String coverLentBand(String name);
+
+  /// Band across a shelf cover for an actively borrowed book — uppercased in code
+  ///
+  /// In en, this message translates to:
+  /// **'From {name}'**
+  String coverBorrowedBand(String name);
+
   /// Title of the popup after a new book is created
   ///
   /// In en, this message translates to:
-  /// **'Added to the catalog'**
+  /// **'Added to the catalogue'**
   String get createdDialogTitle;
 
   /// Popup action that puts the just-created book into the user's library
@@ -1365,6 +1449,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No matching readers.'**
   String get linkContactNoResults;
+
+  /// Confirm dialog body before rewriting a private contact's loans onto a linked account
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Link 1 loan to {handle}?} other{Link {count} loans to {handle}?}}'**
+  String linkContactConfirm(int count, String handle);
 
   /// Snackbar after linking a private contact
   ///
@@ -2143,7 +2233,7 @@ abstract class AppLocalizations {
   /// Confirmation dialog body before removing a library entry
   ///
   /// In en, this message translates to:
-  /// **'Remove this book from your library? Your rating and review stay on the shared catalog entry, but this copy, its reading progress, and its notes are gone.'**
+  /// **'Remove this book from your library? Your rating and review stay on the shared catalogue entry, but this copy, its reading progress, and its notes are gone.'**
   String get bookRemoveConfirm;
 
   /// Eyebrow label on the personal tags/shelves row
@@ -2182,6 +2272,12 @@ abstract class AppLocalizations {
   /// **'Remove'**
   String get bookShelfRemove;
 
+  /// Snackbar after removing the book from its shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Taken off {shelf}'**
+  String bookShelfRemoved(String shelf);
+
   /// Title of the book page shelf card when the book is on no shelf
   ///
   /// In en, this message translates to:
@@ -2218,16 +2314,16 @@ abstract class AppLocalizations {
   /// **'e.g. beach reads'**
   String get bookNewTagHint;
 
-  /// Title of the sheet that picks which shelves a book sits on
+  /// Title of the sheet that picks the one shelf a book lives on
   ///
   /// In en, this message translates to:
-  /// **'Add to a shelf'**
+  /// **'Choose a shelf'**
   String get shelfPickerTitle;
 
-  /// Subtitle on the shelf-picker sheet
+  /// Subtitle on the shelf-picker sheet — honest about the exclusive move
   ///
   /// In en, this message translates to:
-  /// **'Tap a shelf to add or remove this book'**
+  /// **'One shelf per book — picking a shelf moves it here.'**
   String get shelfPickerHint;
 
   /// Shown in the shelf-picker sheet when the reader has no shelves
@@ -2260,10 +2356,10 @@ abstract class AppLocalizations {
   /// **'Add to {shelf}'**
   String libraryAddToShelfTitle(String shelf);
 
-  /// Subtitle on the add-books-to-shelf sheet
+  /// Subtitle on the add-books-to-shelf sheet — honest about the exclusive move
   ///
   /// In en, this message translates to:
-  /// **'Tap a book to shelve or unshelve it'**
+  /// **'Tap a book to move it here — off any other shelf — or take it off this one.'**
   String get libraryAddBooksHint;
 
   /// Shown when there are no library books to add to a shelf
@@ -2434,10 +2530,10 @@ abstract class AppLocalizations {
   /// **'No due date'**
   String get lendingNoDueDate;
 
-  /// Due stamp counting days until the due date
+  /// Due stamp counting days until the due date; zero days reads as due today
   ///
   /// In en, this message translates to:
-  /// **'Due in {days}d'**
+  /// **'{days, plural, =0{Due today} other{Due in {days}d}}'**
   String lendingDueInDays(int days);
 
   /// Due stamp showing the due date
@@ -2614,17 +2710,65 @@ abstract class AppLocalizations {
   /// **'Nothing borrowed yet.'**
   String get lendingBorrowedEmpty;
 
-  /// Opens the log-a-borrowed-book sheet
-  ///
-  /// In en, this message translates to:
-  /// **'+ Log a borrowed book'**
-  String get lendingLogBorrowed;
-
   /// Floating action button on the lending ledger to start a new lend
   ///
   /// In en, this message translates to:
   /// **'Lend a book'**
   String get lendingLendBook;
+
+  /// Floating action button label while the Borrowed tab is showing
+  ///
+  /// In en, this message translates to:
+  /// **'Log a borrowed book'**
+  String get lendingLogBorrowedFab;
+
+  /// Snackbar after closing a loan, with an Undo action
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as returned.'**
+  String get lendingReturnedSnack;
+
+  /// Generic Undo action on snackbars
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undoAction;
+
+  /// Helper line under the lend sheet's due-date field, disclosing the scheduled reminder
+  ///
+  /// In en, this message translates to:
+  /// **'A due date sets a quiet reminder.'**
+  String get lendingDueHelper;
+
+  /// Field label for the optional note, shared by the lend and log-borrowed sheets
+  ///
+  /// In en, this message translates to:
+  /// **'Note · optional'**
+  String get lendingNoteLabel;
+
+  /// Placeholder for an unset date field, shared by the lend and log-borrowed sheets
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a date'**
+  String get lendingNoDate;
+
+  /// Quiet error when saving a lend/borrow record fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the loan.'**
+  String get lendingSaveFailed;
+
+  /// Quiet inline note when the log-borrowed book search fails (usually offline)
+  ///
+  /// In en, this message translates to:
+  /// **'Search is offline — you can still add the book to the catalogue.'**
+  String get lendingSearchOffline;
+
+  /// Empty state in the pick-a-book-to-lend sheet when a search query matches nothing
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matching “{query}”.'**
+  String lendingPickNoMatch(String query);
 
   /// Title of the connections/requests inbox screen
   ///
@@ -2752,6 +2896,24 @@ abstract class AppLocalizations {
   /// **'Disconnect'**
   String get connectionsDisconnect;
 
+  /// Confirm dialog body before disconnecting an accepted connection
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect from {name}? The loans on your ledger stay put.'**
+  String connectionsDisconnectConfirm(String name);
+
+  /// Neutral failure snackbar for any connection action (accept, deny, block, disconnect…)
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t go through — try again.'**
+  String get connectionsActionFailed;
+
+  /// Stamp on an open (not yet returned) loan row on a person's loans page
+  ///
+  /// In en, this message translates to:
+  /// **'Out'**
+  String get connectionLoanOut;
+
   /// Tooltip for the connections icon on the lending ledger
   ///
   /// In en, this message translates to:
@@ -2785,13 +2947,13 @@ abstract class AppLocalizations {
   /// Row under the borrow sheet's book search: create the typed book in the catalog, then come back with it selected
   ///
   /// In en, this message translates to:
-  /// **'＋ Add \"{title}\" to the catalog'**
+  /// **'＋ Add \"{title}\" to the catalogue'**
   String logBorrowedAddNew(String title);
 
   /// Helper shown under the borrow sheet's book search when nothing matches the typed title
   ///
   /// In en, this message translates to:
-  /// **'Not in the catalog yet? Add it — you\'ll come right back here.'**
+  /// **'Not in the catalogue yet? Add it — you\'ll come right back here.'**
   String get logBorrowedNotFound;
 
   /// Title of the log-borrowed bottom sheet (S8c)
@@ -2836,23 +2998,11 @@ abstract class AppLocalizations {
   /// **'Remind me · optional'**
   String get logBorrowedRemindLabel;
 
-  /// Field label for the optional note
-  ///
-  /// In en, this message translates to:
-  /// **'Note · optional'**
-  String get logBorrowedNoteLabel;
-
   /// Submit button on the log-borrowed sheet
   ///
   /// In en, this message translates to:
   /// **'Save to my borrowed shelf'**
   String get logBorrowedSave;
-
-  /// Placeholder for an unset date field
-  ///
-  /// In en, this message translates to:
-  /// **'Pick a date'**
-  String get logBorrowedNoDate;
 
   /// Verb prefix on the lend bottom sheet's title, styled distinctly from the book name that follows it (e.g. "Lend Chemmeen")
   ///
@@ -2989,7 +3139,7 @@ abstract class AppLocalizations {
   /// Onboarding page 1 title
   ///
   /// In en, this message translates to:
-  /// **'Beyond the bookshelf'**
+  /// **'Beyond the Bookshelf'**
   String get welcomeTitle1;
 
   /// Onboarding page 1 body
@@ -3046,11 +3196,23 @@ abstract class AppLocalizations {
   /// **'Time to update'**
   String get updateTitle;
 
-  /// Body of the forced-update screen
+  /// Body of the forced-update screen on iOS
   ///
   /// In en, this message translates to:
   /// **'This version of Kitabi is out of date. Please update from the App Store to keep going.'**
-  String get updateBody;
+  String get updateBodyAppStore;
+
+  /// Body of the forced-update screen on Android
+  ///
+  /// In en, this message translates to:
+  /// **'This version of Kitabi is out of date. Please update from Google Play to keep going.'**
+  String get updateBodyPlayStore;
+
+  /// Button on the forced-update screen that re-runs the version check
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get updateTryAgain;
 
   /// Title of the import screen (S2)
   ///
@@ -3091,7 +3253,7 @@ abstract class AppLocalizations {
   /// Summary of how many CSV rows matched the catalog
   ///
   /// In en, this message translates to:
-  /// **'{matched} of {total} matched to the catalog'**
+  /// **'{matched} of {total} matched to the catalogue'**
   String importMatched(int matched, int total);
 
   /// Note that unmatched rows won't be imported
@@ -3117,6 +3279,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No book rows found in that file.'**
   String get importEmpty;
+
+  /// Clears the rendered preview and returns to the paste/pick step (the pasted CSV is kept)
+  ///
+  /// In en, this message translates to:
+  /// **'Start over'**
+  String get importStartOver;
+
+  /// Quiet error when the CSV preview/parse fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read that CSV — is it a Goodreads export?'**
+  String get importParseFailed;
+
+  /// Quiet error when importing the matched rows fails partway
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t finish the import — try again.'**
+  String get importFailed;
+
+  /// Line under the matched-count header saying how many rows will be skipped
+  ///
+  /// In en, this message translates to:
+  /// **'{skipped} of {total} couldn\'t be matched and will be skipped.'**
+  String importUnmatchedCount(int skipped, int total);
+
+  /// Example CSV header line shown as the paste field's hint. Translator note: these are Goodreads' own column names — keep them in English so a pasted export visibly matches the hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Title,Author,ISBN,My Rating,Exclusive Shelf…'**
+  String get importCsvHint;
+
+  /// Snackbar after an import where some matched rows were skipped as duplicates
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {count} {count, plural, one{book} other{books}} ({skipped} already in your library)'**
+  String importDoneWithSkipped(int count, int skipped);
 
   /// Profile entry point to the import screen
   ///
@@ -3160,11 +3358,17 @@ abstract class AppLocalizations {
   /// **'A handle so friends can find you to lend books.'**
   String get profileUsernameHint;
 
-  /// Header of the reputation/score card
+  /// Header of the reputation/score card; uppercased in code
   ///
   /// In en, this message translates to:
-  /// **'REPUTATION'**
+  /// **'Reputation'**
   String get profileScoreHeader;
+
+  /// Quiet line on the reputation card when every stat is still zero
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first book to start earning.'**
+  String get reputationEmpty;
 
   /// Unit label next to the score number
   ///
@@ -3310,11 +3514,59 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{just now} one{1 day ago} other{{count} days ago}}'**
   String activityWhen(int count);
 
+  /// Activity row naming the book that was added
+  ///
+  /// In en, this message translates to:
+  /// **'Added {title}'**
+  String activityAddedBookTitled(String title);
+
+  /// Activity row naming the book that was finished
+  ///
+  /// In en, this message translates to:
+  /// **'Finished {title}'**
+  String activityFinishedBookTitled(String title);
+
+  /// Activity row naming the book that was rated
+  ///
+  /// In en, this message translates to:
+  /// **'Rated {title}'**
+  String activityRatedBookTitled(String title);
+
+  /// Activity row naming the book that was reviewed
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed {title}'**
+  String activityWroteReviewTitled(String title);
+
+  /// Activity row naming the book that was lent out
+  ///
+  /// In en, this message translates to:
+  /// **'Lent {title}'**
+  String activityLentBookTitled(String title);
+
+  /// Fallback label for an activity event type this app version doesn't know
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get activityGeneric;
+
+  /// Empty-state title on the activity screen (distinct from the app-bar title)
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing yet'**
+  String get activityEmptyTitle;
+
   /// Eyebrow label at the top of the share card
   ///
   /// In en, this message translates to:
   /// **'SHARE A BOOK'**
   String get shareEyebrow;
+
+  /// Eyebrow on the share card's personal-endorsement variant (the reader's own rating/review is included)
+  ///
+  /// In en, this message translates to:
+  /// **'From my shelf'**
+  String get shareEyebrowPersonal;
 
   /// Caption next to the stars when showing the user's own rating
   ///
@@ -3325,7 +3577,7 @@ abstract class AppLocalizations {
   /// Caption next to the stars when showing the catalog average rating
   ///
   /// In en, this message translates to:
-  /// **'catalog avg'**
+  /// **'catalogue avg'**
   String get shareCatalogAvg;
 
   /// Tagline in the share card footer
@@ -3406,11 +3658,17 @@ abstract class AppLocalizations {
   /// **'Start'**
   String get timerStart;
 
-  /// Eyebrow label on the full-screen running-timer view
+  /// Eyebrow label on the full-screen running-timer view — casing applied in code
   ///
   /// In en, this message translates to:
-  /// **'Session in Progress'**
+  /// **'Session in progress'**
   String get timerInProgress;
+
+  /// Tooltip/semantics label on the running timer's minimize chevron — leaving the screen does not stop the session
+  ///
+  /// In en, this message translates to:
+  /// **'Keep reading — the timer stays on'**
+  String get timerMinimizeHint;
 
   /// Caption under the live clock on the running-timer view
   ///
@@ -3483,6 +3741,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get timerDone;
+
+  /// Quiet consequence line under the wax-seal face's Done button, mirroring the stop sheet's skip copy
+  ///
+  /// In en, this message translates to:
+  /// **'Done keeps the page — clear the field to keep only the time.'**
+  String get timerDoneKeepsPage;
 
   /// Label over the session log on the book page's timer card
   ///
@@ -3700,6 +3964,12 @@ abstract class AppLocalizations {
   /// **'Save changes'**
   String get noteSaveChanges;
 
+  /// Primary action on a fresh note with no live session running
+  ///
+  /// In en, this message translates to:
+  /// **'Save note'**
+  String get noteSave;
+
   /// Reassurance under the save button during a live session
   ///
   /// In en, this message translates to:
@@ -3781,7 +4051,7 @@ abstract class AppLocalizations {
   /// Counts under the journal title
   ///
   /// In en, this message translates to:
-  /// **'{notes} notes across {sittings} sittings'**
+  /// **'{notes, plural, =1{1 note} other{{notes} notes}} across {sittings, plural, =1{1 sitting} other{{sittings} sittings}}'**
   String notesSummary(int notes, int sittings);
 
   /// Group header in the journal — the sitting is the timestamp
@@ -3829,8 +4099,14 @@ abstract class AppLocalizations {
   /// Skip copy on the stop sheet when notes exist — they were saved as they were written
   ///
   /// In en, this message translates to:
-  /// **'Skip — your {n} notes are already saved'**
+  /// **'Skip — {n, plural, one{your note is already saved} other{your {n} notes are already saved}}'**
   String stopSkipNotesSafe(int n);
+
+  /// Skip copy naming both costs when notes exist AND a page is on the entry — the notes are safe, the typed page is not kept
+  ///
+  /// In en, this message translates to:
+  /// **'Skip — {n, plural, one{your note is saved} other{your {n} notes are saved}}; the page stays at {page}'**
+  String stopSkipNotesAndPage(int n, int page);
 
   /// Prompt above the big page numeral on the stop-session sheet (R1)
   ///
@@ -3843,6 +4119,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'page'**
   String get stopPageUnit;
+
+  /// Quiet caption surfacing the steppers' long-press: a long press moves ten pages instead of one
+  ///
+  /// In en, this message translates to:
+  /// **'hold − / + for 10'**
+  String get stopHoldForTen;
 
   /// Confirmation eyebrow on the stop sheet — the session is already saved before any page is entered
   ///
@@ -3999,6 +4281,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'+ Wishlist'**
   String get recsWishlist;
+
+  /// Snackbar (with Undo) after wishlisting a recommendation
+  ///
+  /// In en, this message translates to:
+  /// **'Added to your wishlist'**
+  String get recsWishlistedSnack;
+
+  /// Snackbar (with Undo) after dismissing a recommendation as not-for-me
+  ///
+  /// In en, this message translates to:
+  /// **'Okay, noted'**
+  String get recsDismissedSnack;
 
   /// Dismisses a recommendation
   ///
@@ -4276,6 +4570,48 @@ abstract class AppLocalizations {
   /// **'No sitting yet today — even a few pages count.'**
   String get insightsNoSessionToday;
 
+  /// Caption over the Today card's row of seven day-dots
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get insightsLast7Days;
+
+  /// Section label over the finished-books cover strip on Insights
+  ///
+  /// In en, this message translates to:
+  /// **'Finished'**
+  String get insightsFinishedSection;
+
+  /// Week card's closing line when this week has more reading time than last week
+  ///
+  /// In en, this message translates to:
+  /// **'A fuller week than last — the story kept you.'**
+  String get insightsClosingWeekUp;
+
+  /// Week card's closing line when there was some reading this week
+  ///
+  /// In en, this message translates to:
+  /// **'Every sitting this week counted.'**
+  String get insightsClosingWeekSteady;
+
+  /// Week card's closing line when no reading has been logged this week
+  ///
+  /// In en, this message translates to:
+  /// **'A quiet week so far — the book will wait.'**
+  String get insightsClosingWeekNone;
+
+  /// Month card's closing line — days with at least one sitting so far this month
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No reading days yet this month — there\'s still time.} =1{1 reading day this month, and counting.} other{{count} reading days this month, and counting.}}'**
+  String insightsClosingMonthDays(int count);
+
+  /// 3/6-month card's closing line — books finished in the window
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No finishes this stretch — good books take their time.} =1{1 book finished over this stretch — steady wins.} other{{count} books finished over this stretch — steady wins.}}'**
+  String insightsClosingStretch(int count);
+
   /// Hero figure on the monthly/multi-month cards
   ///
   /// In en, this message translates to:
@@ -4360,6 +4696,24 @@ abstract class AppLocalizations {
   /// **'p. {page} of {total} · {percent}%'**
   String homeProgressLine(int page, int total, int percent);
 
+  /// Helper text under the current-page field in the home progress dialog
+  ///
+  /// In en, this message translates to:
+  /// **'of {total} pages'**
+  String homeProgressOfTotal(int total);
+
+  /// Inline error in the home progress dialog when the typed page is past the end
+  ///
+  /// In en, this message translates to:
+  /// **'This book has {total} pages.'**
+  String homeProgressTooFar(int total);
+
+  /// Inline error in the home progress dialog for a negative or non-numeric page
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid page number.'**
+  String get homeProgressInvalid;
+
   /// Reading progress line on a currently-reading card when the book's total page count isn't known, so no 'of N' or percent/progress bar can be shown
   ///
   /// In en, this message translates to:
@@ -4378,6 +4732,12 @@ abstract class AppLocalizations {
   /// **'{title} is with {name} — overdue'**
   String homeNudgeOverdue(String title, String name);
 
+  /// Labelled action on the home lending nudge, replacing a bare chevron
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get homeNudgeView;
+
   /// Lending nudge with no due date
   ///
   /// In en, this message translates to:
@@ -4393,13 +4753,13 @@ abstract class AppLocalizations {
   /// Section header above author search results
   ///
   /// In en, this message translates to:
-  /// **'AUTHORS'**
+  /// **'Authors'**
   String get catalogSearchSectionAuthors;
 
   /// Section header above publisher search results
   ///
   /// In en, this message translates to:
-  /// **'PUBLISHERS'**
+  /// **'Publishers'**
   String get catalogSearchSectionPublishers;
 
   /// Trailing count on an author search result
@@ -4669,7 +5029,7 @@ abstract class AppLocalizations {
   /// Header of the quiet duplicate-suggestions panel under the title field on the add-book form
   ///
   /// In en, this message translates to:
-  /// **'Already in the catalog?'**
+  /// **'Already in the catalogue?'**
   String get formSimilarHeader;
 
   /// One-line explanation inside the duplicate-suggestions panel
@@ -4965,6 +5325,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Editions'**
   String get bookEditionsSection;
+
+  /// Fallback row label for an edition with no format, language or ISBN
+  ///
+  /// In en, this message translates to:
+  /// **'Edition'**
+  String get bookEditionFallback;
 
   /// Button on the book page to add a new edition
   ///
@@ -5685,6 +6051,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reading'**
   String get timerLiveElapsed;
+
+  /// Snackbar when a quick-add from search/browse fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add it to your library — try again.'**
+  String get quickAddFailed;
+
+  /// Snackbar when saving the add/edit form fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save — check your connection and try again.'**
+  String get formSaveFailed;
+
+  /// Title of the unsaved-changes dialog when leaving the add form
+  ///
+  /// In en, this message translates to:
+  /// **'Discard this book?'**
+  String get formDiscardTitle;
+
+  /// Title of the unsaved-changes dialog when leaving the edit form
+  ///
+  /// In en, this message translates to:
+  /// **'Discard your edits?'**
+  String get formDiscardEditTitle;
+
+  /// Body of the unsaved-changes dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here is saved yet.'**
+  String get formDiscardBody;
+
+  /// Confirm action on the unsaved-changes dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get formDiscardConfirm;
+
+  /// Gold provenance banner at the top of the edit form (M5) — shown before typing; ownership isn't known client-side, so the phrasing covers both cases
+  ///
+  /// In en, this message translates to:
+  /// **'A shared entry — if another reader contributed this book, your edit goes to them for review.'**
+  String get formEditReviewBanner;
+
+  /// Sticky-bar consequence note on the edit path (creates keep formSaveHint)
+  ///
+  /// In en, this message translates to:
+  /// **'Edits publish to the shared catalogue — another reader\'s book goes to its contributor for review.'**
+  String get formSaveHintEdit;
+
+  /// Placeholder for the nullable Format select when no format is chosen
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get formFormatUnset;
+
+  /// Display label for the Paperback edition format (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Paperback'**
+  String get formatPaperback;
+
+  /// Display label for the Hardcover edition format (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Hardcover'**
+  String get formatHardcover;
+
+  /// Display label for the eBook edition format (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'eBook'**
+  String get formatEbook;
+
+  /// Display label for the Audiobook edition format (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Audiobook'**
+  String get formatAudiobook;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Fiction'**
+  String get genreFiction;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Non-fiction'**
+  String get genreNonFiction;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Poetry'**
+  String get genrePoetry;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Historical'**
+  String get genreHistorical;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Mystery'**
+  String get genreMystery;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Romance'**
+  String get genreRomance;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Fantasy'**
+  String get genreFantasy;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Biography'**
+  String get genreBiography;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Science'**
+  String get genreScience;
+
+  /// Display label for the suggested genre chip (stored value stays English)
+  ///
+  /// In en, this message translates to:
+  /// **'Self-help'**
+  String get genreSelfHelp;
+
+  /// One-line consequence note under the sticky save bar on the add-edition screen
+  ///
+  /// In en, this message translates to:
+  /// **'New editions join the shared catalogue for every reader'**
+  String get addEditionSaveHint;
+
+  /// Confirmation snackbar after a new edition is saved
+  ///
+  /// In en, this message translates to:
+  /// **'Edition added to {title}'**
+  String addEditionAdded(String title);
+
+  /// Confirmation snackbar after a new edition is saved when the book title is unknown
+  ///
+  /// In en, this message translates to:
+  /// **'Edition added'**
+  String get addEditionAddedNoTitle;
+
+  /// Scanner message when the ISBN lookup failed for network reasons (distinct from a real not-found)
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check the catalogue — try again when you\'re online.'**
+  String get scanLookupFailed;
+
+  /// Snackbar when a scanned book is already in the library, instead of claiming it was added
+  ///
+  /// In en, this message translates to:
+  /// **'Already on your shelf — opening it.'**
+  String get scanAlreadyOnShelf;
+
+  /// Inline error row in the work/author/publisher pickers when a search request fails (never shown as the empty state)
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t search the catalogue — check your connection.'**
+  String get pickerSearchFailed;
+
+  /// Snackbar when creating a new author from the picker fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the author — try again.'**
+  String get pickerSaveAuthorFailed;
+
+  /// Snackbar when creating a new publisher from the picker fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the publisher — try again.'**
+  String get pickerSavePublisherFailed;
+
+  /// Subdued clear row in a single-select chip picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get pickerNone;
+
+  /// Door chip on the catalogue filter sheet opening the full genre/language picker
+  ///
+  /// In en, this message translates to:
+  /// **'All {count}'**
+  String browseFilterAllCount(int count);
+
+  /// Snackbar when withdrawing an author claim fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t withdraw the claim — try again.'**
+  String get claimsWithdrawFailed;
+
+  /// Inline error row when the claims list can't be fetched
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your author claims.'**
+  String get claimsLoadFailed;
+
+  /// Snackbar when approving/rejecting a revision fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save that decision — try again.'**
+  String get revisionsDecideFailed;
+
+  /// Escape hatch under a full-screen error when there is nothing to pop back to
+  ///
+  /// In en, this message translates to:
+  /// **'Go home'**
+  String get commonGoHome;
 }
 
 class _AppLocalizationsDelegate

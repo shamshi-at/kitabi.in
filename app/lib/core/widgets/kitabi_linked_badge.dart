@@ -26,14 +26,14 @@ class KitabiLinkedBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.link, size: compact ? 9 : 10, color: const Color(0xFF8F681E)),
+          Icon(Icons.link, size: compact ? 9 : 10, color: AppColors.goldInk),
           const SizedBox(width: 2),
           Text(
             l10n.linkedAuthorBadge,
             style: TextStyle(
               fontSize: compact ? 8 : 9,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF8F681E),
+              color: AppColors.goldInk,
             ),
           ),
         ],

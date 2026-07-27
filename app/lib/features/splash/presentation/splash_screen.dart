@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                 _RiseFade(
                   animation: name,
                   child: Text(
-                    'Kitabi',
+                    l10n.appTitle,
                     style: GoogleFonts.fraunces(
                       fontSize: 40,
                       height: 1.0,
@@ -182,13 +182,17 @@ class _DotsLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Under reduced motion the loop controller never runs, which used to
+    // freeze all three dots at near-invisible `line` grey — hold them solid
+    // gold instead so the loader still reads as "working".
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     return AnimatedBuilder(
       animation: controller,
       builder: (_, _) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           for (var i = 0; i < 3; i++) ...[
-            _dot(i),
+            _dot(i, static: reduceMotion),
             if (i < 2) const SizedBox(width: 7),
           ],
         ],
@@ -196,7 +200,7 @@ class _DotsLoader extends StatelessWidget {
     );
   }
 
-  Widget _dot(int i) {
+  Widget _dot(int i, {required bool static}) {
     // Each dot's phase is offset so the pulse travels left→right.
     final phase = (controller.value - i * 0.18) % 1.0;
     // Triangle wave 0→1→0 → a smooth swell then fade.
@@ -207,7 +211,7 @@ class _DotsLoader extends StatelessWidget {
       height: 7,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Color.lerp(AppColors.line, AppColors.gold, eased),
+        color: static ? AppColors.gold : Color.lerp(AppColors.line, AppColors.gold, eased),
       ),
     );
   }

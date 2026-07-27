@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/quiet_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/language_chips.dart';
@@ -36,7 +37,13 @@ class _LanguagePickerScreenState extends ConsumerState<LanguagePickerScreen> {
       ref.invalidate(meProvider);
       await ref.read(meProvider.future);
       if (mounted) context.go(Routes.home);
-    } catch (_) {
+    } catch (e) {
+      // The router pins the reader here until languages save — a silent
+      // failure would look like a dead Continue button.
+      if (mounted) {
+        showQuietError(context, AppLocalizations.of(context)!.langPickerSaveError, e);
+      }
+    } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
@@ -78,6 +85,15 @@ class _LanguagePickerScreenState extends ConsumerState<LanguagePickerScreen> {
                   ),
                 ),
               ),
+              Divider(height: 1, color: AppColors.line),
+              const SizedBox(height: 12),
+              if (_selected.isEmpty) ...[
+                Text(
+                  l10n.langPickerPickOne,
+                  style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                ),
+                const SizedBox(height: 8),
+              ],
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -86,7 +102,12 @@ class _LanguagePickerScreenState extends ConsumerState<LanguagePickerScreen> {
                       ? SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            // The button's resolved foreground, not raw paper —
+                            // paper inverts in dark mode.
+                            color: AppColors.dark ? AppColors.ink : AppColors.paper,
+                          ),
                         )
                       : Text(l10n.langPickerContinue),
                 ),

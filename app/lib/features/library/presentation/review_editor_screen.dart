@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
@@ -39,6 +42,11 @@ class _ReviewEditorScreenState extends ConsumerState<ReviewEditorScreen> {
   bool _loaded = false;
   bool _saving = false;
 
+  /// What existed when the editor opened — the difference between "nothing to
+  /// save" and "the reader took it back".
+  bool _hadReview = false;
+  bool _hadRating = false;
+
   @override
   void initState() {
     super.initState();
@@ -63,40 +71,76 @@ class _ReviewEditorScreenState extends ConsumerState<ReviewEditorScreen> {
       _body.text = review?.body ?? '';
       _visible = review?.visible ?? false;
       _stars = rating?.value ?? 0;
+      _hadReview = review != null;
+      _hadRating = rating != null;
       _loaded = true;
     });
   }
 
+  /// Saves what's here and takes back what was emptied — and says which one
+  /// actually happened. An emptied body deletes the review; zero stars where
+  /// a rating existed clears it. Never claims "saved" when nothing was written.
   Future<void> _save() async {
     if (_saving) return;
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    // Outlives this screen — the sync kick below runs after the pop unmounts
+    // it, when `ref` is no longer usable (the quick-stop lesson, CLAUDE.md).
+    final container = ProviderScope.containerOf(context, listen: false);
     try {
-      if (_stars > 0) {
-        final ratingsRepo = await ref.read(ratingsRepositoryProvider.future);
-        await ratingsRepo.setRating(widget.workId, _stars);
-      }
+      final ratingsRepo = await ref.read(ratingsRepositoryProvider.future);
+      final reviewsRepo = await ref.read(reviewsRepositoryProvider.future);
       final body = _body.text.trim();
-      if (body.isNotEmpty) {
-        final reviewsRepo = await ref.read(reviewsRepositoryProvider.future);
-        await reviewsRepo.upsert(widget.workId, body: body, visible: _visible);
+
+      var ratingCleared = false;
+      var ratingWritten = false;
+      if (_stars > 0) {
+        await ratingsRepo.setRating(widget.workId, _stars);
+        ratingWritten = true;
+      } else if (_hadRating) {
+        await ratingsRepo.clearRating(widget.workId);
+        ratingCleared = true;
       }
+
+      var reviewDeleted = false;
+      var reviewWritten = false;
+      if (body.isNotEmpty) {
+        await reviewsRepo.upsert(widget.workId, body: body, visible: _visible);
+        reviewWritten = true;
+      } else if (_hadReview) {
+        await reviewsRepo.removeForWork(widget.workId);
+        reviewDeleted = true;
+      }
+
       ref.invalidate(ratingProvider(widget.workId));
       ref.invalidate(reviewProvider(widget.workId));
-      // The hero's community rating cluster and the About tab's reviews list
-      // both read the *server's* aggregate (publicReviewsProvider), which
-      // only reflects this save after it's actually pushed — a bare
-      // invalidate right after the local write could refetch before the
-      // background sync trigger lands and show the same stale number.
-      // syncNowProvider awaits the real push+pull round trip (never throws,
-      // even offline) before we refetch.
-      await ref.read(syncNowProvider)();
-      ref.invalidate(publicReviewsProvider(widget.workId));
-      Haptics.success();
-      messenger.showSnackBar(SnackBar(content: Text(l10n.reviewSaved)));
+
+      // Name what actually happened. Nothing at all changed → just leave,
+      // claiming nothing.
+      final message = reviewDeleted
+          ? l10n.reviewDeleted
+          : reviewWritten
+              ? l10n.reviewSaved
+              : ratingCleared
+                  ? l10n.ratingCleared
+                  : ratingWritten
+                      ? l10n.ratingSaved
+                      : null;
+      if (message != null) {
+        Haptics.success();
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+      }
+      // Offline-first: pop on the LOCAL write. The server aggregate refresh
+      // (publicReviewsProvider reads the pushed state) rides a background
+      // sync round-trip instead of holding the reader on a spinner.
       if (navigator.canPop()) navigator.pop(true);
+      if (message != null) {
+        unawaited(container.read(syncNowProvider)().then((_) {
+          container.invalidate(publicReviewsProvider(widget.workId));
+        }));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -169,12 +213,16 @@ class _ReviewEditorScreenState extends ConsumerState<ReviewEditorScreen> {
                       children: [
                         for (var i = 1; i <= 5; i++)
                           GestureDetector(
+                            behavior: HitTestBehavior.opaque,
                             onTap: () {
                               Haptics.selection();
-                              setState(() => _stars = i);
+                              // A second tap on the selected star takes the
+                              // rating back to none.
+                              setState(() => _stars = _stars == i ? 0 : i);
                             },
+                            // ≥44px target: 36px glyph + 4px vertical padding.
                             child: Padding(
-                              padding: EdgeInsets.only(right: 8),
+                              padding: EdgeInsets.only(right: 8, top: 4, bottom: 4),
                               child: Icon(
                                 i <= _stars ? Icons.star : Icons.star_border,
                                 size: 36,
@@ -203,7 +251,14 @@ class _ReviewEditorScreenState extends ConsumerState<ReviewEditorScreen> {
                         textAlignVertical: TextAlignVertical.top,
                         keyboardType: TextInputType.multiline,
                         textCapitalization: TextCapitalization.sentences,
-                        style: TextStyle(fontSize: 14, color: AppColors.ink, height: 1.5),
+                        // The review is the home of the literary voice —
+                        // Fraunces italic, matching the card it lands on.
+                        style: GoogleFonts.fraunces(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 14.5,
+                          color: AppColors.ink,
+                          height: 1.5,
+                        ),
                         decoration: InputDecoration(
                           hintText: l10n.reviewBodyHint,
                           filled: true,
@@ -233,6 +288,7 @@ class _ReviewEditorScreenState extends ConsumerState<ReviewEditorScreen> {
                         ),
                         Switch(
                           value: _visible,
+                          activeThumbColor: AppColors.gold,
                           onChanged: (v) => setState(() => _visible = v),
                         ),
                       ],

@@ -11,8 +11,10 @@ import '../period.dart';
 /// app already uses for overflowing ticker text.
 ///
 /// Year carries its own sub-choice (a specific calendar year, or all time) —
-/// [selectedYear] is only read while [selected] is [InsightsPeriod.year], and
-/// picking any option there both selects the period and sets the year.
+/// [selectedYear] is only read while [selected] is [InsightsPeriod.year]. A
+/// plain tap on the chip selects *this* year immediately; the dropdown arrow
+/// opens the other choices, built from [years] (years that actually hold
+/// finished books) plus all time.
 class PeriodSelector extends StatelessWidget {
   const PeriodSelector({
     super.key,
@@ -21,6 +23,7 @@ class PeriodSelector extends StatelessWidget {
     required this.selectedYear,
     required this.onYearSelected,
     required this.thisYear,
+    required this.years,
   });
 
   final InsightsPeriod selected;
@@ -28,6 +31,9 @@ class PeriodSelector extends StatelessWidget {
   final int? selectedYear;
   final ValueChanged<int?> onYearSelected;
   final int thisYear;
+
+  /// Years with data, newest first — always contains [thisYear].
+  final List<int> years;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +60,7 @@ class PeriodSelector extends StatelessWidget {
               selected: selected == InsightsPeriod.year,
               selectedYear: selectedYear,
               thisYear: thisYear,
+              years: years,
               onChanged: (year) {
                 onYearSelected(year);
                 onSelected(InsightsPeriod.year);
@@ -84,21 +91,28 @@ class _PeriodChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.ink : AppColors.card,
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? AppColors.ink : AppColors.card,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? AppColors.ink : AppColors.line),
+          side: BorderSide(color: selected ? AppColors.ink : AppColors.line),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: selected ? AppColors.paper : AppColors.ink,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: selected ? AppColors.paper : AppColors.ink,
+              ),
+            ),
           ),
         ),
       ),
@@ -106,6 +120,8 @@ class _PeriodChip extends StatelessWidget {
   }
 }
 
+/// The Year chip: the body is a one-tap "this year" door; only the arrow
+/// opens the menu of other years (built from years with data) and all time.
 class _YearChip extends StatelessWidget {
   const _YearChip({
     required this.label,
@@ -113,6 +129,7 @@ class _YearChip extends StatelessWidget {
     required this.selected,
     required this.selectedYear,
     required this.thisYear,
+    required this.years,
     required this.onChanged,
   });
 
@@ -121,6 +138,7 @@ class _YearChip extends StatelessWidget {
   final bool selected;
   final int? selectedYear;
   final int thisYear;
+  final List<int> years;
   final ValueChanged<int?> onChanged;
 
   @override
@@ -128,36 +146,43 @@ class _YearChip extends StatelessWidget {
     final text = selected
         ? (selectedYear == null ? allTimeLabel : '$selectedYear')
         : label;
-    return PopupMenuButton<int?>(
-      onSelected: onChanged,
-      itemBuilder: (context) => [
-        PopupMenuItem(value: thisYear, child: Text('$thisYear')),
-        PopupMenuItem(value: thisYear - 1, child: Text('${thisYear - 1}')),
-        PopupMenuItem(value: null, child: Text(allTimeLabel)),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.ink : AppColors.card,
+    final fg = selected ? AppColors.paper : AppColors.ink;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? AppColors.ink : AppColors.card,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? AppColors.ink : AppColors.line),
+          side: BorderSide(color: selected ? AppColors.ink : AppColors.line),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: selected ? AppColors.paper : AppColors.ink,
+            InkWell(
+              onTap: () => onChanged(thisYear),
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 7, 4, 7),
+                child: Text(
+                  text,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+                ),
               ),
             ),
-            const SizedBox(width: 3),
-            Icon(
-              Icons.arrow_drop_down,
-              size: 15,
-              color: selected ? AppColors.paper : AppColors.ink,
+            PopupMenuButton<(int?,)>(
+              // A record wrapper so `null` (all time) survives as a real menu
+              // value — PopupMenuButton drops a plain null onSelected.
+              tooltip: label,
+              onSelected: (choice) => onChanged(choice.$1),
+              itemBuilder: (context) => [
+                for (final y in years) PopupMenuItem(value: (y,), child: Text('$y')),
+                PopupMenuItem(value: const (null,), child: Text(allTimeLabel)),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 7, 8, 7),
+                child: Icon(Icons.arrow_drop_down, size: 15, color: fg),
+              ),
             ),
           ],
         ),

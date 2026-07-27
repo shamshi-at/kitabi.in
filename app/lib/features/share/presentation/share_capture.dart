@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ Future<void> captureAndShareCard({
   required BuildContext context,
   required GlobalKey cardKey,
   required String text,
+  double targetWidthPx = 1080,
 }) async {
   final l10n = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
@@ -29,7 +31,13 @@ Future<void> captureAndShareCard({
     if (boundary == null || boundary.debugNeedsPaint) {
       throw StateError('share card not ready');
     }
-    final image = await boundary.toImage(pixelRatio: 3);
+    // Scale the capture off the preview's *logical* size so the output is at
+    // least [targetWidthPx] wide — the Story preview is ~168 logical px, and
+    // a fixed 3x ratio shipped a 504px image to a 1080×1920 Instagram story
+    // (ux-review 2026-07-28). Floor of 3x so small previews never regress.
+    final logicalWidth = boundary.size.width;
+    final pixelRatio = logicalWidth > 0 ? math.max(3.0, targetWidthPx / logicalWidth) : 3.0;
+    final image = await boundary.toImage(pixelRatio: pixelRatio);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     if (bytes == null) {
       throw StateError('could not encode card');

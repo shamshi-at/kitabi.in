@@ -4,16 +4,18 @@ import 'package:intl/intl.dart';
 
 import '../../../core/format_duration.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/section_label.dart';
 import '../../../l10n/app_localizations.dart';
 import '../period.dart';
 import '../period_summary.dart';
 
 /// The flagship card — one shape, reused for every period except Year (which
 /// keeps its existing goal ring and detail charts, per the 27 Jul 2026
-/// redesign: eyebrow, a headline written as a sentence before it's shown as a
-/// number, the hero figure, a visualization sized to the window, and — only
-/// for Today, the one period with a real fact to report rather than a
-/// restatement of the headline — a closing streak line.
+/// redesign): eyebrow, a headline written as a sentence before it's shown as
+/// a number, the hero figure, a visualization sized to the window, and a
+/// closing encouraging line on the dark panel — streak-driven for Today,
+/// derived from the same period stats everywhere else (the spec's "closing
+/// line" now applies to every period, ux-review 2026-07-28).
 class PeriodSummaryCard extends StatelessWidget {
   const PeriodSummaryCard({
     super.key,
@@ -55,7 +57,7 @@ class PeriodSummaryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _ShareGlyph(tooltip: l10n.insightsShareTooltip, onTap: onShare),
+              ShareGlyph(tooltip: l10n.insightsShareTooltip, onTap: onShare),
             ],
           ),
           const SizedBox(height: 5),
@@ -66,14 +68,43 @@ class PeriodSummaryCard extends StatelessWidget {
           const SizedBox(height: 10),
           _hero(l10n),
           const SizedBox(height: 12),
-          _visualization(context),
-          if (period == InsightsPeriod.today) ...[
+          _visualization(context, l10n),
+          if (_closing(l10n) case final closing?) ...[
             const SizedBox(height: 10),
-            _StreakPanel(summary: summary, l10n: l10n),
+            _ClosingPanel(icon: closing.$1, text: closing.$2),
           ],
         ],
       ),
     );
+  }
+
+  /// The dark-panel closing line — one encouraging fact per period, derived
+  /// from stats the summary already carries (never a new computation).
+  (IconData, String)? _closing(AppLocalizations l10n) {
+    switch (period) {
+      case InsightsPeriod.today:
+        final streak = summary.streakDays ?? 0;
+        return streak > 0
+            ? (Icons.local_fire_department, l10n.insightsStreakDays(streak))
+            : (Icons.auto_stories_outlined, l10n.insightsNoSessionToday);
+      case InsightsPeriod.week:
+        final previous = summary.previousTotalSeconds;
+        if (summary.totalSeconds == 0) {
+          return (Icons.auto_stories_outlined, l10n.insightsClosingWeekNone);
+        }
+        if (previous != null && previous > 0 && summary.totalSeconds > previous) {
+          return (Icons.local_fire_department, l10n.insightsClosingWeekUp);
+        }
+        return (Icons.auto_stories_outlined, l10n.insightsClosingWeekSteady);
+      case InsightsPeriod.month:
+        final read = (summary.calendarCells ?? const []).where((c) => c.isRead).length;
+        return (Icons.calendar_month_outlined, l10n.insightsClosingMonthDays(read));
+      case InsightsPeriod.threeMonths:
+      case InsightsPeriod.sixMonths:
+        return (Icons.auto_stories_outlined, l10n.insightsClosingStretch(summary.booksFinishedCount));
+      case InsightsPeriod.year:
+        return null;
+    }
   }
 
   String _eyebrow(AppLocalizations l10n) {
@@ -159,7 +190,7 @@ class PeriodSummaryCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               '${l10n.bookLogSessions(summary.sittingsCount)} · ${l10n.bookLogTotalPages(summary.pagesRead)}',
-              style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft),
+              style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
             ),
           ],
         );
@@ -177,7 +208,7 @@ class PeriodSummaryCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               '${l10n.bookLogTotalPages(summary.pagesRead)} · ${l10n.insightsDaysRead(read, elapsed)}',
-              style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft),
+              style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
             ),
           ],
         );
@@ -194,7 +225,7 @@ class PeriodSummaryCard extends StatelessWidget {
             Text(
               '${l10n.bookLogTotalPages(summary.pagesRead)} · '
               '${l10n.insightsHoursReading(formatDuration(Duration(seconds: summary.totalSeconds)))}',
-              style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft),
+              style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
             ),
           ],
         );
@@ -203,25 +234,34 @@ class PeriodSummaryCard extends StatelessWidget {
     }
   }
 
-  Widget _visualization(BuildContext context) {
+  Widget _visualization(BuildContext context, AppLocalizations l10n) {
     switch (period) {
       case InsightsPeriod.today:
-        return _DayDots(days: summary.recentDays ?? const []);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionLabel(l10n.insightsLast7Days, padding: const EdgeInsets.only(bottom: 6)),
+            _DayDots(days: summary.recentDays ?? const []),
+          ],
+        );
       case InsightsPeriod.week:
         return _WeekBars(range: range, buckets: summary.dailyBuckets ?? const [0, 0, 0, 0, 0, 0, 0]);
       case InsightsPeriod.month:
         return _MonthHeatmap(cells: summary.calendarCells ?? const []);
       case InsightsPeriod.threeMonths:
       case InsightsPeriod.sixMonths:
-        return _TrendLine(buckets: summary.trendBuckets ?? const []);
+        return _TrendLine(buckets: summary.trendBuckets ?? const [], range: range);
       case InsightsPeriod.year:
         return const SizedBox.shrink();
     }
   }
 }
 
-class _ShareGlyph extends StatelessWidget {
-  const _ShareGlyph({required this.tooltip, required this.onTap});
+/// The little goldSoft share square on the period and year cards — public so
+/// the year card (which lives in insights_screen.dart) reuses this exact
+/// widget instead of keeping its own copy.
+class ShareGlyph extends StatelessWidget {
+  const ShareGlyph({super.key, required this.tooltip, required this.onTap});
 
   final String tooltip;
   final VoidCallback onTap;
@@ -270,31 +310,30 @@ class _Delta extends StatelessWidget {
   }
 }
 
-class _StreakPanel extends StatelessWidget {
-  const _StreakPanel({required this.summary, required this.l10n});
+/// The card's closing line — the spec's "single dark accent card": one gold
+/// icon and one encouraging sentence on [AppColors.darkPanel] (constant in
+/// both themes, so the text tokens are the constant [AppColors.onDark]).
+class _ClosingPanel extends StatelessWidget {
+  const _ClosingPanel({required this.icon, required this.text});
 
-  final PeriodSummary summary;
-  final AppLocalizations l10n;
+  final IconData icon;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    final streak = summary.streakDays ?? 0;
     return Container(
       padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(color: AppColors.night, borderRadius: BorderRadius.circular(10)),
+      decoration:
+          BoxDecoration(color: AppColors.darkPanel, borderRadius: BorderRadius.circular(10)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            streak > 0 ? Icons.local_fire_department : Icons.auto_stories_outlined,
-            size: 14,
-            color: AppColors.gold,
-          ),
+          Icon(icon, size: 14, color: AppColors.gold),
           const SizedBox(width: 9),
           Expanded(
             child: Text(
-              streak > 0 ? l10n.insightsStreakDays(streak) : l10n.insightsNoSessionToday,
-              style: const TextStyle(color: Color(0xFFEFE3C8), fontSize: 11.5, height: 1.4),
+              text,
+              style: const TextStyle(color: AppColors.onDark, fontSize: 11.5, height: 1.4),
             ),
           ),
         ],
@@ -397,6 +436,34 @@ class _MonthHeatmap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Weekday header aligned to the grid's own columns — the grid is
+    // Sunday-first (see `_monthCells`), so the letters run S M T W T F S,
+    // localized via DateFormat (2026-01-04 is a real Sunday).
+    final dayLetters = [
+      for (var i = 0; i < 7; i++)
+        DateFormat.E().format(DateTime(2026, 1, 4 + i)).substring(0, 1),
+    ];
+    return Column(
+      children: [
+        Row(
+          children: [
+            for (final letter in dayLetters)
+              Expanded(
+                child: Text(
+                  letter,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 8.5, color: AppColors.inkSoft),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        _grid(context),
+      ],
+    );
+  }
+
+  Widget _grid(BuildContext context) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -428,16 +495,33 @@ class _MonthHeatmap extends StatelessWidget {
 }
 
 class _TrendLine extends StatelessWidget {
-  const _TrendLine({required this.buckets});
+  const _TrendLine({required this.buckets, required this.range});
 
   final List<int> buckets;
+  final PeriodRange range;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 46,
-      width: double.infinity,
-      child: CustomPaint(painter: _TrendPainter(buckets)),
+    // `end` is exclusive, so the right label names the last day inside the
+    // window, not the day after it.
+    final startLabel = DateFormat.MMM().format(range.start);
+    final endLabel = DateFormat.MMM().format(range.end.subtract(const Duration(days: 1)));
+    return Column(
+      children: [
+        SizedBox(
+          height: 46,
+          width: double.infinity,
+          child: CustomPaint(painter: _TrendPainter(buckets)),
+        ),
+        const SizedBox(height: 3),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(startLabel, style: TextStyle(fontSize: 8.5, color: AppColors.inkSoft)),
+            Text(endLabel, style: TextStyle(fontSize: 8.5, color: AppColors.inkSoft)),
+          ],
+        ),
+      ],
     );
   }
 }

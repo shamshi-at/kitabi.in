@@ -347,7 +347,8 @@ class _UnitTile extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: gold ? AppColors.gold : AppColors.ink,
+              // goldInk, not gold — gold on goldSoft sits at ~2.4:1.
+              color: gold ? AppColors.goldInk : AppColors.ink,
             ),
           ),
           SizedBox(height: 1),
@@ -490,11 +491,12 @@ class _NoPageCount extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.gold,
+                            // goldInk, not gold — gold on goldSoft fails contrast.
+                            color: AppColors.goldInk,
                           ),
                         ),
                       ),
-                      Icon(Icons.chevron_right, size: 16, color: AppColors.gold),
+                      Icon(Icons.chevron_right, size: 16, color: AppColors.goldInk),
                     ],
                   ),
                   SizedBox(height: 3),
@@ -570,7 +572,8 @@ class _Strip extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: assumed ? AppColors.inkSoft : AppColors.gold,
+                    // goldInk, not gold — the headline sits on goldSoft.
+                    color: assumed ? AppColors.inkSoft : AppColors.goldInk,
                   ),
                 ),
                 SizedBox(height: 2),

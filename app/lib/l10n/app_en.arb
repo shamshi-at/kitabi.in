@@ -24,16 +24,24 @@
   "@splashLoading": {"description": "Loading status line on the splash while auth and profile resolve"},
   "signInQuote1": "A reader lives a thousand lives before he dies.",
   "@signInQuote1": {
-    "description": "Rotating literary quote on the sign-in screen"
+    "description": "Rotating literary quote on the sign-in screen and home quote card"
   },
+  "signInQuote1Author": "George R.R. Martin",
+  "@signInQuote1Author": {"description": "Attribution for signInQuote1"},
   "signInQuote2": "I have always imagined that Paradise will be a kind of library.",
   "@signInQuote2": {
-    "description": "Rotating literary quote on the sign-in screen"
+    "description": "Rotating literary quote on the sign-in screen and home quote card"
   },
-  "signInQuote3": "Ein Buch muss die Axt sein für das gefrorene Meer in uns.",
+  "signInQuote2Author": "Jorge Luis Borges",
+  "@signInQuote2Author": {"description": "Attribution for signInQuote2"},
+  "signInQuote3": "A book must be the axe for the frozen sea within us.",
   "@signInQuote3": {
-    "description": "Rotating literary quote on the sign-in screen (Kafka, German)"
+    "description": "Rotating literary quote on the sign-in screen and home quote card (Kafka, English rendering)"
   },
+  "signInQuote3Author": "Franz Kafka",
+  "@signInQuote3Author": {"description": "Attribution for signInQuote3"},
+  "quoteTapForNew": "Tap for a new one",
+  "@quoteTapForNew": {"description": "Hint after the attribution on the home quote card; uppercased in code"},
   "signInGoogle": "Continue with Google",
   "@signInGoogle": {
     "description": "Google sign-in button"
@@ -50,9 +58,9 @@
   "@signInError": {
     "description": "Generic sign-in failure message"
   },
-  "profileVisibilityHeader": "VISIBILITY · everything starts private",
+  "profileVisibilityHeader": "Visibility · everything starts private",
   "@profileVisibilityHeader": {
-    "description": "Section header on the profile screen's visibility switchboard"
+    "description": "Section header on the profile screen's visibility switchboard; uppercased in code"
   },
   "visibilityPublic": "Public",
   "@visibilityPublic": {"description": "Label on the visibility pill when a setting is public"},
@@ -96,6 +104,10 @@
   "@profileViewPublicEntry": {
     "description": "Profile screen action button that opens the same bookplate view other readers see (respects the visibility toggles above — a private profile shows the quiet 'keeps their profile private' state)"
   },
+  "signOutConfirmTitle": "Sign out?",
+  "@signOutConfirmTitle": {"description": "Title of the sign-out confirmation dialog"},
+  "signOutConfirmBody": "Your library stays on this device and picks up where you left off when you sign back in.",
+  "@signOutConfirmBody": {"description": "Body of the sign-out confirmation dialog"},
   "profileSignOut": "Sign out",
   "@profileSignOut": {
     "description": "Sign-out action on the profile screen"
@@ -107,6 +119,11 @@
   "profileDeleteAccountConfirm": "This deletes your Kitabi account and library. This can't be undone.",
   "@profileDeleteAccountConfirm": {
     "description": "Confirmation copy shown before deleting the account"
+  },
+  "profileBooksCount": "{count, plural, =1{1 book} other{{count} books}}",
+  "@profileBooksCount": {
+    "description": "Appended to the reading-since line on the profile header",
+    "placeholders": {"count": {"type": "int"}}
   },
   "profileReadingSince": "Reading since {year}",
   "@profileReadingSince": {
@@ -121,11 +138,11 @@
   "@catalogSearchHint": {
     "description": "Search box placeholder on the catalog search screen"
   },
-  "catalogSearchSectionCatalog": "IN THE CATALOG",
+  "catalogSearchSectionCatalog": "In the catalogue",
   "@catalogSearchSectionCatalog": {
     "description": "Section header above catalog-only search results"
   },
-  "catalogSearchSectionLibrary": "IN YOUR LIBRARY · {count}",
+  "catalogSearchSectionLibrary": "In your library · {count}",
   "@catalogSearchSectionLibrary": {
     "description": "Section header above personal-library search matches",
     "placeholders": {
@@ -156,7 +173,7 @@
   "@authorBrowseLabel": {
     "description": "Eyebrow label on the author browse screen"
   },
-  "authorBrowseWorksCount": "{count} {count, plural, one{work} other{works}} in the catalog",
+  "authorBrowseWorksCount": "{count} {count, plural, one{work} other{works}} in the catalogue",
   "@authorBrowseWorksCount": {
     "description": "Subheader on the author browse screen",
     "placeholders": {
@@ -216,7 +233,7 @@
   "@publisherBrowseLabel": {
     "description": "Eyebrow label on the publisher browse screen"
   },
-  "publisherBrowseWorksCount": "{count} {count, plural, one{title} other{titles}} in the catalog",
+  "publisherBrowseWorksCount": "{count} {count, plural, one{title} other{titles}} in the catalogue",
   "@publisherBrowseWorksCount": {
     "description": "Subheader on the publisher browse screen",
     "placeholders": {
@@ -250,7 +267,7 @@
   "@scanNotFound": {
     "description": "Shown when the ISBN doesn't resolve to a book"
   },
-  "scanCameraUnavailable": "Camera unavailable — you can search the catalog or add the book manually below.",
+  "scanCameraUnavailable": "Camera unavailable — you can search the catalogue or add the book manually below.",
   "@scanCameraUnavailable": {
     "description": "Shown in place of the camera preview when the camera can't start (e.g. permission denied) and the Search/Add fallback buttons are visible"
   },
@@ -278,7 +295,7 @@
   "@formTitleEdit": {
     "description": "Title on the add/edit catalog form when editing"
   },
-  "formSubtitle": "catalog entry · shared",
+  "formSubtitle": "catalogue entry · shared",
   "@formSubtitle": {
     "description": "Subheader clarifying the catalog entry is shared, not personal"
   },
@@ -310,6 +327,10 @@
   "@langPickerSubtitle": {
     "description": "Subtitle of the onboarding reading-languages picker"
   },
+  "langPickerSaveError": "Couldn't save — try again.",
+  "@langPickerSaveError": {"description": "SnackBar when saving the picked languages fails"},
+  "langPickerPickOne": "Pick at least one",
+  "@langPickerPickOne": {"description": "Quiet hint above the disabled Continue button while nothing is selected"},
   "langPickerContinue": "Continue",
   "@langPickerContinue": {
     "description": "Button to save the picked reading languages and continue"
@@ -366,7 +387,7 @@
   "@formCapturePhoto": {
     "description": "Capture-strip tile at the top of the add-book form: photograph the front cover"
   },
-  "formCaptureHelp": "Either one fills the form — everything stays editable. Or just type:",
+  "formCaptureHelp": "Either one fills the form, or just type — everything stays editable.",
   "@formCaptureHelp": {
     "description": "One-line helper under the capture strip on the add-book form"
   },
@@ -414,11 +435,11 @@
   "@formPrefillPhotos": {
     "description": "Banner after the cover-photo extraction prefilled the add-book form"
   },
-  "formSaveHint": "Saved books join the shared catalog for every reader",
+  "formSaveHint": "Saved books join the shared catalogue for every reader",
   "@formSaveHint": {
     "description": "One-line consequence note under the sticky Save button on the add-book form"
   },
-  "formSave": "Save to catalog",
+  "formSave": "Save to catalogue",
   "@formSave": {
     "description": "Submit button on the add/edit catalog form"
   },
@@ -490,8 +511,6 @@
   "@bookStartSession": {"description": "Primary button on the reading card that opens the reading timer"},
   "bookWhereItStands": "WHERE IT STANDS",
   "@bookWhereItStands": {"description": "Label above the four status tiles on the book page"},
-  "bookStatusHint": "Four states, one tap each.",
-  "@bookStatusHint": {"description": "Caption under the status tiles explaining they change status directly"},
   "bookStartReading": "Start reading",
   "@bookStartReading": {"description": "Primary button that marks the book as reading and opens the timer"},
   "bookSecondaryPage": "Page",
@@ -618,7 +637,13 @@
   "reviewVisibilityHint": "Public reviews will be visible to others when Kitabi's community features launch.",
   "@reviewVisibilityHint": {"description": "Hint under the review visibility toggle explaining what public means"},
   "reviewSaved": "Review saved",
-  "@reviewSaved": {"description": "Snackbar after the review editor saves"},
+  "@reviewSaved": {"description": "Snackbar after the review editor saves a review body"},
+  "reviewDeleted": "Review deleted",
+  "@reviewDeleted": {"description": "Snackbar after the review editor removes a review whose body was emptied"},
+  "ratingSaved": "Rating saved",
+  "@ratingSaved": {"description": "Snackbar when only the star rating changed on the review editor"},
+  "ratingCleared": "Rating cleared",
+  "@ratingCleared": {"description": "Snackbar when a second tap on the selected star removed the rating"},
   "reviewFinishedTitle": "You finished it!",
   "@reviewFinishedTitle": {"description": "Title of the popup shown after marking a book as read, inviting a rating/review"},
   "reviewFinishedSubtitle": "How was it? Tap a star to rate, or write a few words.",
@@ -635,7 +660,13 @@
   "@coverFrontLabel": {"description": "Caption in the full-screen cover viewer for the front photo"},
   "coverBackLabel": "Back cover",
   "@coverBackLabel": {"description": "Caption in the full-screen cover viewer for the back photo"},
-  "createdDialogTitle": "Added to the catalog",
+  "coverReturnedStamp": "Returned",
+  "@coverReturnedStamp": {"description": "Small stamp on a shelf cover for a borrowed book that has been given back — uppercased in code"},
+  "coverLentBand": "With {name}",
+  "@coverLentBand": {"description": "Band across a shelf cover for a book lent out — uppercased in code", "placeholders": {"name": {"type": "String"}}},
+  "coverBorrowedBand": "From {name}",
+  "@coverBorrowedBand": {"description": "Band across a shelf cover for an actively borrowed book — uppercased in code", "placeholders": {"name": {"type": "String"}}},
+  "createdDialogTitle": "Added to the catalogue",
   "@createdDialogTitle": {"description": "Title of the popup after a new book is created"},
   "createdAddToLibrary": "Add to library",
   "@createdAddToLibrary": {"description": "Popup action that puts the just-created book into the user's library"},
@@ -707,6 +738,11 @@
   "@linkContactSearchHint": {"description": "Search hint in the link-contact dialog"},
   "linkContactNoResults": "No matching readers.",
   "@linkContactNoResults": {"description": "Empty result in the link-contact dialog"},
+  "linkContactConfirm": "{count, plural, =1{Link 1 loan to {handle}?} other{Link {count} loans to {handle}?}}",
+  "@linkContactConfirm": {
+    "description": "Confirm dialog body before rewriting a private contact's loans onto a linked account",
+    "placeholders": {"count": {"type": "int"}, "handle": {"type": "String"}}
+  },
   "linkContactDone": "Linked — connection request sent.",
   "@linkContactDone": {"description": "Snackbar after linking a private contact"},
   "connectionsLoansWithThem": "{count, plural, =1{1 open loan} other{{count} open loans}}",
@@ -1092,7 +1128,7 @@
   "@bookRemoveFromLibrary": {
     "description": "Menu action that removes the book from the user's library"
   },
-  "bookRemoveConfirm": "Remove this book from your library? Your rating and review stay on the shared catalog entry, but this copy, its reading progress, and its notes are gone.",
+  "bookRemoveConfirm": "Remove this book from your library? Your rating and review stay on the shared catalogue entry, but this copy, its reading progress, and its notes are gone.",
   "bookTagsLabel": "SHELVES · yours only",
   "@bookTagsLabel": {
     "description": "Eyebrow label on the personal tags/shelves row"
@@ -1107,6 +1143,8 @@
   "@bookShelfMove": {"description": "Action on the book page shelf card that opens the shelf picker"},
   "bookShelfRemove": "Remove",
   "@bookShelfRemove": {"description": "Action that takes the book off its shelf"},
+  "bookShelfRemoved": "Taken off {shelf}",
+  "@bookShelfRemoved": {"description": "Snackbar after removing the book from its shelf", "placeholders": {"shelf": {"type": "String"}}},
   "bookShelfEmptyTitle": "Not on a shelf yet",
   "@bookShelfEmptyTitle": {"description": "Title of the book page shelf card when the book is on no shelf"},
   "bookShelfEmptyBody": "Keep it somewhere of your own",
@@ -1125,10 +1163,10 @@
   "@bookNewTagHint": {
     "description": "Text field hint in the new-tag dialog"
   },
-  "shelfPickerTitle": "Add to a shelf",
-  "@shelfPickerTitle": {"description": "Title of the sheet that picks which shelves a book sits on"},
-  "shelfPickerHint": "Tap a shelf to add or remove this book",
-  "@shelfPickerHint": {"description": "Subtitle on the shelf-picker sheet"},
+  "shelfPickerTitle": "Choose a shelf",
+  "@shelfPickerTitle": {"description": "Title of the sheet that picks the one shelf a book lives on"},
+  "shelfPickerHint": "One shelf per book — picking a shelf moves it here.",
+  "@shelfPickerHint": {"description": "Subtitle on the shelf-picker sheet — honest about the exclusive move"},
   "shelfPickerEmpty": "No shelves yet — create your first below.",
   "@shelfPickerEmpty": {"description": "Shown in the shelf-picker sheet when the reader has no shelves"},
   "libraryShelfEmptyTitle": "This shelf is empty",
@@ -1139,8 +1177,8 @@
   "@libraryShelfAddBooks": {"description": "Button that opens the picker to add existing library books to a shelf"},
   "libraryAddToShelfTitle": "Add to {shelf}",
   "@libraryAddToShelfTitle": {"description": "Title of the sheet that adds existing books to a named shelf", "placeholders": {"shelf": {"type": "String"}}},
-  "libraryAddBooksHint": "Tap a book to shelve or unshelve it",
-  "@libraryAddBooksHint": {"description": "Subtitle on the add-books-to-shelf sheet"},
+  "libraryAddBooksHint": "Tap a book to move it here — off any other shelf — or take it off this one.",
+  "@libraryAddBooksHint": {"description": "Subtitle on the add-books-to-shelf sheet — honest about the exclusive move"},
   "libraryAddBooksEmpty": "Your library is empty — add a book first.",
   "@libraryAddBooksEmpty": {"description": "Shown when there are no library books to add to a shelf"},
   "libraryShelfAddBooksShort": "Add books",
@@ -1266,9 +1304,9 @@
   "@lendingNoDueDate": {
     "description": "Due stamp when no due date is set"
   },
-  "lendingDueInDays": "Due in {days}d",
+  "lendingDueInDays": "{days, plural, =0{Due today} other{Due in {days}d}}",
   "@lendingDueInDays": {
-    "description": "Due stamp counting days until the due date",
+    "description": "Due stamp counting days until the due date; zero days reads as due today",
     "placeholders": {
       "days": {"type": "int"}
     }
@@ -1416,13 +1454,46 @@
   "@lendingBorrowedEmpty": {
     "description": "Empty state on the borrowed tab"
   },
-  "lendingLogBorrowed": "+ Log a borrowed book",
-  "@lendingLogBorrowed": {
-    "description": "Opens the log-a-borrowed-book sheet"
-  },
   "lendingLendBook": "Lend a book",
   "@lendingLendBook": {
     "description": "Floating action button on the lending ledger to start a new lend"
+  },
+  "lendingLogBorrowedFab": "Log a borrowed book",
+  "@lendingLogBorrowedFab": {
+    "description": "Floating action button label while the Borrowed tab is showing"
+  },
+  "lendingReturnedSnack": "Marked as returned.",
+  "@lendingReturnedSnack": {
+    "description": "Snackbar after closing a loan, with an Undo action"
+  },
+  "undoAction": "Undo",
+  "@undoAction": {
+    "description": "Generic Undo action on snackbars"
+  },
+  "lendingDueHelper": "A due date sets a quiet reminder.",
+  "@lendingDueHelper": {
+    "description": "Helper line under the lend sheet's due-date field, disclosing the scheduled reminder"
+  },
+  "lendingNoteLabel": "Note · optional",
+  "@lendingNoteLabel": {
+    "description": "Field label for the optional note, shared by the lend and log-borrowed sheets"
+  },
+  "lendingNoDate": "Pick a date",
+  "@lendingNoDate": {
+    "description": "Placeholder for an unset date field, shared by the lend and log-borrowed sheets"
+  },
+  "lendingSaveFailed": "Couldn't save the loan.",
+  "@lendingSaveFailed": {
+    "description": "Quiet error when saving a lend/borrow record fails"
+  },
+  "lendingSearchOffline": "Search is offline — you can still add the book to the catalogue.",
+  "@lendingSearchOffline": {
+    "description": "Quiet inline note when the log-borrowed book search fails (usually offline)"
+  },
+  "lendingPickNoMatch": "Nothing matching “{query}”.",
+  "@lendingPickNoMatch": {
+    "description": "Empty state in the pick-a-book-to-lend sheet when a search query matches nothing",
+    "placeholders": {"query": {"type": "String"}}
   },
   "connectionsTitle": "Connections",
   "@connectionsTitle": {
@@ -1500,6 +1571,19 @@
   "@connectionsDisconnect": {
     "description": "Disconnect an accepted connection"
   },
+  "connectionsDisconnectConfirm": "Disconnect from {name}? The loans on your ledger stay put.",
+  "@connectionsDisconnectConfirm": {
+    "description": "Confirm dialog body before disconnecting an accepted connection",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "connectionsActionFailed": "That didn't go through — try again.",
+  "@connectionsActionFailed": {
+    "description": "Neutral failure snackbar for any connection action (accept, deny, block, disconnect…)"
+  },
+  "connectionLoanOut": "Out",
+  "@connectionLoanOut": {
+    "description": "Stamp on an open (not yet returned) loan row on a person's loans page"
+  },
   "connectionsTooltip": "Connection requests",
   "@connectionsTooltip": {
     "description": "Tooltip for the connections icon on the lending ledger"
@@ -1520,14 +1604,14 @@
   "@lendingPickEmpty": {
     "description": "Empty state when there are no lendable books to pick"
   },
-  "logBorrowedAddNew": "＋ Add \"{title}\" to the catalog",
+  "logBorrowedAddNew": "＋ Add \"{title}\" to the catalogue",
   "@logBorrowedAddNew": {
     "description": "Row under the borrow sheet's book search: create the typed book in the catalog, then come back with it selected",
     "placeholders": {
       "title": {"type": "String"}
     }
   },
-  "logBorrowedNotFound": "Not in the catalog yet? Add it — you'll come right back here.",
+  "logBorrowedNotFound": "Not in the catalogue yet? Add it — you'll come right back here.",
   "@logBorrowedNotFound": {
     "description": "Helper shown under the borrow sheet's book search when nothing matches the typed title"
   },
@@ -1559,17 +1643,9 @@
   "@logBorrowedRemindLabel": {
     "description": "Field label for the optional reminder date"
   },
-  "logBorrowedNoteLabel": "Note · optional",
-  "@logBorrowedNoteLabel": {
-    "description": "Field label for the optional note"
-  },
   "logBorrowedSave": "Save to my borrowed shelf",
   "@logBorrowedSave": {
     "description": "Submit button on the log-borrowed sheet"
-  },
-  "logBorrowedNoDate": "Pick a date",
-  "@logBorrowedNoDate": {
-    "description": "Placeholder for an unset date field"
   },
   "lendSheetTitlePrefix": "Lend",
   "@lendSheetTitlePrefix": {
@@ -1662,7 +1738,7 @@
   "@navAdd": {
     "description": "Bottom navigation label for the add-a-book action"
   },
-  "welcomeTitle1": "Beyond the bookshelf",
+  "welcomeTitle1": "Beyond the Bookshelf",
   "@welcomeTitle1": {"description": "Onboarding page 1 title"},
   "welcomeBody1": "Track the books you own, what you're reading, and how your year is going — all yours, offline-first.",
   "@welcomeBody1": {"description": "Onboarding page 1 body"},
@@ -1682,8 +1758,12 @@
   "@welcomeSkip": {"description": "Onboarding skip button"},
   "updateTitle": "Time to update",
   "@updateTitle": {"description": "Title of the forced-update screen"},
-  "updateBody": "This version of Kitabi is out of date. Please update from the App Store to keep going.",
-  "@updateBody": {"description": "Body of the forced-update screen"},
+  "updateBodyAppStore": "This version of Kitabi is out of date. Please update from the App Store to keep going.",
+  "@updateBodyAppStore": {"description": "Body of the forced-update screen on iOS"},
+  "updateBodyPlayStore": "This version of Kitabi is out of date. Please update from Google Play to keep going.",
+  "@updateBodyPlayStore": {"description": "Body of the forced-update screen on Android"},
+  "updateTryAgain": "Try again",
+  "@updateTryAgain": {"description": "Button on the forced-update screen that re-runs the version check"},
   "importTitle": "Import books",
   "@importTitle": {"description": "Title of the import screen (S2)"},
   "importSubtitle": "From a Goodreads export or any book CSV.",
@@ -1696,7 +1776,7 @@
   "@importPreviewButton": {"description": "Button that parses the pasted CSV and previews matches"},
   "importParsing": "Reading your file…",
   "@importParsing": {"description": "Progress text while parsing the CSV"},
-  "importMatched": "{matched} of {total} matched to the catalog",
+  "importMatched": "{matched} of {total} matched to the catalogue",
   "@importMatched": {
     "description": "Summary of how many CSV rows matched the catalog",
     "placeholders": {"matched": {"type": "int"}, "total": {"type": "int"}}
@@ -1715,6 +1795,24 @@
   },
   "importEmpty": "No book rows found in that file.",
   "@importEmpty": {"description": "Shown when the CSV has no usable rows"},
+  "importStartOver": "Start over",
+  "@importStartOver": {"description": "Clears the rendered preview and returns to the paste/pick step (the pasted CSV is kept)"},
+  "importParseFailed": "Couldn't read that CSV — is it a Goodreads export?",
+  "@importParseFailed": {"description": "Quiet error when the CSV preview/parse fails"},
+  "importFailed": "Couldn't finish the import — try again.",
+  "@importFailed": {"description": "Quiet error when importing the matched rows fails partway"},
+  "importUnmatchedCount": "{skipped} of {total} couldn't be matched and will be skipped.",
+  "@importUnmatchedCount": {
+    "description": "Line under the matched-count header saying how many rows will be skipped",
+    "placeholders": {"skipped": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "importCsvHint": "Title,Author,ISBN,My Rating,Exclusive Shelf…",
+  "@importCsvHint": {"description": "Example CSV header line shown as the paste field's hint. Translator note: these are Goodreads' own column names — keep them in English so a pasted export visibly matches the hint."},
+  "importDoneWithSkipped": "Imported {count} {count, plural, one{book} other{books}} ({skipped} already in your library)",
+  "@importDoneWithSkipped": {
+    "description": "Snackbar after an import where some matched rows were skipped as duplicates",
+    "placeholders": {"count": {"type": "int"}, "skipped": {"type": "int"}}
+  },
   "importEntry": "Import from Goodreads / CSV",
   "@importEntry": {"description": "Profile entry point to the import screen"},
   "exportEntry": "Export my library (CSV)",
@@ -1729,8 +1827,10 @@
   "@profileUsernameSet": {"description": "Prompt on the profile when no username is set yet"},
   "profileUsernameHint": "A handle so friends can find you to lend books.",
   "@profileUsernameHint": {"description": "Explains why to set a username"},
-  "profileScoreHeader": "REPUTATION",
-  "@profileScoreHeader": {"description": "Header of the reputation/score card"},
+  "profileScoreHeader": "Reputation",
+  "@profileScoreHeader": {"description": "Header of the reputation/score card; uppercased in code"},
+  "reputationEmpty": "Add your first book to start earning.",
+  "@reputationEmpty": {"description": "Quiet line on the reputation card when every stat is still zero"},
   "profileScorePoints": "{count, plural, one{point} other{points}}",
   "@profileScorePoints": {"description": "Unit label next to the score number", "placeholders": {"count": {"type": "int"}}},
   "profileScoreBooksAdded": "Books added",
@@ -1782,15 +1882,52 @@
     "description": "Relative day count for an activity entry",
     "placeholders": {"count": {"type": "int"}}
   },
+  "activityAddedBookTitled": "Added {title}",
+  "@activityAddedBookTitled": {
+    "description": "Activity row naming the book that was added",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "activityFinishedBookTitled": "Finished {title}",
+  "@activityFinishedBookTitled": {
+    "description": "Activity row naming the book that was finished",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "activityRatedBookTitled": "Rated {title}",
+  "@activityRatedBookTitled": {
+    "description": "Activity row naming the book that was rated",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "activityWroteReviewTitled": "Reviewed {title}",
+  "@activityWroteReviewTitled": {
+    "description": "Activity row naming the book that was reviewed",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "activityLentBookTitled": "Lent {title}",
+  "@activityLentBookTitled": {
+    "description": "Activity row naming the book that was lent out",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "activityGeneric": "Activity",
+  "@activityGeneric": {
+    "description": "Fallback label for an activity event type this app version doesn't know"
+  },
+  "activityEmptyTitle": "Nothing yet",
+  "@activityEmptyTitle": {
+    "description": "Empty-state title on the activity screen (distinct from the app-bar title)"
+  },
   "shareEyebrow": "SHARE A BOOK",
   "@shareEyebrow": {
     "description": "Eyebrow label at the top of the share card"
+  },
+  "shareEyebrowPersonal": "From my shelf",
+  "@shareEyebrowPersonal": {
+    "description": "Eyebrow on the share card's personal-endorsement variant (the reader's own rating/review is included)"
   },
   "shareYourRating": "your rating",
   "@shareYourRating": {
     "description": "Caption next to the stars when showing the user's own rating"
   },
-  "shareCatalogAvg": "catalog avg",
+  "shareCatalogAvg": "catalogue avg",
   "@shareCatalogAvg": {
     "description": "Caption next to the stars when showing the catalog average rating"
   },
@@ -1846,8 +1983,10 @@
   "@timerSessionLabel": {"description": "Eyebrow label on the book page's timer card"},
   "timerStart": "Start",
   "@timerStart": {"description": "Button that starts a reading session"},
-  "timerInProgress": "Session in Progress",
-  "@timerInProgress": {"description": "Eyebrow label on the full-screen running-timer view"},
+  "timerInProgress": "Session in progress",
+  "@timerInProgress": {"description": "Eyebrow label on the full-screen running-timer view — casing applied in code"},
+  "timerMinimizeHint": "Keep reading — the timer stays on",
+  "@timerMinimizeHint": {"description": "Tooltip/semantics label on the running timer's minimize chevron — leaving the screen does not stop the session"},
   "timerElapsed": "elapsed",
   "@timerElapsed": {"description": "Caption under the live clock on the running-timer view"},
   "timerInTheZone": "In the zone — {minutes} min",
@@ -1881,6 +2020,8 @@
   "@timerPageFieldHint": {"description": "Placeholder digit shown in the empty page-number field"},
   "timerDone": "Done",
   "@timerDone": {"description": "Closes the wax-seal confirmation and returns to the book page"},
+  "timerDoneKeepsPage": "Done keeps the page — clear the field to keep only the time.",
+  "@timerDoneKeepsPage": {"description": "Quiet consequence line under the wax-seal face's Done button, mirroring the stop sheet's skip copy"},
   "timerRecentSessions": "Recent sessions",
   "@timerRecentSessions": {"description": "Label over the session log on the book page's timer card"},
   "timerNoSessionsYet": "No sessions logged yet — tap Start to begin one.",
@@ -1982,6 +2123,8 @@
   "@noteSaveKeepReading": {"description": "Primary action on the note page during a live session"},
   "noteSaveChanges": "Save changes",
   "@noteSaveChanges": {"description": "Primary action when editing an existing note"},
+  "noteSave": "Save note",
+  "@noteSave": {"description": "Primary action on a fresh note with no live session running"},
   "noteTimerNeverPaused": "Saved to this book only you can read. The timer never paused.",
   "@noteTimerNeverPaused": {"description": "Reassurance under the save button during a live session"},
   "noteWrittenOn": "Written on {date}",
@@ -2014,7 +2157,7 @@
   "@notesTitle": {"description": "Title of the book's note journal (N4)"},
   "notesAlwaysPrivate": "always private",
   "@notesAlwaysPrivate": {"description": "Stated once at the top of the journal; there is no visibility toggle"},
-  "notesSummary": "{notes} notes across {sittings} sittings",
+  "notesSummary": "{notes, plural, =1{1 note} other{{notes} notes}} across {sittings, plural, =1{1 sitting} other{{sittings} sittings}}",
   "@notesSummary": {
     "description": "Counts under the journal title",
     "placeholders": {"notes": {"type": "int"}, "sittings": {"type": "int"}}
@@ -2039,15 +2182,22 @@
   },
   "notesClosingThought": "Add a closing thought…",
   "@notesClosingThought": {"description": "Row on the stop sheet opening the note page for a final note"},
-  "stopSkipNotesSafe": "Skip — your {n} notes are already saved",
+  "stopSkipNotesSafe": "Skip — {n, plural, one{your note is already saved} other{your {n} notes are already saved}}",
   "@stopSkipNotesSafe": {
     "description": "Skip copy on the stop sheet when notes exist — they were saved as they were written",
     "placeholders": {"n": {"type": "int"}}
+  },
+  "stopSkipNotesAndPage": "Skip — {n, plural, one{your note is saved} other{your {n} notes are saved}}; the page stays at {page}",
+  "@stopSkipNotesAndPage": {
+    "description": "Skip copy naming both costs when notes exist AND a page is on the entry — the notes are safe, the typed page is not kept",
+    "placeholders": {"n": {"type": "int"}, "page": {"type": "int"}}
   },
   "stopWhereDidYouGet": "Where did you get to?",
   "@stopWhereDidYouGet": {"description": "Prompt above the big page numeral on the stop-session sheet (R1)"},
   "stopPageUnit": "page",
   "@stopPageUnit": {"description": "Label under the numeral when the book's total page count is unknown"},
+  "stopHoldForTen": "hold − / + for 10",
+  "@stopHoldForTen": {"description": "Quiet caption surfacing the steppers' long-press: a long press moves ten pages instead of one"},
   "stopSessionLogged": "Session logged",
   "@stopSessionLogged": {"description": "Confirmation eyebrow on the stop sheet — the session is already saved before any page is entered"},
   "stopStartedAtPage": "You started this session at p. {page}",
@@ -2148,6 +2298,14 @@
   "recsWishlist": "+ Wishlist",
   "@recsWishlist": {
     "description": "Adds a recommended book to the wishlist"
+  },
+  "recsWishlistedSnack": "Added to your wishlist",
+  "@recsWishlistedSnack": {
+    "description": "Snackbar (with Undo) after wishlisting a recommendation"
+  },
+  "recsDismissedSnack": "Okay, noted",
+  "@recsDismissedSnack": {
+    "description": "Snackbar (with Undo) after dismissing a recommendation as not-for-me"
   },
   "recsNotForMe": "Not for me",
   "@recsNotForMe": {
@@ -2292,6 +2450,36 @@
   "insightsStreakPill": "{days, plural, =1{1-day streak} other{{days}-day streak}}",
   "@insightsStreakPill": {"description": "Compact streak badge on the shareable period image", "placeholders": {"days": {"type": "int"}}},
   "insightsNoSessionToday": "No sitting yet today — even a few pages count.",
+  "insightsLast7Days": "Last 7 days",
+  "@insightsLast7Days": {
+    "description": "Caption over the Today card's row of seven day-dots"
+  },
+  "insightsFinishedSection": "Finished",
+  "@insightsFinishedSection": {
+    "description": "Section label over the finished-books cover strip on Insights"
+  },
+  "insightsClosingWeekUp": "A fuller week than last — the story kept you.",
+  "@insightsClosingWeekUp": {
+    "description": "Week card's closing line when this week has more reading time than last week"
+  },
+  "insightsClosingWeekSteady": "Every sitting this week counted.",
+  "@insightsClosingWeekSteady": {
+    "description": "Week card's closing line when there was some reading this week"
+  },
+  "insightsClosingWeekNone": "A quiet week so far — the book will wait.",
+  "@insightsClosingWeekNone": {
+    "description": "Week card's closing line when no reading has been logged this week"
+  },
+  "insightsClosingMonthDays": "{count, plural, =0{No reading days yet this month — there's still time.} =1{1 reading day this month, and counting.} other{{count} reading days this month, and counting.}}",
+  "@insightsClosingMonthDays": {
+    "description": "Month card's closing line — days with at least one sitting so far this month",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "insightsClosingStretch": "{count, plural, =0{No finishes this stretch — good books take their time.} =1{1 book finished over this stretch — steady wins.} other{{count} books finished over this stretch — steady wins.}}",
+  "@insightsClosingStretch": {
+    "description": "3/6-month card's closing line — books finished in the window",
+    "placeholders": {"count": {"type": "int"}}
+  },
   "@insightsNoSessionToday": {"description": "Daily card's gentle nudge when there is no streak to report"},
   "insightsBooksFinished": "{count, plural, =0{No books finished} =1{1 book finished} other{{count} books finished}}",
   "@insightsBooksFinished": {"description": "Hero figure on the monthly/multi-month cards", "placeholders": {"count": {"type": "int"}}},
@@ -2339,6 +2527,18 @@
       "percent": {"type": "int"}
     }
   },
+  "homeProgressOfTotal": "of {total} pages",
+  "@homeProgressOfTotal": {
+    "description": "Helper text under the current-page field in the home progress dialog",
+    "placeholders": {"total": {"type": "int"}}
+  },
+  "homeProgressTooFar": "This book has {total} pages.",
+  "@homeProgressTooFar": {
+    "description": "Inline error in the home progress dialog when the typed page is past the end",
+    "placeholders": {"total": {"type": "int"}}
+  },
+  "homeProgressInvalid": "Enter a valid page number.",
+  "@homeProgressInvalid": {"description": "Inline error in the home progress dialog for a negative or non-numeric page"},
   "homeProgressLineNoTotal": "p. {page}",
   "@homeProgressLineNoTotal": {
     "description": "Reading progress line on a currently-reading card when the book's total page count isn't known, so no 'of N' or percent/progress bar can be shown",
@@ -2363,6 +2563,8 @@
       "name": {"type": "String"}
     }
   },
+  "homeNudgeView": "View",
+  "@homeNudgeView": {"description": "Labelled action on the home lending nudge, replacing a bare chevron"},
   "homeNudgeNoDue": "{title} is with {name}",
   "@homeNudgeNoDue": {
     "description": "Lending nudge with no due date",
@@ -2373,9 +2575,9 @@
   },
   "searchTitle": "Search",
   "@searchTitle": {"description": "Title/tooltip for the global search entry point"},
-  "catalogSearchSectionAuthors": "AUTHORS",
+  "catalogSearchSectionAuthors": "Authors",
   "@catalogSearchSectionAuthors": {"description": "Section header above author search results"},
-  "catalogSearchSectionPublishers": "PUBLISHERS",
+  "catalogSearchSectionPublishers": "Publishers",
   "@catalogSearchSectionPublishers": {"description": "Section header above publisher search results"},
   "searchAuthorWorks": "{count} {count, plural, one{work} other{works}}",
   "@searchAuthorWorks": {
@@ -2471,7 +2673,7 @@
   "@formFillFromPhotos": {"description": "Button under the cover slots: read title/author/publisher/blurb off the photographed covers and prefill the empty fields"},
   "formScanBackCover": "Scan back cover",
   "@formScanBackCover": {"description": "Button under the cover slots: photograph the book's back cover to read its blurb (description) and type, and prefill the empty fields"},
-  "formSimilarHeader": "Already in the catalog?",
+  "formSimilarHeader": "Already in the catalogue?",
   "@formSimilarHeader": {"description": "Header of the quiet duplicate-suggestions panel under the title field on the add-book form"},
   "formSimilarHelp": "Tap a match to open it instead of adding a copy — or keep typing.",
   "@formSimilarHelp": {"description": "One-line explanation inside the duplicate-suggestions panel"},
@@ -2597,6 +2799,8 @@
   "@addEditionSave": {"description": "Save button on the add-edition screen"},
   "bookEditionsSection": "Editions",
   "@bookEditionsSection": {"description": "Header for the editions list on the book page"},
+  "bookEditionFallback": "Edition",
+  "@bookEditionFallback": {"description": "Fallback row label for an edition with no format, language or ISBN"},
   "bookAddEdition": "Add another edition",
   "@bookAddEdition": {"description": "Button on the book page to add a new edition"},
   "bookEditionAdded": "Edition added",
@@ -2937,5 +3141,85 @@
   "@timerMarkFinishedDone": {"description": "Confirmation after finishing a book from the timer"},
 
   "timerLiveElapsed": "Reading",
-  "@timerLiveElapsed": {"description": "Label above the elapsed time on the iOS Live Activity lock-screen card"}
+  "@timerLiveElapsed": {"description": "Label above the elapsed time on the iOS Live Activity lock-screen card"},
+  "quickAddFailed": "Couldn't add it to your library — try again.",
+  "@quickAddFailed": {"description": "Snackbar when a quick-add from search/browse fails"},
+  "formSaveFailed": "Couldn't save — check your connection and try again.",
+  "@formSaveFailed": {"description": "Snackbar when saving the add/edit form fails"},
+  "formDiscardTitle": "Discard this book?",
+  "@formDiscardTitle": {"description": "Title of the unsaved-changes dialog when leaving the add form"},
+  "formDiscardEditTitle": "Discard your edits?",
+  "@formDiscardEditTitle": {"description": "Title of the unsaved-changes dialog when leaving the edit form"},
+  "formDiscardBody": "Nothing here is saved yet.",
+  "@formDiscardBody": {"description": "Body of the unsaved-changes dialog"},
+  "formDiscardConfirm": "Discard",
+  "@formDiscardConfirm": {"description": "Confirm action on the unsaved-changes dialog"},
+  "formEditReviewBanner": "A shared entry — if another reader contributed this book, your edit goes to them for review.",
+  "@formEditReviewBanner": {"description": "Gold provenance banner at the top of the edit form (M5) — shown before typing; ownership isn't known client-side, so the phrasing covers both cases"},
+  "formSaveHintEdit": "Edits publish to the shared catalogue — another reader's book goes to its contributor for review.",
+  "@formSaveHintEdit": {"description": "Sticky-bar consequence note on the edit path (creates keep formSaveHint)"},
+  "formFormatUnset": "Not set",
+  "@formFormatUnset": {"description": "Placeholder for the nullable Format select when no format is chosen"},
+  "formatPaperback": "Paperback",
+  "@formatPaperback": {"description": "Display label for the Paperback edition format (stored value stays English)"},
+  "formatHardcover": "Hardcover",
+  "@formatHardcover": {"description": "Display label for the Hardcover edition format (stored value stays English)"},
+  "formatEbook": "eBook",
+  "@formatEbook": {"description": "Display label for the eBook edition format (stored value stays English)"},
+  "formatAudiobook": "Audiobook",
+  "@formatAudiobook": {"description": "Display label for the Audiobook edition format (stored value stays English)"},
+  "genreFiction": "Fiction",
+  "@genreFiction": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "genreNonFiction": "Non-fiction",
+  "@genreNonFiction": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "genrePoetry": "Poetry",
+  "@genrePoetry": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "genreHistorical": "Historical",
+  "@genreHistorical": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "genreMystery": "Mystery",
+  "@genreMystery": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "genreRomance": "Romance",
+  "@genreRomance": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "genreFantasy": "Fantasy",
+  "@genreFantasy": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "genreBiography": "Biography",
+  "@genreBiography": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "genreScience": "Science",
+  "@genreScience": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "genreSelfHelp": "Self-help",
+  "@genreSelfHelp": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "addEditionSaveHint": "New editions join the shared catalogue for every reader",
+  "@addEditionSaveHint": {"description": "One-line consequence note under the sticky save bar on the add-edition screen"},
+  "addEditionAdded": "Edition added to {title}",
+  "@addEditionAdded": {
+    "description": "Confirmation snackbar after a new edition is saved",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "addEditionAddedNoTitle": "Edition added",
+  "@addEditionAddedNoTitle": {"description": "Confirmation snackbar after a new edition is saved when the book title is unknown"},
+  "scanLookupFailed": "Couldn't check the catalogue — try again when you're online.",
+  "@scanLookupFailed": {"description": "Scanner message when the ISBN lookup failed for network reasons (distinct from a real not-found)"},
+  "scanAlreadyOnShelf": "Already on your shelf — opening it.",
+  "@scanAlreadyOnShelf": {"description": "Snackbar when a scanned book is already in the library, instead of claiming it was added"},
+  "pickerSearchFailed": "Couldn't search the catalogue — check your connection.",
+  "@pickerSearchFailed": {"description": "Inline error row in the work/author/publisher pickers when a search request fails (never shown as the empty state)"},
+  "pickerSaveAuthorFailed": "Couldn't save the author — try again.",
+  "@pickerSaveAuthorFailed": {"description": "Snackbar when creating a new author from the picker fails"},
+  "pickerSavePublisherFailed": "Couldn't save the publisher — try again.",
+  "@pickerSavePublisherFailed": {"description": "Snackbar when creating a new publisher from the picker fails"},
+  "pickerNone": "None",
+  "@pickerNone": {"description": "Subdued clear row in a single-select chip picker sheet"},
+  "browseFilterAllCount": "All {count}",
+  "@browseFilterAllCount": {
+    "description": "Door chip on the catalogue filter sheet opening the full genre/language picker",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "claimsWithdrawFailed": "Couldn't withdraw the claim — try again.",
+  "@claimsWithdrawFailed": {"description": "Snackbar when withdrawing an author claim fails"},
+  "claimsLoadFailed": "Couldn't load your author claims.",
+  "@claimsLoadFailed": {"description": "Inline error row when the claims list can't be fetched"},
+  "revisionsDecideFailed": "Couldn't save that decision — try again.",
+  "@revisionsDecideFailed": {"description": "Snackbar when approving/rejecting a revision fails"},
+  "commonGoHome": "Go home",
+  "@commonGoHome": {"description": "Escape hatch under a full-screen error when there is nothing to pop back to"}
 }

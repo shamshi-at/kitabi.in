@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../l10n/app_localizations.dart';
+import 'share_logo.dart';
+import 'share_palette.dart';
 
 /// The shareable book card (S6c / S13). Cover, title, author, a star rating
 /// (the user's own when [personalRating] is set, otherwise the catalog
@@ -45,21 +46,24 @@ class BookShareCard extends StatelessWidget {
       width: 320,
       padding: EdgeInsets.fromLTRB(16, 16, 16, 13),
       decoration: BoxDecoration(
-        color: AppColors.paper,
+        color: ShareCardPalette.paper,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold),
+        border: Border.all(color: ShareCardPalette.gold),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l10n.shareEyebrow,
+            // Personal-endorsement mode reads as a recommendation from the
+            // reader, not the app — "From my shelf" over "Share a book".
+            (personalRating != null ? l10n.shareEyebrowPersonal : l10n.shareEyebrow)
+                .toUpperCase(),
             style: TextStyle(
               fontSize: 8,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.6,
-              color: AppColors.oxblood,
+              color: ShareCardPalette.oxblood,
             ),
           ),
           SizedBox(height: 10),
@@ -79,14 +83,14 @@ class BookShareCard extends StatelessWidget {
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
-                          ?.copyWith(color: AppColors.ink, height: 1.2),
+                          ?.copyWith(color: ShareCardPalette.ink, height: 1.2),
                     ),
                     SizedBox(height: 2),
                     Text(
                       author,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                      style: TextStyle(fontSize: 11, color: ShareCardPalette.inkSoft),
                     ),
                     if (rating != null) ...[
                       SizedBox(height: 6),
@@ -111,45 +115,13 @@ class BookShareCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 height: 1.5,
-                color: AppColors.inkSoft,
+                color: ShareCardPalette.inkSoft,
                 fontStyle: showPersonalReview ? FontStyle.italic : FontStyle.normal,
               ),
             ),
           ],
           SizedBox(height: 11),
-          Container(height: 1, color: AppColors.line),
-          SizedBox(height: 9),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: AppColors.oxblood,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Icon(Icons.menu_book, size: 10, color: AppColors.paper),
-                  ),
-                  SizedBox(width: 5),
-                  Text(
-                    'kitabi.in',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.oxblood,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                l10n.shareTagline,
-                style: TextStyle(fontSize: 8, color: AppColors.inkSoft),
-              ),
-            ],
-          ),
+          ShareCardFooter(),
         ],
       ),
     );
@@ -172,10 +144,10 @@ class _Stars extends StatelessWidget {
                 ? Icons.star
                 : (value >= i - 0.5 ? Icons.star_half : Icons.star_border),
             size: 14,
-            color: AppColors.gold,
+            color: ShareCardPalette.gold,
           ),
         SizedBox(width: 5),
-        Text(caption, style: TextStyle(fontSize: 8, color: AppColors.inkSoft)),
+        Text(caption, style: TextStyle(fontSize: 8, color: ShareCardPalette.inkSoft)),
       ],
     );
   }

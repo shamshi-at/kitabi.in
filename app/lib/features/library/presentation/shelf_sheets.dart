@@ -55,8 +55,10 @@ Widget _sheetHeader(BuildContext context, String title, String subtitle) {
 }
 
 /// Name-a-new-shelf dialog; returns the created tag's id (case-insensitively
-/// reusing an existing shelf of the same name), or null if cancelled.
-Future<String?> _promptNewShelf(BuildContext context, WidgetRef ref) async {
+/// reusing an existing shelf of the same name), or null if cancelled. The one
+/// copy — the library grid's shelves wall and both sheets here all open this,
+/// so the capitalization and reuse rules can't drift apart again.
+Future<String?> promptNewShelf(BuildContext context, WidgetRef ref) async {
   final l10n = AppLocalizations.of(context)!;
   final controller = TextEditingController();
   final name = await showDialog<String>(
@@ -105,12 +107,15 @@ class _ShelfPickerSheet extends ConsumerWidget {
   final String entryId;
 
   /// Move the book to [tagId] (exclusively) and close the sheet immediately —
-  /// the mutation runs after the pop, so the tap feels instant.
+  /// the mutation runs after the pop, so the tap feels instant. The success
+  /// haptic fires when the write actually lands, not on the tap.
   void _pick(BuildContext context, WidgetRef ref, String tagId) {
-    Haptics.selection();
     final repoFuture = ref.read(tagsRepositoryProvider.future);
     Navigator.of(context).pop();
-    repoFuture.then((repo) => repo.shelveExclusive(entryId, tagId));
+    repoFuture.then((repo) async {
+      await repo.shelveExclusive(entryId, tagId);
+      Haptics.success();
+    });
   }
 
   @override
@@ -159,7 +164,7 @@ class _ShelfPickerSheet extends ConsumerWidget {
                 style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
               ),
               onTap: () async {
-                final tagId = await _promptNewShelf(context, ref);
+                final tagId = await promptNewShelf(context, ref);
                 if (tagId == null || !context.mounted) return;
                 _pick(context, ref, tagId);
               },
@@ -185,7 +190,7 @@ class _ShelfRow extends StatelessWidget {
       onTap: onTap,
       leading: Icon(
         selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-        color: selected ? AppColors.oxblood : AppColors.line,
+        color: selected ? AppColors.oxblood : AppColors.inkSoft,
       ),
       title: Text(
         name,
@@ -437,13 +442,6 @@ class _AddBooksToShelfSheetState extends ConsumerState<_AddBooksToShelfSheet> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.oxblood,
-                      foregroundColor: AppColors.paper,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                    ),
                     child: Text(l10n.formEditorDone),
                   ),
                 ),

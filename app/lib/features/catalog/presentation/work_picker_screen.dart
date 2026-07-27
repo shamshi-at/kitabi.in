@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/languages.dart';
+import '../../../core/quiet_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/select_sheet.dart';
 import '../../../core/widgets/typeset_cover.dart';
@@ -50,6 +51,10 @@ class _WorkPickerScreenState extends ConsumerState<WorkPickerScreen> {
   String _query = '';
   List<Map<String, dynamic>> _results = [];
   bool _loading = false;
+  // A failed search is an error row with retry, never the empty state — the
+  // empty copy (and the add-original card) invites the duplicate the picker
+  // exists to prevent.
+  bool _errored = false;
 
   @override
   void dispose() {
@@ -70,13 +75,21 @@ class _WorkPickerScreenState extends ConsumerState<WorkPickerScreen> {
   }
 
   Future<void> _fetch(String query) async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _errored = false;
+    });
     try {
       final rows = await ref.read(apiClientProvider).searchCatalog(query);
       if (!mounted || query != _query) return;
       setState(() => _results = rows.where((w) => w['id'] != widget.excludeWorkId).toList());
     } catch (_) {
-      if (mounted) setState(() => _results = []);
+      if (mounted && query == _query) {
+        setState(() {
+          _results = [];
+          _errored = true;
+        });
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -101,7 +114,7 @@ class _WorkPickerScreenState extends ConsumerState<WorkPickerScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final showEmpty = _query.isNotEmpty && !_loading && _results.isEmpty;
+    final showEmpty = _query.isNotEmpty && !_loading && !_errored && _results.isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -151,6 +164,7 @@ class _WorkPickerScreenState extends ConsumerState<WorkPickerScreen> {
                       badges: widget.forOriginal,
                       onTap: () => context.pop(work),
                     ),
+                  if (_errored && !_loading) PickerErrorRow(onRetry: () => _fetch(_query)),
                   if (showEmpty && !widget.forOriginal)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -164,7 +178,7 @@ class _WorkPickerScreenState extends ConsumerState<WorkPickerScreen> {
                   // *common* one for regional translations, so it's a card
                   // with equal weight, not a buried link. Shown as soon as
                   // the reader has typed anything.
-                  if (widget.forOriginal && _query.isNotEmpty && !_loading) ...[
+                  if (widget.forOriginal && _query.isNotEmpty && !_loading && !_errored) ...[
                     const SizedBox(height: 8),
                     _AddOriginalCard(onTap: _addOriginalStub),
                   ],
@@ -251,11 +265,11 @@ class _WorkResultTile extends StatelessWidget {
                 ),
                 child: Text(
                   l10n.workPickerStampOriginal.toUpperCase(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 8.5,
                     fontWeight: FontWeight.w700,
                     letterSpacing: .8,
-                    color: Color(0xFF8F681E),
+                    color: AppColors.goldInk,
                   ),
                 ),
               )
@@ -358,7 +372,9 @@ class _OriginalStubSheetState extends ConsumerState<_OriginalStubSheet> {
   @override
   void initState() {
     super.initState();
-    _title = TextEditingController(text: widget.initialTitle);
+    _title = TextEditingController(text: widget.initialTitle)
+      // Save is disabled while the title is empty — rebuild as it's typed.
+      ..addListener(() => setState(() {}));
     _year = TextEditingController();
     _authors = ((widget.seed?['authors'] as List?) ?? const [])
         .map((a) => Map<String, dynamic>.from(a as Map))
@@ -398,7 +414,7 @@ class _OriginalStubSheetState extends ConsumerState<_OriginalStubSheet> {
     } catch (err) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err')));
+        showQuietError(context, AppLocalizations.of(context)!.formSaveFailed, err);
       }
     }
   }
@@ -434,12 +450,9 @@ class _OriginalStubSheetState extends ConsumerState<_OriginalStubSheet> {
             const SizedBox(height: 12),
             Text(
               l10n.workPickerOriginalTitle,
-              style: TextStyle(
-                fontFamily: 'Fraunces',
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: AppColors.ink,
-              ),
+              // The theme's titleLarge really is Fraunces — a raw
+              // fontFamily literal silently fell back to the default sans.
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 18),
             ),
             const SizedBox(height: 2),
             Text(
@@ -447,9 +460,7 @@ class _OriginalStubSheetState extends ConsumerState<_OriginalStubSheet> {
               style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.4),
             ),
             const SizedBox(height: 14),
-            Text(l10n.stubFieldTitle.toUpperCase(), style: labelStyle),
-            const SizedBox(height: 4),
-            TextField(controller: _title, style: const TextStyle(fontSize: 14)),
+            PickerField(label: l10n.stubFieldTitle.toUpperCase(), controller: _title),
             const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,17 +497,10 @@ class _OriginalStubSheetState extends ConsumerState<_OriginalStubSheet> {
                 const SizedBox(width: 12),
                 SizedBox(
                   width: 90,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.stubFieldYear.toUpperCase(), style: labelStyle),
-                      const SizedBox(height: 4),
-                      TextField(
-                        controller: _year,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ],
+                  child: PickerField(
+                    label: l10n.stubFieldYear.toUpperCase(),
+                    controller: _year,
+                    keyboardType: TextInputType.number,
                   ),
                 ),
               ],
@@ -541,7 +545,7 @@ class _OriginalStubSheetState extends ConsumerState<_OriginalStubSheet> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _saving ? null : _save,
+                onPressed: (_saving || _title.text.trim().isEmpty) ? null : _save,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.oxblood,
                   padding: const EdgeInsets.symmetric(vertical: 12),

@@ -238,6 +238,47 @@ void main() {
     await flushTree(tester);
   });
 
+  testWidgets('emptying the body on Save deletes the review; a second star tap clears the rating',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      final ratings = RatingsRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await ratings.setRating(_workId, 4);
+      final reviews = ReviewsRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await reviews.upsert(_workId, body: 'A sea-salted classic.', visible: false);
+    });
+
+    await tester.pumpWidget(wrapWithRouter('/review/$_workId'));
+    await settle(tester);
+    expect(find.text('A sea-salted classic.'), findsOneWidget);
+
+    // Second tap on the currently-selected 4th star clears the rating.
+    await tester.tap(find.byIcon(Icons.star).at(3));
+    await tester.pump();
+    expect(find.byIcon(Icons.star), findsNothing);
+
+    // Empty the body, then Save — this must DELETE, and say so.
+    await tester.enterText(find.byType(TextField), '');
+    await tester.tap(find.text('Save'));
+    await settle(tester);
+
+    final (rating, review) = await tester.runAsync(() async {
+      return (
+        await db.ratingsDao.watchForWork(_workId).first,
+        await db.reviewsDao.watchForWork(_workId).first,
+      );
+    }) as (Rating?, Review?);
+    expect(review, isNull); // soft-deleted — the active query no longer sees it
+    expect(rating, isNull);
+    expect(find.text('Review deleted'), findsOneWidget);
+    expect(find.text('Review saved'), findsNothing);
+
+    await flushTree(tester);
+  });
+
   testWidgets('review card on the book page opens the dedicated editor', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -277,8 +318,8 @@ void main() {
 
     // This book isn't in the library, so there is no "yours" to tab between —
     // the tab bar is gone and the book introduces itself straight away.
-    expect(find.text('YOURS'), findsNothing);
-    expect(find.text('ABOUT'), findsNothing);
+    expect(find.text('Yours'), findsNothing);
+    expect(find.text('About'), findsNothing);
 
     expect(find.text('ABOUT THIS BOOK'), findsOneWidget);
     expect(find.text('A sea-salted love story of Kuttanad.'), findsOneWidget);
@@ -401,7 +442,8 @@ void main() {
     await tester.tap(find.text('Start a session'));
     await settle(tester);
 
-    expect(find.text('Session in Progress'), findsOneWidget);
+    // Casing applied in code (l10n rule): the arb stays sentence case.
+    expect(find.text('SESSION IN PROGRESS'), findsOneWidget);
     // The book page sits under the pushed timer route and now carries its own
     // "Stop & log" (U5) — the timer's is the later one in the tree.
     await tester.tap(find.text('Stop & log').last);
@@ -449,8 +491,8 @@ void main() {
 
     expect(find.text('Log a reading session'), findsOneWidget);
     await tester.enterText(find.byType(TextField).first, '30');
-    // The page field is pre-filled with the current page (50) — replace it
-    // with the end page for this session.
+    // The page field starts EMPTY (the current page is its hint) — an
+    // untouched save must not log a zero-page sitting. Type the end page.
     await tester.enterText(find.byType(TextField).at(1), '78');
     await settle(tester);
 
@@ -534,7 +576,7 @@ void main() {
     final bodyTop = tester.getTopLeft(find.text('No review yet — tap to write one.')).dy;
     expect(ratingTop, lessThan(bodyTop));
 
-    await tester.tap(find.text('ABOUT'));
+    await tester.tap(find.text('About'));
     await settle(tester);
 
     // The rating-distribution column must fit its 5-star row without

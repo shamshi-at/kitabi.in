@@ -40,12 +40,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signInQuote1 => 'A reader lives a thousand lives before he dies.';
 
   @override
+  String get signInQuote1Author => 'George R.R. Martin';
+
+  @override
   String get signInQuote2 =>
       'I have always imagined that Paradise will be a kind of library.';
 
   @override
+  String get signInQuote2Author => 'Jorge Luis Borges';
+
+  @override
   String get signInQuote3 =>
-      'Ein Buch muss die Axt sein für das gefrorene Meer in uns.';
+      'A book must be the axe for the frozen sea within us.';
+
+  @override
+  String get signInQuote3Author => 'Franz Kafka';
+
+  @override
+  String get quoteTapForNew => 'Tap for a new one';
 
   @override
   String get signInGoogle => 'Continue with Google';
@@ -62,7 +74,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileVisibilityHeader =>
-      'VISIBILITY · everything starts private';
+      'Visibility · everything starts private';
 
   @override
   String get visibilityPublic => 'Public';
@@ -102,6 +114,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileViewPublicEntry => 'View my public profile';
 
   @override
+  String get signOutConfirmTitle => 'Sign out?';
+
+  @override
+  String get signOutConfirmBody =>
+      'Your library stays on this device and picks up where you left off when you sign back in.';
+
+  @override
   String get profileSignOut => 'Sign out';
 
   @override
@@ -112,6 +131,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'This deletes your Kitabi account and library. This can\'t be undone.';
 
   @override
+  String profileBooksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books',
+      one: '1 book',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String profileReadingSince(int year) {
     return 'Reading since $year';
   }
@@ -120,11 +150,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get catalogSearchHint => 'Title, author, or ISBN';
 
   @override
-  String get catalogSearchSectionCatalog => 'IN THE CATALOG';
+  String get catalogSearchSectionCatalog => 'In the catalogue';
 
   @override
   String catalogSearchSectionLibrary(int count) {
-    return 'IN YOUR LIBRARY · $count';
+    return 'In your library · $count';
   }
 
   @override
@@ -155,7 +185,7 @@ class AppLocalizationsEn extends AppLocalizations {
       other: 'works',
       one: 'work',
     );
-    return '$count $_temp0 in the catalog';
+    return '$count $_temp0 in the catalogue';
   }
 
   @override
@@ -207,7 +237,7 @@ class AppLocalizationsEn extends AppLocalizations {
       other: 'titles',
       one: 'title',
     );
-    return '$count $_temp0 in the catalog';
+    return '$count $_temp0 in the catalogue';
   }
 
   @override
@@ -229,7 +259,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scanCameraUnavailable =>
-      'Camera unavailable — you can search the catalog or add the book manually below.';
+      'Camera unavailable — you can search the catalogue or add the book manually below.';
 
   @override
   String get scanCameraUnavailableShort =>
@@ -251,7 +281,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formTitleEdit => 'Edit book';
 
   @override
-  String get formSubtitle => 'catalog entry · shared';
+  String get formSubtitle => 'catalogue entry · shared';
 
   @override
   String get formFieldTitle => 'TITLE';
@@ -275,6 +305,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get langPickerSubtitle =>
       'Pick one or more. We\'ll list these first when you add a book — you can change them anytime in your profile.';
+
+  @override
+  String get langPickerSaveError => 'Couldn\'t save — try again.';
+
+  @override
+  String get langPickerPickOne => 'Pick at least one';
 
   @override
   String get langPickerContinue => 'Continue';
@@ -320,7 +356,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get formCaptureHelp =>
-      'Either one fills the form — everything stays editable. Or just type:';
+      'Either one fills the form, or just type — everything stays editable.';
 
   @override
   String get formFieldType => 'TYPE · PICK ONE';
@@ -360,10 +396,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get formSaveHint =>
-      'Saved books join the shared catalog for every reader';
+      'Saved books join the shared catalogue for every reader';
 
   @override
-  String get formSave => 'Save to catalog';
+  String get formSave => 'Save to catalogue';
 
   @override
   String get formTitleRequired => 'Title is required';
@@ -434,9 +470,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookWhereItStands => 'WHERE IT STANDS';
-
-  @override
-  String get bookStatusHint => 'Four states, one tap each.';
 
   @override
   String get bookStartReading => 'Start reading';
@@ -622,6 +655,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewSaved => 'Review saved';
 
   @override
+  String get reviewDeleted => 'Review deleted';
+
+  @override
+  String get ratingSaved => 'Rating saved';
+
+  @override
+  String get ratingCleared => 'Rating cleared';
+
+  @override
   String get reviewFinishedTitle => 'You finished it!';
 
   @override
@@ -647,7 +689,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coverBackLabel => 'Back cover';
 
   @override
-  String get createdDialogTitle => 'Added to the catalog';
+  String get coverReturnedStamp => 'Returned';
+
+  @override
+  String coverLentBand(String name) {
+    return 'With $name';
+  }
+
+  @override
+  String coverBorrowedBand(String name) {
+    return 'From $name';
+  }
+
+  @override
+  String get createdDialogTitle => 'Added to the catalogue';
 
   @override
   String get createdAddToLibrary => 'Add to library';
@@ -775,6 +830,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get linkContactNoResults => 'No matching readers.';
+
+  @override
+  String linkContactConfirm(int count, String handle) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Link $count loans to $handle?',
+      one: 'Link 1 loan to $handle?',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get linkContactDone => 'Linked — connection request sent.';
@@ -1244,7 +1310,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookRemoveConfirm =>
-      'Remove this book from your library? Your rating and review stay on the shared catalog entry, but this copy, its reading progress, and its notes are gone.';
+      'Remove this book from your library? Your rating and review stay on the shared catalogue entry, but this copy, its reading progress, and its notes are gone.';
 
   @override
   String get bookTagsLabel => 'SHELVES · yours only';
@@ -1274,6 +1340,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookShelfRemove => 'Remove';
 
   @override
+  String bookShelfRemoved(String shelf) {
+    return 'Taken off $shelf';
+  }
+
+  @override
   String get bookShelfEmptyTitle => 'Not on a shelf yet';
 
   @override
@@ -1292,10 +1363,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookNewTagHint => 'e.g. beach reads';
 
   @override
-  String get shelfPickerTitle => 'Add to a shelf';
+  String get shelfPickerTitle => 'Choose a shelf';
 
   @override
-  String get shelfPickerHint => 'Tap a shelf to add or remove this book';
+  String get shelfPickerHint =>
+      'One shelf per book — picking a shelf moves it here.';
 
   @override
   String get shelfPickerEmpty => 'No shelves yet — create your first below.';
@@ -1316,7 +1388,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get libraryAddBooksHint => 'Tap a book to shelve or unshelve it';
+  String get libraryAddBooksHint =>
+      'Tap a book to move it here — off any other shelf — or take it off this one.';
 
   @override
   String get libraryAddBooksEmpty =>
@@ -1419,7 +1492,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String lendingDueInDays(int days) {
-    return 'Due in ${days}d';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Due in ${days}d',
+      zero: 'Due today',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1530,10 +1609,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lendingBorrowedEmpty => 'Nothing borrowed yet.';
 
   @override
-  String get lendingLogBorrowed => '+ Log a borrowed book';
+  String get lendingLendBook => 'Lend a book';
 
   @override
-  String get lendingLendBook => 'Lend a book';
+  String get lendingLogBorrowedFab => 'Log a borrowed book';
+
+  @override
+  String get lendingReturnedSnack => 'Marked as returned.';
+
+  @override
+  String get undoAction => 'Undo';
+
+  @override
+  String get lendingDueHelper => 'A due date sets a quiet reminder.';
+
+  @override
+  String get lendingNoteLabel => 'Note · optional';
+
+  @override
+  String get lendingNoDate => 'Pick a date';
+
+  @override
+  String get lendingSaveFailed => 'Couldn\'t save the loan.';
+
+  @override
+  String get lendingSearchOffline =>
+      'Search is offline — you can still add the book to the catalogue.';
+
+  @override
+  String lendingPickNoMatch(String query) {
+    return 'Nothing matching “$query”.';
+  }
 
   @override
   String get connectionsTitle => 'Connections';
@@ -1600,6 +1706,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionsDisconnect => 'Disconnect';
 
   @override
+  String connectionsDisconnectConfirm(String name) {
+    return 'Disconnect from $name? The loans on your ledger stay put.';
+  }
+
+  @override
+  String get connectionsActionFailed => 'That didn\'t go through — try again.';
+
+  @override
+  String get connectionLoanOut => 'Out';
+
+  @override
   String get connectionsTooltip => 'Connection requests';
 
   @override
@@ -1617,12 +1734,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String logBorrowedAddNew(String title) {
-    return '＋ Add \"$title\" to the catalog';
+    return '＋ Add \"$title\" to the catalogue';
   }
 
   @override
   String get logBorrowedNotFound =>
-      'Not in the catalog yet? Add it — you\'ll come right back here.';
+      'Not in the catalogue yet? Add it — you\'ll come right back here.';
 
   @override
   String get logBorrowedTitle => 'Log a borrowed book';
@@ -1646,13 +1763,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logBorrowedRemindLabel => 'Remind me · optional';
 
   @override
-  String get logBorrowedNoteLabel => 'Note · optional';
-
-  @override
   String get logBorrowedSave => 'Save to my borrowed shelf';
-
-  @override
-  String get logBorrowedNoDate => 'Pick a date';
 
   @override
   String get lendSheetTitlePrefix => 'Lend';
@@ -1731,7 +1842,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navAdd => 'Add';
 
   @override
-  String get welcomeTitle1 => 'Beyond the bookshelf';
+  String get welcomeTitle1 => 'Beyond the Bookshelf';
 
   @override
   String get welcomeBody1 =>
@@ -1764,8 +1875,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateTitle => 'Time to update';
 
   @override
-  String get updateBody =>
+  String get updateBodyAppStore =>
       'This version of Kitabi is out of date. Please update from the App Store to keep going.';
+
+  @override
+  String get updateBodyPlayStore =>
+      'This version of Kitabi is out of date. Please update from Google Play to keep going.';
+
+  @override
+  String get updateTryAgain => 'Try again';
 
   @override
   String get importTitle => 'Import books';
@@ -1788,7 +1906,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String importMatched(int matched, int total) {
-    return '$matched of $total matched to the catalog';
+    return '$matched of $total matched to the catalogue';
   }
 
   @override
@@ -1820,6 +1938,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importEmpty => 'No book rows found in that file.';
 
   @override
+  String get importStartOver => 'Start over';
+
+  @override
+  String get importParseFailed =>
+      'Couldn\'t read that CSV — is it a Goodreads export?';
+
+  @override
+  String get importFailed => 'Couldn\'t finish the import — try again.';
+
+  @override
+  String importUnmatchedCount(int skipped, int total) {
+    return '$skipped of $total couldn\'t be matched and will be skipped.';
+  }
+
+  @override
+  String get importCsvHint => 'Title,Author,ISBN,My Rating,Exclusive Shelf…';
+
+  @override
+  String importDoneWithSkipped(int count, int skipped) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'books',
+      one: 'book',
+    );
+    return 'Imported $count $_temp0 ($skipped already in your library)';
+  }
+
+  @override
   String get importEntry => 'Import from Goodreads / CSV';
 
   @override
@@ -1842,7 +1989,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'A handle so friends can find you to lend books.';
 
   @override
-  String get profileScoreHeader => 'REPUTATION';
+  String get profileScoreHeader => 'Reputation';
+
+  @override
+  String get reputationEmpty => 'Add your first book to start earning.';
 
   @override
   String profileScorePoints(int count) {
@@ -1936,13 +2086,47 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String activityAddedBookTitled(String title) {
+    return 'Added $title';
+  }
+
+  @override
+  String activityFinishedBookTitled(String title) {
+    return 'Finished $title';
+  }
+
+  @override
+  String activityRatedBookTitled(String title) {
+    return 'Rated $title';
+  }
+
+  @override
+  String activityWroteReviewTitled(String title) {
+    return 'Reviewed $title';
+  }
+
+  @override
+  String activityLentBookTitled(String title) {
+    return 'Lent $title';
+  }
+
+  @override
+  String get activityGeneric => 'Activity';
+
+  @override
+  String get activityEmptyTitle => 'Nothing yet';
+
+  @override
   String get shareEyebrow => 'SHARE A BOOK';
+
+  @override
+  String get shareEyebrowPersonal => 'From my shelf';
 
   @override
   String get shareYourRating => 'your rating';
 
   @override
-  String get shareCatalogAvg => 'catalog avg';
+  String get shareCatalogAvg => 'catalogue avg';
 
   @override
   String get shareTagline => 'beyond the bookshelf';
@@ -1987,7 +2171,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timerStart => 'Start';
 
   @override
-  String get timerInProgress => 'Session in Progress';
+  String get timerInProgress => 'Session in progress';
+
+  @override
+  String get timerMinimizeHint => 'Keep reading — the timer stays on';
 
   @override
   String get timerElapsed => 'elapsed';
@@ -2037,6 +2224,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timerDone => 'Done';
+
+  @override
+  String get timerDoneKeepsPage =>
+      'Done keeps the page — clear the field to keep only the time.';
 
   @override
   String get timerRecentSessions => 'Recent sessions';
@@ -2174,6 +2365,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noteSaveChanges => 'Save changes';
 
   @override
+  String get noteSave => 'Save note';
+
+  @override
   String get noteTimerNeverPaused =>
       'Saved to this book only you can read. The timer never paused.';
 
@@ -2221,7 +2415,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String notesSummary(int notes, int sittings) {
-    return '$notes notes across $sittings sittings';
+    String _temp0 = intl.Intl.pluralLogic(
+      notes,
+      locale: localeName,
+      other: '$notes notes',
+      one: '1 note',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      sittings,
+      locale: localeName,
+      other: '$sittings sittings',
+      one: '1 sitting',
+    );
+    return '$_temp0 across $_temp1';
   }
 
   @override
@@ -2252,7 +2458,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String stopSkipNotesSafe(int n) {
-    return 'Skip — your $n notes are already saved';
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'your $n notes are already saved',
+      one: 'your note is already saved',
+    );
+    return 'Skip — $_temp0';
+  }
+
+  @override
+  String stopSkipNotesAndPage(int n, int page) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'your $n notes are saved',
+      one: 'your note is saved',
+    );
+    return 'Skip — $_temp0; the page stays at $page';
   }
 
   @override
@@ -2260,6 +2483,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stopPageUnit => 'page';
+
+  @override
+  String get stopHoldForTen => 'hold − / + for 10';
 
   @override
   String get stopSessionLogged => 'Session logged';
@@ -2367,6 +2593,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recsWishlist => '+ Wishlist';
+
+  @override
+  String get recsWishlistedSnack => 'Added to your wishlist';
+
+  @override
+  String get recsDismissedSnack => 'Okay, noted';
 
   @override
   String get recsNotForMe => 'Not for me';
@@ -2542,6 +2774,47 @@ class AppLocalizationsEn extends AppLocalizations {
       'No sitting yet today — even a few pages count.';
 
   @override
+  String get insightsLast7Days => 'Last 7 days';
+
+  @override
+  String get insightsFinishedSection => 'Finished';
+
+  @override
+  String get insightsClosingWeekUp =>
+      'A fuller week than last — the story kept you.';
+
+  @override
+  String get insightsClosingWeekSteady => 'Every sitting this week counted.';
+
+  @override
+  String get insightsClosingWeekNone =>
+      'A quiet week so far — the book will wait.';
+
+  @override
+  String insightsClosingMonthDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reading days this month, and counting.',
+      one: '1 reading day this month, and counting.',
+      zero: 'No reading days yet this month — there\'s still time.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightsClosingStretch(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books finished over this stretch — steady wins.',
+      one: '1 book finished over this stretch — steady wins.',
+      zero: 'No finishes this stretch — good books take their time.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String insightsBooksFinished(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2611,6 +2884,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String homeProgressOfTotal(int total) {
+    return 'of $total pages';
+  }
+
+  @override
+  String homeProgressTooFar(int total) {
+    return 'This book has $total pages.';
+  }
+
+  @override
+  String get homeProgressInvalid => 'Enter a valid page number.';
+
+  @override
   String homeProgressLineNoTotal(int page) {
     return 'p. $page';
   }
@@ -2626,6 +2912,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get homeNudgeView => 'View';
+
+  @override
   String homeNudgeNoDue(String title, String name) {
     return '$title is with $name';
   }
@@ -2634,10 +2923,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchTitle => 'Search';
 
   @override
-  String get catalogSearchSectionAuthors => 'AUTHORS';
+  String get catalogSearchSectionAuthors => 'Authors';
 
   @override
-  String get catalogSearchSectionPublishers => 'PUBLISHERS';
+  String get catalogSearchSectionPublishers => 'Publishers';
 
   @override
   String searchAuthorWorks(int count) {
@@ -2790,7 +3079,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formScanBackCover => 'Scan back cover';
 
   @override
-  String get formSimilarHeader => 'Already in the catalog?';
+  String get formSimilarHeader => 'Already in the catalogue?';
 
   @override
   String get formSimilarHelp =>
@@ -2953,6 +3242,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookEditionsSection => 'Editions';
+
+  @override
+  String get bookEditionFallback => 'Edition';
 
   @override
   String get bookAddEdition => 'Add another edition';
@@ -3457,4 +3749,128 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timerLiveElapsed => 'Reading';
+
+  @override
+  String get quickAddFailed => 'Couldn\'t add it to your library — try again.';
+
+  @override
+  String get formSaveFailed =>
+      'Couldn\'t save — check your connection and try again.';
+
+  @override
+  String get formDiscardTitle => 'Discard this book?';
+
+  @override
+  String get formDiscardEditTitle => 'Discard your edits?';
+
+  @override
+  String get formDiscardBody => 'Nothing here is saved yet.';
+
+  @override
+  String get formDiscardConfirm => 'Discard';
+
+  @override
+  String get formEditReviewBanner =>
+      'A shared entry — if another reader contributed this book, your edit goes to them for review.';
+
+  @override
+  String get formSaveHintEdit =>
+      'Edits publish to the shared catalogue — another reader\'s book goes to its contributor for review.';
+
+  @override
+  String get formFormatUnset => 'Not set';
+
+  @override
+  String get formatPaperback => 'Paperback';
+
+  @override
+  String get formatHardcover => 'Hardcover';
+
+  @override
+  String get formatEbook => 'eBook';
+
+  @override
+  String get formatAudiobook => 'Audiobook';
+
+  @override
+  String get genreFiction => 'Fiction';
+
+  @override
+  String get genreNonFiction => 'Non-fiction';
+
+  @override
+  String get genrePoetry => 'Poetry';
+
+  @override
+  String get genreHistorical => 'Historical';
+
+  @override
+  String get genreMystery => 'Mystery';
+
+  @override
+  String get genreRomance => 'Romance';
+
+  @override
+  String get genreFantasy => 'Fantasy';
+
+  @override
+  String get genreBiography => 'Biography';
+
+  @override
+  String get genreScience => 'Science';
+
+  @override
+  String get genreSelfHelp => 'Self-help';
+
+  @override
+  String get addEditionSaveHint =>
+      'New editions join the shared catalogue for every reader';
+
+  @override
+  String addEditionAdded(String title) {
+    return 'Edition added to $title';
+  }
+
+  @override
+  String get addEditionAddedNoTitle => 'Edition added';
+
+  @override
+  String get scanLookupFailed =>
+      'Couldn\'t check the catalogue — try again when you\'re online.';
+
+  @override
+  String get scanAlreadyOnShelf => 'Already on your shelf — opening it.';
+
+  @override
+  String get pickerSearchFailed =>
+      'Couldn\'t search the catalogue — check your connection.';
+
+  @override
+  String get pickerSaveAuthorFailed => 'Couldn\'t save the author — try again.';
+
+  @override
+  String get pickerSavePublisherFailed =>
+      'Couldn\'t save the publisher — try again.';
+
+  @override
+  String get pickerNone => 'None';
+
+  @override
+  String browseFilterAllCount(int count) {
+    return 'All $count';
+  }
+
+  @override
+  String get claimsWithdrawFailed =>
+      'Couldn\'t withdraw the claim — try again.';
+
+  @override
+  String get claimsLoadFailed => 'Couldn\'t load your author claims.';
+
+  @override
+  String get revisionsDecideFailed =>
+      'Couldn\'t save that decision — try again.';
+
+  @override
+  String get commonGoHome => 'Go home';
 }

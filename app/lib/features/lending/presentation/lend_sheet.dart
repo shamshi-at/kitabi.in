@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/quiet_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
@@ -79,38 +80,46 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context)!;
     final borrower = _borrower.text.trim();
-    final repo = await ref.read(lendingRepositoryProvider.future);
-    final id = await repo.lendOut(
-      widget.libraryEntryId,
-      borrowerName: borrower,
-      borrowerUserId: _borrowerUserId,
-      lentDate: _lentOn,
-      dueDate: _dueOn,
-      note: _note.text,
-    );
-    // When lending to a Kitabi user, send (or auto-accept) a connection request
-    // so the link becomes mutually confirmed. Best-effort: an offline failure
-    // doesn't block the lend — the record keeps the borrower's id and the
-    // request can go out again later.
-    final borrowerUserId = _borrowerUserId;
-    if (borrowerUserId != null) {
-      try {
-        await ref.read(apiClientProvider).requestConnection(borrowerUserId);
-        ref.invalidate(connectionsProvider);
-      } catch (_) {
-        // ignore — link stays pending on the record
+    try {
+      final repo = await ref.read(lendingRepositoryProvider.future);
+      final id = await repo.lendOut(
+        widget.libraryEntryId,
+        borrowerName: borrower,
+        borrowerUserId: _borrowerUserId,
+        lentDate: _lentOn,
+        dueDate: _dueOn,
+        note: _note.text,
+      );
+      // When lending to a Kitabi user, send (or auto-accept) a connection
+      // request so the link becomes mutually confirmed. Best-effort: an
+      // offline failure doesn't block the lend — the record keeps the
+      // borrower's id and the request can go out again later.
+      final borrowerUserId = _borrowerUserId;
+      if (borrowerUserId != null) {
+        try {
+          await ref.read(apiClientProvider).requestConnection(borrowerUserId);
+          ref.invalidate(connectionsProvider);
+        } catch (_) {
+          // ignore — link stays pending on the record
+        }
       }
+      final due = _dueOn;
+      if (due != null) {
+        await ref.read(notificationServiceProvider).scheduleReminder(
+              id: reminderIdForRecord(id),
+              title: l10n.reminderLentTitle,
+              body: l10n.reminderLentBody(widget.bookTitle, borrower),
+              when: reminderTimeFor(due),
+            );
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (err) {
+      // A throw must not brick the button (busy-flag-without-try/finally
+      // pattern, ux-review 2026-07-28).
+      if (mounted) showQuietError(context, l10n.lendingSaveFailed, err);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-    final due = _dueOn;
-    if (due != null) {
-      await ref.read(notificationServiceProvider).scheduleReminder(
-            id: reminderIdForRecord(id),
-            title: l10n.reminderLentTitle,
-            body: l10n.reminderLentBody(widget.bookTitle, borrower),
-            when: reminderTimeFor(due),
-          );
-    }
-    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _pickLentOn() async {
@@ -212,16 +221,23 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
                 Expanded(
                   child: SheetDateField(
                     label: l10n.lendSheetDueLabel,
-                    value: _dueOn == null ? l10n.logBorrowedNoDate : fmtLendingDate(_dueOn!),
+                    value: _dueOn == null ? l10n.lendingNoDate : fmtLendingDate(_dueOn!),
                     onTap: _pickDueOn,
                   ),
                 ),
               ],
             ),
+            SizedBox(height: 5),
+            // Say what a due date actually does — it quietly schedules a
+            // reminder notification (undisclosed side effects read as spooky).
+            Text(
+              l10n.lendingDueHelper,
+              style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.3),
+            ),
             SizedBox(height: 12),
-            SheetLabel(l10n.logBorrowedNoteLabel),
+            SheetLabel(l10n.lendingNoteLabel),
             TextField(
-              textCapitalization: TextCapitalization.words,
+              textCapitalization: TextCapitalization.sentences,
               controller: _note,
               maxLines: 2,
               decoration: sheetInputDecoration(''),

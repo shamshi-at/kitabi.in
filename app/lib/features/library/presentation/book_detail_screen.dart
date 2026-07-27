@@ -37,6 +37,8 @@ import '../reading_status.dart';
 import '../session_pages.dart';
 import '../stop_session_flow.dart';
 import 'note_page.dart';
+import 'session_log_row.dart';
+import 'session_page_entry.dart';
 import '../mark_finished.dart';
 import '../providers/library_providers.dart';
 import '../providers/reading_timer_providers.dart';
@@ -187,8 +189,11 @@ class _BookDetailBodyState extends ConsumerState<_BookDetailBody> {
                 padding: EdgeInsets.fromLTRB(13, 0, 13, 24),
                 child: switch (_tab) {
                   _BookTab.yours => entry.when(
-                      loading: () => Center(child: CircularProgressIndicator()),
-                      error: (err, _) => Center(child: Text('$err')),
+                      loading: () =>
+                          Center(child: CircularProgressIndicator(color: AppColors.gold)),
+                      error: (_, _) => ErrorRetry(
+                        onRetry: () => ref.invalidate(libraryEntryProvider(editionId)),
+                      ),
                       // Non-null by construction here: a null entry is the
                       // `unowned` branch above.
                       data: (libraryEntry) => libraryEntry == null
@@ -219,8 +224,9 @@ class _BookDetailBodyState extends ConsumerState<_BookDetailBody> {
   }
 }
 
-/// Segmented Yours/About tabs — same visual language as the lending ledger's
-/// and the reader-profile's own segmented controls.
+/// Segmented Yours/About tabs — the same solid-oxblood pill control the
+/// library grid's Shelves|All books toggle uses, so the app has one segmented
+/// vocabulary rather than a second underline dialect.
 class _TabBar extends StatelessWidget {
   const _TabBar({required this.selected, required this.onChanged});
 
@@ -230,29 +236,24 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    Widget tab(_BookTab t, String label) {
+    Widget half(_BookTab t, String label) {
       final active = t == selected;
       return Expanded(
-        child: InkWell(
-          onTap: () => onChanged(t),
+        child: GestureDetector(
+          onTap: active ? null : () => onChanged(t),
           child: Container(
-            padding: EdgeInsets.symmetric(vertical: 9),
+            padding: EdgeInsets.symmetric(vertical: 7),
             decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: active ? AppColors.oxblood : AppColors.line,
-                  width: active ? 2 : 1,
-                ),
-              ),
+              color: active ? AppColors.oxblood : Colors.transparent,
+              borderRadius: BorderRadius.circular(99),
             ),
             child: Text(
-              label.toUpperCase(),
+              label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.1,
-                color: active ? AppColors.oxblood : AppColors.inkSoft,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: active ? AppColors.paper : AppColors.inkSoft,
               ),
             ),
           ),
@@ -260,11 +261,19 @@ class _TabBar extends StatelessWidget {
       );
     }
 
-    return Row(
-      children: [
-        tab(_BookTab.yours, l10n.bookYoursTab),
-        tab(_BookTab.about, l10n.bookAboutTab),
-      ],
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: AppColors.line),
+      ),
+      padding: EdgeInsets.all(3),
+      child: Row(
+        children: [
+          half(_BookTab.yours, l10n.bookYoursTab),
+          half(_BookTab.about, l10n.bookAboutTab),
+        ],
+      ),
     );
   }
 }
@@ -540,7 +549,11 @@ class _Frontispiece extends ConsumerWidget {
                                       l10n.bookReviewsCount(ratingCount),
                                       style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
                                     ),
-                                    Icon(Icons.chevron_right, size: 14, color: AppColors.inkSoft),
+                                    // Only tappable rows earn a chevron — on
+                                    // an unowned book this cluster is plain text.
+                                    if (onTapRating != null)
+                                      Icon(Icons.chevron_right,
+                                          size: 14, color: AppColors.inkSoft),
                                   ],
                                 ),
                               ),
@@ -568,7 +581,9 @@ class _Frontispiece extends ConsumerWidget {
   }
 }
 
-/// Read-only star row for an aggregate (community) rating.
+/// Read-only star row for an aggregate (community) rating. Fractional
+/// averages render a half star rather than rounding 3.5 up to 4 — the row
+/// must agree with the numeral printed beside it.
 class _Stars extends StatelessWidget {
   const _Stars({required this.value});
 
@@ -576,12 +591,17 @@ class _Stars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rounded = value.round();
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 1; i <= 5; i++)
-          Icon(i <= rounded ? Icons.star : Icons.star_border, size: 14, color: AppColors.gold),
+          Icon(
+            value >= i - 0.25
+                ? Icons.star
+                : (value >= i - 0.75 ? Icons.star_half : Icons.star_border),
+            size: 14,
+            color: AppColors.gold,
+          ),
       ],
     );
   }
@@ -759,7 +779,9 @@ class _EditionRow extends StatelessWidget {
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                parts.isEmpty ? 'Edition' : parts.join(' · '),
+                parts.isEmpty
+                    ? AppLocalizations.of(context)!.bookEditionFallback
+                    : parts.join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1227,6 +1249,7 @@ class _RatingRow extends ConsumerWidget {
       children: [
         for (var i = 1; i <= 5; i++)
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () async {
               Haptics.selection();
               final repo = await ref.read(ratingsRepositoryProvider.future);
@@ -1239,13 +1262,18 @@ class _RatingRow extends ConsumerWidget {
               await ref.read(syncNowProvider)();
               ref.invalidate(publicReviewsProvider(workId));
             },
-            child: Icon(
-              i <= value ? Icons.star : Icons.star_border,
-              size: 16,
-              color: AppColors.gold,
+            // 40×40 target around the 16px glyph — the stars are the card's
+            // real controls and were the page's smallest tap surface.
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Icon(
+                i <= value ? Icons.star : Icons.star_border,
+                size: 16,
+                color: AppColors.gold,
+              ),
             ),
           ),
-        SizedBox(width: 6),
+        SizedBox(width: 2),
         Text(l10n.bookYourRating, style: TextStyle(color: AppColors.inkSoft, fontSize: 10)),
       ],
     );
@@ -1431,9 +1459,26 @@ class _LibraryEntryMenu extends ConsumerWidget {
             ref.invalidate(libraryEntryProvider(editionId));
           },
         ),
-        IconButton(
-          icon: Icon(Icons.delete_outline, color: AppColors.inkSoft),
-          onPressed: () => _confirmRemove(context, ref, current.id),
+        // Removal is rare and destructive — it lives in the overflow, not as
+        // a permanent trash can beside share/favourite.
+        PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert, color: AppColors.inkSoft),
+          onSelected: (_) => _confirmRemove(context, ref, current.id),
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: 'remove',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_outline, size: 18, color: AppColors.oxbloodDeep),
+                  SizedBox(width: 10),
+                  Text(
+                    l10n.bookRemoveFromLibrary,
+                    style: TextStyle(color: AppColors.oxbloodDeep),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -1711,10 +1756,12 @@ class _AboutTabContent extends StatelessWidget {
                   runSpacing: 4,
                   children: [
                     for (final genre in genres)
+                      // Tints, not outlines (screen-design.md) — a filled
+                      // paperDeep chip, no border.
                       Chip(
                         label: Text(genre['name'] as String, style: TextStyle(fontSize: 10)),
-                        backgroundColor: AppColors.card,
-                        side: BorderSide(color: AppColors.line),
+                        backgroundColor: AppColors.paperDeep,
+                        side: BorderSide.none,
                         visualDensity: VisualDensity.compact,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
@@ -2268,11 +2315,6 @@ class _ReadingCard extends ConsumerWidget {
               ],
             ],
           ),
-          SizedBox(height: 6),
-          Center(
-            child: Text(l10n.bookStatusHint,
-                style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft)),
-          ),
           SizedBox(height: 13),
           Container(height: 1, color: AppColors.line),
           SizedBox(height: 13),
@@ -2541,8 +2583,14 @@ class _ReadingLogSheet extends ConsumerWidget {
                   fontSize: 8.5, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: AppColors.inkSoft)),
         ));
       }
-      out.add(_LogRow(
+      out.add(SessionLogRow(
         session: s,
+        primary: formatSessionSpan(
+          context,
+          l10n,
+          startedAt: s.startedAt,
+          endedAt: s.endedAt,
+        ),
         onDelete: () async {
           Haptics.selection();
           final messenger = ScaffoldMessenger.of(context);
@@ -2556,90 +2604,8 @@ class _ReadingLogSheet extends ConsumerWidget {
   }
 }
 
-/// One sitting in the log: the clock span it covered and the pages it moved
-/// through on the left, its length and the pages it gained on the right, and a
-/// delete for the stray micro-sessions.
-///
-/// The gain stacks under the duration rather than taking a fourth column of its
-/// own (as the mockup's narrower row does) — it mirrors the left column's two
-/// lines and costs no width, which the row hasn't got to spare now that the
-/// time is a span rather than a single clock reading.
-class _LogRow extends StatelessWidget {
-  const _LogRow({required this.session, required this.onDelete});
-
-  final ReadingSession session;
-  final Future<void> Function() onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final time = formatSessionSpan(
-      context,
-      l10n,
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-    );
-    final ps = session.pageStart;
-    final pe = session.pageEnd;
-    final pages = (ps != null && pe != null && pe > ps) ? l10n.bookLogPages(ps, pe) : l10n.bookLogNoPages;
-    final gained = sessionPagesRead(session);
-
-    return Container(
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.line))),
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(
-        children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(color: AppColors.goldSoft, shape: BoxShape.circle),
-            child: Icon(Icons.timelapse, size: 15, color: AppColors.gold),
-          ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(time, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.ink)),
-                Text(pages, style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                formatDuration(Duration(seconds: session.durationSeconds)),
-                style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.oxblood,
-                    fontFeatures: const [FontFeature.tabularFigures()]),
-              ),
-              if (gained != null)
-                Semantics(
-                  label: l10n.bookLogPagesReadA11y(gained),
-                  child: ExcludeSemantics(
-                    child: Text(
-                      l10n.bookLogPagesRead(gained),
-                      style: TextStyle(
-                          fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.moss,
-                          fontFeatures: const [FontFeature.tabularFigures()]),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          SizedBox(width: 2),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.delete_outline, size: 18, color: AppColors.inkSoft),
-            tooltip: l10n.bookLogDelete,
-            onPressed: onDelete,
-          ),
-        ],
-      ),
-    );
-  }
-}
+// One sitting in the log: [SessionLogRow], shared with the stop surfaces'
+// sittings log so the two anatomies can't drift.
 
 /// Minutes read per day across the last week — today in oxblood, the rest gold.
 class _WeekSparkline extends StatelessWidget {
@@ -2671,10 +2637,14 @@ class _WeekSparkline extends StatelessWidget {
               for (final (i, s) in secs.indexed)
                 Expanded(
                   child: Container(
-                    height: (s / maxSec * 32).clamp(3.0, 32.0),
+                    // A day with no reading is a 2px paperDeep tick, not a
+                    // 3px data bar pretending something happened.
+                    height: s == 0 ? 2.0 : (s / maxSec * 32).clamp(3.0, 32.0),
                     margin: const EdgeInsets.symmetric(horizontal: 2.5),
                     decoration: BoxDecoration(
-                      color: i == 6 ? AppColors.oxblood : AppColors.goldSoft,
+                      color: s == 0
+                          ? AppColors.paperDeep
+                          : (i == 6 ? AppColors.oxblood : AppColors.goldSoft),
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
                     ),
                   ),
@@ -2698,10 +2668,13 @@ class _WeekSparkline extends StatelessWidget {
 }
 
 /// Duration-only fallback for a session the reader forgot to time live —
-/// synthesizes `startedAt`/`endedAt` as `(now - duration)..now` and reuses
-/// the same optional end-page field as the wax-seal stop screen. Returns
-/// `(minutes, pageEnd)` for the caller to log; pure UI, no repository calls
-/// here, same split as `_StatusSheet`/`_changeStatus`.
+/// synthesizes `startedAt`/`endedAt` as `(now - duration)..now`. The page and
+/// total halves ride on the shared [SessionPageEntry] (−/+ steppers,
+/// select-all, belowStart/aboveTotal validation, the gold total line), so this
+/// surface can't drift from the timer's stop faces again. The end page starts
+/// EMPTY with the current page as its hint — the old pre-fill let an untouched
+/// save log a zero-page sitting. Returns `(minutes, pageEnd, total)` for the
+/// caller to log; pure UI, no repository calls here.
 class _ManualLogSheet extends StatefulWidget {
   const _ManualLogSheet({required this.currentPage, required this.pageCount});
 
@@ -2713,23 +2686,33 @@ class _ManualLogSheet extends StatefulWidget {
 }
 
 class _ManualLogSheetState extends State<_ManualLogSheet> {
-  late final _minutesController = TextEditingController();
-  late final _pageController = TextEditingController(
-    text: widget.currentPage?.toString() ?? '',
-  );
+  late final _minutesController = TextEditingController()..addListener(_onMinutesChanged);
+  final _pageController = TextEditingController();
   final _totalController = TextEditingController();
+  final _pageFocusNode = FocusNode();
+  PageEntryError? _pageError;
+
+  // Rebuild so SessionPageEntry's synthesized duration (and its pace line)
+  // follows the minutes as they're typed.
+  void _onMinutesChanged() => setState(() {});
 
   @override
   void dispose() {
     _minutesController.dispose();
     _pageController.dispose();
     _totalController.dispose();
+    _pageFocusNode.dispose();
     super.dispose();
   }
 
+  int? get _minutes {
+    final m = int.tryParse(_minutesController.text.trim());
+    return (m == null || m <= 0) ? null : m;
+  }
+
   void _save() {
-    final minutes = int.tryParse(_minutesController.text.trim());
-    if (minutes == null || minutes <= 0) return;
+    final minutes = _minutes;
+    if (minutes == null || _pageError != null) return;
     final page = int.tryParse(_pageController.text.trim());
     final total = int.tryParse(_totalController.text.trim());
     Navigator.pop(context, (minutes, page, total));
@@ -2740,83 +2723,52 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.timerManualSheetTitle, style: Theme.of(context).textTheme.titleMedium),
-          SizedBox(height: 18),
-          Text(
-            l10n.timerManualDurationLabel,
-            style: TextStyle(fontSize: 11, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
-          ),
-          SizedBox(height: 6),
-          TextField(
-            controller: _minutesController,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            style: TextStyle(fontWeight: FontWeight.w600),
-            decoration: InputDecoration(
-              isDense: true,
-              suffixText: l10n.timerManualDurationUnit,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.timerManualSheetTitle, style: Theme.of(context).textTheme.titleMedium),
+            SizedBox(height: 18),
+            Text(
+              l10n.timerManualDurationLabel,
+              style:
+                  TextStyle(fontSize: 11, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
             ),
-          ),
-          SizedBox(height: 16),
-          Text(
-            l10n.timerPageFieldLabel,
-            style: TextStyle(fontSize: 11, color: AppColors.inkSoft, fontWeight: FontWeight.w600),
-          ),
-          SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _pageController,
-                  keyboardType: TextInputType.number,
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
+            SizedBox(height: 6),
+            TextField(
+              controller: _minutesController,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              style: TextStyle(fontWeight: FontWeight.w600),
+              decoration: InputDecoration(
+                isDense: true,
+                suffixText: l10n.timerManualDurationUnit,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              if (widget.pageCount != null) ...[
-                SizedBox(width: 8),
-                Text(
-                  l10n.timerPageFieldOf(widget.pageCount!),
-                  style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
-                ),
-              ] else ...[
-                // No total in the catalog — capture it here so progress can be
-                // a percentage (and the number reaches the book + the cloud).
-                SizedBox(width: 8),
-                Text(l10n.timerTotalFieldLabel,
-                    style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
-                SizedBox(width: 8),
-                SizedBox(
-                  width: 72,
-                  child: TextField(
-                    controller: _totalController,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText: l10n.timerTotalFieldHint,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          SizedBox(height: 22),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(onPressed: _save, child: Text(l10n.timerManualSave)),
-          ),
-        ],
+            ),
+            SizedBox(height: 18),
+            SessionPageEntry(
+              pageController: _pageController,
+              totalController: _totalController,
+              pageFocusNode: _pageFocusNode,
+              pageCount: widget.pageCount,
+              pageStart: widget.currentPage,
+              // Synthesized from the typed minutes so the pace line works.
+              duration: Duration(minutes: _minutes ?? 0),
+              pageHint: widget.currentPage?.toString(),
+              onValidityChanged: (err) => setState(() => _pageError = err),
+            ),
+            SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: (_minutes == null || _pageError != null) ? null : _save,
+                child: Text(l10n.timerManualSave),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2947,7 +2899,7 @@ class _FinishedReviewSheetState extends ConsumerState<_FinishedReviewSheet> {
               width: 46,
               height: 46,
               decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.goldSoft),
-              child: Icon(Icons.auto_stories, color: Color(0xFF8F681E), size: 22),
+              child: Icon(Icons.auto_stories, color: AppColors.goldInk, size: 22),
             ),
             SizedBox(height: 14),
             Text(
@@ -3177,9 +3129,12 @@ class _ReviewCard extends ConsumerWidget {
               padding: EdgeInsets.only(top: 6),
               child: Text(
                 current?.body ?? l10n.bookReviewEmpty,
-                style: TextStyle(
+                // The review is the specified home of the literary voice —
+                // Fraunces italic, like the lending notes below it.
+                style: GoogleFonts.fraunces(
                   fontStyle: FontStyle.italic,
                   fontSize: 12.5,
+                  height: 1.45,
                   color: current != null ? AppColors.ink : AppColors.inkSoft,
                 ),
               ),
@@ -3497,7 +3452,7 @@ class _PublicReviewRow extends StatelessWidget {
               child: Text(
                 initial,
                 style: TextStyle(
-                  color: Color(0xFF8F681E),
+                  color: AppColors.goldInk,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -3576,8 +3531,10 @@ class _NotesCard extends ConsumerWidget {
         ),
       ),
       child: _Card(
-        color: Color(0xFFF6EEDC),
-        borderColor: Color(0xFFE8DCC0),
+        // Brightness-aware slip paper — the hardcoded light hexes were
+        // cream-on-cream at night.
+        color: AppColors.slip,
+        borderColor: AppColors.slipLine,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3782,8 +3739,14 @@ class _ShelfCard extends ConsumerWidget {
                           const Spacer(),
                           GestureDetector(
                             onTap: () async {
+                              // The only shelf mutation that was silent —
+                              // name what just happened, quietly.
+                              final messenger = ScaffoldMessenger.of(context);
                               final repo = await ref.read(tagsRepositoryProvider.future);
                               await repo.unassign(assignment.id);
+                              messenger.showSnackBar(
+                                SnackBar(content: Text(l10n.bookShelfRemoved(name))),
+                              );
                             },
                             child: Text(
                               l10n.bookShelfRemove,

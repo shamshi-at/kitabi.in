@@ -83,11 +83,14 @@ class NotesJournalScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text(
-              l10n.notesSummary(notes.length, grouped.keys.whereType<String>().length),
-              style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
-            ),
-            const SizedBox(height: 14),
+            // The summary only earns its line once there is something to count.
+            if (notes.isNotEmpty) ...[
+              Text(
+                l10n.notesSummary(notes.length, grouped.keys.whereType<String>().length),
+                style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+              ),
+              const SizedBox(height: 14),
+            ],
             if (notes.isEmpty && !hasLegacy)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 28),
@@ -115,13 +118,13 @@ class NotesJournalScreen extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 6),
                 padding: const EdgeInsets.all(11),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF6EEDC),
+                  color: AppColors.slip,
                   borderRadius: BorderRadius.circular(11),
-                  border: Border.all(color: const Color(0xFFE8DCC0)),
+                  border: Border.all(color: AppColors.slipLine),
                 ),
                 child: Text(
                   legacy,
-                  style: const TextStyle(fontSize: 13, height: 1.5),
+                  style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.ink),
                 ),
               ),
             ],
@@ -143,6 +146,9 @@ class NotesJournalScreen extends ConsumerWidget {
               label: Text(l10n.notesAdd),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.oxblood,
+                // The border matches the oxblood label instead of the theme's
+                // ink outline fighting it.
+                side: BorderSide(color: AppColors.oxblood),
                 padding: const EdgeInsets.symmetric(vertical: 13),
               ),
             ),
@@ -196,11 +202,17 @@ class _NoteTile extends StatelessWidget {
         : (note.pageEnd == null
             ? 'p. ${note.pageStart}'
             : 'p. ${note.pageStart}–${note.pageEnd}');
+    // A sitting's header is its timestamp; an unattached note has no header
+    // date, so its tile carries its own.
+    final meta = [
+      ?pages,
+      if (note.sessionId == null) NotesJournalScreen._monthDay(note.createdAt),
+    ].join(' · ');
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
-        color: const Color(0xFFF6EEDC),
+        color: AppColors.slip,
         borderRadius: BorderRadius.circular(11),
         child: InkWell(
           borderRadius: BorderRadius.circular(11),
@@ -218,15 +230,16 @@ class _NoteTile extends StatelessWidget {
             padding: const EdgeInsets.all(11),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: const Color(0xFFE8DCC0)),
+              border: Border.all(color: AppColors.slipLine),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(note.body, style: const TextStyle(fontSize: 13, height: 1.5)),
-                if (pages != null) ...[
+                Text(note.body,
+                    style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.ink)),
+                if (meta.isNotEmpty) ...[
                   const SizedBox(height: 5),
-                  Text(pages, style: TextStyle(fontSize: 10, color: AppColors.inkSoft)),
+                  Text(meta, style: TextStyle(fontSize: 10, color: AppColors.inkSoft)),
                 ],
               ],
             ),

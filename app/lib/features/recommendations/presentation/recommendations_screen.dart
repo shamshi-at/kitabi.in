@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/section_label.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/catalog_cache.dart';
 import '../../../data/repositories/repository_providers.dart';
@@ -34,7 +35,10 @@ class RecommendationsScreen extends ConsumerWidget {
         top: false,
         child: optIn.when(
           loading: () => ListSkeleton(),
-      error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(recommendationsProvider)),
+          // Retry must re-run the failed opt-in read itself — invalidating
+          // only recommendationsProvider left this branch showing the same
+          // stale error forever (ux-review 2026-07-28, #6).
+          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(recsOptInProvider)),
           data: (enabled) => enabled ? const _RecsList() : const _OptInPrompt(),
         ),
       ),
@@ -227,9 +231,7 @@ class _RecsListState extends ConsumerState<_RecsList> {
                 _RecCard(
                   pick: pick,
                   onWishlist: () => _wishlist(pick),
-                  onDismiss: () => setState(
-                    () => _handled.add((pick['work'] as Map)['id'] as String),
-                  ),
+                  onDismiss: () => _dismiss(pick),
                 ),
             SizedBox(height: 16),
             Center(
@@ -250,14 +252,47 @@ class _RecsListState extends ConsumerState<_RecsList> {
     );
   }
 
+  /// Wishlist a pick, with an Undo that restores the card *and* removes the
+  /// entry it just created — unless the book was already in the library, in
+  /// which case Undo only restores the card (never delete a pre-existing row).
   Future<void> _wishlist(Map<String, dynamic> pick) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     final work = pick['work'] as Map<String, dynamic>;
     final edition = work['edition'] as Map<String, dynamic>?;
     if (edition == null) return;
+    final workId = work['id'] as String;
     await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
     final repo = await ref.read(libraryRepositoryProvider.future);
-    await repo.add(editionId: edition['id'] as String, status: 'wishlist');
-    if (mounted) setState(() => _handled.add(work['id'] as String));
+    final existedBefore = await repo.getByEditionId(edition['id'] as String) != null;
+    final entryId = await repo.add(editionId: edition['id'] as String, status: 'wishlist');
+    if (!mounted) return;
+    setState(() => _handled.add(workId));
+    messenger.showSnackBar(SnackBar(
+      content: Text(l10n.recsWishlistedSnack),
+      action: SnackBarAction(
+        label: l10n.undoAction,
+        onPressed: () {
+          if (!existedBefore) repo.remove(entryId);
+          if (mounted) setState(() => _handled.remove(workId));
+        },
+      ),
+    ));
+  }
+
+  void _dismiss(Map<String, dynamic> pick) {
+    final l10n = AppLocalizations.of(context)!;
+    final workId = (pick['work'] as Map)['id'] as String;
+    setState(() => _handled.add(workId));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(l10n.recsDismissedSnack),
+      action: SnackBarAction(
+        label: l10n.undoAction,
+        onPressed: () {
+          if (mounted) setState(() => _handled.remove(workId));
+        },
+      ),
+    ));
   }
 }
 
@@ -388,15 +423,7 @@ class _RecCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            l10n.recsWhy,
-                            style: TextStyle(
-                              fontSize: 7.5,
-                              letterSpacing: 1,
-                              color: AppColors.inkSoft,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                          SectionLabel(l10n.recsWhy, padding: EdgeInsets.zero),
                           SizedBox(height: 2),
                           Text(
                             why,
@@ -457,7 +484,7 @@ class _Stars extends StatelessWidget {
             color: AppColors.gold,
           ),
         SizedBox(width: 5),
-        Text(caption, style: TextStyle(fontSize: 7.5, color: AppColors.inkSoft)),
+        Text(caption, style: TextStyle(fontSize: 9, color: AppColors.inkSoft)),
       ],
     );
   }

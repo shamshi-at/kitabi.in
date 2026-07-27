@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/quiet_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/kitabi_linked_badge.dart';
@@ -42,6 +43,9 @@ class _AuthorPickerScreenState extends ConsumerState<AuthorPickerScreen> {
   List<Map<String, dynamic>> _results = [];
   List<Map<String, dynamic>> _suggestions = [];
   bool _loading = false;
+  // A failed search is an error row with retry, never the empty state — the
+  // empty copy invites the duplicate the picker exists to prevent.
+  bool _errored = false;
   bool _adding = false;
 
   @override
@@ -85,13 +89,21 @@ class _AuthorPickerScreenState extends ConsumerState<AuthorPickerScreen> {
   }
 
   Future<void> _fetch(String query) async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _errored = false;
+    });
     try {
       final rows = await ref.read(apiClientProvider).searchAuthors(query);
       if (!mounted || query != _query) return;
       setState(() => _results = rows);
     } catch (_) {
-      if (mounted) setState(() => _results = []);
+      if (mounted && query == _query) {
+        setState(() {
+          _results = [];
+          _errored = true;
+        });
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -100,7 +112,7 @@ class _AuthorPickerScreenState extends ConsumerState<AuthorPickerScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final showEmpty = _query.isNotEmpty && !_loading && _results.isEmpty;
+    final showEmpty = _query.isNotEmpty && !_loading && !_errored && _results.isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -156,6 +168,7 @@ class _AuthorPickerScreenState extends ConsumerState<AuthorPickerScreen> {
                       author: author,
                       onTap: () => context.pop(author),
                     ),
+                  if (_errored && !_loading) PickerErrorRow(onRetry: () => _fetch(_query)),
                   if (showEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -212,8 +225,8 @@ class _AuthorResultTile extends StatelessWidget {
               child: imageUrl == null
                   ? Text(
                       initials,
-                      style: const TextStyle(
-                        color: Color(0xFF8F681E),
+                      style: TextStyle(
+                        color: AppColors.goldInk,
                         fontWeight: FontWeight.w600,
                       ),
                     )
@@ -356,7 +369,7 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
       if (mounted) context.pop(author);
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err')));
+        showQuietError(context, AppLocalizations.of(context)!.pickerSaveAuthorFailed, err);
         setState(() => _saving = false);
       }
     }
@@ -395,7 +408,7 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
               validator: (v) => (v == null || v.trim().isEmpty) ? l10n.pickerNameRequired : null,
             ),
             const SizedBox(height: 8),
-            PickerLanguageDropdown(
+            PickerLanguageField(
               label: l10n.pickerFieldLanguage,
               value: _language,
               hint: l10n.pickerLanguageHint,
@@ -416,17 +429,11 @@ class _AddNewAuthorSectionState extends ConsumerState<_AddNewAuthorSection> {
             // review the same way — checking this files a claim, it does not
             // link the row (owner decision, 22 Jul 2026).
             const SizedBox(height: 8),
-            CheckboxListTile(
+            PickerCheckbox(
+              label: l10n.pickerIsMe,
+              note: l10n.pickerIsMeNote,
               value: _isMe,
-              onChanged: (v) => setState(() => _isMe = v ?? false),
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              activeColor: AppColors.oxblood,
-              title: Text(l10n.pickerIsMe, style: const TextStyle(fontSize: 14)),
-              subtitle: Text(
-                l10n.pickerIsMeNote,
-                style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
-              ),
+              onChanged: (v) => setState(() => _isMe = v),
             ),
             const SizedBox(height: 8),
             SizedBox(

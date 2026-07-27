@@ -266,6 +266,18 @@ class RatingsRepository extends Repo {
       data: {'work_id': workId, 'value': value},
     );
   }
+
+  /// Takes the rating back (soft delete, rule 3) — a second tap on the
+  /// selected star means "no rating", not "rate it again".
+  Future<void> clearRating(String workId) async {
+    final existing = await db.ratingsDao.watchForWork(workId).first;
+    if (existing == null) return;
+    await db.ratingsDao.patch(
+      existing.id,
+      RatingsCompanion(deletedAt: Value(DateTime.now()), syncStatus: Value('pending')),
+    );
+    await enqueue(entity: 'ratings', entityId: existing.id, opType: 'delete', data: {});
+  }
 }
 
 /// Private per-book notes (rule 13). Offline-first like every Layer-2 repo:
@@ -512,6 +524,19 @@ class ReviewsRepository extends Repo {
       data: {'work_id': workId, 'body': body, 'visible': visible},
     );
   }
+
+  /// Deletes the reader's review of [workId] (soft delete, rule 3). An emptied
+  /// body on the editor's Save means "take it back" — silently keeping the old
+  /// text while toasting "saved" was the lie this exists to end.
+  Future<void> removeForWork(String workId) async {
+    final existing = await db.reviewsDao.watchForWork(workId).first;
+    if (existing == null) return;
+    await db.reviewsDao.patch(
+      existing.id,
+      ReviewsCompanion(deletedAt: Value(DateTime.now()), syncStatus: Value('pending')),
+    );
+    await enqueue(entity: 'reviews', entityId: existing.id, opType: 'delete', data: {});
+  }
 }
 
 class TagsRepository extends Repo {
@@ -707,6 +732,26 @@ class LendingRepository extends Repo {
       entityId: id,
       opType: 'update',
       data: {'returned_date': returnedDate.toUtc().toIso8601String().split('T').first},
+    );
+  }
+
+  /// Undo a mark-returned (the ledger's SnackBar Undo) — clears the returned
+  /// date so the loan reads as open again. Present-and-null clears it
+  /// server-side too, same contract as [updateBorrower]'s borrower link.
+  Future<void> reopenLoan(String id) async {
+    await db.lendingRecordsDao.patch(
+      id,
+      LendingRecordsCompanion(
+        returnedDate: const Value(null),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: const Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'lending_records',
+      entityId: id,
+      opType: 'update',
+      data: {'returned_date': null},
     );
   }
 

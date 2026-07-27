@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_theme.dart';
-import '../../../l10n/app_localizations.dart';
 import '../../../core/widgets/net_image.dart';
+import 'share_logo.dart';
+import 'share_palette.dart';
 
 /// The shareable card for an author or publisher — mirrors [BookShareCard] so a
 /// shared author/publisher looks the part: their portrait/logo, name, a subtitle
@@ -28,16 +28,15 @@ class EntityShareCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
     return Container(
       width: 320,
       padding: EdgeInsets.fromLTRB(16, 16, 16, 13),
       decoration: BoxDecoration(
-        color: AppColors.paper,
+        color: ShareCardPalette.paper,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold),
+        border: Border.all(color: ShareCardPalette.gold),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -49,7 +48,7 @@ class EntityShareCard extends StatelessWidget {
               fontSize: 8,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.6,
-              color: AppColors.oxblood,
+              color: ShareCardPalette.oxblood,
             ),
           ),
           SizedBox(height: 10),
@@ -69,14 +68,14 @@ class EntityShareCard extends StatelessWidget {
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
-                          ?.copyWith(color: AppColors.ink, height: 1.2),
+                          ?.copyWith(color: ShareCardPalette.ink, height: 1.2),
                     ),
                     SizedBox(height: 3),
                     Text(
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                      style: TextStyle(fontSize: 11, color: ShareCardPalette.inkSoft),
                     ),
                   ],
                 ),
@@ -84,39 +83,7 @@ class EntityShareCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: 11),
-          Container(height: 1, color: AppColors.line),
-          SizedBox(height: 9),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: AppColors.oxblood,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Icon(Icons.menu_book, size: 10, color: AppColors.paper),
-                  ),
-                  SizedBox(width: 5),
-                  Text(
-                    'kitabi.in',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.oxblood,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                l10n.shareTagline,
-                style: TextStyle(fontSize: 8, color: AppColors.inkSoft),
-              ),
-            ],
-          ),
+          ShareCardFooter(),
         ],
       ),
     );
@@ -139,7 +106,7 @@ class _Avatar extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.goldSoft,
+        color: ShareCardPalette.goldSoft,
         borderRadius: radius,
         image: imageUrl != null
             ? DecorationImage(image: netImageProvider(imageUrl!), fit: BoxFit.cover)
@@ -149,7 +116,7 @@ class _Avatar extends StatelessWidget {
           ? Text(
               initial,
               style: TextStyle(
-                color: Color(0xFF8F681E),
+                color: ShareCardPalette.goldInk,
                 fontWeight: FontWeight.w700,
                 fontSize: 22,
               ),

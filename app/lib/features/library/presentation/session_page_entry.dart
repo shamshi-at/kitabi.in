@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/format_duration.dart';
 import '../../../core/haptics.dart';
@@ -41,7 +42,7 @@ class SessionPageEntry extends StatefulWidget {
     this.onValidityChanged,
     this.onOpenLog,
     this.lastSessionLine,
-    this.dark = false,
+    this.pageHint,
   });
 
   final TextEditingController pageController;
@@ -69,9 +70,10 @@ class SessionPageEntry extends StatefulWidget {
   /// Pre-formatted "Last time · …" line, when there's a previous sitting.
   final String? lastSessionLine;
 
-  /// The timer's wax-seal face sits on the night background; the quick-stop
-  /// sheet sits on paper.
-  final bool dark;
+  /// Placeholder for the empty numeral — callers that keep the field empty
+  /// (the manual-log sheet) show the current page here instead of "0", so an
+  /// untouched save can't quietly log a zero-page sitting.
+  final String? pageHint;
 
   @override
   State<SessionPageEntry> createState() => _SessionPageEntryState();
@@ -145,11 +147,6 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
         TextSelection.collapsed(offset: widget.pageController.text.length);
   }
 
-  Color get _ink => widget.dark ? const Color(0xFFEDE3D0) : AppColors.ink;
-  Color get _inkSoft => widget.dark ? const Color(0xFFA9997F) : AppColors.inkSoft;
-  Color get _accent => widget.dark ? const Color(0xFFC06770) : AppColors.oxblood;
-  Color get _fieldBg => widget.dark ? const Color(0xFF221A11) : AppColors.card;
-
   String? _errorText(AppLocalizations l10n) => switch (_error) {
         PageEntryError.belowOne => l10n.stopErrorBelowOne,
         PageEntryError.aboveTotal => l10n.stopErrorAboveTotal(widget.pageCount ?? 0),
@@ -180,7 +177,7 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
             fontSize: 9.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: _inkSoft,
+            color: AppColors.inkSoft,
           ),
         ),
         const SizedBox(height: 10),
@@ -190,7 +187,6 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
             _Stepper(
               icon: Icons.remove,
               enabled: true,
-              dark: widget.dark,
               onTap: () => _nudge(-1),
               onLongPress: () => _nudge(-10),
             ),
@@ -206,21 +202,24 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'Fraunces',
+                    // GoogleFonts registers its own family names — a bare
+                    // fontFamily: 'Fraunces' silently fell back to the sans.
+                    // The numeral keeps its oxblood in the error state — the
+                    // oxblood→oxbloodDeep swap was imperceptible; the underline
+                    // and the message below carry the state.
+                    style: GoogleFonts.fraunces(
                       fontSize: 34,
                       height: 1.05,
                       fontWeight: FontWeight.w500,
-                      color: errorText != null ? AppColors.oxbloodDeep : _accent,
+                      color: AppColors.oxblood,
                     ),
                     decoration: InputDecoration(
                       isDense: true,
                       contentPadding: const EdgeInsets.only(bottom: 4),
-                      hintText: l10n.timerPageFieldHint,
-                      hintStyle: TextStyle(
-                        fontFamily: 'Fraunces',
+                      hintText: widget.pageHint ?? l10n.timerPageFieldHint,
+                      hintStyle: GoogleFonts.fraunces(
                         fontSize: 34,
-                        color: _inkSoft.withValues(alpha: .45),
+                        color: AppColors.inkSoft.withValues(alpha: .45),
                       ),
                       enabledBorder: UnderlineInputBorder(
                         borderSide: BorderSide(
@@ -237,9 +236,12 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
                     ),
                   ),
                   const SizedBox(height: 5),
+                  // The caption also surfaces the steppers' hidden long-press,
+                  // which nothing else on the surface hints at.
                   Text(
-                    total != null ? l10n.timerPageFieldOf(total) : l10n.stopPageUnit,
-                    style: TextStyle(fontSize: 10.5, color: _inkSoft),
+                    '${total != null ? l10n.timerPageFieldOf(total) : l10n.stopPageUnit} · ${l10n.stopHoldForTen}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
                   ),
                 ],
               ),
@@ -248,7 +250,6 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
             _Stepper(
               icon: Icons.add,
               enabled: true,
-              dark: widget.dark,
               onTap: () => _nudge(1),
               onLongPress: () => _nudge(10),
             ),
@@ -281,8 +282,8 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
                 child: LinearProgressIndicator(
                   value: fraction,
                   minHeight: 5,
-                  backgroundColor: widget.dark ? const Color(0xFF3A2F20) : AppColors.paperDeep,
-                  valueColor: AlwaysStoppedAnimation(_accent),
+                  backgroundColor: AppColors.paperDeep,
+                  valueColor: AlwaysStoppedAnimation(AppColors.oxblood),
                 ),
               ),
             ),
@@ -295,7 +296,7 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
                 if (pagesRead != null) l10n.timerSessionPages(pagesRead),
                 if (pace != null) l10n.timerPagesPerHour('$pace'),
               ].join(' · '),
-              style: TextStyle(fontSize: 11, color: _inkSoft),
+              style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
             ),
           ],
         ],
@@ -307,12 +308,12 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: widget.dark ? const Color(0xFF20180F) : AppColors.paperDeep,
+              color: AppColors.paperDeep,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
-                Icon(Icons.subdirectory_arrow_left, size: 14, color: _inkSoft),
+                Icon(Icons.subdirectory_arrow_left, size: 14, color: AppColors.inkSoft),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -321,12 +322,12 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
                       if (start != null)
                         Text(
                           l10n.stopStartedAtPage(start),
-                          style: TextStyle(fontSize: 11, color: _ink),
+                          style: TextStyle(fontSize: 11, color: AppColors.ink),
                         ),
                       if (widget.lastSessionLine != null)
                         Text(
                           widget.lastSessionLine!,
-                          style: TextStyle(fontSize: 10, color: _inkSoft),
+                          style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
                         ),
                     ],
                   ),
@@ -345,10 +346,10 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
-                              color: _accent,
+                              color: AppColors.oxblood,
                             ),
                           ),
-                          Icon(Icons.chevron_right, size: 14, color: _accent),
+                          Icon(Icons.chevron_right, size: 14, color: AppColors.oxblood),
                         ],
                       ),
                     ),
@@ -378,10 +379,10 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
                     Expanded(
                       child: Text(
                         l10n.stopTotalQuestion,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF8F681E),
+                          color: AppColors.goldInk,
                         ),
                       ),
                     ),
@@ -392,8 +393,7 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Fraunces',
+                        style: GoogleFonts.fraunces(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: AppColors.oxblood,
@@ -401,10 +401,10 @@ class _SessionPageEntryState extends State<SessionPageEntry> {
                         decoration: InputDecoration(
                           isDense: true,
                           filled: true,
-                          fillColor: _fieldBg,
+                          fillColor: AppColors.card,
                           contentPadding: const EdgeInsets.symmetric(vertical: 6),
                           hintText: l10n.timerTotalFieldHint,
-                          hintStyle: TextStyle(fontSize: 12, color: _inkSoft),
+                          hintStyle: TextStyle(fontSize: 12, color: AppColors.inkSoft),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: const BorderSide(color: Color(0xFFE5D3A6)),
@@ -447,14 +447,12 @@ class _Stepper extends StatelessWidget {
   const _Stepper({
     required this.icon,
     required this.enabled,
-    required this.dark,
     required this.onTap,
     required this.onLongPress,
   });
 
   final IconData icon;
   final bool enabled;
-  final bool dark;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -471,13 +469,13 @@ class _Stepper extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: dark ? const Color(0xFF221A11) : AppColors.card,
-            border: Border.all(color: dark ? const Color(0xFF3A2F20) : AppColors.line),
+            color: AppColors.card,
+            border: Border.all(color: AppColors.line),
           ),
           child: Icon(
             icon,
             size: 18,
-            color: dark ? const Color(0xFFA9997F) : AppColors.inkSoft,
+            color: AppColors.inkSoft,
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import 'status_pill.dart';
 import 'typeset_cover.dart';
@@ -57,6 +58,7 @@ class ShelfCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final band = lentToName ?? borrowedFromName;
     final bandColor = lentToName != null ? const Color(0xEBB8862B) : const Color(0xEB43617E);
     final bandTextColor = lentToName != null ? const Color(0xFF241811) : AppColors.paper;
@@ -100,9 +102,11 @@ class ShelfCover extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                'RETURNED',
+                l10n.coverReturnedStamp.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 5.5,
+                  fontSize: 8.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.4,
                   color: AppColors.stampGrey,
@@ -117,7 +121,9 @@ class ShelfCover extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xF0F0E2C2),
+                // Brightness-aware pair with the goldInk text below — a fixed
+                // light pill would strand the dark-mode goldInk on cream.
+                color: AppColors.goldSoft.withValues(alpha: 0.94),
                 borderRadius: BorderRadius.circular(999),
                 boxShadow: [
                   BoxShadow(color: Color(0x33000000), blurRadius: 3, offset: Offset(0, 1)),
@@ -125,10 +131,12 @@ class ShelfCover extends StatelessWidget {
               ),
               child: Text(
                 timeTag!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 7,
+                  fontSize: 8.5,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF8F681E),
+                  color: AppColors.goldInk,
                 ),
               ),
             ),
@@ -142,15 +150,16 @@ class ShelfCover extends StatelessWidget {
               color: bandColor,
               padding: EdgeInsets.symmetric(vertical: 2),
               child: Text(
-                lentToName != null
-                    ? 'WITH ${lentToName!.toUpperCase()}'
-                    : 'FROM ${borrowedFromName!.toUpperCase()}',
+                (lentToName != null
+                        ? l10n.coverLentBand(lentToName!)
+                        : l10n.coverBorrowedBand(borrowedFromName!))
+                    .toUpperCase(),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: bandTextColor,
-                  fontSize: 6.5,
+                  fontSize: 8.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
                 ),

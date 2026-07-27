@@ -396,7 +396,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.catalogSearch,
         name: 'catalog-search',
-        builder: (context, state) => CatalogSearchScreen(),
+        builder: (context, state) =>
+            CatalogSearchScreen(initialQuery: state.uri.queryParameters['q']),
       ),
       GoRoute(
         path: Routes.catalogBrowse,

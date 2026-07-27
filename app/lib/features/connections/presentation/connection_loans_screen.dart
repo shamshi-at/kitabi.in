@@ -23,9 +23,11 @@ List<LendingWithBook> loansForCounterparty(
 }) {
   final needle = name.trim().toLowerCase();
   return all
-      .where((r) => userId != null
-          ? r.record.borrowerUserId == userId
-          : r.record.borrowerName.trim().toLowerCase() == needle)
+      .where(
+        (r) => userId != null
+            ? r.record.borrowerUserId == userId
+            : r.record.borrowerName.trim().toLowerCase() == needle,
+      )
       .toList();
 }
 
@@ -55,14 +57,23 @@ class ConnectionLoansScreen extends ConsumerWidget {
       ),
       body: ledger.when(
         loading: () => ListSkeleton(),
-        error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(allLendingProvider)),
+        error: (err, _) =>
+            ErrorRetry(onRetry: () => ref.invalidate(allLendingProvider)),
         data: (all) {
           final loans = loansForCounterparty(all, userId: userId, name: name);
-          final lent = loans.where((r) => r.record.direction != 'borrowed').toList();
-          final borrowed = loans.where((r) => r.record.direction == 'borrowed').toList();
+          final lent = loans
+              .where((r) => r.record.direction != 'borrowed')
+              .toList();
+          final borrowed = loans
+              .where((r) => r.record.direction == 'borrowed')
+              .toList();
 
           if (loans.isEmpty) {
-            return EmptyState(icon: Icons.swap_horiz, title: name, body: l10n.connectionLoansEmpty);
+            return EmptyState(
+              icon: Icons.swap_horiz,
+              title: name,
+              body: l10n.connectionLoansEmpty,
+            );
           }
           return ListView(
             padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -124,55 +135,90 @@ class LoanRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: book == null
           ? null
-          : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+          : () => context.push(
+              Routes.bookDetailPath(book.workId, book.editionId),
+            ),
       child: Container(
-      margin: EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.line),
+        margin: EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Row(
+          children: [
+            TypesetCover(
+              title: book?.title ?? '…',
+              author: book?.authorNames,
+              coverUrl: book?.coverUrl,
+              width: 32,
+              height: 47,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    book?.title ?? '…',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  Text(
+                    fmtLendingDate(r.lentDate),
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                  ),
+                  if (r.note?.trim().isNotEmpty ?? false)
+                    Text(
+                      r.note!.trim(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.inkSoft,
+                        fontSize: 10.5,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (returned)
+              _LoanStamp(
+                label: l10n.connectionLoanReturned,
+                color: AppColors.moss,
+              )
+            else
+              // An open loan wears its state too — a quiet gold "Out" stamp, so
+              // the per-person page distinguishes history from books still away.
+              _LoanStamp(label: l10n.connectionLoanOut, color: AppColors.gold),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          TypesetCover(
-            title: book?.title ?? '…',
-            author: book?.authorNames,
-            coverUrl: book?.coverUrl,
-            width: 32,
-            height: 47,
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  book?.title ?? '…',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-                Text(
-                  fmtLendingDate(r.lentDate),
-                  style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          if (returned)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.moss.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                l10n.connectionLoanReturned,
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.moss),
-              ),
-            ),
-        ],
+    );
+  }
+}
+
+class _LoanStamp extends StatelessWidget {
+  const _LoanStamp({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
         ),
       ),
     );

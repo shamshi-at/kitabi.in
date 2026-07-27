@@ -1,39 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/languages.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/net_image.dart';
-
-/// Languages offered in the author/publisher "primary language" dropdown —
-/// Indian languages first (Kitabi's regional wedge), then the wider set most
-/// likely to matter. Free-typing a language was error-prone and produced
-/// near-duplicate catalog values ("Malayalam" vs "malayalam"); a fixed list
-/// keeps them clean.
-const kCatalogLanguages = <String>[
-  'English',
-  'Malayalam',
-  'Hindi',
-  'Tamil',
-  'Telugu',
-  'Kannada',
-  'Bengali',
-  'Marathi',
-  'Gujarati',
-  'Punjabi',
-  'Urdu',
-  'Odia',
-  'Assamese',
-  'Sanskrit',
-  'Arabic',
-  'French',
-  'Spanish',
-  'German',
-  'Portuguese',
-  'Russian',
-  'Japanese',
-  'Chinese',
-  'Other',
-];
+import '../../../core/widgets/select_sheet.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../profile/providers/profile_providers.dart';
 
 /// Shared chrome for the author/publisher pickers (S7b) — a back-arrow header,
 /// an autofocused search field, and a labelled text field for the add-new form.
@@ -111,12 +85,14 @@ class PickerField extends StatelessWidget {
     required this.controller,
     this.validator,
     this.maxLines = 1,
+    this.keyboardType,
   });
 
   final String label;
   final TextEditingController controller;
   final String? Function(String?)? validator;
   final int maxLines;
+  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +114,7 @@ class PickerField extends StatelessWidget {
           controller: controller,
           validator: validator,
           maxLines: maxLines,
+          keyboardType: keyboardType,
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
           decoration: InputDecoration(
             isDense: true,
@@ -159,10 +136,12 @@ class PickerField extends StatelessWidget {
   }
 }
 
-/// Optional language dropdown for the picker add-new forms — replaces the old
-/// free-text language field so values stay canonical ([kCatalogLanguages]).
-class PickerLanguageDropdown extends StatelessWidget {
-  const PickerLanguageDropdown({
+/// Optional language select for the picker add-new forms — the one app-wide
+/// language vocabulary (core/languages.dart), the reader's own profile
+/// languages first, presented in the themed select sheet rather than a raw
+/// Material dropdown. Replaced the file-private `kCatalogLanguages` fork.
+class PickerLanguageField extends ConsumerWidget {
+  const PickerLanguageField({
     super.key,
     required this.label,
     required this.value,
@@ -176,46 +155,60 @@ class PickerLanguageDropdown extends StatelessWidget {
   final ValueChanged<String?> onChanged;
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return SelectField(
+      label: label,
+      displayValue: value ?? hint,
+      isPlaceholder: value == null,
+      onTap: () {
+        final preferred = (ref.read(meProvider).valueOrNull?['preferred_languages'] as List?)
+                ?.cast<String>() ??
+            const <String>[];
+        final options = [
+          ...languageOptions(preferred),
+          if (value != null && !languageOptions(preferred).contains(value)) value!,
+        ];
+        openSelectSheet(
+          context,
+          title: l10n.pickerChoose(label.toLowerCase()),
+          current: value,
+          options: [
+            SelectOption(null, hint, subdued: true),
+            for (final lang in options) SelectOption(lang, lang),
+          ],
+          onChanged: onChanged,
+        );
+      },
+    );
+  }
+}
+
+/// The pickers' search-failure row — an error must never impersonate the
+/// empty state, because "No matches — add a new one" under a dead network is
+/// exactly how duplicates get born (Part 1 #4 of the 28 Jul UX review).
+class PickerErrorRow extends StatelessWidget {
+  const PickerErrorRow({super.key, required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            letterSpacing: 1,
-            color: AppColors.inkSoft,
-            fontWeight: FontWeight.w600,
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 22, color: AppColors.inkSoft),
+          const SizedBox(height: 6),
+          Text(
+            l10n.pickerSearchFailed,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
           ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.paper,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.line),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String?>(
-              value: value,
-              isExpanded: true,
-              hint: Text(hint, style: TextStyle(fontSize: 14, color: AppColors.inkSoft)),
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
-              items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(hint, style: TextStyle(color: AppColors.inkSoft)),
-                ),
-                for (final lang in kCatalogLanguages)
-                  DropdownMenuItem<String?>(value: lang, child: Text(lang)),
-              ],
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-      ],
+          TextButton(onPressed: onRetry, child: Text(l10n.commonRetry)),
+        ],
+      ),
     );
   }
 }
@@ -228,11 +221,15 @@ class PickerCheckbox extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onChanged,
+    this.note,
   });
 
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
+
+  /// Optional quiet line under the label ("Checked claims are reviewed…").
+  final String? note;
 
   @override
   Widget build(BuildContext context) {
@@ -249,13 +246,23 @@ class PickerCheckbox extends StatelessWidget {
               visualDensity: VisualDensity.compact,
             ),
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.ink,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  if (note != null)
+                    Text(
+                      note!,
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11.5, height: 1.3),
+                    ),
+                ],
               ),
             ),
           ],

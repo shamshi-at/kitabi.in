@@ -28,7 +28,9 @@ class ConnectionsScreen extends ConsumerWidget {
 
   /// Attach every loan logged under this free-text [name] to the picked Kitabi
   /// account, then send them a connection request — once they accept, the API
-  /// backfills their Borrowed shelf with the pre-existing loans.
+  /// backfills their Borrowed shelf with the pre-existing loans. Rewriting a
+  /// person's records and pinging them is not a one-tap deed: a lightweight
+  /// confirm names the count first, and a blocking spinner covers the loop.
   Future<void> _linkContact(
     BuildContext context,
     WidgetRef ref,
@@ -38,16 +40,59 @@ class ConnectionsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final user = await showLinkContactDialog(context, name: name);
-    if (user == null) return;
+    if (user == null || !context.mounted) return;
     final userId = user['id'] as String;
-    final repo = await ref.read(lendingRepositoryProvider.future);
-    for (final r in records) {
-      await repo.updateBorrower(r.id, borrowerName: r.borrowerName, borrowerUserId: userId);
-    }
+    final username = user['username'] as String?;
+    final handle = username != null ? '@$username' : ((user['full_name'] as String?) ?? name);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Text(
+          l10n.linkContactConfirm(records.length, handle),
+          style: TextStyle(fontSize: 13.5, height: 1.4, color: AppColors.ink),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              MaterialLocalizations.of(ctx).cancelButtonLabel,
+              style: TextStyle(color: AppColors.inkSoft),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.oxblood),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.connectionsLinkAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    // Modal spinner while every record is rewritten — the loop is fast but
+    // not instant, and a second tap on Link mid-loop would double-link.
+    var busyDialogOpen = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(child: CircularProgressIndicator(color: AppColors.gold)),
+    ).whenComplete(() => busyDialogOpen = false);
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
     try {
-      await ref.read(apiClientProvider).requestConnection(userId);
-    } catch (_) {
-      // Already pending/connected is fine — the link itself has been made.
+      final repo = await ref.read(lendingRepositoryProvider.future);
+      for (final r in records) {
+        await repo.updateBorrower(r.id, borrowerName: r.borrowerName, borrowerUserId: userId);
+      }
+      try {
+        await ref.read(apiClientProvider).requestConnection(userId);
+      } catch (_) {
+        // Already pending/connected is fine — the link itself has been made.
+      }
+    } finally {
+      if (busyDialogOpen) rootNavigator.pop();
     }
     ref.invalidate(connectionsProvider);
     Haptics.success();
@@ -112,7 +157,14 @@ class ConnectionsScreen extends ConsumerWidget {
           }
           return RefreshIndicator(
             color: AppColors.oxblood,
-            onRefresh: () async => ref.invalidate(connectionsProvider),
+            // Both sources on this screen: the connection graph AND the local
+            // ledger (private-contact rows and loan counts come from it).
+            onRefresh: () async {
+              ref.invalidate(allLendingProvider);
+              ref.invalidate(connectionsProvider);
+              // Await the refetch so the spinner reflects real work.
+              await ref.read(connectionsProvider.future);
+            },
             child: ListView(
               padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
               children: [
@@ -254,7 +306,7 @@ class _ConnectionCard extends StatelessWidget {
               child: Text(
                 initial,
                 style: TextStyle(
-                  color: Color(0xFF8F681E),
+                  color: AppColors.goldInk,
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                 ),
@@ -282,10 +334,16 @@ class _ConnectionCard extends StatelessWidget {
               ),
             ),
             SizedBox(width: 8),
-            trailing ??
-                (onTap != null
-                    ? Icon(Icons.chevron_right, size: 20, color: AppColors.inkSoft)
-                    : SizedBox.shrink()),
+            // The chevron survives a trailing action button — private-contact
+            // rows still read as doors to their loans, with Link riding along.
+            if (trailing != null) ...[
+              trailing!,
+              SizedBox(width: 2),
+            ],
+            if (onTap != null)
+              Icon(Icons.chevron_right, size: 20, color: AppColors.inkSoft)
+            else if (trailing == null)
+              SizedBox.shrink(),
           ],
         ),
       ),

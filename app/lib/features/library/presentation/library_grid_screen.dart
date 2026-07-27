@@ -14,7 +14,6 @@ import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/catalog_cache.dart';
 import '../../../data/db/database.dart';
-import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../insights/providers/insights_providers.dart';
@@ -91,6 +90,12 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   /// Cleared once applied. See [_applyPendingShelf].
   late String? _pendingShelfId = widget.initialShelf;
 
+  /// Whether the currently open shelf was reached by deep link rather than by
+  /// tapping its tile on the shelves wall. The back arrow promises "Shelves" —
+  /// a deep link forced the grid override, so [_closeShelf] must undo it or
+  /// the arrow would land on the flat grid instead.
+  late bool _shelfFromDeepLink = widget.initialShelf != null;
+
   /// The starting filter: a deep-linked shelf wins, then a status, else none.
   LibraryFilter _initialFilter() {
     if (widget.initialShelf != null) return LibraryFilter(shelf: widget.initialShelf);
@@ -165,6 +170,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
       setState(() {
         _openShelf = null;
         _pendingShelfId = widget.initialShelf;
+        _shelfFromDeepLink = true;
         _filter = LibraryFilter(shelf: widget.initialShelf);
         _shelvesOverride = false;
       });
@@ -199,11 +205,14 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
     final name = match.name;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _openShelfTile(_ShelfSpec(
-        label: name,
-        books: const [],
-        open: (label: name, tagId: id, status: null, fav: false),
-      ));
+      _openShelfTile(
+        _ShelfSpec(
+          label: name,
+          books: const [],
+          open: (label: name, tagId: id, status: null, fav: false),
+        ),
+        fromDeepLink: true,
+      );
     });
   }
 
@@ -219,9 +228,10 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
     ref.read(appDatabaseProvider).keyValuesDao.setValue('library_shelves_view', '$shelves');
   }
 
-  void _openShelfTile(_ShelfSpec spec) {
+  void _openShelfTile(_ShelfSpec spec, {bool fromDeepLink = false}) {
     Haptics.selection();
     setState(() {
+      _shelfFromDeepLink = fromDeepLink;
       _openShelf = spec.open;
       _filter = LibraryFilter(
         statuses: spec.open.status != null ? {spec.open.status!} : const {},
@@ -235,6 +245,13 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
     setState(() {
       _openShelf = null;
       _filter = const LibraryFilter();
+      // The arrow's tooltip says "Shelves" — after a deep link (which forced
+      // the grid override) honour that instead of stranding the reader on the
+      // flat grid they never chose.
+      if (_shelfFromDeepLink) {
+        _shelvesOverride = true;
+        _shelfFromDeepLink = false;
+      }
     });
   }
 
@@ -303,7 +320,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   l10n.librarySortTitle,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  style: Theme.of(ctx).textTheme.titleLarge,
                 ),
               ),
             ),
@@ -349,38 +366,11 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
   }
 
   Future<void> _newShelf() async {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: Text(l10n.libraryNewShelfTitle, style: TextStyle(fontSize: 16)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(hintText: l10n.libraryNewShelfHint),
-          onSubmitted: (v) => Navigator.pop(ctx, v),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: Text(l10n.bookSave),
-          ),
-        ],
-      ),
-    );
-    final cleaned = name?.trim();
-    if (cleaned == null || cleaned.isEmpty || !mounted) return;
-    final repo = await ref.read(tagsRepositoryProvider.future);
-    // Case-insensitive reuse, same as the book page — "classics" and
-    // "Classics" are one shelf, not near-duplicates.
-    final existing = (await ref.read(allTagsProvider.future))
-        .where((t) => t.name.toLowerCase() == cleaned.toLowerCase());
-    if (existing.isEmpty) await repo.createTag(cleaned);
-    ref.invalidate(allTagsProvider);
+    // The one shared dialog (shelf_sheets.dart) — it reuses an existing shelf
+    // of the same name case-insensitively, so "classics" and "Classics" stay
+    // one shelf here exactly as they do on the book page.
+    final tagId = await promptNewShelf(context, ref);
+    if (tagId != null) ref.invalidate(allTagsProvider);
   }
 
   @override
@@ -1080,14 +1070,15 @@ class _NewShelfTile extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add, size: 24, color: AppColors.oxblood),
+            // Gold content on the gold-edged door — one accent, not two.
+            Icon(Icons.add, size: 24, color: AppColors.gold),
             SizedBox(height: 4),
             Text(
               l10n.libraryNewShelf,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: AppColors.oxblood,
+                color: AppColors.gold,
               ),
             ),
           ],

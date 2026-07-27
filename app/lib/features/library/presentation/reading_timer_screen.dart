@@ -20,7 +20,16 @@ import '../mark_finished.dart';
 import '../providers/reading_timer_providers.dart';
 import '../reading_progress.dart';
 import 'note_page.dart';
+import 'session_notes_block.dart';
 import 'session_page_entry.dart';
+import 'stop_session_sheet.dart';
+
+/// The night face's companions to [AppColors.nightGold]. Numerically these are
+/// the dark-mode values of `line` and `card`, but this face is constant-dark,
+/// so the brightness-aware getters would flip them wrong in light mode —
+/// constant surfaces get constant colors.
+const _nightLine = Color(0xFF3A2F20);
+const _nightCard = Color(0xFF221A11);
 
 /// Full-screen reading session — pushed the moment a session starts (from
 /// the book page's timer card, or reopened from the persistent mini-bar).
@@ -93,6 +102,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   int? _lastLoggedPage;
 
   String? get _title => _book?.title ?? widget.title;
+  String? get _author => _book?.authorNames ?? widget.author;
   String? get _coverUrl => _book?.coverUrl ?? widget.coverUrl;
   int? get _pageCount => _book?.pageCount ?? widget.pageCount;
   int? get _currentPage => _entry?.currentPage ?? widget.currentPage ?? _lastLoggedPage;
@@ -326,28 +336,13 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     if (mounted) _leave();
   }
 
-  /// N1 -> N2. Opens the note page without touching the session: the clock
-  /// keeps running, and this method deliberately has no stop/pause path.
-  Future<void> _openNote(ActiveSession active) async {
-    final existing = ref.read(sessionNotesProvider(active.id)).valueOrNull ?? const [];
-    // With notes already in this sitting, going straight to a blank page hides
-    // them — there was no way back to fix a thought you'd just jotted (owner
-    // report, 21 Jul 2026). Show what's there first; writing another is one tap.
-    if (existing.isNotEmpty) {
-      final wantsNew = await showModalBottomSheet<bool>(
-        context: context,
-        backgroundColor: AppColors.paper,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (ctx) => _SessionNotesSheet(
-          notes: existing,
-          libraryEntryId: active.libraryEntryId,
-        ),
-      );
-      if (wantsNew != true || !mounted) return;
-    }
-    final count = existing.length;
+  /// N1 -> N2. Opens a fresh note page without touching the session: the clock
+  /// keeps running, and this method deliberately has no stop/pause path. The
+  /// pill's main tap always lands here — mid-thought, a list of old notes in
+  /// the way is friction; re-reading lives behind the count badge instead
+  /// ([_openNotesList]).
+  Future<void> _openFreshNote(ActiveSession active) async {
+    final count = ref.read(sessionNotesProvider(active.id)).valueOrNull?.length ?? 0;
     await Navigator.of(context).push(
       MaterialPageRoute<bool>(
         builder: (_) => NotePage(
@@ -360,6 +355,27 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
         ),
       ),
     );
+  }
+
+  /// The count badge's tap — the sitting's notes so far, to re-read or fix a
+  /// thought just jotted (owner report, 21 Jul 2026). "Write another" from the
+  /// sheet still lands on a fresh page.
+  Future<void> _openNotesList(ActiveSession active) async {
+    final existing = ref.read(sessionNotesProvider(active.id)).valueOrNull ?? const [];
+    if (existing.isEmpty) return _openFreshNote(active);
+    final wantsNew = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _SessionNotesSheet(
+        notes: existing,
+        libraryEntryId: active.libraryEntryId,
+      ),
+    );
+    if (wantsNew != true || !mounted) return;
+    await _openFreshNote(active);
   }
 
   @override
@@ -395,23 +411,28 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
           child: _logged == null
               ? _RunningFace(
                 title: _title,
+                author: _author,
                 coverUrl: _coverUrl,
                 startedAt: active?.startedAt,
                 onClose: _leave,
                 hand: _hand,
                 onStop: _stop,
-                onNote: active == null ? null : () => _openNote(active),
+                onNote: active == null ? null : () => _openFreshNote(active),
+                onShowNotes: active == null ? null : () => _openNotesList(active),
                 noteCount: sessionNotes.length,
               )
               : _LoggedFace(
                   title: _title,
+                  author: _author,
                   coverUrl: _coverUrl,
+                  libraryEntryId: widget.libraryEntryId,
                   logged: _logged!,
                   pageController: _pageController,
                   pageFocusNode: _pageFocusNode,
                   pageCount: _pageCount,
                   totalController: _totalController,
-                  saving: _saving || _pageError != null,
+                  saving: _saving,
+                  hasPageError: _pageError != null,
                   onDone: _done,
                   onFinished: _markFinished,
                   onValidityChanged: (err) => setState(() => _pageError = err),
@@ -425,27 +446,34 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
 class _RunningFace extends StatelessWidget {
   const _RunningFace({
     required this.title,
+    required this.author,
     required this.coverUrl,
     required this.startedAt,
     required this.onClose,
     required this.hand,
     required this.onStop,
     required this.onNote,
+    required this.onShowNotes,
     required this.noteCount,
   });
 
   final String? title;
+  final String? author;
   final String? coverUrl;
   final DateTime? startedAt;
   final AnimationController hand;
   final VoidCallback onStop;
 
   /// Leaving the timer — a pop when this route was pushed, Home when it was
-  /// *navigated to* from outside and there is nothing beneath it.
+  /// *navigated to* from outside and there is nothing beneath it. The session
+  /// keeps running either way (the chevron minimizes, music-player style).
   final VoidCallback onClose;
 
-  /// Opens the note page (N1 -> N2). Null hides the pill.
+  /// Opens a fresh note page (N1 -> N2). Null hides the pill.
   final VoidCallback? onNote;
+
+  /// Opens the list of this sitting's notes — the count badge's own tap.
+  final VoidCallback? onShowNotes;
 
   /// How many notes this sitting already holds.
   final int noteCount;
@@ -471,8 +499,12 @@ class _RunningFace extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
+              // A chevron, not an X — leaving this screen backgrounds the
+              // session (the mini-bar keeps following it); an X read as
+              // "cancel the sitting".
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.white70),
+                icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white70),
+                tooltip: l10n.timerMinimizeHint,
                 onPressed: onClose,
               ),
             ],
@@ -483,12 +515,12 @@ class _RunningFace extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    l10n.timerInProgress,
+                    l10n.timerInProgress.toUpperCase(),
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 2,
-                      color: Color(0xFFE3B14C),
+                      color: AppColors.nightGold,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -499,15 +531,16 @@ class _RunningFace extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          if (coverUrl != null) ...[
-                            TypesetCover(
-                              title: title!,
-                              coverUrl: coverUrl,
-                              width: 30,
-                              height: 44,
-                            ),
-                            const SizedBox(width: 10),
-                          ],
+                          // Always the cover frame — a cover-less book gets
+                          // the typeset fallback, not a bare title.
+                          TypesetCover(
+                            title: title!,
+                            author: author,
+                            coverUrl: coverUrl,
+                            width: 30,
+                            height: 44,
+                          ),
+                          const SizedBox(width: 10),
                           Flexible(
                             child: Text(
                               title!,
@@ -534,9 +567,7 @@ class _RunningFace extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xFFE3B14C,
-                              ).withValues(alpha: 0.28),
+                              color: AppColors.nightGold.withValues(alpha: 0.28),
                             ),
                           ),
                         ),
@@ -545,9 +576,7 @@ class _RunningFace extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xFFE3B14C,
-                              ).withValues(alpha: 0.16),
+                              color: AppColors.nightGold.withValues(alpha: 0.16),
                             ),
                           ),
                         ),
@@ -560,7 +589,7 @@ class _RunningFace extends StatelessWidget {
                                 width: 1.5,
                                 height: i % 3 == 0 ? 12 : 8,
                                 color: i % 3 == 0
-                                    ? const Color(0xFFE3B14C)
+                                    ? AppColors.nightGold
                                     : Colors.white.withValues(alpha: 0.35),
                               ),
                             ),
@@ -575,13 +604,11 @@ class _RunningFace extends StatelessWidget {
                                 width: 2,
                                 height: 78,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE3B14C),
+                                  color: AppColors.nightGold,
                                   borderRadius: BorderRadius.circular(2),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(
-                                        0xFFE3B14C,
-                                      ).withValues(alpha: 0.7),
+                                      color: AppColors.nightGold.withValues(alpha: 0.7),
                                       blurRadius: 8,
                                     ),
                                   ],
@@ -595,7 +622,7 @@ class _RunningFace extends StatelessWidget {
                           height: 8,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Color(0xFFE3B14C),
+                            color: AppColors.nightGold,
                           ),
                         ),
                         Column(
@@ -632,12 +659,10 @@ class _RunningFace extends StatelessWidget {
                         vertical: 7,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE3B14C).withValues(alpha: 0.14),
+                        color: AppColors.nightGold.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(
-                            0xFFE3B14C,
-                          ).withValues(alpha: 0.35),
+                          color: AppColors.nightGold.withValues(alpha: 0.35),
                         ),
                       ),
                       child: Row(
@@ -650,7 +675,7 @@ class _RunningFace extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFFE3B14C),
+                              color: AppColors.nightGold,
                             ),
                           ),
                         ],
@@ -662,48 +687,84 @@ class _RunningFace extends StatelessWidget {
             ),
           ),
           // N1 — the way into a note, quiet and above Stop & log so it never
-          // competes with it. The count is the only way to see the sitting
-          // already holds notes without opening anything, and it's what makes
-          // the stop sheet's "already saved" believable.
+          // competes with it. One pill, two hit regions: the main tap always
+          // opens a fresh page (mid-thought, a list in the way is friction),
+          // while the count badge opens this sitting's notes to re-read. The
+          // count is the only way to see the sitting already holds notes
+          // without opening anything, and it's what makes the stop sheet's
+          // "already saved" believable.
           if (onNote != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: Center(
-                child: OutlinedButton.icon(
-                  onPressed: onNote,
-                  icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFFE3B14C)),
-                  label: Row(
+                child: Material(
+                  color: _nightCard,
+                  shape: const StadiumBorder(side: BorderSide(color: _nightLine)),
+                  clipBehavior: Clip.antiAlias,
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        AppLocalizations.of(context)!.noteAThought,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFEDE3D0),
+                      InkWell(
+                        onTap: onNote,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 44),
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                                16, 0, noteCount > 0 ? 10 : 16, 0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.edit_outlined,
+                                    size: 16, color: AppColors.nightGold),
+                                const SizedBox(width: 8),
+                                Text(
+                                  AppLocalizations.of(context)!.noteAThought,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.onDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      if (noteCount > 0) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF3A2F20),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: Text(
-                            '$noteCount',
-                            style: const TextStyle(fontSize: 10.5, color: Color(0xFFCFC1A6)),
+                      if (noteCount > 0)
+                        Semantics(
+                          button: true,
+                          label: AppLocalizations.of(context)!
+                              .notesSectionThisSitting(noteCount),
+                          child: InkWell(
+                            onTap: onShowNotes,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                  minHeight: 44, minWidth: 44),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(4, 0, 12, 0),
+                                child: Center(
+                                  widthFactor: 1,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _nightLine,
+                                      borderRadius: BorderRadius.circular(99),
+                                    ),
+                                    child: Text(
+                                      '$noteCount',
+                                      style: const TextStyle(
+                                          fontSize: 10.5,
+                                          color: AppColors.onDarkSoft),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ],
                     ],
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: const Color(0xFF221A11),
-                    side: const BorderSide(color: Color(0xFF3A2F20)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
                   ),
                 ),
               ),
@@ -714,7 +775,7 @@ class _RunningFace extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE3B14C),
+                  backgroundColor: AppColors.nightGold,
                   foregroundColor: AppColors.night,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
@@ -746,10 +807,10 @@ class _Dot extends StatelessWidget {
       height: 6,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFFE3B14C),
+        color: AppColors.nightGold,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE3B14C).withValues(alpha: 0.7),
+            color: AppColors.nightGold.withValues(alpha: 0.7),
             blurRadius: 6,
           ),
         ],
@@ -761,20 +822,25 @@ class _Dot extends StatelessWidget {
 class _LoggedFace extends ConsumerWidget {
   const _LoggedFace({
     required this.title,
+    required this.author,
     required this.coverUrl,
+    required this.libraryEntryId,
     required this.logged,
     required this.pageController,
     required this.pageFocusNode,
     required this.pageCount,
     required this.totalController,
     required this.saving,
+    required this.hasPageError,
     required this.onDone,
     required this.onFinished,
     required this.onValidityChanged,
   });
 
   final String? title;
+  final String? author;
   final String? coverUrl;
+  final String libraryEntryId;
   final LoggedSession logged;
   final TextEditingController pageController;
   final FocusNode pageFocusNode;
@@ -782,7 +848,14 @@ class _LoggedFace extends ConsumerWidget {
 
   /// Only used when [pageCount] is null — the reader supplying the total.
   final TextEditingController totalController;
+
+  /// A save is in flight — Done shows its spinner and everything locks.
   final bool saving;
+
+  /// The typed page can't be saved. Blocks Done, but not "I finished the
+  /// book" when the total is known — finishing overwrites the page with the
+  /// total anyway, so a typo it would itself clear must not disable it.
+  final bool hasPageError;
   final VoidCallback onDone;
 
   /// "I finished the book" — see `_markFinished`.
@@ -792,11 +865,56 @@ class _LoggedFace extends ConsumerWidget {
   /// rather than silently walking the reader's progress backwards.
   final ValueChanged<PageEntryError?> onValidityChanged;
 
+  /// R3 from the wax-seal face — the same sittings log the quick-stop sheet
+  /// reaches from its anchor line, as a sheet over this full-screen face.
+  Future<void> _openLog(BuildContext context, WidgetRef ref) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Consumer(
+        builder: (ctx, sheetRef, _) => SessionsLog(
+          title: title,
+          sessions:
+              sheetRef.watch(stopSessionsProvider(libraryEntryId)).valueOrNull ??
+                  const <ReadingSession>[],
+          onBack: () => Navigator.of(ctx).pop(),
+          onDelete: (session) async {
+            Haptics.selection();
+            // Handles captured before the awaits — same rule as quickStopSession.
+            final messenger = ScaffoldMessenger.of(ctx);
+            final deleted = AppLocalizations.of(ctx)!.bookLogDeleted;
+            final repo =
+                await sheetRef.read(readingSessionsRepositoryProvider.future);
+            await repo.deleteSession(session.id);
+            messenger.showSnackBar(SnackBar(content: Text(deleted)));
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final duration = Duration(seconds: logged.durationSeconds);
     final weekTotal = ref.watch(weeklyReadingSecondsProvider);
+    final sessions = ref.watch(stopSessionsProvider(libraryEntryId)).valueOrNull ??
+        const <ReadingSession>[];
+    // The most recent *previous* sitting — the one just logged is already in
+    // the stream and must be excluded by id (same rule as the stop sheet).
+    final last = sessions
+        .where((s) => s.id != logged.sessionId && s.pageEnd != null)
+        .firstOrNull;
+    final sessionNotes =
+        ref.watch(sessionNotesProvider(logged.sessionId)).valueOrNull ??
+            const <ReadingNote>[];
 
     return Container(
       color: AppColors.paper,
@@ -804,7 +922,8 @@ class _LoggedFace extends ConsumerWidget {
         children: [
           Expanded(
             child: Center(
-              child: Column(
+              child: SingleChildScrollView(
+                child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
@@ -847,15 +966,16 @@ class _LoggedFace extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          if (coverUrl != null) ...[
-                            TypesetCover(
-                              title: title!,
-                              coverUrl: coverUrl,
-                              width: 24,
-                              height: 36,
-                            ),
-                            const SizedBox(width: 8),
-                          ],
+                          // Always the cover frame — a cover-less book gets
+                          // the typeset fallback, not a bare title.
+                          TypesetCover(
+                            title: title!,
+                            author: author,
+                            coverUrl: coverUrl,
+                            width: 24,
+                            height: 36,
+                          ),
+                          const SizedBox(width: 8),
                           Flexible(
                             child: Text(
                               title!,
@@ -902,27 +1022,47 @@ class _LoggedFace extends ConsumerWidget {
                       pageCount: pageCount,
                       pageStart: logged.pageStart,
                       duration: duration,
-                      // Light, because this face is on paper. It was marked
-                      // `dark: true` with a comment claiming the wax-seal face
-                      // "sits on the night background" — it hasn't since the
-                      // face was rebuilt on `AppColors.paper`, so the whole
-                      // entry block was drawn for a dark background it no
-                      // longer has: a near-black total box on the pale gold
-                      // card, a washed-pink numeral instead of oxblood, and a
-                      // dark slab for the anchor line (owner report, 26 Jul
-                      // 2026 — "design getting broken"). Matches R1/R2, which
-                      // are light throughout.
-                      dark: false,
                       onValidityChanged: onValidityChanged,
+                      // The anchor's "last time" line and the way into the
+                      // sittings log, same as the quick-stop sheet — the most
+                      // deliberate stop path must not be the poorer one.
+                      onOpenLog: sessions.isEmpty
+                          ? null
+                          : () => _openLog(context, ref),
+                      lastSessionLine: last == null
+                          ? null
+                          : formatLastSessionLine(
+                              l10n,
+                              endedAt: last.endedAt,
+                              durationSeconds: last.durationSeconds,
+                              pageStart: last.pageStart,
+                              pageEnd: last.pageEnd,
+                            ),
                     ),
-                  )
+                  ),
+                  // N3 — the closing-thought moment, shared with the
+                  // quick-stop sheet so the two stop paths can't drift.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                    child: SessionNotesBlock(
+                      notes: sessionNotes,
+                      libraryEntryId: libraryEntryId,
+                      sessionId: logged.sessionId,
+                      bookTitle: title,
+                      currentPage: () =>
+                          int.tryParse(pageController.text.trim()),
+                    ),
+                  ),
                 ],
+                ),
               ),
             ),
           ),
           // Finishing sits *above* Done and in moss, not oxblood: it's the
           // rarer, larger claim ("that was the last page"), so it has to be
-          // findable without ever competing with the ordinary way out.
+          // findable without ever competing with the ordinary way out. A page
+          // typo doesn't disable it while the total is known — finishing
+          // settles the page to the total anyway.
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
             child: SizedBox(
@@ -932,7 +1072,9 @@ class _LoggedFace extends ConsumerWidget {
                   foregroundColor: AppColors.moss,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                 ),
-                onPressed: saving ? null : onFinished,
+                onPressed: (saving || (hasPageError && pageCount == null))
+                    ? null
+                    : onFinished,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -952,20 +1094,45 @@ class _LoggedFace extends ConsumerWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 22),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.oxblood,
-                  side: BorderSide(color: AppColors.oxblood),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.oxblood,
+                      side: BorderSide(color: AppColors.oxblood),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: (saving || hasPageError) ? null : onDone,
+                    child: saving
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.oxblood,
+                            ),
+                          )
+                        : Text(
+                            l10n.timerDone,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                  ),
                 ),
-                onPressed: saving ? null : onDone,
-                child: Text(
-                  l10n.timerDone,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                const SizedBox(height: 6),
+                // Names what leaving keeps — the quiet mirror of the stop
+                // sheet's "Skip — keep the time, leave the page at …".
+                Text(
+                  l10n.timerDoneKeepsPage,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    height: 1.4,
+                    color: AppColors.inkSoft,
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
@@ -1006,9 +1173,11 @@ class _StatColumn extends StatelessWidget {
 }
 
 
-/// The notes already written in this sitting, reachable from the timer's pill.
-/// Each opens read-only (it's a re-read, not an edit); "Write another" starts
-/// a fresh one. The session keeps running throughout — nothing here stops it.
+/// The notes already written in this sitting, reachable from the pill's count
+/// badge. Each opens straight into the editor — mid-session you're still
+/// writing, so a thought just jotted can be fixed (read-only is for the book
+/// page, where you're revisiting old thoughts). "Note a thought" starts a
+/// fresh one. The session keeps running throughout — nothing here stops it.
 class _SessionNotesSheet extends StatelessWidget {
   const _SessionNotesSheet({required this.notes, required this.libraryEntryId});
 
@@ -1059,7 +1228,7 @@ class _SessionNotesSheet extends StatelessWidget {
                           ? 'p. ${note.pageStart}'
                           : 'p. ${note.pageStart}-${note.pageEnd}');
                   return Material(
-                    color: const Color(0xFFF6EEDC),
+                    color: AppColors.slip,
                     borderRadius: BorderRadius.circular(11),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(11),
@@ -1082,7 +1251,7 @@ class _SessionNotesSheet extends StatelessWidget {
                         padding: const EdgeInsets.all(11),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(11),
-                          border: Border.all(color: const Color(0xFFE8DCC0)),
+                          border: Border.all(color: AppColors.slipLine),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

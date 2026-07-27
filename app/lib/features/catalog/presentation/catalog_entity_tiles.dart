@@ -35,8 +35,8 @@ class AuthorRowTile extends StatelessWidget {
               child: imageUrl == null
                   ? Text(
                       initials,
-                      style: const TextStyle(
-                        color: Color(0xFF8F681E),
+                      style: TextStyle(
+                        color: AppColors.goldInk,
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../library/presentation/book_detail_screen.dart';
 import '../providers/catalog_providers.dart';
 
@@ -33,7 +36,21 @@ class BookLinkResolverScreen extends ConsumerWidget {
       error: (err, _) => Scaffold(
         backgroundColor: AppColors.paper,
         body: SafeArea(
-          child: ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId))),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId))),
+                // A share link is often the app's entry point — with nothing
+                // beneath this route, Retry alone would be a dead end.
+                if (!context.canPop())
+                  TextButton(
+                    onPressed: () => context.go(Routes.home),
+                    child: Text(AppLocalizations.of(context)!.commonGoHome),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

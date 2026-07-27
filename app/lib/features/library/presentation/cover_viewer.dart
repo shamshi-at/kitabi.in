@@ -68,16 +68,20 @@ class _CoverViewerState extends State<_CoverViewer> {
                     tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                   ),
                   Expanded(
-                    child: Text(
-                      widget.pages[_index].label.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: paper.withValues(alpha: 0.85),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.4,
-                      ),
-                    ),
+                    // A single photo needs no caption — "front cover" only
+                    // means something once there's a back to tell apart.
+                    child: widget.pages.length > 1
+                        ? Text(
+                            widget.pages[_index].label.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: paper.withValues(alpha: 0.85),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.4,
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                   ),
                   // Balances the close button so the caption stays centered.
                   SizedBox(width: 48),
@@ -91,24 +95,34 @@ class _CoverViewerState extends State<_CoverViewer> {
                 onPageChanged: (i) => setState(() => _index = i),
                 itemBuilder: (context, i) => InteractiveViewer(
                   maxScale: 5,
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: netImage(
-                        widget.pages[i].url,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (context, child, progress) => progress == null
-                            ? child
-                            : Center(
-                                child: CircularProgressIndicator(
-                                  color: AppColors.gold,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                        errorBuilder: (context, _, _) => Icon(
-                          Icons.broken_image_outlined,
-                          color: paper.withValues(alpha: 0.4),
-                          size: 48,
+                  // Tap outside the photo dismisses (the spec's promise); a
+                  // tap on the photo itself does nothing, so an accidental
+                  // graze mid-pinch never throws the reader out. The X stays.
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: GestureDetector(
+                          onTap: () {},
+                          child: netImage(
+                            widget.pages[i].url,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (context, child, progress) => progress == null
+                                ? child
+                                : Center(
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.gold,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                            errorBuilder: (context, _, _) => Icon(
+                              Icons.broken_image_outlined,
+                              color: paper.withValues(alpha: 0.4),
+                              size: 48,
+                            ),
+                          ),
                         ),
                       ),
                     ),

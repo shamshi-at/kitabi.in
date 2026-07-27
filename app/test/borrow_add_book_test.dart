@@ -128,7 +128,7 @@ void main() {
     );
   }
 
-  testWidgets('a search with no match offers to add the typed book to the catalog',
+  testWidgets('a search with no match offers to add the typed book to the catalogue',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -142,9 +142,9 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'test book');
     await tester.pumpAndSettle();
 
-    expect(find.text('＋ Add "test book" to the catalog'), findsOneWidget);
+    expect(find.text('＋ Add "test book" to the catalogue'), findsOneWidget);
     expect(
-      find.text("Not in the catalog yet? Add it — you'll come right back here."),
+      find.text("Not in the catalogue yet? Add it — you'll come right back here."),
       findsOneWidget,
     );
   });
@@ -162,7 +162,7 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'test book');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('＋ Add "test book" to the catalog'));
+    await tester.tap(find.text('＋ Add "test book" to the catalogue'));
     await tester.pumpAndSettle();
 
     // The add form opened with the typed title already in — never retyped.
@@ -170,7 +170,7 @@ void main() {
     expect(find.text('Add a book'), findsOneWidget);
     expect(find.text('test book'), findsWidgets);
 
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
 
     expect(api.lastCreatePayload?['title'], 'test book');
@@ -212,9 +212,9 @@ void main() {
     // without the "nothing matched" reassurance line. (The result title shows
     // twice: on its typeset cover and as the tile's text.)
     expect(find.text('Test Book of Poems'), findsWidgets);
-    expect(find.text('＋ Add "test book" to the catalog'), findsOneWidget);
+    expect(find.text('＋ Add "test book" to the catalogue'), findsOneWidget);
     expect(
-      find.text("Not in the catalog yet? Add it — you'll come right back here."),
+      find.text("Not in the catalogue yet? Add it — you'll come right back here."),
       findsNothing,
     );
   });

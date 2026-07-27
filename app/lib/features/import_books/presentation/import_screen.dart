@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/quiet_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/typeset_cover.dart';
@@ -53,48 +54,65 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   Future<void> _parse() async {
     final csv = _csvController.text.trim();
     if (csv.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _busy = true);
     try {
       final preview = await ref.read(apiClientProvider).importPreview(csv);
       if (mounted) setState(() => _preview = preview);
     } catch (err) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err')));
-      }
+      // A human sentence, never the raw exception — the commonest cause is a
+      // file that isn't a book CSV at all.
+      if (mounted) showQuietError(context, l10n.importParseFailed, err);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _import() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _busy = true);
-    final db = ref.read(appDatabaseProvider);
-    final libraryRepo = await ref.read(libraryRepositoryProvider.future);
-    final ratingsRepo = await ref.read(ratingsRepositoryProvider.future);
-    final reviewsRepo = await ref.read(reviewsRepositoryProvider.future);
     var imported = 0;
+    var alreadyOwned = 0;
+    try {
+      final db = ref.read(appDatabaseProvider);
+      final libraryRepo = await ref.read(libraryRepositoryProvider.future);
+      final ratingsRepo = await ref.read(ratingsRepositoryProvider.future);
+      final reviewsRepo = await ref.read(reviewsRepositoryProvider.future);
 
-    for (final row in _matchedRows) {
-      final work = row['match'] as Map<String, dynamic>;
-      final edition = work['edition'] as Map<String, dynamic>?;
-      if (edition == null) continue;
-      final editionId = edition['id'] as String;
-      if (await libraryRepo.getByEditionId(editionId) != null) continue; // already owned
+      for (final row in _matchedRows) {
+        final work = row['match'] as Map<String, dynamic>;
+        final edition = work['edition'] as Map<String, dynamic>?;
+        if (edition == null) continue;
+        final editionId = edition['id'] as String;
+        if (await libraryRepo.getByEditionId(editionId) != null) {
+          alreadyOwned++; // already owned — counted so the done message can say so
+          continue;
+        }
 
-      await cacheBookForOffline(db, work, edition);
-      await libraryRepo.add(editionId: editionId, status: row['status'] as String? ?? 'pending');
-      final workId = work['id'] as String;
-      if (row['rating'] != null) await ratingsRepo.setRating(workId, row['rating'] as int);
-      final review = row['review'] as String?;
-      if (review != null && review.trim().isNotEmpty) {
-        await reviewsRepo.upsert(workId, body: review.trim(), visible: false);
+        await cacheBookForOffline(db, work, edition);
+        await libraryRepo.add(editionId: editionId, status: row['status'] as String? ?? 'pending');
+        final workId = work['id'] as String;
+        if (row['rating'] != null) await ratingsRepo.setRating(workId, row['rating'] as int);
+        final review = row['review'] as String?;
+        if (review != null && review.trim().isNotEmpty) {
+          await reviewsRepo.upsert(workId, body: review.trim(), visible: false);
+        }
+        imported++;
       }
-      imported++;
+    } catch (err) {
+      // try/finally so a thrown await can't brick the button mid-import.
+      if (mounted) showQuietError(context, l10n.importFailed, err);
+      return;
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
 
     if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.importDone(imported))));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(alreadyOwned > 0
+          ? l10n.importDoneWithSkipped(imported, alreadyOwned)
+          : l10n.importDone(imported)),
+    ));
     context.pop();
   }
 
@@ -142,13 +160,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         ),
         SizedBox(height: 12),
         TextField(
-          textCapitalization: TextCapitalization.words,
+          // No capitalization games on pasted CSV data.
+          textCapitalization: TextCapitalization.none,
           controller: _csvController,
           maxLines: 10,
           minLines: 6,
           style: TextStyle(fontSize: 12, fontFamily: 'monospace'),
           decoration: InputDecoration(
-            hintText: 'Title,Author,ISBN,My Rating,Exclusive Shelf…',
+            hintText: l10n.importCsvHint,
             hintStyle: TextStyle(fontSize: 11, color: AppColors.inkSoft),
             filled: true,
             fillColor: AppColors.card,
@@ -203,10 +222,35 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.importMatched(matched, total),
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              Text(l10n.importUnmatchedNote,
-                  style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(l10n.importMatched(matched, total),
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                  // The way back from a rendered preview — keeps the pasted
+                  // CSV, so a wrong file isn't a start-from-scratch.
+                  TextButton(
+                    onPressed: () => setState(() => _preview = null),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.oxblood,
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(l10n.importStartOver,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+              Text(
+                // Say how many will actually be skipped, not just that
+                // unmatched rows exist in the abstract.
+                matched < total
+                    ? l10n.importUnmatchedCount(total - matched, total)
+                    : l10n.importUnmatchedNote,
+                style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+              ),
             ],
           ),
         ),

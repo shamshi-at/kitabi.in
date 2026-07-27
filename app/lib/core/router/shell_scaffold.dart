@@ -292,29 +292,54 @@ class _MiniTimerBarContentState extends ConsumerState<_MiniTimerBarContent> {
               // The book being read, not a blank tile — same cover frame the
               // rest of the app uses, so a photographed cover shows and a
               // cover-less book still reads as itself (the typeset fallback).
-              TypesetCover(
-                title: title ?? '…',
-                author: activeBook?.book?.authorNames,
-                coverUrl: activeBook?.book?.coverUrl,
-                width: 28,
-                height: 40,
-              ),
+              // While the book provider warms, quiet placeholders of the same
+              // footprint hold the space — never a literal '…'.
+              if (title == null)
+                Container(
+                  width: 28,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                )
+              else
+                TypesetCover(
+                  title: title,
+                  author: activeBook?.book?.authorNames,
+                  coverUrl: activeBook?.book?.coverUrl,
+                  width: 28,
+                  height: 40,
+                ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      title ?? '…',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                    if (title == null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Container(
+                          width: 96,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
                     Text(
                       AppLocalizations.of(context)!.timerMiniBarLive(formatClock(elapsed)),
                       style: TextStyle(color: AppColors.gold, fontSize: 10),

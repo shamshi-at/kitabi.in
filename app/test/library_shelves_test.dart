@@ -299,7 +299,7 @@ void main() {
 
     // The reader's real shelves are offered (this is the fix — the old dialog
     // never showed them).
-    expect(find.text('Add to a shelf'), findsOneWidget);
+    expect(find.text('Choose a shelf'), findsOneWidget);
     expect(find.text('Classics'), findsOneWidget);
     expect((await tagsOf(tester, 'le-e1')).map((t) => t.tagId), contains('tag2'));
 
@@ -307,7 +307,7 @@ void main() {
     // closes the sheet at once — one book, one shelf.
     await tester.tap(find.text('Classics'));
     await settle(tester);
-    expect(find.text('Add to a shelf'), findsNothing);
+    expect(find.text('Choose a shelf'), findsNothing);
     final tags = (await tagsOf(tester, 'le-e1')).map((t) => t.tagId).toList();
     expect(tags, contains('tag1'));
     expect(tags, isNot(contains('tag2')));

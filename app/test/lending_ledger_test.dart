@@ -223,9 +223,12 @@ void main() {
     expect(find.text('Returned ✓'), findsOneWidget);
 
     // Tab counts are active loans only: one book out, and the returned
-    // borrow does NOT count as borrowed (the reported bug).
-    expect(find.text('Lent out · 1'), findsOneWidget);
-    expect(find.text('Borrowed · 0'), findsOneWidget);
+    // borrow does NOT count as borrowed (the reported bug). The tabs are the
+    // shared pill SegTabBar now, which uppercases its labels in code.
+    expect(find.text('LENT OUT · 1'), findsOneWidget);
+    expect(find.text('BORROWED · 0'), findsOneWidget);
+    // No rejected loans seeded, so the Rejected tab must not exist at all.
+    expect(find.textContaining('REJECTED'), findsNothing);
     // The at-a-glance summary chip for the one active loan.
     expect(find.text('1 out'), findsOneWidget);
   });

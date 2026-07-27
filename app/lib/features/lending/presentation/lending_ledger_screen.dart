@@ -9,6 +9,7 @@ import '../../../core/router/tab_reset.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/person_link.dart';
+import '../../../core/widgets/seg_tab_bar.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/database.dart';
@@ -37,121 +38,146 @@ class LendingLedgerScreen extends ConsumerWidget {
     // it lands on the first tab, not the last one viewed (owner request).
     final resetTick = ref.watch(lendingTabResetProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.paper,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showLendPickBookSheet(context),
-        backgroundColor: AppColors.oxblood,
-        foregroundColor: AppColors.paper,
-        icon: Icon(Icons.add, size: 20),
-        label: Text(l10n.lendingLendBook),
+    return ledger.when(
+      loading: () => Scaffold(
+        backgroundColor: AppColors.paper,
+        body: SafeArea(child: ListSkeleton()),
       ),
-      body: SafeArea(
-        child: ledger.when(
-          loading: () => ListSkeleton(),
-          error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(allLendingProvider)),
-          data: (all) {
-            final conn = ref.watch(connectionsProvider).valueOrNull;
-            final lent = all.where((r) => r.record.direction != 'borrowed').toList();
-            final borrowed = all.where((r) => r.record.direction == 'borrowed').toList();
-            // Tab counts are ACTIVE loans only — a returned book is neither
-            // lent out nor borrowed anymore (history stays in the lists).
-            final activeLent = lent.where((r) => r.record.returnedDate == null).toList();
-            final activeBorrowed =
-                borrowed.where((r) => r.record.returnedDate == null).toList();
-            // Rejected loans are the still-out ones whose borrower declined the
-            // connection (the book stands, the link doesn't).
-            final rejected = activeLent
-                .where((r) =>
-                    r.record.borrowerUserId != null &&
-                    (conn?.isRejected(r.record.borrowerUserId!) ?? false))
-                .toList();
-
-            final overdue = activeLent
-                .where((r) =>
-                    r.record.dueDate != null &&
-                    DateUtils.dateOnly(r.record.dueDate!)
-                        .isBefore(DateUtils.dateOnly(DateTime.now())))
-                .length;
-
-            return DefaultTabController(
-              key: ValueKey(resetTick),
-              length: 3,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(20, 16, 12, 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(l10n.lendingLedgerTitle,
-                              style: Theme.of(context).textTheme.titleLarge),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.search, color: AppColors.oxblood),
-                          tooltip: l10n.searchTitle,
-                          onPressed: () => context.push(Routes.catalogSearch),
-                        ),
-                        _ConnectionsButton(),
-                      ],
-                    ),
-                  ),
-                  // The ledger at a glance — live counts of what's out, what's
-                  // late, and what's with you.
-                  if (activeLent.isNotEmpty || activeBorrowed.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(20, 0, 20, 6),
-                      child: Row(
-                        children: [
-                          if (activeLent.isNotEmpty)
-                            _SummaryChip(
-                              icon: Icons.north_east,
-                              label: l10n.lendingSummaryOut(activeLent.length),
-                              color: AppColors.gold,
-                            ),
-                          if (overdue > 0)
-                            _SummaryChip(
-                              icon: Icons.schedule,
-                              label: l10n.lendingSummaryOverdue(overdue),
-                              color: AppColors.oxblood,
-                            ),
-                          if (activeBorrowed.isNotEmpty)
-                            _SummaryChip(
-                              icon: Icons.south_west,
-                              label: l10n.lendingSummaryBorrowed(activeBorrowed.length),
-                              color: AppColors.slate,
-                            ),
-                        ],
-                      ),
-                    ),
-                  TabBar(
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    labelColor: AppColors.oxblood,
-                    unselectedLabelColor: AppColors.inkSoft,
-                    indicatorColor: AppColors.oxblood,
-                    labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                    tabs: [
-                      Tab(text: l10n.lendingLentOutTab(activeLent.length)),
-                      Tab(text: l10n.lendingRejectedTab(rejected.length)),
-                      Tab(text: l10n.lendingBorrowedTab(activeBorrowed.length)),
-                    ],
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        _RefreshableTab(child: _LentView(records: lent)),
-                        _RefreshableTab(child: _RejectedView(records: rejected)),
-                        _RefreshableTab(child: _BorrowedView(records: borrowed)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+      error: (err, _) => Scaffold(
+        backgroundColor: AppColors.paper,
+        body: SafeArea(
+          child: ErrorRetry(onRetry: () => ref.invalidate(allLendingProvider)),
         ),
       ),
+      data: (all) {
+        final conn = ref.watch(connectionsProvider).valueOrNull;
+        final lent = all.where((r) => r.record.direction != 'borrowed').toList();
+        final borrowed = all.where((r) => r.record.direction == 'borrowed').toList();
+        // Tab counts are ACTIVE loans only — a returned book is neither
+        // lent out nor borrowed anymore (history stays in the lists).
+        final activeLent = lent.where((r) => r.record.returnedDate == null).toList();
+        final activeBorrowed =
+            borrowed.where((r) => r.record.returnedDate == null).toList();
+        // Rejected loans are the still-out ones whose borrower declined the
+        // connection (the book stands, the link doesn't). The tab only exists
+        // while there are any — "two tabs, one ledger" the rest of the time.
+        final rejected = activeLent
+            .where((r) =>
+                r.record.borrowerUserId != null &&
+                (conn?.isRejected(r.record.borrowerUserId!) ?? false))
+            .toList();
+        final hasRejected = rejected.isNotEmpty;
+
+        final overdue = activeLent
+            .where((r) =>
+                r.record.dueDate != null &&
+                DateUtils.dateOnly(r.record.dueDate!)
+                    .isBefore(DateUtils.dateOnly(DateTime.now())))
+            .length;
+
+        return DefaultTabController(
+          // Re-keyed on the rejected tab appearing/disappearing too — a
+          // TabController's length is fixed at creation.
+          key: ValueKey('$resetTick-$hasRejected'),
+          length: hasRejected ? 3 : 2,
+          child: Builder(builder: (context) {
+            final tabController = DefaultTabController.of(context);
+            return AnimatedBuilder(
+              animation: tabController,
+              builder: (context, _) {
+                // Borrowed is always the last tab; the FAB follows the tab so
+                // "log a borrow" is as reachable as "lend a book" (it used to
+                // be a small TextButton buried under the history).
+                final onBorrowedTab = tabController.index == tabController.length - 1;
+                return Scaffold(
+                  backgroundColor: AppColors.paper,
+                  floatingActionButton: FloatingActionButton.extended(
+                    onPressed: () => onBorrowedTab
+                        ? showLogBorrowedSheet(context)
+                        : showLendPickBookSheet(context),
+                    backgroundColor: AppColors.oxblood,
+                    foregroundColor: AppColors.paper,
+                    icon: Icon(Icons.add, size: 20),
+                    label: Text(
+                        onBorrowedTab ? l10n.lendingLogBorrowedFab : l10n.lendingLendBook),
+                  ),
+                  body: SafeArea(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(20, 16, 12, 4),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(l10n.lendingLedgerTitle,
+                                    style: Theme.of(context).textTheme.titleLarge),
+                              ),
+                              // No catalog-search icon here — on this screen it
+                              // read as "search my loans" (ux-review 2026-07-28).
+                              _ConnectionsButton(),
+                            ],
+                          ),
+                        ),
+                        // The ledger at a glance — live counts of what's out,
+                        // what's late, and what's with you.
+                        if (activeLent.isNotEmpty || activeBorrowed.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(20, 0, 20, 6),
+                            child: Row(
+                              children: [
+                                if (activeLent.isNotEmpty)
+                                  _SummaryChip(
+                                    icon: Icons.north_east,
+                                    label: l10n.lendingSummaryOut(activeLent.length),
+                                    color: AppColors.gold,
+                                  ),
+                                if (overdue > 0)
+                                  _SummaryChip(
+                                    icon: Icons.schedule,
+                                    label: l10n.lendingSummaryOverdue(overdue),
+                                    color: AppColors.oxblood,
+                                  ),
+                                if (activeBorrowed.isNotEmpty)
+                                  _SummaryChip(
+                                    icon: Icons.south_west,
+                                    label: l10n.lendingSummaryBorrowed(activeBorrowed.length),
+                                    color: AppColors.slate,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+                          child: SegTabBar(
+                            tabs: [
+                              SegTabItem(l10n.lendingLentOutTab(activeLent.length)),
+                              if (hasRejected)
+                                SegTabItem(l10n.lendingRejectedTab(rejected.length)),
+                              SegTabItem(l10n.lendingBorrowedTab(activeBorrowed.length)),
+                            ],
+                            selectedIndex: tabController.index,
+                            onChanged: tabController.animateTo,
+                          ),
+                        ),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              _RefreshableTab(child: _LentView(records: lent)),
+                              if (hasRejected)
+                                _RefreshableTab(child: _RejectedView(records: rejected)),
+                              _RefreshableTab(child: _BorrowedView(records: borrowed)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          }),
+        );
+      },
     );
   }
 }
@@ -287,16 +313,9 @@ class _BorrowedView extends StatelessWidget {
             for (final item in returned) _ReturnedCard(item: item),
           ],
         ],
-        SizedBox(height: 12),
-        Center(
-          child: TextButton(
-            onPressed: () => showLogBorrowedSheet(context),
-            child: Text(
-              l10n.lendingLogBorrowed,
-              style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
+        // Room for the context-aware FAB (which is now how a borrow gets
+        // logged from this tab — the old buried TextButton is gone).
+        SizedBox(height: 72),
       ],
     );
   }
@@ -736,12 +755,25 @@ class _LoanCard extends ConsumerWidget {
               _dueStamp(context, r.dueDate),
             ],
           ),
-          if (borrowed)
+          // "Self-logged — just for your own tracking" is only true when the
+          // lender ISN'T a linked Kitabi user; a linked borrow gets the gold
+          // linked badge instead (ux-review 2026-07-28, #9 — the label used
+          // to show unconditionally, inverted for linked lenders).
+          if (borrowed && r.borrowerUserId == null)
             Padding(
               padding: EdgeInsets.only(top: 6, left: 44),
               child: Text(
                 l10n.lendingSelfLogged,
                 style: TextStyle(color: AppColors.inkSoft, fontSize: 10, height: 1.2),
+              ),
+            )
+          else if (borrowed)
+            Padding(
+              padding: EdgeInsets.only(top: 6, left: 44),
+              child: Row(
+                children: [
+                  _Stamp(label: l10n.lendingLinkedUser, color: AppColors.gold),
+                ],
               ),
             ),
           SizedBox(height: 8),
@@ -757,10 +789,23 @@ class _LoanCard extends ConsumerWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () async {
-                    Haptics.success();
+                    // Capture everything before the awaits — this card leaves
+                    // the tree the moment the record closes.
+                    final messenger = ScaffoldMessenger.of(context);
                     final repo = await ref.read(lendingRepositoryProvider.future);
+                    final notifications = ref.read(notificationServiceProvider);
                     await repo.markReturned(r.id, DateTime.now());
-                    await ref.read(notificationServiceProvider).cancel(reminderIdForRecord(r.id));
+                    await notifications.cancel(reminderIdForRecord(r.id));
+                    // Haptic *after* the write — feedback confirms the deed,
+                    // not the intention.
+                    Haptics.success();
+                    messenger.showSnackBar(SnackBar(
+                      content: Text(l10n.lendingReturnedSnack),
+                      action: SnackBarAction(
+                        label: l10n.undoAction,
+                        onPressed: () => repo.reopenLoan(r.id),
+                      ),
+                    ));
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.moss,
@@ -860,6 +905,21 @@ class _ReturnedCard extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // History keeps its cover too — a 24×35 thumbnail (the card's own
+            // 0.72 opacity mutes it along with everything else).
+            GestureDetector(
+              onTap: book == null
+                  ? null
+                  : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+              child: TypesetCover(
+                title: book?.title ?? '…',
+                author: book?.authorNames,
+                coverUrl: book?.coverUrl,
+                width: 24,
+                height: 35,
+              ),
+            ),
+            SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

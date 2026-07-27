@@ -395,7 +395,7 @@ void main() {
     await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
 
     expect(find.text('Title is required'), findsOneWidget);
@@ -411,13 +411,13 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'Oru Deshathinte Katha');
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
 
     expect(fake.lastCreatePayload?['title'], 'Oru Deshathinte Katha');
     // Create mode lands on the confirmation popup with the created book's
     // metadata (the fake API returns Chemmeen) and the three actions.
-    expect(find.text('ADDED TO THE CATALOG'), findsOneWidget);
+    expect(find.text('ADDED TO THE CATALOGUE'), findsOneWidget);
     expect(find.text('Chemmeen'), findsWidgets);
     expect(find.text('Add to library'), findsOneWidget);
     expect(find.text('Create another'), findsOneWidget);
@@ -461,7 +461,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'Oru Deshathinte Katha');
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Add to library'));
@@ -494,15 +494,15 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'Oru Deshathinte Katha');
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Create another'));
     await tester.pumpAndSettle();
 
     // Popup gone, same screen, blank title field.
-    expect(find.text('ADDED TO THE CATALOG'), findsNothing);
-    expect(find.text('Save to catalog'), findsOneWidget);
+    expect(find.text('ADDED TO THE CATALOGUE'), findsNothing);
+    expect(find.text('Save to catalogue'), findsOneWidget);
     final titleField = tester.widget<TextFormField>(find.byType(TextFormField).first);
     expect(titleField.controller?.text, isEmpty);
   });
@@ -550,14 +550,17 @@ void main() {
     await tester.tap(find.text('More details'));
     await tester.pumpAndSettle();
 
-    // Default format shows in the select box (no Material dropdown).
+    // No Material dropdown, and no silent default: a fresh form's format is
+    // unset ("Not set"), not quietly Paperback.
     expect(find.byType(DropdownButton<String>), findsNothing);
-    expect(find.text('Paperback'), findsOneWidget);
+    expect(find.text('Paperback'), findsNothing);
 
-    // Tapping opens the bottom-sheet picker with all options.
-    await tester.tap(find.text('Paperback'));
+    // Two nullable selects read "Not set" (Language above the fold, Format
+    // inside it) — the Format one is last in the list.
+    await tester.tap(find.text('Not set').last);
     await tester.pumpAndSettle();
     expect(find.text('Choose format'), findsOneWidget);
+    expect(find.text('Paperback'), findsOneWidget);
     expect(find.text('Hardcover'), findsOneWidget);
 
     await tester.tap(find.text('Hardcover'));
@@ -686,18 +689,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fake.lastSimilarQuery, 'Chemeen');
-    expect(find.text('Already in the catalog?'), findsOneWidget);
+    expect(find.text('Already in the catalogue?'), findsOneWidget);
     expect(find.text('Chemmeen'), findsWidgets);
 
     // Dismiss → panel gone, and further typing doesn't bring it back.
     await tester.tap(find.byIcon(Icons.close).first);
     await tester.pumpAndSettle();
-    expect(find.text('Already in the catalog?'), findsNothing);
+    expect(find.text('Already in the catalogue?'), findsNothing);
 
     await tester.enterText(find.byType(TextFormField).first, 'Chemeen again');
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();
-    expect(find.text('Already in the catalog?'), findsNothing);
+    expect(find.text('Already in the catalogue?'), findsNothing);
   });
 
   testWidgets('duplicate suggestions never appear in edit mode', (tester) async {
@@ -724,7 +727,7 @@ void main() {
 
     // Edit mode: no listener, no lookup, no panel.
     expect(fake.lastSimilarQuery, isNull);
-    expect(find.text('Already in the catalog?'), findsNothing);
+    expect(find.text('Already in the catalogue?'), findsNothing);
   });
 
   testWidgets('a reading-your-cover overlay shows while extraction is in flight', (tester) async {
@@ -819,7 +822,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'ചെമ്മീൻ (revised)');
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -855,7 +858,7 @@ void main() {
     expect(find.text('Fiction'), findsOneWidget);
 
     // Save is sticky — hit-testable without any scrolling.
-    expect(find.text('Save to catalog').hitTestable(), findsOneWidget);
+    expect(find.text('Save to catalogue').hitTestable(), findsOneWidget);
   });
 
   testWidgets('type and genre chips ride the create payload', (tester) async {
@@ -870,7 +873,7 @@ void main() {
     await tester.tap(find.text('Novel'));
     await tester.tap(find.text('Fiction'));
     await tester.pump();
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
 
     expect(fake.lastCreatePayload?['form'], 'Novel');
@@ -890,7 +893,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Novel')); // deselect
     await tester.pump();
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
 
     expect(fake.lastCreatePayload?['form'], isNull);
@@ -1037,7 +1040,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(FilterChip, 'Science fiction'), findsOneWidget);
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
     expect(
       (fake.lastCreatePayload?['genre_names'] as List).cast<String>(),
@@ -1045,7 +1048,7 @@ void main() {
     );
   });
 
-  testWidgets('a type outside the vocabulary can be created and folds onto a known one',
+  testWidgets('the type sheet is a closed vocabulary — no Create for an off-list type',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -1059,13 +1062,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Novella');
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Create'));
-    await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(FilterChip, 'Novella'), findsOneWidget);
-    await tester.tap(find.text('Save to catalog'));
-    await tester.pumpAndSettle();
-    expect(fake.lastCreatePayload?['form'], 'Novella');
+    // Type has a fixed vocabulary (per its own comment) — unlike genres,
+    // nothing off-list can be created from the sheet.
+    expect(find.textContaining('Create'), findsNothing);
+    expect(find.text('Nothing matches that.'), findsOneWidget);
   });
 
   testWidgets('a custom type that is really a known one folds onto it', (tester) async {
@@ -1090,7 +1091,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
     expect(fake.lastCreatePayload?['form'], 'Novel');
   });
@@ -1111,7 +1112,7 @@ void main() {
     );
     await tester.enterText(pagesField, '250'); // was 184
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
 
     // The Work payload can't carry it (the API ignores edition fields there),
@@ -1134,7 +1135,7 @@ void main() {
 
     // Change only a Work field.
     await tester.enterText(find.byType(TextFormField).first, 'Chemmeen (revised)');
-    await tester.tap(find.text('Save to catalog'));
+    await tester.tap(find.text('Save to catalogue'));
     await tester.pumpAndSettle();
 
     // Nothing on the edition changed, so it must not be patched — a save must

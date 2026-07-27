@@ -11,13 +11,17 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/pulsing_dot.dart';
 import '../../../core/widgets/quote_card.dart';
+import '../../../core/widgets/section_label.dart';
 import '../../../core/widgets/typeset_cover.dart';
+import '../../../data/api/api_client.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../insights/providers/insights_providers.dart';
 import '../../library/providers/library_providers.dart';
 import '../../library/providers/reading_timer_providers.dart';
+import '../../library/reading_progress.dart';
 import '../../library/stop_session_flow.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../../recommendations/providers/recommendations_providers.dart';
@@ -56,7 +60,9 @@ class HomeScreen extends ConsumerWidget {
                     onPressed: () => context.push(Routes.catalogSearch),
                   ),
                   IconButton(
-                    icon: Icon(Icons.auto_stories_outlined, color: AppColors.oxblood),
+                    // local_library, not auto_stories — the open-book glyph
+                    // already means "your shelf" on the empty state.
+                    icon: Icon(Icons.local_library_outlined, color: AppColors.oxblood),
                     tooltip: l10n.browseEntry,
                     onPressed: () => context.push(Routes.catalogBrowse),
                   ),
@@ -65,7 +71,8 @@ class HomeScreen extends ConsumerWidget {
                   Builder(
                     builder: (context) {
                       final me = ref.watch(meProvider).valueOrNull;
-                      final needsUsername = me != null && me['username'] == null;
+                      final username = me?['username'] as String?;
+                      final needsUsername = me != null && (username == null || username.isEmpty);
                       final button = IconButton(
                         icon: Icon(Icons.person_outline, color: AppColors.oxblood),
                         tooltip: l10n.profileEntry,
@@ -91,7 +98,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(
               child: RefreshIndicator(
                 color: AppColors.oxblood,
-                onRefresh: () async => ref.invalidate(libraryEntriesProvider),
+                onRefresh: () => ref.refresh(libraryEntriesProvider.future),
                 child: entries.when(
                   loading: () => CoverGridSkeleton(),
                   error: (err, _) =>
@@ -196,18 +203,18 @@ class _Dashboard extends ConsumerWidget {
       padding: EdgeInsets.fromLTRB(20, 6, 20, 24),
       children: [
         if (reading.isNotEmpty) ...[
-          _SectionLabel(l10n.homeCurrentlyReading),
+          SectionLabel(l10n.homeCurrentlyReading),
           for (final entry in reading) _CurrentlyReadingCard(entry: entry),
           SizedBox(height: 8),
         ],
         if (activeLent.isNotEmpty) _LendingNudge(item: activeLent.first, l10n: l10n),
         SizedBox(height: 14),
-        _SectionLabel(l10n.homeFreshShelf),
+        SectionLabel(l10n.homeFreshShelf),
         _CoverShelf(entries: recent.take(12).toList()),
         SizedBox(height: 16),
         _GoalSlip(entries: entries, l10n: l10n),
         SizedBox(height: 14),
-        _SectionLabel(l10n.homeYourShelves),
+        SectionLabel(l10n.homeYourShelves),
         _ShelfGrid(counts: counts, l10n: l10n),
         SizedBox(height: 14),
         _RecsEntryCard(l10n: l10n),
@@ -242,28 +249,6 @@ class _ShelfCounts {
   final int read;
   final int lentOut;
   final int wishlist;
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 8),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
-          color: AppColors.inkSoft,
-        ),
-      ),
-    );
-  }
 }
 
 /// The newest additions as a plain marquee of real covers — deliberately no
@@ -353,15 +338,7 @@ class _GoalSlip extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    l10n.homeGoalLabel.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 8.5,
-                      letterSpacing: 1.2,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.inkSoft,
-                    ),
-                  ),
+                  child: SectionLabel(l10n.homeGoalLabel, padding: EdgeInsets.zero),
                 ),
                 Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
               ],
@@ -436,12 +413,16 @@ class _CurrentlyReadingCard extends ConsumerWidget {
       onTap: book == null
           ? null
           : () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+      // Light card with the oxblood bar, per mockup 3 — the dark-slab look
+      // put three constant-dark panels on one page (the constitution allows
+      // one, and the quote card owns it).
       child: Container(
         margin: EdgeInsets.only(bottom: 8),
         padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppColors.night,
+          color: AppColors.card,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.line),
         ),
         child: Row(
           children: [
@@ -467,17 +448,13 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                           style: GoogleFonts.fraunces(
                             fontWeight: FontWeight.w600,
                             fontSize: 14.5,
-                            color: Colors.white,
+                            color: AppColors.ink,
                           ),
                         ),
                       ),
                       if (isLive) ...[
                         SizedBox(width: 6),
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.gold),
-                        ),
+                        PulsingDot(size: 6),
                       ],
                     ],
                   ),
@@ -486,7 +463,7 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                       book!.authorNames,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 11),
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
                     ),
                   if (page != null) ...[
                     SizedBox(height: 5),
@@ -503,8 +480,8 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                         child: LinearProgressIndicator(
                           value: (page / total).clamp(0.0, 1.0),
                           minHeight: 4,
-                          backgroundColor: Colors.white.withValues(alpha: 0.15),
-                          valueColor: AlwaysStoppedAnimation(AppColors.gold),
+                          backgroundColor: AppColors.paperDeep,
+                          valueColor: AlwaysStoppedAnimation(AppColors.oxblood),
                         ),
                       ),
                     if (total != null && percent != null) SizedBox(height: 3),
@@ -512,7 +489,7 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                       total != null && percent != null
                           ? l10n.homeProgressLine(page, total, percent)
                           : l10n.homeProgressLineNoTotal(page),
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 10.5),
+                      style: TextStyle(color: AppColors.inkSoft, fontSize: 10.5),
                     ),
                   ],
                 ],
@@ -530,7 +507,7 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                   constraints: BoxConstraints(minWidth: 32, minHeight: 32),
                   icon: Icon(
                     isLive ? Icons.stop_circle_outlined : Icons.play_circle_outline,
-                    color: AppColors.gold,
+                    color: AppColors.oxblood,
                     size: 22,
                   ),
                   tooltip: isLive ? l10n.timerStop : l10n.timerStart,
@@ -541,7 +518,9 @@ class _CurrentlyReadingCard extends ConsumerWidget {
                 IconButton(
                   padding: EdgeInsets.all(4),
                   constraints: BoxConstraints(minWidth: 32, minHeight: 32),
-                  icon: Icon(Icons.add_circle_outline, color: AppColors.gold, size: 22),
+                  // A pencil, not a "+" — the nav's "+" means add-a-book, and
+                  // two nearby plus glyphs meant two different things.
+                  icon: Icon(Icons.edit, color: AppColors.oxblood, size: 20),
                   tooltip: l10n.homeUpdateProgress,
                   onPressed: () => _updateProgress(context, ref, l10n),
                 ),
@@ -585,29 +564,81 @@ class _CurrentlyReadingCard extends ConsumerWidget {
     );
   }
 
+  /// Mirrors the book page's pencil editor: "of N pages" context when the
+  /// total is known, an optional total field (routed through the shared
+  /// [saveBookTotalPages]) when it isn't, replace-on-tap, and range checks —
+  /// this dialog used to accept "-3" and "9999" without blinking.
   Future<void> _updateProgress(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+    final knownTotal = ref.read(cachedBookProvider(entry.editionId)).valueOrNull?.pageCount;
     final controller = TextEditingController(text: entry.currentPage?.toString() ?? '');
-    final newPage = await showDialog<int>(
+    // Pre-selected, so the autofocused field is overwritten by the first digit.
+    controller.selection = TextSelection(baseOffset: 0, extentOffset: controller.text.length);
+    final totalController = TextEditingController();
+    String? errorText;
+    final result = await showDialog<(int, int?)>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.homeUpdateProgress),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: InputDecoration(labelText: l10n.bookCurrentPage),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text)),
-            child: Text(l10n.bookSave),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.homeUpdateProgress),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                onTap: () => controller.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: controller.text.length,
+                ),
+                decoration: InputDecoration(
+                  labelText: l10n.bookCurrentPage,
+                  helperText: knownTotal != null ? l10n.homeProgressOfTotal(knownTotal) : null,
+                  errorText: errorText,
+                ),
+              ),
+              if (knownTotal == null)
+                TextField(
+                  controller: totalController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: l10n.timerTotalFieldLabel),
+                ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.bookCancel)),
+            TextButton(
+              onPressed: () {
+                final page = int.tryParse(controller.text.trim());
+                final total = knownTotal ?? int.tryParse(totalController.text.trim());
+                if (page == null || page < 0) {
+                  setDialogState(() => errorText = l10n.homeProgressInvalid);
+                  return;
+                }
+                if (total != null && page > total) {
+                  setDialogState(() => errorText = l10n.homeProgressTooFar(total));
+                  return;
+                }
+                Navigator.pop(ctx, (page, int.tryParse(totalController.text.trim())));
+              },
+              child: Text(l10n.bookSave),
+            ),
+          ],
+        ),
       ),
     );
-    if (newPage == null) return;
+    if (result == null) return;
+    final (newPage, typedTotal) = result;
     Haptics.selection();
+    // The total belongs to the shared Edition — mirror it locally + sync it.
+    if (knownTotal == null && typedTotal != null) {
+      await saveBookTotalPages(
+        ref.read(appDatabaseProvider),
+        ref.read(apiClientProvider),
+        entry.editionId,
+        typedTotal,
+      );
+    }
     final repo = await ref.read(libraryRepositoryProvider.future);
     await repo.updateProgress(
       entry.id,
@@ -664,7 +695,14 @@ class _LendingNudge extends StatelessWidget {
                           style: TextStyle(fontSize: 12, color: AppColors.ink),
                         ),
                       ),
-                      Icon(Icons.chevron_right, size: 18, color: AppColors.oxblood),
+                      Text(
+                        l10n.homeNudgeView,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.oxblood,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -743,7 +781,7 @@ class _RecsEntryCard extends ConsumerWidget {
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.night,
+          color: AppColors.darkPanel,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -753,7 +791,7 @@ class _RecsEntryCard extends ConsumerWidget {
             Expanded(
               child: Text(
                 l10n.recsHomePick,
-                style: TextStyle(color: Color(0xFFEFE3C8), fontSize: 12, height: 1.4),
+                style: TextStyle(color: AppColors.onDark, fontSize: 12, height: 1.4),
               ),
             ),
             Container(
@@ -765,7 +803,7 @@ class _RecsEntryCard extends ConsumerWidget {
               child: Text(
                 l10n.recsForYou,
                 style: TextStyle(
-                  color: AppColors.night,
+                  color: AppColors.darkPanel,
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
                 ),
@@ -819,7 +857,7 @@ class _ShelfStat extends StatelessWidget {
               Text(
                 label.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 7.5,
+                  fontSize: 9,
                   letterSpacing: 0.8,
                   fontWeight: FontWeight.w700,
                   color: AppColors.inkSoft,

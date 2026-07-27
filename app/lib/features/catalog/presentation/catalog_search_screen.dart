@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/section_label.dart';
 import '../../../core/widgets/net_image.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/typeset_cover.dart';
@@ -23,7 +24,13 @@ import 'catalog_result_tile.dart';
 /// (offline, from Drift) and the shared catalog's books, authors, and
 /// publishers (one API call). Scan/Add buttons stay for the add-a-book flow.
 class CatalogSearchScreen extends ConsumerStatefulWidget {
-  const CatalogSearchScreen({super.key});
+  const CatalogSearchScreen({super.key, this.initialQuery});
+
+  /// Pre-runs this query on open (passed as `?q=` on the route) — used by
+  /// callers that fall back to search with a name already in hand (e.g.
+  /// Insights' most-read-author tile when the author lookup fails offline),
+  /// so the fallback never lands on a blank page.
+  final String? initialQuery;
 
   @override
   ConsumerState<CatalogSearchScreen> createState() => _CatalogSearchScreenState();
@@ -39,6 +46,17 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
   /// costs one request per pause instead of one per keystroke.
   String _remoteQuery = '';
   Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    final q = widget.initialQuery?.trim() ?? '';
+    if (q.isNotEmpty) {
+      _controller.text = q;
+      _query = q;
+      _remoteQuery = q;
+    }
+  }
 
   @override
   void dispose() {
@@ -102,10 +120,10 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                             child: TextField(
                               textCapitalization: TextCapitalization.sentences,
                               controller: _controller,
-                              // Keyboard up on arrival — the screen is useless
-                              // until there's a query, so don't make the user
-                              // tap the field first.
-                              autofocus: true,
+                              // No autofocus: the pre-type page (recents,
+                              // newest arrivals, top authors, the Browse door)
+                              // gets its first impression before the keyboard
+                              // buries it. Tapping the field focuses as usual.
                               decoration: InputDecoration(
                                 hintText: l10n.catalogSearchHint,
                                 border: InputBorder.none,
@@ -121,7 +139,8 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                             ),
                           ),
                           if (_controller.text.isNotEmpty)
-                            GestureDetector(
+                            InkWell(
+                              borderRadius: BorderRadius.circular(20),
                               onTap: () {
                                 _debounce?.cancel();
                                 setState(() {
@@ -130,7 +149,11 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                                   _remoteQuery = '';
                                 });
                               },
-                              child: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
+                              // 16px glyph + 12px padding = a 40px target.
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
+                              ),
                             ),
                         ],
                       ),
@@ -205,15 +228,19 @@ class _SearchIdle extends ConsumerWidget {
       children: [
         if (recent.isNotEmpty) ...[
           Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
             children: [
-              Expanded(child: _IdleSectionLabel(l10n.searchRecentSection)),
-              GestureDetector(
+              Expanded(child: SectionLabel(l10n.searchRecentSection, padding: EdgeInsets.zero)),
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
                 onTap: () => ref.read(recentSearchesProvider.notifier).clear(),
-                child: Text(
-                  l10n.searchRecentClear,
-                  style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                // Padded to a ~40px-tall target — this quiet link does real,
+                // destructive-ish work.
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  child: Text(
+                    l10n.searchRecentClear,
+                    style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                  ),
                 ),
               ),
             ],
@@ -261,25 +288,6 @@ class _SearchIdle extends ConsumerWidget {
   }
 }
 
-class _IdleSectionLabel extends StatelessWidget {
-  const _IdleSectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text.toUpperCase(),
-      style: TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-        color: AppColors.inkSoft,
-      ),
-    );
-  }
-}
-
 /// Newest catalogue arrivals in the reader's first profile language — the
 /// regional angle, and the one row that makes an empty search page feel like
 /// a bookshop rather than a form. With no language (none set, or `/me`
@@ -302,12 +310,13 @@ class _NewInLanguage extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _IdleSectionLabel(
+        SectionLabel(
           language == null ? l10n.searchNewInCatalogue : l10n.searchNewInLanguage(language),
+          padding: EdgeInsets.zero,
         ),
         SizedBox(height: 8),
         SizedBox(
-          height: 132,
+          height: 134,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: works.length,
@@ -337,10 +346,21 @@ class _NewInLanguage extends ConsumerWidget {
                         height: 94,
                       ),
                       SizedBox(height: 4),
+                      Text(
+                        work['title'] as String? ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.ink,
+                          height: 1.2,
+                        ),
+                      ),
                       if (author != null)
                         Text(
                           author,
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 9, color: AppColors.inkSoft, height: 1.25),
                         ),
@@ -377,7 +397,7 @@ class _PopularAuthors extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _IdleSectionLabel(l10n.searchPopularAuthors),
+        SectionLabel(l10n.searchPopularAuthors, padding: EdgeInsets.zero),
         SizedBox(height: 8),
         Wrap(
           spacing: 6,
@@ -448,7 +468,7 @@ class _SearchResults extends ConsumerWidget {
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
       children: [
         if (hits.isNotEmpty) ...[
-          _SectionHeader(l10n.catalogSearchSectionLibrary(hits.length)),
+          SectionLabel(l10n.catalogSearchSectionLibrary(hits.length), padding: EdgeInsets.zero),
           SizedBox(height: 8),
           for (final hit in hits) _LibraryHitTile(hit: hit),
           SizedBox(height: 16),
@@ -465,13 +485,13 @@ class _SearchResults extends ConsumerWidget {
             ),
           ),
         if (works.isNotEmpty) ...[
-          _SectionHeader(l10n.catalogSearchSectionCatalog),
+          SectionLabel(l10n.catalogSearchSectionCatalog, padding: EdgeInsets.zero),
           SizedBox(height: 8),
           for (final work in works) CatalogResultTile(work: work),
           SizedBox(height: 16),
         ],
         if (authors.isNotEmpty) ...[
-          _SectionHeader(l10n.catalogSearchSectionAuthors),
+          SectionLabel(l10n.catalogSearchSectionAuthors, padding: EdgeInsets.zero),
           SizedBox(height: 8),
           for (final author in authors)
             AuthorRowTile(
@@ -481,7 +501,7 @@ class _SearchResults extends ConsumerWidget {
           SizedBox(height: 16),
         ],
         if (publishers.isNotEmpty) ...[
-          _SectionHeader(l10n.catalogSearchSectionPublishers),
+          SectionLabel(l10n.catalogSearchSectionPublishers, padding: EdgeInsets.zero),
           SizedBox(height: 8),
           for (final publisher in publishers)
             PublisherRowTile(
@@ -518,7 +538,7 @@ class _ReadersSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(l10n.searchReadersHeader.toUpperCase()),
+        SectionLabel(l10n.searchReadersHeader, padding: EdgeInsets.zero),
         SizedBox(height: 8),
         for (final r in readers)
           ListTile(
@@ -536,7 +556,7 @@ class _ReadersSection extends ConsumerWidget {
                         : (r['username'] as String? ?? '?')[0])
                     .toUpperCase(),
                 style: TextStyle(
-                  color: Color(0xFF8F681E),
+                  color: AppColors.goldInk,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),
@@ -561,23 +581,6 @@ class _ReadersSection extends ConsumerWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(context)
-          .textTheme
-          .labelSmall
-          ?.copyWith(color: AppColors.inkSoft, letterSpacing: 1),
     );
   }
 }

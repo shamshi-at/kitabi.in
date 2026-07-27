@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
+import 'share_logo.dart';
+import 'share_palette.dart';
 
 /// The shareable reading-recap image — third member of the share-card family
 /// alongside [BookShareCard] and the personal-endorsement variant (27 Jul
@@ -47,8 +48,8 @@ class PeriodShareCard extends StatelessWidget {
       aspectRatio: square ? 1 : 9 / 16,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.paper,
-          border: Border.all(color: AppColors.gold, width: 1.5),
+          color: ShareCardPalette.paper,
+          border: Border.all(color: ShareCardPalette.gold, width: 1.5),
           borderRadius: BorderRadius.circular(16),
         ),
         clipBehavior: Clip.antiAlias,
@@ -65,7 +66,7 @@ class PeriodShareCard extends StatelessWidget {
                   gradient: RadialGradient(
                     center: const Alignment(0, -0.15),
                     radius: 0.75,
-                    colors: [AppColors.gold.withValues(alpha: 0.16), Colors.transparent],
+                    colors: [ShareCardPalette.gold.withValues(alpha: 0.16), Colors.transparent],
                   ),
                 ),
               ),
@@ -75,7 +76,7 @@ class PeriodShareCard extends StatelessWidget {
                 padding: const EdgeInsets.all(10),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.55), width: 0.75),
+                    border: Border.all(color: ShareCardPalette.gold.withValues(alpha: 0.55), width: 0.75),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -84,12 +85,12 @@ class PeriodShareCard extends StatelessWidget {
             Positioned(
               top: 16,
               left: 18,
-              child: Text('❦', style: TextStyle(fontSize: 9, color: AppColors.gold.withValues(alpha: 0.7))),
+              child: Text('❦', style: TextStyle(fontSize: 9, color: ShareCardPalette.gold.withValues(alpha: 0.7))),
             ),
             Positioned(
               top: 16,
               right: 18,
-              child: Text('❦', style: TextStyle(fontSize: 9, color: AppColors.gold.withValues(alpha: 0.7))),
+              child: Text('❦', style: TextStyle(fontSize: 9, color: ShareCardPalette.gold.withValues(alpha: 0.7))),
             ),
             // Square (1:1) has noticeably less absolute height than Story
             // (9:16) at the same width, so it can't afford Story's spacing or
@@ -112,7 +113,7 @@ class PeriodShareCard extends StatelessWidget {
                   if (hasPill)
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: square ? 9 : 12, vertical: square ? 3 : 4),
-                      decoration: BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(99)),
+                      decoration: BoxDecoration(color: ShareCardPalette.goldSoft, borderRadius: BorderRadius.circular(99)),
                       child: Text(
                         pill!.toUpperCase(),
                         textAlign: TextAlign.center,
@@ -120,7 +121,7 @@ class PeriodShareCard extends StatelessWidget {
                           fontSize: square ? 7.5 : 8.5,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.6,
-                          color: AppColors.oxblood,
+                          color: ShareCardPalette.oxblood,
                         ),
                       ),
                     ),
@@ -130,7 +131,7 @@ class PeriodShareCard extends StatelessWidget {
                     style: GoogleFonts.fraunces(
                       fontSize: square ? 36 : 56,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.oxblood,
+                      color: ShareCardPalette.oxblood,
                       height: 1,
                     ),
                   ),
@@ -143,14 +144,14 @@ class PeriodShareCard extends StatelessWidget {
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 2,
-                          color: AppColors.inkSoft,
+                          color: ShareCardPalette.inkSoft,
                         ),
                       ),
                     ),
                   Text(
                     subLine,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: square ? 9.5 : 10.5, color: AppColors.inkSoft),
+                    style: TextStyle(fontSize: square ? 9.5 : 10.5, color: ShareCardPalette.inkSoft),
                   ),
                   Text(
                     closingLine,
@@ -161,7 +162,7 @@ class PeriodShareCard extends StatelessWidget {
                       fontStyle: FontStyle.italic,
                       fontSize: square ? 10.5 : 13,
                       height: 1.4,
-                      color: AppColors.ink,
+                      color: ShareCardPalette.ink,
                     ),
                   ),
                   _Wordmark(tagline: l10n.shareTagline, square: square),
@@ -188,94 +189,30 @@ class _Wordmark extends StatelessWidget {
       children: [
         Text(
           '❦ ❦ ❦',
-          style: TextStyle(fontSize: square ? 7 : 8, color: AppColors.gold.withValues(alpha: 0.6)),
+          style: TextStyle(fontSize: square ? 7 : 8, color: ShareCardPalette.gold.withValues(alpha: 0.6)),
         ),
         SizedBox(height: square ? 6 : 10),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: square ? 11 : 13,
-              height: square ? 11 : 13,
-              child: CustomPaint(painter: _LogoPainter()),
-            ),
+            ShareLogo(size: square ? 11 : 13),
             const SizedBox(width: 5),
             Text(
               'kitabi.in',
               style: TextStyle(
                 fontSize: square ? 9 : 10,
                 fontWeight: FontWeight.w700,
-                color: AppColors.oxblood,
+                color: ShareCardPalette.oxblood,
               ),
             ),
           ],
         ),
         if (!square) ...[
           const SizedBox(height: 2),
-          Text(tagline, style: TextStyle(fontSize: 7.5, color: AppColors.inkSoft)),
+          Text(tagline, style: TextStyle(fontSize: 7.5, color: ShareCardPalette.inkSoft)),
         ],
       ],
     );
   }
 }
 
-/// The open-book-with-gold-ribbon mark, drawn to spec rather than loaded from
-/// an asset — same shapes as `landing-page/logo.svg`, scaled to whatever size
-/// the caller needs. No letter K anywhere (brand rule, 3 Jul 2026).
-class _LogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.width / 512;
-    canvas.save();
-    canvas.scale(s);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(16, 16, 480, 480), const Radius.circular(112)),
-      Paint()..color = AppColors.oxblood,
-    );
-    final page = Paint()..color = AppColors.paper;
-    canvas.drawPath(
-      Path()
-        ..moveTo(114, 160)
-        ..cubicTo(164, 136, 218, 136, 250, 156)
-        ..lineTo(250, 366)
-        ..cubicTo(218, 348, 164, 348, 114, 370)
-        ..close(),
-      page,
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(398, 160)
-        ..cubicTo(348, 136, 294, 136, 262, 156)
-        ..lineTo(262, 366)
-        ..cubicTo(294, 348, 348, 348, 398, 370)
-        ..close(),
-      page,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(250, 148, 12, 222), const Radius.circular(6)),
-      Paint()..color = AppColors.oxbloodDeep,
-    );
-    canvas.drawLine(
-      const Offset(298, 252),
-      const Offset(362, 252),
-      Paint()
-        ..color = AppColors.gold
-        ..strokeWidth = 16
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(240, 356)
-        ..lineTo(272, 356)
-        ..lineTo(272, 428)
-        ..lineTo(256, 410)
-        ..lineTo(240, 428)
-        ..close(),
-      Paint()..color = AppColors.gold,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _LogoPainter oldDelegate) => false;
-}

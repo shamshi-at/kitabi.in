@@ -10,6 +10,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/net_image.dart';
+import '../../../core/widgets/seg_tab_bar.dart';
 import '../../../core/widgets/shelf_cover.dart';
 import '../../../core/widgets/sticky_header_delegate.dart';
 import '../../../data/api/api_client.dart';
@@ -105,7 +106,9 @@ Future<void> _runConnectionAction(
       messenger.showSnackBar(SnackBar(content: Text(successMessage)));
     }
   } catch (_) {
-    messenger.showSnackBar(SnackBar(content: Text(l10n.lendingReminderFailed)));
+    // A neutral failure line — "couldn't send the reminder" made no sense on
+    // an accept/deny/block that failed.
+    messenger.showSnackBar(SnackBar(content: Text(l10n.connectionsActionFailed)));
   }
 }
 
@@ -124,21 +127,53 @@ class _ProfileMenu extends ConsumerWidget {
     final c = ref.watch(connectionsProvider).valueOrNull?.connectionFor(userId);
     if (c == null) return const SizedBox.shrink();
 
-    // (label, isDanger, action)
-    final items = <(String, bool, Future<void> Function(ApiClient))>[];
+    // (label, isDanger, needsConfirm, action). Disconnect is destructive-ish
+    // (severs a mutual link) — oxblood, and a confirm before it runs.
+    final items = <(String, bool, bool, Future<void> Function(ApiClient))>[];
     if (c.status == 'accepted') {
-      items.add((l10n.connectionsDisconnect, false, (api) => api.declineConnection(c.id)));
-      items.add((l10n.connectionsBlock, true, (api) => api.blockConnection(c.id)));
+      items.add((l10n.connectionsDisconnect, true, true, (api) => api.declineConnection(c.id)));
+      items.add((l10n.connectionsBlock, true, false, (api) => api.blockConnection(c.id)));
     } else if (c.status == 'pending' && c.role == 'requester') {
-      items.add((l10n.connectionsCancel, false, (api) => api.declineConnection(c.id)));
+      items.add((l10n.connectionsCancel, false, false, (api) => api.declineConnection(c.id)));
     } else if (c.status == 'pending' && c.role == 'addressee') {
-      items.add((l10n.connectionsBlock, true, (api) => api.blockConnection(c.id)));
+      items.add((l10n.connectionsBlock, true, false, (api) => api.blockConnection(c.id)));
     }
     if (items.isEmpty) return const SizedBox.shrink();
 
     return PopupMenuButton<int>(
       icon: Icon(Icons.more_vert, color: AppColors.inkSoft),
-      onSelected: (i) => _runConnectionAction(context, ref, items[i].$3),
+      onSelected: (i) async {
+        final item = items[i];
+        if (item.$3) {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppColors.card,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              content: Text(
+                l10n.connectionsDisconnectConfirm(c.other.display),
+                style: TextStyle(fontSize: 13.5, height: 1.4, color: AppColors.ink),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text(
+                    MaterialLocalizations.of(ctx).cancelButtonLabel,
+                    style: TextStyle(color: AppColors.inkSoft),
+                  ),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.oxblood),
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: Text(l10n.connectionsDisconnect),
+                ),
+              ],
+            ),
+          );
+          if (confirmed != true || !context.mounted) return;
+        }
+        if (context.mounted) await _runConnectionAction(context, ref, item.$4);
+      },
       itemBuilder: (_) => [
         for (var i = 0; i < items.length; i++)
           PopupMenuItem(
@@ -320,12 +355,14 @@ class _Bookplate extends StatelessWidget {
         ? display.replaceAll('@', '')[0].toUpperCase()
         : '?';
 
-    // Corner stamp: connected (moss) or awaiting-reply (gold). Other states
-    // put their control in the action slot instead, so there's no stamp.
-    final ({String text, Color color})? stamp = switch (connection) {
-      Connection(status: 'accepted') => (text: l10n.connectionsAcceptedSection, color: AppColors.moss),
+    // Corner stamp: connected (moss check) or awaiting-reply (gold clock — a
+    // checkmark on "waiting" read as already done). Other states put their
+    // control in the action slot instead, so there's no stamp.
+    final ({String text, Color color, IconData icon})? stamp = switch (connection) {
+      Connection(status: 'accepted') =>
+        (text: l10n.connectionsAcceptedSection, color: AppColors.moss, icon: Icons.check),
       Connection(status: 'pending', role: 'requester') =>
-        (text: l10n.connectionsAwaitingReply, color: AppColors.gold),
+        (text: l10n.connectionsAwaitingReply, color: AppColors.gold, icon: Icons.schedule),
       _ => null,
     };
 
@@ -370,7 +407,7 @@ class _Bookplate extends StatelessWidget {
                           child: Text(
                             initial,
                             style: TextStyle(
-                              color: Color(0xFF8F681E),
+                              color: AppColors.goldInk,
                               fontWeight: FontWeight.w700,
                               fontSize: 18,
                             ),
@@ -415,7 +452,7 @@ class _Bookplate extends StatelessWidget {
               right: 12,
               child: Transform.rotate(
                 angle: 0.09,
-                child: _Stamp(text: stamp.text, color: stamp.color),
+                child: _Stamp(text: stamp.text, color: stamp.color, icon: stamp.icon),
               ),
             ),
         ],
@@ -427,10 +464,11 @@ class _Bookplate extends StatelessWidget {
 /// The little inked stamp on the plate's corner — moss for connected, gold for
 /// a request awaiting reply.
 class _Stamp extends StatelessWidget {
-  const _Stamp({required this.text, required this.color});
+  const _Stamp({required this.text, required this.color, required this.icon});
 
   final String text;
   final Color color;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -443,7 +481,7 @@ class _Stamp extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check, size: 11, color: color),
+          Icon(icon, size: 11, color: color),
           SizedBox(width: 4),
           Text(
             text,
@@ -683,92 +721,18 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: AppColors.paperDeep,
-        borderRadius: BorderRadius.circular(11),
-      ),
-      child: Row(
-        children: [
-          _SegTab(
-            label: l10n.publicProfileTabLedger,
-            count: ledgerCount,
-            active: selected == _ProfileTab.ledger,
-            onTap: () => onChanged(_ProfileTab.ledger),
-          ),
-          _SegTab(
-            label: l10n.publicProfileTabShelf,
-            count: shelfCount,
-            active: selected == _ProfileTab.shelf,
-            onTap: () => onChanged(_ProfileTab.shelf),
-          ),
-          if (worksCount != null)
-            _SegTab(
-              label: l10n.publicProfileTabWorks,
-              count: worksCount,
-              active: selected == _ProfileTab.works,
-              onTap: () => onChanged(_ProfileTab.works),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegTab extends StatelessWidget {
-  const _SegTab({
-    required this.label,
-    required this.count,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final int? count;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: active ? AppColors.card : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
-            boxShadow: active
-                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 3, offset: Offset(0, 1))]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
-                  color: active ? AppColors.oxblood : AppColors.inkSoft,
-                ),
-              ),
-              if (count != null)
-                Text(
-                  ' · $count',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: (active ? AppColors.oxblood : AppColors.inkSoft).withValues(alpha: 0.65),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+    // The tab list mirrors the enum order (works last, only when present) so
+    // the shared SegTabBar's index maps cleanly back to _ProfileTab.
+    final tabs = [
+      (_ProfileTab.ledger, SegTabItem(l10n.publicProfileTabLedger, count: ledgerCount)),
+      (_ProfileTab.shelf, SegTabItem(l10n.publicProfileTabShelf, count: shelfCount)),
+      if (worksCount != null)
+        (_ProfileTab.works, SegTabItem(l10n.publicProfileTabWorks, count: worksCount)),
+    ];
+    return SegTabBar(
+      tabs: [for (final (_, item) in tabs) item],
+      selectedIndex: tabs.indexWhere((t) => t.$1 == selected),
+      onChanged: (i) => onChanged(tabs[i].$1),
     );
   }
 }

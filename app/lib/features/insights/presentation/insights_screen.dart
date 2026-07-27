@@ -120,7 +120,11 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     } catch (_) {
       // Offline or the lookup failed — search still gets them somewhere useful.
     }
-    if (context.mounted) context.push(Routes.catalogSearch);
+    // Fallback: land on search *with the name already queried*, not a blank
+    // page that makes the tap feel broken.
+    if (context.mounted) {
+      context.push('${Routes.catalogSearch}?q=${Uri.encodeQueryComponent(name)}');
+    }
   }
 
   /// Assembles the share sheet's inputs from whichever card is on screen.
@@ -233,6 +237,15 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             }
 
             final range = rangeFor(_period, year: _year);
+            // Years the year-chip menu offers: only years that actually have
+            // finished books (same finished-on fallback the stats use), with
+            // the current year always present as the one-tap default.
+            final dataYears = <int>{
+              thisYear,
+              for (final h in hits)
+                if (h.entry.status == 'read') (h.entry.finishDate ?? h.entry.updatedAt).year,
+            }.toList()
+              ..sort((a, b) => b.compareTo(a));
             final periodSummary = sessions == null
                 ? null
                 : computePeriodSummary(
@@ -256,6 +269,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   selectedYear: _year,
                   onYearSelected: (y) => setState(() => _year = y),
                   thisYear: thisYear,
+                  years: dataYears,
                 ),
                 SizedBox(height: 14),
                 if (periodSummary == null)
@@ -409,21 +423,9 @@ class _YearCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => onShare(stats, yearSummary),
-                  borderRadius: BorderRadius.circular(7),
-                  child: Tooltip(
-                    message: l10n.insightsShareTooltip,
-                    child: Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(7)),
-                      child: Icon(Icons.ios_share, size: 13, color: AppColors.oxblood),
-                    ),
-                  ),
-                ),
+              ShareGlyph(
+                tooltip: l10n.insightsShareTooltip,
+                onTap: () => onShare(stats, yearSummary),
               ),
             ],
           ),
@@ -490,7 +492,8 @@ class _BusiestTimeInsight extends StatelessWidget {
     final monday = DateTime(2026, 1, 5); // an arbitrary real Monday.
     return Container(
       padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.night, borderRadius: BorderRadius.circular(12)),
+      decoration:
+          BoxDecoration(color: AppColors.darkPanel, borderRadius: BorderRadius.circular(12)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -502,7 +505,7 @@ class _BusiestTimeInsight extends StatelessWidget {
                 DateFormat.EEEE().format(monday.add(Duration(days: weekday - 1))),
                 _hourRangeLabel(hour),
               ),
-              style: TextStyle(color: Color(0xFFEFE3C8), fontSize: 11.5, height: 1.5),
+              style: TextStyle(color: AppColors.onDark, fontSize: 11.5, height: 1.5),
             ),
           ),
         ],
@@ -540,6 +543,9 @@ class _GoalRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = showTarget && goal > 0 ? (booksRead / goal).clamp(0.0, 1.0) : 1.0;
+    // All time has no target, so a full gold ring would read as "goal met" —
+    // draw it as a neutral hairline circle instead.
+    final ringColor = showTarget ? AppColors.gold : AppColors.line;
     return GestureDetector(
       onTap: showTarget ? onTap : null,
       child: Container(
@@ -564,7 +570,7 @@ class _GoalRing extends StatelessWidget {
                       value: progress,
                       strokeWidth: 7,
                       backgroundColor: AppColors.line,
-                      valueColor: AlwaysStoppedAnimation(AppColors.gold),
+                      valueColor: AlwaysStoppedAnimation(ringColor),
                     ),
                   ),
                   Text(
@@ -664,7 +670,7 @@ class _MonthBars extends StatelessWidget {
                   if (counts[i] > 0)
                     Text(
                       '${counts[i]}',
-                      style: TextStyle(fontSize: 8, color: AppColors.inkSoft),
+                      style: TextStyle(fontSize: 9, color: AppColors.inkSoft),
                     ),
                   SizedBox(height: 2),
                   Container(

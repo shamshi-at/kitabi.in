@@ -40,7 +40,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     final pages = <(IconData, String, String)>[
       (Icons.auto_stories_outlined, l10n.welcomeTitle1, l10n.welcomeBody1),
       (Icons.swap_horiz, l10n.welcomeTitle2, l10n.welcomeBody2),
-      (Icons.lock_outline, l10n.welcomeTitle3, l10n.welcomeBody3),
+      // Shield, not lock — the lock glyph means "private toggle" everywhere
+      // else in the app; here the message is protection, not a setting.
+      (Icons.shield_outlined, l10n.welcomeTitle3, l10n.welcomeBody3),
     ];
     final isLast = _page == pages.length - 1;
 
@@ -80,7 +82,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           title,
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: AppColors.oxblood,
+                                color: AppColors.ink,
                                 fontWeight: FontWeight.w700,
                               ),
                         ),

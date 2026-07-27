@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/auth/auth_providers.dart';
@@ -14,10 +16,12 @@ import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/language_chips.dart';
 import '../../../core/widgets/net_image.dart';
 import '../../../core/widgets/pulsing_dot.dart';
+import '../../../core/widgets/section_label.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../import_books/csv_export.dart';
 import '../../insights/providers/insights_providers.dart';
+import '../../library/providers/library_providers.dart';
 import '../../settings/theme_mode_provider.dart';
 import '../providers/profile_providers.dart';
 
@@ -62,13 +66,23 @@ class _ProfileBody extends ConsumerStatefulWidget {
 }
 
 class _ProfileBodyState extends ConsumerState<_ProfileBody> {
+  static const _visKeys = ['profile_visible', 'library_visible', 'reviews_visible_default'];
+
   // Optimistic local mirror of the server-side visibility flags, so a tap flips
   // instantly instead of waiting on the /me round-trip (what made the old
   // switches feel dead). Reverts + warns if the save fails.
-  late final Map<String, bool> _vis = {
-    for (final k in const ['profile_visible', 'library_visible', 'reviews_visible_default'])
-      k: widget.profile[k] as bool? ?? false,
-  };
+  late Map<String, bool> _vis = _seedVis();
+
+  Map<String, bool> _seedVis() =>
+      {for (final k in _visKeys) k: widget.profile[k] as bool? ?? false};
+
+  @override
+  void didUpdateWidget(covariant _ProfileBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A /me refresh hands this State a new profile map; without re-seeding,
+    // the pills keep showing the values from the first build forever.
+    if (!identical(oldWidget.profile, widget.profile)) _vis = _seedVis();
+  }
 
   Future<void> _toggle(String field, bool value) async {
     final previous = _vis[field]!;
@@ -135,7 +149,9 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     final fullName = profile['full_name'] as String? ?? profile['email'] as String? ?? '';
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
     final createdAt = DateTime.tryParse(profile['created_at'] as String? ?? '');
-    final username = profile['username'] as String?;
+    final rawUsername = profile['username'] as String?;
+    // An empty string is "not set" too — the nudge must not vanish on ''.
+    final username = (rawUsername == null || rawUsername.isEmpty) ? null : rawUsername;
     final langs = (profile['preferred_languages'] as List?)?.cast<String>() ?? const <String>[];
 
     return ListView(
@@ -144,15 +160,29 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
         Row(
           children: [
             // The account picture (from Google/Apple sign-in, stored at
-            // bootstrap); the initial stays as the fallback while it loads
-            // or when the provider gave none.
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: AppColors.oxblood,
-              foregroundImage: (profile['avatar_url'] as String?) != null
-                  ? netImageProvider(profile['avatar_url'] as String)
-                  : null,
-              child: Text(initial, style: TextStyle(color: AppColors.paper)),
+            // bootstrap); the Fraunces initial stays as the fallback while it
+            // loads or when the provider gave none. The gold ring matches the
+            // linked-reader avatar language (mockup 12).
+            Container(
+              padding: EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.gold, width: 2),
+              ),
+              child: CircleAvatar(
+                radius: 26,
+                backgroundColor: AppColors.oxblood,
+                foregroundImage: (profile['avatar_url'] as String?) != null
+                    ? netImageProvider(profile['avatar_url'] as String)
+                    : null,
+                child: Text(
+                  initial,
+                  style: GoogleFonts.fraunces(
+                    color: AppColors.dark ? AppColors.ink : AppColors.paper,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
             SizedBox(width: 14),
             Expanded(
@@ -190,13 +220,20 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                     ),
                   ),
                   if (createdAt != null)
-                    Text(
-                      l10n.profileReadingSince(createdAt.year),
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: AppColors.inkSoft),
-                    ),
+                    Builder(builder: (context) {
+                      // Cheap: the entries stream is already warm on Home and
+                      // the library tab; here it's just read.
+                      final books =
+                          ref.watch(libraryEntriesProvider).valueOrNull?.length ?? 0;
+                      final since = l10n.profileReadingSince(createdAt.year);
+                      return Text(
+                        books > 0 ? '$since · ${l10n.profileBooksCount(books)}' : since,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppColors.inkSoft),
+                      );
+                    }),
                 ],
               ),
             ),
@@ -211,13 +248,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.profileVisibilityHeader,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.inkSoft,
-                        letterSpacing: 1,
-                      ),
-                ),
+                SectionLabel(l10n.profileVisibilityHeader, padding: EdgeInsets.zero),
                 Divider(height: 20),
                 _VisibilityRow(
                   title: l10n.profileVisibilityProfileTitle,
@@ -294,39 +325,47 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
           ),
         ),
         SizedBox(height: 24),
-        _ActionButton(
-          icon: Icons.history,
-          label: l10n.activityEntry,
-          onPressed: () => context.push(Routes.activity),
-        ),
-        SizedBox(height: 8),
-        _ActionButton(
-          icon: Icons.auto_awesome,
-          label: l10n.recsProfileEntry,
-          onPressed: () => context.push(Routes.recommendations),
-        ),
-        SizedBox(height: 8),
-        _ActionButton(
-          icon: Icons.rule,
-          label: l10n.revisionsTitle,
-          onPressed: () => context.push(Routes.revisions),
-        ),
-        SizedBox(height: 8),
-        _ActionButton(
-          icon: Icons.upload_file_outlined,
-          label: l10n.importEntry,
-          onPressed: () => context.push(Routes.importBooks),
-        ),
-        SizedBox(height: 8),
-        _ActionButton(
-          icon: Icons.download_outlined,
-          label: l10n.exportEntry,
-          onPressed: () => _exportLibrary(context),
+        // One card of chevron rows (the Languages-card pattern) instead of a
+        // stack of five outlined buttons shouting for equal attention.
+        Card(
+          child: Column(
+            children: [
+              _NavRow(
+                icon: Icons.history,
+                label: l10n.activityEntry,
+                onTap: () => context.push(Routes.activity),
+              ),
+              Divider(height: 1, indent: 44),
+              _NavRow(
+                icon: Icons.auto_awesome,
+                label: l10n.recsProfileEntry,
+                onTap: () => context.push(Routes.recommendations),
+              ),
+              Divider(height: 1, indent: 44),
+              _NavRow(
+                icon: Icons.rule,
+                label: l10n.revisionsTitle,
+                onTap: () => context.push(Routes.revisions),
+              ),
+              Divider(height: 1, indent: 44),
+              _NavRow(
+                icon: Icons.upload_file_outlined,
+                label: l10n.importEntry,
+                onTap: () => context.push(Routes.importBooks),
+              ),
+              Divider(height: 1, indent: 44),
+              _NavRow(
+                icon: Icons.download_outlined,
+                label: l10n.exportEntry,
+                onTap: () => _exportLibrary(context),
+              ),
+            ],
+          ),
         ),
         SizedBox(height: 24),
         Center(
           child: TextButton(
-            onPressed: () => ref.read(authServiceProvider).signOut(),
+            onPressed: () => _confirmSignOut(context),
             child: Text(l10n.profileSignOut, style: TextStyle(color: AppColors.inkSoft)),
           ),
         ),
@@ -343,6 +382,27 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
         // `_confirmDelete` and the l10n strings are kept for that work.
       ],
     );
+  }
+
+  /// Signing out tears down the session everywhere on this device — worth one
+  /// quiet question, unlike the undo-able mutations elsewhere.
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.signOutConfirmTitle),
+        content: Text(l10n.signOutConfirmBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.profileSignOut, style: TextStyle(color: AppColors.oxblood)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await ref.read(authServiceProvider).signOut();
   }
 
   Future<void> _exportLibrary(BuildContext context) async {
@@ -385,6 +445,34 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     if (confirmed != true) return;
     await ref.read(apiClientProvider).deleteMe();
     await ref.read(authServiceProvider).signOut();
+  }
+}
+
+/// One chevron row inside the profile's navigation card — same anatomy as the
+/// Languages card above it (icon · label · chevron).
+class _NavRow extends StatelessWidget {
+  const _NavRow({required this.icon, required this.label, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: AppColors.oxblood),
+            SizedBox(width: 12),
+            Expanded(child: Text(label, style: TextStyle(fontWeight: FontWeight.w600))),
+            Icon(Icons.chevron_right, size: 18, color: AppColors.inkSoft),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -550,16 +638,13 @@ class _ReputationCard extends ConsumerWidget {
               (l10n.profileScoreFinished, (s['books_finished'] as num?)?.toInt() ?? 0),
               (l10n.profileScoreLending, (s['lending_records'] as num?)?.toInt() ?? 0),
             ];
+            // Six grey zero-pills greeting a new reader read as failure — show
+            // only what's been earned, and one quiet invitation before that.
+            final earned = stats.where((s) => s.$2 > 0).toList();
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.profileScoreHeader,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelSmall
-                      ?.copyWith(color: AppColors.inkSoft, letterSpacing: 1),
-                ),
+                SectionLabel(l10n.profileScoreHeader, padding: EdgeInsets.zero),
                 SizedBox(height: 6),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -580,13 +665,19 @@ class _ReputationCard extends ConsumerWidget {
                   ],
                 ),
                 Divider(height: 18),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final (label, value) in stats) _StatPill(label: label, value: value),
-                  ],
-                ),
+                if (earned.isEmpty)
+                  Text(
+                    l10n.reputationEmpty,
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final (label, value) in earned) _StatPill(label: label, value: value),
+                    ],
+                  ),
               ],
             );
           },
@@ -730,7 +821,10 @@ class _UsernameSheetState extends ConsumerState<_UsernameSheet> {
           Text(l10n.profileUsernameHint, style: TextStyle(color: AppColors.inkSoft, fontSize: 13)),
           SizedBox(height: 14),
           TextField(
-            textCapitalization: TextCapitalization.words,
+            // Usernames are lowercase by rule (`_re`); a capitalizing keyboard
+            // made every attempt start "invalid" with no visible reason.
+            textCapitalization: TextCapitalization.none,
+            inputFormatters: [_LowerCaseFormatter()],
             controller: _controller,
             autofocus: true,
             autocorrect: false,
@@ -774,7 +868,12 @@ class _UsernameSheetState extends ConsumerState<_UsernameSheet> {
                   ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        // The button's resolved foreground — raw paper inverts
+                        // in dark mode.
+                        color: AppColors.dark ? AppColors.ink : AppColors.paper,
+                      ),
                     )
                   : Text(l10n.usernameSave),
             ),
@@ -848,7 +947,12 @@ class _LanguagesSheetState extends ConsumerState<_LanguagesSheet> {
                   ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        // The button's resolved foreground — raw paper inverts
+                        // in dark mode.
+                        color: AppColors.dark ? AppColors.ink : AppColors.paper,
+                      ),
                     )
                   : Text(l10n.profileLanguagesSave),
             ),
@@ -857,4 +961,12 @@ class _LanguagesSheetState extends ConsumerState<_LanguagesSheet> {
       ),
     );
   }
+}
+
+/// Keeps the visible text identical to what is validated and saved — the
+/// username rule is lowercase-first, and what you see must be what you get.
+class _LowerCaseFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) =>
+      newValue.copyWith(text: newValue.text.toLowerCase());
 }

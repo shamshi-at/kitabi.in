@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/quiet_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
@@ -57,7 +58,8 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
     super.dispose();
   }
 
-  bool get _canSave => _selected != null && _lender.text.trim().isNotEmpty && !_saving;
+  bool get _canSave =>
+      _selected != null && _lender.text.trim().isNotEmpty && !_saving;
 
   Future<void> _save() async {
     final work = _selected;
@@ -65,27 +67,38 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context)!;
     final lender = _lender.text.trim();
-    final edition = work['edition'] as Map<String, dynamic>;
-    await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
-    final repo = await ref.read(lendingRepositoryProvider.future);
-    final id = await repo.logBorrowed(
-      editionId: edition['id'] as String,
-      lenderName: lender,
-      borrowerUserId: _lenderUserId,
-      borrowedDate: _borrowedOn,
-      dueDate: _remindOn,
-      note: _note.text,
-    );
-    final due = _remindOn;
-    if (due != null) {
-      await ref.read(notificationServiceProvider).scheduleReminder(
-            id: reminderIdForRecord(id),
-            title: l10n.reminderBorrowedTitle,
-            body: l10n.reminderBorrowedBody(work['title'] as String? ?? '', lender),
-            when: reminderTimeFor(due),
-          );
+    try {
+      final edition = work['edition'] as Map<String, dynamic>;
+      await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+      final repo = await ref.read(lendingRepositoryProvider.future);
+      final id = await repo.logBorrowed(
+        editionId: edition['id'] as String,
+        lenderName: lender,
+        borrowerUserId: _lenderUserId,
+        borrowedDate: _borrowedOn,
+        dueDate: _remindOn,
+        note: _note.text,
+      );
+      final due = _remindOn;
+      if (due != null) {
+        await ref
+            .read(notificationServiceProvider)
+            .scheduleReminder(
+              id: reminderIdForRecord(id),
+              title: l10n.reminderBorrowedTitle,
+              body: l10n.reminderBorrowedBody(
+                work['title'] as String? ?? '',
+                lender,
+              ),
+              when: reminderTimeFor(due),
+            );
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (err) {
+      if (mounted) showQuietError(context, l10n.lendingSaveFailed, err);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-    if (mounted) Navigator.of(context).pop();
   }
 
   /// The typed title isn't in the catalog (or none of the matches are it) —
@@ -104,7 +117,9 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
     // createWork returns the full Work (`editions: [...]`); the search results
     // this sheet is built around carry one representative `edition`. Normalise
     // so _save and _SelectedBook see the same shape either way.
-    final editions = (created['editions'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final editions =
+        (created['editions'] as List?)?.cast<Map<String, dynamic>>() ??
+        const [];
     if (editions.isEmpty) return;
     setState(() {
       _selected = {...created, 'edition': editions.first};
@@ -151,11 +166,17 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SheetGrabber(),
-            Text(l10n.logBorrowedTitle, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              l10n.logBorrowedTitle,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             SizedBox(height: 14),
             SheetLabel(l10n.logBorrowedBookLabel),
             if (_selected != null)
-              _SelectedBook(work: _selected!, onClear: () => setState(() => _selected = null))
+              _SelectedBook(
+                work: _selected!,
+                onClear: () => setState(() => _selected = null),
+              )
             else
               _BookSearch(
                 controller: _searchController,
@@ -190,14 +211,16 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
                 Expanded(
                   child: SheetDateField(
                     label: l10n.logBorrowedRemindLabel,
-                    value: _remindOn == null ? l10n.logBorrowedNoDate : fmtLendingDate(_remindOn!),
+                    value: _remindOn == null
+                        ? l10n.lendingNoDate
+                        : fmtLendingDate(_remindOn!),
                     onTap: _pickRemindOn,
                   ),
                 ),
               ],
             ),
             SizedBox(height: 12),
-            SheetLabel(l10n.logBorrowedNoteLabel),
+            SheetLabel(l10n.lendingNoteLabel),
             TextField(
               textCapitalization: TextCapitalization.sentences,
               controller: _note,
@@ -213,7 +236,10 @@ class _LogBorrowedSheetState extends ConsumerState<_LogBorrowedSheet> {
                     ? SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.paper),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.paper,
+                        ),
                       )
                     : Text(l10n.logBorrowedSave),
               ),
@@ -260,42 +286,72 @@ class _BookSearch extends ConsumerWidget {
           results.when(
             loading: () => Padding(
               padding: EdgeInsets.all(12),
-              child: Center(child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )),
+              child: Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
             ),
-            error: (err, _) => Padding(padding: EdgeInsets.all(8), child: Text('$err')),
+            // A failed search (usually: offline) gets a quiet human line, not
+            // a raw exception — and the add-to-catalogue door stays open.
+            error: (err, _) => Padding(
+              padding: EdgeInsets.all(8),
+              child: Text(
+                l10n.lendingSearchOffline,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.inkSoft,
+                  height: 1.3,
+                ),
+              ),
+            ),
             data: (works) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (final work in works.take(6))
-                  ListTile(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 4),
-                    dense: true,
-                    leading: TypesetCover(
-                      title: work['title'] as String? ?? '',
-                      author: _firstAuthor(work),
-                      coverUrl: (work['edition'] as Map?)?['cover_url'] as String?,
-                      width: 26,
-                      height: 38,
+                  // A work with no pickable edition can't be selected — dim it
+                  // so it doesn't look like a dead tap.
+                  Opacity(
+                    opacity: (work['edition'] as Map?)?['id'] == null
+                        ? 0.45
+                        : 1,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 4),
+                      dense: true,
+                      leading: TypesetCover(
+                        title: work['title'] as String? ?? '',
+                        author: _firstAuthor(work),
+                        coverUrl:
+                            (work['edition'] as Map?)?['cover_url'] as String?,
+                        width: 26,
+                        height: 38,
+                      ),
+                      title: Text(
+                        work['title'] as String? ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: _firstAuthor(work) == null
+                          ? null
+                          : Text(
+                              _firstAuthor(work)!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.inkSoft,
+                              ),
+                            ),
+                      onTap: (work['edition'] as Map?)?['id'] == null
+                          ? null
+                          : () => onPick(work),
                     ),
-                    title: Text(
-                      work['title'] as String? ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: _firstAuthor(work) == null
-                        ? null
-                        : Text(
-                            _firstAuthor(work)!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
-                          ),
-                    onTap: (work['edition'] as Map?)?['id'] == null ? null : () => onPick(work),
                   ),
                 // The escape hatch — always offered, not just on an empty
                 // result: the matches may all be the wrong book. When nothing
@@ -313,7 +369,8 @@ class _BookSearch extends ConsumerWidget {
   }
 
   static String? _firstAuthor(Map<String, dynamic> work) {
-    final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final authors =
+        (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     return authors.isEmpty ? null : authors.first['name'] as String?;
   }
 }
@@ -321,7 +378,11 @@ class _BookSearch extends ConsumerWidget {
 /// "＋ Add `<what you typed>` to the catalog" — the borrow sheet's way out of
 /// a dead-end search. Same door the author picker offers when a name is new.
 class _AddNewBookRow extends StatelessWidget {
-  const _AddNewBookRow({required this.title, required this.onTap, required this.showHelp});
+  const _AddNewBookRow({
+    required this.title,
+    required this.onTap,
+    required this.showHelp,
+  });
 
   final String title;
   final VoidCallback onTap;
@@ -341,7 +402,11 @@ class _AddNewBookRow extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(4, 10, 4, 2),
             child: Text(
               l10n.logBorrowedNotFound,
-              style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.3),
+              style: TextStyle(
+                fontSize: 11.5,
+                color: AppColors.inkSoft,
+                height: 1.3,
+              ),
             ),
           ),
         InkWell(
@@ -374,13 +439,16 @@ class _SelectedBook extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final authors =
+        (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    // GoldSoft + hairline — the provenance treatment (a chosen book is a
+    // quiet fact, not an alert), replacing the harsh ink outline.
     return Container(
       padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: AppColors.paper,
+        color: AppColors.goldSoft,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.ink),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         children: [
@@ -409,4 +477,3 @@ class _SelectedBook extends StatelessWidget {
     );
   }
 }
-

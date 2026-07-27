@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +32,14 @@ class IsbnScanScreen extends ConsumerStatefulWidget {
   ConsumerState<IsbnScanScreen> createState() => _IsbnScanScreenState();
 }
 
+// The scanner's constant-dark ("night") palette — deliberately not
+// theme-aware: the camera view is the same in any theme.
+const _nightText = Color(0xFFEFE6C8);
+const _nightMuted = Color(0xFFA08D6E);
+const _nightSoft = Color(0xFFCBB897);
+const _nightCard = Color(0xFF2A2115);
+const _nightInk = Color(0xFF241811);
+
 class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
   final _controller = MobileScannerController(formats: [BarcodeFormat.ean13]);
   String? _detectedIsbn;
@@ -59,8 +68,17 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
     try {
       final work = await ref.read(apiClientProvider).lookupIsbn(isbn);
       if (mounted) setState(() => _work = work);
+    } on DioException catch (err) {
+      // Only a real 404 means "no book for that ISBN" — anything else
+      // (offline, timeout, a 500) must say the *lookup* failed, or the empty
+      // state invites the exact duplicate the catalogue tries to prevent.
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        final notFound = err.response?.statusCode == 404;
+        setState(() => _error = notFound ? l10n.scanNotFound : l10n.scanLookupFailed);
+      }
     } catch (_) {
-      if (mounted) setState(() => _error = AppLocalizations.of(context)!.scanNotFound);
+      if (mounted) setState(() => _error = AppLocalizations.of(context)!.scanLookupFailed);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -90,7 +108,7 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: Icon(Icons.arrow_back, color: Color(0xFFEFE6C8)),
+                      icon: Icon(Icons.arrow_back, color: _nightText),
                       onPressed: () => context.pop(),
                     ),
                   ],
@@ -99,7 +117,7 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
               Text(
                 l10n.scanTitle,
                 style: TextStyle(
-                  color: Color(0xFFEFE6C8),
+                  color: _nightText,
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
                 ),
@@ -107,7 +125,7 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
               SizedBox(height: 4),
               Text(
                 l10n.scanSubtitle,
-                style: TextStyle(color: Color(0xFFA08D6E), fontSize: 12),
+                style: TextStyle(color: _nightMuted, fontSize: 12),
               ),
               SizedBox(height: 16),
               Expanded(
@@ -133,7 +151,7 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                               widget.returnResult
                                   ? l10n.scanCameraUnavailableShort
                                   : l10n.scanCameraUnavailable,
-                              style: TextStyle(color: Color(0xFFEFE6C8)),
+                              style: TextStyle(color: _nightText),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -149,7 +167,7 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 14),
                   child: Text(
                     l10n.scanDetected(_detectedIsbn!),
-                    style: TextStyle(color: Color(0xFFCBB897), fontSize: 12),
+                    style: TextStyle(color: _nightSoft, fontSize: 12),
                   ),
                 ),
               SizedBox(height: 10),
@@ -176,8 +194,8 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Color(0xFFCBB897)),
-                            foregroundColor: Color(0xFFCBB897),
+                            side: BorderSide(color: _nightSoft),
+                            foregroundColor: _nightSoft,
                           ),
                           onPressed: () {
                             context.pop();
@@ -190,8 +208,8 @@ class _IsbnScanScreenState extends ConsumerState<IsbnScanScreen> {
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Color(0xFFCBB897)),
-                            foregroundColor: Color(0xFFCBB897),
+                            side: BorderSide(color: _nightSoft),
+                            foregroundColor: _nightSoft,
                           ),
                           onPressed: () {
                             // Carry a scanned-but-unmatched ISBN into the blank
@@ -238,7 +256,7 @@ class _ScanFooter extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 14),
       child: Column(
         children: [
-          Text(error, style: TextStyle(color: Color(0xFFEFE6C8))),
+          Text(error, style: TextStyle(color: _nightText)),
           TextButton(
             onPressed: onReset,
             child: Text(l10n.scanAgain, style: TextStyle(color: AppColors.gold)),
@@ -246,8 +264,8 @@ class _ScanFooter extends StatelessWidget {
           if (onUseIsbn != null)
             OutlinedButton(
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Color(0xFFCBB897)),
-                foregroundColor: Color(0xFFCBB897),
+                side: BorderSide(color: _nightSoft),
+                foregroundColor: _nightSoft,
               ),
               onPressed: onUseIsbn,
               child: Text(l10n.scanUseIsbnAnyway),
@@ -280,7 +298,9 @@ class _ConfirmCard extends ConsumerWidget {
     }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.scanAddedToLibrary)),
+      // Honest either way: a re-scan of an owned book opens it, it doesn't
+      // pretend to have added it again.
+      SnackBar(content: Text(existing == null ? l10n.scanAddedToLibrary : l10n.scanAlreadyOnShelf)),
     );
     context.pushReplacement(Routes.bookDetailPath(workId, editionId));
   }
@@ -297,7 +317,7 @@ class _ConfirmCard extends ConsumerWidget {
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Color(0xFF2A2115),
+          color: _nightCard,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -319,7 +339,7 @@ class _ConfirmCard extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Color(0xFFEFE6C8),
+                      color: _nightText,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
@@ -329,7 +349,7 @@ class _ConfirmCard extends ConsumerWidget {
                       authorNames,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Color(0xFFA08D6E), fontSize: 11),
+                      style: TextStyle(color: _nightMuted, fontSize: 11),
                     ),
                 ],
               ),
@@ -337,7 +357,7 @@ class _ConfirmCard extends ConsumerWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
-                foregroundColor: Color(0xFF241811),
+                foregroundColor: _nightInk,
               ),
               onPressed: edition == null
                   ? null
