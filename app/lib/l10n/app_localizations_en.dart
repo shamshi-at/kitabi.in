@@ -468,6 +468,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String bookLogTimeRange(String from, String to) {
+    return '$from – $to';
+  }
+
+  @override
+  String bookLogTimeRangeNextDay(String from, String to) {
+    return '$from – $to (+1)';
+  }
+
+  @override
   String bookLogPages(int from, int to) {
     return 'p. $from → $to';
   }

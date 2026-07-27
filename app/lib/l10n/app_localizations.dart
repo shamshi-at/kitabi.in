@@ -886,6 +886,18 @@ abstract class AppLocalizations {
   /// **'Last read {when}'**
   String bookLogLastRead(String when);
 
+  /// Clock span of one sitting, start to end
+  ///
+  /// In en, this message translates to:
+  /// **'{from} – {to}'**
+  String bookLogTimeRange(String from, String to);
+
+  /// Clock span of a sitting that ran past midnight
+  ///
+  /// In en, this message translates to:
+  /// **'{from} – {to} (+1)'**
+  String bookLogTimeRangeNextDay(String from, String to);
+
   /// Page range a session moved through
   ///
   /// In en, this message translates to:

@@ -2550,7 +2550,8 @@ class _ReadingLogSheet extends ConsumerWidget {
   }
 }
 
-/// One sitting in the log: time of day, the pages it moved through, its length,
+/// One sitting in the log: the clock span it covered, the pages it moved
+/// through, its length,
 /// and a delete for the stray micro-sessions.
 class _LogRow extends StatelessWidget {
   const _LogRow({required this.session, required this.onDelete});
@@ -2561,8 +2562,12 @@ class _LogRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final time = MaterialLocalizations.of(context)
-        .formatTimeOfDay(TimeOfDay.fromDateTime(session.startedAt));
+    final time = formatSessionSpan(
+      context,
+      l10n,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+    );
     final ps = session.pageStart;
     final pe = session.pageEnd;
     final pages = (ps != null && pe != null && pe > ps) ? l10n.bookLogPages(ps, pe) : l10n.bookLogNoPages;
