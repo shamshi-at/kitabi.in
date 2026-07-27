@@ -88,10 +88,14 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   CachedBook? _book;
   LibraryEntry? _entry;
 
+  /// Where the newest sitting that noted a page ended — the fallback when the
+  /// shelf entry itself has no current page.
+  int? _lastLoggedPage;
+
   String? get _title => _book?.title ?? widget.title;
   String? get _coverUrl => _book?.coverUrl ?? widget.coverUrl;
   int? get _pageCount => _book?.pageCount ?? widget.pageCount;
-  int? get _currentPage => _entry?.currentPage ?? widget.currentPage;
+  int? get _currentPage => _entry?.currentPage ?? widget.currentPage ?? _lastLoggedPage;
 
   Future<void> _resolveBook() async {
     try {
@@ -99,14 +103,30 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
       final entry = await db.libraryEntriesDao.getById(widget.libraryEntryId);
       if (entry == null || !mounted) return;
       final book = await db.cachedBooksDao.getByEditionId(entry.editionId);
+      // A shelf entry with no page of its own can still have sittings that
+      // recorded where they ended — "the page number was noted for the last
+      // log, here page number came empty" (owner report, 26 Jul 2026). The most
+      // recent sitting that noted a page is the best answer we have.
+      int? lastLoggedPage;
+      if (entry.currentPage == null) {
+        final sessions = await db.readingSessionsDao.watchForEntry(entry.id).first;
+        for (final s in sessions) {
+          if (s.pageEnd != null) {
+            lastLoggedPage = s.pageEnd;
+            break; // newest first
+          }
+        }
+      }
       if (!mounted) return;
+      final seed = entry.currentPage ?? lastLoggedPage;
       setState(() {
         _entry = entry;
         _book = book;
+        _lastLoggedPage = lastLoggedPage;
         // Only seed the field the reader hasn't touched — never overwrite a
         // page they've already typed.
-        if (_pageController.text.trim().isEmpty && entry.currentPage != null) {
-          _pageController.text = '${entry.currentPage}';
+        if (_pageController.text.trim().isEmpty && seed != null) {
+          _pageController.text = '$seed';
         }
       });
     } catch (_) {
@@ -882,8 +902,17 @@ class _LoggedFace extends ConsumerWidget {
                       pageCount: pageCount,
                       pageStart: logged.pageStart,
                       duration: duration,
-                      // The wax-seal face sits on the night background.
-                      dark: true,
+                      // Light, because this face is on paper. It was marked
+                      // `dark: true` with a comment claiming the wax-seal face
+                      // "sits on the night background" — it hasn't since the
+                      // face was rebuilt on `AppColors.paper`, so the whole
+                      // entry block was drawn for a dark background it no
+                      // longer has: a near-black total box on the pale gold
+                      // card, a washed-pink numeral instead of oxblood, and a
+                      // dark slab for the anchor line (owner report, 26 Jul
+                      // 2026 — "design getting broken"). Matches R1/R2, which
+                      // are light throughout.
+                      dark: false,
                       onValidityChanged: onValidityChanged,
                     ),
                   )

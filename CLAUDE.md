@@ -436,6 +436,15 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   reach the iOS Live Activity channel, so the lock-screen card kept counting a
   sitting that was already over — give the activity a `staleDate` at the deadline
   so iOS renders it as outdated instead of confidently wrong.
+- **A `dark:`/`light:` styling flag outlives the background it was written for.**
+  The timer's wax-seal face passed `dark: true` to the shared page-entry block
+  with the comment "the wax-seal face sits on the night background" — it hadn't
+  since the face was rebuilt on `AppColors.paper`, so every control was drawn for
+  a background it no longer had: a near-black total box on the pale gold card, a
+  washed-pink numeral instead of oxblood, a dark slab for the anchor line (owner
+  report, 26 Jul 2026). Nothing failed; it just looked wrong, and only on the
+  variant with no page count, which is why it survived. When a screen's
+  background changes, grep the flags its children take.
 - **A screen must not take its data from route `extra` when an OS-level entry
   point can reach it.** `extra` is a snapshot the *caller* assembles, and the
   callers that matter most can't assemble one: a tap on the iOS Live Activity or

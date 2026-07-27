@@ -59,7 +59,21 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
       ? null
       : await db.cachedBooksDao.getByEditionId(storedEntry.editionId);
   final resolvedPageCount = storedBook?.pageCount ?? pageCount;
-  final resolvedCurrentPage = storedEntry?.currentPage ?? currentPage;
+  // An entry with no page of its own can still have sittings that noted where
+  // they ended; the newest of those is a far better answer than a blank field
+  // (owner report, 26 Jul 2026).
+  int? lastLoggedPage;
+  if (storedEntry?.currentPage == null && currentPage == null) {
+    final sessions =
+        await db.readingSessionsDao.watchForEntry(logged.libraryEntryId).first;
+    for (final s in sessions) {
+      if (s.id != logged.sessionId && s.pageEnd != null) {
+        lastLoggedPage = s.pageEnd;
+        break; // newest first
+      }
+    }
+  }
+  final resolvedCurrentPage = storedEntry?.currentPage ?? currentPage ?? lastLoggedPage;
   if (!context.mounted) return;
 
   // R1/R2 — a sheet, not an AlertDialog whose whole content was one cramped

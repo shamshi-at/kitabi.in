@@ -275,4 +275,75 @@ void main() {
     await settle();
     reportTestException = reportOriginal;
   });
+
+  testWidgets('the page field falls back to the last sitting that noted a page',
+      (tester) async {
+    // Owner report, 26 Jul 2026: "even though the page number was noted for the
+    // last log, here page number came empty". An entry with no page of its own
+    // can still have sittings that recorded where they ended.
+    GoogleFonts.config.allowRuntimeFetching = false;
+    final reportOriginal = reportTestException;
+    reportTestException = (details, testDescription) {
+      if (details.exception.toString().contains('GoogleFonts')) return;
+      reportOriginal(details, testDescription);
+    };
+
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    const session = SessionContext(userId: 'u1', deviceId: 'd1');
+    final repo = LibraryRepository(db, session);
+
+    final entryId = await tester.runAsync(() async {
+      final id = await repo.add(editionId: _editionId);
+      await repo.updateStatus(id, 'reading');
+      await db.cachedBooksDao.upsert(CachedBooksCompanion.insert(
+        editionId: _editionId, workId: 'w', title: 'T', authorNames: 'A',
+        pageCount: const Value(200),
+      ));
+      // A sitting from yesterday that ended on p. 88 — but the entry itself
+      // carries no current page.
+      final sessions = ReadingSessionsRepository(db, session);
+      final sid = await sessions.logSession(
+        libraryEntryId: id,
+        startedAt: DateTime.now().subtract(const Duration(days: 1, minutes: 30)),
+        endedAt: DateTime.now().subtract(const Duration(days: 1)),
+        durationSeconds: 1800,
+      );
+      await sessions.updateSessionPageEnd(sid, 88);
+      return id;
+    });
+
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+    }
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        apiClientProvider.overrideWithValue(_FakeApi()),
+        sessionContextProvider.overrideWith((ref) async => session),
+        syncTriggerProvider.overrideWithValue(() {}),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: _Host(entryId: entryId!),
+      ),
+    ));
+    await settle();
+
+    await tester.tap(find.text('start'));
+    await settle();
+    await tester.tap(find.text('stop'));
+    await settle();
+
+    expect(find.text('88'), findsWidgets,
+        reason: 'the last noted page is a far better answer than a blank field');
+
+    await tester.pumpWidget(const SizedBox());
+    await settle();
+    reportTestException = reportOriginal;
+  });
 }
