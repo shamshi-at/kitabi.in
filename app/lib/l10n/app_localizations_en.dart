@@ -3516,6 +3516,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseFilterAllTitle => 'All';
 
   @override
+  String get browseFilterYourLanguages => 'Your languages';
+
+  @override
+  String get browseEmptyInYourLanguages =>
+      'Nothing here in your languages yet.';
+
+  @override
+  String get browseShowAllBooks => 'Show all books';
+
+  @override
   String get browseFabLabel => 'Search and filter the catalogue';
 
   @override

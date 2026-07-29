@@ -128,7 +128,7 @@ final newInLanguageProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, String?>((ref, language) {
   return ref.watch(apiClientProvider).browseWorks(
         limit: 12,
-        language: language,
+        languages: language == null ? null : [language],
         sort: 'year_desc',
       );
 });

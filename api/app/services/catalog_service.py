@@ -826,18 +826,19 @@ async def browse_works(
     db: AsyncSession,
     limit: int,
     offset: int,
-    language: str | None = None,
+    languages: list[str] | None = None,
     form: str | None = None,
     genre: str | None = None,
     sort: str = "title",
 ) -> list[Work]:
     """The Discover/browse screen — catalog works, paged, with optional
-    language / form (Type) / genre filters and sort (title / newest / oldest /
-    author). Layer 1 is server-authoritative, so this reads straight from our
-    catalog."""
+    language(s) / form (Type) / genre filters and sort (title / newest /
+    oldest / author). Layer 1 is server-authoritative, so this reads straight
+    from our catalog. `languages` is a list because the app's default filter
+    is the reader's preferred languages — usually more than one."""
     stmt = select(Work).options(*_SUMMARY_OPTIONS).where(Work.deleted_at.is_(None))
-    if language:
-        stmt = stmt.where(Work.language == language)
+    if languages:
+        stmt = stmt.where(Work.language.in_(languages))
     if form:
         stmt = stmt.where(Work.form == form)
     if genre:

@@ -374,6 +374,25 @@ async def test_browse_works_filter_and_sort(client):
     assert oy.index("Older Book") < oy.index("Newer Book")
 
 
+async def test_browse_works_filters_by_multiple_languages(client):
+    """`language` repeats — the app's default filter is the reader's preferred
+    languages (plural). A single value must keep working for older builds."""
+    for title, lang in [
+        ("Mal Book", "Malayalam"),
+        ("Tam Book", "Tamil"),
+        ("Eng Book", "English"),
+    ]:
+        await client.post("/catalog/works", json={"title": title, "language": lang})
+
+    both = await client.get(
+        "/catalog/browse/works",
+        params={"language": ["Malayalam", "Tamil"], "limit": 100},
+    )
+    titles = [w["title"] for w in both.json()]
+    assert "Mal Book" in titles and "Tam Book" in titles
+    assert "Eng Book" not in titles
+
+
 async def test_browse_works_sort_by_author(client):
     await client.post("/catalog/works", json={"title": "Zeta Work", "author_names": ["Anand"]})
     await client.post("/catalog/works", json={"title": "Alpha Work", "author_names": ["Zacharia"]})

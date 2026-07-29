@@ -5770,6 +5770,24 @@ abstract class AppLocalizations {
   /// **'All'**
   String get browseFilterAllTitle;
 
+  /// Catalogue language filter chip selecting the reader's profile languages — the default when the catalogue opens
+  ///
+  /// In en, this message translates to:
+  /// **'Your languages'**
+  String get browseFilterYourLanguages;
+
+  /// Books-tab empty state when the default your-languages filter matches nothing
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here in your languages yet.'**
+  String get browseEmptyInYourLanguages;
+
+  /// Action under the filtered-empty state that clears the language filter
+  ///
+  /// In en, this message translates to:
+  /// **'Show all books'**
+  String get browseShowAllBooks;
+
   /// Accessibility label for the catalogue floating search/filter control
   ///
   /// In en, this message translates to:

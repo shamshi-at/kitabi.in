@@ -120,22 +120,27 @@ class _FakeApiClient extends ApiClient {
   /// server-side (the list is paged), so the query is the thing to assert.
   String? lastBrowseForm;
   String? lastBrowseGenre;
-  String? lastBrowseLanguage;
+  List<String>? lastBrowseLanguages;
   String? lastBrowseSort;
+
+  /// When set, a language-filtered query returns nothing — the "no books in
+  /// your languages yet" branch.
+  bool emptyWhenLanguageFiltered = false;
 
   @override
   Future<List<Map<String, dynamic>>> browseWorks({
     int limit = 40,
     int offset = 0,
-    String? language,
+    List<String>? languages,
     String? form,
     String? genre,
     String sort = 'title',
   }) async {
     lastBrowseForm = form;
     lastBrowseGenre = genre;
-    lastBrowseLanguage = language;
+    lastBrowseLanguages = languages;
     lastBrowseSort = sort;
+    if (emptyWhenLanguageFiltered && languages != null) return [];
     if (offset > 0) return []; // one page, then end
     return searchCatalog('chemmeen');
   }
@@ -309,7 +314,7 @@ void main() {
 
     // Header names the language, and the query was actually filtered by it.
     expect(find.text('NEW IN MALAYALAM'), findsOneWidget);
-    expect(fake.lastBrowseLanguage, 'Malayalam');
+    expect(fake.lastBrowseLanguages, ['Malayalam']);
     expect(fake.lastBrowseSort, 'year_desc');
   });
 
@@ -323,7 +328,7 @@ void main() {
     // stops claiming a filter that isn't applied.
     expect(find.text('NEW IN THE CATALOGUE'), findsOneWidget);
     expect(find.textContaining('from your profile languages'), findsNothing);
-    expect(fake.lastBrowseLanguage, isNull);
+    expect(fake.lastBrowseLanguages, isNull);
     expect(fake.lastBrowseSort, 'year_desc');
   });
 
@@ -931,6 +936,115 @@ void main() {
     // matches further into the pagination), and the facets compose.
     expect(fake.lastBrowseForm, 'Novel');
     expect(fake.lastBrowseGenre, 'Historical');
+  });
+
+  // ── Default language filter (29 Jul 2026) ────────────────────────────────
+  // The catalogue opens filtered to the reader's configured languages; the
+  // sheet's "Your languages" chip names the state, All/single override it,
+  // and an empty filtered result offers the whole catalogue as an escape.
+
+  testWidgets("the catalogue opens filtered to the reader's languages", (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(
+      const BrowseScreen(),
+      apiClient: fake,
+      overrides: [
+        meProvider.overrideWith((ref) async => {
+              'id': 'u1',
+              'preferred_languages': ['Malayalam', 'Tamil'],
+            }),
+      ],
+    ));
+    await tester.pumpAndSettle();
+
+    // The first page was already narrowed server-side to the profile languages.
+    expect(fake.lastBrowseLanguages, ['Malayalam', 'Tamil']);
+    // The floating control's badge says one facet is active — the filter must
+    // never be invisible.
+    expect(find.text('1'), findsOneWidget);
+
+    // The sheet names the state: "Your languages" is the selected chip.
+    await tester.tap(find.byIcon(Icons.manage_search));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Filter'));
+    await tester.pumpAndSettle();
+    expect(find.text('Your languages'), findsOneWidget);
+
+    // Switching to All re-queries the whole catalogue.
+    await tester.tap(find.text('All').last);
+    await tester.tap(find.text('Show books'));
+    await tester.pumpAndSettle();
+    expect(fake.lastBrowseLanguages, isNull);
+  });
+
+  testWidgets('no configured languages → the catalogue opens unfiltered', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const BrowseScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    expect(fake.lastBrowseLanguages, isNull);
+    expect(find.text('Chemmeen'), findsWidgets);
+  });
+
+  testWidgets('a late /me still applies the default filter — unless the reader chose first',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(
+      const BrowseScreen(),
+      apiClient: fake,
+      overrides: [
+        meProvider.overrideWith((ref) async {
+          // /me resolving after the screen's first frame — a cold start
+          // straight into Discover.
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+          return {
+            'id': 'u1',
+            'preferred_languages': ['Malayalam'],
+          };
+        }),
+      ],
+    ));
+    await tester.pump(); // first frame — /me still in flight
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(fake.lastBrowseLanguages, isNull);
+
+    await tester.pump(const Duration(milliseconds: 250)); // /me lands
+    await tester.pumpAndSettle();
+    expect(fake.lastBrowseLanguages, ['Malayalam']);
+  });
+
+  testWidgets('an empty your-languages shelf offers the whole catalogue', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient()..emptyWhenLanguageFiltered = true;
+    await tester.pumpWidget(_wrap(
+      const BrowseScreen(),
+      apiClient: fake,
+      overrides: [
+        meProvider.overrideWith((ref) async => {
+              'id': 'u1',
+              'preferred_languages': ['Odia'],
+            }),
+      ],
+    ));
+    await tester.pumpAndSettle();
+
+    // The filtered shelf is empty — the escape hatch shows and works.
+    expect(find.text('Nothing here in your languages yet.'), findsOneWidget);
+    await tester.tap(find.text('Show all books'));
+    await tester.pumpAndSettle();
+    expect(fake.lastBrowseLanguages, isNull);
+    expect(find.text('Chemmeen'), findsWidgets);
   });
 
   testWidgets('the catalogue Books tab is a wall of standing covers with quick-add',

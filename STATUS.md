@@ -334,7 +334,21 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
-- **29 Jul 2026** — **The catalog speaks 14 languages: 100 books each, straight
+- **29 Jul 2026** — **Discover opens in the reader's own languages.** The
+  catalogue's Books tab now applies a default server-side filter: the
+  reader's `preferred_languages` from /me (the languages they configured at
+  onboarding / on the profile). The filter sheet's language row gains a
+  leading **"Your languages"** chip naming the state; All / a single language
+  override it, the fab badge counts it, and an empty filtered shelf shows
+  "Nothing here in your languages yet" with a **Show all books** escape
+  instead of dead-ending. A late-resolving /me still applies the default —
+  unless the reader has already made a choice (`_langTouched`).
+  `GET /catalog/browse/works` takes a repeatable `language` param
+  (`Work.language.in_`), single values still bind so older builds are
+  unaffected; the app pins Dio to `ListFormat.multi` for that call because
+  Dio's query default (`multiCompatible`) encodes `language[]=`, which
+  FastAPI ignores. Tests: multi-language filter (API), default-applied /
+  override-to-All / late-me / empty-escape (app; 52 + 293 green).
   from the live OpenLibrary API.** New `etl/07_language_seed.py` +
   `07_run_language_seed.sh` — a re-runnable seed job that needs *no* 9 GB dump:
   it asks the OL search API for the top-100 reader-interest works per language

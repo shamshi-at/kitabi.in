@@ -15,6 +15,7 @@ import '../../../data/sync/sync_providers.dart';
 import '../../../core/quiet_error.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
+import '../../profile/providers/profile_providers.dart';
 import 'catalog_entity_tiles.dart';
 import 'chip_picker_sheet.dart';
 
@@ -39,18 +40,31 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
   // Books facets — lifted out of the tab into the screen so the floating
   // filter sheet drives them (the tab just reads them and re-keys on change).
   String _sort = 'title';
-  String? _language;
+  // null = the whole catalogue; otherwise a server-side language filter. The
+  // catalogue *opens* filtered to the reader's profile languages (their
+  // configured reading languages) — Discover should greet a Malayalam reader
+  // with Malayalam shelves, not the global alphabet.
+  List<String>? _languages;
+  // Set once the reader applies any choice from the sheet (or the empty-state
+  // escape) — after that, a late /me arrival must not overwrite their pick.
+  bool _langTouched = false;
   String? _form;
   String? _genre;
 
   // What the filter sheet offers — best-effort; a failed fetch just leaves
   // that facet showing "All", never blocks browsing.
-  List<String> _languages = [];
+  List<String> _languageOptions = [];
   List<String> _forms = [];
   List<String> _genres = [];
   // The same genres with their work counts — the "All N" door's picker ranks
   // and annotates by count, so the established spelling wins.
   List<Map<String, dynamic>> _genreRows = [];
+
+  /// The reader's profile languages, straight from /me (empty when signed out,
+  /// offline before the first /me, or none configured).
+  List<String> get _preferred =>
+      (ref.read(meProvider).valueOrNull?['preferred_languages'] as List?)?.cast<String>() ??
+      const <String>[];
 
   @override
   void initState() {
@@ -61,9 +75,20 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
       ..addListener(() {
         if (!_tab.indexIsChanging) setState(() {});
       });
+    // Default filter: the reader's configured languages. /me is normally
+    // cached by the router's onboarding gate long before Discover opens, but
+    // a cold start straight into this screen can beat it — listen and apply
+    // the default late, unless the reader has already made a choice.
+    if (_preferred.isNotEmpty) _languages = List.of(_preferred);
+    ref.listenManual(meProvider, (_, next) {
+      final langs = (next.valueOrNull?['preferred_languages'] as List?)?.cast<String>();
+      if (!_langTouched && _languages == null && langs != null && langs.isNotEmpty) {
+        setState(() => _languages = List.of(langs));
+      }
+    });
     final api = ref.read(apiClientProvider);
     api.browseLanguages().then((v) {
-      if (mounted) setState(() => _languages = v);
+      if (mounted) setState(() => _languageOptions = v);
     }).catchError((_) {});
     api.browseForms().then((v) {
       if (mounted) setState(() => _forms = v);
@@ -85,7 +110,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
   }
 
   int get _activeFacetCount =>
-      (_language != null ? 1 : 0) + (_form != null ? 1 : 0) + (_genre != null ? 1 : 0);
+      (_languages != null ? 1 : 0) + (_form != null ? 1 : 0) + (_genre != null ? 1 : 0);
 
   Future<void> _openFilterSheet() async {
     final result = await showModalBottomSheet<_CatalogFacets>(
@@ -96,8 +121,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _CatalogFilterSheet(
-        current: _CatalogFacets(sort: _sort, language: _language, form: _form, genre: _genre),
-        languages: _languages,
+        current: _CatalogFacets(sort: _sort, languages: _languages, form: _form, genre: _genre),
+        languages: _languageOptions,
+        preferred: _preferred,
         forms: _forms,
         genres: _genres,
         genreRows: _genreRows,
@@ -106,7 +132,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
     if (result == null) return;
     setState(() {
       _sort = result.sort;
-      _language = result.language;
+      _languages = result.languages;
+      _langTouched = true;
       _form = result.form;
       _genre = result.genre;
     });
@@ -172,17 +199,35 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
                     // Re-key on facet/sort change so pagination resets to page 1
                     // (every facet is applied server-side; filtering an
                     // already-fetched page would hide matches further in).
-                    key: ValueKey('books|$_sort|$_language|$_form|$_genre'),
+                    key: ValueKey('books|$_sort|${_languages?.join('+')}|$_form|$_genre'),
                     storageKey: 'catalog-books',
                     fetch: (limit, offset) => api.browseWorks(
                       limit: limit,
                       offset: offset,
                       sort: _sort,
-                      language: _language,
+                      languages: _languages,
                       form: _form,
                       genre: _genre,
                     ),
-                    emptyText: l10n.browseEmpty,
+                    emptyText:
+                        _languages != null ? l10n.browseEmptyInYourLanguages : l10n.browseEmpty,
+                    // The default filter must never dead-end a reader whose
+                    // languages have no books yet — offer the whole catalogue.
+                    emptyAction: _languages == null
+                        ? null
+                        : TextButton(
+                            onPressed: () => setState(() {
+                              _languages = null;
+                              _langTouched = true;
+                            }),
+                            child: Text(
+                              l10n.browseShowAllBooks,
+                              style: TextStyle(
+                                color: AppColors.oxblood,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                     sliverBuilder: (context, works) => _BooksGridSliver(works: works),
                   ),
                   _PagedCatalogView(
@@ -283,12 +328,17 @@ class _PagedCatalogView extends StatefulWidget {
     required this.sliverBuilder,
     required this.emptyText,
     required this.storageKey,
+    this.emptyAction,
   });
 
   final Future<List<Map<String, dynamic>>> Function(int limit, int offset) fetch;
   final Widget Function(BuildContext, List<Map<String, dynamic>>) sliverBuilder;
   final String emptyText;
   final String storageKey;
+
+  /// Optional escape hatch under the empty state (e.g. "Show all books" when
+  /// the your-languages default filter matched nothing).
+  final Widget? emptyAction;
 
   @override
   State<_PagedCatalogView> createState() => _PagedCatalogViewState();
@@ -358,10 +408,20 @@ class _PagedCatalogViewState extends State<_PagedCatalogView>
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Text(
-                widget.emptyText,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.emptyText,
+                    textAlign: TextAlign.center,
+                    style:
+                        Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
+                  ),
+                  if (widget.emptyAction != null) ...[
+                    const SizedBox(height: 8),
+                    widget.emptyAction!,
+                  ],
+                ],
               ),
             ),
           ),
@@ -604,12 +664,14 @@ class _QuickAddBadge extends ConsumerWidget {
 }
 
 /// The four Books facets the catalogue can narrow by. Sort always has a value;
-/// language/form/genre are null when "All".
+/// languages/form/genre are null when "All". [languages] is a *list*: the
+/// default filter is the reader's profile languages, and a single sheet pick
+/// travels as a one-element list.
 class _CatalogFacets {
-  const _CatalogFacets({required this.sort, this.language, this.form, this.genre});
+  const _CatalogFacets({required this.sort, this.languages, this.form, this.genre});
 
   final String sort;
-  final String? language;
+  final List<String>? languages;
   final String? form;
   final String? genre;
 }
@@ -621,6 +683,7 @@ class _CatalogFilterSheet extends StatefulWidget {
   const _CatalogFilterSheet({
     required this.current,
     required this.languages,
+    required this.preferred,
     required this.forms,
     required this.genres,
     required this.genreRows,
@@ -628,6 +691,9 @@ class _CatalogFilterSheet extends StatefulWidget {
 
   final _CatalogFacets current;
   final List<String> languages;
+
+  /// The reader's profile languages — the "Your languages" chip's value.
+  final List<String> preferred;
   final List<String> forms;
   final List<String> genres;
   final List<Map<String, dynamic>> genreRows;
@@ -637,10 +703,32 @@ class _CatalogFilterSheet extends StatefulWidget {
 }
 
 class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
+  /// The language row's selection, flattened to one value so the shared chip
+  /// row can drive it: null = All, [_kMine] = the reader's profile languages,
+  /// anything else = that single language.
+  static const _kMine = '__your_languages__';
+
   late String _sort = widget.current.sort;
-  late String? _language = widget.current.language;
+  late String? _langChoice = _initialLangChoice();
   late String? _form = widget.current.form;
   late String? _genre = widget.current.genre;
+
+  String? _initialLangChoice() {
+    final cur = widget.current.languages;
+    if (cur == null) return null;
+    if (cur.length == 1 && !_isPreferredSet(cur)) return cur.first;
+    return widget.preferred.isEmpty ? cur.first : _kMine;
+  }
+
+  bool _isPreferredSet(List<String> langs) =>
+      langs.length == widget.preferred.length && langs.toSet().containsAll(widget.preferred);
+
+  /// What the sheet hands back for the language facet.
+  List<String>? get _resultLanguages => _langChoice == null
+      ? null
+      : _langChoice == _kMine
+          ? List.of(widget.preferred)
+          : [_langChoice!];
 
   // M10: chips are a shortcut, not the vocabulary — the row shows a handful
   // and the "All N" door opens the full searchable picker.
@@ -681,7 +769,7 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
       builder: (ctx) => ChipPickerSheet(
         title: title,
         options: options,
-        selected: {?(genre ? _genre : _language)},
+        selected: {?(genre ? _genre : (_langChoice == _kMine ? null : _langChoice))},
         multiSelect: false,
         allowCreate: false,
       ),
@@ -692,7 +780,7 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
       if (genre) {
         _genre = value;
       } else {
-        _language = value;
+        _langChoice = value;
       }
     });
   }
@@ -733,11 +821,11 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const Spacer(),
-                  if (_language != null || _form != null || _genre != null || _sort != 'title')
+                  if (_langChoice != null || _form != null || _genre != null || _sort != 'title')
                     TextButton(
                       onPressed: () => setState(() {
                         _sort = 'title';
-                        _language = null;
+                        _langChoice = null;
                         _form = null;
                         _genre = null;
                       }),
@@ -784,11 +872,19 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                 _FacetLabel(l10n.libraryFilterLanguage),
                 _ChipRow(
                   options: [
+                    // "Your languages" leads — it's the state the catalogue
+                    // opens in, so it must be visible and re-selectable.
+                    if (widget.preferred.isNotEmpty)
+                      (_kMine, l10n.browseFilterYourLanguages),
                     (null, l10n.browseFilterAllTitle),
-                    for (final lang in _visible(widget.languages, _language)) (lang, lang),
+                    for (final lang in _visible(
+                      widget.languages,
+                      _langChoice == _kMine ? null : _langChoice,
+                    ))
+                      (lang, lang),
                   ],
-                  selected: _language,
-                  onSelect: (v) => setState(() => _language = v),
+                  selected: _langChoice,
+                  onSelect: (v) => setState(() => _langChoice = v),
                   trailing: widget.languages.length > _kVisibleFacetChips
                       ? _AllDoorChip(
                           label: l10n.browseFilterAllCount(widget.languages.length),
@@ -802,7 +898,12 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(
-                    _CatalogFacets(sort: _sort, language: _language, form: _form, genre: _genre),
+                    _CatalogFacets(
+                      sort: _sort,
+                      languages: _resultLanguages,
+                      form: _form,
+                      genre: _genre,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.oxblood,

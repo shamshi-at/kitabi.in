@@ -278,7 +278,7 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> browseWorks({
     int limit = 40,
     int offset = 0,
-    String? language,
+    List<String>? languages,
     String? form,
     String? genre,
     String sort = 'title',
@@ -289,10 +289,13 @@ class ApiClient {
         'limit': limit,
         'offset': offset,
         'sort': sort,
-        'language': ?language,
+        'language': ?languages,
         'form': ?form,
         'genre': ?genre,
       },
+      // FastAPI binds a repeated `language=A&language=B`; Dio's query default
+      // (multiCompatible) would send `language[]=A`, which it ignores.
+      options: Options(listFormat: ListFormat.multi),
     );
     return (res.data as List).cast<Map<String, dynamic>>();
   }

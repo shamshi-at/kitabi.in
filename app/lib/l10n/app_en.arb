@@ -2973,6 +2973,12 @@
   "@browseFilterClear": {"description": "Reset action on the catalogue filter sheet"},
   "browseFilterAllTitle": "All",
   "@browseFilterAllTitle": {"description": "Catalogue filter chip that clears a single facet (type/genre/language)"},
+  "browseFilterYourLanguages": "Your languages",
+  "@browseFilterYourLanguages": {"description": "Catalogue language filter chip selecting the reader's profile languages — the default when the catalogue opens"},
+  "browseEmptyInYourLanguages": "Nothing here in your languages yet.",
+  "@browseEmptyInYourLanguages": {"description": "Books-tab empty state when the default your-languages filter matches nothing"},
+  "browseShowAllBooks": "Show all books",
+  "@browseShowAllBooks": {"description": "Action under the filtered-empty state that clears the language filter"},
   "browseFabLabel": "Search and filter the catalogue",
   "@browseFabLabel": {"description": "Accessibility label for the catalogue floating search/filter control"},
 

@@ -106,15 +106,19 @@ async def browse_works(
     db: DbSession,
     limit: int = Query(default=40, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    language: str | None = Query(default=None),
+    language: Annotated[list[str] | None, Query()] = None,
     form: str | None = Query(default=None),
     genre: str | None = Query(default=None),
     sort: str = Query(default="title", pattern="^(title|year_desc|year_asc|author)$"),
 ) -> list[WorkSummaryOut]:
     """Discover screen — catalog books, paged, filterable by language, form
-    (Type) and genre, sortable by title / newest / oldest / author (S4/browse)."""
+    (Type) and genre, sortable by title / newest / oldest / author (S4/browse).
+
+    `language` repeats (`?language=Malayalam&language=Tamil`): the app opens
+    the catalogue filtered to the reader's preferred languages by default.
+    A single value still works, so older app builds are unaffected."""
     works = await catalog_service.browse_works(
-        db, limit, offset, language=language, form=form, genre=genre, sort=sort
+        db, limit, offset, languages=language, form=form, genre=genre, sort=sort
     )
     return [work_summary(w) for w in works]
 
