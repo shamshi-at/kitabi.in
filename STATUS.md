@@ -334,6 +334,24 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **29 Jul 2026** — **Production wiped of all test data; catalog reseeded clean.**
+  The "test data still to be cleaned separately" debt from the 23 Jul seed-on-top
+  is paid: every Layer-1/Layer-2 table truncated, all 6 test `auth.users` deleted
+  (with their sessions/refresh tokens — installed apps are signed out as soon as
+  their access token expires and refresh fails), the 52 test cover photos removed
+  from the `covers` storage bucket, and `sync_seq` restarted at 1. The two
+  `admin_users` (founder + collaborator) were deliberately kept — operational
+  accounts, not test data. Catalog reseeded from the regenerated maltest CSVs
+  (current `03_transform.py`, so titles land in native script with
+  `title_translit` + `title_fold` populated — no post-load backfill needed):
+  prod is now exactly **100 works / 100 editions / 96 authors / 57 publishers**,
+  all `external_source='openlibrary'`. Verified live: `/catalog/search` resolves
+  romanized queries (`arkapurnima` → അർക്കപൂർണിമ) and the sitemap serves.
+  Pre-wipe safety net: `pg_dump` of `public` + auth/storage CSVs at
+  `~/kitabi-backups/prewipe-2026-07-29/` (local only, not in the repo).
+  Gotcha for next time: Supabase blocks SQL deletes on `storage.objects`
+  (`protect_delete` trigger) — `SET session_replication_role = replica` works
+  from the pooler's `postgres` role for a deliberate metadata wipe.
 - **26 Jul 2026** — **Fixed: "Yes, still reading" didn't keep the sitting
   alive.** Answering the check-in re-armed the notification and the workmanager
   auto-stop but recorded nothing, so the *in-app* safety net — which measures a
