@@ -66,10 +66,16 @@ except ImportError:  # pragma: no cover — wrong interpreter
         return None
 
 
-def native_script(text: str | None) -> str | None:
+def native_script(text: str | None, language: str | None) -> str | None:
     """OpenLibrary romanizes Malayalam (`Kēraḷa sthalanāmakōśaṃ`); store the
     native script instead. Returns [text] unchanged when there's nothing to
-    convert — an English title, or one already in script."""
+    convert — an English title, or one already in script. Only applies when
+    the row's language IS Malayalam: the converter reads ALA-LC diacritics,
+    and romanized Tamil/Hindi carries the same diacritics — converting those
+    would write Malayalam script onto another language's book (caught on the
+    14-language seed, 29 Jul 2026)."""
+    if language != "Malayalam":
+        return text
     return to_malayalam_script(text) or text
 
 
@@ -208,7 +214,7 @@ def main() -> None:
         kept_work_ids.add(wid)
         lang = majority_lang(work_langs.get(key))
         desc = ol_text(work.get("description"))
-        native = native_script(title)
+        native = native_script(title, lang)
         works_csv.writerow(row({
             "id": wid, "created_at": NOW, "updated_at": NOW, "deleted_at": None,
             "title": native, "title_translit": transliterate(native),
@@ -243,7 +249,7 @@ def main() -> None:
         seen_author_ids[key] = aid
         langs = author_langs.get(key)
         bio = ol_text(author.get("bio"))
-        native = native_script(_WS.sub(" ", name))
+        native = native_script(_WS.sub(" ", name), langs.most_common(1)[0][0] if langs else None)
         authors_csv.writerow(row({
             "id": aid, "created_at": NOW, "updated_at": NOW, "deleted_at": None,
             "name": native, "name_translit": transliterate(native),
@@ -280,6 +286,8 @@ def main() -> None:
         wid = ol_id(wks[0]) if wks else None
         if wid not in kept_work_ids:
             continue
+        codes = edition_lang_codes(ed)
+        ed_lang = LANG_NAMES.get(codes[0]) if codes else None
         publisher_id = None
         for raw in ed.get("publishers") or []:
             if isinstance(raw, str) and raw.strip():
@@ -287,7 +295,7 @@ def main() -> None:
                 low = name.lower()
                 if low not in publisher_ids:
                     publisher_ids[low] = str(uuid.uuid5(NS, f"publisher:{low}"))
-                    native = native_script(name)
+                    native = native_script(name, ed_lang)
                     publishers_csv.writerow(row({
                         "id": publisher_ids[low], "created_at": NOW, "updated_at": NOW,
                         "deleted_at": None, "name": native,
@@ -303,14 +311,13 @@ def main() -> None:
             isbn = None  # editions.isbn is UNIQUE — first writer wins
         elif isbn:
             seen_isbns.add(isbn)
-        codes = edition_lang_codes(ed)
         year = first_year(ed.get("publish_date"))
         pages = ed.get("number_of_pages")
         editions_csv.writerow(row({
             "id": ol_id(key), "created_at": NOW, "updated_at": NOW, "deleted_at": None,
             "work_id": wid, "publisher_id": publisher_id,
             "series_id": None, "series_number": None,
-            "isbn": isbn, "language": LANG_NAMES.get(codes[0]) if codes else None,
+            "isbn": isbn, "language": ed_lang,
             "page_count": pages if isinstance(pages, int) and 0 < pages < 20000 else None,
             "pub_date": f"{year}-01-01" if year else None,
             "format": norm_format(ed), "cover_url": cover_url_of(ed),

@@ -155,6 +155,44 @@ and the romanized search column is broken. Re-running `04_load.sql` inserts 0
 rows, so it's safe to repeat. To start over:
 `TRUNCATE work_authors, editions, publishers, authors, works CASCADE;`
 
+## The per-language seed job (no dumps needed)
+
+`07_run_language_seed.sh` is a one-command job that fills the catalog with the
+**top ~100 reader-interest books per language** — the 13 Indic languages plus
+an India-focused English list (`language:eng subject:india`) — straight from
+the OpenLibrary **live API**, no 9 GB dump download:
+
+```bash
+cd etl
+SEED_PROD_YES="SEED PROD" ./07_run_language_seed.sh          # ~/ol-dumps/langseed, 100/lang
+./07_run_language_seed.sh ~/ol-dumps/langseed 50             # custom workdir / quota
+```
+
+How it stays sane:
+
+- **Ranking** is OL's reading-log count (`sort=readinglog`), so each Indic
+  list is a mix of native literature and in-language translations of global
+  hits — both are "books an Indian audience reaches for". The stored edition
+  is always one *in the target language*, and the Work's title comes from
+  that edition (അനിമൽ ഫാം, not "Animal Farm") to match Kitabi's
+  Work-per-translation model.
+- **No duplicates, three layers:** a work key is claimed by the first
+  language that selects it (Indic before English); within a language a
+  second work whose *normalized title* matches one already kept is skipped —
+  OL carries duplicate work records for popular books ("The palace of
+  illusions" / "The Palace of Illusions"); and `04_load.sql` skips anything
+  already in the catalog by external_id — re-runs converge.
+- **Covers:** the edition's own cover when it has one, else the work-level
+  cover; author photos come through too.
+- **Politeness/resume:** ~4 requests/s aggregate, hard backoff on 429/503,
+  and every record fetch is disk-cached in `workdir/cache/` — a re-run after
+  a network wobble resumes instead of re-crawling (~4k requests, 20–30 min
+  cold for 14×100).
+
+`07_language_seed.py` (the fetch step) emits the same `works/editions/authors
+.jsonl.gz` files as `02_filter.py`, so the transform + load stay the shared,
+already-tested path.
+
 ## Sizing before you commit to a tier
 
 `sample_stats.py` estimates row counts, field coverage, language mix, and the

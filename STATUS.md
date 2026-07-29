@@ -240,7 +240,7 @@ parts, each with their own README and CI workflow:
 | `landing-page/` | Static "launching soon" site | **Live** at kitabi.in |
 | `api/` | FastAPI backend | **Live** at api.kitabi.in — auth/profile + shared catalog (search, ISBN lookup, add/edit, author/publisher browse) |
 | `app/` | Flutter mobile app | Auth flow + library-first home + catalog screens working (global search across library/books/authors/publishers, ISBN scan → adds to library, add/edit form with author/publisher **picker pages**, author/publisher browse, shareable book/author/publisher links) + personal-library grid & book detail |
-| `etl/` | OpenLibrary bulk-dump → curated catalog seed pipeline (offline scripts, run locally) | Scaffolded, smoke-tested end-to-end against dump samples + local Postgres |
+| `etl/` | OpenLibrary → curated catalog seed pipeline: bulk-dump path (01–04) + live-API per-language seed job (07) | Live-API job run against prod: 100 books × 14 languages (13 Indic + India-focused English), covers included |
 | `docs/` | Mockups, design tokens, task checklist | — |
 
 ---
@@ -334,6 +334,31 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **29 Jul 2026** — **The catalog speaks 14 languages: 100 books each, straight
+  from the live OpenLibrary API.** New `etl/07_language_seed.py` +
+  `07_run_language_seed.sh` — a re-runnable seed job that needs *no* 9 GB dump:
+  it asks the OL search API for the top-100 reader-interest works per language
+  (`sort=readinglog`; the 13 Indic codes get `language:<code>`, English gets
+  `language:eng subject:india`), fetches full work/edition/author records
+  (~4.2k calls, ~4 req/s, disk-cached in `workdir/cache` so re-runs resume),
+  and emits the same JSONL the dump pipeline's transform consumes. Prod now
+  holds exactly **1,400 works / 1,400 editions / 1,187 authors / 1,065
+  publishers, 100 works per language, 769 editions with covers (55%)** — and
+  author photos where OL has them. Dedup is three-layered (cross-language
+  work-key claim, per-language normalized-title match, external_id on load);
+  verified 0 same-title dupes on prod. Four gotchas fixed along the way, each
+  caught by validating CSVs before load: OL *orphaned editions* serve the
+  edition record at their virtual `/works/OL…M` URL (force the search-index
+  key, or the work↔edition link breaks); ~4% of live edition records point
+  `works[]` at a *different* (merged) work than the search index said (pin
+  them); bilingual editions leaked works into the wrong language bucket
+  (target code now leads `languages[]`); and `to_malayalam_script` was
+  converting romanized *Hindi/Tamil/etc.* titles into Malayalam script —
+  `03_transform.native_script` is now gated on the row's language actually
+  being Malayalam. Work titles come from the in-language edition (അനിമൽ ഫാം,
+  not "Animal Farm") to match the Work-per-translation model. Verified live:
+  `ikigai` → इकिगाई (Hindi, cover), one hit for "palace of illusions",
+  Bengali original + English translation stay separate works.
 - **29 Jul 2026** — **Production wiped of all test data; catalog reseeded clean.**
   The "test data still to be cleaned separately" debt from the 23 Jul seed-on-top
   is paid: every Layer-1/Layer-2 table truncated, all 6 test `auth.users` deleted
