@@ -248,6 +248,12 @@ a.healthrow .bar{margin-top:6px}
 .chk{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;
   background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px;
   cursor:pointer}
+/* `.fld label` is (0,1,1) and beats a bare `.chk` (0,1,0), so a chip inside a
+   field block inherited the uppercase field-label treatment and shouted, while
+   the identical chips on the Audience tab (inside .prule) stayed sentence
+   case. Needs the extra class to win. */
+.fld label.chk{text-transform:none;letter-spacing:0;color:var(--ink);
+  margin-bottom:0;display:inline-flex;font-size:12px;font-weight:500}
 .chk input{margin:0}
 
 .pvariants{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -323,3 +329,6 @@ a.healthrow .bar{margin-top:6px}
 .pbookrow b{display:block;font-size:12.5px;font-weight:600}
 .pbookrow s{display:block;text-decoration:none;font-size:11px;color:var(--ink-soft);margin-top:1px}
 .pbookempty{padding:10px 11px;font-size:11.5px;color:var(--stamp-grey);line-height:1.55}
+.pbookgroup{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--ink-soft);padding:8px 11px 4px;background:var(--paper-deep);
+  border-bottom:1px solid var(--line)}

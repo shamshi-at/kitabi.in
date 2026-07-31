@@ -104,34 +104,38 @@
     <div class="split">
       <div class="fld"><label>Button label</label>
         <input name="cta_label" value="{{ (selected.cta_label or '') if selected else '' }}"></div>
-      <div class="fld"><label>Tapping it</label>
-        {% set at = selected.action_type if selected else 'none' %}
-        {% set av = (selected.action_value or '') if selected else '' %}
-        {# One question — "where does this go?" — instead of asking the operator
-           to pick a protocol and then assemble a route by hand. #}
-        <select name="action_type" id="actionType">
-          <option value="none" {{ 'selected' if at == 'none' }}>Does nothing</option>
-          <option value="deep_link" {{ 'selected' if at == 'deep_link' }}>Opens a screen in the app</option>
-          <option value="external_url" {{ 'selected' if at == 'external_url' }}>Opens a web page</option>
-        </select></div>
     </div>
+
+    {% set at = selected.action_type if selected else 'none' %}
+    {% set av = (selected.action_value or '') if selected else '' %}
+    {# One question, three answers. The old version asked for a protocol
+       ("Opens a screen in the app") *and* a hand-assembled route, then offered
+       five overlapping chips — which is two questions too many (owner report,
+       31 Jul 2026). action_type is now derived from the choice below. #}
     <div class="fld" id="destBlock">
-      <label>Destination</label>
-      <div class="seg sm" id="destKind" style="margin-bottom:8px">
-        <span data-kind="linked" class="{{ 'on' if at == 'deep_link' and not av }}">The linked book</span>
-        <span data-kind="book" class="{{ 'on' if at == 'deep_link' and av.startswith('/book/') }}">Another book</span>
-        <span data-kind="author" class="{{ 'on' if av.startswith('/catalog/authors/') }}">An author</span>
-        <span data-kind="publisher" class="{{ 'on' if av.startswith('/catalog/publishers/') }}">A publisher</span>
-        <span data-kind="custom" class="{{ 'on' if at == 'external_url' or (at == 'deep_link' and av and not av.startswith('/book/') and not av.startswith('/catalog/')) }}">Somewhere else</span>
+      <label>Tapping it</label>
+      <input type="hidden" name="action_type" id="actionType" value="{{ at }}">
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px">
+        <label class="chk"><input type="radio" name="dest_mode" value="none"
+          {{ 'checked' if at == 'none' }}> Does nothing</label>
+        <label class="chk"><input type="radio" name="dest_mode" value="linked"
+          {{ 'checked' if at == 'deep_link' and not av }}> Opens the linked book</label>
+        <label class="chk"><input type="radio" name="dest_mode" value="other"
+          {{ 'checked' if av }}> Opens something else</label>
       </div>
+
       <div id="destSearchWrap" style="display:none">
         <input type="text" id="destSearch" autocomplete="off" spellcheck="false"
-               placeholder="Search the catalog — any script">
+               placeholder="Search books, authors and publishers — or paste an https:// link">
         <div id="destResults"></div>
       </div>
-      <input name="action_value" id="actionValue" value="{{ av }}"
-             placeholder="/book/&lt;workId&gt;/&lt;editionId&gt;  or  https://…">
-      <div class="hint" id="destHint" style="margin-top:5px"></div>
+      <input type="text" name="action_value" id="actionValue" value="{{ av }}"
+             placeholder="https://…" style="display:none;margin-top:7px">
+      {# The way back. Without it, a campaign that already holds a URL opens in
+         link mode with no route to the search — a one-way door. #}
+      <a href="#" id="destBackToSearch" style="display:none;font-size:11px;
+         color:var(--slate);margin-top:6px">← Search the catalog instead</a>
+      <div class="hint" id="destHint" style="margin-top:6px"></div>
     </div>
     <div class="fld" style="margin-bottom:0"><label>Image URL <span class="hint">optional</span></label>
       <input name="image_url" value="{{ (selected.image_url or '') if selected else '' }}"
@@ -522,84 +526,103 @@
   });
 })();
 
-// Destination picker. "The linked book" stores nothing at all — the server
-// derives /book/{work}/{edition} from the campaign's own ids at serve time, so
-// it can't go stale if the linked book is changed later.
+// Destination. Three answers to one question; `action_type` is derived, never
+// asked. "The linked book" stores nothing at all — the server derives
+// /book/{work}/{edition} from the campaign's own ids at serve time, so it can't
+// go stale if the linked book is changed later.
 (function () {
-  const kinds = document.getElementById("destKind");
   const type = document.getElementById("actionType");
   const value = document.getElementById("actionValue");
   const wrap = document.getElementById("destSearchWrap");
   const box = document.getElementById("destSearch");
   const results = document.getElementById("destResults");
   const hint = document.getElementById("destHint");
-  const block = document.getElementById("destBlock");
-  if (!kinds || !type || !value) return;
+  const back = document.getElementById("destBackToSearch");
+  const radios = [...document.querySelectorAll('input[name="dest_mode"]')];
+  if (!type || !value || !radios.length) return;
   let timer = null;
+  let external = value.value.startsWith("http");
 
-  function current() {
-    const on = kinds.querySelector("span.on");
-    return on ? on.dataset.kind : "custom";
-  }
+  const mode = () => (radios.find((r) => r.checked) || {}).value || "none";
+  const looksExternal = (s) => /^https?:\/\//i.test(s.trim());
 
   function render() {
-    const kind = current();
-    block.style.display = type.value === "none" ? "none" : "";
-    const searching = ["book", "author", "publisher"].includes(kind);
-    wrap.style.display = searching ? "" : "none";
-    value.style.display = kind === "custom" ? "" : "none";
-    if (kind === "linked") value.value = "";
-    box.placeholder =
-      kind === "author" ? "Search authors — any script"
-      : kind === "publisher" ? "Search publishers"
-      : "Search the catalog — any script";
+    const m = mode();
+    wrap.style.display = m === "other" && !external ? "" : "none";
+    value.style.display = m === "other" && external ? "" : "none";
+    back.style.display = m === "other" && external ? "block" : "none";
+    if (m === "none") { type.value = "none"; value.value = ""; }
+    else if (m === "linked") { type.value = "deep_link"; value.value = ""; }
+    else type.value = external ? "external_url" : "deep_link";
+
     hint.textContent =
-      kind === "linked"
-        ? "Goes to the book linked above. Nothing is stored — the path is derived at serve time, so it follows the book."
-        : kind === "custom"
-        ? "A full https:// URL, or an in-app path starting with /."
-        : value.value
-        ? "Currently: " + value.value
-        : "Pick a result to set the destination.";
+      m === "none" ? "The card is not tappable."
+      : m === "linked"
+        ? "Goes to the book linked above. Nothing is stored — the path is derived when the promotion is served, so it follows the book if you change it."
+      : external
+        ? "Opens in the browser, outside Kitabi."
+      : value.value
+        ? "Goes to " + value.value
+        : "Search for a book, author or publisher — or paste a link.";
   }
 
-  kinds.querySelectorAll("span").forEach((s) => {
-    s.addEventListener("click", () => {
-      kinds.querySelectorAll("span").forEach((x) => x.classList.remove("on"));
-      s.classList.add("on");
-      if (s.dataset.kind === "custom") {
-        if (!value.value.startsWith("http")) type.value = "external_url";
-      } else {
-        type.value = "deep_link";
-      }
-      results.innerHTML = "";
-      render();
-    });
-  });
-  type.addEventListener("change", render);
+  radios.forEach((r) => r.addEventListener("change", () => {
+    if (r.value !== "other") external = false;
+    results.innerHTML = "";
+    render();
+  }));
+
+  function choose(path, title) {
+    value.value = path;
+    external = false;
+    box.value = "";
+    results.innerHTML = "";
+    render();
+    hint.textContent = "Goes to " + title + " — " + path;
+  }
+
+  function goExternal() {
+    external = true;
+    render();
+    value.focus();
+  }
 
   box.addEventListener("input", () => {
     clearTimeout(timer);
     timer = setTimeout(async () => {
       const q = box.value.trim();
+      // A pasted link is its own answer — offer it instead of searching for it.
+      if (looksExternal(q)) {
+        value.value = q;
+        goExternal();
+        return;
+      }
       if (q.length < 2) { results.innerHTML = ""; return; }
       try {
-        const resp = await fetch(
-          "/promotions/entity-search?kind=" + current() + "&q=" + encodeURIComponent(q));
+        const resp = await fetch("/promotions/entity-search?q=" + encodeURIComponent(q));
         if (!resp.ok) return;
         results.innerHTML = await resp.text();
         results.querySelectorAll(".pbookrow").forEach((row) => {
           row.addEventListener("click", (e) => {
             e.preventDefault();
-            value.value = row.dataset.path;
-            type.value = "deep_link";
-            box.value = "";
-            results.innerHTML = "";
-            hint.textContent = "Goes to: " + row.dataset.title + " (" + row.dataset.path + ")";
+            if (row.dataset.external === "1") goExternal();
+            else choose(row.dataset.path, row.dataset.title);
           });
         });
       } catch (e) { /* keep the last results rather than blanking */ }
     }, 250);
+  });
+
+  back.addEventListener("click", (e) => {
+    e.preventDefault();
+    external = false;
+    value.value = "";
+    render();
+    box.focus();
+  });
+
+  value.addEventListener("input", () => {
+    type.value = looksExternal(value.value) ? "external_url" : "deep_link";
   });
 
   render();

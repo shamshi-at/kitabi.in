@@ -1,17 +1,29 @@
-{# Destination typeahead results — a book, author or publisher, each already
-   resolved to the in-app path it maps to. The JS fills the destination field
-   from data-path, so nobody assembles a route by hand. #}
-{% if rows %}
+{# Destination results — books, authors and publishers from one box, each
+   already resolved to the in-app path it maps to, plus the escape hatch to an
+   external URL. The composer's JS fills the destination from data-path, so
+   nobody assembles a route by hand. #}
 <div class="pbooklist">
-  {% for r in rows %}
-  <a href="#" class="pbookrow" data-path="{{ r.path }}" data-title="{{ r.title }}">
-    <b>{{ r.title }}</b>
-    <s>{{ r.sub }} · <code style="font-size:10px">{{ r.path }}</code></s>
-  </a>
+  {% set found = groups | map(attribute='rows') | map('length') | sum %}
+  {% for group in groups if group.rows %}
+  <div class="pbookgroup">{{ group.label }}</div>
+    {% for r in group.rows %}
+    <a href="#" class="pbookrow" data-path="{{ r.path }}" data-title="{{ r.title }}">
+      <b>{{ r.title }}</b>
+      <s>{{ r.sub }} · <code style="font-size:10px">{{ r.path }}</code></s>
+    </a>
+    {% endfor %}
   {% endfor %}
+
+  {% if query | length >= 2 and not found %}
+  <div class="pbookempty">Nothing in the catalog matching “{{ query }}”. Search is
+    typo-tolerant and cross-script, so if this is empty it isn't in the catalog yet.</div>
+  {% endif %}
+
+  {% if query | length >= 2 %}
+  <div class="pbookgroup">Not in Kitabi?</div>
+  <a href="#" class="pbookrow" data-external="1" data-path="" data-title="an external link">
+    <b>Use an external link</b>
+    <s>Opens a web page in the browser, outside Kitabi — you'll type the URL next</s>
+  </a>
+  {% endif %}
 </div>
-{% elif query | length >= 2 %}
-<div class="pbooklist"><div class="pbookempty">Nothing matching “{{ query }}”.
-  Search is typo-tolerant and cross-script, so if this is empty it isn't in the
-  catalog yet.</div></div>
-{% endif %}

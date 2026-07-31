@@ -318,7 +318,7 @@ async def create(
 
 @router.get("/entity-search")
 async def entity_search(
-    request: Request, admin: RequireEditor, db: DbSession, q: str = "", kind: str = "book"
+    request: Request, admin: RequireEditor, db: DbSession, q: str = ""
 ) -> HTMLResponse:
     """Typeahead behind the destination picker — books, authors or publishers.
 
@@ -328,32 +328,37 @@ async def entity_search(
     /catalog/publishers/:id, so every result maps to a real screen.
     """
     query = q.strip()
-    rows: list[dict] = []
+    groups: list[dict] = []
     if len(query) >= 2:
-        if kind == "author":
-            rows = [
-                {"path": f"/catalog/authors/{a.id}", "title": a.name, "sub": "Author page"}
-                for a in await catalog_service.search_authors(db, query, limit=8)
-            ]
-        elif kind == "publisher":
-            rows = [
-                {"path": f"/catalog/publishers/{p.id}", "title": p.name, "sub": "Publisher page"}
-                for p in await catalog_service.search_publishers(db, query, limit=8)
-            ]
-        else:
-            for w in await catalog_service.search_local(db, query, limit=8):
-                edition = next((e for e in (w.editions or [])), None)
-                if edition is None:
-                    continue
-                rows.append(
-                    {
-                        "path": f"/book/{w.id}/{edition.id}",
-                        "title": w.title,
-                        "sub": ", ".join(a.name for a in w.authors) or "—",
-                    }
-                )
+        books = []
+        for w in await catalog_service.search_local(db, query, limit=5):
+            edition = next(iter(w.editions or []), None)
+            if edition is None:
+                continue  # a Work with no Edition has no book page to open
+            books.append(
+                {
+                    "path": f"/book/{w.id}/{edition.id}",
+                    "title": w.title,
+                    "sub": ", ".join(a.name for a in w.authors) or "—",
+                }
+            )
+        authors = [
+            {"path": f"/catalog/authors/{a.id}", "title": a.name, "sub": "Author page"}
+            for a in await catalog_service.search_authors(db, query, limit=4)
+        ]
+        publishers = [
+            {"path": f"/catalog/publishers/{p.id}", "title": p.name, "sub": "Publisher page"}
+            for p in await catalog_service.search_publishers(db, query, limit=3)
+        ]
+        # One box over all three rather than "pick a kind, then search": the
+        # operator knows the name, not which table it lives in.
+        groups = [
+            {"label": "Books", "rows": books},
+            {"label": "Authors", "rows": authors},
+            {"label": "Publishers", "rows": publishers},
+        ]
     return templates.TemplateResponse(
-        request, "_promo_dest_results.html", {"rows": rows, "query": query}
+        request, "_promo_dest_results.html", {"groups": groups, "query": query}
     )
 
 
