@@ -55,3 +55,10 @@ class Profile(Base):
     # Set by an admin (admin console) to lock a reader out of the API while
     # keeping their data. Null = active. Enforced in core.security.get_current_user.
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+    # "Show promotions from Kitabi" (docs/promotions-plan.md §11). Default off
+    # = promotions shown. Filtered in the serve query rather than hidden in the
+    # app, so opting out stops the campaigns being *sent* to the device at all.
+    promotions_opt_out: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )

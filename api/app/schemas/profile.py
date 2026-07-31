@@ -33,6 +33,9 @@ class ProfileOut(BaseModel):
     profile_visible: bool
     library_visible: bool
     reviews_visible_default: bool
+    # "Show promotions from Kitabi" inverted — false means show them (the
+    # default). Stored as an opt-*out* so an absent/legacy row means shown.
+    promotions_opt_out: bool = False
     # The reader's languages (e.g. ["Malayalam", "English"]) — set at onboarding,
     # editable in profile; drives the add-book language dropdown.
     preferred_languages: list[str] = []
@@ -53,6 +56,7 @@ class ProfileUpdate(BaseModel):
     profile_visible: bool | None = None
     library_visible: bool | None = None
     reviews_visible_default: bool | None = None
+    promotions_opt_out: bool | None = None
     preferred_languages: list[str] | None = None
 
     @field_validator("username")
