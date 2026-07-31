@@ -24,6 +24,8 @@ import '../../library/providers/reading_timer_providers.dart';
 import '../../library/reading_progress.dart';
 import '../../library/stop_session_flow.dart';
 import '../../profile/providers/profile_providers.dart';
+import '../../promotions/providers/promotions_providers.dart';
+import '../../promotions/widgets/promo_surfaces.dart';
 import '../../recommendations/providers/recommendations_providers.dart';
 
 /// S3 — the home dashboard, the reader's first impression. A personal
@@ -189,19 +191,33 @@ class _Dashboard extends ConsumerWidget {
       ..sort(_byDueDate);
 
     final reading = entries.where((e) => e.status == 'reading').toList();
+    // A wishlisted book is a book you *don't have* — "Wishlist is a shelf, not
+    // a reading stage" (design note U4). It must never be counted as owned or
+    // stood up on the shelf strip: a reader who wishlisted one book and owns
+    // one read "2 OWNED" and saw a book they don't have under "Fresh on your
+    // shelf" (owner report, 31 Jul 2026). Wishlist has its own stat, one
+    // column over — a book in both places is a book counted twice.
+    final shelved = entries.where((e) => e.status != 'wishlist').toList();
     final counts = _ShelfCounts(
-      owned: entries.length,
+      owned: shelved.length,
       read: entries.where((e) => e.status == 'read').length,
       lentOut: activeLent.length,
       wishlist: entries.where((e) => e.status == 'wishlist').length,
     );
 
     // Newest additions first — the shelf strip shows the library growing.
-    final recent = [...entries]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final recent = [...shelved]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    // Promotions (docs/promotions-plan.md). Null unless something is live and
+    // this reader matches it — with nothing published, not a single widget of
+    // this feature is built and Home is exactly the page it was before.
+    final banner = ref.watch(homeBannerProvider);
+    final card = ref.watch(homeCardProvider);
 
     return ListView(
       padding: EdgeInsets.fromLTRB(20, 6, 20, 24),
       children: [
+        if (banner != null) PromoBanner(promo: banner),
         if (reading.isNotEmpty) ...[
           SectionLabel(l10n.homeCurrentlyReading),
           for (final entry in reading) _CurrentlyReadingCard(entry: entry),
@@ -209,15 +225,27 @@ class _Dashboard extends ConsumerWidget {
         ],
         if (activeLent.isNotEmpty) _LendingNudge(item: activeLent.first, l10n: l10n),
         SizedBox(height: 14),
-        SectionLabel(l10n.homeFreshShelf),
-        _CoverShelf(entries: recent.take(12).toList()),
-        SizedBox(height: 16),
+        // Hidden rather than shown empty: now that wishlisted books are filtered
+        // out, a reader whose only entries are wishlist would otherwise get a
+        // section heading over a 96px hole.
+        if (recent.isNotEmpty) ...[
+          SectionLabel(l10n.homeFreshShelf),
+          _CoverShelf(entries: recent.take(12).toList()),
+          SizedBox(height: 16),
+        ],
         _GoalSlip(entries: entries, l10n: l10n),
         SizedBox(height: 14),
         SectionLabel(l10n.homeYourShelves),
         _ShelfGrid(counts: counts, l10n: l10n),
         SizedBox(height: 14),
         _RecsEntryCard(l10n: l10n),
+        // Last before the quote, deliberately: Home opens on what you're
+        // reading, not on a pitch. A reader who never scrolls never sees it —
+        // and never has an impression counted against them.
+        if (card != null) ...[
+          SizedBox(height: 14),
+          PromoCard(promo: card),
+        ],
         // Moved here from the profile screen (owner request, 16 Jul 2026) —
         // inspiration nobody scrolls to isn't inspiration. Last, as a closing
         // flourish: Home opens on what you're reading, not on a fortune.
