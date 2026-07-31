@@ -138,9 +138,18 @@ a.kpi:hover{border-color:#c9b48a;box-shadow:0 6px 16px rgba(60,42,25,.10);transf
 .fld{text-align:left;margin-bottom:13px}
 .fld label{display:block;font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;
   color:var(--ink-soft);font-weight:700;margin-bottom:5px}
-.fld input,.fld select{width:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;
+/* Text-ish controls only. A blanket `.fld input` also caught radios, checkboxes
+   and file pickers — stretching each to width:100% with a border and padding,
+   which shoved radio labels outside their chips and pushed the Upload button
+   onto its own line (owner reports, 31 Jul 2026, twice). Narrowed at the source
+   rather than patched per instance; nothing in the console styles a
+   radio/checkbox/file input deliberately. */
+.fld input:not([type="file"]):not([type="radio"]):not([type="checkbox"]),
+.fld select{width:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;
   padding:10px 12px;font-size:13px;color:var(--ink);font-family:inherit}
-.fld input:focus,.fld select:focus{outline:none;border-color:var(--gold)}
+.fld input:not([type="file"]):not([type="radio"]):not([type="checkbox"]):focus,
+.fld select:focus{outline:none;border-color:var(--gold)}
+.fld input[type="file"]{font-size:12px;max-width:100%}
 .otp-in{letter-spacing:12px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:22px}
 /* 6-box one-time-code input */
 .otp-label{display:block;font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;
@@ -341,3 +350,13 @@ a.healthrow .bar{margin-top:6px}
 .chk input[type="radio"],
 .chk input[type="checkbox"]{width:auto;min-width:0;flex:0 0 auto;
   padding:0;margin:0;border:0;border-radius:0;background:none}
+
+/* The Image field: preview beside its controls, so the file picker reads as
+   part of the field instead of stranded under the Save button. */
+.pimagefield{display:flex;gap:11px;align-items:flex-start}
+.pimagepreview{width:96px;height:62px;flex-shrink:0;border-radius:8px;overflow:hidden;
+  border:1px solid var(--line);background:var(--paper-deep);
+  display:flex;align-items:center;justify-content:center}
+.pimagepreview img{width:100%;height:100%;object-fit:cover;display:block}
+.pimagepreview span{font-size:10px;color:var(--stamp-grey)}
+@media (max-width:720px){.pimagefield{flex-direction:column}}
