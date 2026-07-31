@@ -332,3 +332,12 @@ a.healthrow .bar{margin-top:6px}
 .pbookgroup{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
   color:var(--ink-soft);padding:8px 11px 4px;background:var(--paper-deep);
   border-bottom:1px solid var(--line)}
+
+/* A chip's own control must not inherit `.fld input {width:100%}` — that made
+   each radio a 45px-wide box that shoved its label outside the pill, and the
+   pill then wrapped the text onto three lines (owner report, 31 Jul 2026).
+   Specificity: .chk input[type=…] is (0,2,1) and beats .fld input (0,1,1). */
+.chk{white-space:nowrap}
+.chk input[type="radio"],
+.chk input[type="checkbox"]{width:auto;min-width:0;flex:0 0 auto;
+  padding:0;margin:0;border:0;border-radius:0;background:none}
