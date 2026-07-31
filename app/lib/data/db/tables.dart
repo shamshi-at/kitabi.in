@@ -217,13 +217,15 @@ class CachedPromotions extends Table {
   TextColumn get actionValue => text().nullable()();
   TextColumn get workId => text().nullable()();
   TextColumn get editionId => text().nullable()();
-  /// The linked book, resolved by the server. Cached here rather than looked
-  /// up locally because the reader usually does *not* own the book being
-  /// promoted — it isn't in [CachedBooks], so the card would otherwise draw a
-  /// generated cover of the headline (owner report, 31 Jul 2026).
-  TextColumn get bookTitle => text().nullable()();
-  TextColumn get bookAuthors => text().nullable()();
-  TextColumn get bookCoverUrl => text().nullable()();
+  /// The campaign's subject — the one catalog thing it's about — resolved by
+  /// the server. Cached rather than looked up locally because the reader
+  /// usually does *not* own the promoted book and has no local copy of the
+  /// catalog's authors at all, so the card would otherwise draw a generated
+  /// cover of the headline (owner report, 31 Jul 2026).
+  TextColumn get subjectKind => text().nullable()(); // book | author | publisher
+  TextColumn get subjectTitle => text().nullable()();
+  TextColumn get subjectSubtitle => text().nullable()();
+  TextColumn get subjectImageUrl => text().nullable()();
   BoolColumn get dismissible => boolean().withDefault(Constant(true))();
   IntColumn get priority => integer().withDefault(Constant(5))();
   DateTimeColumn get expiresAt => dateTime().nullable()();

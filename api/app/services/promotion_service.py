@@ -20,6 +20,7 @@ from sqlalchemy import Select, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.author import Author
 from app.models.edition import Edition
 from app.models.genre import Genre
 from app.models.library_entry import LibraryEntry
@@ -41,6 +42,7 @@ from app.models.promotion import (
     PromotionContent,
     PromotionEvent,
 )
+from app.models.publisher import Publisher
 from app.models.work import Work, work_genres
 
 # One reader can't report more than this in a single batch. Generous for a
@@ -369,7 +371,7 @@ async def resolve_for_reader(
     history = await _reader_history(db, user_id, ids)
     contents = await _contents_by_promotion(db, ids)
 
-    books = await _books_for(db, list(candidates))
+    subjects = await _subjects_for(db, list(candidates))
 
     resolved: list[dict] = []
     filled: set[str] = set()
@@ -383,7 +385,7 @@ async def resolve_for_reader(
         content = pick_content(contents.get(promo.id, []), facts.languages)
         if content is None:
             continue
-        resolved.append(_to_payload(promo, content, books.get(promo.id)))
+        resolved.append(_to_payload(promo, content, subjects.get(promo.id)))
         filled.add(promo.placement)
     return resolved
 
@@ -454,37 +456,105 @@ def _frequency_allows(
     return True
 
 
-async def _books_for(db: AsyncSession, promos: list[Promotion]) -> dict[uuid.UUID, dict]:
-    """Cover, title and author for every book-led campaign, keyed by promo id.
+async def _subjects_for(db: AsyncSession, promos: list[Promotion]) -> dict[uuid.UUID, dict]:
+    """The featured book / author / publisher for each campaign, keyed by promo id.
 
     Resolved here rather than looked up on the device: the reader very often
-    doesn't own the book being promoted, so it isn't in their local catalog
-    cache and the card would fall back to a generated typeset cover of the
-    *headline* — which is what shipped (owner report, 31 Jul 2026).
+    doesn't own the book being promoted (and has no local copy of the catalog's
+    authors at all), so there is nothing on the phone to find — the card would
+    fall back to a generated cover of the *headline*, which is what shipped
+    (owner report, 31 Jul 2026).
+
+    Emits `subject_*` plus the older `book_*` keys. Both, on purpose: an API
+    deployed ahead of the app is the normal deploy order here, and a build that
+    only knows `book_*` must keep working (CLAUDE.md, 21 Jul 2026).
     """
+    out: dict[uuid.UUID, dict] = {}
+
     editions = {p.edition_id for p in promos if p.edition_id}
-    if not editions:
-        return {}
-    rows = (
-        (
-            await db.execute(
-                select(Edition, Work)
-                .join(Work, Work.id == Edition.work_id)
-                .where(Edition.id.in_(editions))
+    if editions:
+        rows = (
+            (
+                await db.execute(
+                    select(Edition, Work)
+                    .join(Work, Work.id == Edition.work_id)
+                    .where(Edition.id.in_(editions))
+                )
             )
+            .unique()
+            .all()
         )
-        .unique()
-        .all()
-    )
-    by_edition = {
-        edition.id: {
-            "book_title": work.title,
-            "book_authors": ", ".join(a.name for a in work.authors) or None,
-            "book_cover_url": edition.cover_url,
+        by_edition = {
+            edition.id: {
+                "subject_kind": "book",
+                "subject_title": work.title,
+                "subject_subtitle": ", ".join(a.name for a in work.authors) or None,
+                "subject_image_url": edition.cover_url,
+                # Deprecated aliases — see the docstring.
+                "book_title": work.title,
+                "book_authors": ", ".join(a.name for a in work.authors) or None,
+                "book_cover_url": edition.cover_url,
+            }
+            for edition, work in rows
         }
-        for edition, work in rows
-    }
-    return {p.id: by_edition[p.edition_id] for p in promos if p.edition_id in by_edition}
+        out.update({p.id: by_edition[p.edition_id] for p in promos if p.edition_id in by_edition})
+
+    author_ids = {p.author_id for p in promos if p.author_id and p.id not in out}
+    if author_ids:
+        authors = (
+            (await db.execute(select(Author).where(Author.id.in_(author_ids)))).scalars().all()
+        )
+        by_author = {
+            a.id: {
+                "subject_kind": "author",
+                "subject_title": a.name,
+                "subject_subtitle": a.pen_name or None,
+                "subject_image_url": a.image_url,
+            }
+            for a in authors
+        }
+        out.update({p.id: by_author[p.author_id] for p in promos if p.author_id in by_author})
+
+    publisher_ids = {p.publisher_id for p in promos if p.publisher_id and p.id not in out}
+    if publisher_ids:
+        publishers = (
+            (await db.execute(select(Publisher).where(Publisher.id.in_(publisher_ids))))
+            .scalars()
+            .all()
+        )
+        # No upstream source ever supplied publisher logos, so most are blank.
+        # One of their own covers stands in — visually honest, and far better
+        # than a grey box; it degrades to the typeset treatment if they have
+        # none either.
+        needs_cover = [p.id for p in publishers if not p.logo_url]
+        fallback: dict[uuid.UUID, str] = {}
+        if needs_cover:
+            for pub_id, cover in (
+                await db.execute(
+                    select(Edition.publisher_id, Edition.cover_url)
+                    .where(
+                        Edition.publisher_id.in_(needs_cover),
+                        Edition.cover_url.is_not(None),
+                        Edition.deleted_at.is_(None),
+                    )
+                    .order_by(Edition.publisher_id, Edition.created_at.asc())
+                )
+            ).all():
+                fallback.setdefault(pub_id, cover)
+        by_publisher = {
+            p.id: {
+                "subject_kind": "publisher",
+                "subject_title": p.name,
+                "subject_subtitle": None,
+                "subject_image_url": p.logo_url or fallback.get(p.id),
+            }
+            for p in publishers
+        }
+        out.update(
+            {p.id: by_publisher[p.publisher_id] for p in promos if p.publisher_id in by_publisher}
+        )
+
+    return out
 
 
 def _resolve_action_value(promo: Promotion, content: PromotionContent) -> str | None:
@@ -503,10 +573,10 @@ def _resolve_action_value(promo: Promotion, content: PromotionContent) -> str | 
     return None
 
 
-def _to_payload(promo: Promotion, content: PromotionContent, book: dict | None = None) -> dict:
+def _to_payload(promo: Promotion, content: PromotionContent, subject: dict | None = None) -> dict:
     freq = promo.frequency or {}
     return {
-        **(book or {}),
+        **(subject or {}),
         "id": str(promo.id),
         "kind": promo.kind,
         "card_style": promo.card_style,

@@ -9,12 +9,12 @@ import uuid
 from typing import Annotated
 
 from app.services import catalog_service  # noqa: E402
-from fastapi import APIRouter, Form, Query, Request
+from fastapi import APIRouter, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from .. import queries, security
+from .. import assets, queries, security
 from ..deps import DbSession, RequireEditor, client_ip
 from ..flash import pop_flash, set_flash
 from ..models_ref import (
@@ -345,8 +345,61 @@ async def publisher_detail(
     return templates.TemplateResponse(
         request,
         "publisher_detail.html",
-        {"admin": admin, "active": "publishers", "badges": badges, "p": publisher, "works": works},
+        {
+            "admin": admin,
+            "active": "publishers",
+            "badges": badges,
+            "p": publisher,
+            "works": works,
+            "uploads_on": assets.configured(),
+            "uploads_why": assets.why_not_configured(),
+        },
     )
+
+
+@router.post("/publishers/{publisher_id}/logo")
+async def upload_publisher_logo(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    publisher_id: uuid.UUID,
+    logo: UploadFile | None = None,
+) -> RedirectResponse:
+    """Give a publisher a logo.
+
+    Nothing upstream ever supplied these — OpenLibrary has no publisher art, so
+    every `logo_url` in the catalog is null (owner request, 31 Jul 2026). The
+    only way one exists is if somebody uploads it, and the publisher's own page
+    is where it belongs: it's catalog data, not campaign data, and a campaign
+    featuring this publisher then picks it up for free.
+    """
+    resp = RedirectResponse(f"/catalog/publishers/{publisher_id}", status_code=303)
+    publisher = await db.get(Publisher, publisher_id)
+    if publisher is None:
+        set_flash(resp, "err", "Publisher not found.")
+        return resp
+    if logo is None or not logo.filename:
+        set_flash(resp, "err", "No file chosen.")
+        return resp
+    try:
+        publisher.logo_url = await assets.upload_image(
+            "publishers", logo.filename, await logo.read(), logo.content_type
+        )
+    except assets.UploadError as exc:
+        set_flash(resp, "err", str(exc))
+        return resp
+    await db.commit()
+    await security.audit(
+        db,
+        "publisher.upload_logo",
+        admin_id=admin.id,
+        target_type="publisher",
+        target_id=publisher_id,
+        summary=publisher.name,
+        ip=client_ip(request),
+    )
+    set_flash(resp, "ok", f"Logo saved for {publisher.name}.")
+    return resp
 
 
 @router.get("/merge")

@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/net_image.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
 import '../../../l10n/app_localizations.dart';
@@ -264,16 +264,37 @@ class _PromoCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The *book's* cover and title, not the campaign's headline. Drawing the
+    // The *subject's* image and title, not the campaign's headline. Drawing the
     // headline through TypesetCover produced a generated cover of the ad copy
     // sitting where the book should be (owner report, 31 Jul 2026). The server
-    // resolves these because the reader usually doesn't own the promoted book,
-    // so it isn't in the local catalog cache to look up. A campaign image, if
-    // one was uploaded, still wins — that's the deliberate override.
+    // resolves these because the reader usually doesn't own the promoted book —
+    // and has no local copy of the catalog's authors at all. A campaign image,
+    // if one was uploaded, still wins: that's the deliberate override.
+    final image = promo.imageUrl ?? promo.subjectImageUrl;
+    final title = promo.subjectTitle ?? promo.headline;
+
+    // An author is a person: round, like every other avatar in the app. A book
+    // is a portrait cover, and a publisher's logo sits in the same frame since
+    // it stands in for one of their covers when they have no logo.
+    if (promo.subjectKind == 'author') {
+      return CircleAvatar(
+        radius: 27,
+        backgroundColor: AppColors.goldSoft,
+        foregroundImage: image != null ? netImageProvider(image) : null,
+        child: Text(
+          title.characters.isEmpty ? '?' : title.characters.first.toUpperCase(),
+          style: GoogleFonts.fraunces(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: AppColors.oxblood,
+          ),
+        ),
+      );
+    }
     return TypesetCover(
-      title: promo.bookTitle ?? promo.headline,
-      author: promo.bookAuthors,
-      coverUrl: promo.imageUrl ?? promo.bookCoverUrl,
+      title: title,
+      author: promo.subjectSubtitle,
+      coverUrl: image,
       width: 48,
       height: 70,
     );

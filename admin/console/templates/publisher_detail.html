@@ -12,6 +12,25 @@
       <tr><td>Works in catalog</td><td style="text-align:right"><b>{{ works | length }}</b></td></tr>
       <tr><td>Source</td><td style="text-align:right">{{ p.external_source or 'reader-added' }}</td></tr>
     </table>
+    <div class="lbl" style="margin-top:16px">Logo</div>
+    {% if p.logo_url %}
+    <div style="margin-top:8px"><img src="{{ p.logo_url }}" alt="{{ p.name }}"
+      style="max-height:56px;max-width:100%;border-radius:6px;border:1px solid var(--line)"></div>
+    {% else %}
+    <div class="hint" style="margin-top:6px">None. No upstream source supplies publisher
+      logos, so a campaign featuring this publisher falls back to one of its own book
+      covers.</div>
+    {% endif %}
+    {% if uploads_on %}
+    <form method="post" action="/catalog/publishers/{{ p.id }}/logo"
+          enctype="multipart/form-data" style="margin-top:9px;display:flex;gap:8px;align-items:center">
+      <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+             style="font-size:12px">
+      <button class="btn s">{{ 'Replace' if p.logo_url else 'Upload' }}</button>
+    </form>
+    {% else %}
+    <div class="hint" style="margin-top:8px">{{ uploads_why }}</div>
+    {% endif %}
     <div class="note" style="margin-top:12px">Publisher id <span class="mono">{{ p.id }}</span></div>
   </div>
   <div class="card">

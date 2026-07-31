@@ -82,9 +82,16 @@ class PromotionsRepository {
       actionValue: Value(row['action_value'] as String?),
       workId: Value(row['work_id'] as String?),
       editionId: Value(row['edition_id'] as String?),
-      bookTitle: Value(row['book_title'] as String?),
-      bookAuthors: Value(row['book_authors'] as String?),
-      bookCoverUrl: Value(row['book_cover_url'] as String?),
+      // subject_* is current; book_* is what an API older than this build
+      // sends. Tolerating the previous shape is the normal deploy-order state,
+      // not an edge case (CLAUDE.md, 21 Jul 2026).
+      subjectKind: Value(row['subject_kind'] as String? ??
+          (row['book_title'] != null ? 'book' : null)),
+      subjectTitle: Value(row['subject_title'] as String? ?? row['book_title'] as String?),
+      subjectSubtitle:
+          Value(row['subject_subtitle'] as String? ?? row['book_authors'] as String?),
+      subjectImageUrl:
+          Value(row['subject_image_url'] as String? ?? row['book_cover_url'] as String?),
       dismissible: Value(row['dismissible'] as bool? ?? true),
       priority: Value((row['priority'] as num?)?.toInt() ?? 5),
       expiresAt: Value(parseDate(row['expires_at'])),

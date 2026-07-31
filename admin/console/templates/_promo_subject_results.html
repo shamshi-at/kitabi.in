@@ -1,0 +1,23 @@
+{# Featured-subject typeahead — books, authors and publishers from one box.
+   `has_image` is shown honestly: most publishers have no logo (nothing
+   upstream ever supplied one), and the operator should know before choosing
+   whether the card will draw a real image or fall back. #}
+<div class="pbooklist">
+  {% set found = groups | map(attribute='rows') | map('length') | sum %}
+  {% for group in groups if group.rows %}
+  <div class="pbookgroup">{{ group.label }}</div>
+    {% for r in group.rows %}
+    <a href="#" class="pbookrow" data-kind="{{ r.kind }}" data-id="{{ r.id }}"
+       data-title="{{ r.title }}">
+      <b>{{ r.title }}</b>
+      <s>{{ r.sub }}
+        {% if r.has_image %}<span style="color:var(--moss)">· has an image</span>
+        {% else %}<span style="color:var(--stamp-grey)">· no image yet</span>{% endif %}</s>
+    </a>
+    {% endfor %}
+  {% endfor %}
+  {% if query | length >= 2 and not found %}
+  <div class="pbookempty">Nothing matching “{{ query }}”. Search is typo-tolerant and
+    cross-script, so if this is empty it isn't in the catalog yet.</div>
+  {% endif %}
+</div>

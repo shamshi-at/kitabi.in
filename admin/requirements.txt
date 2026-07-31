@@ -10,6 +10,10 @@ pyotp==2.9.0
 segno==1.6.1
 # Resend HTTP API transport (console/mail.py); pinned to match the API.
 httpx==0.28.1
+# Image uploads to Cloudflare R2 (console/assets.py). Console-only on purpose —
+# the API never uploads, so its container stays lean. Same R2 account and
+# credentials the nightly backup already uses: no new service, no new bill.
+boto3==1.35.99
 # Shared with the API (its container also installs these; pinned identically):
 sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0

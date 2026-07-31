@@ -27,14 +27,22 @@ from app.models.promotion import (
     STATUS_PUBLISHED,
 )
 from app.services import catalog_service, promotion_service
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import delete, func, select
 
-from .. import queries, security
+from .. import assets, queries, security
 from ..deps import DbSession, RequireEditor, client_ip
 from ..flash import pop_flash, set_flash
-from ..models_ref import Edition, Promotion, PromotionContent, PromotionEvent, Work
+from ..models_ref import (
+    Author,
+    Edition,
+    Promotion,
+    PromotionContent,
+    PromotionEvent,
+    Publisher,
+    Work,
+)
 from ..templating import templates
 
 router = APIRouter(prefix="/promotions")
@@ -198,6 +206,19 @@ def _audience_summary(targeting: dict) -> str:
     return " · ".join(parts)
 
 
+def _subject_id(promo: Promotion):
+    """Whichever catalog thing this campaign features, if any."""
+    return promo.work_id or promo.author_id or promo.publisher_id
+
+
+def _subject_kind(promo: Promotion) -> str:
+    if promo.author_id:
+        return "author"
+    if promo.publisher_id:
+        return "publisher"
+    return "book"
+
+
 def _blockers(promo: Promotion, contents: list[PromotionContent]) -> list[str]:
     """What still stands between this campaign and a reader's Home."""
     out: list[str] = []
@@ -207,8 +228,8 @@ def _blockers(promo: Promotion, contents: list[PromotionContent]) -> list[str]:
         out.append("No default copy — readers outside your languages would see nothing")
     if promo.kind == KIND_CARD and not promo.card_style:
         out.append("No card style chosen")
-    if promo.kind == KIND_CARD and promo.card_style == "book" and not promo.work_id:
-        out.append("Book-led card with no book linked")
+    if promo.kind == KIND_CARD and promo.card_style == "book" and not _subject_id(promo):
+        out.append("Book-led card with nothing featured — pick a book, author or publisher")
     if not promo.starts_at:
         out.append("No start date")
     if not promo.ends_at and not promo.open_ended:
@@ -362,35 +383,172 @@ async def entity_search(
     )
 
 
-@router.get("/book-search")
-async def book_search(
+async def _set_subject(db: DbSession, promo: Promotion, kind: str, subject_id: str) -> None:
+    """Point the campaign at one catalog thing, clearing the others.
+
+    Exactly one subject at a time: a campaign that is "about" both a book and a
+    publisher has no single image or title to draw, and the card only has room
+    for one anyway.
+    """
+    promo.work_id = promo.edition_id = promo.author_id = promo.publisher_id = None
+    if not subject_id:
+        return
+    try:
+        parsed = uuid.UUID(subject_id)
+    except ValueError:
+        return
+
+    if kind == "author":
+        if await db.get(Author, parsed):
+            promo.author_id = parsed
+        return
+    if kind == "publisher":
+        if await db.get(Publisher, parsed):
+            promo.publisher_id = parsed
+        return
+
+    work = await db.get(Work, parsed)
+    if work is None:
+        return
+    promo.work_id = work.id
+    # The card deep-links to a *page*, which needs an edition — take the
+    # earliest, the same one the app's own book page settles on.
+    edition = (
+        (
+            await db.execute(
+                select(Edition)
+                .where(Edition.work_id == work.id, Edition.deleted_at.is_(None))
+                .order_by(Edition.created_at.asc())
+                .limit(1)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    promo.edition_id = edition.id if edition else None
+
+
+@router.post("/{promotion_id}/upload")
+async def upload_campaign_image(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    promotion_id: uuid.UUID,
+    language: str = Form(default=""),
+    image: UploadFile | None = None,
+) -> RedirectResponse:
+    """Upload the campaign's own artwork to R2 and store its URL on the copy.
+
+    Per language variant, because the artwork is part of the copy — a Malayalam
+    card may well want different art from the English one.
+    """
+    await _get_or_404(db, promotion_id)
+    lang = language.strip() or None
+    resp = RedirectResponse(
+        f"/promotions/{promotion_id}?tab=content&lang={lang or ''}", status_code=303
+    )
+    if image is None or not image.filename:
+        set_flash(resp, "err", "No file chosen.")
+        return resp
+    try:
+        url = await assets.upload_image(
+            "campaigns", image.filename, await image.read(), image.content_type
+        )
+    except assets.UploadError as exc:
+        set_flash(resp, "err", str(exc))
+        return resp
+
+    content = (
+        (
+            await db.execute(
+                select(PromotionContent).where(
+                    PromotionContent.promotion_id == promotion_id,
+                    (
+                        PromotionContent.language.is_(None)
+                        if lang is None
+                        else PromotionContent.language == lang
+                    ),
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if content is None:
+        set_flash(resp, "err", "Write the copy first, then add the image.")
+        return resp
+    content.image_url = url
+    await db.commit()
+    await security.audit(
+        db,
+        "promotion.upload_image",
+        admin_id=admin.id,
+        target_type="promotion",
+        target_id=promotion_id,
+        summary=f"{lang or 'default'} variant",
+        ip=client_ip(request),
+    )
+    set_flash(resp, "ok", "Image uploaded.")
+    return resp
+
+
+@router.get("/subject-search")
+async def subject_search(
     request: Request, admin: RequireEditor, db: DbSession, q: str = ""
 ) -> HTMLResponse:
-    """Typeahead for the book-led card's book field.
+    """Typeahead for the campaign's featured subject — a book, an author or a
+    publisher, from one box.
 
-    Reuses `catalog_service.search_local`, so it's typo-tolerant and
-    cross-script — "keezhalan" finds കീഴാളൻ — which matters here more than
-    anywhere: the alternative was copying a UUID out of the catalog page by
-    hand (owner request, 31 Jul 2026).
+    Reuses the catalog's own search, so it's typo-tolerant and cross-script
+    ("keezhalan" finds കീഴാളൻ). The alternative was copying a UUID out of the
+    catalog page by hand (owner request, 31 Jul 2026).
     """
     query = q.strip()
-    works = await catalog_service.search_local(db, query, limit=8) if len(query) >= 2 else []
+    groups: list[dict] = []
+    if len(query) >= 2:
+        groups = [
+            {
+                "label": "Books",
+                "rows": [
+                    {
+                        "kind": "book",
+                        "id": str(w.id),
+                        "title": w.title,
+                        "sub": ", ".join(a.name for a in w.authors) or "—",
+                        "has_image": any(e.cover_url for e in (w.editions or [])),
+                    }
+                    for w in await catalog_service.search_local(db, query, limit=5)
+                ],
+            },
+            {
+                "label": "Authors",
+                "rows": [
+                    {
+                        "kind": "author",
+                        "id": str(a.id),
+                        "title": a.name,
+                        "sub": a.pen_name or "Author",
+                        "has_image": bool(a.image_url),
+                    }
+                    for a in await catalog_service.search_authors(db, query, limit=4)
+                ],
+            },
+            {
+                "label": "Publishers",
+                "rows": [
+                    {
+                        "kind": "publisher",
+                        "id": str(p.id),
+                        "title": p.name,
+                        "sub": "Publisher",
+                        "has_image": bool(p.logo_url),
+                    }
+                    for p in await catalog_service.search_publishers(db, query, limit=3)
+                ],
+            },
+        ]
     return templates.TemplateResponse(
-        request,
-        "_promo_book_results.html",
-        {
-            "works": [
-                {
-                    "id": str(w.id),
-                    "title": w.title,
-                    "authors": ", ".join(a.name for a in w.authors) or "—",
-                    "language": w.language or "",
-                    "year": w.first_publish_year or "",
-                }
-                for w in works
-            ],
-            "query": query,
-        },
+        request, "_promo_subject_results.html", {"groups": groups, "query": query}
     )
 
 
@@ -427,9 +585,30 @@ async def edit(
         editing_language = lang.strip() or None
     selected = next((c for c in contents if c.language == editing_language), None)
 
-    book = None
-    if promo.work_id:
-        book = (await db.execute(select(Work).where(Work.id == promo.work_id))).scalars().first()
+    subject = None
+    if promo.author_id:
+        row = await db.get(Author, promo.author_id)
+        if row:
+            subject = {
+                "kind": "author",
+                "id": str(row.id),
+                "title": row.name,
+                "image": row.image_url,
+            }
+    elif promo.publisher_id:
+        row = await db.get(Publisher, promo.publisher_id)
+        if row:
+            subject = {
+                "kind": "publisher",
+                "id": str(row.id),
+                "title": row.name,
+                "image": row.logo_url,
+            }
+    elif promo.work_id:
+        row = (await db.execute(select(Work).where(Work.id == promo.work_id))).scalars().first()
+        if row:
+            cover = next((e.cover_url for e in (row.editions or []) if e.cover_url), None)
+            subject = {"kind": "book", "id": str(row.id), "title": row.title, "image": cover}
 
     ctx = {
         "promo": promo,
@@ -451,7 +630,9 @@ async def edit(
         "card_styles": CARD_STYLES,
         "placements": PLACEMENTS,
         "actions": ACTIONS,
-        "book": book,
+        "subject": subject,
+        "uploads_on": assets.configured(),
+        "uploads_why": assets.why_not_configured(),
         "estimate": await promotion_service.estimate_audience(db, promo.targeting),
         "stats": (await _stats(db, [promo.id])).get(promo.id, {}),
         "by_language": await _stats_by_language(db, promo.id),
@@ -525,7 +706,8 @@ async def save_content(
     card_style: str = Form(default=""),
     placement: str = Form(default=PLACEMENT_HOME_TOP),
     sponsor: str = Form(default=""),
-    work_id: str = Form(default=""),
+    subject_kind: str = Form(default=""),
+    subject_id: str = Form(default=""),
     language: str = Form(default=""),
     headline: str = Form(default=""),
     body: str = Form(default=""),
@@ -542,29 +724,7 @@ async def save_content(
     promo.sponsor = sponsor.strip() or None
     promo.updated_by = admin.id
 
-    resolved_work = None
-    if work_id.strip():
-        try:
-            resolved_work = await db.get(Work, uuid.UUID(work_id.strip()))
-        except ValueError:
-            resolved_work = None
-    promo.work_id = resolved_work.id if resolved_work else None
-    if resolved_work is not None:
-        edition = (
-            (
-                await db.execute(
-                    select(Edition)
-                    .where(Edition.work_id == resolved_work.id, Edition.deleted_at.is_(None))
-                    .order_by(Edition.created_at.asc())
-                    .limit(1)
-                )
-            )
-            .scalars()
-            .first()
-        )
-        promo.edition_id = edition.id if edition else None
-    else:
-        promo.edition_id = None
+    await _set_subject(db, promo, subject_kind.strip(), subject_id.strip())
 
     lang = language.strip() or None
     if headline.strip():
@@ -886,6 +1046,8 @@ async def duplicate(
         frequency=dict(source.frequency or {}),
         work_id=source.work_id,
         edition_id=source.edition_id,
+        author_id=source.author_id,
+        publisher_id=source.publisher_id,
         created_by=admin.id,
         updated_by=admin.id,
     )

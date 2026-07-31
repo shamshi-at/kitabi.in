@@ -59,21 +59,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
-          if (from < 9) {
-            // The promoted book's title/author/cover, resolved by the server
-            // (31 Jul 2026). The reader usually doesn't own the book being
-            // promoted, so it isn't in CachedBooks and the card had nothing to
-            // draw. Null until the next /promotions fetch refills the cache.
-            await m.addColumn(cachedPromotions, cachedPromotions.bookTitle);
-            await m.addColumn(cachedPromotions, cachedPromotions.bookAuthors);
-            await m.addColumn(cachedPromotions, cachedPromotions.bookCoverUrl);
-          }
+          // Promotions, v8 → v10. Exclusive branches on purpose: a device that
+          // has never seen the tables just creates them at the final shape,
+          // and one that has them at an older shape recreates the cache. The
+          // v9 book*-column step is gone — v10 supersedes it, and leaving it
+          // would have tried to add columns to a table that no longer has them.
           if (from < 8) {
             // In-app promotions (31 Jul 2026) — a server-resolved cache plus
             // its own append-only event outbox. Both start empty; the first
@@ -81,6 +77,13 @@ class AppDatabase extends _$AppDatabase {
             // they simply stay empty and Home renders exactly as before.
             await m.createTable(cachedPromotions);
             await m.createTable(promotionEventQueue);
+          } else if (from < 10) {
+            // The featured subject generalised from book-only to book / author
+            // / publisher. Drift can't drop columns without recreating the
+            // table, and this is a pure cache — emptying it is correct, and
+            // the next /promotions fetch refills it within the half hour.
+            await m.deleteTable('cached_promotions');
+            await m.createTable(cachedPromotions);
           }
           if (from < 7) {
             // Private per-book notes as their own syncable rows (21 Jul 2026,

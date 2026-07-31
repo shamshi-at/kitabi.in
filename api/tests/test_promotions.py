@@ -702,3 +702,87 @@ async def test_an_explicit_destination_is_never_overridden(client, db_sessionmak
         await db.commit()
     promo = (await client.get("/promotions")).json()["promotions"][0]
     assert promo["action_value"] == "/catalog/authors/abc"
+
+
+async def test_a_featured_author_carries_their_photo(client, db_sessionmaker):
+    """An author isn't in the reader's local catalog cache at all, so the card
+    can only draw a face if the server resolves one."""
+    await client.post("/auth/bootstrap")
+    created = await client.post(
+        "/catalog/authors", json={"name": "പെരുമാൾ മുരുകൻ", "image_url": "https://x/pm.jpg"}
+    )
+    assert created.status_code in (200, 201), created.text
+    author_id = uuid.UUID(created.json()["id"])
+    promo_id = await _make_promo(
+        db_sessionmaker,
+        kind=KIND_CARD,
+        card_style="book",
+        placement=PLACEMENT_HOME_STREAM,
+        contents=((None, "A writer worth your evening"),),
+    )
+    async with db_sessionmaker() as db:
+        promo = await db.get(Promotion, promo_id)
+        promo.author_id = author_id
+        await db.commit()
+
+    promo = (await client.get("/promotions")).json()["promotions"][0]
+    assert promo["subject_kind"] == "author"
+    assert promo["subject_title"] == "പെരുമാൾ മുരുകൻ"
+    assert promo["subject_image_url"] == "https://x/pm.jpg"
+
+
+async def test_a_publisher_with_no_logo_borrows_one_of_its_covers(client, db_sessionmaker):
+    """No upstream source supplies publisher logos, so most are blank — a cover
+    of theirs beats a grey box."""
+    await client.post("/auth/bootstrap")
+    work = (
+        await client.post(
+            "/catalog/works",
+            json={"title": "Goat Days", "author_names": ["Benyamin"], "publisher_name": "DC Books"},
+        )
+    ).json()
+    edition_id = work["editions"][0]["id"]
+    await client.patch(f"/catalog/editions/{edition_id}", json={"cover_url": "https://x/goat.jpg"})
+    async with db_sessionmaker() as db:
+        from app.models.publisher import Publisher
+
+        publisher = (await db.execute(select(Publisher))).scalars().first()
+        assert publisher is not None and publisher.logo_url is None
+
+    promo_id = await _make_promo(
+        db_sessionmaker,
+        kind=KIND_CARD,
+        card_style="book",
+        placement=PLACEMENT_HOME_STREAM,
+        contents=((None, "Fifty years of DC Books"),),
+    )
+    async with db_sessionmaker() as db:
+        promo = await db.get(Promotion, promo_id)
+        promo.publisher_id = publisher.id
+        await db.commit()
+
+    promo = (await client.get("/promotions")).json()["promotions"][0]
+    assert promo["subject_kind"] == "publisher"
+    assert promo["subject_title"] == "DC Books"
+    assert promo["subject_image_url"] == "https://x/goat.jpg"
+
+
+async def test_book_keys_still_ship_for_older_builds(client, db_sessionmaker):
+    """An API deployed ahead of the app is the normal deploy order, so build
+    108 — which only knows book_* — must keep drawing a cover."""
+    await client.post("/auth/bootstrap")
+    work_id, edition_id = await _work_with_cover(client)
+    promo_id = await _make_promo(
+        db_sessionmaker,
+        kind=KIND_CARD,
+        card_style="book",
+        placement=PLACEMENT_HOME_STREAM,
+        contents=((None, "New edition"),),
+    )
+    async with db_sessionmaker() as db:
+        promo = await db.get(Promotion, promo_id)
+        promo.work_id, promo.edition_id = work_id, edition_id
+        await db.commit()
+    promo = (await client.get("/promotions")).json()["promotions"][0]
+    assert promo["book_cover_url"] == promo["subject_image_url"]
+    assert promo["book_title"] == promo["subject_title"]

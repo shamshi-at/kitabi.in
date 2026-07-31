@@ -58,14 +58,32 @@
           field — it can't be typed, and it can't be left off.</div></div>
     </div>
     <div class="fld" style="margin-bottom:0" id="bookField">
-      <label>Book <span class="hint">book-led cards — the CTA deep-links to its page in the app</span></label>
+      <label>Featured
+        <span class="hint">the one thing this campaign is about — its image and title
+        are drawn on the card</span></label>
       <input type="text" id="bookSearch" autocomplete="off" spellcheck="false"
-             placeholder="Search the catalog — title or author, any script">
-      <input type="hidden" name="work_id" id="workId" value="{{ promo.work_id or '' }}">
+             placeholder="Search books, authors and publishers — any script">
+      <input type="hidden" name="subject_kind" id="subjectKind"
+             value="{{ subject.kind if subject else '' }}">
+      <input type="hidden" name="subject_id" id="subjectId"
+             value="{{ subject.id if subject else '' }}">
       <div id="bookResults"></div>
-      <div class="hint" id="bookChosen" style="margin-top:6px;{{ '' if book else 'display:none' }}">
-        {% if book %}<span style="color:var(--moss)">Linked: <b>{{ book.title }}</b></span>
-        <a href="#" id="bookClear" style="margin-left:8px;color:var(--danger)">clear</a>{% endif %}
+      <div class="hint" id="bookChosen"
+           style="margin-top:6px;{{ '' if subject else 'display:none' }}">
+        {% if subject %}
+        <span style="display:inline-flex;align-items:center;gap:7px">
+          {% if subject.image %}
+          <img src="{{ subject.image }}" alt="" style="width:22px;height:30px;object-fit:cover;
+            border-radius:{{ '50%' if subject.kind == 'author' else '3px' }};
+            {{ 'height:22px' if subject.kind == 'author' }}">
+          {% endif %}
+          <span style="color:var(--moss)">Featuring the {{ subject.kind }}
+            <b>{{ subject.title }}</b>{% if not subject.image %}
+            <span style="color:var(--stamp-grey)"> — no image; the card falls back to the
+            typeset treatment</span>{% endif %}</span>
+        </span>
+        <a href="#" id="bookClear" style="margin-left:8px;color:var(--danger)">clear</a>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -137,7 +155,17 @@
          color:var(--slate);margin-top:6px">← Search the catalog instead</a>
       <div class="hint" id="destHint" style="margin-top:6px"></div>
     </div>
-    <div class="fld" style="margin-bottom:0"><label>Image URL <span class="hint">optional</span></label>
+    <div class="fld" style="margin-bottom:0"><label>Image <span class="hint">optional — the card's own artwork</span></label>
+      {% if selected and selected.image_url %}
+      <div style="margin-bottom:8px"><img src="{{ selected.image_url }}" alt=""
+        style="max-height:74px;border-radius:8px;border:1px solid var(--line)"></div>
+      {% endif %}
+      <div class="hint" style="margin-bottom:6px">
+        {% if uploads_on %}Upload below, or paste a URL. Uploading stores it in the
+          promo-assets bucket and fills the field for you.
+        {% else %}<b>{{ uploads_why }}</b> — paste a URL for now. Set those on the admin
+          service and the upload control appears; nothing else changes.{% endif %}
+      </div>
       <input name="image_url" value="{{ (selected.image_url or '') if selected else '' }}"
              placeholder="https://…">
       <div class="hint" style="margin-top:5px">A card whose image fails to load renders as the
@@ -151,6 +179,19 @@
       copied across from another language by accident.{% endif %}</span>
   </div>
 </form>
+{# A separate form, not nested — the copy form posts to /content and this one
+   uploads a file; HTML has no way to nest them, and multipart on the copy form
+   would make every text save a file upload. #}
+{% if uploads_on and selected %}
+<form method="post" action="/promotions/{{ promo.id }}/upload"
+      enctype="multipart/form-data" style="margin-top:12px;display:flex;gap:8px;align-items:center">
+  <input type="hidden" name="language" value="{{ editing_language or '' }}">
+  <input type="file" name="image" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+         style="font-size:12px">
+  <button class="btn s">Upload image</button>
+  <span class="hint">Max 2 MB · JPEG, PNG, WebP or SVG</span>
+</form>
+{% endif %}
 {% if selected and contents | length > 1 %}
 <form method="post" action="/promotions/{{ promo.id }}/variants/delete" style="margin-top:10px">
   <input type="hidden" name="language" value="{{ editing_language or '' }}">
@@ -474,13 +515,15 @@
 // ever copy a UUID out of the catalog page.
 (function () {
   const box = document.getElementById("bookSearch");
-  const hidden = document.getElementById("workId");
+  const kindField = document.getElementById("subjectKind");
+  const hidden = document.getElementById("subjectId");
   const results = document.getElementById("bookResults");
   const chosen = document.getElementById("bookChosen");
   if (!box || !hidden || !results) return;
   let timer = null;
 
-  function pick(id, title) {
+  function pick(kind, id, title) {
+    kindField.value = kind;
     hidden.value = id;
     box.value = "";
     results.innerHTML = "";
@@ -498,6 +541,7 @@
     clear.addEventListener("click", (e) => {
       e.preventDefault();
       hidden.value = "";
+      kindField.value = "";
       chosen.style.display = "none";
       chosen.innerHTML = "";
     });
@@ -510,13 +554,13 @@
       const q = box.value.trim();
       if (q.length < 2) { results.innerHTML = ""; return; }
       try {
-        const resp = await fetch("/promotions/book-search?q=" + encodeURIComponent(q));
+        const resp = await fetch("/promotions/subject-search?q=" + encodeURIComponent(q));
         if (!resp.ok) return;
         results.innerHTML = await resp.text();
         results.querySelectorAll(".pbookrow").forEach((row) => {
           row.addEventListener("click", (e) => {
             e.preventDefault();
-            pick(row.dataset.workId, row.dataset.title);
+            pick(row.dataset.kind, row.dataset.id, row.dataset.title);
           });
         });
       } catch (e) {

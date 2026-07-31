@@ -38,9 +38,17 @@ class PromotionOut(BaseModel):
     work_id: uuid.UUID | None = None
     edition_id: uuid.UUID | None = None
 
-    # The linked book, resolved server-side. The reader usually does *not* own
-    # the book being promoted, so it isn't in their local catalog cache — the
-    # card can only draw a real cover if the server sends one.
+    # The campaign's subject — a book, an author or a publisher — resolved
+    # server-side. The reader usually does *not* own the book being promoted,
+    # and has no local copy of the catalog's authors at all, so the card can
+    # only draw a real image if the server sends one.
+    subject_kind: str | None = None  # book | author | publisher
+    subject_title: str | None = None
+    subject_subtitle: str | None = None
+    subject_image_url: str | None = None
+
+    # Deprecated aliases, still emitted for build 108 and earlier. An API
+    # deployed ahead of the app is the normal deploy order here.
     book_title: str | None = None
     book_authors: str | None = None
     book_cover_url: str | None = None

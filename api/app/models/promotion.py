@@ -118,11 +118,22 @@ class Promotion(Base):
     # max_impressions | min_hours_between | dismissible | redisplay_after_days
     frequency: Mapped[dict] = mapped_column(_Json, nullable=False, default=dict)
 
-    # Book-led cards point at a real catalog Work/Edition, so the CTA can
-    # deep-link into the app instead of ejecting the reader to a browser.
+    # The campaign's *subject* — the one catalog thing it is about. At most one
+    # of these is set; the server resolves whichever it is into a title and an
+    # image for the card (promotion_service._subjects_for).
+    #
+    # Deliberately separate from the destination: `action_value` lives on the
+    # per-language copy, so it can't carry the campaign's artwork, and "which
+    # book is this about" is not the same question as "where does a tap go".
     work_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("works.id"), default=None)
     edition_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("editions.id"), default=None
+    )
+    author_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("authors.id"), default=None
+    )
+    publisher_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("publishers.id"), default=None
     )
 
     created_by: Mapped[uuid.UUID | None] = mapped_column(Uuid, default=None)  # admin_users.id
