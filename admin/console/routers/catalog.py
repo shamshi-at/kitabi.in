@@ -357,6 +357,40 @@ async def publisher_detail(
     )
 
 
+@router.post("/publishers/{publisher_id}/logo/remove")
+async def remove_publisher_logo(
+    request: Request, admin: RequireEditor, db: DbSession, publisher_id: uuid.UUID
+) -> RedirectResponse:
+    """Take a logo back off.
+
+    Without this the page could only ever *add* one, so a wrong upload was
+    permanent from the console (owner report, 31 Jul 2026). The stored object
+    stays in the bucket — the URL is in the audit trail, so a mistake is
+    recoverable by pasting it back rather than by hunting for the file.
+    """
+    resp = RedirectResponse(f"/catalog/publishers/{publisher_id}", status_code=303)
+    publisher = await db.get(Publisher, publisher_id)
+    if publisher is None:
+        set_flash(resp, "err", "Publisher not found.")
+        return resp
+    if not publisher.logo_url:
+        set_flash(resp, "err", "There was no logo to remove.")
+        return resp
+    previous, publisher.logo_url = publisher.logo_url, None
+    await db.commit()
+    await security.audit(
+        db,
+        "publisher.remove_logo",
+        admin_id=admin.id,
+        target_type="publisher",
+        target_id=publisher_id,
+        summary=f"{publisher.name} · was {previous}",
+        ip=client_ip(request),
+    )
+    set_flash(resp, "ok", f"Logo removed from {publisher.name}.")
+    return resp
+
+
 @router.post("/publishers/{publisher_id}/logo")
 async def upload_publisher_logo(
     request: Request,

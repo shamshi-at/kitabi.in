@@ -21,14 +21,24 @@
       logos, so a campaign featuring this publisher falls back to one of its own book
       covers.</div>
     {% endif %}
-    {% if uploads_on %}
-    <form method="post" action="/catalog/publishers/{{ p.id }}/logo"
-          enctype="multipart/form-data" style="margin-top:9px;display:flex;gap:8px;align-items:center">
-      <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml"
-             style="font-size:12px">
-      <button class="btn s">{{ 'Replace' if p.logo_url else 'Upload' }}</button>
-    </form>
-    {% else %}
+    <div style="display:flex;gap:8px;align-items:center;margin-top:9px;flex-wrap:wrap">
+      {% if uploads_on %}
+      <form method="post" action="/catalog/publishers/{{ p.id }}/logo"
+            enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center">
+        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+               style="font-size:12px">
+        <button class="btn s">{{ 'Replace' if p.logo_url else 'Upload' }}</button>
+      </form>
+      {% endif %}
+      {% if p.logo_url %}
+      {# Available even when uploads are off — removing needs no credentials,
+         and without it a wrong logo was permanent from the console. #}
+      <form method="post" action="/catalog/publishers/{{ p.id }}/logo/remove">
+        <button class="btn s d">Remove</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if not uploads_on %}
     <div class="hint" style="margin-top:8px">{{ uploads_why }}</div>
     {% endif %}
     <div class="note" style="margin-top:12px">Publisher id <span class="mono">{{ p.id }}</span></div>

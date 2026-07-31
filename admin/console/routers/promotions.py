@@ -428,6 +428,65 @@ async def _set_subject(db: DbSession, promo: Promotion, kind: str, subject_id: s
     promo.edition_id = edition.id if edition else None
 
 
+@router.post("/{promotion_id}/image/remove")
+async def remove_campaign_image(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    promotion_id: uuid.UUID,
+    language: str = Form(default=""),
+) -> RedirectResponse:
+    """Clear this variant's artwork.
+
+    Immediate, to match upload — the two image controls act at once while the
+    text fields wait for Save, and having one of the pair behave differently is
+    worse than either rule on its own.
+
+    The stored object is left in the bucket rather than deleted: it may be
+    referenced elsewhere (a pasted URL can be reused), the cost is kilobytes,
+    and a delete that half-succeeds is a worse failure than an orphan.
+    """
+    await _get_or_404(db, promotion_id)
+    lang = language.strip() or None
+    content = (
+        (
+            await db.execute(
+                select(PromotionContent).where(
+                    PromotionContent.promotion_id == promotion_id,
+                    (
+                        PromotionContent.language.is_(None)
+                        if lang is None
+                        else PromotionContent.language == lang
+                    ),
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    resp = RedirectResponse(
+        f"/promotions/{promotion_id}?tab=content&lang={lang or ''}", status_code=303
+    )
+    if content is None or not content.image_url:
+        set_flash(resp, "err", "There was no image to remove.")
+        return resp
+    previous, content.image_url = content.image_url, None
+    await db.commit()
+    await security.audit(
+        db,
+        "promotion.remove_image",
+        admin_id=admin.id,
+        target_type="promotion",
+        target_id=promotion_id,
+        # The URL goes in the trail so a mistaken removal is recoverable by
+        # pasting it back — the file itself is still in the bucket.
+        summary=f"{lang or 'default'} variant · was {previous}",
+        ip=client_ip(request),
+    )
+    set_flash(resp, "ok", "Image removed. The file is still in the bucket if you need it back.")
+    return resp
+
+
 @router.post("/{promotion_id}/upload")
 async def upload_campaign_image(
     request: Request,
