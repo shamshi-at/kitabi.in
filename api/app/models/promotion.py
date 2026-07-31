@@ -23,6 +23,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -104,6 +105,13 @@ class Promotion(Base):
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    # "Runs until I stop it." A null `ends_at` alone can't tell a deliberate
+    # open-ended campaign from one whose end date nobody has set yet, and the
+    # console has to treat those differently — the first is ready to publish,
+    # the second is the campaign that gets forgotten.
+    open_ended: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
 
     # See promotion_service for the full key list. Absent key = don't filter.
     targeting: Mapped[dict] = mapped_column(_Json, nullable=False, default=dict)

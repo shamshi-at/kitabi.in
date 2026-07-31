@@ -26,7 +26,7 @@ from app.models.promotion import (
     STATUS_PAUSED,
     STATUS_PUBLISHED,
 )
-from app.services import promotion_service
+from app.services import catalog_service, promotion_service
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import delete, func, select
@@ -211,15 +211,33 @@ def _blockers(promo: Promotion, contents: list[PromotionContent]) -> list[str]:
         out.append("Book-led card with no book linked")
     if not promo.starts_at:
         out.append("No start date")
-    if not promo.ends_at:
-        # A blocker, not a warning: an open-ended promotion is the one that gets
-        # forgotten. It can still be cleared deliberately on the schedule tab.
+    if not promo.ends_at and not promo.open_ended:
+        # An open-ended promotion is the one that gets forgotten, so a missing
+        # end date does block — but only while nobody has *decided*. Ticking
+        # "runs until I stop it" is that decision, and this must then stop
+        # firing (owner report, 31 Jul 2026: the checklist demanded an end date
+        # while the box was already ticked).
         out.append("No end date — set one, or tick 'runs until I stop it'")
+    return out
+
+
+def _notes(promo: Promotion, contents: list[PromotionContent]) -> list[str]:
+    """Worth knowing before publishing, but not wrong — so these never gate.
+
+    A targeted language with no variant of its own is the *designed* fallback,
+    not a fault: the default variant exists precisely so those readers still
+    get something. It used to sit in the blocker list and gate Publish, which
+    made a perfectly ordinary campaign unpublishable (owner report, 31 Jul
+    2026). A checklist that cries wolf gets read as decoration.
+    """
+    out: list[str] = []
     for language in (promo.targeting or {}).get("languages", []):
         if not any(c.language == language for c in contents):
-            out.append(
-                f"Targeting {language} readers with no {language} copy (they'd see the default)"
-            )
+            out.append(f"{language} readers see the default copy — no {language} variant yet")
+    if promo.open_ended:
+        out.append("Runs until you stop it — no end date")
+    if (promo.frequency or {}).get("dismissible") is False:
+        out.append("Readers cannot dismiss this")
     return out
 
 
@@ -298,6 +316,38 @@ async def create(
     return RedirectResponse(f"/promotions/{promo.id}", status_code=303)
 
 
+@router.get("/book-search")
+async def book_search(
+    request: Request, admin: RequireEditor, db: DbSession, q: str = ""
+) -> HTMLResponse:
+    """Typeahead for the book-led card's book field.
+
+    Reuses `catalog_service.search_local`, so it's typo-tolerant and
+    cross-script — "keezhalan" finds കീഴാളൻ — which matters here more than
+    anywhere: the alternative was copying a UUID out of the catalog page by
+    hand (owner request, 31 Jul 2026).
+    """
+    query = q.strip()
+    works = await catalog_service.search_local(db, query, limit=8) if len(query) >= 2 else []
+    return templates.TemplateResponse(
+        request,
+        "_promo_book_results.html",
+        {
+            "works": [
+                {
+                    "id": str(w.id),
+                    "title": w.title,
+                    "authors": ", ".join(a.name for a in w.authors) or "—",
+                    "language": w.language or "",
+                    "year": w.first_publish_year or "",
+                }
+                for w in works
+            ],
+            "query": query,
+        },
+    )
+
+
 # --------------------------------------------------------------------------
 # Composer
 # --------------------------------------------------------------------------
@@ -343,6 +393,7 @@ async def edit(
         "editing_language": editing_language,
         "state": promotion_service.effective_state(promo, now),
         "blockers": _blockers(promo, contents),
+        "notes": _notes(promo, contents),
         "audience": _audience_summary(promo.targeting),
         "summary": _audience_summary(promo.targeting),
         "targeting": promo.targeting or {},
@@ -648,7 +699,13 @@ async def save_schedule(
 ) -> RedirectResponse:
     promo = await _get_or_404(db, promotion_id)
     promo.starts_at = _to_utc(starts_at)
-    promo.ends_at = None if open_ended else _to_utc(ends_at)
+    parsed_end = _to_utc(ends_at)
+    # A typed end date wins over a stale tick. The checkbox used to be checked
+    # by default on every new campaign, so typing an end date and pressing Save
+    # silently threw it away (owner report, 31 Jul 2026) — the one failure mode
+    # a date field must never have.
+    promo.open_ended = bool(open_ended) and parsed_end is None
+    promo.ends_at = None if promo.open_ended else parsed_end
     promo.priority = _int_or_none(priority) or 5
 
     frequency: dict = {"dismissible": bool(dismissible)}

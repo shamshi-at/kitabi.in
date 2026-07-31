@@ -312,3 +312,14 @@ a.healthrow .bar{margin-top:6px}
   .prule{flex-direction:column;gap:6px}
   .prule .k{width:auto;padding-top:0}
 }
+
+/* Book typeahead in the campaign composer — an operator should never have to
+   copy a work UUID out of the catalog page. */
+.pbooklist{border:1px solid var(--line);border-radius:8px;background:var(--card);
+  margin-top:6px;overflow:hidden;max-height:260px;overflow-y:auto}
+.pbookrow{display:block;padding:8px 11px;text-decoration:none;border-bottom:1px solid var(--line)}
+.pbookrow:last-child{border-bottom:0}
+.pbookrow:hover{background:var(--paper-deep)}
+.pbookrow b{display:block;font-size:12.5px;font-weight:600}
+.pbookrow s{display:block;text-decoration:none;font-size:11px;color:var(--ink-soft);margin-top:1px}
+.pbookempty{padding:10px 11px;font-size:11.5px;color:var(--stamp-grey);line-height:1.55}

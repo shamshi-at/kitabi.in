@@ -57,12 +57,16 @@
         <div class="hint" style="margin-top:5px">The reader-facing label is derived from this
           field — it can't be typed, and it can't be left off.</div></div>
     </div>
-    <div class="fld" style="margin-bottom:0">
+    <div class="fld" style="margin-bottom:0" id="bookField">
       <label>Book <span class="hint">book-led cards — the CTA deep-links to its page in the app</span></label>
-      <input name="work_id" value="{{ promo.work_id or '' }}"
-             placeholder="Work id — copy it from Catalog → the book's page">
-      {% if book %}<div class="hint" style="margin-top:5px;color:var(--moss)">
-        Linked: <b>{{ book.title }}</b></div>{% endif %}
+      <input type="text" id="bookSearch" autocomplete="off" spellcheck="false"
+             placeholder="Search the catalog — title or author, any script">
+      <input type="hidden" name="work_id" id="workId" value="{{ promo.work_id or '' }}">
+      <div id="bookResults"></div>
+      <div class="hint" id="bookChosen" style="margin-top:6px;{{ '' if book else 'display:none' }}">
+        {% if book %}<span style="color:var(--moss)">Linked: <b>{{ book.title }}</b></span>
+        <a href="#" id="bookClear" style="margin-left:8px;color:var(--danger)">clear</a>{% endif %}
+      </div>
     </div>
   </div>
 
@@ -233,10 +237,15 @@
       <div class="fld"><label>Starts (IST)</label>
         <input type="datetime-local" name="starts_at" value="{{ starts_field }}"></div>
       <div class="fld"><label>Ends (IST)</label>
-        <input type="datetime-local" name="ends_at" value="{{ ends_field }}"></div>
+        <input type="datetime-local" name="ends_at" id="endsAt" value="{{ ends_field }}"></div>
     </div>
+    {# Reflects the stored choice, NOT "ends_at happens to be null" — checked by
+       default on every new campaign meant a typed end date was thrown away on
+       save (owner report, 31 Jul 2026). The JS below also clears the date field
+       when it's ticked, so the two can never disagree silently. #}
     <label class="chk" style="margin-bottom:10px">
-      <input type="checkbox" name="open_ended" value="1" {{ 'checked' if not promo.ends_at }}>
+      <input type="checkbox" name="open_ended" value="1" id="openEnded"
+             {{ 'checked' if promo.open_ended }}>
       Runs until I stop it (no end date)</label>
     <div class="hint" style="margin-bottom:12px">Typed in IST, stored UTC. Everyone sees it start
       at the same instant — no per-reader timezone shifting, which sounds thoughtful and produces
@@ -407,6 +416,17 @@
       <div style="color:var(--oxblood);font-size:12.5px;line-height:1.6;margin-bottom:5px">• {{ b }}</div>
       {% endfor %}
     {% endif %}
+    {# Notes never gate Publish. A checklist that mixes "this is broken" with
+       "this is a choice you made" gets read as decoration. #}
+    {% if notes %}
+    <div style="margin-top:{{ '10px' if blockers or not blockers }};padding-top:9px;
+      border-top:1px solid var(--line)">
+      <div class="lbl" style="margin-bottom:6px">Worth knowing</div>
+      {% for n in notes %}
+      <div class="hint" style="line-height:1.6;margin-bottom:4px">• {{ n }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
 </div>
 </div>
@@ -424,6 +444,80 @@
     if (style) style.hidden = kind.value !== "card";
   }
   kind.addEventListener("change", sync);
+  sync();
+})();
+
+// Book typeahead for the book-led card. Cross-script and typo-tolerant on the
+// server side, so "keezhalan" finds കീഴാളൻ — the point is that nobody should
+// ever copy a UUID out of the catalog page.
+(function () {
+  const box = document.getElementById("bookSearch");
+  const hidden = document.getElementById("workId");
+  const results = document.getElementById("bookResults");
+  const chosen = document.getElementById("bookChosen");
+  if (!box || !hidden || !results) return;
+  let timer = null;
+
+  function pick(id, title) {
+    hidden.value = id;
+    box.value = "";
+    results.innerHTML = "";
+    chosen.style.display = "";
+    chosen.innerHTML =
+      '<span style="color:var(--moss)">Linked: <b></b></span>' +
+      ' <a href="#" id="bookClear" style="margin-left:8px;color:var(--danger)">clear</a>';
+    chosen.querySelector("b").textContent = title;   // textContent, never innerHTML
+    wireClear();
+  }
+
+  function wireClear() {
+    const clear = document.getElementById("bookClear");
+    if (!clear) return;
+    clear.addEventListener("click", (e) => {
+      e.preventDefault();
+      hidden.value = "";
+      chosen.style.display = "none";
+      chosen.innerHTML = "";
+    });
+  }
+  wireClear();
+
+  box.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const q = box.value.trim();
+      if (q.length < 2) { results.innerHTML = ""; return; }
+      try {
+        const resp = await fetch("/promotions/book-search?q=" + encodeURIComponent(q));
+        if (!resp.ok) return;
+        results.innerHTML = await resp.text();
+        results.querySelectorAll(".pbookrow").forEach((row) => {
+          row.addEventListener("click", (e) => {
+            e.preventDefault();
+            pick(row.dataset.workId, row.dataset.title);
+          });
+        });
+      } catch (e) {
+        /* leave the previous results rather than blanking the list */
+      }
+    }, 250);
+  });
+})();
+
+// "Runs until I stop it" and the end date are one decision. Ticking the box
+// clears and disables the date so they can't silently disagree — a typed end
+// date used to be thrown away by a box that defaulted to checked.
+(function () {
+  const open = document.getElementById("openEnded");
+  const ends = document.getElementById("endsAt");
+  if (!open || !ends) return;
+  function sync() {
+    ends.disabled = open.checked;
+    if (open.checked) ends.value = "";
+  }
+  open.addEventListener("change", sync);
+  // Typing a date is itself a decision: untick rather than discard it.
+  ends.addEventListener("input", () => { if (ends.value) open.checked = false; });
   sync();
 })();
 
