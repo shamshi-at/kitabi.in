@@ -42,12 +42,23 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   final api = ref.read(apiClientProvider);
   final notifier = ref.read(activeSessionProvider.notifier);
   final container = ProviderScope.containerOf(context, listen: false);
+  // The place to *show* the sheet is a captured handle too, and captured here
+  // with the other context read — before any await, so it's never read across
+  // an async gap. Every caller of this function is a widget that disappears
+  // when the session does: the mini-bar is only built while one is live, and
+  // Home's card rebuilds the moment `isLive` flips. By the time the reads
+  // below finish, the context that asked for the stop may be unmounted, and
+  // the `context.mounted` guards that used to sit further down then returned
+  // silently — the page question simply never appeared (owner report,
+  // 31 Jul 2026). Intermittent because it's a race: stop() only *schedules*
+  // that rebuild, so a fast read beat it and a slow one didn't. A root
+  // navigator outlives every caller.
+  final navigator = Navigator.of(context, rootNavigator: true);
   final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
   final libraryRepo = await ref.read(libraryRepositoryProvider.future);
-
   final logged = await notifier.stop();
   container.invalidate(weeklyReadingSecondsProvider);
-  if (logged == null || !context.mounted) return;
+  if (logged == null || !navigator.mounted) return;
 
   // Re-read the book from the database rather than trusting the pre-stop
   // provider snapshot: `activeSessionBookProvider` is autoDispose and composes
@@ -74,13 +85,13 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
     }
   }
   final resolvedCurrentPage = storedEntry?.currentPage ?? currentPage ?? lastLoggedPage;
-  if (!context.mounted) return;
+  if (!navigator.mounted) return;
 
   // R1/R2 — a sheet, not an AlertDialog whose whole content was one cramped
   // Row. The entry block is shared with the timer's wax-seal face so the two
   // can't drift (CLAUDE.md: the four progress surfaces have drifted before).
   final result = await showStopSessionSheet(
-    context,
+    navigator.context,
     libraryEntryId: logged.libraryEntryId,
     loggedSessionId: logged.sessionId,
     duration: Duration(seconds: logged.durationSeconds),

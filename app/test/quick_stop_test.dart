@@ -141,6 +141,76 @@ void main() {
     reportTestException = reportOriginal;
   });
 
+  testWidgets('the page sheet still opens when the caller unmounts mid-flow',
+      (tester) async {
+    // The test above passes by timing luck: stop() only *schedules* the
+    // rebuild that removes the caller, so `context.mounted` is still true when
+    // the flow checks it. On a device the database reads take long enough for
+    // that frame to land first, and the flow then returned silently — the page
+    // question simply never appeared (owner report, 31 Jul 2026, "sometimes").
+    // Pumping one frame right after the tap makes that ordering deterministic.
+    GoogleFonts.config.allowRuntimeFetching = false;
+    final reportOriginal = reportTestException;
+    reportTestException = (details, testDescription) {
+      if (details.exception.toString().contains('GoogleFonts')) return;
+      reportOriginal(details, testDescription);
+    };
+
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    const session = SessionContext(userId: 'u1', deviceId: 'd1');
+    final repo = LibraryRepository(db, session);
+
+    final entryId = await tester.runAsync(() async {
+      final id = await repo.add(editionId: _editionId);
+      await repo.updateStatus(id, 'reading');
+      await db.cachedBooksDao.upsert(CachedBooksCompanion.insert(
+        editionId: _editionId, workId: 'w', title: 'T', authorNames: 'A',
+        pageCount: const Value(200),
+      ));
+      return id;
+    });
+
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+    }
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        apiClientProvider.overrideWithValue(_FakeApi()),
+        sessionContextProvider.overrideWith((ref) async => session),
+        syncTriggerProvider.overrideWithValue(() {}),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: _Host(entryId: entryId!),
+      ),
+    ));
+    await settle();
+
+    await tester.tap(find.text('start'));
+    await settle();
+    expect(find.text('stop'), findsOneWidget);
+
+    await tester.tap(find.text('stop'));
+    await tester.pump(); // ← the caller unmounts here, while the reads are open
+    expect(find.text('stop'), findsNothing, reason: 'the caller is already gone');
+    await settle();
+
+    expect(find.byType(TextField), findsWidgets,
+        reason: 'the page question must survive the caller that asked for it');
+
+    // Flush the sheet and drift's stream timers before the binding's
+    // pending-timer check.
+    await tester.pumpWidget(const SizedBox());
+    await settle();
+    reportTestException = reportOriginal;
+  });
+
   testWidgets('a sitting that ends on the page already recorded is still logged',
       (tester) async {
     // Owner report, 26 Jul 2026: the first sitting showed "no page noted" in
