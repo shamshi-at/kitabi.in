@@ -14,6 +14,38 @@ from app.models.profile import Profile
 from app.schemas.profile import ProfileUpdate
 
 
+def _apply_identity(profile: Profile, user: dict) -> bool:
+    """Bring the provider-owned display fields up to date. Returns True if
+    anything changed.
+
+    Bootstrap runs on every launch with a session, so "idempotent" has to mean
+    **converge**, not "do nothing when the row already exists". A reader who
+    first signs in with Apple gets no picture and often no name; a later
+    sign-in enriches the Supabase identity, and without this the profile keeps
+    the nulls forever — the app then falls back to showing the raw email and a
+    monogram (owner report, 31 Jul 2026: Supabase held "Shamsheer AT" and an
+    avatar while `profiles` held two NULLs).
+
+    `full_name` is only *filled in*, never overwritten: it's editable in the
+    app, and a provider must not stomp a reader's own edit on every launch.
+    `avatar_url` has no in-app editor, so the provider stays its source of
+    truth and a rotated URL is picked up.
+    """
+    changed = False
+    email = user.get("email")
+    if email and profile.email != email:
+        profile.email = email
+        changed = True
+    if not profile.full_name and user.get("full_name"):
+        profile.full_name = user["full_name"]
+        changed = True
+    avatar = user.get("avatar_url")
+    if avatar and profile.avatar_url != avatar:
+        profile.avatar_url = avatar
+        changed = True
+    return changed
+
+
 async def get_or_bootstrap_profile(db: AsyncSession, user: dict) -> Profile:
     """Fetch the profile for this auth user, creating it on first login.
 
@@ -26,9 +58,10 @@ async def get_or_bootstrap_profile(db: AsyncSession, user: dict) -> Profile:
         # profile (same Supabase user id). Revive it on re-bootstrap — otherwise
         # /me and PATCH /me keep 404ing (get_profile_or_404 rejects deleted rows)
         # and the reader is stuck at onboarding, unable to get back in.
-        if profile.deleted_at is not None:
+        revived = profile.deleted_at is not None
+        if revived:
             profile.deleted_at = None
-            profile.email = user["email"]
+        if _apply_identity(profile, user) or revived:
             await db.commit()
             await db.refresh(profile)
         return profile

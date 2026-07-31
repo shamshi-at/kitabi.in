@@ -137,3 +137,53 @@ async def test_delete_me_soft_deletes(client):
 
     follow_up = await client.get("/me")
     assert follow_up.status_code == 404
+
+
+# --- bootstrap converges provider-owned fields (owner report, 31 Jul 2026) ---
+#
+# Bootstrap runs on every launch with a session, so it has to converge rather
+# than no-op when the row exists. Apple gives no picture and often no name on
+# first sign-in; a later sign-in enriches the Supabase identity, and the old
+# early-return left the profile showing a raw email and a monogram forever.
+
+
+async def test_bootstrap_backfills_a_name_and_avatar_it_didnt_have(client, user):
+    # First sign-in: the provider told us nothing but the email.
+    await client.post("/auth/bootstrap")
+    body = (await client.get("/me")).json()
+    assert body["full_name"] is None
+    assert body["avatar_url"] is None
+
+    # A later sign-in carries the enriched identity.
+    user["full_name"] = "Shamsheer AT"
+    user["avatar_url"] = "https://example.com/a.jpg"
+    await client.post("/auth/bootstrap")
+
+    body = (await client.get("/me")).json()
+    assert body["full_name"] == "Shamsheer AT"
+    assert body["avatar_url"] == "https://example.com/a.jpg"
+
+
+async def test_bootstrap_never_overwrites_a_name_the_reader_edited(client, user):
+    """full_name is editable in the app — a provider must not stomp it on
+    every launch. avatar_url has no in-app editor, so it still refreshes."""
+    user["full_name"] = "Shamsheer AT"
+    user["avatar_url"] = "https://example.com/old.jpg"
+    await client.post("/auth/bootstrap")
+
+    await client.patch("/me", json={"full_name": "Shamshi"})
+
+    user["full_name"] = "Shamsheer AT"  # provider still says the formal name
+    user["avatar_url"] = "https://example.com/new.jpg"  # …and rotated the URL
+    await client.post("/auth/bootstrap")
+
+    body = (await client.get("/me")).json()
+    assert body["full_name"] == "Shamshi"
+    assert body["avatar_url"] == "https://example.com/new.jpg"
+
+
+async def test_bootstrap_keeps_the_email_in_step(client, user):
+    await client.post("/auth/bootstrap")
+    user["email"] = "moved@example.com"
+    await client.post("/auth/bootstrap")
+    assert (await client.get("/me")).json()["email"] == "moved@example.com"
