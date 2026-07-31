@@ -1,0 +1,47 @@
+{# Audience estimate fragment — rendered inline on first load and replaced by
+   the composer's debounced fetch as the rules change. Without it, targeting is
+   guesswork and you find out you targeted nobody when the campaign ends. #}
+<div class="pestimate">
+  <div class="n">{{ estimate.matched }}</div>
+  <div class="l">reader{{ 's' if estimate.matched != 1 }} match right now</div>
+  <div class="b">
+    {% if estimate.total %}
+      <b>{{ (100 * estimate.matched / estimate.total) | round | int }}%</b> of
+      {{ estimate.total }} reader{{ 's' if estimate.total != 1 }} who accept promotions<br>
+    {% endif %}
+    {{ summary if summary is defined else '' }}
+    {% if estimate.rollout_percent %}<br>…of whom {{ estimate.rollout_percent }}% will see it{% endif %}
+    {% if estimate.opted_out %}
+      <br><span style="color:var(--stamp-grey)">{{ estimate.opted_out }} other
+      reader{{ 's have' if estimate.opted_out != 1 else ' has' }} promotions turned off and
+      {{ 'are' if estimate.opted_out != 1 else 'is' }} excluded from every count here.</span>
+    {% endif %}
+  </div>
+</div>
+
+{% if estimate.ignores_device_rules %}
+<div class="note warn" style="margin-top:10px;font-size:11.5px">
+  This count <b>ignores your platform and app-version rules</b> — those are per-install, not
+  per-reader (one reader can have two phones), so no reader-level count can honour them. The real
+  audience is smaller than the number above.
+</div>
+{% endif %}
+
+{% if steps is defined and steps | length > 1 %}
+<div class="card" style="margin-top:10px;padding:12px">
+  <div class="lbl" style="margin-bottom:8px">As you narrow</div>
+  {% set top = steps[0].count or 1 %}
+  {% for step in steps %}
+  <div style="display:flex;align-items:center;gap:9px;margin-bottom:{{ '0' if loop.last else '7px' }}">
+    <span style="width:96px;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;
+      white-space:nowrap" title="{{ step.label }}">{{ step.label }}</span>
+    <span class="bar" style="flex:1"><i style="width:{{ (100 * step.count / top) | round }}%;
+      background:{{ 'var(--moss)' if loop.last else 'var(--slate)' }}"></i></span>
+    <span style="width:44px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;
+      color:var(--ink-soft)">{{ step.count }}</span>
+  </div>
+  {% endfor %}
+  <div class="hint" style="margin-top:10px">Each row is the count after that rule. The step that
+    drops the most is usually the one you didn't mean to add.</div>
+</div>
+{% endif %}

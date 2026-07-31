@@ -222,3 +222,93 @@ a.healthrow .bar{margin-top:6px}
 @media (max-width:420px){
   .kpis{grid-template-columns:1fr 1fr;gap:8px}
 }
+
+/* ============================================================
+   Campaigns (in-app promotions) — docs/promotions-plan.md §8.
+   The preview blocks deliberately mirror the app's own widgets
+   so what you see here is what a reader gets.
+   ============================================================ */
+.hint{font-size:10.5px;color:var(--stamp-grey);line-height:1.55;font-weight:400;
+  letter-spacing:0;text-transform:none}
+
+.ptabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+.ptabs a{font-size:12.5px;font-weight:600;padding:9px 15px;color:var(--ink-soft);
+  border-bottom:2px solid transparent;text-decoration:none}
+.ptabs a:hover{color:var(--ink)}
+.ptabs a.on{color:var(--oxblood);border-bottom-color:var(--oxblood)}
+
+.psplit{display:grid;grid-template-columns:1fr 292px;gap:22px;align-items:start}
+.paside{position:sticky;top:16px}
+
+.prule{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.prule .k{width:132px;flex-shrink:0;font-weight:600;font-size:12.5px;padding-top:5px}
+.prule .v{flex:1;display:flex;gap:7px;flex-wrap:wrap;align-items:center;min-width:0}
+.prule .v input{background:var(--card);border:1px solid var(--line);border-radius:7px;
+  padding:6px 10px;font-size:12.5px;color:var(--ink);font-family:inherit;min-width:0}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;
+  background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px;
+  cursor:pointer}
+.chk input{margin:0}
+
+.pvariants{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pvariants a{font-size:12px;font-weight:600;padding:6px 13px;border-radius:8px 8px 0 0;
+  border:1px solid var(--line);border-bottom:none;background:var(--paper-deep);
+  color:var(--ink-soft);text-decoration:none}
+.pvariants a.on{background:var(--card);color:var(--oxblood)}
+.padd{position:relative}
+.padd summary{list-style:none;cursor:pointer;font-size:12px;color:var(--stamp-grey);padding:6px 10px}
+.padd summary::-webkit-details-marker{display:none}
+.pmenu{position:absolute;z-index:20;top:100%;left:0;background:var(--card);
+  border:1px solid var(--line);border-radius:9px;padding:5px;min-width:170px;
+  box-shadow:0 10px 26px rgba(60,42,25,.18)}
+.pmenu a{display:block;padding:6px 10px;font-size:12.5px;border-radius:6px;text-decoration:none}
+.pmenu a:hover{background:var(--paper-deep)}
+
+/* ---- the phone preview ---- */
+.pphone{background:var(--paper);border-radius:12px;padding:11px}
+.pempty{font-size:11.5px;color:var(--stamp-grey);text-align:center;padding:20px 8px}
+.ppbanner{display:flex;align-items:stretch;background:var(--gold-soft);border:1px solid #E4CF9B;
+  border-radius:11px;overflow:hidden}
+/* A 3px child strip, not a non-uniform border with a radius — that combination
+   throws at paint time in Flutter, so the mockup, this preview and the widget
+   are all built the same way (CLAUDE.md, 21 Jul 2026). */
+.ppbanner>i{width:3px;background:var(--gold);flex-shrink:0}
+.ppbanner.spon{background:#F3EEE2;border-color:var(--line)}
+.ppbanner.spon>i{background:var(--slate)}
+.ppbanner .in{flex:1;display:flex;align-items:center;gap:8px;padding:8px 9px;min-width:0}
+.ppbanner .tx{flex:1;min-width:0}
+.ppbanner .lb{font-size:7px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#8F681E}
+.ppbanner.spon .lb{color:var(--slate)}
+.ppbanner .hl{font-size:10px;font-weight:600;line-height:1.35;margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ppbanner .x{color:#9B7B3A;font-size:11px;flex-shrink:0}
+
+.ppcard{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+.ppcard .lbrow{display:flex;align-items:center;gap:5px;padding:8px 10px 0}
+.ppcard .lb{font-size:7px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--gold)}
+.ppcard .lb.spon{color:var(--slate)}
+.ppcard .x{margin-left:auto;color:var(--stamp-grey);font-size:11px}
+.ppcard .bd{padding:6px 10px 11px}
+.ppcard h4{font-family:'Fraunces',serif;font-size:13.5px;font-weight:550;line-height:1.3}
+.ppcard p{font-size:10px;color:var(--ink-soft);line-height:1.55;margin-top:4px}
+.ppcard .cta{display:inline-block;margin-top:9px;background:var(--oxblood);color:#F6F0E3;
+  font-size:9.5px;font-weight:600;padding:6px 12px;border-radius:9px}
+.pimg{height:88px;background-size:cover;background-position:center;background-color:var(--paper-deep)}
+.pcover{width:44px;height:64px;border-radius:2px 4px 4px 2px;flex-shrink:0;
+  background:linear-gradient(150deg,#A8342B,#6E1E1A);box-shadow:0 3px 8px rgba(43,33,24,.28)}
+
+.pestimate{background:linear-gradient(160deg,#F3EAD4,#EFE2C4);border:1px solid #E4CF9B;
+  border-radius:10px;padding:14px;text-align:center}
+.pestimate .n{font-family:'Fraunces',serif;font-size:34px;font-weight:600;color:var(--oxblood);line-height:1}
+.pestimate .l{font-size:10.5px;color:#8F681E;font-weight:600;margin-top:4px}
+.pestimate .b{font-size:10.5px;color:var(--ink-soft);margin-top:9px;padding-top:9px;
+  border-top:1px solid #E4CF9B;line-height:1.6}
+
+@media (max-width:1100px){
+  .psplit{grid-template-columns:1fr}
+  .paside{position:static}
+}
+@media (max-width:720px){
+  .prule{flex-direction:column;gap:6px}
+  .prule .k{width:auto;padding-top:0}
+}

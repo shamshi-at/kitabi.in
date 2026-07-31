@@ -22,6 +22,7 @@ from .routers import (
     claims,
     dashboard,
     edits,
+    promotions,
     readers,
     reports,
     search,
@@ -45,6 +46,7 @@ app.include_router(dashboard.router)
 app.include_router(claims.router)
 app.include_router(edits.router)
 app.include_router(reports.router)
+app.include_router(promotions.router)
 app.include_router(catalog.router)
 app.include_router(readers.router)
 app.include_router(admins.router)

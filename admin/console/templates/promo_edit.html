@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+{% block title %}{{ promo.name }} · Campaigns · Kitabi Admin{% endblock %}
+{% block heading %}{{ promo.name }}{% endblock %}
+{% block subheading %}
+  <span class="pill {{ {'live':'ok','scheduled':'pend','draft':'mute','paused':'no','ended':'mute'}[state] }}">{{ state }}</span>
+  {% if promo.sponsor %}&nbsp;sponsored by {{ promo.sponsor }}{% else %}&nbsp;from Kitabi{% endif %}
+{% endblock %}
+{% block topactions %}
+  {% if state in ['live', 'scheduled'] %}
+    <form method="post" action="/promotions/{{ promo.id }}/pause"><button class="btn d">Stop now</button></form>
+  {% elif state == 'paused' %}
+    <form method="post" action="/promotions/{{ promo.id }}/resume"><button class="btn g">Resume</button></form>
+  {% else %}
+    <form method="post" action="/promotions/{{ promo.id }}/publish">
+      <button class="btn p" {% if blockers %}disabled title="{{ blockers[0] }}"{% endif %}>
+        Publish{% if not blockers %} — {{ estimate.matched }} readers{% endif %}</button></form>
+  {% endif %}
+{% endblock %}
+{% block content %}
+
+<div class="ptabs">
+  {% for key, label in [('content','Content'), ('audience','Audience'),
+                        ('schedule','Schedule & frequency'), ('results','Results')] %}
+  <a href="/promotions/{{ promo.id }}?tab={{ key }}" class="{{ 'on' if tab == key }}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="psplit">
+<div>
+
+{# ------------------------------------------------------------------ CONTENT #}
+{% if tab == 'content' %}
+<form method="post" action="/promotions/{{ promo.id }}/content">
+  <div class="lbl">Surface</div>
+  <div class="card" style="margin-top:8px">
+    <div class="split">
+      <div class="fld"><label>Campaign name <span class="hint">internal — readers never see it</span></label>
+        <input name="name" value="{{ promo.name }}"></div>
+      <div class="fld"><label>Where it appears</label>
+        <select name="kind" id="kindSel">
+          <option value="banner" {{ 'selected' if promo.kind == 'banner' }}>Banner — Home top</option>
+          <option value="card" {{ 'selected' if promo.kind == 'card' }}>Card — Home stream</option>
+        </select>
+        <input type="hidden" name="placement" id="placementField"
+               value="{{ promo.placement }}"></div>
+    </div>
+    <div class="split">
+      <div class="fld" id="styleField" {% if promo.kind != 'card' %}hidden{% endif %}>
+        <label>Card style</label>
+        <select name="card_style">
+          <option value="text" {{ 'selected' if promo.card_style == 'text' }}>Text only</option>
+          <option value="book" {{ 'selected' if promo.card_style == 'book' }}>Book-led</option>
+          <option value="image" {{ 'selected' if promo.card_style == 'image' }}>Image</option>
+        </select></div>
+      <div class="fld"><label>Sponsor <span class="hint">blank = “From Kitabi”</span></label>
+        <input name="sponsor" value="{{ promo.sponsor or '' }}" placeholder="e.g. DC Books">
+        <div class="hint" style="margin-top:5px">The reader-facing label is derived from this
+          field — it can't be typed, and it can't be left off.</div></div>
+    </div>
+    <div class="fld" style="margin-bottom:0">
+      <label>Book <span class="hint">book-led cards — the CTA deep-links to its page in the app</span></label>
+      <input name="work_id" value="{{ promo.work_id or '' }}"
+             placeholder="Work id — copy it from Catalog → the book's page">
+      {% if book %}<div class="hint" style="margin-top:5px;color:var(--moss)">
+        Linked: <b>{{ book.title }}</b></div>{% endif %}
+    </div>
+  </div>
+
+  <div class="lbl" style="margin:24px 0 9px">Copy</div>
+  <div class="pvariants">
+    {% for c in contents %}
+    <a href="/promotions/{{ promo.id }}?tab=content&lang={{ c.language or '' }}"
+       class="{{ 'on' if c.language == editing_language }}">{{ c.language or 'Default' }}</a>
+    {% endfor %}
+    {% if selected is none %}
+    <a class="on">{{ editing_language or 'Default' }} <span style="opacity:.6">· new</span></a>
+    {% endif %}
+    <details class="padd">
+      <summary>+ Add a language</summary>
+      <div class="pmenu">
+        {% for lang in languages %}
+          {% if not contents | selectattr('language', 'equalto', lang) | list %}
+          <a href="/promotions/{{ promo.id }}?tab=content&lang={{ lang }}">{{ lang }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if not contents | selectattr('language', 'none') | list %}
+          <a href="/promotions/{{ promo.id }}?tab=content&lang=">Default (no language)</a>
+        {% endif %}
+      </div>
+    </details>
+  </div>
+
+  <input type="hidden" name="language" value="{{ editing_language or '' }}">
+  <div class="card" style="margin-top:9px">
+    <div class="fld"><label>Headline
+      <span class="hint">{{ (selected.headline | length) if selected else 0 }} / 42 for a banner</span></label>
+      <input name="headline" required value="{{ selected.headline if selected else '' }}"></div>
+    <div class="fld"><label>Body <span class="hint">cards only — a banner is one line</span></label>
+      <input name="body" value="{{ (selected.body or '') if selected else '' }}"></div>
+    <div class="split">
+      <div class="fld"><label>Button label</label>
+        <input name="cta_label" value="{{ (selected.cta_label or '') if selected else '' }}"></div>
+      <div class="fld"><label>Tapping it</label>
+        <select name="action_type">
+          {% set at = selected.action_type if selected else 'none' %}
+          <option value="none" {{ 'selected' if at == 'none' }}>Does nothing</option>
+          <option value="deep_link" {{ 'selected' if at == 'deep_link' }}>Opens a screen in the app</option>
+          <option value="external_url" {{ 'selected' if at == 'external_url' }}>Opens a web page</option>
+        </select></div>
+    </div>
+    <div class="fld"><label>Destination</label>
+      <input name="action_value" value="{{ (selected.action_value or '') if selected else '' }}"
+             placeholder="/book/&lt;workId&gt;/&lt;editionId&gt;  or  https://…"></div>
+    <div class="fld" style="margin-bottom:0"><label>Image URL <span class="hint">optional</span></label>
+      <input name="image_url" value="{{ (selected.image_url or '') if selected else '' }}"
+             placeholder="https://…">
+      <div class="hint" style="margin-top:5px">A card whose image fails to load renders as the
+        text-only shape rather than a grey box, so a dead URL degrades instead of breaking.</div></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:13px;align-items:center">
+    <button class="btn p">{{ 'Save copy' if selected else 'Create this variant' }}</button>
+    <span style="font-size:11.5px;color:var(--ink-soft)">
+      {% if selected %}Editing the <b>{{ editing_language or 'default' }}</b> variant.
+      {% else %}New <b>{{ editing_language or 'default' }}</b> copy — starts blank, so nothing is
+      copied across from another language by accident.{% endif %}</span>
+  </div>
+</form>
+{% if selected and contents | length > 1 %}
+<form method="post" action="/promotions/{{ promo.id }}/variants/delete" style="margin-top:10px">
+  <input type="hidden" name="language" value="{{ editing_language or '' }}">
+  <button class="btn s d">Remove the {{ selected.language or 'default' }} copy</button>
+</form>
+{% endif %}
+{% endif %}
+
+{# ----------------------------------------------------------------- AUDIENCE #}
+{% if tab == 'audience' %}
+<form method="post" action="/promotions/{{ promo.id }}/audience" id="audienceForm">
+  <div class="lbl">Who sees this</div>
+  <div class="card" style="margin-top:8px">
+
+    <div class="prule"><span class="k">Languages</span><div class="v">
+      {% for lang in languages %}
+      <label class="chk"><input type="checkbox" name="languages" value="{{ lang }}"
+        {{ 'checked' if lang in targeting.get('languages', []) }}> {{ lang }}</label>
+      {% endfor %}
+      <div class="hint" style="flex-basis:100%;margin-top:4px">From the reader's own profile —
+        what they chose at onboarding. None ticked = every language.</div>
+    </div></div>
+
+    <div class="prule"><span class="k">Platform</span><div class="v">
+      {% for p in ['ios', 'android'] %}
+      <label class="chk"><input type="checkbox" name="platform" value="{{ p }}"
+        {{ 'checked' if p in targeting.get('platform', []) }}> {{ p | upper }}</label>
+      {% endfor %}
+      <div class="hint" style="flex-basis:100%;margin-top:4px">A build too old to report its
+        platform is <b>excluded</b> — showing a promo to a device you can't verify is the wrong
+        direction to be wrong in.</div>
+    </div></div>
+
+    <div class="prule"><span class="k">App version</span><div class="v">
+      <input name="app_version_min" placeholder="min e.g. 0.2.0" style="width:150px"
+             value="{{ targeting.get('app_version_min', '') }}">
+      <input name="app_version_max" placeholder="max" style="width:150px"
+             value="{{ targeting.get('app_version_max', '') }}">
+    </div></div>
+
+    <div class="prule"><span class="k">Account age</span><div class="v">
+      <input name="account_age_min" type="number" min="0" placeholder="at least (days)" style="width:150px"
+             value="{{ targeting.get('account_age_days', {}).get('min', '') }}">
+      <input name="account_age_max" type="number" min="0" placeholder="at most (days)" style="width:150px"
+             value="{{ targeting.get('account_age_days', {}).get('max', '') }}">
+      <span class="hint">“at most 7” = new readers only.</span>
+    </div></div>
+
+    <div class="prule"><span class="k">Library size</span><div class="v">
+      <input name="library_min" type="number" min="0" placeholder="at least" style="width:150px"
+             value="{{ targeting.get('library_size', {}).get('min', '') }}">
+      <input name="library_max" type="number" min="0" placeholder="at most" style="width:150px"
+             value="{{ targeting.get('library_size', {}).get('max', '') }}">
+    </div></div>
+
+    <div class="prule"><span class="k">Has a book</span><div class="v">
+      {% for s in ['reading', 'pending', 'read', 'wishlist', 'stopped'] %}
+      <label class="chk"><input type="checkbox" name="has_status" value="{{ s }}"
+        {{ 'checked' if s in targeting.get('has_status', []) }}> {{ s }}</label>
+      {% endfor %}
+    </div></div>
+
+    <div class="prule"><span class="k">Genres they read</span><div class="v">
+      <input name="genres" placeholder="Fiction, Poetry — comma separated" style="flex:1"
+             value="{{ targeting.get('genres', []) | join(', ') }}">
+    </div></div>
+
+    <div class="prule"><span class="k">Rollout</span><div class="v">
+      <input name="rollout_percent" type="number" min="0" max="100" style="width:100px"
+             value="{{ targeting.get('rollout_percent', 100) }}">
+      <span class="hint">%. Stable per reader — nobody flickers in and out between fetches.</span>
+    </div></div>
+
+    <div class="prule"><span class="k">Only these readers</span><div class="v">
+      <input name="reader_ids" placeholder="reader uuid, uuid — comma separated" style="flex:1"
+             value="{{ targeting.get('reader_ids', []) | join(', ') }}">
+      <div class="hint" style="flex-basis:100%;margin-top:4px;color:var(--slate)">
+        <b>Send it to yourself first.</b> Put your own reader id here, publish, check it on your
+        phone, then clear the field and republish. It's the only way to see what everyone else is
+        about to see.</div>
+    </div></div>
+
+    <div class="prule" style="border-bottom:0"><span class="k">Never these readers</span><div class="v">
+      <input name="exclude_reader_ids" placeholder="reader uuid, uuid" style="flex:1"
+             value="{{ targeting.get('exclude_reader_ids', []) | join(', ') }}">
+    </div></div>
+  </div>
+  <button class="btn p" style="margin-top:13px">Save audience</button>
+</form>
+
+<div class="note" style="margin-top:20px">
+  <b>No country or city targeting, on purpose.</b> Kitabi stores no location and shouldn't start —
+  that would mean either an IP-geolocation service (a bill and a credential) or inferring it from
+  locale and timezone, which is the fingerprinting posture this app rejects. Language is a better
+  proxy for the actual case <i>and</i> it's data the reader gave you deliberately. For something
+  genuinely city-bound, use <i>Only these readers</i> or accept a wider audience.
+</div>
+{% endif %}
+
+{# ----------------------------------------------------------------- SCHEDULE #}
+{% if tab == 'schedule' %}
+<form method="post" action="/promotions/{{ promo.id }}/schedule">
+  <div class="lbl">When it runs</div>
+  <div class="card" style="margin-top:8px">
+    <div class="split">
+      <div class="fld"><label>Starts (IST)</label>
+        <input type="datetime-local" name="starts_at" value="{{ starts_field }}"></div>
+      <div class="fld"><label>Ends (IST)</label>
+        <input type="datetime-local" name="ends_at" value="{{ ends_field }}"></div>
+    </div>
+    <label class="chk" style="margin-bottom:10px">
+      <input type="checkbox" name="open_ended" value="1" {{ 'checked' if not promo.ends_at }}>
+      Runs until I stop it (no end date)</label>
+    <div class="hint" style="margin-bottom:12px">Typed in IST, stored UTC. Everyone sees it start
+      at the same instant — no per-reader timezone shifting, which sounds thoughtful and produces
+      campaigns that are live in one place and not another for half a day.</div>
+    <div class="fld" style="margin-bottom:0"><label>Priority</label>
+      <input type="number" name="priority" min="0" max="99" value="{{ promo.priority }}" style="width:120px">
+      <div class="hint" style="margin-top:5px">Highest wins per surface; ties go to the older start.
+        Only one banner and one card are ever served at once.</div></div>
+  </div>
+
+  <div class="lbl" style="margin:24px 0 9px">How often one reader sees it</div>
+  <div class="card">
+    <div class="split">
+      <div class="fld"><label>Maximum times shown</label>
+        <input type="number" name="max_impressions" min="1" placeholder="unlimited"
+               value="{{ frequency.get('max_impressions', '') }}"></div>
+      <div class="fld"><label>Wait between showings (hours)</label>
+        <input type="number" name="min_hours_between" min="0"
+               value="{{ frequency.get('min_hours_between', 24) }}">
+        <div class="hint" style="margin-top:5px">Default 24. Zero is allowed and is almost always
+          a mistake.</div></div>
+    </div>
+    <div class="fld"><label>If they dismiss it, show again after (days)</label>
+      <input type="number" name="redisplay_after_days" min="1" placeholder="never"
+             value="{{ frequency.get('redisplay_after_days', '') }}" style="width:180px"></div>
+    <label class="chk" style="margin-bottom:0">
+      <input type="checkbox" name="dismissible" value="1"
+             {{ 'checked' if frequency.get('dismissible', True) }}>
+      The reader can dismiss it</label>
+    <div class="hint" style="margin-top:6px">Unticking this on anything promotional is how an app
+      gets uninstalled. It exists for “sync is delayed today”, nothing else.</div>
+  </div>
+  <button class="btn p" style="margin-top:13px">Save schedule</button>
+</form>
+
+<div class="note" style="margin-top:20px">
+  <b>Counting, honestly.</b> An impression is counted when the promotion is actually on screen, not
+  when it's fetched — a card below the fold that nobody scrolled to never happened. Caps are exact
+  on one device and approximate across several: a reader with two phones, both offline, can see one
+  extra. That's the cost of rendering from the local database instead of asking the server before
+  every frame, and it isn't worth fixing.
+</div>
+{% endif %}
+
+{# ------------------------------------------------------------------ RESULTS #}
+{% if tab == 'results' %}
+<div class="lbl">Since it went live</div>
+<div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-top:8px">
+  <div class="kpi"><div class="v">{{ stats.impressions or 0 }}</div><div class="k">Impressions</div></div>
+  <div class="kpi"><div class="v">{{ stats.readers or 0 }}</div><div class="k">Readers reached</div></div>
+  <div class="kpi"><div class="v">{{ stats.clicks or 0 }}</div>
+    <div class="k">Clicks{% if stats.ctr is not none %} · {{ stats.ctr }}%{% endif %}</div></div>
+  {% set high = stats.dismiss_rate is not none and stats.dismiss_rate >= 20 %}
+  <div class="kpi"><div class="v" {% if high %}style="color:var(--oxblood)"{% endif %}>
+    {{ stats.dismiss_rate if stats.dismiss_rate is not none else 0 }}%</div>
+    <div class="k">Dismissed</div></div>
+</div>
+
+{% if high %}
+<div class="note warn" style="margin-top:14px">
+  <b>Over 20% dismissals.</b> {{ stats.dismisses }} readers went out of their way to close this.
+  However well it converts, at this level a campaign is doing brand damage — readers are telling
+  you so in the only way the app gives them. Stop it.
+</div>
+{% endif %}
+
+{% if by_language %}
+<div class="lbl" style="margin:24px 0 9px">By language variant</div>
+<div class="card">
+  {% set top = by_language[0].impressions or 1 %}
+  {% for row in by_language %}
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:{{ '0' if loop.last else '10px' }}">
+    <span style="width:110px;font-size:12.5px;font-weight:600">{{ row.language }}</span>
+    <span class="bar" style="flex:1"><i style="width:{{ (100 * row.impressions / top) | round }}%;
+      background:{{ 'var(--moss)' if loop.first else 'var(--slate)' }}"></i></span>
+    <span style="width:120px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink-soft)">
+      {{ row.impressions }}{% if row.ctr is not none %} · {{ row.ctr }}%{% endif %}</span>
+  </div>
+  {% endfor %}
+  <div class="hint" style="margin-top:12px;padding-top:11px;border-top:1px solid var(--line)">
+    Click-through per variant is how you learn whether the Malayalam copy actually worked, or
+    whether the Malayalam audience just tolerated the English.</div>
+</div>
+{% endif %}
+
+<div class="lbl" style="margin:24px 0 9px">Audit</div>
+<div class="tbl"><table>
+  {% for row in audit %}
+  <tr><td style="width:170px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft)">
+    {{ row.created_at.strftime('%d %b %Y %H:%M') }}</td>
+    <td><b>{{ row.action.replace('promotion.', '') | replace('_', ' ') }}</b>
+      {% if row.summary %}<span style="color:var(--ink-soft)"> · {{ row.summary }}</span>{% endif %}</td></tr>
+  {% else %}
+  <tr><td style="color:var(--ink-soft)">Nothing yet.</td></tr>
+  {% endfor %}
+</table></div>
+<div class="hint" style="margin-top:9px">Every change writes an audit row like the rest of the
+  console — publishing to every reader's Home should be impossible to do quietly.</div>
+
+<form method="post" action="/promotions/{{ promo.id }}/delete" style="margin-top:26px">
+  <button class="btn s d">Delete this campaign</button>
+  <span class="hint" style="margin-left:8px">Soft delete — its numbers stay as the record of what
+    readers saw.</span>
+</form>
+{% endif %}
+
+</div>
+
+{# --------------------------------------------------------- RIGHT-HAND COLUMN #}
+<div class="paside">
+  <div class="lbl">Live preview</div>
+  <div class="card" style="margin-top:8px;padding:12px">
+    <div class="pphone">
+      {% set c = selected %}
+      {% set label = ('Sponsored · ' ~ promo.sponsor) if promo.sponsor else 'From Kitabi' %}
+      {% if not c %}
+        <div class="pempty">Nothing to preview yet — write the copy first.</div>
+      {% elif promo.kind == 'banner' %}
+        <div class="ppbanner {{ 'spon' if promo.sponsor }}"><i></i>
+          <div class="in"><div class="tx">
+            <div class="lb">{{ label }}</div>
+            <div class="hl">{{ c.headline }}</div></div>
+            {% if frequency.get('dismissible', True) %}<span class="x">✕</span>{% endif %}</div>
+        </div>
+      {% else %}
+        <div class="ppcard">
+          <div class="lbrow"><span class="lb {{ 'spon' if promo.sponsor }}">{{ label }}</span>
+            {% if frequency.get('dismissible', True) %}<span class="x">✕</span>{% endif %}</div>
+          {% if promo.card_style == 'image' and c.image_url %}
+            <div class="pimg" style="background-image:url('{{ c.image_url }}')"></div>
+          {% endif %}
+          <div class="bd">
+            {% if promo.card_style == 'book' and book %}
+              <div style="display:flex;gap:9px">
+                <div class="pcover"></div>
+                <div style="flex:1;min-width:0">
+                  <h4>{{ c.headline }}</h4>
+                  {% if c.body %}<p>{{ c.body }}</p>{% endif %}
+                  {% if c.cta_label %}<span class="cta">{{ c.cta_label }} ›</span>{% endif %}</div>
+              </div>
+            {% else %}
+              <h4>{{ c.headline }}</h4>
+              {% if c.body %}<p>{{ c.body }}</p>{% endif %}
+              {% if c.cta_label %}<span class="cta">{{ c.cta_label }} ›</span>{% endif %}
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="hint" style="margin-top:10px">The
+      <b>{{ editing_language or 'default' }}</b> variant, at roughly real size — including the
+      line-height, which is where copy that “fit” in English stops fitting in Malayalam.</div>
+  </div>
+
+  {% if tab == 'audience' %}
+  <div class="lbl" style="margin:20px 0 8px">Estimated reach</div>
+  <div id="estimateBox">{% include "_promo_estimate.html" with context %}</div>
+  {% endif %}
+
+  <div class="lbl" style="margin:20px 0 8px">Before it can go live</div>
+  <div class="card">
+    {% if not blockers %}
+      <div style="color:var(--moss);font-size:12.5px;font-weight:600">✓ Ready to publish</div>
+      <div class="hint" style="margin-top:6px">{{ audience }} — about
+        {{ estimate.matched }} reader{{ 's' if estimate.matched != 1 }}.</div>
+    {% else %}
+      {% for b in blockers %}
+      <div style="color:var(--oxblood);font-size:12.5px;line-height:1.6;margin-bottom:5px">• {{ b }}</div>
+      {% endfor %}
+    {% endif %}
+  </div>
+</div>
+</div>
+
+<script>
+// Placement follows the surface: a banner is Home top, a card is the Home
+// stream. They're one choice to the operator, two columns in the database.
+(function () {
+  const kind = document.getElementById("kindSel");
+  const placement = document.getElementById("placementField");
+  const style = document.getElementById("styleField");
+  if (!kind) return;
+  function sync() {
+    placement.value = kind.value === "card" ? "home_stream" : "home_top";
+    if (style) style.hidden = kind.value !== "card";
+  }
+  kind.addEventListener("change", sync);
+  sync();
+})();
+
+// Live audience estimate — re-runs the real serve predicate against the form
+// as it stands. Debounced, same shape as the global search in admin.js.
+(function () {
+  const form = document.getElementById("audienceForm");
+  const box = document.getElementById("estimateBox");
+  if (!form || !box) return;
+  let timer = null;
+  function refresh() {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        const resp = await fetch("/promotions/estimate", {
+          method: "POST",
+          body: new FormData(form),
+        });
+        if (resp.ok) box.innerHTML = await resp.text();
+      } catch (e) {
+        /* leave the last good estimate on screen rather than blanking it */
+      }
+    }, 280);
+  }
+  form.addEventListener("input", refresh);
+  form.addEventListener("change", refresh);
+})();
+</script>
+{% endblock %}

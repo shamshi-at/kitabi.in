@@ -2,6 +2,8 @@
 from the API's own services because these are admin-shaped questions ("how many
 are waiting on me") the reader API never asks."""
 
+from datetime import UTC, datetime
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,6 +59,24 @@ async def open_reports(db: AsyncSession) -> int:
     )
 
 
+async def live_promotions(db: AsyncSession) -> int:
+    """Campaigns visible to readers *right now* — published and inside their
+    window. Badged in the rail because "what is my app showing people at this
+    moment" should never need a click to answer."""
+    from app.models import Promotion  # noqa: PLC0415 — lazy, see module docstring
+    from app.services import promotion_service  # noqa: PLC0415
+
+    now = datetime.now(UTC)
+    return int(
+        await db.scalar(
+            select(func.count())
+            .select_from(Promotion)
+            .where(*promotion_service.live_window_clause(now))
+        )
+        or 0
+    )
+
+
 async def nav_badges(db: AsyncSession) -> dict:
     claims = await pending_claims(db)
     revisions = await pending_revisions(db)
@@ -65,6 +85,7 @@ async def nav_badges(db: AsyncSession) -> dict:
         "claims": claims,
         "revisions": revisions,
         "reports": reports,
+        "promotions_live": await live_promotions(db),
         "waiting_total": claims + revisions + reports,
     }
 

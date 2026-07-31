@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Campaigns · Kitabi Admin{% endblock %}
+{% block heading %}Campaigns{% endblock %}
+{% block subheading %}
+  {{ counts.live }} live · {{ counts.scheduled }} scheduled · {{ counts.draft }} draft ·
+  {{ counts.paused + counts.ended }} stopped
+{% endblock %}
+{% block topactions %}
+<form method="post" action="/promotions/new">
+  <button class="btn p">+ New campaign</button>
+</form>
+{% endblock %}
+{% block content %}
+
+{% if not grouped.live and not grouped.scheduled and not grouped.draft
+      and not grouped.paused and not grouped.ended %}
+  <div class="card" style="text-align:center;padding:44px">
+    <div class="lbl">Nothing published</div>
+    <p style="margin-top:8px;color:var(--ink-soft);font-size:13px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.7">
+      Readers see no banner and no card — Home renders exactly as it does today. A campaign
+      only appears once you create one here, target it, and publish it.</p>
+    <form method="post" action="/promotions/new" style="margin-top:16px">
+      <button class="btn p">Create the first campaign</button></form>
+  </div>
+{% endif %}
+
+{% set labels = {'live': 'Live now', 'scheduled': 'Scheduled', 'draft': 'Draft',
+                 'paused': 'Stopped', 'ended': 'Ended'} %}
+{% set pills = {'live': 'ok', 'scheduled': 'pend', 'draft': 'mute', 'paused': 'no', 'ended': 'mute'} %}
+
+{% for state in order %}
+{% if grouped[state] %}
+<div class="lbl" style="margin:{{ '0' if loop.first else '26px' }} 0 9px">{{ labels[state] }}</div>
+<div class="tbl">
+<table>
+  <tr>
+    <th style="width:30%">Campaign</th>
+    <th>Surface</th>
+    <th>Audience</th>
+    <th>Runs</th>
+    <th style="text-align:right">Seen</th>
+    <th style="text-align:right">Clicked</th>
+    <th style="text-align:right">Dismissed</th>
+    <th></th>
+  </tr>
+  {% for row in grouped[state] %}
+  <tr>
+    <td>
+      <a href="/promotions/{{ row.promo.id }}" style="font-weight:600;font-size:13px;color:var(--ink)">
+        {{ row.promo.name }}</a>
+      <div style="font-size:11px;color:var(--ink-soft);margin-top:2px">
+        {{ row.promo.kind | capitalize }}{% if row.promo.card_style %} · {{ row.promo.card_style }}{% endif %}
+        · {% if row.promo.sponsor %}sponsored · {{ row.promo.sponsor }}{% else %}from Kitabi{% endif %}
+      </div>
+    </td>
+    <td>
+      <span class="pill {{ pills[state] }}">{{ state }}</span>
+      <div style="font-size:11px;color:var(--ink-soft);margin-top:3px">
+        {{ 'Home top' if row.promo.placement == 'home_top' else 'Home stream' }}</div>
+    </td>
+    <td style="font-size:11.5px;color:var(--slate);max-width:230px">{{ row.audience }}</td>
+    <td style="font-size:11.5px;font-family:'JetBrains Mono',monospace">
+      {{ row.starts[:10] or '—' }}<br>
+      <span style="color:var(--ink-soft)">→ {{ row.ends[:10] or 'open-ended' }}</span>
+    </td>
+    <td style="text-align:right;font-family:'JetBrains Mono',monospace">
+      {{ row.stats.impressions or 0 }}
+      {% if row.stats.readers %}<div style="font-size:10.5px;color:var(--ink-soft)">
+        {{ row.stats.readers }} readers</div>{% endif %}
+    </td>
+    <td style="text-align:right;font-family:'JetBrains Mono',monospace">
+      {{ row.stats.clicks or 0 }}
+      {% if row.stats.ctr is not none %}<div style="font-size:10.5px;color:var(--ink-soft)">
+        {{ row.stats.ctr }}%</div>{% endif %}
+    </td>
+    <td style="text-align:right;font-family:'JetBrains Mono',monospace">
+      {# Dismissal rate is the number worth watching: clicks say a promo was
+         interesting to some, dismissals say it was unwelcome to many. #}
+      {% set high = row.stats.dismiss_rate is not none and row.stats.dismiss_rate >= 20 %}
+      <span {% if high %}style="color:var(--oxblood);font-weight:700"{% endif %}>
+        {{ row.stats.dismisses or 0 }}</span>
+      {% if row.stats.dismiss_rate is not none %}
+        <div style="font-size:10.5px;{{ 'color:var(--oxblood)' if high else 'color:var(--ink-soft)' }}">
+          {{ row.stats.dismiss_rate }}%{{ ' — high' if high }}</div>{% endif %}
+    </td>
+    <td style="text-align:right;white-space:nowrap">
+      {% if state in ['live', 'scheduled'] %}
+      <form method="post" action="/promotions/{{ row.promo.id }}/pause" style="display:inline">
+        <button class="btn s d">Stop now</button></form>
+      {% elif state == 'paused' %}
+      <form method="post" action="/promotions/{{ row.promo.id }}/resume" style="display:inline">
+        <button class="btn s">Resume</button></form>
+      {% else %}
+      <form method="post" action="/promotions/{{ row.promo.id }}/duplicate" style="display:inline">
+        <button class="btn s">Duplicate</button></form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if grouped.live %}
+<div class="note" style="margin-top:22px">
+  <b>Watch the dismissal rate, not the clicks.</b> Click-through says a promotion was interesting
+  to some readers; dismissal rate says it was unwelcome to many. Anything over <b>20%</b> is
+  shown in oxblood above — at that level a campaign is doing brand damage regardless of how well
+  it converts, and the honest move is to stop it.
+</div>
+{% endif %}
+{% endblock %}

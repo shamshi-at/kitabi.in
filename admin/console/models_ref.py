@@ -38,6 +38,9 @@ from app.models import (  # noqa: E402
     Edition,
     LibraryEntry,
     Profile,
+    Promotion,
+    PromotionContent,
+    PromotionEvent,
     Publisher,
     Rating,
     ReadingSession,
@@ -78,4 +81,7 @@ __all__ = [
     "Rating",
     "Review",
     "ReadingSession",
+    "Promotion",
+    "PromotionContent",
+    "PromotionEvent",
 ]
