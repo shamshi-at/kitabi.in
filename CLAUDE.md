@@ -531,10 +531,16 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   re-architecting.
 - ~~ISBN barcode scanning package~~ — **resolved 5 Jul 2026: `mobile_scanner`** (same
   choice rupee-diary made for QR) — see the Simulator gotcha above before testing it.
-- **No user-photo cover upload endpoint yet.** `Edition.cover_url` holds any image URL
-  (OpenLibrary's own covers already populate it on ISBN lookup), but there's no
-  Supabase storage bucket or upload flow for a user's own photo — new infrastructure,
-  deliberately deferred past Phase 2.
+- ~~No user-photo cover upload endpoint~~ — **resolved: there is one, and has been
+  since Phase 2.** Catalog images live in the **public Supabase Storage `covers`
+  bucket**: `app/lib/features/catalog/catalog_image_upload.dart` uploads book covers,
+  author portraits (`authors/…`) and publisher logos (`publishers/…`), and
+  `extraction_service` only accepts cover URLs from that bucket. The admin console
+  writes to the same bucket (`admin/console/assets.py`, `campaigns/…` for promo
+  artwork) with a service-role key. **Use this bucket for any new image feature** —
+  a second store means a second credential and a second thing to reason about
+  (this stale line is what sent the promotions work briefly down an R2 path,
+  31 Jul 2026). R2 stays what it is: the encrypted-backup target.
 
 (Resolved: design tokens & mockups — `docs/kitabi_screens.html` + `docs/screen-design.md`,
 2 Jul 2026. `app/lib/core/theme/app_theme.dart` still carries the old landing-page

@@ -367,11 +367,11 @@ async def upload_publisher_logo(
 ) -> RedirectResponse:
     """Give a publisher a logo.
 
-    Nothing upstream ever supplied these — OpenLibrary has no publisher art, so
-    every `logo_url` in the catalog is null (owner request, 31 Jul 2026). The
-    only way one exists is if somebody uploads it, and the publisher's own page
-    is where it belongs: it's catalog data, not campaign data, and a campaign
-    featuring this publisher then picks it up for free.
+    Nothing upstream supplies these — OpenLibrary has no publisher art, so every
+    `logo_url` in the catalog is null (owner request, 31 Jul 2026). The app can
+    already set one from the publisher picker; this is the same thing from the
+    operator's side, writing to the same `covers` bucket under the same
+    `publishers/` prefix, so the two can't drift apart.
     """
     resp = RedirectResponse(f"/catalog/publishers/{publisher_id}", status_code=303)
     publisher = await db.get(Publisher, publisher_id)

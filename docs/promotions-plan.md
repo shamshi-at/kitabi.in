@@ -406,22 +406,28 @@ in one tap, and pausing is reversible.
 `image_url` is a plain URL column, so the *schema* doesn't care where images
 live. Two ways to fill it, in order of preference:
 
-**Recommended — a Cloudflare R2 bucket, uploaded from the console.** R2 is
-already in the stack: `.github/workflows/backup.yml` uses
-`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` / `R2_ENDPOINT` for
-nightly backups. A second bucket (`kitabi-promo-assets`) on the same account
-with a public custom domain is **no new service, no new credential, and no new
-bill** — R2's free tier is 10 GB with zero egress fees, and promo images are
-kilobytes. The console PUTs via the S3-compatible API with boto3.
+**Built: the existing Supabase Storage `covers` bucket.** Not a new store —
+the app has uploaded book covers, author portraits (`authors/…`) and publisher
+logos (`publishers/…`) there since Phase 2
+(`app/lib/features/catalog/catalog_image_upload.dart`), and
+`extraction_service` already validates cover URLs against it. The console
+writes to the same bucket under `campaigns/…` via the Storage REST API
+(`admin/console/assets.py`, plain httpx), with `SUPABASE_SERVICE_ROLE_KEY` as
+the operator credential.
 
-**Fallback for v1 — paste a URL.** Zero work, and fine while you're the only
-person creating promos. The risk is an image that 404s later; the text-led
-fallback in §7 covers it.
+> **Correction, 31 Jul 2026.** This section first recommended a second
+> Cloudflare R2 bucket with boto3, on the strength of a line in CLAUDE.md
+> claiming there was no Supabase bucket. There was — and it already held the
+> exact two things this feature needed, author portraits and publisher logos.
+> The R2 path was built and then removed; that CLAUDE.md line is now fixed.
+> The lesson is the cheap one: **check the code before trusting a doc about
+> what doesn't exist yet.** R2 stays the encrypted-backup target and nothing
+> else.
 
-This also unblocks the long-standing open decision in CLAUDE.md ("no
-user-photo cover upload endpoint yet") — the same bucket and the same upload
-helper would serve reader cover photos when that finally ships. Worth doing
-properly once.
+**Dormant until configured**, like the mail transport: without the service-role
+key the console hides the upload control, names the missing variable and says
+to paste a URL. A campaign image that 404s still degrades to the text-led shape
+(§7), so a bad URL costs nothing.
 
 ---
 
