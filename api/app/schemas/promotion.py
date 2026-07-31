@@ -31,9 +31,19 @@ class PromotionOut(BaseModel):
     image_url: str | None = None
 
     action_type: str  # none | deep_link | external_url
+    # For a book-led card with no explicit destination, this comes back as the
+    # linked book's own path — derived server-side from the ids, so it can't go
+    # stale when the campaign's edition changes.
     action_value: str | None = None
     work_id: uuid.UUID | None = None
     edition_id: uuid.UUID | None = None
+
+    # The linked book, resolved server-side. The reader usually does *not* own
+    # the book being promoted, so it isn't in their local catalog cache — the
+    # card can only draw a real cover if the server sends one.
+    book_title: str | None = None
+    book_authors: str | None = None
+    book_cover_url: str | None = None
 
     dismissible: bool = True
     priority: int = 5

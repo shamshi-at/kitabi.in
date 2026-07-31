@@ -217,6 +217,13 @@ class CachedPromotions extends Table {
   TextColumn get actionValue => text().nullable()();
   TextColumn get workId => text().nullable()();
   TextColumn get editionId => text().nullable()();
+  /// The linked book, resolved by the server. Cached here rather than looked
+  /// up locally because the reader usually does *not* own the book being
+  /// promoted — it isn't in [CachedBooks], so the card would otherwise draw a
+  /// generated cover of the headline (owner report, 31 Jul 2026).
+  TextColumn get bookTitle => text().nullable()();
+  TextColumn get bookAuthors => text().nullable()();
+  TextColumn get bookCoverUrl => text().nullable()();
   BoolColumn get dismissible => boolean().withDefault(Constant(true))();
   IntColumn get priority => integer().withDefault(Constant(5))();
   DateTimeColumn get expiresAt => dateTime().nullable()();

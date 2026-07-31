@@ -1,0 +1,17 @@
+{# Destination typeahead results — a book, author or publisher, each already
+   resolved to the in-app path it maps to. The JS fills the destination field
+   from data-path, so nobody assembles a route by hand. #}
+{% if rows %}
+<div class="pbooklist">
+  {% for r in rows %}
+  <a href="#" class="pbookrow" data-path="{{ r.path }}" data-title="{{ r.title }}">
+    <b>{{ r.title }}</b>
+    <s>{{ r.sub }} · <code style="font-size:10px">{{ r.path }}</code></s>
+  </a>
+  {% endfor %}
+</div>
+{% elif query | length >= 2 %}
+<div class="pbooklist"><div class="pbookempty">Nothing matching “{{ query }}”.
+  Search is typo-tolerant and cross-script, so if this is empty it isn't in the
+  catalog yet.</div></div>
+{% endif %}

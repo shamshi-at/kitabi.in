@@ -11,6 +11,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy import select
 
 from app.models.promotion import (
     CARD_TEXT,
@@ -608,3 +609,96 @@ async def test_estimate_flags_that_it_cannot_honour_device_rules(client, db_sess
         estimate = await promotion_service.estimate_audience(db, {"platform": ["ios"]})
     assert estimate["ignores_device_rules"] is True
     assert estimate["matched"] == 1
+
+
+# --- the linked book, resolved server-side (owner report, 31 Jul 2026) ---
+
+
+async def _work_with_cover(client):
+    created = await client.post(
+        "/catalog/works",
+        json={"title": "കീഴാളൻ", "author_names": ["പെരുമാൾ മുരുകൻ"], "language": "Malayalam"},
+    )
+    work = created.json()
+    edition_id = work["editions"][0]["id"]
+    await client.patch(
+        f"/catalog/editions/{edition_id}", json={"cover_url": "https://example.com/keezhalan.jpg"}
+    )
+    return uuid.UUID(work["id"]), uuid.UUID(edition_id)
+
+
+async def test_book_led_card_carries_the_books_own_cover(client, db_sessionmaker):
+    """The reader usually does NOT own the promoted book, so it isn't in their
+    local catalog cache — if the server doesn't send the cover, the card draws
+    a generated cover of the ad copy."""
+    await client.post("/auth/bootstrap")
+    work_id, edition_id = await _work_with_cover(client)
+    promo_id = await _make_promo(
+        db_sessionmaker,
+        kind=KIND_CARD,
+        card_style="book",
+        placement=PLACEMENT_HOME_STREAM,
+        contents=((None, "New from Perumal Murugan"),),
+    )
+    async with db_sessionmaker() as db:
+        promo = await db.get(Promotion, promo_id)
+        promo.work_id, promo.edition_id = work_id, edition_id
+        await db.commit()
+
+    promo = (await client.get("/promotions")).json()["promotions"][0]
+    assert promo["book_title"] == "കീഴാളൻ"
+    assert promo["book_authors"] == "പെരുമാൾ മുരുകൻ"
+    assert promo["book_cover_url"] == "https://example.com/keezhalan.jpg"
+
+
+async def test_empty_deep_link_resolves_to_the_linked_books_page(client, db_sessionmaker):
+    """ "Opens the linked book" stores no path at all — deriving it at serve
+    time means it can't go stale when the campaign's edition changes."""
+    await client.post("/auth/bootstrap")
+    work_id, edition_id = await _work_with_cover(client)
+    promo_id = await _make_promo(
+        db_sessionmaker,
+        kind=KIND_CARD,
+        card_style="book",
+        placement=PLACEMENT_HOME_STREAM,
+        contents=((None, "New from Perumal Murugan"),),
+    )
+    async with db_sessionmaker() as db:
+        promo = await db.get(Promotion, promo_id)
+        promo.work_id, promo.edition_id = work_id, edition_id
+        content = (
+            (
+                await db.execute(
+                    select(PromotionContent).where(PromotionContent.promotion_id == promo_id)
+                )
+            )
+            .scalars()
+            .one()
+        )
+        content.action_type = "deep_link"
+        content.action_value = None
+        await db.commit()
+
+    promo = (await client.get("/promotions")).json()["promotions"][0]
+    # Exactly the app's Routes.bookDetailPath shape.
+    assert promo["action_value"] == f"/book/{work_id}/{edition_id}"
+
+
+async def test_an_explicit_destination_is_never_overridden(client, db_sessionmaker):
+    await client.post("/auth/bootstrap")
+    promo_id = await _make_promo(db_sessionmaker, contents=((None, "Book fair"),))
+    async with db_sessionmaker() as db:
+        content = (
+            (
+                await db.execute(
+                    select(PromotionContent).where(PromotionContent.promotion_id == promo_id)
+                )
+            )
+            .scalars()
+            .one()
+        )
+        content.action_type = "deep_link"
+        content.action_value = "/catalog/authors/abc"
+        await db.commit()
+    promo = (await client.get("/promotions")).json()["promotions"][0]
+    assert promo["action_value"] == "/catalog/authors/abc"

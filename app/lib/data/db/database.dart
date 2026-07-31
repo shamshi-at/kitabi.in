@@ -59,12 +59,21 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 9) {
+            // The promoted book's title/author/cover, resolved by the server
+            // (31 Jul 2026). The reader usually doesn't own the book being
+            // promoted, so it isn't in CachedBooks and the card had nothing to
+            // draw. Null until the next /promotions fetch refills the cache.
+            await m.addColumn(cachedPromotions, cachedPromotions.bookTitle);
+            await m.addColumn(cachedPromotions, cachedPromotions.bookAuthors);
+            await m.addColumn(cachedPromotions, cachedPromotions.bookCoverUrl);
+          }
           if (from < 8) {
             // In-app promotions (31 Jul 2026) — a server-resolved cache plus
             // its own append-only event outbox. Both start empty; the first
@@ -157,6 +166,12 @@ class AppDatabase extends _$AppDatabase {
         await delete(syncState).go();
         await delete(conflictHistoryEntries).go();
         await delete(cachedBooks).go();
+        // Campaigns are resolved per reader (targeting, dismissals, impression
+        // counts), so they must go on an account switch exactly like the rest —
+        // otherwise the next reader inherits the last one's promotions and
+        // their unsent engagement events get attributed to the wrong account.
+        await delete(cachedPromotions).go();
+        await delete(promotionEventQueue).go();
         await (delete(keyValues)..where((k) => k.key.isIn(_personalKeys))).go();
       });
 }

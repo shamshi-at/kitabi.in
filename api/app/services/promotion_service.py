@@ -25,6 +25,7 @@ from app.models.genre import Genre
 from app.models.library_entry import LibraryEntry
 from app.models.profile import Profile
 from app.models.promotion import (
+    ACTION_DEEP_LINK,
     EVENT_DISMISS,
     EVENT_IMPRESSION,
     EVENT_KINDS,
@@ -368,6 +369,8 @@ async def resolve_for_reader(
     history = await _reader_history(db, user_id, ids)
     contents = await _contents_by_promotion(db, ids)
 
+    books = await _books_for(db, list(candidates))
+
     resolved: list[dict] = []
     filled: set[str] = set()
     for promo in candidates:
@@ -380,7 +383,7 @@ async def resolve_for_reader(
         content = pick_content(contents.get(promo.id, []), facts.languages)
         if content is None:
             continue
-        resolved.append(_to_payload(promo, content))
+        resolved.append(_to_payload(promo, content, books.get(promo.id)))
         filled.add(promo.placement)
     return resolved
 
@@ -451,9 +454,59 @@ def _frequency_allows(
     return True
 
 
-def _to_payload(promo: Promotion, content: PromotionContent) -> dict:
+async def _books_for(db: AsyncSession, promos: list[Promotion]) -> dict[uuid.UUID, dict]:
+    """Cover, title and author for every book-led campaign, keyed by promo id.
+
+    Resolved here rather than looked up on the device: the reader very often
+    doesn't own the book being promoted, so it isn't in their local catalog
+    cache and the card would fall back to a generated typeset cover of the
+    *headline* — which is what shipped (owner report, 31 Jul 2026).
+    """
+    editions = {p.edition_id for p in promos if p.edition_id}
+    if not editions:
+        return {}
+    rows = (
+        (
+            await db.execute(
+                select(Edition, Work)
+                .join(Work, Work.id == Edition.work_id)
+                .where(Edition.id.in_(editions))
+            )
+        )
+        .unique()
+        .all()
+    )
+    by_edition = {
+        edition.id: {
+            "book_title": work.title,
+            "book_authors": ", ".join(a.name for a in work.authors) or None,
+            "book_cover_url": edition.cover_url,
+        }
+        for edition, work in rows
+    }
+    return {p.id: by_edition[p.edition_id] for p in promos if p.edition_id in by_edition}
+
+
+def _resolve_action_value(promo: Promotion, content: PromotionContent) -> str | None:
+    """Where tapping the card goes.
+
+    A stored value wins. Otherwise a `deep_link` with nothing stored is the
+    "opens the linked book" case: the path is derived from the campaign's
+    work/edition ids so it always points at the book actually linked, even if
+    that's changed since the copy was written. The app's route is
+    /book/:workId/:editionId (Routes.bookDetailPath).
+    """
+    if content.action_value:
+        return content.action_value
+    if content.action_type == ACTION_DEEP_LINK and promo.work_id and promo.edition_id:
+        return f"/book/{promo.work_id}/{promo.edition_id}"
+    return None
+
+
+def _to_payload(promo: Promotion, content: PromotionContent, book: dict | None = None) -> dict:
     freq = promo.frequency or {}
     return {
+        **(book or {}),
         "id": str(promo.id),
         "kind": promo.kind,
         "card_style": promo.card_style,
@@ -465,7 +518,10 @@ def _to_payload(promo: Promotion, content: PromotionContent) -> dict:
         "cta_label": content.cta_label,
         "image_url": content.image_url,
         "action_type": content.action_type,
-        "action_value": content.action_value,
+        # An empty deep link on a book-led campaign means "the linked book" —
+        # resolved here from the ids rather than stored as a path, so it can
+        # never go stale when the campaign's edition is changed.
+        "action_value": _resolve_action_value(promo, content),
         "work_id": str(promo.work_id) if promo.work_id else None,
         "edition_id": str(promo.edition_id) if promo.edition_id else None,
         "dismissible": bool(freq.get("dismissible", True)),

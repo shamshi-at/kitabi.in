@@ -264,9 +264,16 @@ class _PromoCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The *book's* cover and title, not the campaign's headline. Drawing the
+    // headline through TypesetCover produced a generated cover of the ad copy
+    // sitting where the book should be (owner report, 31 Jul 2026). The server
+    // resolves these because the reader usually doesn't own the promoted book,
+    // so it isn't in the local catalog cache to look up. A campaign image, if
+    // one was uploaded, still wins — that's the deliberate override.
     return TypesetCover(
-      title: promo.headline,
-      coverUrl: promo.imageUrl,
+      title: promo.bookTitle ?? promo.headline,
+      author: promo.bookAuthors,
+      coverUrl: promo.imageUrl ?? promo.bookCoverUrl,
       width: 48,
       height: 70,
     );

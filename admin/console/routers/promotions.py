@@ -316,6 +316,47 @@ async def create(
     return RedirectResponse(f"/promotions/{promo.id}", status_code=303)
 
 
+@router.get("/entity-search")
+async def entity_search(
+    request: Request, admin: RequireEditor, db: DbSession, q: str = "", kind: str = "book"
+) -> HTMLResponse:
+    """Typeahead behind the destination picker — books, authors or publishers.
+
+    Same shape as the book field, so "send them to an author's page" is a
+    search rather than a hand-copied UUID (owner request, 31 Jul 2026). The
+    app already routes /book/:workId/:editionId, /catalog/authors/:id and
+    /catalog/publishers/:id, so every result maps to a real screen.
+    """
+    query = q.strip()
+    rows: list[dict] = []
+    if len(query) >= 2:
+        if kind == "author":
+            rows = [
+                {"path": f"/catalog/authors/{a.id}", "title": a.name, "sub": "Author page"}
+                for a in await catalog_service.search_authors(db, query, limit=8)
+            ]
+        elif kind == "publisher":
+            rows = [
+                {"path": f"/catalog/publishers/{p.id}", "title": p.name, "sub": "Publisher page"}
+                for p in await catalog_service.search_publishers(db, query, limit=8)
+            ]
+        else:
+            for w in await catalog_service.search_local(db, query, limit=8):
+                edition = next((e for e in (w.editions or [])), None)
+                if edition is None:
+                    continue
+                rows.append(
+                    {
+                        "path": f"/book/{w.id}/{edition.id}",
+                        "title": w.title,
+                        "sub": ", ".join(a.name for a in w.authors) or "—",
+                    }
+                )
+    return templates.TemplateResponse(
+        request, "_promo_dest_results.html", {"rows": rows, "query": query}
+    )
+
+
 @router.get("/book-search")
 async def book_search(
     request: Request, admin: RequireEditor, db: DbSession, q: str = ""

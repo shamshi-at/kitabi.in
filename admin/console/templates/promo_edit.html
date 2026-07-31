@@ -105,16 +105,34 @@
       <div class="fld"><label>Button label</label>
         <input name="cta_label" value="{{ (selected.cta_label or '') if selected else '' }}"></div>
       <div class="fld"><label>Tapping it</label>
-        <select name="action_type">
-          {% set at = selected.action_type if selected else 'none' %}
+        {% set at = selected.action_type if selected else 'none' %}
+        {% set av = (selected.action_value or '') if selected else '' %}
+        {# One question — "where does this go?" — instead of asking the operator
+           to pick a protocol and then assemble a route by hand. #}
+        <select name="action_type" id="actionType">
           <option value="none" {{ 'selected' if at == 'none' }}>Does nothing</option>
           <option value="deep_link" {{ 'selected' if at == 'deep_link' }}>Opens a screen in the app</option>
           <option value="external_url" {{ 'selected' if at == 'external_url' }}>Opens a web page</option>
         </select></div>
     </div>
-    <div class="fld"><label>Destination</label>
-      <input name="action_value" value="{{ (selected.action_value or '') if selected else '' }}"
-             placeholder="/book/&lt;workId&gt;/&lt;editionId&gt;  or  https://…"></div>
+    <div class="fld" id="destBlock">
+      <label>Destination</label>
+      <div class="seg sm" id="destKind" style="margin-bottom:8px">
+        <span data-kind="linked" class="{{ 'on' if at == 'deep_link' and not av }}">The linked book</span>
+        <span data-kind="book" class="{{ 'on' if at == 'deep_link' and av.startswith('/book/') }}">Another book</span>
+        <span data-kind="author" class="{{ 'on' if av.startswith('/catalog/authors/') }}">An author</span>
+        <span data-kind="publisher" class="{{ 'on' if av.startswith('/catalog/publishers/') }}">A publisher</span>
+        <span data-kind="custom" class="{{ 'on' if at == 'external_url' or (at == 'deep_link' and av and not av.startswith('/book/') and not av.startswith('/catalog/')) }}">Somewhere else</span>
+      </div>
+      <div id="destSearchWrap" style="display:none">
+        <input type="text" id="destSearch" autocomplete="off" spellcheck="false"
+               placeholder="Search the catalog — any script">
+        <div id="destResults"></div>
+      </div>
+      <input name="action_value" id="actionValue" value="{{ av }}"
+             placeholder="/book/&lt;workId&gt;/&lt;editionId&gt;  or  https://…">
+      <div class="hint" id="destHint" style="margin-top:5px"></div>
+    </div>
     <div class="fld" style="margin-bottom:0"><label>Image URL <span class="hint">optional</span></label>
       <input name="image_url" value="{{ (selected.image_url or '') if selected else '' }}"
              placeholder="https://…">
@@ -502,6 +520,89 @@
       }
     }, 250);
   });
+})();
+
+// Destination picker. "The linked book" stores nothing at all — the server
+// derives /book/{work}/{edition} from the campaign's own ids at serve time, so
+// it can't go stale if the linked book is changed later.
+(function () {
+  const kinds = document.getElementById("destKind");
+  const type = document.getElementById("actionType");
+  const value = document.getElementById("actionValue");
+  const wrap = document.getElementById("destSearchWrap");
+  const box = document.getElementById("destSearch");
+  const results = document.getElementById("destResults");
+  const hint = document.getElementById("destHint");
+  const block = document.getElementById("destBlock");
+  if (!kinds || !type || !value) return;
+  let timer = null;
+
+  function current() {
+    const on = kinds.querySelector("span.on");
+    return on ? on.dataset.kind : "custom";
+  }
+
+  function render() {
+    const kind = current();
+    block.style.display = type.value === "none" ? "none" : "";
+    const searching = ["book", "author", "publisher"].includes(kind);
+    wrap.style.display = searching ? "" : "none";
+    value.style.display = kind === "custom" ? "" : "none";
+    if (kind === "linked") value.value = "";
+    box.placeholder =
+      kind === "author" ? "Search authors — any script"
+      : kind === "publisher" ? "Search publishers"
+      : "Search the catalog — any script";
+    hint.textContent =
+      kind === "linked"
+        ? "Goes to the book linked above. Nothing is stored — the path is derived at serve time, so it follows the book."
+        : kind === "custom"
+        ? "A full https:// URL, or an in-app path starting with /."
+        : value.value
+        ? "Currently: " + value.value
+        : "Pick a result to set the destination.";
+  }
+
+  kinds.querySelectorAll("span").forEach((s) => {
+    s.addEventListener("click", () => {
+      kinds.querySelectorAll("span").forEach((x) => x.classList.remove("on"));
+      s.classList.add("on");
+      if (s.dataset.kind === "custom") {
+        if (!value.value.startsWith("http")) type.value = "external_url";
+      } else {
+        type.value = "deep_link";
+      }
+      results.innerHTML = "";
+      render();
+    });
+  });
+  type.addEventListener("change", render);
+
+  box.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const q = box.value.trim();
+      if (q.length < 2) { results.innerHTML = ""; return; }
+      try {
+        const resp = await fetch(
+          "/promotions/entity-search?kind=" + current() + "&q=" + encodeURIComponent(q));
+        if (!resp.ok) return;
+        results.innerHTML = await resp.text();
+        results.querySelectorAll(".pbookrow").forEach((row) => {
+          row.addEventListener("click", (e) => {
+            e.preventDefault();
+            value.value = row.dataset.path;
+            type.value = "deep_link";
+            box.value = "";
+            results.innerHTML = "";
+            hint.textContent = "Goes to: " + row.dataset.title + " (" + row.dataset.path + ")";
+          });
+        });
+      } catch (e) { /* keep the last results rather than blanking */ }
+    }, 250);
+  });
+
+  render();
 })();
 
 // "Runs until I stop it" and the end date are one decision. Ticking the box
