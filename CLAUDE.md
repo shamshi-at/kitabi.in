@@ -506,6 +506,21 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   transcription-style call should send `thinking: {"type": "disabled"}` explicitly
   rather than inherit the model's default. Reproduced live before fixing — a thinking
   reply really does come back as `blocks=['thinking']`, `stop_reason=max_tokens`.
+- **A renderer that needs *both* ends of a range erases the end it actually has.**
+  Third report in the same family, and the first one that was purely a display bug:
+  a book with no page count, the page and the total typed on the very first sitting —
+  progress showed p. 120, the reading log said "Page not noted" (owner report,
+  31 Jul 2026). The write path was correct all along (an E2E test through the real
+  timer screen passed on the unfixed code); `SessionLogRow` simply gated its whole
+  page line on `pageStart != null && pageEnd != null`, and a first sitting on a book
+  with no recorded progress has no start page — nothing knows where the reader began.
+  Same guard also blanked a sitting that ended where it began, whose page the 26 Jul
+  fix had just made sure to record. The end page is what the *reader* supplies; the
+  start is context the app happens to have. Render the half you hold ("Ended on
+  p. 120") and drop only the figure that genuinely can't be derived (the +N gain).
+  Corollary for diagnosis: "it's in the progress bar but not the log" points at the
+  *reader*, not the writer — prove which half is broken with a test through the real
+  screen before changing either.
 
 ## Open decisions
 

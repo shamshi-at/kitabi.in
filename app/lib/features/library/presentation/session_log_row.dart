@@ -44,10 +44,21 @@ class SessionLogRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final ps = session.pageStart;
     final pe = session.pageEnd;
-    final noted = ps != null && pe != null;
-    final pages = (ps != null && pe != null && pe > ps)
-        ? l10n.bookLogPages(ps, pe)
-        : l10n.bookLogNoPages;
+    // What the reader noted is the *end* page — where they got to. A start page
+    // is context the app supplies (the entry's progress when the clock began),
+    // and the first sitting on a book with no recorded progress simply has
+    // none. Requiring both to show anything meant that first sitting read as
+    // "Page not noted" while the progress bar showed the very page the reader
+    // had just typed (owner report, 31 Jul 2026) — and so did a sitting that
+    // ended where it began, whose page the 26 Jul fix had just made sure to
+    // record. The range is the richer line when there is one; the end page
+    // alone is still the fact this row exists to carry.
+    final noted = pe != null;
+    final pages = pe == null
+        ? l10n.bookLogNoPages
+        : (ps != null && pe > ps)
+            ? l10n.bookLogPages(ps, pe)
+            : l10n.bookLogPageEnded(pe);
     final gained = sessionPagesRead(session);
 
     return Container(

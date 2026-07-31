@@ -516,6 +516,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String bookLogPageEnded(int to) {
+    return 'Ended on p. $to';
+  }
+
+  @override
   String bookLogPagesRead(int count) {
     return '+$count';
   }
@@ -2498,6 +2503,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String stopLastSession(String date, String duration, int from, int to) {
     return 'Last time · $date · $duration · p. $from → $to';
+  }
+
+  @override
+  String stopLastSessionTo(String date, String duration, int to) {
+    return 'Last time · $date · $duration · ended on p. $to';
   }
 
   @override

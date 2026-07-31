@@ -484,8 +484,14 @@ class _Stepper extends StatelessWidget {
 }
 
 /// Formats the "Last time · 12 Jul · 38m · p. 214 → 260" line. Null when the
-/// previous sitting noted no pages — a line with two blanks in it is worse
+/// previous sitting noted no page at all — a line with a blank in it is worse
 /// than no line.
+///
+/// A sitting with an end page but no start (the first one on a book with no
+/// recorded progress) still knows the fact that matters here — where the reader
+/// got to — so it gets the shorter "ended on p. 260" form rather than being
+/// dropped (owner report, 31 Jul 2026: the same blind spot that made the
+/// reading log say "Page not noted" for that sitting).
 String? formatLastSessionLine(
   AppLocalizations l10n, {
   required DateTime? endedAt,
@@ -493,16 +499,16 @@ String? formatLastSessionLine(
   required int? pageStart,
   required int? pageEnd,
 }) {
-  if (endedAt == null || pageStart == null || pageEnd == null) return null;
+  if (endedAt == null || pageEnd == null) return null;
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
   final local = endedAt.toLocal();
-  return l10n.stopLastSession(
-    '${local.day} ${months[local.month - 1]}',
-    formatDuration(Duration(seconds: durationSeconds)),
-    pageStart,
-    pageEnd,
-  );
+  final date = '${local.day} ${months[local.month - 1]}';
+  final duration = formatDuration(Duration(seconds: durationSeconds));
+  if (pageStart == null || pageEnd <= pageStart) {
+    return l10n.stopLastSessionTo(date, duration, pageEnd);
+  }
+  return l10n.stopLastSession(date, duration, pageStart, pageEnd);
 }

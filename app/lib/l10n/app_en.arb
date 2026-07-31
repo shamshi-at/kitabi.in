@@ -529,6 +529,8 @@
   "@bookLogTimeRangeNextDay": {"description": "Clock span of a sitting that ran past midnight", "placeholders": {"from": {"type": "String"}, "to": {"type": "String"}}},
   "bookLogPages": "p. {from} → {to}",
   "@bookLogPages": {"description": "Page range a session moved through", "placeholders": {"from": {"type": "int"}, "to": {"type": "int"}}},
+  "bookLogPageEnded": "Ended on p. {to}",
+  "@bookLogPageEnded": {"description": "A sitting that noted where it finished but has no start page to draw a range from — the first sitting on a book with no recorded progress", "placeholders": {"to": {"type": "int"}}},
   "bookLogPagesRead": "+{count}",
   "@bookLogPagesRead": {"description": "Pages a single sitting moved through, shown beside its length", "placeholders": {"count": {"type": "int"}}},
   "bookLogPagesReadA11y": "{count, plural, =1{1 page read} other{{count} pages read}}",
@@ -2212,6 +2214,15 @@
       "date": {"type": "String"},
       "duration": {"type": "String"},
       "from": {"type": "int"},
+      "to": {"type": "int"}
+    }
+  },
+  "stopLastSessionTo": "Last time · {date} · {duration} · ended on p. {to}",
+  "@stopLastSessionTo": {
+    "description": "The previous sitting when it noted where it ended but had no start page to draw a range from",
+    "placeholders": {
+      "date": {"type": "String"},
+      "duration": {"type": "String"},
       "to": {"type": "int"}
     }
   },

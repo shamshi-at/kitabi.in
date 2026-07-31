@@ -952,6 +952,12 @@ abstract class AppLocalizations {
   /// **'p. {from} → {to}'**
   String bookLogPages(int from, int to);
 
+  /// A sitting that noted where it finished but has no start page to draw a range from — the first sitting on a book with no recorded progress
+  ///
+  /// In en, this message translates to:
+  /// **'Ended on p. {to}'**
+  String bookLogPageEnded(int to);
+
   /// Pages a single sitting moved through, shown beside its length
   ///
   /// In en, this message translates to:
@@ -4143,6 +4149,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last time · {date} · {duration} · p. {from} → {to}'**
   String stopLastSession(String date, String duration, int from, int to);
+
+  /// The previous sitting when it noted where it ended but had no start page to draw a range from
+  ///
+  /// In en, this message translates to:
+  /// **'Last time · {date} · {duration} · ended on p. {to}'**
+  String stopLastSessionTo(String date, String duration, int to);
 
   /// Link on the stop sheet opening the full list of sittings (R3)
   ///
