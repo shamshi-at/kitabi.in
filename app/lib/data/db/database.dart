@@ -3,6 +3,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 import 'daos/cached_books_dao.dart';
 import 'daos/library_daos.dart';
+import 'daos/promotions_dao.dart';
 import 'daos/sync_daos.dart';
 import 'tables.dart';
 
@@ -31,6 +32,8 @@ part 'database.g.dart';
     ConflictHistoryEntries,
     KeyValues,
     CachedBooks,
+    CachedPromotions,
+    PromotionEventQueue,
   ],
   daos: [
     LibraryEntriesDao,
@@ -46,6 +49,7 @@ part 'database.g.dart';
     ConflictHistoryDao,
     KeyValuesDao,
     CachedBooksDao,
+    PromotionsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -55,12 +59,20 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 8) {
+            // In-app promotions (31 Jul 2026) — a server-resolved cache plus
+            // its own append-only event outbox. Both start empty; the first
+            // /promotions fetch fills the cache, and with nothing published
+            // they simply stay empty and Home renders exactly as before.
+            await m.createTable(cachedPromotions);
+            await m.createTable(promotionEventQueue);
+          }
           if (from < 7) {
             // Private per-book notes as their own syncable rows (21 Jul 2026,
             // owner request) — a whole new table. The old free-text blob on

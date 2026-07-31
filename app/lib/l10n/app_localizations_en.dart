@@ -907,6 +907,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeFreshShelf => 'Fresh on your shelf';
 
   @override
+  String get promoFromKitabi => 'From Kitabi';
+
+  @override
+  String promoSponsored(String sponsor) {
+    return 'Sponsored · $sponsor';
+  }
+
+  @override
+  String get promoDismiss => 'Hide this';
+
+  @override
+  String get promoDismissed => 'Hidden. You won\'t see it again.';
+
+  @override
+  String get settingsPromotions => 'Show promotions from Kitabi';
+
+  @override
+  String get settingsPromotionsHint =>
+      'Occasional news and offers on Home. Chosen from the languages you read — never from anything you\'ve written.';
+
+  @override
   String get homeGoalLabel => 'Reading goal';
 
   @override

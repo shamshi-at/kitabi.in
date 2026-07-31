@@ -1540,6 +1540,42 @@ abstract class AppLocalizations {
   /// **'Fresh on your shelf'**
   String get homeFreshShelf;
 
+  /// Disclosure label on a promotion Kitabi itself is running. Derived from the absence of a sponsor, never typed by the campaign author
+  ///
+  /// In en, this message translates to:
+  /// **'From Kitabi'**
+  String get promoFromKitabi;
+
+  /// Disclosure label on a paid placement
+  ///
+  /// In en, this message translates to:
+  /// **'Sponsored · {sponsor}'**
+  String promoSponsored(String sponsor);
+
+  /// Accessibility label for the promotion's dismiss button
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this'**
+  String get promoDismiss;
+
+  /// Snackbar after dismissing a promotion — dismissal is permanent unless the campaign sets a re-show window
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden. You won\'t see it again.'**
+  String get promoDismissed;
+
+  /// Profile toggle for in-app promotions
+  ///
+  /// In en, this message translates to:
+  /// **'Show promotions from Kitabi'**
+  String get settingsPromotions;
+
+  /// Explanatory line under the promotions toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Occasional news and offers on Home. Chosen from the languages you read — never from anything you\'ve written.'**
+  String get settingsPromotionsHint;
+
   /// Eyebrow on the home goal slip
   ///
   /// In en, this message translates to:

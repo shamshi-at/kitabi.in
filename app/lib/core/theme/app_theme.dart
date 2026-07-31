@@ -89,6 +89,18 @@ ThemeData buildAppTheme({bool dark = false}) {
       headlineSmall: GoogleFonts.fraunces(textStyle: base.textTheme.headlineSmall),
       titleLarge: GoogleFonts.fraunces(textStyle: base.textTheme.titleLarge),
     ),
+    // A snackbar is one of the few constant-dark surfaces in the app, and
+    // Material's default action colour is a pink drawn for a background it
+    // doesn't have here — it read as washed-out on the dark slab (caught on the
+    // emulator, 31 Jul 2026, on the promotion "Undo"). Gold on dark, like every
+    // other constant-dark surface in screen-design.md.
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.darkPanel,
+      contentTextStyle: TextStyle(color: AppColors.onDark, fontSize: 13),
+      actionTextColor: AppColors.nightGold,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ),
     cardTheme: CardThemeData(
       color: AppColors.card,
       surfaceTintColor: Colors.transparent,

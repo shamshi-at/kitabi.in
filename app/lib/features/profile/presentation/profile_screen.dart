@@ -22,6 +22,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../import_books/csv_export.dart';
 import '../../insights/providers/insights_providers.dart';
 import '../../library/providers/library_providers.dart';
+import '../../promotions/providers/promotions_providers.dart';
 import '../../settings/theme_mode_provider.dart';
 import '../providers/profile_providers.dart';
 
@@ -66,7 +67,15 @@ class _ProfileBody extends ConsumerStatefulWidget {
 }
 
 class _ProfileBodyState extends ConsumerState<_ProfileBody> {
-  static const _visKeys = ['profile_visible', 'library_visible', 'reviews_visible_default'];
+  // Server-side booleans on /me that this screen flips. Named for visibility
+  // because that's most of them; `promotions_opt_out` rides the same
+  // optimistic-mirror machinery rather than growing a second copy of it.
+  static const _visKeys = [
+    'profile_visible',
+    'library_visible',
+    'reviews_visible_default',
+    'promotions_opt_out',
+  ];
 
   // Optimistic local mirror of the server-side visibility flags, so a tap flips
   // instantly instead of waiting on the /me round-trip (what made the old
@@ -90,6 +99,13 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     Haptics.selection();
     try {
       await ref.read(apiClientProvider).updateMe({field: value});
+      if (field == 'promotions_opt_out') {
+        // Re-resolve now rather than at the next 30-minute poll: turning the
+        // switch off must clear the banner the reader is looking at, not the
+        // one they'll see after lunch. Opted out, the server returns nothing
+        // and the local cache is emptied.
+        await ref.read(promotionsRepositoryProvider).refresh(force: true);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _vis[field] = previous);
@@ -324,6 +340,22 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
             ),
           ),
         ),
+        SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            // Stored server-side as an opt-*out* so an absent/legacy value
+            // means "shown"; presented here the way a reader thinks about it.
+            // Turning it off filters at the API, so campaigns stop being sent
+            // to the device rather than being downloaded and hidden.
+            child: _SwitchRow(
+              title: l10n.settingsPromotions,
+              subtitle: l10n.settingsPromotionsHint,
+              value: !_vis['promotions_opt_out']!,
+              onChanged: (v) => _toggle('promotions_opt_out', !v),
+            ),
+          ),
+        ),
         SizedBox(height: 24),
         // One card of chevron rows (the Languages-card pattern) instead of a
         // stack of five outlined buttons shouting for equal attention.
@@ -402,7 +434,14 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
         ],
       ),
     );
-    if (confirmed == true) await ref.read(authServiceProvider).signOut();
+    if (confirmed == true) {
+      // The reader's library stays (that's what the dialog promises), but the
+      // promotion cache must not: campaigns are resolved per reader, so the
+      // next person to sign in on this device would otherwise inherit the last
+      // one's targeting — and their dismissals.
+      await ref.read(promotionsRepositoryProvider).clearForSignOut();
+      await ref.read(authServiceProvider).signOut();
+    }
   }
 
   Future<void> _exportLibrary(BuildContext context) async {

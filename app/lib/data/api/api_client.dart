@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,16 @@ const _apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http:/
 /// The client version, sent as `X-App-Version` so the API's update-gate can
 /// force old builds to upgrade. Keep in step with pubspec.yaml.
 const kAppVersion = '0.1.0';
+
+/// Sent as `X-Platform` so server-side promotion targeting can address one
+/// platform. Null on anything that isn't a real phone build (tests, desktop),
+/// where it's simply omitted rather than guessed.
+String? get kPlatformName {
+  if (kIsWeb) return null;
+  if (Platform.isIOS) return 'ios';
+  if (Platform.isAndroid) return 'android';
+  return null;
+}
 
 /// Reads the current access token. Null means "no session" — the request goes
 /// out unauthenticated rather than waiting on one.
@@ -35,6 +47,13 @@ class ApiClient {
       InterceptorsWrapper(
         onRequest: (options, handler) {
           options.headers['X-App-Version'] = kAppVersion;
+          // Promotion targeting can filter on platform, and it fails *closed*
+          // when it doesn't know — a build that doesn't send this simply never
+          // receives a platform-targeted campaign. Sent on every request, like
+          // the version, so nothing has to remember to attach it.
+          if (kPlatformName != null) {
+            options.headers['X-Platform'] = kPlatformName;
+          }
           // Read per-request, never captured at construction: a token refreshed
           // between two calls (Supabase refreshes on its own cadence, and the
           // 401 handler below forces one) must be picked up by the next call.
@@ -208,6 +227,42 @@ class ApiClient {
   /// Drop this token on sign-out.
   Future<void> unregisterDevice(String token) =>
       _dio.delete('/devices', data: {'token': token});
+
+  // --- In-app promotions (docs/promotions-plan.md) ---
+
+  /// Everything live and eligible for this reader, already resolved by the
+  /// server: targeting applied, language variant chosen. The device holds no
+  /// targeting rules and never learns about a campaign it isn't in.
+  ///
+  /// Pass the last [etag] to get a cheap 304 — the usual answer — signalled
+  /// here as a null return meaning "nothing changed, keep what you have".
+  Future<PromotionsPayload?> getPromotions({String? etag}) async {
+    final res = await _dio.get(
+      '/promotions',
+      options: Options(
+        headers: etag == null ? null : {'If-None-Match': etag},
+        // 304 is a success here, not an error to be thrown.
+        validateStatus: (code) => code != null && (code == 304 || (code >= 200 && code < 300)),
+      ),
+    );
+    if (res.statusCode == 304) return null;
+    final data = res.data as Map<String, dynamic>;
+    return PromotionsPayload(
+      version: data['version'] as String? ?? '',
+      etag: res.headers.value('etag'),
+      // Parsed eagerly, element by element — `.cast()` is lazy and would push
+      // a shape change into a widget build() far from the cause (21 Jul 2026).
+      promotions: [
+        for (final row in (data['promotions'] as List? ?? const []))
+          if (row is Map) Map<String, dynamic>.from(row),
+      ],
+    );
+  }
+
+  /// Report a batch from the device's outbox. Each event carries a
+  /// device-generated id, so the server drops replays instead of double-counting.
+  Future<void> postPromotionEvents(List<Map<String, dynamic>> events) =>
+      _dio.post('/promotions/events', data: {'events': events});
 
   // --- Lending connections (peer-to-peer consent layer) ---
 
@@ -552,6 +607,20 @@ class ApiClient {
     final res = await _dio.get('/sync/pull', queryParameters: {'cursor': cursor, 'limit': limit});
     return res.data as Map<String, dynamic>;
   }
+}
+
+/// One `/promotions` response: the resolved list plus the ETag to send back
+/// next time. A null payload from [ApiClient.getPromotions] means 304.
+class PromotionsPayload {
+  const PromotionsPayload({
+    required this.version,
+    required this.etag,
+    required this.promotions,
+  });
+
+  final String version;
+  final String? etag;
+  final List<Map<String, dynamic>> promotions;
 }
 
 /// Set to true when the API returns 426 (this build is too old) — the router

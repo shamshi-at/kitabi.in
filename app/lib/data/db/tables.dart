@@ -189,6 +189,70 @@ class KeyValues extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// A promotion the server has decided this reader should see — already
+/// resolved (targeting applied, language variant chosen) before it ever
+/// reached the device. A plain cache like [CachedBooks], not a syncable
+/// table: a campaign is operator-owned content, not the reader's data.
+///
+/// Home renders from here, so a live promotion works offline and — because
+/// [expiresAt] rides along — a finished one disappears without a network call.
+///
+/// [dismissedAt] is written locally the instant the reader taps ✕, before
+/// the event reaches the server: the one thing worse than an unwanted promo
+/// is an unwanted promo that won't close on a bad connection.
+class CachedPromotions extends Table {
+  TextColumn get id => text()();
+  TextColumn get kind => text()(); // banner | card
+  TextColumn get cardStyle => text().nullable()(); // book | image | text
+  TextColumn get placement => text()(); // home_top | home_stream
+  /// Null = "From Kitabi"; set = "Sponsored · {sponsor}". The label the reader
+  /// sees is derived from this — never a free-text field somebody can forget.
+  TextColumn get sponsor => text().nullable()();
+  TextColumn get language => text().nullable()(); // which variant was served
+  TextColumn get headline => text()();
+  TextColumn get body => text().nullable()();
+  TextColumn get ctaLabel => text().nullable()();
+  TextColumn get imageUrl => text().nullable()();
+  TextColumn get actionType => text().withDefault(Constant('none'))();
+  TextColumn get actionValue => text().nullable()();
+  TextColumn get workId => text().nullable()();
+  TextColumn get editionId => text().nullable()();
+  BoolColumn get dismissible => boolean().withDefault(Constant(true))();
+  IntColumn get priority => integer().withDefault(Constant(5))();
+  DateTimeColumn get expiresAt => dateTime().nullable()();
+  DateTimeColumn get fetchedAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get dismissedAt => dateTime().nullable()();
+  /// This device's own count, so the cooldown holds offline too. Exact on one
+  /// device and approximate across several — the honest cost of rendering from
+  /// the local database instead of asking the server before every frame.
+  IntColumn get impressionCount => integer().withDefault(Constant(0))();
+  DateTimeColumn get lastShownAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Outbox for promotion impressions/clicks/dismisses.
+///
+/// Deliberately NOT the sync queue. The sync engine exists for Layer-2
+/// entities that get updated and deleted and therefore need op ordering,
+/// `server_seq` cursors, last-write-wins and conflict-history rows. These are
+/// append-only facts with a device-generated id and no conflicts — reusing
+/// `sync_queue` would drag all of that into a case that needs none of it, and
+/// would put marketing telemetry in the same retry path as a reader's library,
+/// where a promo-server hiccup could stall real data.
+class PromotionEventQueue extends Table {
+  TextColumn get id => text()(); // client-generated; the server dedupes on it
+  TextColumn get promotionId => text()();
+  TextColumn get kind => text()(); // impression | click | dismiss
+  TextColumn get language => text().nullable()();
+  DateTimeColumn get occurredAt => dateTime()();
+  IntColumn get attempts => integer().withDefault(Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// A denormalized, read-only cache of catalog data (Layer 1) fetched from
 /// the API — NOT synced (CLAUDE.md rule 2: fetched/cached for offline
 /// reading, never client-authored). Flattened rather than mirroring the
