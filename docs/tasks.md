@@ -662,6 +662,49 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       + `terms.html` (Reading Room theme, honest to the app's actual data practices), linked
       from the landing footer and added to the Cloudflare Pages deploy
 
+## Phase 9 — In-app promotions
+
+Design: [promotions-plan.md](promotions-plan.md) · mockups:
+[promotions-mockup.html](promotions-mockup.html). First-party only — no ad SDK,
+no advertising identifier, no new bill (CLAUDE.md rule 8).
+
+- [x] Migration `000034`: `promotions` / `promotion_contents` / `promotion_events`,
+      RLS deny-by-default, plus `profiles.promotions_opt_out`. `status` stores the
+      operator's *intent* (draft/published/paused) and live/scheduled/ended are
+      derived from the dates — nothing runs on a timer, so there is no day the
+      timer didn't run and a finished campaign is still live
+- [x] `promotion_service`: the targeting resolver (languages, platform, app version,
+      account age, library size, reading status, genres, reader ids, rollout %,
+      exclusions — unknown facts fail *closed*), language-variant selection,
+      frequency/dismissal rules, and the audience estimate. The estimate reuses the
+      same `matches()` the serve path uses, so it can't drift from what ships
+- [x] `GET /promotions` (server-resolved, ETag→304) + `POST /promotions/events`
+      (batched, idempotent on device-generated ids, always 200); `X-Platform` header
+      on the app's Dio interceptor. 41 tests — every targeting rule for the match
+      *and* the non-match, since both directions fail silently in production
+- [x] Admin console **Campaigns** (editor+): list grouped by derived state with the
+      dismissal rate in oxblood past 20%, four-tab composer with a live phone preview,
+      audience builder with a live estimate + narrowing bars, schedule/frequency,
+      per-variant results, one-tap Stop now, audit row on every mutation
+- [x] App: `CachedPromotions` + `PromotionEventQueue` (schema v8), repository,
+      `StreamProvider`, `PromoBanner` / `PromoCard`, Home wiring, l10n, the reader's
+      opt-out switch in Profile, cache cleared on sign-out
+- [x] Verified on an Android emulator via `lib/main_uidemo.dart`: both surfaces render,
+      dismiss is instant and database-backed, undo works. Fixed one real bug found only
+      there — Material's default pink snackbar action on the constant-dark slab, now
+      themed gold app-wide
+- [ ] Decide: sponsored placements at launch, or Kitabi's own promos only (the
+      `sponsor` field ships either way; it drives the disclosure label)
+- [ ] Image hosting — an R2 `promo-assets` bucket (same Cloudflare account as the
+      nightly backups, so no new service and no new bill) with upload from the console.
+      Until then `image_url` is a pasted URL, and a card whose image fails renders as
+      the text shape
+- [ ] Privacy-policy paragraph: that Kitabi shows its own promotions, chosen
+      server-side from language and library, and counts engagement. Ships with the
+      feature, not after it
+- [ ] End-to-end on a real phone against the deployed API — create a campaign in the
+      console targeted at your own reader id, publish, confirm it appears, dismiss it
+
 ## Parking lot — v1.5 (designed or deliberately deferred)
 
 - [ ] Quote capture with OCR (regional scripts) — S14 designed

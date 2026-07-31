@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — In-app promotions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Malayalam:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Kitabi — in-app promotions (banner + card) and the console
+   that publishes them. Plan: docs/promotions-plan.md
+   Reading Room tokens throughout (docs/screen-design.md): a
+   promotion is drawn by Kitabi, in Kitabi's voice, or it isn't
+   shown at all.
+   ============================================================ */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+  --panel:#332419; --panel-2:#241811; --danger:#A03A2B;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:#E7DFCC;color:var(--ink);padding-bottom:90px}
+code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.ml{font-family:'Noto Sans Malayalam','Inter',sans-serif}
+
+/* ---------- page chrome ---------- */
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:56px 32px 44px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:40px;font-weight:400;margin:0 0 10px;letter-spacing:.5px}
+.hero .tag{font-size:15px;color:#CBB897;max-width:780px;margin:0 auto;line-height:1.68}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+.toc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:1040px;margin:26px auto 0}
+.toc a{font-size:12px;font-weight:600;color:#E9DCC2;text-decoration:none;
+  border:1px solid rgba(240,226,194,.28);padding:6px 13px;border-radius:999px;transition:.15s}
+.toc a:hover{background:var(--gold);color:#241811;border-color:var(--gold)}
+
+.area{max-width:1520px;margin:56px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.area h2{font-family:'Fraunces',serif;font-size:29px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:9px 0 26px;max-width:940px;font-size:14.5px;line-height:1.68}
+.area .desc b{color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}
+.shot{display:flex;flex-direction:column;gap:12px}
+.cap{width:272px;font-size:12.5px;color:#6d5f4b;line-height:1.58}
+.cap b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:3px;font-weight:600}
+.cap .pro{color:var(--moss);display:block;margin-top:6px}
+.cap .con{color:var(--oxblood);display:block;margin-top:3px}
+.note{background:var(--card);border:1px solid var(--line);border-left:none;border-radius:12px;
+  overflow:hidden;display:flex;margin-top:26px;max-width:1180px}
+.note i{width:4px;background:var(--gold);flex-shrink:0}
+.note div{padding:14px 18px;font-size:13px;line-height:1.7;color:#6d5f4b}
+.note b{color:var(--ink)}
+
+/* ---------- phone frame ---------- */
+.phone{width:272px;height:588px;border-radius:34px;border:8px solid #241B12;
+  background:var(--paper);overflow:hidden;position:relative;
+  box-shadow:0 24px 50px rgba(43,33,24,.30),0 4px 12px rgba(43,33,24,.18)}
+.scr{height:100%;display:flex;flex-direction:column;background:var(--paper);position:relative}
+.sbar{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 15px 4px;font-size:9.5px;font-weight:600;color:var(--ink)}
+.pbody{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0 14px}
+
+/* home header */
+.hd{padding:4px 0 2px}
+.hd .t{display:flex;align-items:flex-start;justify-content:space-between}
+.hd h3{font-family:'Fraunces',serif;font-size:21px;font-weight:600;color:var(--oxblood);line-height:1.1}
+.hd .g{font-family:'Fraunces',serif;font-style:italic;font-size:10.5px;color:var(--ink);margin-top:1px}
+.hd .d{font-size:7.5px;letter-spacing:1.3px;color:var(--gold);font-weight:700;margin-top:2px;text-transform:uppercase}
+.hd .ic{display:flex;gap:11px;color:var(--oxblood);font-size:13px;padding-top:3px}
+
+.sl{font-size:7.5px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--ink-soft);margin:11px 0 5px}
+.crd{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;gap:8px}
+.cover{width:38px;height:55px;border-radius:2px 4px 4px 2px;flex-shrink:0;position:relative;overflow:hidden;
+  background:linear-gradient(150deg,#B9C6CC,#8FA3AC);box-shadow:0 3px 8px rgba(43,33,24,.28)}
+.cover::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(0,0,0,.22)}
+.cover span{position:absolute;left:5px;right:4px;top:6px;font-size:5.5px;line-height:1.25;
+  font-family:'Fraunces',serif;color:#2B2118}
+.cover.ox{background:linear-gradient(150deg,#7E2A33,#4A161C)}
+.cover.ox span{color:#F0E2C2}
+.cover.dk{background:linear-gradient(150deg,#5C3A24,#3A2114)}
+.cover.dk span{color:#EFE6C8}
+.cover.rd{background:linear-gradient(150deg,#A8342B,#6E1E1A)}
+.cover.rd span{color:#F5E3C4}
+.crd .m{flex:1;display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0}
+.crd .ti{font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crd .au{font-size:8px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:3.5px;border-radius:99px;background:var(--paper-deep);margin-top:2px}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--oxblood)}
+.crd .pg{font-size:7.5px;color:var(--ink-soft)}
+.crd .act{align-self:center;display:flex;gap:8px;color:var(--oxblood);font-size:12px}
+
+.strip{display:flex;gap:7px;margin-top:2px}
+.strip .cover{width:44px;height:64px}
+.goal{background:var(--gold-soft);border-radius:14px;padding:9px 11px;margin-top:10px}
+.goal .gl{font-size:7.5px;font-weight:700;letter-spacing:1.2px;color:#8F681E;text-transform:uppercase;
+  display:flex;justify-content:space-between}
+.goal .gt{font-size:11.5px;font-weight:600;margin-top:3px}
+.stats{display:flex;margin-top:10px}
+.stats div{flex:1}
+.stats .n{font-family:'Fraunces',serif;font-size:19px;font-weight:600;line-height:1}
+.stats .l{font-size:7px;letter-spacing:1.1px;color:var(--ink-soft);font-weight:600;margin-top:2px}
+.quote{background:#3A2C1E;border-radius:12px;padding:11px 12px;margin-top:10px;text-align:center}
+.quote .q{font-family:'Fraunces',serif;font-style:italic;font-size:9.5px;color:#EFE3C8;line-height:1.5}
+.quote .a{font-size:7px;letter-spacing:1px;color:#A99374;margin-top:5px;text-transform:uppercase}
+
+.nav{display:flex;justify-content:space-between;align-items:center;padding:7px 14px 9px;
+  border-top:1px solid var(--line);background:var(--card)}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:6.5px;
+  color:var(--ink-soft);font-weight:600;flex:1}
+.nav div.on{color:var(--oxblood)}
+.nav div i{font-size:13px;font-style:normal}
+.nav .plus{width:30px;height:30px;border-radius:10px;background:var(--oxblood);color:#F6F0E3;
+  display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* ============================================================
+   THE PROMOTION SURFACES — the actual subject of this document
+   ============================================================ */
+
+/* --- the banner: a thin strip, never a box --- */
+/* Built as a uniform 1px border + clip + a 3px strip child, NOT as a
+   non-uniform Border() with borderRadius — that throws at paint time in
+   Flutter (CLAUDE.md, 21 Jul 2026). The mockup uses the same construction
+   so nobody translates it back into the version that crashes. */
+.pbanner{display:flex;align-items:stretch;background:var(--gold-soft);border:1px solid #E4CF9B;
+  border-radius:11px;overflow:hidden;margin-top:9px}
+.pbanner > i.rule{width:3px;background:var(--gold);flex-shrink:0}
+.pbanner .in{flex:1;display:flex;align-items:center;gap:8px;padding:8px 9px;min-width:0}
+.pbanner .mk{font-size:12px;flex-shrink:0}
+.pbanner .tx{flex:1;min-width:0}
+.pbanner .lb{font-size:6.5px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#8F681E}
+.pbanner .hl{font-size:9.5px;font-weight:600;line-height:1.3;margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbanner .x{flex-shrink:0;color:#9B7B3A;font-size:11px;padding:0 1px}
+.pbanner.spon{background:#F3EEE2;border-color:var(--line)}
+.pbanner.spon > i.rule{background:var(--slate)}
+.pbanner.spon .lb{color:var(--slate)}
+.pbanner.spon .x{color:var(--ink-soft)}
+.pbanner.crit{background:#F3DFDA;border-color:#E3C4BE}
+.pbanner.crit > i.rule{background:var(--oxblood)}
+.pbanner.crit .lb{color:var(--oxblood)}
+
+/* --- the card: full block in the Home stream --- */
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
+.pcard .lbrow{display:flex;align-items:center;gap:5px;padding:8px 10px 0}
+.pcard .lb{font-size:6.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--gold)}
+.pcard .lb.s{color:var(--slate)}
+.pcard .x{margin-left:auto;color:var(--stamp-grey);font-size:11px}
+.pcard .bd{padding:5px 10px 10px}
+.pcard h4{font-family:'Fraunces',serif;font-size:13.5px;font-weight:550;line-height:1.25}
+.pcard p{font-size:9px;color:var(--ink-soft);line-height:1.55;margin-top:4px}
+.pcard .cta{display:inline-flex;align-items:center;gap:4px;margin-top:9px;background:var(--oxblood);
+  color:#F6F0E3;font-size:9px;font-weight:600;padding:6px 12px;border-radius:9px}
+.pcard .cta.g{background:transparent;color:var(--oxblood);border:1.3px solid var(--oxblood)}
+
+/* book-led */
+.pcard .bookrow{display:flex;gap:9px;padding:5px 10px 10px;align-items:flex-start}
+.pcard .bookrow .cover{width:44px;height:64px}
+.pcard .bookrow .bm{flex:1;min-width:0}
+
+/* image-led */
+.pcard .img{height:88px;position:relative;overflow:hidden;
+  background:linear-gradient(155deg,#7E2A33 0%,#4A161C 55%,#2B1014 100%)}
+.pcard .img.fair{background:linear-gradient(150deg,#3E5A47 0%,#24382B 60%,#16241B 100%)}
+.pcard .img .sp{position:absolute;left:0;right:0;bottom:0;top:38%;
+  background:linear-gradient(180deg,rgba(20,12,8,0),rgba(20,12,8,.82))}
+.pcard .img .ov{position:absolute;left:10px;right:10px;bottom:8px;color:#F6F0E3}
+.pcard .img .ov h4{color:#F6F0E3;font-size:13px}
+.pcard .img .ov .lb{color:var(--gold-soft);margin-bottom:2px}
+.pcard .img .deco{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:5px;opacity:.5}
+.pcard .img .deco span{width:15px;height:34px;border-radius:1px 3px 3px 1px;background:rgba(240,226,194,.5)}
+.pcard .img .x{position:absolute;top:6px;right:8px;color:rgba(246,240,227,.85);font-size:11px;margin:0}
+
+/* text-led (dark panel — the recs-card weight) */
+.pcard.dark{background:#3A2C1E;border-color:#3A2C1E}
+.pcard.dark h4{color:#F3E7CE}
+.pcard.dark p{color:#BCA986}
+.pcard.dark .lb{color:var(--gold)}
+.pcard.dark .x{color:#8D7B60}
+.pcard.dark .cta{background:var(--gold);color:#241811}
+
+/* dismissed / ghost states used in the interaction strip */
+.ghost{opacity:.34;filter:saturate(.5)}
+.gone{border:1.3px dashed var(--line);border-radius:11px;padding:9px;margin-top:9px;text-align:center;
+  font-size:8.5px;color:var(--stamp-grey);background:rgba(255,252,244,.5)}
+
+/* toast */
+.toast{position:absolute;left:14px;right:14px;bottom:54px;background:#3A2C1E;color:#F3E7CE;
+  border-radius:10px;padding:8px 11px;font-size:9px;display:flex;align-items:center;gap:8px;
+  box-shadow:0 8px 22px rgba(43,33,24,.4)}
+.toast b{margin-left:auto;color:var(--gold);font-weight:700;font-size:9px}
+
+/* fade at the bottom of a cut-off phone body */
+.fade{position:absolute;left:0;right:0;bottom:44px;height:46px;
+  background:linear-gradient(180deg,rgba(246,240,227,0),var(--paper));pointer-events:none}
+
+/* ============================================================
+   ADMIN CONSOLE FRAME  (matches docs/admin_mockups.html)
+   ============================================================ */
+.win{width:1180px;background:var(--paper);border-radius:12px;overflow:hidden;
+  box-shadow:0 26px 60px rgba(60,42,25,.30);border:1px solid #cbbb9c}
+.win.mid{width:860px}
+.chrome{height:34px;background:#DED2B7;display:flex;align-items:center;gap:7px;padding:0 13px;
+  border-bottom:1px solid #cbbb9c}
+.dot{width:10px;height:10px;border-radius:50%;background:#bfae8e}
+.chrome .addr{margin-left:12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#6d5f4b;
+  background:#F3EBD9;border:1px solid #cbbb9c;border-radius:5px;padding:3px 12px}
+.wbody{display:flex;min-height:640px}
+.rail{width:206px;background:var(--panel);color:#E7DBC4;padding:15px 0;flex-shrink:0;display:flex;flex-direction:column}
+.rail .brand{display:flex;align-items:center;gap:9px;padding:0 15px 14px;border-bottom:1px solid rgba(240,226,194,.14)}
+.rail .brand i{width:27px;height:27px;border-radius:7px;background:var(--gold);color:#241811;
+  font-family:'Fraunces',serif;font-weight:600;font-size:16px;display:flex;align-items:center;
+  justify-content:center;font-style:normal}
+.rail .brand b{font-family:'Fraunces',serif;font-weight:500;font-size:15px}
+.rail .brand s{display:block;font-size:9px;letter-spacing:1.5px;color:#9d8b6c;text-decoration:none}
+.rail .grp{font-size:8.5px;letter-spacing:1.5px;color:#8d7c60;padding:14px 15px 6px;font-weight:700}
+.rail a{display:flex;align-items:center;gap:8px;padding:7px 15px;color:#D7C9AE;text-decoration:none;
+  font-size:12.5px;border-left:3px solid transparent}
+.rail a.on{background:rgba(184,134,43,.16);border-left-color:var(--gold);color:#F6F0E3;font-weight:600}
+.rail a .n{margin-left:auto;background:var(--oxblood);color:#fff;font-size:9.5px;font-weight:700;
+  border-radius:999px;padding:1px 7px}
+.rail a .live{margin-left:auto;background:var(--moss);color:#fff;font-size:9.5px;font-weight:700;
+  border-radius:999px;padding:1px 7px}
+.main{flex:1;background:var(--paper);min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card)}
+.top h3{font-family:'Fraunces',serif;font-size:18.5px;font-weight:500}
+.top .sub{font-size:11px;color:var(--ink-soft);margin-top:1px}
+.top .sp{margin-left:auto;display:flex;gap:8px;align-items:center}
+.content{padding:18px 20px;overflow:auto}
+
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:7px;
+  padding:6px 12px;font-size:12px;font-weight:600;display:inline-block}
+.btn.p{background:var(--oxblood);border-color:var(--oxblood);color:#fff}
+.btn.d{background:#fff;border-color:#E3C4BE;color:var(--danger)}
+.btn.g{background:var(--moss);border-color:var(--moss);color:#fff}
+.btn.s{padding:4px 9px;font-size:11px}
+.pill{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  padding:2px 8px;border-radius:999px}
+.pill.live{background:#E3EAD9;color:var(--moss)}
+.pill.sch{background:#F2E6C4;color:#8F681E}
+.pill.dr{background:#EAE2D2;color:var(--stamp-grey)}
+.pill.end{background:#EDE5D6;color:#8b7c63}
+.pill.pau{background:#F3DFDA;color:var(--oxblood)}
+
+.sect{font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);
+  margin:20px 0 9px;display:flex;align-items:center;gap:9px}
+.sect:first-child{margin-top:0}
+.sect::after{content:"";flex:1;height:1px;background:var(--line)}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft);
+  padding:0 10px 7px;font-weight:700}
+td{padding:11px 10px;border-top:1px solid var(--line);vertical-align:middle}
+tr.hl td{background:rgba(184,134,43,.07)}
+.tt{font-weight:600;font-size:13px}
+.ts{font-size:10.5px;color:var(--ink-soft);margin-top:2px}
+.aud{font-size:11px;color:var(--slate);font-weight:500}
+.num{font-family:'JetBrains Mono',monospace;font-size:12px}
+.num s{text-decoration:none;color:var(--ink-soft);font-size:10.5px}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 15px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.f{margin-bottom:11px}
+.f label{display:block;font-size:10.5px;font-weight:600;color:var(--ink-soft);margin-bottom:4px}
+.f .inp{background:var(--paper-deep);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:12.5px}
+.f .inp.ph{color:var(--stamp-grey)}
+.f .hint{font-size:10px;color:var(--stamp-grey);margin-top:4px;line-height:1.5}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tabs span{font-size:12px;font-weight:600;padding:8px 14px;color:var(--ink-soft);border-bottom:2px solid transparent}
+.tabs span.on{color:var(--oxblood);border-bottom-color:var(--oxblood)}
+.tabs span.add{color:var(--stamp-grey);font-weight:500}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg span{font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:7px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink-soft)}
+.seg span.on{background:var(--oxblood);border-color:var(--oxblood);color:#fff}
+.seg.sm span{font-size:10.5px;padding:4px 9px}
+/* Audience chip. NOT `.tag` — the hero paragraph is `.hero .tag`, and a bare
+   `.tag` rule leaks its inline-flex/padding/background into it (every property
+   the more-specific rule doesn't itself declare still applies). */
+.atag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;
+  border-radius:999px;background:#E8EEF4;color:var(--slate);border:1px solid #CFDDE8}
+.atag s{text-decoration:none;opacity:.6}
+.rule{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.rule:last-child{border-bottom:0}
+.rule .k{width:120px;font-weight:600;flex-shrink:0}
+.rule .v{flex:1;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.rule .off{color:var(--stamp-grey);font-size:11.5px}
+.est{background:linear-gradient(160deg,#F3EAD4,#EFE2C4);border:1px solid #E4CF9B;border-radius:10px;
+  padding:14px 15px;text-align:center}
+.est .n{font-family:'Fraunces',serif;font-size:34px;font-weight:600;color:var(--oxblood);line-height:1}
+.est .l{font-size:10.5px;color:#8F681E;font-weight:600;margin-top:4px;letter-spacing:.4px}
+.est .b{font-size:10.5px;color:var(--ink-soft);margin-top:9px;padding-top:9px;border-top:1px solid #E4CF9B;line-height:1.6}
+.kpi{display:flex;gap:10px}
+.kpi div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:11px 12px}
+.kpi .n{font-family:'Fraunces',serif;font-size:23px;font-weight:600;line-height:1}
+.kpi .l{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft);
+  font-weight:700;margin-top:4px}
+.kpi .warn .n{color:var(--oxblood)}
+.bars{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.brow{display:flex;align-items:center;gap:10px;font-size:11.5px}
+.brow .bn{width:96px;font-weight:600}
+.brow .bt{flex:1;height:16px;background:var(--paper-deep);border-radius:4px;overflow:hidden}
+.brow .bt i{display:block;height:100%;background:var(--slate);border-radius:4px}
+.brow .bt i.g{background:var(--moss)}
+.brow .bv{width:78px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft)}
+.mini{display:flex;gap:20px;align-items:flex-start}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>In-app promotions</h1>
+  <p class="tag">A <b>banner</b> and a <b>card</b> that appear only when you publish one from the console —
+  targeted by the languages a reader actually reads, written once per language, dismissible always,
+  and gone the moment the campaign ends. First-party only: <b>no ad SDK, no advertising identifier,
+  no new bill.</b> Design doc: <b>docs/promotions-plan.md</b>.</p>
+  <div class="toc">
+    <a href="#a1">1 · Nothing published</a>
+    <a href="#a2">2 · The banner</a>
+    <a href="#a3">3 · The card</a>
+    <a href="#a4">4 · Language targeting</a>
+    <a href="#a5">5 · Labels</a>
+    <a href="#a6">6 · Dismissal</a>
+    <a href="#a7">7 · Console — list</a>
+    <a href="#a8">8 · Console — content</a>
+    <a href="#a9">9 · Console — audience</a>
+    <a href="#a10">10 · Console — schedule</a>
+    <a href="#a11">11 · Console — results</a>
+    <a href="#a12">Notes</a>
+  </div>
+</div>
+
+<!-- ============================================================ 1 -->
+<div class="area" id="a1">
+  <div class="ah"><span class="an">1 · The default</span><h2>With nothing published, Home is exactly Home</h2></div>
+  <p class="desc">The promotion system's most common state is <b>off</b>. No slot, no placeholder,
+  no reserved height, no "no promotions right now" — the widgets simply aren't in the tree.
+  This is the same rule that just bit "Fresh on your shelf": a heading over an empty space reads
+  as a broken app, not an empty one.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="hd"><div class="t"><div>
+            <h3>Kitabi</h3><div class="g">Good afternoon</div>
+            <div class="d">Friday · 31 July</div></div>
+            <div class="ic"><span>⌕</span><span>▤</span><span>◍</span></div></div></div>
+          <div class="sl">Currently reading</div>
+          <div class="crd">
+            <div class="cover"><span>കീഴാളൻ</span></div>
+            <div class="m"><div class="ti ml">കീഴാളൻ</div><div class="au ml">പെരുമാൾ മുരുകൻ</div>
+              <div class="bar"><i style="width:24%"></i></div><div class="pg">p. 86 of 352 · 24%</div></div>
+            <div class="act"><span>▶</span><span>✎</span></div>
+          </div>
+          <div class="sl">Fresh on your shelf</div>
+          <div class="strip">
+            <div class="cover"><span>കീഴാളൻ</span></div>
+            <div class="cover dk"><span>Chemmeen</span></div>
+          </div>
+          <div class="goal"><div class="gl"><span>Reading goal</span><span>›</span></div>
+            <div class="gt">Set a goal for 2026 — even a small one.</div></div>
+          <div class="sl">Your shelves</div>
+          <div class="stats">
+            <div><div class="n">2</div><div class="l">OWNED</div></div>
+            <div><div class="n" style="color:var(--moss)">0</div><div class="l">READ</div></div>
+            <div><div class="n" style="color:var(--oxblood)">0</div><div class="l">LENT OUT</div></div>
+            <div><div class="n" style="color:var(--slate)">1</div><div class="l">WISHLIST</div></div>
+          </div>
+          <div class="quote"><div class="q">"A reader lives a thousand lives before he dies."</div>
+            <div class="a">— George R.R. Martin</div></div>
+        </div>
+        <div class="nav">
+          <div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Home · nothing live</b>Byte-for-byte the screen that ships today.
+      The promo query returned an empty list and no widget was built.
+      <span class="pro">The app is never worse for having the feature.</span></div>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>12:21</span><span>✈ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="hd"><div class="t"><div>
+            <h3>Kitabi</h3><div class="g">Good afternoon</div>
+            <div class="d">Friday · 31 July</div></div>
+            <div class="ic"><span>⌕</span><span>▤</span><span>◍</span></div></div></div>
+          <div class="pbanner"><i class="rule"></i><div class="in">
+            <span class="mk">✦</span>
+            <div class="tx"><div class="lb">From Kitabi</div>
+              <div class="hl">Trivandrum Book Fair — 5 to 9 August</div></div>
+            <span class="x">✕</span></div></div>
+          <div class="sl">Currently reading</div>
+          <div class="crd">
+            <div class="cover"><span>കീഴാളൻ</span></div>
+            <div class="m"><div class="ti ml">കീഴാളൻ</div><div class="au ml">പെരുമാൾ മുരുകൻ</div>
+              <div class="bar"><i style="width:24%"></i></div><div class="pg">p. 86 of 352 · 24%</div></div>
+            <div class="act"><span>▶</span><span>✎</span></div>
+          </div>
+          <div class="sl">Fresh on your shelf</div>
+          <div class="strip">
+            <div class="cover"><span>കീഴാളൻ</span></div>
+            <div class="cover dk"><span>Chemmeen</span></div>
+          </div>
+          <div class="goal"><div class="gl"><span>Reading goal</span><span>›</span></div>
+            <div class="gt">Set a goal for 2026 — even a small one.</div></div>
+          <div class="sl">Your shelves</div>
+          <div class="stats">
+            <div><div class="n">2</div><div class="l">OWNED</div></div>
+            <div><div class="n" style="color:var(--moss)">0</div><div class="l">READ</div></div>
+            <div><div class="n" style="color:var(--oxblood)">0</div><div class="l">LENT OUT</div></div>
+            <div><div class="n" style="color:var(--slate)">1</div><div class="l">WISHLIST</div></div>
+          </div>
+        </div>
+        <div class="fade"></div>
+        <div class="nav">
+          <div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Home · one banner live, offline</b>The strip costs ~46pt and pushes nothing
+      below the fold. Note the ✈ — it's rendering from the Drift cache with no network, and it will
+      disappear on its own at <code>expires_at</code>.
+      <span class="pro">A finished campaign dies on the device, not on the next fetch.</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 2 -->
+<div class="area" id="a2">
+  <div class="ah"><span class="an">2 · Surface one</span><h2>The banner — a strip, not a box</h2></div>
+  <p class="desc">One line, one optional mark, one dismiss. It truncates instead of wrapping, so a
+  long headline can never grow the strip and shove the currently-reading card off screen.
+  Three tones, and the tone is chosen by <i>what the promo is</i>, not by whoever writes it:
+  <b>gold</b> for Kitabi's own news, <b>slate</b> for a sponsored placement, <b>oxblood</b> for
+  the rare operational notice that can't be dismissed.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+      <div class="pbody" style="padding-top:14px">
+        <div class="sl" style="margin-top:0">Gold — from Kitabi</div>
+        <div class="pbanner"><i class="rule"></i><div class="in">
+          <span class="mk">✦</span><div class="tx"><div class="lb">From Kitabi</div>
+          <div class="hl">Trivandrum Book Fair — 5 to 9 August</div></div><span class="x">✕</span></div></div>
+
+        <div class="sl">Slate — a placement you sold</div>
+        <div class="pbanner spon"><i class="rule"></i><div class="in">
+          <span class="mk">◈</span><div class="tx"><div class="lb">Sponsored · DC Books</div>
+          <div class="hl">Onam sale — 30% off Malayalam fiction</div></div><span class="x">✕</span></div></div>
+
+        <div class="sl">Oxblood — operational, not dismissible</div>
+        <div class="pbanner crit"><i class="rule"></i><div class="in">
+          <span class="mk">⚠</span><div class="tx"><div class="lb">Service notice</div>
+          <div class="hl">Sync is delayed today — your books are safe</div></div></div></div>
+
+        <div class="sl">Truncation, not wrapping</div>
+        <div class="pbanner"><i class="rule"></i><div class="in">
+          <span class="mk">✦</span><div class="tx"><div class="lb">From Kitabi</div>
+          <div class="hl">A deliberately overlong headline that someone will absolutely write one day</div></div>
+          <span class="x">✕</span></div></div>
+        <div style="font-size:8px;color:var(--stamp-grey);margin-top:6px;line-height:1.5">
+          The console counts characters and warns past 42 — but the app never trusts it.</div>
+      </div>
+      <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+        <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <div class="cap"><b>The three tones, and the overflow case</b>The 3px coloured rule is a
+      child <code>Container</code> inside a uniformly-bordered, clipped box — never a non-uniform
+      <code>Border()</code> with a <code>borderRadius</code>, which throws at paint time and renders
+      a blank rectangle (CLAUDE.md, 21 Jul 2026).
+      <span class="con">Only the operational tone may set <code>dismissible: false</code>.</span></div>
+    </div>
+
+    <div class="shot" style="width:600px">
+      <div class="panel" style="width:600px">
+        <div class="sect">What the banner is for</div>
+        <p style="font-size:13px;line-height:1.75;color:#6d5f4b">
+          One sentence a reader can act on or ignore in under a second: an event, a new platform,
+          a sale, a notice. It is <b>not</b> for anything that needs explaining — that's the card.
+          If a banner needs a second line, it was the wrong surface.</p>
+        <div class="sect">Rules the code enforces</div>
+        <table>
+          <tr><td style="width:180px"><b>One at a time</b></td>
+            <td>Highest <code>priority</code> wins; ties break on the older <code>starts_at</code>.
+            A deterministic rule beats a random one when you're debugging "why didn't mine show".</td></tr>
+          <tr><td><b>Impression on sight</b></td>
+            <td>Counted when the widget is actually visible, never on fetch — otherwise every
+            metric in §11 is a lie.</td></tr>
+          <tr><td><b>Cooldown</b></td>
+            <td><code>min_hours_between</code>, default 24. The same strip on every cold start is
+            how a promo becomes a grievance.</td></tr>
+          <tr><td><b>Dies locally</b></td>
+            <td><code>expires_at</code> is in the cached row, so an ended campaign vanishes
+            offline too.</td></tr>
+          <tr><td style="border-bottom:0"><b>Never over reading</b></td>
+            <td style="border-bottom:0">No promo surface exists on the reading timer, the book
+            page's Yours tab, or any modal. Interrupting a sitting is not a growth tactic.</td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 3 -->
+<div class="area" id="a3">
+  <div class="ah"><span class="an">3 · Surface two</span><h2>The card — three shapes, all drawn by Kitabi</h2></div>
+  <p class="desc">The card sits in the Home stream where the recommendations entry already sits,
+  with the same weight. An advertiser never controls the frame — they supply <i>an image, a
+  headline, two lines and a link</i>, and Kitabi draws the rest. That's the difference between a
+  promotion and an ad slot, and it's the whole reason the app can carry one without looking cheap.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+      <div class="pbody" style="padding-top:12px">
+        <div class="sl" style="margin-top:0">Book-led — the best one</div>
+        <div class="pcard">
+          <div class="lbrow"><span class="lb">From Kitabi</span><span class="x">✕</span></div>
+          <div class="bookrow">
+            <div class="cover rd" style="width:44px;height:64px"><span>ആടുജീവിതം</span></div>
+            <div class="bm"><h4 class="ml" style="font-size:12.5px">ആടുജീവിതം</h4>
+              <p>Benyamin · Malayalam · 2008 — the most borrowed book on Kitabi this month.</p>
+              <span class="cta">Look inside ›</span></div>
+          </div>
+        </div>
+
+        <div class="sl">Image-led</div>
+        <div class="pcard">
+          <div class="img fair"><div class="deco"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="sp"></div><span class="x">✕</span>
+            <div class="ov"><div class="lb">Sponsored · Kerala Lit Fest</div>
+              <h4>Three days of writers by the sea</h4></div></div>
+          <div class="bd"><p>Kozhikode Beach · 8–10 August. Passes from ₹300.</p>
+            <span class="cta">Get a pass ›</span></div>
+        </div>
+
+        <div class="sl">Text-led — no artwork needed</div>
+        <div class="pcard dark">
+          <div class="lbrow"><span class="lb">From Kitabi</span><span class="x">✕</span></div>
+          <div class="bd"><h4>Kitabi is on Android now</h4>
+            <p>Same library, same shelf, same lending — on both phones in the house.</p>
+            <span class="cta">Tell a friend ›</span></div>
+        </div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+        <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <div class="cap"><b>The three card styles</b>Shown stacked for comparison only — the app
+      renders <b>one</b>. Book-led links a real catalog Work by id, so the CTA deep-links straight
+      to the book page and the reader can wishlist it in one more tap.
+      <span class="pro">A promotion that ends inside the app beats one that ejects to a browser.</span></div>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+      <div class="pbody">
+        <div class="hd"><div class="t"><div><h3>Kitabi</h3><div class="g">Good afternoon</div>
+          <div class="d">Friday · 31 July</div></div>
+          <div class="ic"><span>⌕</span><span>▤</span><span>◍</span></div></div></div>
+        <div class="sl">Currently reading</div>
+        <div class="crd">
+          <div class="cover"><span>കീഴാളൻ</span></div>
+          <div class="m"><div class="ti ml">കീഴാളൻ</div><div class="au ml">പെരുമാൾ മുരുകൻ</div>
+            <div class="bar"><i style="width:24%"></i></div><div class="pg">p. 86 of 352 · 24%</div></div>
+          <div class="act"><span>▶</span><span>✎</span></div></div>
+        <div class="sl">Fresh on your shelf</div>
+        <div class="strip"><div class="cover"><span>കീഴാളൻ</span></div>
+          <div class="cover dk"><span>Chemmeen</span></div></div>
+        <div class="goal"><div class="gl"><span>Reading goal</span><span>›</span></div>
+          <div class="gt">Set a goal for 2026 — even a small one.</div></div>
+        <div class="sl">Your shelves</div>
+        <div class="stats">
+          <div><div class="n">2</div><div class="l">OWNED</div></div>
+          <div><div class="n" style="color:var(--moss)">0</div><div class="l">READ</div></div>
+          <div><div class="n" style="color:var(--oxblood)">0</div><div class="l">LENT OUT</div></div>
+          <div><div class="n" style="color:var(--slate)">1</div><div class="l">WISHLIST</div></div>
+        </div>
+        <div class="pcard">
+          <div class="lbrow"><span class="lb">From Kitabi</span><span class="x">✕</span></div>
+          <div class="bookrow">
+            <div class="cover rd" style="width:44px;height:64px"><span>ആടുജീവിതം</span></div>
+            <div class="bm"><h4 class="ml" style="font-size:12.5px">ആടുജീവിതം</h4>
+              <p>Benyamin · the most borrowed book on Kitabi this month.</p>
+              <span class="cta">Look inside ›</span></div></div>
+        </div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+        <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <div class="cap"><b>In place — below "Your shelves"</b>The card is the <i>last</i> thing before
+      the quote, deliberately: Home opens on what you're reading, not on a pitch. A reader who never
+      scrolls never sees it — and never gets an impression counted against them.</div>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+      <div class="pbody">
+        <div class="hd"><div class="t"><div><h3>Kitabi</h3><div class="g">Good afternoon</div>
+          <div class="d">Friday · 31 July</div></div>
+          <div class="ic"><span>⌕</span><span>▤</span><span>◍</span></div></div></div>
+        <div class="pbanner"><i class="rule"></i><div class="in"><span class="mk">✦</span>
+          <div class="tx"><div class="lb">From Kitabi</div>
+          <div class="hl">Trivandrum Book Fair — 5 to 9 August</div></div><span class="x">✕</span></div></div>
+        <div class="sl">Currently reading</div>
+        <div class="crd">
+          <div class="cover"><span>കീഴാളൻ</span></div>
+          <div class="m"><div class="ti ml">കീഴാളൻ</div><div class="au ml">പെരുമാൾ മുരുകൻ</div>
+            <div class="bar"><i style="width:24%"></i></div><div class="pg">p. 86 of 352 · 24%</div></div>
+          <div class="act"><span>▶</span><span>✎</span></div></div>
+        <div class="sl">Fresh on your shelf</div>
+        <div class="strip"><div class="cover"><span>കീഴാളൻ</span></div>
+          <div class="cover dk"><span>Chemmeen</span></div></div>
+        <div class="goal"><div class="gl"><span>Reading goal</span><span>›</span></div>
+          <div class="gt">Set a goal for 2026 — even a small one.</div></div>
+        <div class="sl">Your shelves</div>
+        <div class="stats">
+          <div><div class="n">2</div><div class="l">OWNED</div></div>
+          <div><div class="n" style="color:var(--moss)">0</div><div class="l">READ</div></div>
+          <div><div class="n" style="color:var(--oxblood)">0</div><div class="l">LENT OUT</div></div>
+          <div><div class="n" style="color:var(--slate)">1</div><div class="l">WISHLIST</div></div>
+        </div>
+        <div class="pcard dark">
+          <div class="lbrow"><span class="lb">From Kitabi</span><span class="x">✕</span></div>
+          <div class="bd"><h4>Kitabi is on Android now</h4>
+            <p>Same library, same shelf, same lending.</p><span class="cta">Tell a friend ›</span></div>
+        </div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+        <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <div class="cap"><b>The absolute maximum: one + one</b>This is the loudest Home can ever be,
+      and it takes two separate live campaigns to get here.
+      <span class="con">There is no configuration that produces a third. The serve query caps
+      per placement before the payload is built, so a bug in the app can't stack them either.</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 4 -->
+<div class="area" id="a4">
+  <div class="ah"><span class="an">4 · The headline feature</span><h2>A Malayalam promo reaches Malayalam readers — in Malayalam</h2></div>
+  <p class="desc">Two mechanisms that people usually conflate, kept separate on purpose.
+  <b>Targeting</b> decides who is eligible. <b>Content variants</b> decide which words they see.
+  One campaign carries both language versions, and each reader gets theirs — so you write the promo
+  once, not twice, and you don't end up with two campaigns whose schedules drift apart.
+  The source is <code>profiles.preferred_languages</code>: what the reader chose at onboarding,
+  the same field that already filters Discover.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+      <div class="pbody">
+        <div class="hd"><div class="t"><div><h3>Kitabi</h3>
+          <div class="g">Good afternoon, Anjali</div><div class="d">Friday · 31 July</div></div>
+          <div class="ic"><span>⌕</span><span>▤</span><span>◍</span></div></div></div>
+        <div class="pbanner"><i class="rule"></i><div class="in"><span class="mk">✦</span>
+          <div class="tx"><div class="lb">From Kitabi</div>
+          <div class="hl ml" style="font-size:9px">തിരുവനന്തപുരം പുസ്തകോത്സവം — ഓഗസ്റ്റ് 5 മുതൽ 9 വരെ</div></div>
+          <span class="x">✕</span></div></div>
+        <div class="sl">Currently reading</div>
+        <div class="crd">
+          <div class="cover"><span>കീഴാളൻ</span></div>
+          <div class="m"><div class="ti ml">കീഴാളൻ</div><div class="au ml">പെരുമാൾ മുരുകൻ</div>
+            <div class="bar"><i style="width:24%"></i></div><div class="pg">p. 86 of 352 · 24%</div></div>
+          <div class="act"><span>▶</span><span>✎</span></div></div>
+        <div class="sl">Your shelves</div>
+        <div class="stats">
+          <div><div class="n">14</div><div class="l">OWNED</div></div>
+          <div><div class="n" style="color:var(--moss)">6</div><div class="l">READ</div></div>
+          <div><div class="n" style="color:var(--oxblood)">1</div><div class="l">LENT OUT</div></div>
+          <div><div class="n" style="color:var(--slate)">3</div><div class="l">WISHLIST</div></div>
+        </div>
+        <div class="pcard">
+          <div class="lbrow"><span class="lb">From Kitabi</span><span class="x">✕</span></div>
+          <div class="bookrow">
+            <div class="cover rd" style="width:44px;height:64px"><span>ആടുജീവിതം</span></div>
+            <div class="bm"><h4 class="ml" style="font-size:12.5px">ഓണം വായനക്കാലം</h4>
+              <p class="ml" style="font-size:8.5px">മലയാളം പുസ്തകങ്ങൾക്ക് 30% വരെ കിഴിവ് — ഓഗസ്റ്റ് 9 വരെ.</p>
+              <span class="cta ml" style="font-size:8.5px">കാണുക ›</span></div></div>
+        </div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+        <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <div class="cap"><b>Anjali · reads Malayalam, English</b>Eligible, and her first listed
+      language has a variant — so she gets the Malayalam copy.
+      <span class="pro">Same campaign id, same schedule, same metrics bucket.</span></div>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+      <div class="pbody">
+        <div class="hd"><div class="t"><div><h3>Kitabi</h3>
+          <div class="g">Good afternoon, Ravi</div><div class="d">Friday · 31 July</div></div>
+          <div class="ic"><span>⌕</span><span>▤</span><span>◍</span></div></div></div>
+        <div class="pbanner"><i class="rule"></i><div class="in"><span class="mk">✦</span>
+          <div class="tx"><div class="lb">From Kitabi</div>
+          <div class="hl">Trivandrum Book Fair — 5 to 9 August</div></div><span class="x">✕</span></div></div>
+        <div class="sl">Currently reading</div>
+        <div class="crd">
+          <div class="cover dk"><span>The Covenant of Water</span></div>
+          <div class="m"><div class="ti">The Covenant of Water</div><div class="au">Abraham Verghese</div>
+            <div class="bar"><i style="width:42%"></i></div><div class="pg">p. 302 of 724 · 42%</div></div>
+          <div class="act"><span>▶</span><span>✎</span></div></div>
+        <div class="sl">Your shelves</div>
+        <div class="stats">
+          <div><div class="n">31</div><div class="l">OWNED</div></div>
+          <div><div class="n" style="color:var(--moss)">12</div><div class="l">READ</div></div>
+          <div><div class="n" style="color:var(--oxblood)">2</div><div class="l">LENT OUT</div></div>
+          <div><div class="n" style="color:var(--slate)">5</div><div class="l">WISHLIST</div></div>
+        </div>
+        <div class="pcard">
+          <div class="lbrow"><span class="lb">From Kitabi</span><span class="x">✕</span></div>
+          <div class="bookrow">
+            <div class="cover rd" style="width:44px;height:64px"><span>Goat Days</span></div>
+            <div class="bm"><h4 style="font-size:12.5px">Onam reading season</h4>
+              <p>Up to 30% off Malayalam fiction and its translations — until 9 August.</p>
+              <span class="cta">Browse ›</span></div></div>
+        </div>
+      </div>
+      <div class="fade"></div>
+      <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+        <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <div class="cap"><b>Ravi · reads English only</b>Still eligible (the campaign targets
+      <code>["Malayalam","English"]</code>), no Malayalam variant applies, so he falls through to
+      the default English copy — and a translated edition as the book.
+      <span class="pro">One campaign, two audiences, no duplicate rows to keep in sync.</span></div>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+      <div class="pbody">
+        <div class="hd"><div class="t"><div><h3>Kitabi</h3>
+          <div class="g">Good afternoon, Meera</div><div class="d">Friday · 31 July</div></div>
+          <div class="ic"><span>⌕</span><span>▤</span><span>◍</span></div></div></div>
+        <div class="sl">Currently reading</div>
+        <div class="crd">
+          <div class="cover" style="background:linear-gradient(150deg,#4A6B5C,#25382E)">
+            <span style="color:#EFE6C8">Ponniyin Selvan</span></div>
+          <div class="m"><div class="ti">Ponniyin Selvan</div><div class="au">Kalki</div>
+            <div class="bar"><i style="width:61%"></i></div><div class="pg">p. 540 of 890 · 61%</div></div>
+          <div class="act"><span>▶</span><span>✎</span></div></div>
+        <div class="sl">Fresh on your shelf</div>
+        <div class="strip"><div class="cover dk"><span>Ponniyin Selvan</span></div>
+          <div class="cover ox"><span>Silappatikaram</span></div></div>
+        <div class="goal"><div class="gl"><span>Reading goal</span><span>›</span></div>
+          <div class="gt">9 of 24 books this year.</div></div>
+        <div class="sl">Your shelves</div>
+        <div class="stats">
+          <div><div class="n">22</div><div class="l">OWNED</div></div>
+          <div><div class="n" style="color:var(--moss)">9</div><div class="l">READ</div></div>
+          <div><div class="n" style="color:var(--oxblood)">0</div><div class="l">LENT OUT</div></div>
+          <div><div class="n" style="color:var(--slate)">4</div><div class="l">WISHLIST</div></div>
+        </div>
+        <div class="quote"><div class="q">"A reader lives a thousand lives before he dies."</div>
+          <div class="a">— George R.R. Martin</div></div>
+      </div>
+      <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+        <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <div class="cap"><b>Meera · reads Tamil only</b>Not targeted, so <b>nothing is sent to her
+      device at all</b> — not hidden client-side, not delivered and filtered. Her Home is the
+      no-promotions Home from §1.
+      <span class="pro">The device never learns a campaign it isn't in existed. That's the privacy
+      argument for resolving targeting on the server, and it's the main one.</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 5 -->
+<div class="area" id="a5">
+  <div class="ah"><span class="an">5 · Disclosure</span><h2>Labelled, always, in the app's own small-caps voice</h2></div>
+  <p class="desc">Every promotion carries a label in the same treatment as
+  <span class="mono" style="font-size:11px">CURRENTLY READING</span> and
+  <span class="mono" style="font-size:11px">YOUR SHELVES</span> — it belongs to the page rather than
+  shouting over it. <b>No sponsor set</b> → "From Kitabi". <b>Sponsor set</b> → "Sponsored · {name}".
+  There is no third option and no way to publish without one; the label is derived from the data, not
+  typed by the author.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+      <div class="pbody" style="padding-top:14px">
+        <div class="sl" style="margin-top:0">Kitabi's own — gold</div>
+        <div class="pcard dark"><div class="lbrow"><span class="lb">From Kitabi</span><span class="x">✕</span></div>
+          <div class="bd"><h4>Kitabi is on Android now</h4>
+            <p>Same library, same shelf, same lending.</p><span class="cta">Tell a friend ›</span></div></div>
+        <div class="sl">A placement you sold — slate</div>
+        <div class="pcard"><div class="lbrow"><span class="lb s">Sponsored · DC Books</span><span class="x">✕</span></div>
+          <div class="bookrow"><div class="cover rd" style="width:44px;height:64px"><span>ആടുജീവിതം</span></div>
+            <div class="bm"><h4 style="font-size:12.5px">Onam sale</h4>
+              <p>30% off Malayalam fiction until 9 August.</p><span class="cta g">Browse ›</span></div></div></div>
+        <div class="sl">And in the reader's own hands</div>
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin-top:5px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <div style="flex:1"><div style="font-size:10.5px;font-weight:600">Show promotions from Kitabi</div>
+              <div style="font-size:8.5px;color:var(--ink-soft);line-height:1.5;margin-top:2px">
+                Occasional news and offers on Home. Chosen from the languages you read — never from
+                anything you've written.</div></div>
+            <div style="width:32px;height:19px;border-radius:99px;background:var(--oxblood);position:relative;flex-shrink:0">
+              <span style="position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#F6F0E3"></span></div>
+          </div></div>
+        <div style="font-size:8px;color:var(--stamp-grey);margin-top:7px;line-height:1.5">
+          Profile → Preferences. Default on. Respected by the serve query, not by hiding the widget.</div>
+      </div>
+      <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+        <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <div class="cap"><b>Two labels, and one switch</b>Nobody requires the opt-out. But an app whose
+      pitch is that it isn't the attention economy, which then makes its own promos unavoidable, is
+      arguing with itself.
+      <span class="pro">Turning it off filters at the API, so the device stops receiving campaigns
+      rather than silently downloading and hiding them.</span></div>
+    </div>
+
+    <div class="shot" style="width:620px">
+      <div class="panel" style="width:620px">
+        <div class="sect">Why this matters more than it looks</div>
+        <table>
+          <tr><td style="width:150px"><b>Store policy</b></td>
+            <td>Both stores require paid placements to be identifiable as advertising. A derived
+            label can't be forgotten by whoever writes the campaign at 11pm.</td></tr>
+          <tr><td><b>No ATT prompt</b></td>
+            <td>Targeting reads the reader's own languages and library — no advertising identifier,
+            no cross-app tracking, so no App Tracking Transparency dialog and no tracking domains
+            in the iOS privacy manifest. Play's Data Safety form barely changes.</td></tr>
+          <tr><td><b>Never sensitive</b></td>
+            <td>Language here is a reading preference the reader typed in. Keep it that way: no
+            targeting rule may be built that turns it into a proxy for anything else.</td></tr>
+          <tr><td style="border-bottom:0"><b>Say it in the policy</b></td>
+            <td style="border-bottom:0">One paragraph on the existing privacy page — that Kitabi
+            shows its own promotions, chosen server-side from language and library, and counts
+            engagement. Ships in the same release as the feature, not after it.</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 6 -->
+<div class="area" id="a6">
+  <div class="ah"><span class="an">6 · Interaction</span><h2>Dismissal is instant, offline, and permanent</h2></div>
+  <p class="desc">Tapping ✕ writes <code>dismissedAt</code> to Drift and the widget is gone on the
+  next frame — no network in the path, because the one thing worse than an unwanted promo is an
+  unwanted promo that won't close on a bad connection. The event goes to a small local outbox and
+  drains later, so the server stops serving it to that reader's other devices too.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+      <div class="pbody" style="padding-top:12px">
+        <div class="sl" style="margin-top:0">1 · There</div>
+        <div class="pbanner"><i class="rule"></i><div class="in"><span class="mk">✦</span>
+          <div class="tx"><div class="lb">From Kitabi</div>
+          <div class="hl">Trivandrum Book Fair — 5 to 9 August</div></div>
+          <span class="x" style="color:var(--oxblood);font-size:13px">✕</span></div></div>
+        <div class="sl">2 · Tapped</div>
+        <div class="pbanner ghost"><i class="rule"></i><div class="in"><span class="mk">✦</span>
+          <div class="tx"><div class="lb">From Kitabi</div>
+          <div class="hl">Trivandrum Book Fair — 5 to 9 August</div></div><span class="x">✕</span></div></div>
+        <div class="sl">3 · Gone — nothing left behind</div>
+        <div class="gone">no reserved space, no "dismissed" placeholder</div>
+        <div class="sl">4 · One quiet undo</div>
+        <div style="position:relative;height:44px">
+          <div class="toast" style="position:static;margin-top:4px">Hidden. You won't see it again.<b>UNDO</b></div>
+        </div>
+        <div style="font-size:8px;color:var(--stamp-grey);margin-top:9px;line-height:1.55">
+          The toast is the <i>only</i> second chance — there is no "restore promotions" setting.
+          A dismissal the reader can't find their way back out of is fine; one they can't make
+          stick is not.</div>
+      </div>
+      <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+        <div><span class="plus">+</span></div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <div class="cap"><b>The four states</b>Collapse is a 150ms size transition, not a fade —
+      the surrounding content moving up is what tells the reader it worked.</div>
+    </div>
+
+    <div class="shot" style="width:660px">
+      <div class="panel" style="width:660px">
+        <div class="sect">What happens underneath</div>
+        <table>
+          <tr><td style="width:130px"><b>Drift, now</b></td>
+            <td><code>dismissedAt = now()</code> on the cached row. The <code>StreamProvider</code>
+            re-emits, Home rebuilds without it. No await, no spinner.</td></tr>
+          <tr><td><b>Outbox</b></td>
+            <td>A <code>dismiss</code> event with a <b>client-generated uuid</b> into
+            <code>PromotionEventQueue</code> — so a retried batch is idempotent, exactly as the
+            sync engine's op UUIDs already work.</td></tr>
+          <tr><td><b>Not the sync queue</b></td>
+            <td>Promo events are append-only facts with no updates, no deletes, no conflicts.
+            Putting them through <code>sync_queue</code> would drag <code>server_seq</code> cursors,
+            LWW and conflict-history rows into a case that needs none of them — and would put
+            marketing telemetry in the same retry path as a reader's library, where a promo hiccup
+            could stall real data.</td></tr>
+          <tr><td><b>Drop, don't hoard</b></td>
+            <td>Five attempts, exponential backoff, then discard. A lost impression count is not
+            worth a queue that never empties.</td></tr>
+          <tr><td style="border-bottom:0"><b>Across devices</b></td>
+            <td style="border-bottom:0">Once the event lands, the serve query excludes it
+            everywhere. Until then the reader's other phone may show it once more — the honest
+            cost of offline-first, written down here so nobody files it as a bug later.</td></tr>
+        </table>
+        <div class="sect">Frequency, if you don't want to rely on dismissal</div>
+        <div class="grid3">
+          <div><div style="font-size:11px;font-weight:700;color:var(--ink-soft)">MAX IMPRESSIONS</div>
+            <div style="font-size:12.5px;margin-top:4px;line-height:1.5">Stop after N views by that
+            reader. Default off.</div></div>
+          <div><div style="font-size:11px;font-weight:700;color:var(--ink-soft)">COOLDOWN</div>
+            <div style="font-size:12.5px;margin-top:4px;line-height:1.5">Hours between showings.
+            Default 24 — not zero, deliberately.</div></div>
+          <div><div style="font-size:11px;font-weight:700;color:var(--ink-soft)">RE-SHOW AFTER</div>
+            <div style="font-size:12.5px;margin-top:4px;line-height:1.5">Days before a dismissed
+            promo may return. Default <b>never</b>.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 7 -->
+<div class="area" id="a7">
+  <div class="ah"><span class="an">7 · Console</span><h2>Promotions — the list</h2></div>
+  <p class="desc">A new nav group in <span class="mono" style="font-size:11.5px">admin.kitabi.in</span>,
+  editor-and-above. Every row says its audience <i>in words</i> — "Malayalam readers on Android" —
+  because a targeting rule you have to decode is a targeting rule you will get wrong. Live rows carry
+  a one-click <b>Stop now</b> with no confirmation dialog: when a promo is wrong you want it gone in
+  one tap, and pausing is reversible.</p>
+  <div class="row">
+    <div class="win">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="addr">admin.kitabi.in/promotions</span></div>
+      <div class="wbody">
+        <div class="rail">
+          <div class="brand"><i>K</i><div><b>Kitabi</b><s>ADMIN</s></div></div>
+          <div class="grp">OVERVIEW</div>
+          <a href="#">Dashboard</a>
+          <div class="grp">MODERATION</div>
+          <a href="#">Author claims<span class="n">3</span></a>
+          <a href="#">Suggested edits<span class="n">7</span></a>
+          <a href="#">Reported content<span class="n">2</span></a>
+          <div class="grp">PROMOTIONS</div>
+          <a href="#" class="on">Campaigns<span class="live">2</span></a>
+          <div class="grp">CATALOG</div>
+          <a href="#">Works &amp; editions</a><a href="#">Authors</a><a href="#">Publishers</a>
+          <div class="grp">PEOPLE</div>
+          <a href="#">Readers</a><a href="#">Admin users</a>
+          <div class="grp">TRUST</div>
+          <a href="#">Audit log</a>
+        </div>
+        <div class="main">
+          <div class="top"><div><h3>Campaigns</h3>
+            <div class="sub">2 live · 1 scheduled · 1 draft · 3 ended</div></div>
+            <div class="sp"><span class="btn">Import copy</span><span class="btn p">+ New campaign</span></div></div>
+          <div class="content">
+
+            <div class="sect">Live now</div>
+            <table>
+              <tr><th style="width:32%">Campaign</th><th>Surface</th><th>Audience</th>
+                <th>Runs</th><th style="text-align:right">Seen</th><th style="text-align:right">Clicked</th>
+                <th style="text-align:right">Dismissed</th><th></th></tr>
+              <tr>
+                <td><div class="tt">Trivandrum Book Fair</div>
+                  <div class="ts">Banner · from Kitabi · <span class="mono">ml</span> + <span class="mono">default</span></div></td>
+                <td><span class="pill live">Live</span><div class="ts">Home top</div></td>
+                <td class="aud">Malayalam &amp; English readers<div class="ts">all platforms · 14+ books</div></td>
+                <td class="num">28 Jul → 9 Aug<div class="ts">9 days left</div></td>
+                <td class="num" style="text-align:right">1,204<s> / 402 readers</s></td>
+                <td class="num" style="text-align:right">96<div class="ts">8.0%</div></td>
+                <td class="num" style="text-align:right">51<div class="ts">4.2%</div></td>
+                <td style="text-align:right"><span class="btn s d">Stop now</span></td>
+              </tr>
+              <tr class="hl">
+                <td><div class="tt">Onam reading season</div>
+                  <div class="ts">Card · sponsored · DC Books · <span class="mono">ml</span> + <span class="mono">default</span></div></td>
+                <td><span class="pill live">Live</span><div class="ts">Home stream</div></td>
+                <td class="aud">Malayalam readers<div class="ts">iOS + Android · any library</div></td>
+                <td class="num">30 Jul → 9 Aug<div class="ts">9 days left</div></td>
+                <td class="num" style="text-align:right">318<s> / 187 readers</s></td>
+                <td class="num" style="text-align:right">44<div class="ts">13.8%</div></td>
+                <td class="num" style="text-align:right;color:var(--oxblood);font-weight:600">71
+                  <div class="ts" style="color:var(--oxblood)">22.3% — high</div></td>
+                <td style="text-align:right"><span class="btn s d">Stop now</span></td>
+              </tr>
+            </table>
+
+            <div class="sect">Scheduled</div>
+            <table>
+              <tr>
+                <td style="width:32%"><div class="tt">Kitabi on Android</div>
+                  <div class="ts">Card · text-led · from Kitabi</div></td>
+                <td><span class="pill sch">Scheduled</span><div class="ts">Home stream</div></td>
+                <td class="aud">iOS readers only<div class="ts">so nobody is told about the app they're on</div></td>
+                <td class="num">12 Aug → open-ended</td>
+                <td colspan="3" class="ts" style="text-align:right">estimated audience 1,102</td>
+                <td style="text-align:right"><span class="btn s">Edit</span></td>
+              </tr>
+            </table>
+
+            <div class="sect">Draft</div>
+            <table>
+              <tr>
+                <td style="width:32%"><div class="tt">Kerala Lit Fest</div>
+                  <div class="ts">Card · image-led · sponsored</div></td>
+                <td><span class="pill dr">Draft</span><div class="ts">Home stream</div></td>
+                <td class="aud">— no audience set</td>
+                <td class="num ts">no dates</td>
+                <td colspan="3" class="ts" style="text-align:right">missing: Malayalam copy, end date</td>
+                <td style="text-align:right"><span class="btn s">Edit</span></td>
+              </tr>
+            </table>
+
+            <div class="sect">Ended</div>
+            <table>
+              <tr>
+                <td style="width:32%"><div class="tt">World Book Day</div><div class="ts">Banner · from Kitabi</div></td>
+                <td><span class="pill end">Ended</span><div class="ts">Home top</div></td>
+                <td class="aud">everyone</td>
+                <td class="num">23 Apr → 24 Apr</td>
+                <td class="num" style="text-align:right">2,940</td>
+                <td class="num" style="text-align:right">211<div class="ts">7.2%</div></td>
+                <td class="num" style="text-align:right">88<div class="ts">3.0%</div></td>
+                <td style="text-align:right"><span class="btn s">Duplicate</span></td>
+              </tr>
+              <tr>
+                <td><div class="tt">Import your Goodreads shelf</div><div class="ts">Card · text-led</div></td>
+                <td><span class="pill pau">Paused</span><div class="ts">Home stream</div></td>
+                <td class="aud">readers with 0 books<div class="ts">account &lt; 7 days</div></td>
+                <td class="num">3 Jun → stopped 11 Jun</td>
+                <td class="num" style="text-align:right">407</td>
+                <td class="num" style="text-align:right">130<div class="ts">31.9%</div></td>
+                <td class="num" style="text-align:right">12<div class="ts">2.9%</div></td>
+                <td style="text-align:right"><span class="btn s">Duplicate</span></td>
+              </tr>
+            </table>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><i></i><div><b>The number to actually watch is the dismissal rate, not the clicks.</b>
+  "Onam reading season" is the best-performing campaign on the page by CTR and the worst by a mile
+  by dismissals — 22% of the readers who saw it went out of their way to close it. Click-through
+  says a promo was interesting to some; dismissal rate says it was unwelcome to many. The list turns
+  it oxblood past 20% so it can't be read as a success by accident.</div></div>
+</div>
+
+<!-- ============================================================ 8 -->
+<div class="area" id="a8">
+  <div class="ah"><span class="an">8 · Console</span><h2>Composer — the words, once per language</h2></div>
+  <p class="desc">The language variants are <b>tabs on one form</b>, not separate campaigns. You write
+  the Malayalam next to the English, they share a schedule and a metrics bucket, and there is no way
+  for one to run three days longer than the other because somebody edited one row and not the other.
+  The live phone preview beside the form is the actual promo widget, in the variant you're editing.</p>
+  <div class="row">
+    <div class="win">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="addr">admin.kitabi.in/promotions/new</span></div>
+      <div class="wbody">
+        <div class="rail">
+          <div class="brand"><i>K</i><div><b>Kitabi</b><s>ADMIN</s></div></div>
+          <div class="grp">OVERVIEW</div><a href="#">Dashboard</a>
+          <div class="grp">MODERATION</div><a href="#">Author claims<span class="n">3</span></a>
+          <a href="#">Suggested edits<span class="n">7</span></a><a href="#">Reported content<span class="n">2</span></a>
+          <div class="grp">PROMOTIONS</div><a href="#" class="on">Campaigns<span class="live">2</span></a>
+          <div class="grp">CATALOG</div><a href="#">Works &amp; editions</a><a href="#">Authors</a><a href="#">Publishers</a>
+          <div class="grp">PEOPLE</div><a href="#">Readers</a><a href="#">Admin users</a>
+          <div class="grp">TRUST</div><a href="#">Audit log</a>
+        </div>
+        <div class="main">
+          <div class="top"><div><h3>Onam reading season</h3>
+            <div class="sub">Draft · created by you, 2 minutes ago</div></div>
+            <div class="sp"><span class="btn">Save draft</span><span class="btn p">Review &amp; schedule</span></div></div>
+          <div class="content">
+            <div class="tabs"><span class="on">Content</span><span>Audience</span>
+              <span>Schedule &amp; frequency</span><span>Preview</span></div>
+            <div style="display:flex;gap:22px">
+              <div style="flex:1;min-width:0">
+
+                <div class="sect">Surface</div>
+                <div class="grid2">
+                  <div class="f"><label>Where it appears</label>
+                    <div class="seg"><span>Banner · Home top</span><span class="on">Card · Home stream</span></div></div>
+                  <div class="f"><label>Card style</label>
+                    <div class="seg sm"><span class="on">Book-led</span><span>Image</span><span>Text only</span></div></div>
+                </div>
+                <div class="f"><label>Attribution</label>
+                  <div class="grid2"><div class="inp">Sponsored — a paid placement</div>
+                    <div class="inp">DC Books</div></div>
+                  <div class="hint">Leave the sponsor blank for "From Kitabi". The label is derived
+                  from this field — it can't be typed, and it can't be left off.</div></div>
+                <div class="f"><label>The book (book-led cards)</label>
+                  <div class="inp">ആടുജീവിതം — Benyamin · Malayalam · DC Books, 2008</div>
+                  <div class="hint">A real catalog Work. The CTA deep-links to its book page, so the
+                  reader can wishlist it without leaving the app.</div></div>
+
+                <div class="sect">Copy</div>
+                <div class="tabs" style="margin-bottom:12px">
+                  <span>Default (English)</span><span class="on ml">Malayalam</span><span class="add">+ Add a language</span></div>
+                <div class="f"><label>Headline <s style="float:right;color:var(--stamp-grey);font-weight:400">18 / 42</s></label>
+                  <div class="inp ml">ഓണം വായനക്കാലം</div></div>
+                <div class="f"><label>Body <s style="float:right;color:var(--stamp-grey);font-weight:400">54 / 120</s></label>
+                  <div class="inp ml">മലയാളം പുസ്തകങ്ങൾക്ക് 30% വരെ കിഴിവ് — ഓഗസ്റ്റ് 9 വരെ.</div></div>
+                <div class="grid2">
+                  <div class="f"><label>Button</label><div class="inp ml">കാണുക</div></div>
+                  <div class="f"><label>Tapping it does</label><div class="inp">Opens the book page</div></div>
+                </div>
+                <div class="f"><label>Image <s style="float:right;color:var(--stamp-grey);font-weight:400">optional</s></label>
+                  <div class="inp ph">none — the book cover is used</div>
+                  <div class="hint">Uploads to the promo-assets R2 bucket (the same Cloudflare
+                  account the nightly backups already use — no new service, no new bill). A card
+                  whose image fails to load renders as text-led rather than a grey box.</div></div>
+
+              </div>
+              <div style="width:300px;flex-shrink:0">
+                <div class="sect" style="margin-top:0">Live preview</div>
+                <div class="panel" style="padding:12px">
+                  <div class="seg sm" style="margin-bottom:11px"><span>Default</span><span class="on">Malayalam</span></div>
+                  <div style="background:var(--paper);border-radius:12px;padding:10px">
+                    <div class="pcard" style="margin-top:0">
+                      <div class="lbrow"><span class="lb s">Sponsored · DC Books</span><span class="x">✕</span></div>
+                      <div class="bookrow">
+                        <div class="cover rd" style="width:44px;height:64px"><span>ആടുജീവിതം</span></div>
+                        <div class="bm"><h4 class="ml" style="font-size:12.5px">ഓണം വായനക്കാലം</h4>
+                          <p class="ml" style="font-size:8.5px">മലയാളം പുസ്തകങ്ങൾക്ക് 30% വരെ കിഴിവ് — ഓഗസ്റ്റ് 9 വരെ.</p>
+                          <span class="cta ml" style="font-size:8.5px">കാണുക ›</span></div></div>
+                    </div>
+                  </div>
+                  <div style="font-size:11px;color:var(--ink-soft);margin-top:10px;line-height:1.6">
+                    The real widget, at real size, in the variant you're editing — including the
+                    Malayalam line-height, which is where copy that "fit" in English stops fitting.</div>
+                </div>
+                <div class="panel" style="margin-top:12px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--ink-soft);
+                    text-transform:uppercase;margin-bottom:7px">Before it can go live</div>
+                  <div style="font-size:12px;line-height:1.9">
+                    <div style="color:var(--moss)">✓ &nbsp;Default copy set</div>
+                    <div style="color:var(--moss)">✓ &nbsp;Malayalam copy set</div>
+                    <div style="color:var(--moss)">✓ &nbsp;Sponsor named</div>
+                    <div style="color:var(--oxblood)">• &nbsp;No audience yet</div>
+                    <div style="color:var(--oxblood)">• &nbsp;No end date</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><i></i><div><b>An open-ended promotion is the one that gets forgotten.</b>
+  The checklist treats a missing end date as a blocker, not a warning. <code>ends_at</code> can
+  still be cleared deliberately for something like "Kitabi is on Android" — but it has to be a
+  decision someone makes, not the default that happens when a form is submitted in a hurry.</div></div>
+</div>
+
+<!-- ============================================================ 9 -->
+<div class="area" id="a9">
+  <div class="ah"><span class="an">9 · Console</span><h2>Audience — rules in plain language, with a live count</h2></div>
+  <p class="desc">Every rule is off until you turn it on, and an untouched rule reads
+  "everyone". The count on the right re-runs the actual serve query as you edit — because targeting
+  without an estimate is guesswork, and the way you find out you targeted nobody is when the
+  campaign ends with 0 impressions.</p>
+  <div class="row">
+    <div class="win mid">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="addr">admin.kitabi.in/promotions/onam/audience</span></div>
+      <div class="wbody">
+        <div class="main">
+          <div class="top"><div><h3>Onam reading season</h3><div class="sub">Audience</div></div>
+            <div class="sp"><span class="btn">Save draft</span><span class="btn p">Review &amp; schedule</span></div></div>
+          <div class="content">
+            <div class="tabs"><span>Content</span><span class="on">Audience</span>
+              <span>Schedule &amp; frequency</span><span>Preview</span></div>
+            <div style="display:flex;gap:20px">
+              <div style="flex:1;min-width:0">
+                <div class="sect" style="margin-top:0">Who sees this</div>
+                <div class="panel">
+                  <div class="rule"><span class="k">Languages</span><span class="v">
+                    <span class="atag">Malayalam <s>✕</s></span><span class="btn s">+ add</span></span></div>
+                  <div class="rule"><span class="k">Platform</span><span class="v">
+                    <span class="atag">iOS <s>✕</s></span><span class="atag">Android <s>✕</s></span></span></div>
+                  <div class="rule"><span class="k">App version</span>
+                    <span class="v off">any — no minimum set</span></div>
+                  <div class="rule"><span class="k">Account age</span>
+                    <span class="v off">any</span></div>
+                  <div class="rule"><span class="k">Library size</span><span class="v">
+                    <span class="atag">1 or more books <s>✕</s></span></span></div>
+                  <div class="rule"><span class="k">Reading status</span>
+                    <span class="v off">any</span></div>
+                  <div class="rule"><span class="k">Genres read</span>
+                    <span class="v off">any</span></div>
+                  <div class="rule"><span class="k">Rollout</span><span class="v">
+                    <span class="atag">100% <s>✕</s></span>
+                    <span class="ts" style="color:var(--stamp-grey)">stable per reader — nobody flickers in and out</span></span></div>
+                  <div class="rule"><span class="k">Only these readers</span>
+                    <span class="v off">— &nbsp;<span style="color:var(--slate)">use this to test on yourself first</span></span></div>
+                  <div class="rule"><span class="k">Never these readers</span><span class="v off">—</span></div>
+                </div>
+
+                <div class="sect">Not available, on purpose</div>
+                <div class="panel" style="background:var(--paper-deep)">
+                  <div style="font-size:12.5px;line-height:1.75;color:#6d5f4b">
+                    <b style="color:var(--ink)">Country / city.</b> Kitabi doesn't store a location
+                    and shouldn't start. Getting one means either an IP-geolocation service — a bill
+                    and a credential, against rule 8 — or inferring it from locale and timezone,
+                    which is the fingerprinting posture this app rejects. <b style="color:var(--ink)">Language
+                    is the better proxy anyway</b>, and it's data the reader gave you on purpose.
+                    For something genuinely city-bound, use <i>Only these readers</i> or accept a
+                    wider audience.</div>
+                </div>
+              </div>
+
+              <div style="width:250px;flex-shrink:0">
+                <div class="sect" style="margin-top:0">Estimated reach</div>
+                <div class="est">
+                  <div class="n">412</div>
+                  <div class="l">readers match right now</div>
+                  <div class="b"><b>32%</b> of 1,284 readers<br>
+                    Malayalam · any platform · 1+ books</div>
+                </div>
+                <div class="panel" style="margin-top:12px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--ink-soft);
+                    text-transform:uppercase;margin-bottom:9px">As you narrow</div>
+                  <div class="bars">
+                    <div class="brow"><span class="bn">Everyone</span>
+                      <span class="bt"><i style="width:100%"></i></span><span class="bv">1,284</span></div>
+                    <div class="brow"><span class="bn">+ Malayalam</span>
+                      <span class="bt"><i style="width:38%"></i></span><span class="bv">487</span></div>
+                    <div class="brow"><span class="bn">+ 1+ books</span>
+                      <span class="bt"><i class="g" style="width:32%"></i></span><span class="bv">412</span></div>
+                  </div>
+                  <div style="font-size:11px;color:var(--ink-soft);margin-top:11px;line-height:1.6">
+                    Each row is the count after that rule. The step that drops the most is usually
+                    the one you didn't mean to add.</div>
+                </div>
+                <div class="panel" style="margin-top:12px;padding:11px 12px;background:#F3EEE2">
+                  <div style="font-size:11.5px;line-height:1.65;color:#6d5f4b">
+                    <b style="color:var(--ink)">Send it to yourself first.</b> Put your own reader id
+                    in <i>Only these readers</i>, publish, check it on your phone, then clear the
+                    field and republish. Two minutes, and it's the only way to see what 412 people
+                    are about to see.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 10 -->
+<div class="area" id="a10">
+  <div class="ah"><span class="an">10 · Console</span><h2>Schedule &amp; frequency — how often, and for how long</h2></div>
+  <p class="desc">Dates are typed in IST and stored UTC (rule 5). Everything on this tab has a
+  defensible default, so a campaign published without touching it still behaves.</p>
+  <div class="row">
+    <div class="win mid">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="addr">admin.kitabi.in/promotions/onam/schedule</span></div>
+      <div class="wbody">
+        <div class="main">
+          <div class="top"><div><h3>Onam reading season</h3><div class="sub">Schedule &amp; frequency</div></div>
+            <div class="sp"><span class="btn">Save draft</span><span class="btn g">Publish — 412 readers</span></div></div>
+          <div class="content">
+            <div class="tabs"><span>Content</span><span>Audience</span>
+              <span class="on">Schedule &amp; frequency</span><span>Preview</span></div>
+
+            <div class="sect" style="margin-top:0">When it runs</div>
+            <div class="panel">
+              <div class="grid3">
+                <div class="f"><label>Starts</label><div class="inp">30 Jul 2026, 06:00 IST</div></div>
+                <div class="f"><label>Ends</label><div class="inp">9 Aug 2026, 23:59 IST</div></div>
+                <div class="f"><label>Priority</label><div class="inp">5 — normal</div>
+                  <div class="hint">Highest wins per surface; ties go to the older start.</div></div>
+              </div>
+              <div style="font-size:11.5px;color:var(--ink-soft);line-height:1.6;padding-top:4px;
+                border-top:1px solid var(--line);margin-top:4px">
+                Stored as <span class="mono">2026-07-30T00:30:00Z</span> →
+                <span class="mono">2026-08-09T18:29:00Z</span>. Every reader sees it start at the
+                same instant, wherever they are — no per-reader timezone shifting, which sounds
+                thoughtful and produces campaigns that are live in one place and not another for
+                half a day.</div>
+            </div>
+
+            <div class="sect">How often one reader sees it</div>
+            <div class="panel">
+              <div class="grid3">
+                <div class="f"><label>Maximum times shown</label><div class="inp">6</div>
+                  <div class="hint">Then it stops for that reader, dismissed or not.</div></div>
+                <div class="f"><label>Wait between showings</label><div class="inp">24 hours</div>
+                  <div class="hint">Default. Zero is allowed and is almost always a mistake.</div></div>
+                <div class="f"><label>If they dismiss it</label><div class="inp">Never show again</div>
+                  <div class="hint">The other option is a re-show after N days. Use it rarely.</div></div>
+              </div>
+              <div class="f" style="margin-bottom:0"><label>Can the reader dismiss it?</label>
+                <div class="seg"><span class="on">Yes — always</span><span>No (service notices only)</span></div>
+                <div class="hint">Choosing "no" on anything promotional is how an app gets
+                uninstalled. The option exists for "sync is delayed today", nothing else.</div></div>
+            </div>
+
+            <div class="sect">Counting, honestly</div>
+            <div class="panel" style="background:var(--paper-deep)">
+              <div style="font-size:12.5px;line-height:1.75;color:#6d5f4b">
+                An impression is counted when the promo is <b style="color:var(--ink)">actually on
+                screen</b>, not when it's fetched — a card below the fold that nobody scrolled to
+                never happened. Caps are <b style="color:var(--ink)">exact on one device and
+                approximate across several</b>: a reader on two phones, both offline, can see one
+                extra. That's the honest cost of rendering from the local database instead of asking
+                the server before every frame, and it is not worth fixing.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 11 -->
+<div class="area" id="a11">
+  <div class="ah"><span class="an">11 · Console</span><h2>Results — including the number nobody wants to look at</h2></div>
+  <p class="desc">Per campaign and <b>per language variant</b> — which is how you find out whether the
+  Malayalam copy actually did anything, or whether the Malayalam audience just tolerated the English.</p>
+  <div class="row">
+    <div class="win mid">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="addr">admin.kitabi.in/promotions/onam</span></div>
+      <div class="wbody">
+        <div class="main">
+          <div class="top"><div><h3>Onam reading season</h3>
+            <div class="sub"><span class="pill live">Live</span> &nbsp;day 2 of 11 · sponsored by DC Books</div></div>
+            <div class="sp"><span class="btn">Edit</span><span class="btn d">Stop now</span></div></div>
+          <div class="content">
+            <div class="sect" style="margin-top:0">Since it went live</div>
+            <div class="kpi">
+              <div><div class="n">318</div><div class="l">Impressions</div></div>
+              <div><div class="n">187</div><div class="l">Readers reached</div></div>
+              <div><div class="n">44</div><div class="l">Clicks · 13.8%</div></div>
+              <div class="warn"><div class="n">22.3%</div><div class="l">Dismissed</div></div>
+            </div>
+            <div class="note" style="margin-top:14px;max-width:none"><i></i><div>
+              <b>Over 20% dismissals.</b> The clicks look excellent and the campaign is still doing
+              damage: 71 readers went out of their way to close it. If this holds through day 3,
+              stop it — a sponsored card on Home is the most intrusive thing Kitabi has ever shown,
+              and readers are telling you so in the only way the app gives them.</div></div>
+
+            <div class="sect">By language variant</div>
+            <div class="panel">
+              <div class="bars">
+                <div class="brow"><span class="bn">Malayalam</span>
+                  <span class="bt"><i class="g" style="width:71%"></i></span>
+                  <span class="bv">226 · 16.8%</span></div>
+                <div class="brow"><span class="bn">Default (EN)</span>
+                  <span class="bt"><i style="width:29%"></i></span>
+                  <span class="bv">92 · 6.5%</span></div>
+              </div>
+              <div style="font-size:12px;color:var(--ink-soft);margin-top:12px;line-height:1.65;
+                padding-top:11px;border-top:1px solid var(--line)">
+                The Malayalam variant clicks at <b style="color:var(--ink)">two and a half times</b>
+                the English one on the same offer, same audience, same days. That is the entire
+                argument for content variants, measured — and the reason the next campaign should
+                lead in Malayalam rather than translate into it.</div>
+            </div>
+
+            <div class="sect">Audit</div>
+            <table>
+              <tr><td style="width:150px" class="num ts">30 Jul 06:00</td>
+                <td>Published by <b>Shamshi</b> · audience 412 · <span class="mono">ml</span> + default</td></tr>
+              <tr><td class="num ts">29 Jul 23:14</td>
+                <td>Audience narrowed to 1+ books by <b>Shamshi</b> · estimate 487 → 412</td></tr>
+              <tr style="border-bottom:0"><td class="num ts">29 Jul 22:51</td>
+                <td>Created by <b>Shamshi</b></td></tr>
+            </table>
+            <div style="font-size:11.5px;color:var(--ink-soft);margin-top:9px;line-height:1.6">
+              Every change writes an <code>admin_audit_log</code> row like the rest of the console —
+              publishing to every reader's Home is exactly the kind of action that should be
+              impossible to do quietly.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ notes -->
+<div class="area" id="a12">
+  <div class="ah"><span class="an">Notes</span><h2>What these mockups commit us to</h2></div>
+  <div class="row">
+    <div class="panel" style="max-width:1180px">
+      <div class="sect" style="margin-top:0">The shape of it</div>
+      <table>
+        <tr><td style="width:210px"><b>Three tables, one migration</b></td>
+          <td><code>promotions</code> (the campaign), <code>promotion_contents</code> (copy, one row
+          per language, null = default), <code>promotion_events</code> (append-only
+          impression/click/dismiss). Next in sequence: <code>000034_promotions</code>. Server-only,
+          not syncable, RLS on with zero policies.</td></tr>
+        <tr><td><b>Targeting resolves on the server</b></td>
+          <td>Always. The device receives only what it's eligible for — a campaign it isn't in
+          never reaches it. That's the privacy argument, and it also means you can retarget without
+          shipping an app release.</td></tr>
+        <tr><td><b>Two mechanisms, not one</b></td>
+          <td>Targeting picks the audience; content variants pick the words. Conflating them gives
+          you N campaigns per language with drifting schedules.</td></tr>
+        <tr><td><b>Render from Drift</b></td>
+          <td>Cached like the catalog, so promos work offline and expire on the device. The provider
+          is a <code>StreamProvider</code> over a Drift watch — a <code>FutureProvider</code> here
+          would mean dismissal doesn't update Home, which is the same bug this repo has already
+          shipped three times.</td></tr>
+        <tr><td><b>Its own event outbox</b></td>
+          <td>Not <code>sync_queue</code>. Append-only facts need no cursors, no LWW, no conflict
+          history — and marketing telemetry must never share a retry path with a reader's library.</td></tr>
+        <tr style="border-bottom:0"><td style="border-bottom:0"><b>One banner, one card, never more</b></td>
+          <td style="border-bottom:0">Capped in the serve query, before the payload exists, so no
+          client bug can stack them.</td></tr>
+      </table>
+
+      <div class="sect">Still to decide</div>
+      <table>
+        <tr><td style="width:210px"><b>Sponsored placements?</b></td>
+          <td>The field ships either way. The answer changes the label and whether store "paid
+          content" rules engage. Safe default: build it, run only Kitabi's own promos at launch.</td></tr>
+        <tr><td><b>Images — R2 or paste a URL?</b></td>
+          <td>R2 recommended: the Cloudflare account and credentials already exist for nightly
+          backups, so a second bucket is no new service and no new bill. Pasting a URL is zero work
+          and fine while you're the only author. The same bucket would later serve reader cover
+          photos — the upload gap that's been an open decision since Phase 2.</td></tr>
+        <tr><td><b>The opt-out toggle</b></td>
+          <td>Nobody requires it. Recommendation: ship it — see §5.</td></tr>
+        <tr style="border-bottom:0"><td style="border-bottom:0"><b>May a promo ever interrupt?</b></td>
+          <td style="border-bottom:0">This design says no: no modals, no takeovers, nothing over the
+          reading timer or the book page. If a launch-day announcement needs more reach than a Home
+          banner, that's what a non-dismissible banner is for.</td></tr>
+      </table>
+
+      <div class="sect">And the part that isn't a mockup</div>
+      <div style="font-size:13px;line-height:1.8;color:#6d5f4b">
+        The last three owner-reported bugs in this repo — the timer's page save, the Live Activity
+        deep link, the wax-seal styling — all passed their tests and failed on the phone. A
+        promotions system's entire job is to render correctly on somebody else's device. The
+        definition of done is not a green test run: it's <b style="color:var(--ink)">a real campaign,
+        created in the console, appearing on a real phone, dismissed, and gone</b>.
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
