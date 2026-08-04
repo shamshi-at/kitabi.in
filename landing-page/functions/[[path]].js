@@ -16,11 +16,19 @@
 import { notFound } from './_lib/layout.js';
 
 // Exact files the deploy copies into public/ (see .github/workflows/deploy.yml).
+// NOTE the extensionless twins. Cloudflare Pages 308s /privacy.html to
+// /privacy automatically, so listing only the .html form means the redirect
+// lands on a path this catch-all does not recognise and 404s. That regression
+// took the privacy policy offline — which is a store requirement, not a
+// cosmetic page. Every .html asset needs both spellings here.
 const ASSET_FILES = new Set([
   '/404.html',
+  '/404',
   '/index.html',
   '/privacy.html',
+  '/privacy',
   '/terms.html',
+  '/terms',
   '/logo.svg',
   '/ico.png',
   '/kitabi-logo.png',

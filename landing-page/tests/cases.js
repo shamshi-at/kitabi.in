@@ -602,3 +602,12 @@ assert(!isAsset('/book/chemmeen'), 'a real route is not handled here (its own Fu
 assert(!isAsset('/'), 'home is not handled here either');
 assert(!isAsset('/fonts'), 'the bare directory is not a file');
 assert(!isAsset('/.well-known'), 'nor is the bare well-known directory');
+
+// Cloudflare Pages 308s /x.html to /x automatically, so an allowlist that names
+// only the .html form sends the redirect to a path it doesn't recognise. That
+// took the privacy policy offline once; both spellings are required.
+assert(isAsset('/privacy') && isAsset('/privacy.html'), 'privacy is reachable both ways');
+assert(isAsset('/terms') && isAsset('/terms.html'), 'terms is reachable both ways');
+var footerDoc = String(page({ title: 't', body: html`x` }).text());
+assertIncludes(footerDoc, 'href="/privacy"', 'the footer links the clean URL, avoiding the hop');
+assertExcludes(footerDoc, 'href="/privacy.html"', 'not the .html form that 308s');
