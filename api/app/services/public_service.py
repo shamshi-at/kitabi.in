@@ -947,3 +947,50 @@ async def suggest(db: AsyncSession, q: str, limit: int = 8) -> P.SuggestPage:
                 )
             )
     return P.SuggestPage(q=q, suggestions=out[:limit])
+
+
+async def indexable_ids(db: AsyncSession, kind: str, ids: list[uuid.UUID]) -> set[uuid.UUID] | None:
+    """Which of these rows clear the content floor for their kind.
+
+    Returns None for a kind with no floor, so the caller can tell "everything
+    qualifies" apart from "nothing qualifies" — collapsing those two is how a
+    sitemap silently empties itself.
+    """
+    if not ids:
+        return set()
+    if kind == "works":
+        return await indexable_work_ids(db, ids)
+
+    if kind == "authors":
+        rows = (
+            await db.execute(
+                select(Author.id, Author.bio, func.count(work_authors.c.work_id))
+                .outerjoin(work_authors, work_authors.c.author_id == Author.id)
+                .where(Author.id.in_(ids))
+                .group_by(Author.id)
+            )
+        ).all()
+        return {
+            row[0]
+            for row in rows
+            if author_is_indexable_row(bio=row[1], work_count=int(row[2] or 0))
+        }
+
+    if kind == "publishers":
+        rows = (
+            await db.execute(
+                select(Publisher.id, func.count(Edition.id))
+                .outerjoin(Edition, Edition.publisher_id == Publisher.id)
+                .where(Publisher.id.in_(ids))
+                .group_by(Publisher.id)
+            )
+        ).all()
+        return {row[0] for row in rows if publisher_is_indexable(int(row[1] or 0))}
+
+    return None
+
+
+def author_is_indexable_row(*, bio: str | None, work_count: int) -> bool:
+    """Same rule as `author_is_indexable`, from raw columns rather than an ORM
+    row — the sitemap works in bulk and must not load 10,000 objects to ask."""
+    return bool((bio and bio.strip()) or work_count >= 2)

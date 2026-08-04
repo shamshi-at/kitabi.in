@@ -80,14 +80,18 @@ async def build_page(db: AsyncSession, kind: str, page: int) -> str:
     if not rows:
         raise _not_found("Sitemap page out of range")
 
-    # Only advertise pages that clear the content floor. A sitemap listing every
-    # row — most of them thin, imported, coverless — is a direct statement to a
-    # search engine that this domain produces thin pages, and it drags down the
-    # good ones (docs/web-platform-plan.md §8.3). The pages left out are still
-    # crawlable and still linked; they just aren't advertised until they're
-    # worth landing on, which happens on its own as readers improve them.
-    if kind == "works":
-        indexable = await public_service.indexable_work_ids(db, [row_id for row_id, _, _ in rows])
+    # Only advertise pages that clear the content floor — for EVERY kind, not
+    # just works. A sitemap listing every row is a direct statement to a search
+    # engine that this domain produces thin pages, and it drags down the good
+    # ones (docs/web-platform-plan.md §8.3). The pages left out stay crawlable
+    # and linked; they simply are not advertised until they are worth landing
+    # on, which happens on its own as readers improve them.
+    #
+    # This filtered works alone at first, so 1,190 author pages were advertised
+    # when only 239 had a bio — the precise problem the floor exists to prevent,
+    # left in place for two of the three kinds.
+    indexable = await public_service.indexable_ids(db, kind, [row_id for row_id, _, _ in rows])
+    if indexable is not None:
         rows = [row for row in rows if row[0] in indexable]
         if not rows:
             # A page of the catalog where nothing qualifies yet is a valid empty

@@ -21,8 +21,20 @@ async def _seed(db_sessionmaker) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
         db.add(Work(id=work_id, title="Chemmeen", slug="chemmeen"))
         # A cover clears the content floor, so this work is advertised.
         db.add(Edition(work_id=work_id, cover_url="https://x/c.jpg"))
-        db.add(Author(id=author_id, name="Thakazhi Sivasankara Pillai", slug="thakazhi"))
+        # A bio and three editions so these clear the content floor — this test
+        # is about the canonical URL shape, not about the floor, and it should
+        # not pass merely because no floor exists.
+        db.add(
+            Author(
+                id=author_id,
+                name="Thakazhi Sivasankara Pillai",
+                slug="thakazhi",
+                bio="Wrote the Kerala coast into Malayalam literature.",
+            )
+        )
         db.add(Publisher(id=publisher_id, name="DC Books", slug="dc-books"))
+        for _ in range(3):
+            db.add(Edition(work_id=work_id, publisher_id=publisher_id))
         db.add(Work(id=uuid.uuid4(), title="Gone", deleted_at=datetime.now(UTC)))
         await db.commit()
     return work_id, author_id, publisher_id
@@ -128,3 +140,51 @@ async def test_thin_works_are_not_advertised(unauthenticated_client, db_sessionm
     res = await unauthenticated_client.get("/catalog/sitemap/works-1.xml")
     assert "https://kitabi.in/book/has-a-cover" in res.text
     assert "bare-stub" not in res.text
+
+
+async def test_thin_authors_and_publishers_are_not_advertised_either(
+    unauthenticated_client, db_sessionmaker
+):
+    """The floor originally covered works alone, which meant 1,190 author pages
+    were advertised when only 239 had a bio — the exact problem the floor exists
+    to prevent, left in place for two of the three kinds."""
+    async with db_sessionmaker() as db:
+        # Qualifies: has a bio.
+        db.add(Author(name="Has A Bio", slug="has-a-bio", bio="A real biography."))
+        # Qualifies: two works.
+        prolific = Author(name="Two Books", slug="two-books")
+        db.add(prolific)
+        await db.flush()
+        db.add_all(
+            [
+                Work(title="One", authors=[prolific]),
+                Work(title="Two", authors=[prolific]),
+            ]
+        )
+        # Does not qualify: no bio, one work.
+        thin = Author(name="Thin Author", slug="thin-author")
+        db.add(thin)
+        await db.flush()
+        db.add(Work(title="Solo", authors=[thin]))
+
+        # Publishers: three editions qualifies, one does not.
+        big, small = Publisher(name="Big", slug="big-pub"), Publisher(
+            name="Small", slug="small-pub"
+        )
+        db.add_all([big, small])
+        w = Work(title="Anything")
+        db.add(w)
+        await db.flush()
+        for _ in range(3):
+            db.add(Edition(work_id=w.id, publisher_id=big.id))
+        db.add(Edition(work_id=w.id, publisher_id=small.id))
+        await db.commit()
+
+    authors = (await unauthenticated_client.get("/catalog/sitemap/authors-1.xml")).text
+    assert "has-a-bio" in authors
+    assert "two-books" in authors
+    assert "thin-author" not in authors
+
+    publishers = (await unauthenticated_client.get("/catalog/sitemap/publishers-1.xml")).text
+    assert "big-pub" in publishers
+    assert "small-pub" not in publishers
