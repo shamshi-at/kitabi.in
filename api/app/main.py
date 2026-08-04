@@ -16,6 +16,7 @@ from app.api import (
     health,
     me,
     promotions,
+    public,
     recommendations,
     sitemap,
     sync,
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
     app.include_router(connections.router)
     app.include_router(devices.router)
     app.include_router(catalog.router)
+    app.include_router(public.router)
     app.include_router(sitemap.router)
     app.include_router(recommendations.router)
     app.include_router(promotions.router)
