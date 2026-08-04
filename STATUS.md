@@ -241,6 +241,7 @@ parts, each with their own README and CI workflow:
 | `api/` | FastAPI backend | **Live** at api.kitabi.in — auth/profile + shared catalog (search, ISBN lookup, add/edit, author/publisher browse) |
 | `app/` | Flutter mobile app | Auth flow + library-first home + catalog screens working (global search across library/books/authors/publishers, ISBN scan → adds to library, add/edit form with author/publisher **picker pages**, author/publisher browse, shareable book/author/publisher links) + personal-library grid & book detail |
 | `etl/` | OpenLibrary → curated catalog seed pipeline: bulk-dump path (01–04) + live-API per-language seed job (07) | Live-API job run against prod: 100 books × 14 languages (13 Indic + India-focused English), covers included |
+| `infra/cloudflare/` | Edge protection for the kitabi.in zone, as code — `rate_limits.py` (idempotent, dry-run by default) + README | **Written, not applied.** Needs a Zone→WAF→Edit token; the Actions `CLOUDFLARE_API_TOKEN` is Pages-scoped and must not be widened |
 | `docs/` | Mockups, design tokens, task checklist | — |
 
 ---
@@ -336,6 +337,24 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **4 Aug 2026** — **Cloudflare edge protection, as code (`infra/cloudflare/`).**
+  Written and reviewable but **not yet applied** — it needs a token that doesn't exist
+  yet. The Actions `CLOUDFLARE_API_TOKEN` is scoped to *Pages: Edit* and has no
+  zone/WAF permission; widening it would hand the landing-page deploy workflow the
+  ability to rewrite the firewall, so a separate Zone→WAF→Edit token scoped to
+  kitabi.in is required. `rate_limits.py` is dry-run by default, idempotent, refuses to
+  clobber rules it didn't create, and needs no venv (stdlib only).
+  The free plan allows **one** rate limiting rule, IP-only, over a short window — so it
+  is a **burst shield, not an anti-scraping control**, and that one rule is deliberately
+  spent on *availability*: Anthropic spend is already bounded precisely by `llm_quota`,
+  and catalogue scraping is low-harm by design (the SEO plan wants that content
+  crawled), while a single IP saturating the `10 + 10` DB pool has no other defence.
+  Action is `block`, never a challenge — `api.kitabi.in` serves the Flutter app and the
+  edge functions, neither of which can solve one. Verified bots are exempt, or crawling
+  breaks and the SEO plan with it. **Ordering constraint recorded for W1:** once pages
+  are edge-rendered, most API traffic stops being "one IP per reader" and becomes
+  Cloudflare itself, so the edge→origin shared secret plus a `skip` rule must land
+  *before* edge SSR ships or the limiter will throttle the edge.
 - **4 Aug 2026** — **Spend limits on the paid endpoints, and the ISBN lookup closed.**
   `GET /recommendations` and `POST /catalog/cover-extract` are the only two endpoints
   where one request costs money, and until now neither had any ceiling: both require

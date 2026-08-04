@@ -553,13 +553,22 @@ costs, as measured 4 Aug 2026:
 |---|---|---|
 | **LLM endpoints** (`/catalog/cover-extract`, `/recommendations`) — the only two where a request costs money | Auth'd, but **no quota, no cap, no breaker anywhere in the API** | ✅ **Done** — `llm_usage` + `services/llm_quota.py`: per-reader daily quota + global daily circuit breaker (migration `000037`) |
 | **`GET /catalog/isbn/{isbn}`** — public, proxies OpenLibrary, writes to our DB | Fully public: an anonymous caller could get Kitabi rate-limited by a third party and fill the catalog with junk | ✅ **Done** — signed-in only; needed no app change (the Dio interceptor already attaches the token) |
-| Catalogue scraping — 14 public GETs, `browse/works?limit=100` = 82 KB in 0.56 s | No limits | ⏳ Cloudflare rate-limiting rules (`api.kitabi.in` is already proxied — `server: cloudflare`), plus `Cache-Control` so repeat reads never reach Railway. **Low harm by design** — crawling this is the point |
+| Catalogue scraping — 14 public GETs, `browse/works?limit=100` = 82 KB in 0.56 s | No limits | **Left open on purpose** — crawling this is the point. Bounded later by `Cache-Control` (repeat reads never reach Railway), not by blocking |
+| A single IP hammering the API into an outage (pool is `10 + 10`) | No limits | 📝 **Written, not applied** — `infra/cloudflare/rate_limits.py`. Free plan allows **one** rate limiting rule, IP-only, short window: a **burst shield, not an anti-scraping control**. Spent on availability, since spend is already bounded by `llm_quota`. Blocked on a Zone→WAF token (the Actions one is Pages-scoped and must not be widened) |
 | CORS | `allow_methods=["*"]`, `allow_credentials=True`, `Authorization` allowed | ✅ **Done** — `["GET"]`, credentials off, `Accept` only. The public web is read-only and unauthenticated (rule 2 below), so this now matches it exactly |
 | Catalog writes | Auth'd + the revision-approval queue | Adequate; rate-limit at the edge |
 | Personal data | JWT + RLS deny-by-default + `user_id` scoping | Correct already |
 
 The reframe worth keeping: **an uncapped LLM budget can hurt you; a fully
 crawled catalogue is the plan working.**
+
+⚠️ **One ordering constraint for W1.** Today the browser calls `api.kitabi.in`
+directly, so a per-IP rate limit means "per reader". After edge SSR it does not:
+most API traffic becomes the Pages Function calling the API server-side, so a
+per-IP ceiling can throttle *Cloudflare itself* and take the public site down
+under exactly the traffic spike it exists to survive. The edge→origin shared
+secret must land with a `skip` rule ordered ahead of the limiter **before** W1
+ships, not after.
 
 ## 12. Rules this must obey
 

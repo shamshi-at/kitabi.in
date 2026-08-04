@@ -722,8 +722,24 @@ cost, never secrecy.
       so cold-start readers don't burn quota on a call that never happens
 - [x] **`GET /catalog/isbn/{isbn}` requires auth** (4 Aug 2026) — the one public read
       that spent *OpenLibrary's* quota and wrote to our catalog. No app change needed
-- [ ] Cloudflare rate-limiting rules on `api.kitabi.in` (already proxied — zero code,
-      zero bill). The cheapest remaining item
+- [~] **Cloudflare rate-limiting rule — written, not applied** (4 Aug 2026).
+      `infra/cloudflare/rate_limits.py` (+ README) defines it as code and applies it
+      idempotently; dry-run by default. **Blocked on a token:** the Actions
+      `CLOUDFLARE_API_TOKEN` is scoped to *Pages: Edit* and has no zone/WAF permission,
+      and must not be widened — that would let the landing-page deploy rewrite the
+      firewall. Mint a separate Zone→WAF→Edit token scoped to kitabi.in, then
+      `./rate_limits.py --apply`.
+      Free plan allows **one** rate limiting rule, IP-only, short window — so it is a
+      **burst shield, not an anti-scraping control**, and it's spent on *availability*
+      (a single IP saturating the 10+10 DB pool), because spend is already bounded by
+      `llm_quota` and scraping is low-harm by design. Action is `block`, never a
+      challenge — the app and the edge functions can't solve one. Verified bots exempt,
+      or crawling breaks and the whole SEO plan with it
+- [ ] **Exempt the edge from the rate limit before W1 ships.** Once pages are
+      edge-rendered, most API traffic stops being "one IP per reader" and becomes
+      "Cloudflare", so a per-IP ceiling can throttle the edge itself and take the public
+      site down under exactly the spike it should survive. Needs the edge→origin shared
+      secret plus a `skip` custom rule ordered ahead of the limiter
 - [x] **CORS scoped to what the share pages actually do** (4 Aug 2026) — was
       `allow_methods=["*"]` + `allow_credentials=True` + `Authorization` allowed, i.e.
       every method advertised to every browser and cookie-bearing cross-origin reads
