@@ -386,3 +386,102 @@ async def test_batch_lookup_is_one_query_not_one_per_key(db_sessionmaker):
     # One for the works, plus the eager-loaded relations and the batched rating
     # counts. The point is that it does NOT scale with the number of keys.
     assert len(statements) < 8, f"{len(statements)} SELECTs for 12 keys:\n" + "\n".join(statements)
+
+
+# --------------------------------------------------------------------------
+# Author / publisher directories
+# --------------------------------------------------------------------------
+
+
+async def test_people_directory_leads_with_the_substantial_ones(db_sessionmaker):
+    """A directory of 1,190 authors is useless alphabetically — page one would
+    be initials and typos. Most works first makes the first page worth landing
+    on, which is also what decides whether it deserves indexing."""
+    async with db_sessionmaker() as db:
+        prolific = Author(name="Prolific", slug="prolific")
+        sparse = Author(name="Sparse", slug="sparse")
+        db.add_all([prolific, sparse])
+        await db.flush()
+        for i in range(3):
+            db.add(Work(title=f"Book {i}", authors=[prolific]))
+        db.add(Work(title="Only one", authors=[sparse]))
+        await db.commit()
+
+        page = await public_service.people_page(db, "authors")
+
+    names = [p.name for p in page.people]
+    assert names.index("Prolific") < names.index("Sparse")
+    assert next(p.work_count for p in page.people if p.name == "Prolific") == 3
+    assert page.total >= 2
+
+
+async def test_people_directory_rejects_an_unknown_kind(db_sessionmaker):
+    async with db_sessionmaker() as db:
+        assert await public_service.people_page(db, "wombats") is None
+
+
+async def test_publisher_directory_counts_works_not_editions(db_sessionmaker):
+    """Two printings of one book is one work — counting editions would inflate
+    a publisher that reprints a lot into looking like a bigger catalogue."""
+    async with db_sessionmaker() as db:
+        pub = Publisher(name="DC Books", slug="dc-books")
+        work = Work(title="Chemmeen")
+        db.add_all([pub, work])
+        await db.flush()
+        db.add_all(
+            [
+                Edition(work_id=work.id, publisher_id=pub.id),
+                Edition(work_id=work.id, publisher_id=pub.id),
+            ]
+        )
+        await db.commit()
+
+        page = await public_service.people_page(db, "publishers")
+    assert next(p.work_count for p in page.people if p.name == "DC Books") == 1
+
+
+# --------------------------------------------------------------------------
+# Typeahead
+# --------------------------------------------------------------------------
+
+
+async def test_suggest_matches_across_scripts(db_sessionmaker):
+    """The reason to have suggestions at all: typing "chemmeen" on an English
+    keyboard should offer ചെമ്മീൻ."""
+    async with db_sessionmaker() as db:
+        w = Work(title="ചെമ്മീൻ", slug="chemmeen")
+        db.add(w)
+        await db.commit()
+        page = await public_service.suggest(db, "chemmeen")
+
+    assert page.suggestions
+    top = page.suggestions[0]
+    assert top.kind == "book"
+    assert top.href == "/book/chemmeen"
+
+
+async def test_suggest_includes_authors_and_publishers_when_there_is_room(db_sessionmaker):
+    async with db_sessionmaker() as db:
+        db.add_all(
+            [
+                Author(name="Thakazhi Sivasankara Pillai", slug="thakazhi"),
+                Publisher(name="Thakazhi Press", slug="thakazhi-press"),
+            ]
+        )
+        await db.commit()
+        page = await public_service.suggest(db, "thakazhi")
+
+    kinds = {s.kind for s in page.suggestions}
+    assert "author" in kinds
+    assert all(s.href.startswith("/") for s in page.suggestions)
+
+
+async def test_suggest_is_bounded(db_sessionmaker):
+    """It runs on a keystroke; an unbounded list would be a performance bug on
+    both ends."""
+    async with db_sessionmaker() as db:
+        for i in range(30):
+            db.add(Work(title=f"Common Title {i}", slug=f"common-{i}"))
+        await db.commit()
+        page = await public_service.suggest(db, "common", limit=5)
+    assert len(page.suggestions) <= 5

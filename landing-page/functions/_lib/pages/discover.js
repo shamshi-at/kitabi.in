@@ -328,3 +328,59 @@ export function renderIndex({ title, description, kind, items, hrefFor, canonica
     jsonLd: [ld.collectionPage(title, description, canonical)],
   });
 }
+
+// --------------------------------------------------------------------------
+// /authors and /publishers — the directories the header links to
+// --------------------------------------------------------------------------
+
+export function renderPeople(data) {
+  const isAuthors = data.kind === 'authors';
+  const title = isAuthors ? 'Authors' : 'Publishers';
+  const path = `/${data.kind}`;
+  const hrefFor = (p) => (p === 1 ? path : `${path}?page=${p}`);
+  const first = (data.page - 1) * data.per_page + 1;
+  const last = Math.min(data.page * data.per_page, data.total);
+
+  const body = html`
+    <div class="wrap">
+      ${breadcrumb([{ label: 'Home', href: '/' }, { label: title }])}
+      <h1 class="serif" style="font-size:30px;font-weight:600;margin-top:14px">${title}</h1>
+      <p class="intro">
+        ${isAuthors
+          ? 'Everyone in the catalogue who has written, translated or been credited on a book — most-published first.'
+          : 'Every house with a book in the catalogue, from the national imprints to the regional presses that publish most of what is here.'}
+      </p>
+      <div class="toolbar">
+        <span class="cnt">Showing ${num(first)}–${num(last)} of ${num(data.total)}</span>
+      </div>
+      ${data.people?.length
+        ? html`<div class="strip" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+              ${data.people.map(
+                (p) => html`<a class="bk" style="text-align:center"
+                  href="/${isAuthors ? 'author' : 'publisher'}/${seg(p.slug || p.id)}">
+                  ${avatar(p, { className: 'ppl' })}
+                  <span class="bt">${p.name}</span>
+                  ${p.work_count
+                    ? html`<span class="ba">${num(p.work_count)} ${p.work_count === 1 ? 'book' : 'books'}</span>`
+                    : ''}
+                </a>`,
+              )}
+            </div>
+            ${pager(data.page, data.total, data.per_page, hrefFor)}`
+        : html`<div class="thin"><p>Nothing here yet.</p></div>`}
+      ${appBand()}
+    </div>
+  `;
+
+  const suffix = data.page > 1 ? ` — page ${data.page}` : '';
+  return page({
+    title: `${title} — ${num(data.total)} in the catalogue${suffix} — Kitabi`,
+    description: isAuthors
+      ? `Every author in the Kitabi catalogue — ${num(data.total)} writers and translators across Indian languages.`
+      : `Every publisher in the Kitabi catalogue — ${num(data.total)} houses.`,
+    canonical: hrefFor(data.page),
+    body,
+    nav: data.kind,
+    jsonLd: [ld.collectionPage(title, null, hrefFor(data.page))],
+  });
+}

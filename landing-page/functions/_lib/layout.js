@@ -8,6 +8,7 @@
 
 import { CACHE_CONTROL } from './api.js';
 import { CSS } from './css.js';
+import { SUGGEST_CSS, SUGGEST_JS } from './suggest.js';
 import { attr, h, html, raw } from './html.js';
 
 export const SITE = 'Kitabi';
@@ -118,7 +119,7 @@ export function page({
 <meta name="twitter:title" content="${attr(title)}">
 <meta name="twitter:description" content="${attr(desc)}">
 ${image ? `<meta property="og:image" content="${attr(image)}"><meta property="og:image:secure_url" content="${attr(image)}"><meta name="twitter:image" content="${attr(image)}">` : ''}
-<style>${CSS}</style>
+<style>${CSS}${SUGGEST_CSS}</style>
 ${blocks
   .map(
     (b) =>
@@ -132,6 +133,7 @@ ${extraHead}
 ${headerHtml(nav, q)}
 <main id="main">${body}</main>
 ${FOOTER}
+<script defer>${SUGGEST_JS}</script>
 </body>
 </html>`;
 

@@ -841,3 +841,109 @@ async def reader_page(db: AsyncSession, username: str) -> P.ReaderPage | None:
         library_visible=profile.library_visible,
         recent=await _cards(db, recent),
     )
+
+
+# --------------------------------------------------------------------------
+# Author / publisher directories, and search typeahead
+# --------------------------------------------------------------------------
+
+
+async def people_page(
+    db: AsyncSession, kind: str, *, page: int = 1, per_page: int = 48
+) -> P.PeoplePage | None:
+    """The /authors and /publishers directories.
+
+    Ordered by how many works they carry, then by name: a directory of 1,190
+    authors is useless alphabetically — page one would be initials and typos.
+    Putting the substantial ones first makes the first page worth landing on,
+    which is also what decides whether it is worth indexing.
+    """
+    if kind == "authors":
+        model, join_table, join_col = Author, work_authors, work_authors.c.author_id
+    elif kind == "publishers":
+        model, join_table, join_col = Publisher, None, None
+    else:
+        return None
+
+    if kind == "authors":
+        count_col = func.count(func.distinct(join_table.c.work_id)).label("n")
+        stmt = (
+            select(model, count_col)
+            .outerjoin(join_table, join_col == model.id)
+            .where(model.deleted_at.is_(None))
+            .group_by(model.id)
+            .order_by(count_col.desc(), model.name)
+        )
+    else:
+        count_col = func.count(func.distinct(Edition.work_id)).label("n")
+        stmt = (
+            select(model, count_col)
+            .outerjoin(Edition, Edition.publisher_id == model.id)
+            .where(model.deleted_at.is_(None))
+            .group_by(model.id)
+            .order_by(count_col.desc(), model.name)
+        )
+
+    total = int(
+        await db.scalar(select(func.count()).select_from(model).where(model.deleted_at.is_(None)))
+        or 0
+    )
+    rows = (await db.execute(stmt.offset((page - 1) * per_page).limit(per_page))).all()
+    return P.PeoplePage(
+        kind=kind,
+        people=[
+            P.PersonCard(
+                id=row[0].id,
+                name=getattr(row[0], "pen_name", None) or row[0].name,
+                slug=row[0].slug,
+                image_url=getattr(row[0], "image_url", None),
+                language=row[0].primary_language,
+                work_count=int(row[1] or 0),
+            )
+            for row in rows
+        ],
+        total=total,
+        page=page,
+        per_page=per_page,
+    )
+
+
+async def suggest(db: AsyncSession, q: str, limit: int = 8) -> P.SuggestPage:
+    """Typeahead. Kept deliberately small and cheap — it runs on a keystroke.
+
+    Reuses the same cross-script matching as full search, so typing "chemmeen"
+    suggests ചെമ്മീൻ. That is the moment worth having in a suggestion list.
+    """
+    works = (await catalog_service.search_local(db, q))[:limit]
+    out: list[P.Suggestion] = [
+        P.Suggestion(
+            kind="book",
+            label=w.title,
+            sub=", ".join(a.pen_name or a.name for a in w.authors) or None,
+            href=f"/book/{w.slug or w.id}",
+        )
+        for w in works
+    ]
+    remaining = limit - len(out)
+    if remaining > 0:
+        for a in await catalog_service.search_authors(db, q, limit=remaining):
+            out.append(
+                P.Suggestion(
+                    kind="author",
+                    label=a.pen_name or a.name,
+                    sub="Author",
+                    href=f"/author/{a.slug or a.id}",
+                )
+            )
+    remaining = limit - len(out)
+    if remaining > 0:
+        for p in await catalog_service.search_publishers(db, q, limit=remaining):
+            out.append(
+                P.Suggestion(
+                    kind="publisher",
+                    label=p.name,
+                    sub="Publisher",
+                    href=f"/publisher/{p.slug or p.id}",
+                )
+            )
+    return P.SuggestPage(q=q, suggestions=out[:limit])

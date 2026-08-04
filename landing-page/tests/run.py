@@ -40,6 +40,7 @@ MODULES = [
     "html.js",
     "css.js",
     "api.js",
+    "suggest.js",
     "layout.js",
     "jsonld.js",
     "components.js",

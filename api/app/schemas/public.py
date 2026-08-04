@@ -272,3 +272,33 @@ class ReaderPage(BaseModel):
     books_finished: int = 0
     library_visible: bool = False
     recent: list[WorkCard] = []
+
+
+class PersonCard(Ref):
+    """An author or publisher in a directory listing — the link, plus the one
+    number that makes the row worth clicking."""
+
+    work_count: int = 0
+    language: str | None = None
+
+
+class PeoplePage(BaseModel):
+    kind: str  # "authors" | "publishers"
+    people: list[PersonCard] = []
+    total: int = 0
+    page: int = 1
+    per_page: int = 48
+
+
+class Suggestion(BaseModel):
+    """One typeahead row. Deliberately tiny — this is fetched on a keystroke."""
+
+    kind: str  # "book" | "author" | "publisher"
+    label: str
+    sub: str | None = None
+    href: str
+
+
+class SuggestPage(BaseModel):
+    q: str
+    suggestions: list[Suggestion] = []

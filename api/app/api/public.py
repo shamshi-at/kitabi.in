@@ -182,3 +182,27 @@ async def reader(username: str, db: DbSession, response: Response) -> P.ReaderPa
         raise _not_found("Reader")
     _cached(response, _CACHE_SHORT)
     return result
+
+
+@router.get("/people/{kind}", response_model=P.PeoplePage)
+async def people(
+    kind: str,
+    db: DbSession,
+    response: Response,
+    page: int = Query(default=1, ge=1, le=200),
+) -> P.PeoplePage:
+    """The /authors and /publishers directories."""
+    result = await public_service.people_page(db, kind, page=page)
+    if result is None:
+        raise _not_found("Directory")
+    _cached(response, _CACHE)
+    return result
+
+
+@router.get("/suggest", response_model=P.SuggestPage)
+async def suggest(
+    db: DbSession, response: Response, q: str = Query(min_length=1, max_length=80)
+) -> P.SuggestPage:
+    """Search typeahead. Small and cheap — it runs on a keystroke."""
+    _cached(response, _CACHE_SHORT)
+    return await public_service.suggest(db, q)

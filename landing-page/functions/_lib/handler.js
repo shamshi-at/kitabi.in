@@ -7,7 +7,7 @@
 import { cached, fetchPage } from './api.js';
 import { notFound, unavailable } from './layout.js';
 import { LIST_BY_SLUG, LISTS } from './lists.js';
-import { renderIndex } from './pages/discover.js';
+import { renderIndex, renderPeople } from './pages/discover.js';
 import { renderList, renderListIndex, renderTranslationIndex } from './pages/more.js';
 
 /**
@@ -177,6 +177,14 @@ export function serveTranslationIndex(context) {
     const { data } = await fetchPage('/public/home');
     if (!data) return unavailable();
     return renderTranslationIndex(data.translation_pairs || []);
+  });
+}
+
+/** /authors and /publishers — the directories the header links to. */
+export function servePeople(context, kind) {
+  const page = pageParam(new URL(context.request.url));
+  return servePage(context, `/public/people/${kind}?page=${page}`, renderPeople, {
+    what: 'directory',
   });
 }
 

@@ -555,3 +555,23 @@ assert(allowedSource('https://169.254.169.254/latest/meta-data/') === null,
 assert(allowedSource('') === null && allowedSource(null) === null, 'empty input is refused');
 assert(allowedSource('https://covers.openlibrary.org/' + 'x'.repeat(700)) === null,
   'an absurdly long URL is refused before anything is fetched');
+
+// --------------------------------------------------------------------------
+// Typeahead — optional by construction
+// --------------------------------------------------------------------------
+
+var sdoc = String(page({ title: 't', body: html`x` }).text());
+assertIncludes(sdoc, 'role="search"', 'the search form is still a plain labelled form');
+assertIncludes(sdoc, 'action="/search" method="get"',
+  '…and a plain GET, so it works with JavaScript disabled, blocked or failed');
+assertIncludes(sdoc, '<script defer>', 'the typeahead is deferred — never blocking');
+assertIncludes(sdoc, '/api/suggest', 'it calls our own origin, not a second one');
+assertIncludes(sdoc, '.sugg{', 'its styles ship with the rest of the inlined CSS');
+// The suggestion labels come from a database and are written into innerHTML.
+assertIncludes(SUGGEST_JS, 'replace(/[&<>"\']/g', 'suggestion text is escaped before innerHTML');
+assertIncludes(SUGGEST_JS, 'aria-autocomplete', 'the combobox is announced to assistive tech');
+assertIncludes(SUGGEST_JS, "e.key === 'Escape'", 'Escape closes the list');
+// Enter must only be intercepted when a suggestion is genuinely selected,
+// otherwise someone ignoring the dropdown cannot submit their own query.
+assertIncludes(SUGGEST_JS, "e.key === 'Enter' && active >= 0",
+  'Enter submits the form unless a suggestion is selected');
