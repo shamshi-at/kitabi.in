@@ -53,7 +53,7 @@ MODULES = [
 ]
 
 # Route modules that are worth testing directly (not under _lib).
-EXTRA_MODULES = ["img/c.js"]
+EXTRA_MODULES = ["img/c.js", "[[path]].js"]
 
 # Handles the multi-line form too — `import {\n  a,\n  b,\n} from '...'` — which a
 # single-line pattern silently leaves behind as a syntax error 1,000 lines into

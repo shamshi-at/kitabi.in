@@ -575,3 +575,30 @@ assertIncludes(SUGGEST_JS, "e.key === 'Escape'", 'Escape closes the list');
 // otherwise someone ignoring the dropdown cannot submit their own query.
 assertIncludes(SUGGEST_JS, "e.key === 'Enter' && active >= 0",
   'Enter submits the form unless a suggestion is selected');
+
+// --------------------------------------------------------------------------
+// The catch-all's asset allowlist
+// --------------------------------------------------------------------------
+//
+// This runs BEFORE static assets, so getting it wrong takes the site down. The
+// cost is asymmetric: a missing font is cosmetic, a missing app-association
+// file silently breaks universal links for every installed app.
+
+assert(isAsset('/.well-known/apple-app-site-association'),
+  'the iOS app-association file MUST pass through — losing it orphans installed apps');
+assert(isAsset('/.well-known/assetlinks.json'), 'the Android association file passes through');
+assert(isAsset('/fonts/inter-latin.woff2'), 'self-hosted fonts pass through');
+assert(isAsset('/fonts/fraunces-latin-ext.woff2'), 'every font subset passes through');
+assert(isAsset('/robots.txt'), 'robots.txt passes through');
+assert(isAsset('/sitemap.xml'), 'sitemap.xml passes through');
+assert(isAsset('/logo.svg') && isAsset('/ico.png') && isAsset('/apple-touch-icon.png'),
+  'icons pass through');
+assert(isAsset('/privacy.html') && isAsset('/terms.html'), 'the legal pages pass through');
+assert(isAsset('/404.html'), 'the 404 document itself passes through');
+
+// …and everything else is a 404, which is the entire point.
+assert(!isAsset('/total-nonsense-url'), 'an unmatched path is not an asset');
+assert(!isAsset('/book/chemmeen'), 'a real route is not handled here (its own Function wins)');
+assert(!isAsset('/'), 'home is not handled here either');
+assert(!isAsset('/fonts'), 'the bare directory is not a file');
+assert(!isAsset('/.well-known'), 'nor is the bare well-known directory');
