@@ -616,3 +616,65 @@ assertExcludes(footerDoc, 'href="/privacy.html"', 'not the .html form that 308s'
 // index.js for the root — named routes keep winning, "/" does not, and the
 // home page 404'd in production until this was explicit.
 assert(!isAsset('/'), 'home is not an asset — it is rendered, and by the catch-all');
+
+// ===== canonical host (functions/_lib/host.js) =====
+//
+// www.kitabi.in served the whole site byte-identical at 200 with `index,
+// follow` — a full duplicate host. These lock in the redirect and, more
+// importantly, everything it must NOT touch.
+
+assert(canonicalHostUrl('https://kitabi.in/') === null, 'the apex is already canonical');
+assert(canonicalHostUrl('https://kitabi.in/book/nrittam') === null, 'a deep apex URL is left alone');
+
+assert(
+  canonicalHostUrl('https://www.kitabi.in/') === 'https://kitabi.in/',
+  'www home redirects to the apex',
+);
+assert(
+  canonicalHostUrl('https://www.kitabi.in/author/m-t-vasudevan-nair') ===
+    'https://kitabi.in/author/m-t-vasudevan-nair',
+  'a named route redirects too — this is why it is middleware and not the catch-all',
+);
+assert(
+  canonicalHostUrl('https://www.kitabi.in/search?q=%E0%B4%9A%E0%B5%86') ===
+    'https://kitabi.in/search?q=%E0%B4%9A%E0%B5%86',
+  'the query string survives, encoding intact',
+);
+assert(
+  canonicalHostUrl('https://www.kitabi.in/browse?language=malayalam&page=3') ===
+    'https://kitabi.in/browse?language=malayalam&page=3',
+  'multiple query params survive in order',
+);
+
+// Apple does not follow redirects for the association file, and iOS only
+// re-checks at install — so a redirect here breaks universal links invisibly,
+// for weeks, for everyone who already installed.
+assert(
+  canonicalHostUrl('https://www.kitabi.in/.well-known/apple-app-site-association') === null,
+  'the app-association file is never redirected',
+);
+assert(
+  canonicalHostUrl('https://www.kitabi.in/.well-known/assetlinks.json') === null,
+  'nor is the Android one',
+);
+
+// Exact hosts only — a startsWith('www.') heuristic would break previews.
+assert(
+  canonicalHostUrl('https://kitabi-in.pages.dev/book/nrittam') === null,
+  'preview deployments are untouched',
+);
+assert(canonicalHostUrl('http://localhost:8788/') === null, 'local dev is untouched');
+assert(
+  canonicalHostUrl('https://wwwkitabi.in/') === null,
+  'a lookalike host without the dot is not ours to redirect',
+);
+
+// One 301, not two: http on www must land on https at the apex directly.
+assert(
+  canonicalHostUrl('http://www.kitabi.in/lists') === 'https://kitabi.in/lists',
+  'http+www collapses to https+apex in a single hop',
+);
+assert(
+  canonicalHostUrl('https://www.kitabi.in/browse?a=1#frag') === 'https://kitabi.in/browse?a=1#frag',
+  'the fragment survives too',
+);

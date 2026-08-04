@@ -37,6 +37,7 @@ LIB = ROOT / "functions" / "_lib"
 
 # Dependency order. jsonld imports ORIGIN from layout, so layout comes first.
 MODULES = [
+    "host.js",
     "html.js",
     "css.js",
     "api.js",
