@@ -36,6 +36,12 @@ from app.models.genre import Genre
 from app.models.lending_record import LendingRecord
 from app.models.library_entry import LibraryEntry
 from app.models.library_entry_tag import LibraryEntryTag
+from app.models.llm_usage import (
+    FEATURE_COVER_EXTRACT,
+    FEATURE_RECOMMENDATIONS,
+    LLM_FEATURES,
+    LlmUsage,
+)
 from app.models.personal_tag import PersonalTag
 from app.models.profile import Profile
 from app.models.promotion import (
@@ -116,6 +122,10 @@ __all__ = [
     "SyncOp",
     "ConflictHistory",
     "WorkRevision",
+    "LlmUsage",
+    "LLM_FEATURES",
+    "FEATURE_RECOMMENDATIONS",
+    "FEATURE_COVER_EXTRACT",
     "AdminUser",
     "AdminRecoveryCode",
     "AdminSession",

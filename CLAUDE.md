@@ -40,7 +40,7 @@ This folder is the single root for all three parts:
 
 | Directory | rupee-diary equivalent | What it is | Status |
 |---|---|---|---|
-| `landing-page/` | `landing/` | Static "launching soon" page at kitabi.in | Live |
+| `landing-page/` | `landing/` | kitabi.in — the static page, the public share pages (`/b/` `/a/` `/p/`) and their Cloudflare Pages Functions | Live. Planned to grow into the full public book site — [docs/web-platform-plan.md](docs/web-platform-plan.md) |
 | `api/` | `backend/` | FastAPI — catalog, personal library, auth, sync, recommendations | Scaffolded (health endpoint, JWT verify, Alembic, tests, Docker) |
 | `app/` | `app/` | Flutter mobile app — the primary platform (web comes later) | Scaffolded (Riverpod + go_router + l10n, placeholder home) |
 | `etl/` | — | OpenLibrary bulk-dump → curated catalog seed pipeline (offline scripts, run locally with `api/.venv`) | Scaffolded, smoke-tested |
@@ -164,6 +164,15 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   parsing, and catalog dedupe live in `services/` with unit tests.
 - Errors: `HTTPException` with structured detail `{"code": "...", "message": "..."}`;
   version enforcement returns 426 with update payload.
+- **Any endpoint whose request costs money must be metered before it ships.**
+  Auth is not a spend limit — it means "any Google account", so an unmetered paid
+  endpoint's ceiling is the caller's patience. Route it through
+  `services/llm_quota.consume` (per-reader daily quota + global circuit breaker,
+  backed by `llm_usage`) and add its feature constant to `models/llm_usage.py`.
+  Meter at the line the spend happens on, not in the router — every cheap early
+  return above it must stay free. Same rule for a public endpoint that spends a
+  *third party's* quota: `GET /catalog/isbn/{isbn}` is signed-in-only for exactly
+  that reason. Wider picture: [docs/web-platform-plan.md](docs/web-platform-plan.md) §11.
 - Every model change ships its Alembic migration in the same commit; never edit
   applied migrations.
 - Flutter: feature-scoped Riverpod providers, no global mutable singletons; route
@@ -177,6 +186,14 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   change per commit.
 - Landing page stays dependency-free static HTML/CSS — no build step, no frameworks;
   mobile-first, respects `prefers-reduced-motion`; follows the Reading Room theme.
+  The **public web platform** ([docs/web-platform-plan.md](docs/web-platform-plan.md),
+  mockups in [docs/web-mockups.html](docs/web-mockups.html)) holds that line: pages
+  are rendered by the Cloudflare Pages Functions that already run there, from a
+  `functions/_lib/` of plain template literals — no framework, no `node_modules`.
+  Two rules it adds: **the public web is strictly read-only** (every write is a door
+  into the app, so RLS deny-by-default and a zero public attack surface both hold),
+  and **content is server-rendered** — a page whose body needs JS to appear is a page
+  crawlers don't have.
 - **Logo:** `landing-page/logo.svg` is the master mark — "The Gold Line": an open
   book with a gold ribbon bookmark and text lines on both pages, one line gold on
   the recto ("the line that stays with you"), on an oxblood tile with a gold

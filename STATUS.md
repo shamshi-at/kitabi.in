@@ -11,7 +11,7 @@
 > tokens. This document summarizes and cross-links all of them plus the live/deployed state
 > those docs don't cover.
 
-**Last updated:** 23 Jul 2026
+**Last updated:** 4 Aug 2026
 
 ---
 
@@ -237,7 +237,7 @@ parts, each with their own README and CI workflow:
 
 | Directory | What | Status |
 |---|---|---|
-| `landing-page/` | Static "launching soon" site | **Live** at kitabi.in |
+| `landing-page/` | Static "launching soon" site + the three public share pages (`/b/`, `/a/`, `/p/`) and their Cloudflare Pages Functions | **Live** at kitabi.in. **Planned to become the full public book site** — edge-rendered, crawlable, ~11 page types: see [docs/web-platform-plan.md](docs/web-platform-plan.md) and [docs/web-mockups.html](docs/web-mockups.html) |
 | `api/` | FastAPI backend | **Live** at api.kitabi.in — auth/profile + shared catalog (search, ISBN lookup, add/edit, author/publisher browse) |
 | `app/` | Flutter mobile app | Auth flow + library-first home + catalog screens working (global search across library/books/authors/publishers, ISBN scan → adds to library, add/edit form with author/publisher **picker pages**, author/publisher browse, shareable book/author/publisher links) + personal-library grid & book detail |
 | `etl/` | OpenLibrary → curated catalog seed pipeline: bulk-dump path (01–04) + live-API per-language seed job (07) | Live-API job run against prod: 100 books × 14 languages (13 Indic + India-focused English), covers included |
@@ -327,6 +327,7 @@ Full spec in [feature-map.md](feature-map.md); phase-by-phase checklist in
 | 7 — Recommendations & share | LLM recs, per-book + personal share cards | **Core done** — **share cards (S6c/S13)** (`BookShareCard` → PNG via `RepaintBoundary` + `share_plus`, include-my-rating toggle, from the book page) and **LLM recommendations (S11)**: `GET /recommendations` reasons picks from the reader's ratings via Claude (gated behind an optional `ANTHROPIC_API_KEY` — dormant/no bill when unset), opt-in S11 screen with a "why" per pick, always-visible off switch, + Wishlist / Not-for-me, and a quiet "For you" home card. Live LLM output not yet verified (no key set) |
 | 8 — Launch plumbing | Version gate, backups, app icons, store listings, privacy policy | **Mostly done** — version gate (426 + update screen), Supabase keep-warm job, nightly encrypted R2 backup workflow, privacy + terms pages, Railway deploy + custom domain + app icons/splash all ✅. Remaining: store listings + store badges (pre-submission) |
 | 9 — In-app promotions | Banner + card on Home, admin composer, audience targeting | **✅ Built end-to-end (31 Jul 2026)** — design in [docs/promotions-plan.md](docs/promotions-plan.md), mockups in [docs/promotions-mockup.html](docs/promotions-mockup.html). First-party only: **no ad SDK, no advertising identifier, no ATT prompt, no new bill**. Migration `000034` adds `promotions` / `promotion_contents` / `promotion_events` (RLS deny-by-default) plus `profiles.promotions_opt_out`. `GET /promotions` resolves **server-side** — targeting applied, language variant chosen, dismissals and caps honoured, one per placement, ETag→304 on the usual poll; `POST /promotions/events` takes a batch idempotent on device-generated ids. Targeting: languages (from `profiles.preferred_languages`), platform (new `X-Platform` header), app-version range, account age, library size, reading status, genres, explicit reader ids, rollout %, exclusions — unknown facts fail *closed*. **Content variants are a separate mechanism from targeting**: one campaign carries per-language copy (null = default), so a Malayalam promo reaches Malayalam readers *in Malayalam* without a duplicate campaign. Deliberately **no geo targeting** (no location stored, and adding one means a bill or fingerprinting). Console gains a **Campaigns** section (editor+): list grouped by derived state, four-tab composer with a live phone preview, audience builder with a live estimate + narrowing bars, schedule/frequency, per-variant results, one-tap Stop now, full audit trail. App caches into Drift (`CachedPromotions`) so Home renders offline and an ended campaign expires on-device; its own append-only outbox (`PromotionEventQueue`), **not** the sync queue. Reader opt-out switch in Profile filters at the API. Verified on an Android emulator: both surfaces render, dismiss is instant and DB-backed, and the campaign→console→device round trip works |
+| W — Public web platform | kitabi.in as a book reference site ("IMDB for books"): edge-rendered pages, search, hubs, lists, SEO | **Planned, nothing built (4 Aug 2026)** — plan in [docs/web-platform-plan.md](docs/web-platform-plan.md), 14 mocked page types in [docs/web-mockups.html](docs/web-mockups.html). Two measured blockers drive it: the existing `/b/:id` pages are **client-rendered**, so a non-JS crawler receives *"Opening the book…"* and no book content (the edge function injects correct OG + `Book` JSON-LD into the `<head>`, but the `<body>` is a spinner); and `GET /catalog/browse/genres` returns `[]` — **no seeded work carries a genre**, so genre hubs have nothing to stand on. Approach: render in the Pages Functions that already run there (no framework, no build step, no new bill — rule 8 holds), one `/public/*` page-shaped API call per page, Cloudflare Cache API + stale-while-revalidate in front. Adds a `slug` column on works/authors/publishers/series; `/b/:uuid` 301s to the slug URL and the AASA/`assetlinks.json` paths must gain `/book/*` **before** the redirect ships, since iOS only re-evaluates the association at install. Indexation is deliberately gated by a content floor (~250–400 of 1,402 works at launch, not all of them) |
 
 All 19 v1 screen mockups exist in [docs/kitabi_screens.html](docs/kitabi_screens.html),
 audited against feature-map.md so every `[V1]` feature has a designed home before it's built.
@@ -335,6 +336,63 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **4 Aug 2026** — **Spend limits on the paid endpoints, and the ISBN lookup closed.**
+  `GET /recommendations` and `POST /catalog/cover-extract` are the only two endpoints
+  where one request costs money, and until now neither had any ceiling: both require
+  auth, but auth means "any Google account", so the cap on the Anthropic bill was the
+  caller's patience. Migration `000037` adds `llm_usage` (RLS deny-by-default) behind a
+  new `services/llm_quota.py`: a **per-reader daily quota** (`llm_daily_quota_recommendations`
+  = 20, `llm_daily_quota_cover_extract` = 40) and a **global daily circuit breaker**
+  (`llm_daily_global_cap` = 1000, the number that actually bounds the bill). Postgres,
+  not Redis — rule 8 holds; any limit set to 0 is disabled. The per-reader counter is an
+  `INSERT … ON CONFLICT DO UPDATE … RETURNING`, so increment-and-check is one atomic
+  statement and two concurrent requests can't both read "one under the cap"; the global
+  check is deliberately check-then-act (a ceiling with slack, not an exact budget — locking
+  it would serialize every paid call). Quota is consumed **before** the call and **not
+  refunded** on failure, or a caller who can force an upstream error gets unlimited free
+  attempts. Rejections are 429 `quota_exceeded` / 503 `llm_unavailable`, both with
+  `Retry-After` to the next UTC midnight. The recs meter sits in the *service*, next to
+  `_generate_picks`, not in the router — every early return above it (dormant, cold-start,
+  no candidates) is a free no-op, and a reader with no ratings must not burn quota
+  reopening a screen that never calls Anthropic. Separately, **`GET /catalog/isbn/{isbn}`
+  now requires auth** — it was the one public read that spends *OpenLibrary's* quota and
+  writes to our catalog, so an anonymous caller hammering it gets Kitabi rate-limited by
+  a third party and fills the catalog with junk; the app's Dio interceptor already attaches
+  the bearer token to every request, so no client change was needed. **CORS narrowed to
+  what the share pages actually do**: it was `allow_methods=["*"]` with
+  `allow_credentials=True` and `Authorization` permitted — every method advertised to every
+  browser, and cookie-bearing cross-origin reads allowed — now `["GET"]`, credentials off,
+  `Accept` only. The mobile app isn't a browser and the admin console is a separate
+  same-origin app, so neither is affected; the whole block disappears at W1, when the
+  browser stops calling the API. 22 new tests (**342 green**), lint clean, migration
+  round-trips up→down→up, Docker builds. Each new guard was verified by reverting the
+  change and watching the test fail. Wider API-hardening picture (and what's still open —
+  Cloudflare rate-limit rules, cache headers, app-side 429 handling) in
+  [docs/web-platform-plan.md](docs/web-platform-plan.md) §11 and Phase S of
+  [docs/tasks.md](docs/tasks.md).
+- **4 Aug 2026** — **The public web platform, planned and mocked.** kitabi.in becomes
+  a book reference site rather than a launching-soon page plus three share pages:
+  [docs/web-platform-plan.md](docs/web-platform-plan.md) (architecture, URL map,
+  per-page spec, performance budget, indexation strategy, phasing) and
+  [docs/web-mockups.html](docs/web-mockups.html) (14 page types drawn in the Reading
+  Room theme — home, search, book, author, publisher, genre + language hubs, series,
+  translation group, editorial list, reviews, reader profile, mobile, and the
+  thin/empty states). Nothing is built yet. The plan is grounded in production
+  measurements taken the same day, two of which are blockers rather than
+  improvements: a non-JS crawler on `/b/:id` receives *"Opening the book…"* and **zero
+  book content** (620 ms TTFB for a shell, then a 310 ms client-side fetch to
+  api.kitabi.in before anything appears), and `GET /catalog/browse/genres` returns
+  `[]` — **not one seeded work has a genre**, so the genre hubs a reference site is
+  built from have nothing behind them. `browse/forms` returns only `["Novel"]`.
+  Live catalogue: 1,402 works / 1,189 authors / 1,066 publishers, 14 languages.
+  The positioning is deliberately narrow — Indic-language literature and the
+  translation graph, which is the one thing Goodreads/StoryGraph/Amazon structurally
+  cannot show — and the indexation strategy is deliberately *restrictive*: a content
+  floor keeps ~250–400 works indexable at launch rather than publishing 1,402 pages,
+  many of them OpenLibrary transliteration noise, and teaching Google the domain is
+  thin. Everything stays inside rule 8 — Cloudflare Pages Functions that already run,
+  the existing FastAPI, the existing Supabase `covers` bucket; no framework, no build
+  step, no new service, no new bill.
 - **29 Jul 2026** — **Discover opens in the reader's own languages.** The
   catalogue's Books tab now applies a default server-side filter: the
   reader's `preferred_languages` from /me (the languages they configured at

@@ -28,6 +28,7 @@ CONTAINER = "kitabi-test-pg"
 LOCAL_URL = "postgresql+asyncpg://postgres:test@localhost:55443/test"
 # Tables to truncate between tests — extend as models land.
 TABLES: list[str] = [
+    "llm_usage",
     "promotion_events",
     "promotion_contents",
     "promotions",

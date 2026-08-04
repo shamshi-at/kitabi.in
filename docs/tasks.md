@@ -705,6 +705,148 @@ no advertising identifier, no new bill (CLAUDE.md rule 8).
 - [ ] End-to-end on a real phone against the deployed API — create a campaign in the
       console targeted at your own reader id, publish, confirm it appears, dismiss it
 
+## Phase S — API hardening
+
+Plan: [web-platform-plan.md](web-platform-plan.md) §11. Ranked by what abuse
+actually costs, not by how discoverable an endpoint is — **you cannot stop a
+non-browser client from calling a public API**, so the controls are rate and
+cost, never secrecy.
+
+- [x] **Daily spend limits on the two paid endpoints** (4 Aug 2026) — migration
+      `000037` + `services/llm_quota.py`. Per-reader daily quota *and* a global daily
+      circuit breaker, in Postgres (rule 8, no Redis). The per-reader counter is an
+      atomic `INSERT … ON CONFLICT DO UPDATE … RETURNING`; the global check is
+      deliberately check-then-act. Consumed before the call, **not refunded** on
+      failure. 429 `quota_exceeded` / 503 `llm_unavailable`, both with `Retry-After`.
+      The recs meter sits in the service next to `_generate_picks`, not the router,
+      so cold-start readers don't burn quota on a call that never happens
+- [x] **`GET /catalog/isbn/{isbn}` requires auth** (4 Aug 2026) — the one public read
+      that spent *OpenLibrary's* quota and wrote to our catalog. No app change needed
+- [ ] Cloudflare rate-limiting rules on `api.kitabi.in` (already proxied — zero code,
+      zero bill). The cheapest remaining item
+- [x] **CORS scoped to what the share pages actually do** (4 Aug 2026) — was
+      `allow_methods=["*"]` + `allow_credentials=True` + `Authorization` allowed, i.e.
+      every method advertised to every browser and cookie-bearing cross-origin reads
+      permitted. Now `["GET"]`, credentials off, `Accept` only. The mobile app isn't a
+      browser and the admin console is a separate same-origin app, so neither is
+      affected. 7 tests in `test_cors.py`; the block disappears entirely at W1, when
+      the browser stops calling the API
+- [ ] `Cache-Control` on the public catalog GETs so Cloudflare serves repeat reads and
+      the API stops being touched for them
+- [ ] Surface 429/503 from the paid endpoints in the app as a calm message rather than
+      a generic error state (recs screen + the add form's "Fill in from photos")
+- [ ] Alert on anomalous volume — a daily job that flags a reader at their cap, or the
+      global breaker tripping, so the first sign isn't the invoice
+- [ ] Edge→origin shared secret on `/public/*` (blocked on W1 — meaningless until the
+      browser stops calling the API directly)
+
+## Phase W — Public web platform (kitabi.in as a book reference site)
+
+Plan: [web-platform-plan.md](web-platform-plan.md) · Mockups: [web-mockups.html](web-mockups.html).
+Runs alongside the app phases, not after them — the catalogue it publishes already exists.
+Two measured blockers gate everything below: the public pages render client-side (a
+non-JS crawler gets a spinner), and **no seeded work carries a genre**.
+
+### W0 — Foundations
+
+- [ ] `slug` column (unique, indexed) on `works` / `authors` / `publishers` / `series`,
+      generated from `title` or **`title_translit`** when the title is non-Latin;
+      disambiguate by author → year → `-N`. Migration + backfill + generation on create
+- [ ] `/public/*` read layer — page-shaped payloads (`book`, `author`, `publisher`,
+      `series`, `genre`, `language`, `home`), keyed by slug. **One API call per page**;
+      thin projections over the existing services, additive to the app's endpoints
+- [ ] Public reviews — `GET /catalog/works/{id}/reviews` currently requires `CurrentUser`;
+      the visibility flags and anonymization already do the right thing, the auth gate
+      is simply the wrong gate for a public page
+- [ ] `X-Total-Count` on `GET /catalog/browse/works` (no totals today → no "1–40 of 312",
+      no finite pagination for crawlers)
+- [ ] Self-host the fonts — Fraunces + Inter variable woff2, latin subset, preloaded;
+      Noto Sans Malayalam behind `unicode-range` so English pages never fetch it.
+      Drops two third-party origins from the critical path (~300–500 ms on mobile)
+- [ ] Cover proxy `/img/c/<id>` — fetch once, 30-day immutable edge cache; backfill hot
+      covers into the **existing Supabase `covers` bucket** (no second store, rule 8)
+- [ ] `POST /internal/purge` → Cloudflare cache purge by URL, fired on catalog writes
+
+### W1 — Server-render the three pages that already exist
+
+- [ ] `landing-page/functions/_lib/` — shared layout/components/cache/JSON-LD renderer
+      (plain tagged template literals; the existing `_og.js` `Book` builder gets lifted,
+      not rewritten)
+- [ ] `/book/<slug>`, `/author/<slug>`, `/publisher/<slug>` fully server-rendered
+- [ ] Edge cache: `s-maxage=300`, `stale-while-revalidate=86400`
+- [ ] **AASA + `assetlinks.json` gain `/book/*`, `/author/*`, `/publisher/*` — shipped
+      BEFORE the redirect.** iOS re-evaluates the association only at install, so
+      removing or racing the old paths orphans every installed app. Expect Apple's CDN
+      to lag ~24 h
+- [ ] `/b/:uuid`, `/a/:uuid`, `/p/:uuid` → **301** to the slug URL (never removed —
+      they're in Google's index, in every share card, and bound to the app links)
+- [ ] Done when: a JS-disabled browser sees the whole book page, TTFB < 100 ms warm
+
+### W2 — The front door
+
+- [ ] `/` — search box, featured book, recently added, highest rated, the language grid
+      (the row that gives every hub a link from the root), translation pairs, one app band
+- [ ] `/search?q=` — server-rendered, grouped, `noindex, follow`; works with JS disabled;
+      shows the cross-script match line ("matched your spelling 'chemmeen'")
+- [ ] `/browse?…` — faceted, `noindex, follow`, still fully linked
+- [ ] `/public/home` feeds: recently added, highest rated, trending (library adds in 30
+      days, computed in Postgres, cached 1 h — no Redis)
+
+### W3 — Hubs
+
+- [ ] `/genre/<slug>`, `/language/<slug>`, `/language/<slug>/<form>`, `/series/<slug>`,
+      `/translations/<slug>` — one hub template
+- [ ] Editorial intros, 150–250 words each, hand-written per hub. **This is the whole
+      difference between a hub and a thin auto-generated list**
+- [ ] `/list/<slug>` — editorial lists; ten written for launch
+- [ ] Done when: every indexable page is ≤3 clicks from home
+
+### W4 — Indexation
+
+- [ ] The content floor: a work is `index, follow` only with a cover **or** a description
+      ≥120 chars **or** ≥1 review **or** ≥2 editions **or** ≥1 rating, and a title that
+      isn't transliteration noise. Everything else `noindex, follow`. Same idea for
+      authors (bio or ≥2 works) and publishers (≥3 editions)
+- [ ] `sitemap_service.build_page` emits **only indexable rows** — it emits every
+      non-deleted row today, which is exactly the signal we don't want to send
+- [ ] Extend sitemaps to series / genres / languages / lists / translation groups,
+      with `<image:image>` for covers
+- [ ] JSON-LD per page type; `AggregateRating` **only when a real rating exists** — never
+      zeroed, never invented
+- [ ] Pagination: unique title + self-canonical per page; never canonical page 2 → page 1
+- [ ] `hreflang` scaffolding for a future `/ml/`, so it isn't a retrofit
+- [ ] Search Console + Bing Webmaster verified; Lighthouse CI failing the build on
+      LCP > 1.2 s or a document-size regression
+
+### W5 — Catalogue depth (parallel, and never really finished)
+
+- [ ] **Merge duplicate authors** — `Basheer, Vaikom Muhammad` and `Vokom M. Basheer` are
+      live right now as two rows for one person. Two rows = two thin pages competing.
+      **Prerequisite for indexing author pages at all**
+- [ ] Fix imported titles — ~30% carry OpenLibrary transliteration noise
+- [ ] **Attach genres** — `browse/genres` returns `[]`. Classify the seed set against a
+      ~40-genre closed vocabulary, LLM-assisted with human review (the Anthropic client
+      already exists in the API). Nothing genre-shaped can ship before this
+- [ ] Cover coverage — typeset covers where none exists, so no page has a hole
+- [ ] Descriptions for the top 300 works, 120–200 words. Highest-leverage manual task on
+      the list: it flips 300 works past the content floor and gives each a real meta description
+- [ ] `/reader/<username>` public profiles (honouring the visibility flags, rule 16)
+
+### W6 — `[LATER]`
+
+- [ ] `/ml/` Malayalam UI + `hreflang`
+
+### Open decisions (owner)
+
+- [ ] Slug column vs. hash-suffixed UUID — recommendation is the column (one migration,
+      clean URLs permanently; a hash prefix fails *silently* as two books on one URL)
+- [ ] Content-floor thresholds — the proposal indexes ~250–400 of 1,402 works at launch
+- [ ] Who owns the ~40-genre vocabulary, and is LLM-assisted classification with human
+      review acceptable for the seed set?
+- [ ] Editorial writing capacity — the descriptions and hub intros are ~40 hours of writing
+- [ ] `buy_links` (`[WIRED]`, empty): affiliate programmes are revenue but also a
+      disclosure obligation. In or out for v1?
+
 ## Parking lot — v1.5 (designed or deliberately deferred)
 
 - [ ] Quote capture with OCR (regional scripts) — S14 designed
@@ -713,4 +855,6 @@ no advertising identifier, no new bill (CLAUDE.md rule 8).
 - [ ] Shelf-scan-to-library (camera reads spines)
 - [ ] Reading sessions (timed logs)
 - [ ] Reading challenges; spoiler-aware companion; AI book insights
-- [ ] Web app; email/mobile OTP; community layer (flip the `[WIRED]` switches)
+- [ ] Web *app* — the signed-in Flutter experience in a browser. Distinct from Phase W,
+      which is the public read-only reference site and needs no accounts
+- [ ] Email/mobile OTP; community layer (flip the `[WIRED]` switches)

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, DbSession, OptionalUser
 from app.core.config import get_settings
-from app.models import Author, Publisher
+from app.models import FEATURE_COVER_EXTRACT, Author, Publisher
 from app.schemas.catalog import (
     AuthorClaimOut,
     AuthorCreate,
@@ -37,7 +37,7 @@ from app.schemas.catalog import (
     WorkSummaryOut,
     WorkUpdate,
 )
-from app.services import catalog_service, extraction_service, review_service
+from app.services import catalog_service, extraction_service, llm_quota, review_service
 from app.services.openlibrary_client import OpenLibraryClient, get_openlibrary_client
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
@@ -174,9 +174,18 @@ async def browse_publishers(
 
 
 @router.get("/isbn/{isbn}", response_model=WorkOut)
-async def lookup_isbn(isbn: str, db: DbSession, ol_client: OlClient) -> WorkOut:
+async def lookup_isbn(isbn: str, user: CurrentUser, db: DbSession, ol_client: OlClient) -> WorkOut:
     """Scan flow (S7): local match first, else OpenLibrary — and whatever's
-    found is cached locally so the next scan of this ISBN is instant."""
+    found is cached locally so the next scan of this ISBN is instant.
+
+    **Signed-in only**, unlike the other catalog GETs. This is the one public
+    read that spends a *third party's* quota and writes to our database: an
+    unauthenticated caller hammering it gets Kitabi rate-limited or banned by
+    OpenLibrary and fills the catalog with rows nobody asked for. Only the
+    scan flow calls it, and that flow is only reachable signed in — the app's
+    Dio interceptor attaches the bearer token to every request, so this
+    needed no client change.
+    """
     edition = await catalog_service.find_or_fetch_by_isbn(db, ol_client, isbn)
     if edition is None:
         raise HTTPException(
@@ -188,11 +197,15 @@ async def lookup_isbn(isbn: str, db: DbSession, ol_client: OlClient) -> WorkOut:
 
 
 @router.post("/cover-extract", response_model=CoverExtractOut)
-async def cover_extract(payload: CoverExtractIn, user: CurrentUser) -> CoverExtractOut:
+async def cover_extract(
+    payload: CoverExtractIn, user: CurrentUser, db: DbSession
+) -> CoverExtractOut:
     """Prefill the add-book form from cover photographs — the rescue path when
     a scan finds nothing anywhere. Reads the photo URLs the form has already
     uploaded (our covers bucket only), returns whatever fields the vision
-    model could read; nothing is persisted. Dormant without an LLM key."""
+    model could read; nothing is persisted. Dormant without an LLM key.
+
+    Metered: every call is a paid Anthropic request (see `llm_quota`)."""
     settings = get_settings()
     if not settings.extraction_enabled:
         raise HTTPException(
@@ -213,6 +226,9 @@ async def cover_extract(payload: CoverExtractIn, user: CurrentUser) -> CoverExtr
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"code": "bad_image_url", "message": "Only uploaded cover photos can be read"},
         )
+    # Last thing before the paid call, and after every cheap rejection above —
+    # a malformed request must not spend the reader's daily quota.
+    await llm_quota.consume(db, uuid.UUID(user["id"]), FEATURE_COVER_EXTRACT, settings=settings)
     try:
         fields = await extraction_service.extract_from_covers(
             settings, front_url=payload.front_url, back_url=payload.back_url

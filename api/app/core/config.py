@@ -48,6 +48,22 @@ class Settings(BaseSettings):
     # this path runs.
     extraction_model: str = "claude-sonnet-5"
 
+    # Daily spend limits for the two endpoints that cost real money. Auth on
+    # them means "any signed-in reader", so without a ceiling the cap on the
+    # Anthropic bill is the caller's patience. Enforced in
+    # services/llm_quota.py against the `llm_usage` table — Postgres, not
+    # Redis (rule 8). Set any of these to 0 to disable that limit entirely.
+    #
+    # Per reader, per UTC day. Sized against real use: recs are one deliberate
+    # screen visit each, extraction is the rescue path for books no catalog
+    # knows (a reader bulk-adding a shelf might genuinely photograph dozens).
+    llm_daily_quota_recommendations: int = 20
+    llm_daily_quota_cover_extract: int = 40
+    # The circuit breaker: total paid calls across ALL readers in one UTC day.
+    # This is the number that actually bounds the bill — the per-reader caps
+    # only stop one account from being the whole problem.
+    llm_daily_global_cap: int = 1000
+
     # Push notifications (FCM HTTP v1). Optional, opt-in like recs (rule 8): the
     # owner pastes a Firebase Admin service-account JSON here (one string). Unset
     # → push is dormant and every notify call is a no-op, no external request.

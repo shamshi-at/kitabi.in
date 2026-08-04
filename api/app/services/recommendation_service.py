@@ -16,7 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings, get_settings
-from app.models import Edition, LibraryEntry, Rating, Work
+from app.models import FEATURE_RECOMMENDATIONS, Edition, LibraryEntry, Rating, Work
+from app.services import llm_quota
 from app.services.anthropic_client import ANTHROPIC_URL, headers, reply_text
 
 _SYSTEM = (
@@ -142,6 +143,12 @@ async def recommend(
     candidates = await _candidate_works(db, exclude)
     if not candidates:
         return []
+
+    # Metered here rather than in the router because this is the exact line the
+    # spend happens on: every `return []` above is a free no-op, and a reader
+    # with no ratings yet would otherwise burn their daily quota re-opening a
+    # screen that never calls Anthropic at all. Raises 429/503 (llm_quota).
+    await llm_quota.consume(db, user_id, FEATURE_RECOMMENDATIONS, settings=settings)
 
     picks = await _generate_picks(settings, rated, candidates, limit, client=client)
     by_id = {str(w.id): w for w in candidates}
