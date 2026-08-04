@@ -14,10 +14,21 @@ from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Author, Edition, Genre, Publisher, Rating, Review, Series, Work
+from app.models import (
+    Author,
+    Edition,
+    Genre,
+    LibraryEntry,
+    Profile,
+    Publisher,
+    Rating,
+    Review,
+    Series,
+    Work,
+)
 from app.models.work import work_authors, work_genres
 from app.schemas import public as P
-from app.services import catalog_service, review_service, slug_service
+from app.services import catalog_service, review_service, scoring_service, slug_service
 
 # --------------------------------------------------------------------------
 # The content floor (docs/web-platform-plan.md §8.3)
@@ -708,3 +719,96 @@ async def indexable_work_ids(db: AsyncSession, ids: list[uuid.UUID]) -> set[uuid
             rating_count=rating_counts.get(w.id, 0),
         )
     }
+
+
+# --------------------------------------------------------------------------
+# Reviews, batch lookup, reader profiles
+# --------------------------------------------------------------------------
+
+
+async def reviews_page(
+    db: AsyncSession, key: str, *, page: int = 1, per_page: int = 20
+) -> P.ReviewsPage | None:
+    work = await resolve(db, Work, key)
+    if work is None:
+        return None
+    summary = await review_service.rating_summary(db, work.id)
+    everything = await review_service.public_reviews(db, work.id, limit=500)
+    start = (page - 1) * per_page
+    counts = await _rating_counts(db, [work.id])
+    return P.ReviewsPage(
+        work=card(work, rating_count=counts.get(work.id, 0)),
+        rating=P.RatingSummary(
+            average=summary["average"],
+            count=summary["count"],
+            distribution={str(k): v for k, v in (summary["distribution"] or {}).items()},
+        ),
+        reviews=[P.PublicReviewOut(**r) for r in everything[start : start + per_page]],
+        total=len(everything),
+        page=page,
+        per_page=per_page,
+    )
+
+
+async def works_by_keys(db: AsyncSession, keys: list[str]) -> list[P.WorkCard]:
+    """Cards for a specific set of books, in the order asked for.
+
+    Editorial lists are curated by slug in the renderer, so this is what turns
+    "these twelve books, in this order" into one API call instead of twelve.
+    Keys that don't resolve are skipped rather than erroring — a list must not
+    break because one book was merged away.
+    """
+    found: list[Work] = []
+    for key in keys[:60]:
+        work = await resolve(db, Work, key)
+        if work is not None:
+            found.append(work)
+    return await _cards(db, found)
+
+
+async def reader_page(db: AsyncSession, username: str) -> P.ReaderPage | None:
+    """A public reader profile, by handle.
+
+    Returns None for a reader who has not made their profile public — which the
+    router turns into a 404. A private profile must have NO page, not an empty
+    one: "this handle exists but you can't see it" is itself a disclosure, and
+    the visibility flags exist precisely so the web can honour them (rule 16).
+    """
+    profile = (
+        (
+            await db.execute(
+                select(Profile).where(
+                    func.lower(Profile.username) == username.lower(),
+                    Profile.profile_visible.is_(True),
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if profile is None:
+        return None
+
+    recent: list[Work] = []
+    if profile.library_visible:
+        stmt = (
+            _with_relations(select(Work))
+            .join(Edition, Edition.work_id == Work.id)
+            .join(LibraryEntry, LibraryEntry.edition_id == Edition.id)
+            .where(LibraryEntry.user_id == profile.id, LibraryEntry.deleted_at.is_(None))
+            .order_by(LibraryEntry.updated_at.desc())
+            .limit(12)
+        )
+        recent = list((await db.execute(stmt)).scalars().unique().all())
+
+    return P.ReaderPage(
+        id=profile.id,
+        username=profile.username,
+        display_name=profile.full_name or profile.username or "A reader",
+        avatar_url=profile.avatar_url,
+        score=(await scoring_service.compute_score(db, profile.id)).get("total", 0),
+        books_tracked=len(recent),
+        books_finished=0,
+        library_visible=profile.library_visible,
+        recent=await _cards(db, recent),
+    )

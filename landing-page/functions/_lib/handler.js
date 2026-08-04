@@ -6,7 +6,9 @@
 
 import { cached, fetchPage } from './api.js';
 import { notFound, unavailable } from './layout.js';
+import { LIST_BY_SLUG, LISTS } from './lists.js';
 import { renderIndex } from './pages/discover.js';
+import { renderList, renderListIndex, renderTranslationIndex } from './pages/more.js';
 
 /**
  * Fetch a /public/* payload and render it.
@@ -104,6 +106,53 @@ export function serveIndex(context, { title, description, kind, field, prefix, c
       items: data[field] || [],
       hrefFor: (i) => `${prefix}${encodeURIComponent(i.slug)}`,
     });
+  });
+}
+
+/** /book/:key/reviews */
+export function serveReviews(context, key, render) {
+  const page = pageParam(new URL(context.request.url));
+  return servePage(
+    context,
+    `/public/book/${encodeURIComponent(key)}/reviews?page=${page}`,
+    render,
+    { what: 'book' },
+  );
+}
+
+/**
+ * /list/:slug — an editorial list.
+ *
+ * The list is content (_lib/lists.js); only the book data comes from the API,
+ * fetched as ONE batch call for the whole list rather than one per entry.
+ */
+export function serveList(context, slug) {
+  const list = LIST_BY_SLUG.get(slug);
+  if (!list) return Promise.resolve(notFound({ what: 'list' }));
+  return cached(context, async () => {
+    const params = new URLSearchParams();
+    for (const entry of list.entries) params.append('slug', entry.slug);
+    const { data } = await fetchPage(`/public/works?${params.toString()}`);
+    if (!data) return unavailable();
+    return renderList(list, data);
+  });
+}
+
+export function serveListIndex(context) {
+  return cached(context, () => Promise.resolve(renderListIndex(LISTS)));
+}
+
+/**
+ * /translations — the translation index.
+ *
+ * Built from the home payload's pairs, which is all the data this needs; a
+ * dedicated endpoint would be a second way to compute the same thing.
+ */
+export function serveTranslationIndex(context) {
+  return cached(context, async () => {
+    const { data } = await fetchPage('/public/home');
+    if (!data) return unavailable();
+    return renderTranslationIndex(data.translation_pairs || []);
   });
 }
 

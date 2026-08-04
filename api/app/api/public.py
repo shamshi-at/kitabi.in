@@ -137,3 +137,48 @@ async def search(
 ) -> P.SearchPage:
     _cached(response, _CACHE_SHORT)
     return await public_service.search_page(db, q)
+
+
+@router.get("/book/{key}/reviews", response_model=P.ReviewsPage)
+async def book_reviews(
+    key: str,
+    db: DbSession,
+    response: Response,
+    page: int = Query(default=1, ge=1, le=200),
+) -> P.ReviewsPage:
+    result = await public_service.reviews_page(db, key, page=page)
+    if result is None:
+        raise _not_found("Book")
+    _cached(response, _CACHE)
+    return result
+
+
+@router.get("/works", response_model=list[P.WorkCard])
+async def works(
+    db: DbSession,
+    response: Response,
+    slug: Annotated[list[str] | None, Query()] = None,
+) -> list[P.WorkCard]:
+    """Cards for a named set of books, in the order asked for.
+
+    Editorial lists are curated by slug in the renderer, so this turns "these
+    twelve books, in this order" into one call instead of twelve. Keys that
+    don't resolve are skipped — a list must not break because one book was
+    merged away."""
+    _cached(response, _CACHE)
+    return await public_service.works_by_keys(db, slug or [])
+
+
+@router.get("/reader/{username}", response_model=P.ReaderPage)
+async def reader(username: str, db: DbSession, response: Response) -> P.ReaderPage:
+    """A reader's public profile, by handle.
+
+    404s for a reader who hasn't made their profile public. Deliberately
+    indistinguishable from "no such handle": "this reader exists but is
+    private" is itself a disclosure, and the visibility flags exist precisely
+    so the public web honours them (feature-map rule 16)."""
+    result = await public_service.reader_page(db, username)
+    if result is None:
+        raise _not_found("Reader")
+    _cached(response, _CACHE_SHORT)
+    return result

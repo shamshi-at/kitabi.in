@@ -268,3 +268,85 @@ async def test_reviews_are_public_on_the_book_page(unauthenticated_client, db_se
     assert resp.status_code == 200
     body = resp.json()
     assert "reviews" in body and "rating" in body
+
+
+# --------------------------------------------------------------------------
+# Reviews, batch lookup, reader profiles
+# --------------------------------------------------------------------------
+
+
+async def test_reviews_page_paginates_and_carries_the_histogram(db_sessionmaker):
+    async with db_sessionmaker() as db:
+        work, _ = await _seed_book(db, cover="https://x/c.jpg")
+        page = await public_service.reviews_page(db, work.slug)
+    assert page is not None
+    assert page.work.title == "Chemmeen"
+    assert page.rating is not None
+    assert page.page == 1
+
+
+async def test_works_by_keys_preserves_the_order_asked_for(db_sessionmaker):
+    """Editorial lists are curated sequences — "twelve books, in this order" —
+    so the API must not reorder them."""
+    async with db_sessionmaker() as db:
+        a, _ = await _seed_book(db, title="Alpha", author_name="A")
+        b, _ = await _seed_book(db, title="Beta", author_name="B")
+        c, _ = await _seed_book(db, title="Gamma", author_name="C")
+        cards = await public_service.works_by_keys(db, [c.slug, a.slug, b.slug])
+    assert [w.title for w in cards] == ["Gamma", "Alpha", "Beta"]
+
+
+async def test_works_by_keys_skips_what_it_cannot_resolve(db_sessionmaker):
+    """A list must not break because one book on it was merged away."""
+    async with db_sessionmaker() as db:
+        a, _ = await _seed_book(db, title="Alpha")
+        cards = await public_service.works_by_keys(db, ["gone-away", a.slug, "also-gone"])
+    assert [w.title for w in cards] == ["Alpha"]
+
+
+async def test_a_private_reader_has_no_page_at_all(db_sessionmaker):
+    """Not an empty page — none. "This handle exists but is private" is itself
+    a disclosure, and the visibility flags exist so the web honours them."""
+    from app.models import Profile
+
+    async with db_sessionmaker() as db:
+        db.add(Profile(id=uuid.uuid4(), email="h@x.test", username="hidden", profile_visible=False))
+        db.add(Profile(id=uuid.uuid4(), email="s@x.test", username="shown", profile_visible=True))
+        await db.commit()
+
+        assert await public_service.reader_page(db, "hidden") is None
+        assert await public_service.reader_page(db, "nobody") is None
+        shown = await public_service.reader_page(db, "shown")
+    assert shown is not None and shown.username == "shown"
+
+
+async def test_a_public_reader_with_a_private_library_shows_no_books(db_sessionmaker):
+    """Two separate flags. A public profile does not imply a public shelf."""
+    from app.models import Profile
+
+    async with db_sessionmaker() as db:
+        db.add(
+            Profile(
+                id=uuid.uuid4(),
+                email="r@x.test",
+                username="reader",
+                profile_visible=True,
+                library_visible=False,
+            )
+        )
+        await db.commit()
+        page = await public_service.reader_page(db, "reader")
+    assert page is not None
+    assert page.recent == []
+    assert page.library_visible is False
+
+
+async def test_reader_lookup_is_case_insensitive(db_sessionmaker):
+    from app.models import Profile
+
+    async with db_sessionmaker() as db:
+        db.add(
+            Profile(id=uuid.uuid4(), email="a@x.test", username="arundhati", profile_visible=True)
+        )
+        await db.commit()
+        assert await public_service.reader_page(db, "Arundhati") is not None

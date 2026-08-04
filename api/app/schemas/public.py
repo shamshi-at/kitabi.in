@@ -246,3 +246,29 @@ class BrowsePage(BaseModel):
     languages: list[LanguageCount] = []
     forms: list[GenreCount] = []
     genres: list[GenreCount] = []
+
+
+class ReviewsPage(BaseModel):
+    """Every public review on one work — the paginated /book/<slug>/reviews."""
+
+    work: WorkCard
+    rating: RatingSummary = RatingSummary()
+    reviews: list[PublicReviewOut] = []
+    total: int = 0
+    page: int = 1
+    per_page: int = 20
+
+
+class ReaderPage(BaseModel):
+    """A reader's public profile. Rendered ONLY for readers who opted in —
+    a private profile has no page at all, not an empty one (rule 16)."""
+
+    id: uuid.UUID
+    username: str | None = None
+    display_name: str
+    avatar_url: str | None = None
+    score: int = 0
+    books_tracked: int = 0
+    books_finished: int = 0
+    library_visible: bool = False
+    recent: list[WorkCard] = []

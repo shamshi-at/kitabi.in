@@ -418,3 +418,79 @@ var browseDoc = String(
   renderBrowse({ works: [], total: 0, page: 1, per_page: 24, languages: [], forms: [], genres: [] }).text(),
 );
 assertIncludes(browseDoc, 'content="noindex, follow"', 'faceted browse is noindex, follow');
+
+// --------------------------------------------------------------------------
+// Series, translation groups, lists, reviews, readers (W8–W12)
+// --------------------------------------------------------------------------
+
+var seriesDoc = String(
+  renderSeries({ id: 's', slug: 'malgudi', name: 'Malgudi', indexable: true,
+    works: [{ id: '1', slug: 'swami', title: 'Swami and Friends', authors: [{ name: 'Narayan' }], year: 1935 },
+            { id: '2', slug: 'bachelor', title: 'The Bachelor of Arts', authors: [], year: 1937 }] }).text(),
+);
+assertIncludes(seriesDoc, 'Swami and Friends', 'the series lists its books');
+assertIncludes(seriesDoc, 'href="/book/swami"', 'each entry links to the book');
+assertIncludes(seriesDoc, '"@type":"ItemList"', 'a series is an ItemList');
+
+var transDoc = String(
+  renderTranslations({ group_id: 'g', title: 'ആടുജീവിതം', group_rating: 4.5, group_rating_count: 1043,
+    description: 'A Malayali migrant is enslaved on a Saudi goat farm.',
+    original: { id: 'o', slug: 'aadujeevitham', title: 'ആടുജീവിതം', language: 'Malayalam', year: 2008,
+                rating: 4.6, is_original: true, authors: [] },
+    translations: [{ id: 't', slug: 'goat-days', title: 'Goat Days', language: 'English', year: 2012,
+                     rating: 4.4, is_original: false, authors: [] }],
+    translators: [{ id: 'x', name: 'Joseph Koyippally', slug: 'joseph-koyippally' }] }).text(),
+);
+assertIncludes(transDoc, 'Goat Days', 'the group lists every language');
+assertIncludes(transDoc, 'the original', 'the original is labelled');
+assertIncludes(transDoc, '4.5', 'the group rating is shown');
+assertIncludes(transDoc, 'href="/author/joseph-koyippally"', 'translators get real links');
+assertIncludes(transDoc, 'canonical" href="https://kitabi.in/translations/aadujeevitham"',
+  'the group canonicals to the original, so it never competes with the book page');
+
+var listDoc = String(
+  renderList(
+    { slug: 'start', title: 'Where to start', intro: 'A route through it.',
+      entries: [{ slug: 'chemmeen', why: 'The one everyone names, and it earns it.' },
+                { slug: 'gone-away', why: 'This book was merged away.' }] },
+    [{ id: 'c', slug: 'chemmeen', title: 'Chemmeen', authors: [{ name: 'Thakazhi' }], year: 1956 }],
+  ).text(),
+);
+assertIncludes(listDoc, 'The one everyone names', 'the editorial "why" is the point of a list');
+assertIncludes(listDoc, 'href="/book/chemmeen"', 'entries link to the books');
+assertExcludes(listDoc, 'This book was merged away',
+  'an entry whose book no longer resolves is skipped, not rendered broken');
+assertIncludes(listDoc, 'content="index, follow"', 'editorial lists are indexable');
+
+var reviewsDoc = String(
+  renderReviews({ work: { id: 'w', slug: 'chemmeen', title: 'Chemmeen', authors: [] },
+    rating: { average: 4.4, count: 312, distribution: { '5': 193, '4': 81 } },
+    reviews: [{ rating: 5, text: 'Wonderful.', reviewer: { display_name: 'A reader' } }],
+    total: 41, page: 1, per_page: 20 }).text(),
+);
+assertIncludes(reviewsDoc, 'Wonderful.', 'reviews render');
+assertIncludes(reviewsDoc, 'href="/book/chemmeen"', 'and link back to the book');
+assertIncludes(reviewsDoc, 'content="index, follow"', 'a page with 41 reviews is worth indexing');
+
+var thinReviews = String(
+  renderReviews({ work: { id: 'w', slug: 'x', title: 'X', authors: [] },
+    rating: { average: null, count: 0, distribution: {} }, reviews: [], total: 0, page: 1, per_page: 20 }).text(),
+);
+assertIncludes(thinReviews, 'content="noindex, follow"', 'an empty reviews page is not indexed');
+assertIncludes(thinReviews, 'No reviews yet', 'but it is still a real page');
+
+var readerDoc = String(
+  renderReader({ id: 'u', username: 'arundhati', display_name: 'Arundhati M.', score: 214,
+    library_visible: true, recent: [{ id: 'b', slug: 'chemmeen', title: 'Chemmeen', authors: [] }] }).text(),
+);
+assertIncludes(readerDoc, 'Arundhati M.', 'the reader page renders');
+assertIncludes(readerDoc, '@arundhati', 'the handle is shown');
+assertIncludes(readerDoc, 'href="/book/chemmeen"', 'their public shelf links to books');
+
+var privateShelf = String(
+  renderReader({ id: 'u', username: 'quiet', display_name: 'Quiet Reader', score: 3,
+    library_visible: false, recent: [] }).text(),
+);
+assertIncludes(privateShelf, 'keeps their shelf private', 'a private shelf says so rather than looking empty');
+assertIncludes(privateShelf, 'content="noindex, follow"',
+  'a profile with nothing public is not indexed');
