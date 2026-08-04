@@ -801,8 +801,15 @@ the catalogue-depth work in W5 — which is what actually makes it rank.
       fetch. Probed against the real runtime — every disallowed host returns 400,
       including the suffix attack. A cover from an unexpected host passes through
       unproxied rather than breaking
-- [ ] Backfill hot covers into the **existing Supabase `covers` bucket** so the origin is
-      ours as well as the cache (no second store, rule 8)
+- [x] **Cover backfill into the Supabase `covers` bucket** (4 Aug 2026) —
+      `jobs/backfill_covers.py` + `services/cover_storage.py`. A cache is not ownership:
+      the edge proxy means no reader waits on OpenLibrary, but if the image is removed
+      the cover is gone. 770 of 772 catalogue covers are hotlinked; the job trickles them
+      into the bucket we already own (25 per run, every 10 min, ~0.4s between fetches —
+      OpenLibrary is a free non-profit service and a burst is both abusive and
+      self-defeating). Idempotent, deterministic path per edition id, upserts.
+      **Needs `SUPABASE_SERVICE_ROLE_KEY` on Railway** — dormant and silent without it,
+      same gate as recs and push (rule 8)
 - [ ] `POST /internal/purge` → Cloudflare cache purge by URL, fired on catalog writes
 
 ### W1 — Server-render the three pages that already exist

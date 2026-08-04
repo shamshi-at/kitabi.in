@@ -19,6 +19,7 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 LOCK_KEEP_WARM = 1001
 LOCK_LENDING_REMINDER = 1002
 LOCK_BACKFILL_SLUGS = 1003
+LOCK_BACKFILL_COVERS = 1004
 
 
 @asynccontextmanager
@@ -39,6 +40,7 @@ async def advisory_lock(session: AsyncSession, lock_id: int) -> AsyncIterator[bo
 
 
 def start() -> None:
+    from app.jobs.backfill_covers import backfill_covers
     from app.jobs.backfill_slugs import backfill_slugs
     from app.jobs.keep_warm import keep_warm
 
@@ -58,6 +60,18 @@ def start() -> None:
         id="backfill_slugs",
         replace_existing=True,
         next_run_time=datetime.now(UTC) + timedelta(minutes=1),
+    )
+    # Every 10 minutes, 25 covers at a time — deliberately a trickle. See
+    # jobs/backfill_covers.py: OpenLibrary is a free non-profit service and a
+    # burst is both abusive and self-defeating. Clears the ~770-cover backlog
+    # in a few hours, then costs one indexed query per run.
+    scheduler.add_job(
+        backfill_covers,
+        "interval",
+        minutes=10,
+        id="backfill_covers",
+        replace_existing=True,
+        next_run_time=datetime.now(UTC) + timedelta(minutes=2),
     )
     scheduler.start()
 

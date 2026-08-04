@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     # only stop one account from being the whole problem.
     llm_daily_global_cap: int = 1000
 
+    # Supabase Storage writes (the `covers` bucket the app and admin console
+    # already use). Needed only by the cover backfill job, which copies
+    # hotlinked catalogue covers into a bucket we own — a cache is not
+    # ownership. Optional and dormant when unset, like recs and push (rule 8):
+    # no key means the job no-ops and makes no external call. The anon key is
+    # not enough; Storage writes need the service role.
+    supabase_service_role_key: str = ""
+
     # Push notifications (FCM HTTP v1). Optional, opt-in like recs (rule 8): the
     # owner pastes a Firebase Admin service-account JSON here (one string). Unset
     # → push is dormant and every notify call is a no-op, no external request.
