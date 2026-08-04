@@ -36,6 +36,10 @@ jobs:
           cp landing-page/index.html landing-page/privacy.html landing-page/terms.html landing-page/logo.svg landing-page/kitabi-logo.png landing-page/ico.png landing-page/apple-touch-icon.png landing-page/og-image.png landing-page/robots.txt landing-page/sitemap.xml public/
           cp landing-page/_redirects landing-page/_headers public/
           cp -R landing-page/.well-known public/.well-known
+          # Self-hosted brand faces (fonts/README.md). Without these the pages
+          # fall through to the system stack — which looks fine, so a missing
+          # copy here would not be obvious.
+          mkdir -p public/fonts && cp landing-page/fonts/*.woff2 public/fonts/
           # Pages Functions (the whole server-rendered site) must sit in
           # ./functions relative to the deploy command's cwd — wrangler compiles
           # it automatically alongside the static `public` assets.

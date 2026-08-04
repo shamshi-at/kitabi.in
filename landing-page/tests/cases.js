@@ -499,3 +499,59 @@ var privateShelf = String(
 assertIncludes(privateShelf, 'keeps their shelf private', 'a private shelf says so rather than looking empty');
 assertIncludes(privateShelf, 'content="noindex, follow"',
   'a profile with nothing public is not indexed');
+
+// --------------------------------------------------------------------------
+// Self-hosted fonts
+// --------------------------------------------------------------------------
+
+var fontDoc = String(page({ title: 't', body: html`x` }).text());
+assertIncludes(fontDoc, "@font-face", 'font faces are declared inline with the rest of the CSS');
+assertIncludes(fontDoc, "/fonts/fraunces-latin.woff2", 'Fraunces is served from our own origin');
+assertIncludes(fontDoc, "/fonts/inter-latin.woff2", 'Inter is served from our own origin');
+assertExcludes(fontDoc, 'fonts.googleapis.com', 'never the Google Fonts CSS endpoint');
+assertExcludes(fontDoc, 'fonts.gstatic.com', 'never the Google Fonts file origin');
+assertIncludes(fontDoc, 'font-display:swap', 'swap — a slow font must never delay the paint');
+assertIncludes(fontDoc, 'unicode-range', 'latin-ext only downloads on pages that need it');
+assertIncludes(fontDoc, 'rel="preload" href="/fonts/fraunces-latin.woff2"', 'the primary faces are preloaded');
+assertIncludes(fontDoc, 'as="font" type="font/woff2" crossorigin', 'preload is correctly typed and CORS-flagged');
+// Preloading a subset that usually is not used would waste the bytes it saves.
+assertExcludes(fontDoc, 'preload" href="/fonts/fraunces-latin-ext', 'the extended subset is NOT preloaded');
+
+// --------------------------------------------------------------------------
+// The cover proxy — the allowlist is the security model
+// --------------------------------------------------------------------------
+
+assert(
+  coverSrc('https://covers.openlibrary.org/b/id/123-L.jpg') ===
+    '/img/c?u=https%3A%2F%2Fcovers.openlibrary.org%2Fb%2Fid%2F123-L.jpg',
+  'OpenLibrary covers are routed through our own origin',
+);
+assert(
+  coverSrc('https://proj.supabase.co/storage/v1/object/public/covers/x.jpg').indexOf('/img/c?u=') === 0,
+  'reader-uploaded covers from our bucket are proxied too',
+);
+assert(
+  coverSrc('https://somewhere.example/x.jpg') === 'https://somewhere.example/x.jpg',
+  'an unexpected host passes through rather than rendering as a broken image',
+);
+assert(coverSrc(null) === null, 'no cover URL stays no cover URL');
+
+// allowedSource is what stands between this and an open proxy.
+assert(allowedSource('https://covers.openlibrary.org/b/id/1-L.jpg') !== null, 'OpenLibrary is allowed');
+assert(allowedSource('https://proj.supabase.co/storage/x.jpg') !== null, 'the Supabase bucket is allowed');
+assert(allowedSource('https://evil.test/payload.jpg') === null, 'an arbitrary host is refused');
+assert(allowedSource('http://covers.openlibrary.org/b/id/1-L.jpg') === null, 'http is refused — no downgrade');
+assert(allowedSource('https://covers.openlibrary.org.evil.test/x.jpg') === null,
+  'a suffix attack on an allowed host is refused');
+assert(allowedSource('https://evil.test/#covers.openlibrary.org') === null,
+  'an allowed host in the fragment is not an allowed host');
+assert(allowedSource('https://user:pw@covers.openlibrary.org/x.jpg') === null,
+  'embedded credentials are refused');
+assert(allowedSource('https://covers.openlibrary.org:8080/x.jpg') === null,
+  'a non-standard port is refused — a CDN does not need one');
+assert(allowedSource('file:///etc/passwd') === null, 'non-http schemes are refused');
+assert(allowedSource('https://169.254.169.254/latest/meta-data/') === null,
+  'the cloud metadata endpoint is refused — this must never be an SSRF instrument');
+assert(allowedSource('') === null && allowedSource(null) === null, 'empty input is refused');
+assert(allowedSource('https://covers.openlibrary.org/' + 'x'.repeat(700)) === null,
+  'an absurdly long URL is refused before anything is fetched');

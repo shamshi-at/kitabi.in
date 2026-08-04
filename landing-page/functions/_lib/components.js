@@ -6,6 +6,24 @@
 
 import { authorPath, bookPath, html, joinDot, num, raw, seg } from './html.js';
 
+// Hosts the cover proxy will serve. Kept in step with functions/img/c.js — a
+// URL the renderer proxies but the proxy refuses renders as a broken image, and
+// one it passes through unproxied is a third-party origin on the critical path.
+const PROXYABLE = /^https:\/\/(covers\.openlibrary\.org|[a-z0-9-]+\.supabase\.co)\//;
+
+/**
+ * Route a cover through our own origin so it is served from the edge cache
+ * rather than fetched from a third party on every page view.
+ *
+ * Anything not on the allowlist is passed through untouched rather than
+ * dropped: a cover from an unexpected host is still a cover, and a blank frame
+ * would be a worse outcome than one slow image.
+ */
+export function coverSrc(url) {
+  if (!url) return null;
+  return PROXYABLE.test(url) ? `/img/c?u=${encodeURIComponent(url)}` : url;
+}
+
 /** Stable 1-8 palette pick for a generated cover, derived from the title so a
  *  book looks the same everywhere it appears rather than flickering per page. */
 function tone(text) {
@@ -50,7 +68,7 @@ export function cover(work, { priority = false, width = 190 } = {}) {
   if (work?.cover_url) {
     return html`<span class="cv g${tone(title)}">
       ${typeset}
-      <img src="${work.cover_url}" alt="${`Cover of ${title}`}" width="${width}" height="${height}"
+      <img src="${coverSrc(work.cover_url)}" alt="${`Cover of ${title}`}" width="${width}" height="${height}"
            ${raw(priority ? 'fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"')} />
     </span>`;
   }

@@ -9,3 +9,11 @@
 # implies; set it explicitly rather than relying on the .json extension.
 /.well-known/assetlinks.json
   Content-Type: application/json
+
+# The self-hosted brand faces. Immutable and cached for a year: the filenames are
+# stable and the contents never change in place — a new cut gets a new name. This
+# is what makes self-hosting cheaper than Google Fonts rather than merely
+# equivalent, since a repeat visitor pays nothing at all.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *

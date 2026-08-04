@@ -104,6 +104,8 @@ export function page({
 <meta name="robots" content="${indexable ? 'index, follow' : 'noindex, follow'}">
 <link rel="canonical" href="${attr(canonicalUrl)}">
 <meta name="theme-color" content="#F6F0E3">
+<link rel="preload" href="/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="/logo.svg?v=3" type="image/svg+xml">
 <link rel="icon" href="/ico.png?v=3" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">

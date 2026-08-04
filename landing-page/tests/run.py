@@ -51,6 +51,9 @@ MODULES = [
     "pages/more.js",
 ]
 
+# Route modules that are worth testing directly (not under _lib).
+EXTRA_MODULES = ["img/c.js"]
+
 # Handles the multi-line form too — `import {\n  a,\n  b,\n} from '...'` — which a
 # single-line pattern silently leaves behind as a syntax error 1,000 lines into
 # the generated program.
@@ -84,6 +87,36 @@ class Response {
     this.headers = new Headers(init && init.headers);
   }
   text() { return this.bodyText; }
+}
+
+// JavaScriptCore has no URL constructor (it is a Web API, not ECMAScript), and
+// node's differs from the Workers runtime in edge cases. This approximation
+// exists so the cover proxy's allowlist logic can be exercised at all — without
+// it `allowedSource` threw on every input and returned null, which made every
+// rejection assertion pass VACUOUSLY. A security test that passes because the
+// function refuses everything is worse than no test.
+//
+// It is deliberately strict and simple. It is NOT authoritative: the real
+// allowlist behaviour is probed against the deployed /img/c endpoint, which runs
+// the actual runtime's URL parser. Treat failures here as real and passes here
+// as necessary-but-not-sufficient.
+class URL {
+  constructor(input) {
+    const m = /^([a-zA-Z][a-zA-Z0-9+.\-]*:)\/\/(?:([^:@/]*)(?::([^@/]*))?@)?([^:/?#]*)(?::(\d+))?([^?#]*)(\?[^#]*)?(#.*)?$/.exec(
+      String(input),
+    );
+    if (!m) throw new TypeError('Invalid URL');
+    this.protocol = m[1].toLowerCase();
+    this.username = m[2] || '';
+    this.password = m[3] || '';
+    this.hostname = (m[4] || '').toLowerCase();
+    this.port = m[5] || '';
+    this.pathname = m[6] || '';
+    this.search = m[7] || '';
+    this.hash = m[8] || '';
+    this.href = String(input);
+  }
+  toString() { return this.href; }
 }
 class Request { constructor(url, init) { this.url = url; this.method = (init && init.method) || 'GET'; } }
 const caches = { default: { match() { return null; }, put() {} } };
@@ -128,6 +161,12 @@ def build_source() -> str:
         if alias:
             fields = ", ".join(exported)
             parts.append(f"const {alias} = {{ {fields} }};")
+    for name in EXTRA_MODULES:
+        text = (ROOT / "functions" / name).read_text()
+        text = IMPORT_RE.sub("", text)
+        text = EXPORT_BARE_RE.sub("", text)
+        text = EXPORT_CONST_RE.sub("", text)
+        parts.append(f"// ===== {name} =====\n{text}")
     parts.append((Path(__file__).parent / "cases.js").read_text())
     parts.append(TAIL)
     return "\n".join(parts)

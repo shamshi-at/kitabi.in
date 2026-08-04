@@ -6,15 +6,52 @@
 // leave — so there is no second page to amortise a cached file across. Gzipped
 // this is a couple of KB inside a document that already has to be sent.
 //
-// WHY SYSTEM FONTS rather than Fraunces + Inter as in the mockups: webfonts
-// mean either a third-party origin (two DNS+TLS handshakes before first paint —
-// exactly what the measured baseline was penalised for) or self-hosted binaries
-// that have to be downloaded and committed. The stack below leads with real
-// serif faces that ship on every platform, so the Reading Room look survives at
-// zero cost and zero latency. Self-hosting the brand faces is a follow-up
-// (Phase W in docs/tasks.md); nothing else has to change when it lands.
+// FONTS ARE SELF-HOSTED, from /fonts (see landing-page/fonts/README.md). Never
+// fonts.googleapis.com: that costs a DNS lookup, a TLS handshake, a CSS round
+// trip and *then* a fetch from a second origin before a glyph paints, and the
+// budget allows zero third-party origins.
+//
+// Three properties make this safe to put in front of every page:
+//   * `font-display: swap` — text paints immediately in the fallback and swaps
+//     when the face arrives, so a slow font never delays the LCP.
+//   * `unicode-range` — the latin-ext subsets download ONLY on pages that
+//     actually render those characters. That matters here: the catalogue is
+//     full of transliterated names (Bibhūtibhūshaṇa, Ḥāfiẓ, Kāśīnātha) and
+//     without the extended subset a name renders in two typefaces at once.
+//   * `size-adjust`/fallback stack chosen so the swap moves as little as
+//     possible — the whole point of explicit image dimensions elsewhere is CLS,
+//     and a font swap is the other half of that.
+//
+// Indic scripts are deliberately NOT bundled — 14 languages would be ~500 KB to
+// solve a problem the system fonts already handle. See fonts/README.md.
 
 export const CSS = `
+@font-face{
+  font-family:'Fraunces';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('/fonts/fraunces-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,
+    U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face{
+  font-family:'Fraunces';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('/fonts/fraunces-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,
+    U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,
+    U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face{
+  font-family:'InterVar';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('/fonts/inter-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,
+    U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face{
+  font-family:'InterVar';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('/fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,
+    U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,
+    U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
 :root{
   --paper:#F6F0E3;--paper-deep:#EFE6D2;--card:#FFFCF4;
   --ink:#2B2118;--ink-soft:#7A6A55;--line:#E2D6BD;
@@ -22,8 +59,11 @@ export const CSS = `
   --gold:#B8862B;--gold-soft:#F0E2C2;
   --moss:#48663F;--slate:#43617E;--stamp-grey:#9A8F7C;
   --night:#241811;--night-2:#33241A;
-  --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;
-  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  /* The brand faces first, then a fallback chosen to be metrically close so the
+     swap moves as little as possible. Indic text falls through to the system
+     stack on purpose — see fonts/README.md. */
+  --serif:'Fraunces','Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;
+  --sans:'InterVar',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 /* The renderer builds cards out of <a><span>…</span></a> rather than nested
