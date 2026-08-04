@@ -337,6 +337,39 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **4 Aug 2026** — **kitabi.in is a server-rendered book site.** The measured blocker is
+  fixed: a non-JS crawler on a book page received *"Opening the book…"* and zero book
+  content; it now receives the whole page. Verified against production — a real book
+  page serves its title (in native script), author, year, language, page count,
+  breadcrumb and `Book`/`Person`/`BreadcrumbList` JSON-LD as HTML, with no JavaScript
+  involved. Built in three layers:
+  **(1) Slugs** (migration `000038`) — `/book/chemmeen`, not `/book/<uuid>`, romanized
+  through the existing translit service so a Malayalam title yields a typeable Latin URL.
+  Assigned once and never recomputed (a slug is a published URL); nullable, so a title
+  that romanizes to nothing degrades to its UUID rather than failing to insert; and a
+  scheduled `backfill_missing` sweeps up rows created by paths that never call
+  `ensure_slug` (the ETL's bulk SQL). **(2) The `/public/*` read layer** — page-shaped,
+  not resource-shaped, so a page costs exactly one upstream call instead of four
+  sequential edge→Singapore round trips (~1.2 s of TTFB on their own). Reviews are
+  finally public here; they were invisible on the web because the only endpoint serving
+  them required a signed-in user. **(3) The edge renderer** (`landing-page/functions/_lib/`)
+  — tagged template literals, no framework, no build step, no `node_modules`.
+  Live page types: home, search, browse, book, author, publisher, genre hub, language
+  hub, language+form sub-hub, and the `/languages` / `/genres` directories.
+  `/b/`, `/a/`, `/p/` now **301** to the canonical slug URL and are kept forever;
+  `/book/*`, `/author/*`, `/publisher/*` were added to `apple-app-site-association`
+  **ahead of** the redirect, because iOS only re-evaluates the association at install.
+  The old client-rendered shells, their `_redirects` rewrites and `_og.js` are gone.
+  **Indexation is deliberately restrictive**: the content floor gates both the page's
+  robots tag and the sitemap (which now emits canonical slug URLs rather than
+  redirects), hubs are indexed, `/search` and `/browse` are `noindex, follow`, and every
+  paginated page self-canonicals. **`AggregateRating` is emitted only when a real rating
+  exists** — never zeroed, never invented. Two interim choices, both documented in code:
+  CSS is inlined (the budget allows zero render-blocking requests) and fonts are a system
+  serif stack rather than Fraunces + Inter, because a webfont means either a third-party
+  origin or binaries to commit. Tested by `landing-page/tests/run.py` — 136 assertions
+  over the real rendering code, executed with node in CI or macOS JavaScriptCore locally,
+  still with no `node_modules`.
 - **4 Aug 2026** — **Cloudflare edge protection, as code (`infra/cloudflare/`).**
   Written and reviewable but **not yet applied** — it needs a token that doesn't exist
   yet. The Actions `CLOUDFLARE_API_TOKEN` is scoped to *Pages: Edit* and has no

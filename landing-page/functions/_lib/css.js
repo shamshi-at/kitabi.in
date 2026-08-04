@@ -26,6 +26,15 @@ export const CSS = `
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
+/* The renderer builds cards out of <a><span>…</span></a> rather than nested
+   divs, because an <a> may not contain block-level flow content in valid HTML.
+   Spans are inline by default, so every span that is meant to be a LINE in a
+   stacked card has to be told so — otherwise the lines run together and text
+   wraps mid-phrase ("Marathi 100 / books"). One rule instead of a dozen. */
+.bk .bt,.bk .ba,.bk .brt,.cvw,.feat .eyebrow,.feat .fa,
+.tcard .ti .lg,.tcard .ti .t,.tcard .ti .m,
+.pair .side .t,.pair .side .m,
+.srow .st,.srow .sa{display:block}
 html{-webkit-text-size-adjust:100%}
 body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.5;
   -webkit-font-smoothing:antialiased}
@@ -241,8 +250,10 @@ img{max-width:100%;display:block}
 .langs{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:11px}
 .lang{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px 10px;text-align:center}
 .lang:hover{border-color:var(--gold)}
-.lang .n{font-family:var(--serif);font-size:16px;line-height:1.2}
-.lang .c{font-size:10px;color:var(--gold);font-weight:700;margin-top:4px;letter-spacing:.04em}
+/* These are spans in the markup, so they must be told to stack — left inline
+   they flow together and the count wraps as "Marathi 100 / books". */
+.lang .n{display:block;font-family:var(--serif);font-size:16px;line-height:1.2}
+.lang .c{display:block;font-size:10px;color:var(--gold);font-weight:700;margin-top:4px;letter-spacing:.04em}
 .pairs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .pair{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex}
 .pair:hover{border-color:var(--gold)}

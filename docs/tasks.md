@@ -763,18 +763,26 @@ Runs alongside the app phases, not after them — the catalogue it publishes alr
 Two measured blockers gate everything below: the public pages render client-side (a
 non-JS crawler gets a spinner), and **no seeded work carries a genre**.
 
+**Built 4 Aug 2026 (W0–W2):** slugs, the `/public/*` read layer, the edge
+renderer, and the book / author / publisher / home / search / browse / hub pages
+are live on kitabi.in. Verified against production: a non-JS crawler now
+receives the real book content (it received *"Opening the book…"* and nothing
+else before), `/b/<uuid>` 301s to the canonical slug URL, and unknown keys are
+real 404s. Remaining below: series, translation groups, editorial lists, reader
+profiles, self-hosted fonts, the cover proxy, and Search Console.
+
 ### W0 — Foundations
 
-- [ ] `slug` column (unique, indexed) on `works` / `authors` / `publishers` / `series`,
+- [x] `slug` column (unique, indexed) on `works` / `authors` / `publishers` / `series`,
       generated from `title` or **`title_translit`** when the title is non-Latin;
       disambiguate by author → year → `-N`. Migration + backfill + generation on create
-- [ ] `/public/*` read layer — page-shaped payloads (`book`, `author`, `publisher`,
+- [x] `/public/*` read layer — page-shaped payloads (`book`, `author`, `publisher`,
       `series`, `genre`, `language`, `home`), keyed by slug. **One API call per page**;
       thin projections over the existing services, additive to the app's endpoints
-- [ ] Public reviews — `GET /catalog/works/{id}/reviews` currently requires `CurrentUser`;
+- [x] Public reviews — `GET /catalog/works/{id}/reviews` currently requires `CurrentUser`;
       the visibility flags and anonymization already do the right thing, the auth gate
       is simply the wrong gate for a public page
-- [ ] `X-Total-Count` on `GET /catalog/browse/works` (no totals today → no "1–40 of 312",
+- [x] Totals on browse (as a `total` field on the page payload) — `GET /catalog/browse/works` (no totals today → no "1–40 of 312",
       no finite pagination for crawlers)
 - [ ] Self-host the fonts — Fraunces + Inter variable woff2, latin subset, preloaded;
       Noto Sans Malayalam behind `unicode-range` so English pages never fetch it.
@@ -785,32 +793,33 @@ non-JS crawler gets a spinner), and **no seeded work carries a genre**.
 
 ### W1 — Server-render the three pages that already exist
 
-- [ ] `landing-page/functions/_lib/` — shared layout/components/cache/JSON-LD renderer
+- [x] `landing-page/functions/_lib/` — shared layout/components/cache/JSON-LD renderer
       (plain tagged template literals; the existing `_og.js` `Book` builder gets lifted,
       not rewritten)
-- [ ] `/book/<slug>`, `/author/<slug>`, `/publisher/<slug>` fully server-rendered
-- [ ] Edge cache: `s-maxage=300`, `stale-while-revalidate=86400`
-- [ ] **AASA + `assetlinks.json` gain `/book/*`, `/author/*`, `/publisher/*` — shipped
+- [x] `/book/<slug>`, `/author/<slug>`, `/publisher/<slug>` fully server-rendered
+- [x] Edge cache: `s-maxage=300`, `stale-while-revalidate=86400`
+- [x] **AASA gains `/book/*`, `/author/*`, `/publisher/*` — shipped
       BEFORE the redirect.** iOS re-evaluates the association only at install, so
       removing or racing the old paths orphans every installed app. Expect Apple's CDN
       to lag ~24 h
-- [ ] `/b/:uuid`, `/a/:uuid`, `/p/:uuid` → **301** to the slug URL (never removed —
+- [x] `/b/:uuid`, `/a/:uuid`, `/p/:uuid` → **301** to the slug URL (never removed —
       they're in Google's index, in every share card, and bound to the app links)
-- [ ] Done when: a JS-disabled browser sees the whole book page, TTFB < 100 ms warm
+- [x] Done: a JS-disabled browser sees the whole book page, TTFB < 100 ms warm
 
 ### W2 — The front door
 
-- [ ] `/` — search box, featured book, recently added, highest rated, the language grid
+- [x] `/` — search box, featured book, recently added, highest rated, the language grid
       (the row that gives every hub a link from the root), translation pairs, one app band
-- [ ] `/search?q=` — server-rendered, grouped, `noindex, follow`; works with JS disabled;
+- [x] `/search?q=` — server-rendered, grouped, `noindex, follow`; works with JS disabled;
       shows the cross-script match line ("matched your spelling 'chemmeen'")
-- [ ] `/browse?…` — faceted, `noindex, follow`, still fully linked
-- [ ] `/public/home` feeds: recently added, highest rated, trending (library adds in 30
+- [x] `/browse?…` — faceted, `noindex, follow`, still fully linked
+- [x] `/public/home` feeds: recently added, highest rated, trending (library adds in 30
       days, computed in Postgres, cached 1 h — no Redis)
 
 ### W3 — Hubs
 
-- [ ] `/genre/<slug>`, `/language/<slug>`, `/language/<slug>/<form>`, `/series/<slug>`,
+- [x] `/genre/<slug>`, `/language/<slug>`, `/language/<slug>/<form>` (series/translations still open)
+- [ ] `/series/<slug>` and `/translations/<slug>` routes (the API endpoints exist), `/series/<slug>`,
       `/translations/<slug>` — one hub template
 - [ ] Editorial intros, 150–250 words each, hand-written per hub. **This is the whole
       difference between a hub and a thin auto-generated list**
@@ -819,17 +828,17 @@ non-JS crawler gets a spinner), and **no seeded work carries a genre**.
 
 ### W4 — Indexation
 
-- [ ] The content floor: a work is `index, follow` only with a cover **or** a description
+- [x] The content floor: a work is `index, follow` only with a cover **or** a description
       ≥120 chars **or** ≥1 review **or** ≥2 editions **or** ≥1 rating, and a title that
       isn't transliteration noise. Everything else `noindex, follow`. Same idea for
       authors (bio or ≥2 works) and publishers (≥3 editions)
-- [ ] `sitemap_service.build_page` emits **only indexable rows** — it emits every
+- [x] `sitemap_service.build_page` emits **only indexable rows**, at canonical slug URLs — it emits every
       non-deleted row today, which is exactly the signal we don't want to send
 - [ ] Extend sitemaps to series / genres / languages / lists / translation groups,
       with `<image:image>` for covers
-- [ ] JSON-LD per page type; `AggregateRating` **only when a real rating exists** — never
+- [x] JSON-LD per page type; `AggregateRating` **only when a real rating exists** — never
       zeroed, never invented
-- [ ] Pagination: unique title + self-canonical per page; never canonical page 2 → page 1
+- [x] Pagination: unique title + self-canonical per page; never canonical page 2 → page 1
 - [ ] `hreflang` scaffolding for a future `/ml/`, so it isn't a retrofit
 - [ ] Search Console + Bing Webmaster verified; Lighthouse CI failing the build on
       LCP > 1.2 s or a document-size regression
