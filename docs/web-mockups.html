@@ -1,0 +1,2174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi on the web — public site mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Malayalam:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ==============================================================
+   Kitabi — the public web site (kitabi.in), mocked.
+   Plan: docs/web-platform-plan.md · Tokens: docs/screen-design.md
+
+   Every frame below is what an EDGE-RENDERED page looks like:
+   the HTML you see is the HTML a crawler receives. Nothing here
+   depends on JavaScript to appear.
+   ============================================================== */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+  --night:#241811; --night-2:#33241A; --panel:#332419;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:#E7DFCC;color:var(--ink);padding-bottom:90px}
+code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.ml{font-family:'Noto Sans Malayalam','Inter',sans-serif}
+.serif{font-family:'Fraunces',Georgia,serif}
+
+/* ---------- document chrome ---------- */
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:58px 32px 46px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:41px;font-weight:400;margin:0 0 12px;letter-spacing:.4px}
+.hero .tag{font-size:15px;color:#CBB897;max-width:830px;margin:0 auto;line-height:1.7}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+.hero .rule{width:52px;height:2px;background:var(--gold);margin:22px auto 0;opacity:.7}
+.toc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:1080px;margin:24px auto 0}
+.toc a{font-size:12px;font-weight:600;color:#E9DCC2;text-decoration:none;
+  border:1px solid rgba(240,226,194,.28);padding:6px 13px;border-radius:999px;transition:.15s}
+.toc a:hover{background:var(--gold);color:#241811;border-color:var(--gold)}
+
+.area{max-width:1420px;margin:60px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px;white-space:nowrap}
+.area h2{font-family:'Fraunces',serif;font-size:29px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:10px 0 26px;max-width:980px;font-size:14.5px;line-height:1.72}
+.area .desc b{color:var(--ink)}
+.area .desc code{background:#F0E9DA;padding:1px 6px;border-radius:5px;font-size:12.5px}
+.note{background:var(--card);border:1px solid var(--line);border-left:none;border-radius:12px;
+  overflow:hidden;display:flex;margin-top:24px;max-width:1240px}
+.note i{width:4px;background:var(--gold);flex-shrink:0}
+.note div{padding:14px 18px;font-size:13px;line-height:1.72;color:#6d5f4b}
+.note b{color:var(--ink)}
+.note.red i{background:var(--oxblood)}
+.note.green i{background:var(--moss)}
+.legend{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;margin:26px auto 0;max-width:900px}
+.legend span{font-size:12px;color:#CBB897;display:flex;align-items:center;gap:7px}
+.legend i{width:12px;height:12px;border-radius:3px;display:block}
+
+/* ---------- browser frame ---------- */
+.browser{background:var(--paper);border-radius:12px;overflow:hidden;
+  box-shadow:0 22px 60px rgba(43,33,24,.28);border:1px solid #cbbfa6;position:relative}
+.browser.w{width:1240px;max-width:100%}
+.chrome{background:linear-gradient(180deg,#e9e1d0,#ded4bf);border-bottom:1px solid #c7bba2;
+  display:flex;align-items:center;gap:12px;padding:9px 14px}
+.chrome .dots{display:flex;gap:6px}
+.chrome .dots i{width:11px;height:11px;border-radius:50%;display:block;background:#c2b59a}
+.chrome .dots i:first-child{background:#d98b7f}
+.chrome .dots i:nth-child(2){background:#dcc07f}
+.chrome .dots i:nth-child(3){background:#a3bd93}
+.chrome .url{flex:1;background:#fbf7ec;border:1px solid #cdc0a6;border-radius:999px;
+  padding:5px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#6d5f4b;
+  display:flex;align-items:center;gap:8px}
+.chrome .url b{color:var(--ink);font-weight:500}
+.chrome .url .lock{color:var(--moss);font-size:10px}
+.chrome .ttfb{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--moss);
+  background:#E3EAD9;border-radius:999px;padding:3px 9px;font-weight:500;white-space:nowrap}
+.viewport{max-height:none;overflow:hidden}
+
+/* ---------- the site itself ---------- */
+.site{background:var(--paper);font-size:14px;color:var(--ink)}
+.site a{color:inherit;text-decoration:none}
+
+/* site header */
+.shead{background:var(--card);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:22px;padding:13px 30px;position:relative}
+.brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.mark{width:34px;height:34px;border-radius:8px;background:linear-gradient(150deg,#8B3038,#5E1F26);
+  position:relative;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(184,134,43,.55)}
+.mark::before{content:"";position:absolute;left:50%;top:6px;width:2px;height:22px;background:var(--gold);opacity:.9}
+.mark::after{content:"";position:absolute;left:7px;right:7px;top:10px;height:1px;
+  box-shadow:0 0 0 0 #F0E2C2,0 4px 0 0 rgba(240,226,194,.5),0 8px 0 0 rgba(240,226,194,.5);
+  background:rgba(240,226,194,.5)}
+.brand .bn{font-family:'Fraunces',serif;font-weight:600;font-size:19px;line-height:1}
+.brand .bn small{display:block;font-family:'Inter',sans-serif;font-size:7.5px;font-weight:700;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-top:3px}
+.snav{display:flex;gap:20px;font-size:13.5px;font-weight:500;color:var(--ink-soft)}
+.snav a.on{color:var(--oxblood);font-weight:600;border-bottom:2px solid var(--gold);padding-bottom:2px}
+.ssearch{flex:1;max-width:420px;margin-left:auto;background:var(--paper-deep);border:1px solid var(--line);
+  border-radius:999px;padding:8px 15px;display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-soft)}
+.ssearch b{font-weight:400;color:#a3937c}
+.btn-app{background:var(--oxblood);color:#F6F0E3;font-size:12.5px;font-weight:600;
+  padding:9px 17px;border-radius:999px;white-space:nowrap}
+.btn-ghost{border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:12.5px;
+  font-weight:600;padding:8px 16px;border-radius:999px;white-space:nowrap;display:inline-block}
+
+/* breadcrumb */
+.crumb{padding:13px 30px 0;font-size:12px;color:var(--ink-soft);display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.crumb a{color:var(--oxblood);border-bottom:1px solid rgba(126,42,51,.25)}
+.crumb .sep{color:#bcae94}
+
+.wrap{padding:0 30px 34px;max-width:1180px;margin:0 auto}
+.wrap.wide{max-width:100%}
+
+/* section heads */
+.sec{margin-top:34px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:18px}
+.sec-h h3{font-family:'Fraunces',serif;font-size:20px;font-weight:500}
+.sec-h .more{font-size:12px;font-weight:600;color:var(--oxblood)}
+.eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* ---------- covers (typeset — no images needed) ---------- */
+.cv{aspect-ratio:2/3;border-radius:3px 7px 7px 3px;position:relative;overflow:hidden;
+  box-shadow:0 7px 18px rgba(43,33,24,.26);background:var(--paper-deep);flex-shrink:0}
+.cv::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(0,0,0,.22);z-index:3}
+.cv .ct{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+  padding:11% 10%;text-align:center;gap:8%}
+.cv .ct .t{font-family:'Fraunces',serif;font-size:13px;font-weight:600;line-height:1.22}
+.cv .ct .a{font-size:8px;letter-spacing:.11em;text-transform:uppercase;opacity:.78;font-weight:600}
+.cv .rib{position:absolute;top:-2px;right:11%;width:9px;height:20px;background:var(--gold);z-index:4;
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 76%,0 100%)}
+.c1{background:linear-gradient(155deg,#7E2A33,#4E181F);color:#F0E2C2}
+.c2{background:linear-gradient(155deg,#43617E,#25384A);color:#DCE7F0}
+.c3{background:linear-gradient(155deg,#48663F,#2A3E24);color:#E3EAD9}
+.c4{background:linear-gradient(155deg,#B8862B,#7A5713);color:#FFF6E0}
+.c5{background:linear-gradient(155deg,#33241A,#1A1009);color:#E9DCC2}
+.c6{background:linear-gradient(155deg,#8C5A3C,#553220);color:#F5E4D4}
+.c7{background:linear-gradient(155deg,#5C4A73,#33264A);color:#E7DEF2}
+.c8{background:linear-gradient(155deg,#2F6360,#153A38);color:#D8ECEA}
+
+/* book strip / grid */
+.strip{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:18px}
+.strip.n6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.strip.n5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.strip.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.bk .cv{width:100%}
+.bk .bt{font-family:'Fraunces',serif;font-size:13px;font-weight:550;margin-top:9px;line-height:1.3}
+.bk .ba{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+.bk .brt{font-size:11px;color:var(--gold);font-weight:600;margin-top:4px;letter-spacing:.02em}
+.bk .brt span{color:var(--ink-soft);font-weight:500}
+
+/* pills & chips */
+.pill{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:4px 10px;border-radius:999px;display:inline-block}
+.p-ox{background:#F2DEDA;color:var(--oxblood)}
+.p-gold{background:#F2E6C4;color:#8F681E}
+.p-moss{background:#E3EAD9;color:var(--moss)}
+.p-slate{background:#DEE7EF;color:var(--slate)}
+.p-grey{background:#EAE4D6;color:var(--stamp-grey)}
+.chip{font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink-soft);display:inline-block}
+.chip.on{background:var(--oxblood);border-color:var(--oxblood);color:#F6F0E3}
+
+/* stars */
+.stars{display:flex;align-items:center;gap:8px}
+.stars .s{font-size:16px;letter-spacing:1.5px;color:var(--gold)}
+.stars .s .off{color:#DCD0B6}
+.stars .n{font-size:12.5px;color:var(--ink-soft);font-weight:600}
+
+/* ---------- W1 home ---------- */
+.hhero{background:linear-gradient(180deg,var(--paper-deep),var(--paper));
+  border-bottom:1px solid var(--line);padding:38px 30px 34px}
+.hhero-in{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1.25fr .95fr;gap:44px;align-items:center}
+.hh-l h1{font-family:'Fraunces',serif;font-size:38px;font-weight:400;line-height:1.16;letter-spacing:.2px}
+.hh-l h1 em{font-style:italic;color:var(--oxblood)}
+.hh-l p{color:var(--ink-soft);font-size:15px;line-height:1.72;margin-top:13px;max-width:520px}
+.bigsearch{margin-top:22px;background:var(--card);border:1.5px solid var(--line);border-radius:999px;
+  padding:13px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 18px rgba(43,33,24,.09);max-width:540px}
+.bigsearch .ico{color:var(--oxblood);font-size:15px}
+.bigsearch .ph{flex:1;color:#a3937c;font-size:14.5px}
+.bigsearch .go{background:var(--oxblood);color:#F6F0E3;font-size:12px;font-weight:600;
+  padding:7px 16px;border-radius:999px}
+.hh-l .hint{margin-top:11px;font-size:12.5px;color:var(--ink-soft)}
+.hh-l .hint b{color:var(--oxblood);font-weight:600}
+/* the featured book card */
+.feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;
+  display:flex;gap:18px;box-shadow:0 10px 28px rgba(43,33,24,.13);position:relative;overflow:hidden}
+.feat::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
+.feat .cv{width:104px}
+.feat .fm .eyebrow{color:var(--gold)}
+.feat .fm h4{font-family:'Fraunces',serif;font-size:19px;font-weight:550;margin-top:5px;line-height:1.24}
+.feat .fm .fa{font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+.feat .fm .fq{font-family:'Fraunces',serif;font-style:italic;font-size:13px;color:#6d5f4b;
+  line-height:1.62;margin-top:10px;border-left:2px solid var(--gold-soft);padding-left:11px}
+.feat .fm .fl{margin-top:11px;font-size:12px;font-weight:600;color:var(--oxblood)}
+
+/* language grid */
+.langs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:11px}
+.lang{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px 12px;
+  text-align:center;transition:.15s}
+.lang .n{font-family:'Noto Sans Malayalam','Fraunces',serif;font-size:17px;line-height:1.2;color:var(--ink)}
+.lang .e{font-size:11px;color:var(--ink-soft);margin-top:5px;font-weight:500}
+.lang .c{font-size:10px;color:var(--gold);font-weight:700;margin-top:3px;letter-spacing:.04em}
+.lang.hot{background:linear-gradient(160deg,#FFFCF4,#F5EBD6);border-color:var(--gold)}
+
+/* translation pair module */
+.pairs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pair{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  display:flex;align-items:stretch}
+.pair .rule{width:3px;background:var(--gold);flex-shrink:0}
+.pair .in{padding:14px 16px;display:flex;align-items:center;gap:14px;flex:1}
+.pair .cv{width:46px}
+.pair .side{flex:1;min-width:0}
+.pair .side .t{font-family:'Fraunces',serif;font-size:14px;font-weight:550;line-height:1.26}
+.pair .side .m{font-size:11px;color:var(--ink-soft);margin-top:3px}
+.pair .arrow{color:var(--gold);font-size:17px;flex-shrink:0}
+
+/* app band */
+.appband{background:linear-gradient(135deg,var(--night-2),var(--night));color:#E9DCC2;
+  border-radius:14px;padding:26px 30px;display:flex;align-items:center;justify-content:space-between;gap:26px}
+.appband h4{font-family:'Fraunces',serif;font-size:22px;font-weight:450;color:#F6F0E3}
+.appband p{font-size:13px;color:#CBB897;margin-top:7px;line-height:1.65;max-width:520px}
+.appband .bs{display:flex;gap:10px;flex-shrink:0}
+.appband .bs .b{background:rgba(246,240,227,.1);border:1px solid rgba(240,226,194,.3);
+  border-radius:9px;padding:9px 16px;font-size:12px;font-weight:600;color:#F0E2C2}
+
+/* site footer */
+.sfoot{background:var(--night);color:#B8A88C;padding:30px;margin-top:38px}
+.sfoot-in{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:30px}
+.sfoot h5{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:11px}
+.sfoot a,.sfoot p{display:block;font-size:12.5px;color:#B8A88C;line-height:2}
+.sfoot .fb{font-family:'Fraunces',serif;font-size:17px;color:#F6F0E3;margin-bottom:6px}
+
+/* ---------- W3 book page ---------- */
+.bhero{display:grid;grid-template-columns:232px 1fr 232px;gap:32px;margin-top:20px;align-items:start}
+.bhero .cover-col{display:flex;flex-direction:column;gap:12px}
+.bhero .cover-col .cv{width:100%}
+.bhero h1{font-family:'Fraunces',serif;font-size:36px;font-weight:450;line-height:1.13;letter-spacing:.1px}
+.bhero .native{font-family:'Noto Sans Malayalam',serif;font-size:22px;color:var(--ink-soft);margin-top:7px}
+.bhero .by{font-size:15px;margin-top:14px}
+.bhero .by a{color:var(--oxblood);font-weight:600;border-bottom:1px solid rgba(126,42,51,.3)}
+.bhero .by .tr{color:var(--ink-soft);font-size:13.5px;display:block;margin-top:4px}
+.rating-row{display:flex;align-items:center;gap:16px;margin-top:16px;flex-wrap:wrap}
+.rating-row .big{font-family:'Fraunces',serif;font-size:31px;font-weight:600;color:var(--ink);line-height:1}
+.rating-row .big span{font-size:14px;color:var(--ink-soft);font-weight:400}
+.facts{margin-top:17px;display:flex;flex-wrap:wrap;gap:7px 22px;font-size:13px;color:var(--ink-soft)}
+.facts b{color:var(--ink);font-weight:600}
+.blurb{margin-top:17px;font-size:14.5px;line-height:1.78;color:#4a3d2e;max-width:640px}
+.blurb .fade{color:var(--oxblood);font-weight:600;font-size:13px}
+.act{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.act .prim{background:var(--oxblood);color:#F6F0E3;font-size:13.5px;font-weight:600;
+  padding:11px 22px;border-radius:999px;box-shadow:0 5px 14px rgba(126,42,51,.28)}
+/* right rail */
+.rail{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+.rail .rh{background:var(--paper-deep);padding:10px 15px;font-size:9.5px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+.rail .rb{padding:14px 15px}
+.rail .buy{display:flex;align-items:center;justify-content:space-between;padding:9px 0;
+  border-bottom:1px solid var(--line);font-size:13px}
+.rail .buy:last-child{border-bottom:none}
+.rail .buy .p{font-weight:600;color:var(--ink)}
+.rail .kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:12.5px}
+.rail .kv .k{color:var(--ink-soft)}
+.rail .kv .v{font-weight:600;text-align:right}
+
+/* translation module */
+.trans{background:linear-gradient(160deg,#FFFCF4,#F6EFDD);border:1px solid var(--gold);
+  border-radius:14px;overflow:hidden;display:flex}
+.trans .rule{width:4px;background:var(--gold);flex-shrink:0}
+.trans .tin{padding:20px 22px;flex:1}
+.trans .th{display:flex;align-items:center;gap:10px}
+.trans .th .eyebrow{color:#8F681E}
+.trans .grp{margin-left:auto;font-size:11.5px;color:var(--ink-soft)}
+.trans .grp b{color:var(--gold);font-weight:700}
+.trans .tg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:15px}
+.tcard{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px;
+  display:flex;gap:13px;align-items:center}
+.tcard .cv{width:52px}
+.tcard .ti{flex:1;min-width:0}
+.tcard .ti .lg{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.tcard .ti .t{font-family:'Fraunces',serif;font-size:15px;font-weight:550;margin-top:3px;line-height:1.25}
+.tcard .ti .m{font-size:11.5px;color:var(--ink-soft);margin-top:3px}
+.tcard.orig{border-color:var(--gold);background:linear-gradient(160deg,#FFFCF4,#FBF4E4)}
+
+/* editions table */
+.eds{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.ed{display:grid;grid-template-columns:52px 1fr 130px 96px 84px;gap:14px;align-items:center;
+  padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px}
+.ed:last-child{border-bottom:none}
+.ed:nth-child(even){background:#FDFAF1}
+.ed .cv{width:44px}
+.ed .et{font-family:'Fraunces',serif;font-size:14px;font-weight:550;line-height:1.28}
+.ed .em{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+.ed .col{font-size:12.5px;color:var(--ink-soft)}
+.ed .col b{display:block;color:var(--ink);font-weight:600;font-size:13px}
+
+/* ratings histogram */
+.ratings{display:grid;grid-template-columns:200px 1fr;gap:30px;align-items:center}
+.hist{display:flex;flex-direction:column;gap:6px}
+.hbar{display:flex;align-items:center;gap:10px;font-size:12px}
+.hbar .lb{width:32px;color:var(--ink-soft);font-weight:600;text-align:right}
+.hbar .tr{flex:1;height:9px;background:var(--paper-deep);border-radius:999px;overflow:hidden}
+.hbar .fl{height:100%;background:var(--gold);border-radius:999px}
+.hbar .ct{width:38px;font-size:11.5px;color:var(--ink-soft);text-align:right}
+.score{text-align:center}
+.score .n{font-family:'Fraunces',serif;font-size:52px;font-weight:600;line-height:1}
+.score .of{font-size:13px;color:var(--ink-soft);margin-top:4px}
+
+/* reviews */
+.rev{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:17px 19px;margin-bottom:13px}
+.rev .rhd{display:flex;align-items:center;gap:11px}
+.rev .av{width:34px;height:34px;border-radius:50%;background:var(--paper-deep);
+  display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;
+  font-size:14px;color:var(--ink-soft);flex-shrink:0;border:1px solid var(--line)}
+.rev .who{font-weight:600;font-size:13.5px}
+.rev .when{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
+.rev .rs{margin-left:auto;font-size:14px;color:var(--gold);letter-spacing:1px}
+.rev .rt{font-family:'Fraunces',serif;font-size:14.5px;line-height:1.75;color:#4a3d2e;margin-top:12px;font-style:italic}
+
+/* facts table */
+.ftab{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);
+  display:grid;grid-template-columns:1fr 1fr}
+.ftab .r{display:flex;gap:14px;padding:11px 17px;border-bottom:1px solid var(--line);font-size:13px}
+.ftab .r:nth-child(odd){border-right:1px solid var(--line)}
+.ftab .k{width:130px;color:var(--ink-soft);flex-shrink:0}
+.ftab .v{font-weight:500}
+.ftab .v a{color:var(--oxblood);border-bottom:1px solid rgba(126,42,51,.25)}
+
+/* ---------- search ---------- */
+.sres{display:grid;grid-template-columns:1fr 260px;gap:30px;margin-top:20px}
+.sgroup{margin-bottom:26px}
+.sgh{display:flex;align-items:baseline;gap:11px;margin-bottom:13px}
+.sgh h3{font-family:'Fraunces',serif;font-size:18px;font-weight:500}
+.sgh .ct{font-size:11.5px;color:var(--ink-soft)}
+.sr{display:flex;gap:15px;padding:13px 0;border-bottom:1px solid var(--line)}
+.sr .cv{width:52px}
+.sr .si{flex:1;min-width:0}
+.sr .st{font-family:'Fraunces',serif;font-size:16px;font-weight:550;line-height:1.25}
+.sr .st .nat{font-family:'Noto Sans Malayalam',serif;color:var(--ink)}
+.sr .sa{font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+.sr .sm{font-size:11.5px;color:var(--ink-soft);margin-top:6px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.matchline{background:#F2E6C4;color:#8F681E;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+  padding:3px 9px;border-radius:999px;display:inline-block}
+.sr .ppl{width:52px;height:52px;border-radius:50%;background:var(--paper-deep);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:19px;
+  color:var(--ink-soft);flex-shrink:0}
+
+/* facets */
+.facets{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.facets h4{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:11px}
+.facets .fr{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:var(--ink)}
+.facets .fr span{color:var(--ink-soft);font-size:11.5px}
+.facets .div{height:1px;background:var(--line);margin:14px 0}
+
+/* hub intro */
+.hubhead{background:linear-gradient(170deg,var(--paper-deep),var(--paper));
+  border-bottom:1px solid var(--line);padding:30px}
+.hubhead-in{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr 300px;gap:40px;align-items:start}
+.hubhead h1{font-family:'Fraunces',serif;font-size:35px;font-weight:400;line-height:1.14}
+.hubhead h1 .nat{font-family:'Noto Sans Malayalam',serif;display:block;font-size:29px;color:var(--oxblood);margin-bottom:5px}
+.hubhead .intro{font-size:14.5px;line-height:1.8;color:#4a3d2e;margin-top:15px;max-width:660px}
+.hubhead .intro a{color:var(--oxblood);border-bottom:1px solid rgba(126,42,51,.28)}
+.hubstats{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:17px 19px}
+.hubstats .st{display:flex;justify-content:space-between;padding:7px 0;font-size:13px;border-bottom:1px solid var(--line)}
+.hubstats .st:last-child{border-bottom:none}
+.hubstats .st b{font-family:'Fraunces',serif;font-size:17px;font-weight:600}
+.hubstats .k{color:var(--ink-soft)}
+
+/* toolbar */
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 0;
+  border-bottom:1px solid var(--line);margin-bottom:20px}
+.toolbar .cnt{font-size:12.5px;color:var(--ink-soft);margin-left:auto}
+.pager{display:flex;gap:6px;justify-content:center;margin-top:26px;align-items:center}
+.pager a{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 13px;
+  font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.pager a.on{background:var(--oxblood);border-color:var(--oxblood);color:#F6F0E3}
+.pager .el{color:var(--ink-soft);font-size:12px;padding:0 4px}
+
+/* author page */
+.ahero{display:grid;grid-template-columns:180px 1fr 250px;gap:34px;margin-top:22px;align-items:start}
+.portrait{width:180px;aspect-ratio:1;border-radius:14px;background:linear-gradient(155deg,#8C7355,#5A4530);
+  display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:56px;
+  color:#F0E2C2;box-shadow:0 10px 26px rgba(43,33,24,.26)}
+.ahero h1{font-family:'Fraunces',serif;font-size:34px;font-weight:450;line-height:1.15}
+.ahero .nat{font-family:'Noto Sans Malayalam',serif;font-size:20px;color:var(--ink-soft);margin-top:6px}
+.ahero .bio{font-size:14.5px;line-height:1.8;color:#4a3d2e;margin-top:15px;max-width:600px}
+.badge-kit{display:inline-flex;align-items:center;gap:6px;background:#F2E6C4;color:#8F681E;
+  font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;letter-spacing:.04em}
+.timeline{display:flex;gap:0;margin-top:8px;border-top:1px solid var(--line);padding-top:16px}
+.tl{flex:1;text-align:center;position:relative}
+.tl::before{content:"";position:absolute;top:-17px;left:50%;width:1px;height:9px;background:var(--line)}
+.tl .y{font-size:11px;color:var(--ink-soft);font-weight:600}
+.tl .b{width:100%;background:var(--gold-soft);border-radius:3px 3px 0 0;margin-top:6px;
+  border:1px solid var(--gold);border-bottom:none}
+
+/* list page */
+.listhead{background:linear-gradient(135deg,var(--night-2),var(--night));color:#E9DCC2;padding:38px 30px}
+.listhead-in{max-width:1180px;margin:0 auto}
+.listhead .eyebrow{color:var(--gold)}
+.listhead h1{font-family:'Fraunces',serif;font-size:38px;font-weight:400;color:#F6F0E3;margin-top:9px;line-height:1.16}
+.listhead p{font-size:14.5px;color:#CBB897;line-height:1.78;margin-top:13px;max-width:700px}
+.listhead .meta{margin-top:16px;font-size:12px;color:#9d8b6e;display:flex;gap:16px;flex-wrap:wrap}
+.li{display:grid;grid-template-columns:44px 78px 1fr;gap:18px;padding:20px 0;
+  border-bottom:1px solid var(--line);align-items:start}
+.li .num{font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--gold);line-height:1}
+.li .cv{width:78px}
+.li h4{font-family:'Fraunces',serif;font-size:19px;font-weight:550;line-height:1.24}
+.li .la{font-size:13px;color:var(--ink-soft);margin-top:4px}
+.li .why{font-size:13.5px;line-height:1.75;color:#4a3d2e;margin-top:9px;max-width:660px}
+
+/* profile */
+.phero{display:flex;gap:24px;align-items:center;margin-top:22px}
+.phero .pav{width:88px;height:88px;border-radius:50%;background:linear-gradient(155deg,#7E2A33,#4E181F);
+  color:#F0E2C2;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:34px}
+.phero h1{font-family:'Fraunces',serif;font-size:29px;font-weight:500}
+.phero .hnd{font-size:13px;color:var(--ink-soft);margin-top:3px;font-family:'JetBrains Mono',monospace}
+.pstats{display:flex;gap:26px;margin-top:11px}
+.pstats .s b{font-family:'Fraunces',serif;font-size:20px;font-weight:600;display:block}
+.pstats .s span{font-size:11px;color:var(--ink-soft);letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+
+/* empty / thin state */
+.thin{text-align:center;padding:46px 30px;background:var(--card);border:1px dashed var(--line);border-radius:14px}
+.thin .fl{font-size:22px;color:var(--gold);margin-bottom:12px}
+.thin h3{font-family:'Fraunces',serif;font-size:22px;font-weight:500}
+.thin p{color:var(--ink-soft);font-size:14px;line-height:1.72;max-width:480px;margin:11px auto 0}
+.robots{display:inline-block;margin-top:16px;background:#EAE4D6;color:var(--stamp-grey);
+  font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 12px;border-radius:7px}
+
+/* mobile frame */
+.phone{width:392px;border-radius:34px;background:#241811;padding:11px;
+  box-shadow:0 22px 54px rgba(43,33,24,.34);flex-shrink:0}
+.phone .scr{background:var(--paper);border-radius:26px;overflow:hidden}
+.phone .nub{width:92px;height:5px;background:#4a392b;border-radius:99px;margin:0 auto 8px}
+
+/* annotation pins */
+.pin{position:absolute;background:var(--night);color:#F0E2C2;font-size:10.5px;font-weight:600;
+  padding:5px 10px;border-radius:7px;box-shadow:0 5px 14px rgba(0,0,0,.3);z-index:20;
+  border-left:3px solid var(--gold);white-space:nowrap;letter-spacing:.02em}
+.pin.r{border-left:none;border-right:3px solid var(--gold)}
+
+/* spec table */
+.spec{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;overflow:hidden;font-size:13px;max-width:1240px}
+.spec th{background:var(--paper-deep);text-align:left;padding:11px 15px;font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+.spec td{padding:11px 15px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
+.spec tr:last-child td{border-bottom:none}
+.spec code{background:#F0E9DA;padding:1px 6px;border-radius:4px;font-size:11.5px}
+.ok{color:var(--moss);font-weight:600}
+.no{color:var(--oxblood);font-weight:600}
+.row2{display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start}
+.cap{width:290px;font-size:12.5px;color:#6d5f4b;line-height:1.62}
+.cap b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:4px;font-weight:600}
+.cap .pro{color:var(--moss);display:block;margin-top:7px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Kitabi on the web</h1>
+  <div class="tag">
+    The public site at <b>kitabi.in</b> — a book reference destination in the shape of IMDB,
+    with a moat the incumbents don't have: <b>Indic-language literature</b> and a
+    <b>translation graph</b>, in pages a search engine can actually read.
+    Every frame below is <b>edge-rendered HTML</b>: what you see is what a crawler receives,
+    with <b>zero JavaScript</b> required for any of it to appear.
+  </div>
+  <div class="rule"></div>
+  <div class="legend">
+    <span><i style="background:#B8862B"></i> gold = the translation layer, the signature feature</span>
+    <span><i style="background:#7E2A33"></i> oxblood = the one door into the app</span>
+    <span><i style="background:#48663F"></i> moss = measured / verified</span>
+  </div>
+  <div class="toc">
+    <a href="#w1">W1 · Home</a>
+    <a href="#w2">W2 · Search</a>
+    <a href="#w3">W3 · Book page</a>
+    <a href="#w4">W4 · Author</a>
+    <a href="#w5">W5 · Publisher</a>
+    <a href="#w6">W6 · Genre hub</a>
+    <a href="#w7">W7 · Language hub</a>
+    <a href="#w8">W8 · Series</a>
+    <a href="#w9">W9 · Translations</a>
+    <a href="#w10">W10 · Editorial list</a>
+    <a href="#w11">W11 · Reviews</a>
+    <a href="#w12">W12 · Reader</a>
+    <a href="#w13">W13 · Mobile</a>
+    <a href="#w14">W14 · Thin &amp; empty</a>
+    <a href="#budget">The budget</a>
+  </div>
+</div>
+
+<!-- ============================== W1 · HOME ============================== -->
+<div class="area" id="w1">
+  <div class="ah"><span class="an">W1</span><h2>Home — the front door</h2></div>
+  <p class="desc">
+    A book site's home page <b>is a search box</b>; everything under it is proof the site has answers.
+    Today the home page is 76 KB of launching-soon marketing — it becomes the crawl root instead,
+    with the app pitch demoted to one honest band at the bottom. The <b>Browse by language</b> grid is the most
+    important block on the page: it is the row that gives every hub a link from the root, so no
+    indexable page is more than three clicks deep.
+  </p>
+
+  <div class="browser w">
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url"><span class="lock">🔒</span><b>kitabi.in</b></div>
+      <div class="ttfb">TTFB 41 ms · cached at the edge</div>
+    </div>
+    <div class="viewport"><div class="site">
+
+      <div class="shead">
+        <a class="brand"><span class="mark"></span><span class="bn">Kitabi<small>Beyond the Bookshelf</small></span></a>
+        <div class="snav"><a class="on">Books</a><a>Authors</a><a>Publishers</a><a>Languages</a><a>Lists</a></div>
+        <div class="ssearch">🔍 <b>Search a book, author or publisher…</b></div>
+        <a class="btn-app">Get the app</a>
+      </div>
+
+      <div class="hhero">
+        <div class="hhero-in">
+          <div class="hh-l">
+            <h1>Every book you've read,<br>and <em>every language</em> it lives in.</h1>
+            <p>A reference library for Indian literature — 1,402 works, 1,189 authors, in 14 languages,
+               with the translations traced both ways.</p>
+            <div class="bigsearch">
+              <span class="ico">🔍</span>
+              <span class="ph">Try “chemmeen”, “Thakazhi”, or an ISBN…</span>
+              <span class="go">Search</span>
+            </div>
+            <div class="hint">Type in English — we'll find it in <b>Malayalam</b>, <b>Tamil</b>, <b>Bengali</b> and 11 more.</div>
+          </div>
+          <div class="feat">
+            <div class="cv c1"><span class="rib"></span><div class="ct"><div class="t">ചെമ്മീൻ</div><div class="a">Thakazhi</div></div></div>
+            <div class="fm">
+              <div class="eyebrow">From the reading room</div>
+              <h4>Chemmeen</h4>
+              <div class="fa">Thakazhi Sivasankara Pillai · 1956 · Malayalam</div>
+              <div class="fq">The novel that carried Malayalam fiction to the world — and the first
+                 Indian book to be read, in translation, on four continents.</div>
+              <div class="fl">Read the story →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wrap">
+
+        <div class="sec">
+          <div class="sec-h"><h3>Browse by language</h3><span class="more">All 14 →</span></div>
+          <div class="langs">
+            <a class="lang hot"><div class="n ml">മലയാളം</div><div class="e">Malayalam</div><div class="c">418 books</div></a>
+            <a class="lang"><div class="n">தமிழ்</div><div class="e">Tamil</div><div class="c">204 books</div></a>
+            <a class="lang"><div class="n">বাংলা</div><div class="e">Bengali</div><div class="c">186 books</div></a>
+            <a class="lang"><div class="n">हिन्दी</div><div class="e">Hindi</div><div class="c">173 books</div></a>
+            <a class="lang"><div class="n">ಕನ್ನಡ</div><div class="e">Kannada</div><div class="c">112 books</div></a>
+            <a class="lang"><div class="n">తెలుగు</div><div class="e">Telugu</div><div class="c">98 books</div></a>
+            <a class="lang"><div class="n">मराठी</div><div class="e">Marathi</div><div class="c">91 books</div></a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>Read it in another language</h3><span class="more">The translation index →</span></div>
+          <div class="pairs">
+            <div class="pair"><div class="rule"></div><div class="in">
+              <div class="cv c1" style="width:46px"><div class="ct"><div class="t" style="font-size:8px">ആടുജീവിതം</div></div></div>
+              <div class="side"><div class="t ml">ആടുജീവിതം</div><div class="m">Benyamin · Malayalam · 2008</div></div>
+              <span class="arrow">⇄</span>
+              <div class="side" style="text-align:right"><div class="t">Goat Days</div><div class="m">trans. Joseph Koyippally · 2012</div></div>
+            </div></div>
+            <div class="pair"><div class="rule"></div><div class="in">
+              <div class="cv c3" style="width:46px"><div class="ct"><div class="t" style="font-size:8px">ചെമ്മീൻ</div></div></div>
+              <div class="side"><div class="t ml">ചെമ്മീൻ</div><div class="m">Thakazhi · Malayalam · 1956</div></div>
+              <span class="arrow">⇄</span>
+              <div class="side" style="text-align:right"><div class="t">Chemmeen</div><div class="m">trans. Narayana Menon · 1962</div></div>
+            </div></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>Recently added</h3><span class="more">Everything new →</span></div>
+          <div class="strip">
+            <a class="bk"><div class="cv c2"><div class="ct"><div class="t">Kayar</div><div class="a">Thakazhi</div></div></div><div class="bt">Kayar</div><div class="ba">Thakazhi S. Pillai</div><div class="brt">★ 4.3 <span>· 84</span></div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Randamoozham</div><div class="a">M. T. Vasudevan Nair</div></div></div><div class="bt">Randamoozham</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.7 <span>· 291</span></div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t">Balyakalasakhi</div><div class="a">Basheer</div></div></div><div class="bt">Balyakalasakhi</div><div class="ba">Vaikom M. Basheer</div><div class="brt">★ 4.5 <span>· 156</span></div></a>
+            <a class="bk"><div class="cv c7"><div class="ct"><div class="t">Ponniyin Selvan</div><div class="a">Kalki</div></div></div><div class="bt">Ponniyin Selvan</div><div class="ba">Kalki Krishnamurthy</div><div class="brt">★ 4.8 <span>· 402</span></div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t">Pather Panchali</div><div class="a">Bibhutibhushan</div></div></div><div class="bt">Pather Panchali</div><div class="ba">B. Bandyopadhyay</div><div class="brt">★ 4.6 <span>· 213</span></div></a>
+            <a class="bk"><div class="cv c5"><div class="ct"><div class="t">Ivory Throne</div><div class="a">Manu S. Pillai</div></div></div><div class="bt">The Ivory Throne</div><div class="ba">Manu S. Pillai</div><div class="brt">★ 4.4 <span>· 97</span></div></a>
+            <a class="bk"><div class="cv c1"><div class="ct"><div class="t">Oru Desathinte Katha</div><div class="a">S. K. Pottekkatt</div></div></div><div class="bt">Oru Desathinte Katha</div><div class="ba">S. K. Pottekkatt</div><div class="brt">★ 4.5 <span>· 118</span></div></a>
+            <a class="bk"><div class="cv c3"><div class="ct"><div class="t">Naalukettu</div><div class="a">M. T. Vasudevan Nair</div></div></div><div class="bt">Naalukettu</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.4 <span>· 132</span></div></a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>Highest rated this month</h3><span class="more">The full ranking →</span></div>
+          <div class="strip">
+            <a class="bk"><div class="cv c7"><span class="rib"></span><div class="ct"><div class="t">Ponniyin Selvan</div><div class="a">Kalki</div></div></div><div class="bt">Ponniyin Selvan</div><div class="ba">Kalki Krishnamurthy</div><div class="brt">★ 4.8 <span>· 402</span></div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Randamoozham</div><div class="a">M. T.</div></div></div><div class="bt">Randamoozham</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.7 <span>· 291</span></div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t">Pather Panchali</div><div class="a">Bibhutibhushan</div></div></div><div class="bt">Pather Panchali</div><div class="ba">B. Bandyopadhyay</div><div class="brt">★ 4.6 <span>· 213</span></div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t">Balyakalasakhi</div><div class="a">Basheer</div></div></div><div class="bt">Balyakalasakhi</div><div class="ba">Vaikom M. Basheer</div><div class="brt">★ 4.5 <span>· 156</span></div></a>
+            <a class="bk"><div class="cv c1"><div class="ct"><div class="t">Oru Desathinte Katha</div><div class="a">Pottekkatt</div></div></div><div class="bt">Oru Desathinte Katha</div><div class="ba">S. K. Pottekkatt</div><div class="brt">★ 4.5 <span>· 118</span></div></a>
+            <a class="bk"><div class="cv c2"><div class="ct"><div class="t">Aarohanam</div><div class="a">Sara Joseph</div></div></div><div class="bt">Aarohanam</div><div class="ba">Sara Joseph</div><div class="brt">★ 4.5 <span>· 71</span></div></a>
+            <a class="bk"><div class="cv c5"><div class="ct"><div class="t">Ivory Throne</div><div class="a">Manu S. Pillai</div></div></div><div class="bt">The Ivory Throne</div><div class="ba">Manu S. Pillai</div><div class="brt">★ 4.4 <span>· 97</span></div></a>
+            <a class="bk"><div class="cv c3"><div class="ct"><div class="t">Naalukettu</div><div class="a">M. T.</div></div></div><div class="bt">Naalukettu</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.4 <span>· 132</span></div></a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>Where to start</h3><span class="more">All lists →</span></div>
+          <div class="strip n4">
+            <a class="bk"><div style="background:linear-gradient(135deg,#33241A,#241811);border-radius:11px;padding:19px;height:118px;display:flex;flex-direction:column;justify-content:space-between">
+              <div class="eyebrow" style="color:#B8862B">Editors' list · 12 books</div>
+              <div class="serif" style="color:#F6F0E3;font-size:17px;font-weight:500;line-height:1.28">Malayalam novels to start with</div></div></a>
+            <a class="bk"><div style="background:linear-gradient(135deg,#3d2a2e,#2b1c1f);border-radius:11px;padding:19px;height:118px;display:flex;flex-direction:column;justify-content:space-between">
+              <div class="eyebrow" style="color:#B8862B">Editors' list · 18 books</div>
+              <div class="serif" style="color:#F6F0E3;font-size:17px;font-weight:500;line-height:1.28">Indian books that travelled — in translation</div></div></a>
+            <a class="bk"><div style="background:linear-gradient(135deg,#2d3a2a,#1d2619);border-radius:11px;padding:19px;height:118px;display:flex;flex-direction:column;justify-content:space-between">
+              <div class="eyebrow" style="color:#B8862B">Editors' list · 9 books</div>
+              <div class="serif" style="color:#F6F0E3;font-size:17px;font-weight:500;line-height:1.28">Jnanpith winners, in their own language</div></div></a>
+            <a class="bk"><div style="background:linear-gradient(135deg,#2c3540,#1a2129);border-radius:11px;padding:19px;height:118px;display:flex;flex-direction:column;justify-content:space-between">
+              <div class="eyebrow" style="color:#B8862B">Editors' list · 15 books</div>
+              <div class="serif" style="color:#F6F0E3;font-size:17px;font-weight:500;line-height:1.28">Short story collections worth the shelf</div></div></a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="appband">
+            <div>
+              <h4>Keep the shelf in your pocket</h4>
+              <p>Kitabi is a personal library app — track what you own, log what you read,
+                 and lend a book to a friend without losing it. Free, offline-first, no ads.</p>
+            </div>
+            <div class="bs"><span class="b">App Store</span><span class="b">Google Play</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sfoot">
+        <div class="sfoot-in">
+          <div><div class="fb">Kitabi</div><p>A reference library for Indian literature, and a personal one for your shelf.</p></div>
+          <div><h5>Browse</h5><a>Languages</a><a>Genres</a><a>Authors A–Z</a><a>Publishers</a><a>Series</a></div>
+          <div><h5>Lists</h5><a>Editors' lists</a><a>Highest rated</a><a>Recently added</a><a>Translations</a></div>
+          <div><h5>Kitabi</h5><a>The app</a><a>Privacy</a><a>Terms</a><a>Contact</a></div>
+        </div>
+      </div>
+
+    </div></div>
+  </div>
+
+  <div class="note"><i></i><div>
+    <b>Why the language grid sits so high.</b> It is not decoration — it is the crawl architecture.
+    Home links all 14 language hubs; each hub links its books; therefore every indexable page is
+    ≤3 clicks from the root. Google's crawl budget for a new domain is small, and a flat, shallow
+    graph is the cheapest way to spend it well.
+  </div></div>
+  <div class="note green"><i></i><div>
+    <b>JSON-LD on this page:</b> <code>WebSite</code> + <code>SearchAction</code> (this is what earns the
+    sitelinks search box under a branded result), <code>Organization</code>, and one
+    <code>ItemList</code> per row.
+  </div></div>
+</div>
+
+<!-- ============================== W2 · SEARCH ============================== -->
+<div class="area" id="w2">
+  <div class="ah"><span class="an">W2</span><h2>Search — the party trick</h2></div>
+  <p class="desc">
+    Server-rendered, grouped <b>Books · Authors · Publishers · Series</b>. The cross-script match
+    is the moment a reader remembers: you type <code>chemmeen</code> on an English keyboard and the
+    site returns <span class="ml">ചെമ്മീൻ</span> — <b>and says so</b>. That capability already exists in
+    the API (<code>title_translit</code> / <code>title_fold</code>); it has simply never been shown to
+    anyone outside the app. The page is <code>noindex, follow</code> — search pages generate infinite
+    near-duplicate URLs — but every result on it is a crawlable link.
+  </p>
+
+  <div class="browser w">
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/search?q=chemmeen</div>
+      <div class="ttfb">TTFB 88 ms · <span style="color:#8F681E">noindex, follow</span></div>
+    </div>
+    <div class="viewport"><div class="site">
+
+      <div class="shead">
+        <a class="brand"><span class="mark"></span><span class="bn">Kitabi<small>Beyond the Bookshelf</small></span></a>
+        <div class="snav"><a>Books</a><a>Authors</a><a>Publishers</a><a>Languages</a><a>Lists</a></div>
+        <div class="ssearch" style="border-color:var(--oxblood);background:var(--card)">🔍 <b style="color:var(--ink);font-weight:600">chemmeen</b></div>
+        <a class="btn-app">Get the app</a>
+      </div>
+
+      <div class="wrap">
+        <div style="padding-top:22px">
+          <h1 class="serif" style="font-size:26px;font-weight:450">
+            9 results for <span style="color:var(--oxblood)">“chemmeen”</span>
+          </h1>
+          <div style="margin-top:8px"><span class="matchline">✓ also matched ചെമ്മീൻ · കയർ — spelling-insensitive across scripts</span></div>
+        </div>
+
+        <div class="sres">
+          <div>
+            <div class="sgroup">
+              <div class="sgh"><h3>Books</h3><span class="ct">6 results</span></div>
+
+              <div class="sr">
+                <div class="cv c1" style="width:52px"><span class="rib"></span><div class="ct"><div class="t" style="font-size:8px">ചെമ്മീൻ</div></div></div>
+                <div class="si">
+                  <div class="st"><span class="nat ml">ചെമ്മീൻ</span> <span style="color:var(--ink-soft);font-weight:400;font-size:14px">· Chemmeen</span></div>
+                  <div class="sa">Thakazhi Sivasankara Pillai · Malayalam · Novel · 1956</div>
+                  <div class="sm">
+                    <span class="matchline">matched your spelling</span>
+                    <span>★ 4.4 · 312 ratings</span><span>·</span><span>4 editions</span><span>·</span><span style="color:var(--gold);font-weight:600">2 translations</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sr">
+                <div class="cv c3" style="width:52px"><div class="ct"><div class="t" style="font-size:8px">Chemmeen</div><div class="a" style="font-size:6px">Eng</div></div></div>
+                <div class="si">
+                  <div class="st">Chemmeen</div>
+                  <div class="sa">Thakazhi Sivasankara Pillai · trans. Narayana Menon · English · 1962</div>
+                  <div class="sm"><span class="pill p-gold">Translation</span><span>★ 4.2 · 88 ratings</span><span>·</span><span>3 editions</span></div>
+                </div>
+              </div>
+
+              <div class="sr">
+                <div class="cv c6" style="width:52px"><div class="ct"><div class="t" style="font-size:7px">Chemmeen: A Study</div></div></div>
+                <div class="si">
+                  <div class="st">Chemmeen: a critical study</div>
+                  <div class="sa">K. M. Tharakan · Malayalam · Criticism · 1978</div>
+                  <div class="sm"><span>1 edition</span><span>·</span><span style="color:var(--stamp-grey)">no ratings yet</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sgroup">
+              <div class="sgh"><h3>Authors</h3><span class="ct">2 results</span></div>
+              <div class="sr">
+                <div class="ppl">ത</div>
+                <div class="si">
+                  <div class="st">Thakazhi Sivasankara Pillai</div>
+                  <div class="sa ml">തകഴി ശിവശങ്കരപ്പിള്ള · Malayalam</div>
+                  <div class="sm"><span>34 works</span><span>·</span><span>11 translated</span><span>·</span><span>Jnanpith, 1984</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sgroup">
+              <div class="sgh"><h3>Publishers</h3><span class="ct">1 result</span></div>
+              <div class="sr">
+                <div class="ppl" style="border-radius:11px">DC</div>
+                <div class="si">
+                  <div class="st">DC Books</div>
+                  <div class="sa">Kottayam · Malayalam · 214 editions in the catalogue</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="facets">
+              <h4>Narrow it down</h4>
+              <div class="fr">Malayalam <span>6</span></div>
+              <div class="fr">English <span>3</span></div>
+              <div class="div"></div>
+              <h4>Type</h4>
+              <div class="fr">Novel <span>5</span></div>
+              <div class="fr">Criticism <span>2</span></div>
+              <div class="fr">Short stories <span>2</span></div>
+              <div class="div"></div>
+              <h4>Has</h4>
+              <div class="fr">A translation <span>4</span></div>
+              <div class="fr">Reviews <span>3</span></div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px">
+              <h4 style="font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:9px">Not here?</h4>
+              <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.65">Any reader can add a book to the
+                catalogue from the Kitabi app — scan the ISBN and it's here in seconds.</p>
+              <a class="btn-ghost" style="margin-top:11px">Add a book →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="note"><i></i><div>
+    <b>The form works with JavaScript disabled.</b> It's a plain <code>GET</code> to
+    <code>/search?q=</code>. The ~3 KB of deferred JS adds typeahead on top — it is never the
+    thing that makes search work.
+  </div></div>
+</div>
+
+<!-- ============================== W3 · BOOK PAGE ============================== -->
+<div class="area" id="w3">
+  <div class="ah"><span class="an">W3</span><h2>The book page — the flagship</h2></div>
+  <p class="desc">
+    Everything else on this site exists to send people here. The page answers four questions in the
+    order they actually arrive: <b>what is it</b> → <b>what do people think</b> → <b>what's it about</b>
+    → <b>what do I do about it</b>. Then, below the fold, in this order because it's the order the
+    <i>next</i> questions arrive: read it in another language → which printing → what readers said →
+    what else by this author → what's like it → the facts.
+  </p>
+  <p class="desc">
+    Note where the <b>translation module</b> sits: directly under the fold, above editions and above
+    reviews. It is the one thing on this page that Goodreads, StoryGraph and Amazon structurally
+    cannot show, so it gets the best position on the page that isn't the title.
+  </p>
+
+  <div class="browser w">
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/book/chemmeen</div>
+      <div class="ttfb">TTFB 39 ms · 1 API call · 11.4 KB HTML</div>
+    </div>
+    <div class="viewport"><div class="site">
+
+      <div class="shead">
+        <a class="brand"><span class="mark"></span><span class="bn">Kitabi<small>Beyond the Bookshelf</small></span></a>
+        <div class="snav"><a class="on">Books</a><a>Authors</a><a>Publishers</a><a>Languages</a><a>Lists</a></div>
+        <div class="ssearch">🔍 <b>Search a book, author or publisher…</b></div>
+        <a class="btn-app">Get the app</a>
+      </div>
+
+      <div class="wrap">
+        <div class="crumb">
+          <a>Home</a><span class="sep">›</span><a>Malayalam</a><span class="sep">›</span><a>Novels</a><span class="sep">›</span><span>Chemmeen</span>
+        </div>
+
+        <div class="bhero">
+          <div class="cover-col">
+            <div class="cv c1"><span class="rib"></span><div class="ct"><div class="t ml" style="font-size:19px">ചെമ്മീൻ</div><div class="a">Thakazhi Sivasankara Pillai</div></div></div>
+            <div style="display:flex;gap:8px"><span class="chip" style="flex:1;text-align:center">Front</span><span class="chip" style="flex:1;text-align:center">Back</span></div>
+          </div>
+
+          <div>
+            <h1>Chemmeen</h1>
+            <div class="native ml">ചെമ്മീൻ</div>
+            <div class="by">
+              by <a>Thakazhi Sivasankara Pillai</a>
+              <span class="tr">Original work · Malayalam · translated into <a style="color:var(--oxblood)">English</a> and <a style="color:var(--oxblood)">Hindi</a></span>
+            </div>
+
+            <div class="rating-row">
+              <div class="big">4.4<span> / 5</span></div>
+              <div class="stars"><span class="s">★★★★<span class="off">★</span></span><span class="n">312 ratings · 41 reviews</span></div>
+              <span class="pill p-gold">Top 10 in Malayalam</span>
+            </div>
+
+            <div class="facts">
+              <span><b>1956</b> first published</span>
+              <span><b>Malayalam</b></span>
+              <span><b>Novel</b></span>
+              <span><b>218</b> pages</span>
+              <span><b>4</b> editions</span>
+            </div>
+
+            <div style="margin-top:14px;display:flex;gap:7px;flex-wrap:wrap">
+              <span class="chip">Literary fiction</span><span class="chip">Coastal life</span>
+              <span class="chip">Tragedy</span><span class="chip">Classic</span><span class="chip">Kerala</span>
+            </div>
+
+            <div class="blurb">
+              On the Kerala coast, Karuthamma — a fisherman's daughter — loves Pareekutti, a Muslim trader's
+              son, across a line her community will not let her cross. Thakazhi's 1956 novel turned the
+              taboo of that love into the most widely translated book in Malayalam, and gave the language
+              its first international readership. <span class="fade">Read more ▾</span>
+            </div>
+
+            <div class="act">
+              <a class="prim">Track this in Kitabi</a>
+              <a class="btn-ghost">Add to a shelf</a>
+              <a class="btn-ghost">↗ Share</a>
+            </div>
+          </div>
+
+          <div>
+            <div class="rail">
+              <div class="rh">Where to find it</div>
+              <div class="rb" style="padding:6px 15px">
+                <div class="buy"><span>Amazon.in</span><span class="p">₹ 250</span></div>
+                <div class="buy"><span>DC Books</span><span class="p">₹ 220</span></div>
+                <div class="buy"><span>Flipkart</span><span class="p">₹ 265</span></div>
+              </div>
+            </div>
+            <div class="rail" style="margin-top:14px">
+              <div class="rh">This edition</div>
+              <div class="rb">
+                <div class="kv"><span class="k">Publisher</span><span class="v">DC Books</span></div>
+                <div class="kv"><span class="k">Published</span><span class="v">2019 · 14th ed.</span></div>
+                <div class="kv"><span class="k">ISBN</span><span class="v mono" style="font-size:11px">9788126403455</span></div>
+                <div class="kv"><span class="k">Pages</span><span class="v">218</span></div>
+                <div class="kv"><span class="k">Format</span><span class="v">Paperback</span></div>
+              </div>
+            </div>
+            <div class="rail" style="margin-top:14px;background:linear-gradient(150deg,#33241A,#241811);border-color:#241811">
+              <div class="rh" style="background:transparent;color:var(--gold);border-bottom-color:rgba(240,226,194,.16)">On your shelf?</div>
+              <div class="rb" style="color:#CBB897;font-size:12.5px;line-height:1.7">
+                Track it, log your reading, and lend it to a friend — without losing it.
+                <a class="btn-ghost" style="display:block;text-align:center;margin-top:12px;background:var(--gold);border-color:var(--gold);color:#241811">Open in Kitabi</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- translation module -->
+        <div class="sec">
+          <div class="trans">
+            <div class="rule"></div>
+            <div class="tin">
+              <div class="th">
+                <span class="eyebrow">Read it in another language</span>
+                <span class="grp">Across all translations: <b>★ 4.3</b> from 412 ratings</span>
+              </div>
+              <div class="tg">
+                <div class="tcard orig">
+                  <div class="cv c1" style="width:52px"><span class="rib"></span><div class="ct"><div class="t ml" style="font-size:8px">ചെമ്മീൻ</div></div></div>
+                  <div class="ti">
+                    <div class="lg">Malayalam · the original</div>
+                    <div class="t ml">ചെമ്മീൻ</div>
+                    <div class="m">Thakazhi · 1956 · ★ 4.4 · 312 ratings</div>
+                  </div>
+                  <span class="pill p-gold">You're here</span>
+                </div>
+                <div class="tcard">
+                  <div class="cv c3" style="width:52px"><div class="ct"><div class="t" style="font-size:8px">Chemmeen</div></div></div>
+                  <div class="ti">
+                    <div class="lg">English</div>
+                    <div class="t">Chemmeen</div>
+                    <div class="m">trans. Narayana Menon · 1962 · ★ 4.2 · 88 ratings</div>
+                  </div>
+                </div>
+                <div class="tcard">
+                  <div class="cv c4" style="width:52px"><div class="ct"><div class="t" style="font-size:8px">चेम्मीन</div></div></div>
+                  <div class="ti">
+                    <div class="lg">Hindi</div>
+                    <div class="t">चेम्मीन</div>
+                    <div class="m">trans. G. Gopinathan · 1980 · ★ 4.1 · 12 ratings</div>
+                  </div>
+                </div>
+                <div class="tcard" style="border-style:dashed;background:transparent">
+                  <div class="ti">
+                    <div class="lg" style="color:var(--ink-soft)">Know another?</div>
+                    <div class="t" style="font-size:14px;color:var(--ink-soft)">Add a translation</div>
+                    <div class="m">French, Russian and Czech editions exist — none are catalogued yet.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- editions -->
+        <div class="sec">
+          <div class="sec-h"><h3>All 4 editions</h3><span class="more">Compare printings →</span></div>
+          <div class="eds">
+            <div class="ed">
+              <div class="cv c1"><div class="ct"><div class="t" style="font-size:6px">ചെമ്മീൻ</div></div></div>
+              <div><div class="et">DC Books · 14th edition</div><div class="em">Kottayam · Malayalam · Paperback</div></div>
+              <div class="col"><b>2019</b>ISBN 9788126403455</div>
+              <div class="col"><b>218</b>pages</div>
+              <div><span class="pill p-moss">Most owned</span></div>
+            </div>
+            <div class="ed">
+              <div class="cv c5"><div class="ct"><div class="t" style="font-size:6px">ചെമ്മീൻ</div></div></div>
+              <div><div class="et">Sahitya Pravarthaka</div><div class="em">Kottayam · Malayalam · Hardcover</div></div>
+              <div class="col"><b>1956</b>First printing</div>
+              <div class="col"><b>204</b>pages</div>
+              <div><span class="pill p-gold">First edition</span></div>
+            </div>
+            <div class="ed">
+              <div class="cv c3"><div class="ct"><div class="t" style="font-size:6px">Chemmeen</div></div></div>
+              <div><div class="et">Gollancz · English translation</div><div class="em">London · English · Hardcover</div></div>
+              <div class="col"><b>1962</b>ISBN —</div>
+              <div class="col"><b>224</b>pages</div>
+              <div><span class="pill p-slate">Translation</span></div>
+            </div>
+            <div class="ed">
+              <div class="cv c6"><div class="ct"><div class="t" style="font-size:6px">Chemmeen</div></div></div>
+              <div><div class="et">Harper Perennial</div><div class="em">Noida · English · Paperback</div></div>
+              <div class="col"><b>2011</b>ISBN 9789350290590</div>
+              <div class="col"><b>240</b>pages</div>
+              <div><span class="pill p-slate">Translation</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ratings + reviews -->
+        <div class="sec">
+          <div class="sec-h"><h3>What readers said</h3><span class="more">All 41 reviews →</span></div>
+          <div class="ratings" style="margin-bottom:22px">
+            <div class="score">
+              <div class="n">4.4</div>
+              <div class="stars" style="justify-content:center;margin-top:7px"><span class="s">★★★★<span class="off">★</span></span></div>
+              <div class="of">312 ratings · 41 reviews</div>
+            </div>
+            <div class="hist">
+              <div class="hbar"><span class="lb">5 ★</span><span class="tr"><span class="fl" style="width:62%"></span></span><span class="ct">193</span></div>
+              <div class="hbar"><span class="lb">4 ★</span><span class="tr"><span class="fl" style="width:26%"></span></span><span class="ct">81</span></div>
+              <div class="hbar"><span class="lb">3 ★</span><span class="tr"><span class="fl" style="width:8%"></span></span><span class="ct">25</span></div>
+              <div class="hbar"><span class="lb">2 ★</span><span class="tr"><span class="fl" style="width:3%"></span></span><span class="ct">9</span></div>
+              <div class="hbar"><span class="lb">1 ★</span><span class="tr"><span class="fl" style="width:1%"></span></span><span class="ct">4</span></div>
+            </div>
+          </div>
+
+          <div class="rev">
+            <div class="rhd">
+              <div class="av">A</div>
+              <div><div class="who">Arundhati M.</div><div class="when">14 July 2026 · read in Malayalam</div></div>
+              <div class="rs">★★★★★</div>
+            </div>
+            <div class="rt">“I read it first at fifteen and thought it was a love story. I read it again at forty
+              and understood it was about the sea — how it feeds you and how it decides, without consulting you,
+              when it's finished.”</div>
+          </div>
+          <div class="rev">
+            <div class="rhd">
+              <div class="av">R</div>
+              <div><div class="who">A reader on Kitabi</div><div class="when">2 July 2026 · read in English</div></div>
+              <div class="rs">★★★★☆</div>
+            </div>
+            <div class="rt">“Menon's translation is of its time — a little stately for Thakazhi's plain voice —
+              but it carries the thing that matters. Start here if you can't read Malayalam, then find someone who can.”</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>More by Thakazhi Sivasankara Pillai</h3><span class="more">All 34 works →</span></div>
+          <div class="strip n6">
+            <a class="bk"><div class="cv c2"><div class="ct"><div class="t">Kayar</div></div></div><div class="bt">Kayar</div><div class="brt">★ 4.3</div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Enippadikal</div></div></div><div class="bt">Enippadikal</div><div class="brt">★ 4.1</div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t">Randidangazhi</div></div></div><div class="bt">Randidangazhi</div><div class="brt">★ 4.2</div></a>
+            <a class="bk"><div class="cv c7"><div class="ct"><div class="t">Thottiyude Makan</div></div></div><div class="bt">Thottiyude Makan</div><div class="brt">★ 4.0</div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t">Ouseppinte Makkal</div></div></div><div class="bt">Ouseppinte Makkal</div><div class="brt">★ 3.9</div></a>
+            <a class="bk"><div class="cv c5"><div class="ct"><div class="t">Anubhavangal</div></div></div><div class="bt">Anubhavangal</div><div class="brt">★ 4.0</div></a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>Readers who shelved this also shelved</h3></div>
+          <div class="strip n6">
+            <a class="bk"><div class="cv c3"><div class="ct"><div class="t">Balyakalasakhi</div></div></div><div class="bt">Balyakalasakhi</div><div class="ba">Basheer</div></a>
+            <a class="bk"><div class="cv c1"><div class="ct"><div class="t">Oru Desathinte Katha</div></div></div><div class="bt">Oru Desathinte Katha</div><div class="ba">Pottekkatt</div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Randamoozham</div></div></div><div class="bt">Randamoozham</div><div class="ba">M. T. Vasudevan Nair</div></a>
+            <a class="bk"><div class="cv c7"><div class="ct"><div class="t">Khasakkinte Ithihasam</div></div></div><div class="bt">Khasakkinte Ithihasam</div><div class="ba">O. V. Vijayan</div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t">Naalukettu</div></div></div><div class="bt">Naalukettu</div><div class="ba">M. T. Vasudevan Nair</div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t">Aarohanam</div></div></div><div class="bt">Aarohanam</div><div class="ba">Sara Joseph</div></a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>The facts</h3></div>
+          <div class="ftab">
+            <div class="r"><span class="k">Original title</span><span class="v ml">ചെമ്മീൻ</span></div>
+            <div class="r"><span class="k">Romanized</span><span class="v">Chemmeen</span></div>
+            <div class="r"><span class="k">Author</span><span class="v"><a>Thakazhi Sivasankara Pillai</a></span></div>
+            <div class="r"><span class="k">Language</span><span class="v"><a>Malayalam</a></span></div>
+            <div class="r"><span class="k">First published</span><span class="v">1956</span></div>
+            <div class="r"><span class="k">Type</span><span class="v"><a>Novel</a></span></div>
+            <div class="r"><span class="k">Genres</span><span class="v"><a>Literary fiction</a>, <a>Classic</a></span></div>
+            <div class="r"><span class="k">Translations</span><span class="v"><a>English</a>, <a>Hindi</a></span></div>
+            <div class="r"><span class="k">Editions</span><span class="v">4 · 1956–2019</span></div>
+            <div class="r"><span class="k">Publishers</span><span class="v"><a>DC Books</a>, <a>Gollancz</a>, +2</span></div>
+            <div class="r"><span class="k">Awards</span><span class="v">Sahitya Akademi, 1957</span></div>
+            <div class="r"><span class="k">Contributed by</span><span class="v">3 Kitabi readers · <a>improve this entry</a></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sfoot"><div class="sfoot-in">
+        <div><div class="fb">Kitabi</div><p>A reference library for Indian literature, and a personal one for your shelf.</p></div>
+        <div><h5>Browse</h5><a>Languages</a><a>Genres</a><a>Authors A–Z</a><a>Publishers</a></div>
+        <div><h5>This book</h5><a>All editions</a><a>All reviews</a><a>Translations</a></div>
+        <div><h5>Kitabi</h5><a>The app</a><a>Privacy</a><a>Terms</a></div>
+      </div></div>
+    </div></div>
+  </div>
+
+  <div class="row2" style="margin-top:26px">
+    <div class="cap"><b>One page, one API call</b>
+      Everything on this frame — work, editions, authors, translations, reviews, related books,
+      breadcrumbs — arrives in a single <code>GET /public/book/chemmeen</code>. Four sequential
+      round trips from the edge to Singapore would be ~1.2 s of TTFB on their own.
+      <span class="pro">Budget met: 39 ms warm, 11.4 KB HTML.</span></div>
+    <div class="cap"><b>Outbound links: 41</b>
+      Author, translators, publisher ×4, series, 5 genres, language hub, form hub, 2 translations,
+      12 related books, 4 edition anchors. A book page is the densest crawl node on the site —
+      that is the whole reason the "more by / also shelved" rows exist.</div>
+    <div class="cap"><b>Structured data</b>
+      <code>Book</code> with a <code>workExample</code> per edition, <code>Person</code> per author,
+      <code>Review</code> per public review, <code>BreadcrumbList</code>, and
+      <code>AggregateRating</code> — <b>only because a real rating exists</b>
+      <span class="pro">The existing <code>_og.js</code> already builds this object correctly; it gets lifted, not rewritten.</span></div>
+  </div>
+
+  <div class="note red"><i></i><div>
+    <b>Never emit <code>AggregateRating</code> with a zero or invented value.</b> Google issues manual
+    actions for fabricated review markup, and Kitabi's <code>aggregate_rating</code> is legitimately
+    <code>null</code> on most works today. When there's no rating, the block and the markup both
+    disappear — the page simply doesn't have that section.
+  </div></div>
+</div>
+
+<!-- ============================== W4 · AUTHOR ============================== -->
+<div class="area" id="w4">
+  <div class="ah"><span class="an">W4</span><h2>Author</h2></div>
+  <p class="desc">
+    Low competition, high intent: <i>"Thakazhi Sivasankara Pillai books"</i> currently returns a
+    Wikipedia stub and Amazon listings. The two sections no one else has are <b>Translated by them</b>
+    (translators are Author rows here — same pages, already modelled on <code>work_translators</code>)
+    and <b>Translated into</b>. The <span class="badge-kit">🔗 on Kitabi</span> badge appears when
+    <code>linked_user_id</code> is set — a verified author reading on the platform is a genuinely
+    novel signal, so say it out loud.
+  </p>
+
+  <div class="browser w">
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/author/thakazhi-sivasankara-pillai</div>
+      <div class="ttfb">TTFB 44 ms</div>
+    </div>
+    <div class="viewport"><div class="site">
+      <div class="shead">
+        <a class="brand"><span class="mark"></span><span class="bn">Kitabi<small>Beyond the Bookshelf</small></span></a>
+        <div class="snav"><a>Books</a><a class="on">Authors</a><a>Publishers</a><a>Languages</a><a>Lists</a></div>
+        <div class="ssearch">🔍 <b>Search a book, author or publisher…</b></div>
+        <a class="btn-app">Get the app</a>
+      </div>
+
+      <div class="wrap">
+        <div class="crumb"><a>Home</a><span class="sep">›</span><a>Authors</a><span class="sep">›</span><a>Malayalam</a><span class="sep">›</span><span>Thakazhi Sivasankara Pillai</span></div>
+
+        <div class="ahero">
+          <div class="portrait">ത</div>
+          <div>
+            <h1>Thakazhi Sivasankara Pillai</h1>
+            <div class="nat ml">തകഴി ശിവശങ്കരപ്പിള്ള</div>
+            <div style="margin-top:11px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <span class="chip">Malayalam</span><span class="chip">1912 – 1999</span>
+              <span class="chip">Novelist</span><span class="pill p-gold">Jnanpith · 1984</span>
+            </div>
+            <div class="bio">
+              Thakazhi wrote the Kerala coast and the Kuttanad paddy fields into Malayalam literature —
+              first as a social realist documenting caste and labour, later, in <a style="color:var(--oxblood)">Kayar</a>,
+              as the chronicler of a whole village across four generations. <a style="color:var(--oxblood)">Chemmeen</a> (1956)
+              made him the first Malayalam novelist with an international readership; it has since
+              been translated into more than twenty languages.
+            </div>
+            <div class="timeline">
+              <div class="tl"><div class="b" style="height:14px"></div><div class="y" style="margin-top:5px">1930s</div></div>
+              <div class="tl"><div class="b" style="height:30px"></div><div class="y" style="margin-top:5px">1940s</div></div>
+              <div class="tl"><div class="b" style="height:52px"></div><div class="y" style="margin-top:5px">1950s</div></div>
+              <div class="tl"><div class="b" style="height:38px"></div><div class="y" style="margin-top:5px">1960s</div></div>
+              <div class="tl"><div class="b" style="height:44px"></div><div class="y" style="margin-top:5px">1970s</div></div>
+              <div class="tl"><div class="b" style="height:26px"></div><div class="y" style="margin-top:5px">1980s</div></div>
+              <div class="tl"><div class="b" style="height:12px"></div><div class="y" style="margin-top:5px">1990s</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="hubstats">
+              <div class="st"><span class="k">Works</span><b>34</b></div>
+              <div class="st"><span class="k">Editions</span><b>96</b></div>
+              <div class="st"><span class="k">Translated into</span><b>7</b></div>
+              <div class="st"><span class="k">Average rating</span><b>★ 4.3</b></div>
+              <div class="st"><span class="k">Readers here</span><b>1,204</b></div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px;margin-top:13px">
+              <div class="eyebrow" style="margin-bottom:9px">Published by</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <span class="chip">DC Books</span><span class="chip">SPCS</span><span class="chip">Mathrubhumi</span><span class="chip">Gollancz</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>Works</h3><span class="more">Sort: most read ▾</span></div>
+          <div class="strip">
+            <a class="bk"><div class="cv c1"><span class="rib"></span><div class="ct"><div class="t ml">ചെമ്മീൻ</div></div></div><div class="bt">Chemmeen</div><div class="ba">1956 · Novel</div><div class="brt">★ 4.4 <span>· 312</span></div></a>
+            <a class="bk"><div class="cv c2"><div class="ct"><div class="t">Kayar</div></div></div><div class="bt">Kayar</div><div class="ba">1978 · Novel</div><div class="brt">★ 4.3 <span>· 84</span></div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Enippadikal</div></div></div><div class="bt">Enippadikal</div><div class="ba">1964 · Novel</div><div class="brt">★ 4.1 <span>· 47</span></div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t">Randidangazhi</div></div></div><div class="bt">Randidangazhi</div><div class="ba">1948 · Novel</div><div class="brt">★ 4.2 <span>· 39</span></div></a>
+            <a class="bk"><div class="cv c7"><div class="ct"><div class="t">Thottiyude Makan</div></div></div><div class="bt">Thottiyude Makan</div><div class="ba">1947 · Novel</div><div class="brt">★ 4.0 <span>· 31</span></div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t">Ouseppinte Makkal</div></div></div><div class="bt">Ouseppinte Makkal</div><div class="ba">1958 · Novel</div><div class="brt">★ 3.9 <span>· 22</span></div></a>
+            <a class="bk"><div class="cv c5"><div class="ct"><div class="t">Anubhavangal</div></div></div><div class="bt">Anubhavangal</div><div class="ba">1971 · Memoir</div><div class="brt">★ 4.0 <span>· 18</span></div></a>
+            <a class="bk"><div class="cv c3"><div class="ct"><div class="t">Chukku</div></div></div><div class="bt">Chukku</div><div class="ba">1961 · Short stories</div><div class="brt">★ 3.8 <span>· 11</span></div></a>
+          </div>
+          <div class="pager"><a>‹</a><a class="on">1</a><a>2</a><a>3</a><a>4</a><span class="el">…</span><a>5</a><a>›</a></div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>Translated into</h3><span class="more">The translation index →</span></div>
+          <div class="pairs">
+            <div class="pair"><div class="rule"></div><div class="in">
+              <div class="cv c1" style="width:46px"><div class="ct"><div class="t ml" style="font-size:7px">ചെമ്മീൻ</div></div></div>
+              <div class="side"><div class="t ml">ചെമ്മീൻ</div><div class="m">Malayalam · 1956</div></div><span class="arrow">⇄</span>
+              <div class="side" style="text-align:right"><div class="t">Chemmeen</div><div class="m">English · Hindi · +5</div></div>
+            </div></div>
+            <div class="pair"><div class="rule"></div><div class="in">
+              <div class="cv c2" style="width:46px"><div class="ct"><div class="t" style="font-size:8px">Kayar</div></div></div>
+              <div class="side"><div class="t">Kayar</div><div class="m">Malayalam · 1978</div></div><span class="arrow">⇄</span>
+              <div class="side" style="text-align:right"><div class="t">Coir</div><div class="m">English · 1997</div></div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sfoot"><div class="sfoot-in">
+        <div><div class="fb">Kitabi</div><p>A reference library for Indian literature.</p></div>
+        <div><h5>Browse</h5><a>Languages</a><a>Genres</a><a>Authors A–Z</a></div>
+        <div><h5>This author</h5><a>All works</a><a>Translations</a><a>Publishers</a></div>
+        <div><h5>Kitabi</h5><a>The app</a><a>Privacy</a><a>Terms</a></div>
+      </div></div>
+    </div></div>
+  </div>
+
+  <div class="note red"><i></i><div>
+    <b>Blocker before author pages can be indexed at all.</b> The seed contains duplicate rows for
+    the same person — <code>Basheer, Vaikom Muhammad</code> <i>and</i> <code>Vokom M. Basheer</code>
+    are both live right now. Two rows means two thin pages competing with each other for the same
+    query, which is textbook duplicate content. The author-merge job (plan §9.1) is a prerequisite,
+    not a nice-to-have.
+  </div></div>
+</div>
+
+<!-- ============================== W5 · PUBLISHER ============================== -->
+<div class="area" id="w5">
+  <div class="ah"><span class="an">W5</span><h2>Publisher</h2></div>
+  <p class="desc">
+    The cheapest ranking on the whole site. Nobody writes good pages about DC Books, Mathrubhumi or
+    Green Books — Kitabi could plausibly own <i>"DC Books catalogue"</i> within a month of indexing,
+    because 214 editions with covers, years and authors is already more than anyone else publishes.
+  </p>
+
+  <div class="browser w">
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/publisher/dc-books</div>
+      <div class="ttfb">TTFB 37 ms</div>
+    </div>
+    <div class="viewport"><div class="site">
+      <div class="shead">
+        <a class="brand"><span class="mark"></span><span class="bn">Kitabi<small>Beyond the Bookshelf</small></span></a>
+        <div class="snav"><a>Books</a><a>Authors</a><a class="on">Publishers</a><a>Languages</a><a>Lists</a></div>
+        <div class="ssearch">🔍 <b>Search a book, author or publisher…</b></div>
+        <a class="btn-app">Get the app</a>
+      </div>
+      <div class="wrap">
+        <div class="crumb"><a>Home</a><span class="sep">›</span><a>Publishers</a><span class="sep">›</span><span>DC Books</span></div>
+
+        <div style="display:grid;grid-template-columns:1fr 300px;gap:38px;margin-top:22px;align-items:start">
+          <div>
+            <div style="display:flex;gap:20px;align-items:center">
+              <div style="width:88px;height:88px;border-radius:14px;background:linear-gradient(150deg,#7E2A33,#4E181F);
+                display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:26px;color:#F0E2C2;flex-shrink:0">DC</div>
+              <div>
+                <h1 class="serif" style="font-size:33px;font-weight:450">DC Books</h1>
+                <div style="font-size:13.5px;color:var(--ink-soft);margin-top:5px">Kottayam, Kerala · founded 1974 · primarily Malayalam</div>
+              </div>
+            </div>
+            <p style="font-size:14.5px;line-height:1.8;color:#4a3d2e;margin-top:16px;max-width:640px">
+              Kerala's largest trade publisher, and the house that put most of modern Malayalam fiction
+              into paperback. In this catalogue: <b>214 editions</b> of <b>168 works</b> by
+              <b>91 authors</b>, from 1974 to today.
+            </p>
+            <div style="margin-top:16px;display:flex;gap:7px;flex-wrap:wrap">
+              <span class="chip on">All 214</span><span class="chip">Novels 118</span><span class="chip">Short stories 41</span>
+              <span class="chip">Poetry 23</span><span class="chip">Memoir 17</span><span class="chip">Translations 32</span>
+            </div>
+          </div>
+          <div class="hubstats">
+            <div class="st"><span class="k">Editions</span><b>214</b></div>
+            <div class="st"><span class="k">Works</span><b>168</b></div>
+            <div class="st"><span class="k">Authors</span><b>91</b></div>
+            <div class="st"><span class="k">Earliest</span><b>1974</b></div>
+            <div class="st"><span class="k">Average rating</span><b>★ 4.2</b></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>By decade</h3></div>
+          <div class="timeline" style="border-top:none;padding-top:0">
+            <div class="tl"><div class="b" style="height:18px;background:var(--gold-soft)"></div><div class="y" style="margin-top:6px">1970s · 14</div></div>
+            <div class="tl"><div class="b" style="height:34px"></div><div class="y" style="margin-top:6px">1980s · 29</div></div>
+            <div class="tl"><div class="b" style="height:48px"></div><div class="y" style="margin-top:6px">1990s · 41</div></div>
+            <div class="tl"><div class="b" style="height:62px"></div><div class="y" style="margin-top:6px">2000s · 53</div></div>
+            <div class="tl"><div class="b" style="height:56px"></div><div class="y" style="margin-top:6px">2010s · 48</div></div>
+            <div class="tl"><div class="b" style="height:32px"></div><div class="y" style="margin-top:6px">2020s · 29</div></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>From this house</h3><span class="more">Sort: newest ▾</span></div>
+          <div class="strip">
+            <a class="bk"><div class="cv c1"><div class="ct"><div class="t ml">ചെമ്മീൻ</div></div></div><div class="bt">Chemmeen</div><div class="ba">Thakazhi · 2019 ed.</div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Randamoozham</div></div></div><div class="bt">Randamoozham</div><div class="ba">M. T. Vasudevan Nair</div></a>
+            <a class="bk"><div class="cv c7"><div class="ct"><div class="t">Khasakkinte Ithihasam</div></div></div><div class="bt">Khasakkinte Ithihasam</div><div class="ba">O. V. Vijayan</div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t">Balyakalasakhi</div></div></div><div class="bt">Balyakalasakhi</div><div class="ba">Vaikom M. Basheer</div></a>
+            <a class="bk"><div class="cv c3"><div class="ct"><div class="t">Aarachar</div></div></div><div class="bt">Aarachar</div><div class="ba">K. R. Meera</div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t ml">ആടുജീവിതം</div></div></div><div class="bt">Aadujeevitham</div><div class="ba">Benyamin</div></a>
+            <a class="bk"><div class="cv c2"><div class="ct"><div class="t">Manju</div></div></div><div class="bt">Manju</div><div class="ba">M. T. Vasudevan Nair</div></a>
+            <a class="bk"><div class="cv c5"><div class="ct"><div class="t">Sundarikalum Sundaranmarum</div></div></div><div class="bt">Sundarikalum…</div><div class="ba">Uroob</div></a>
+          </div>
+          <div class="pager"><a>‹</a><a class="on">1</a><a>2</a><a>3</a><span class="el">…</span><a>27</a><a>›</a></div>
+        </div>
+      </div>
+      <div class="sfoot"><div class="sfoot-in">
+        <div><div class="fb">Kitabi</div><p>A reference library for Indian literature.</p></div>
+        <div><h5>Browse</h5><a>Languages</a><a>Genres</a><a>Publishers</a></div>
+        <div><h5>This publisher</h5><a>All editions</a><a>Authors</a></div>
+        <div><h5>Kitabi</h5><a>The app</a><a>Privacy</a></div>
+      </div></div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================== W6 · GENRE HUB ============================== -->
+<div class="area" id="w6">
+  <div class="ah"><span class="an">W6</span><h2>Genre hub — and the faceted browse behind it</h2></div>
+  <p class="desc">
+    One template, used for genres, forms and languages. The <b>editorial intro is not optional</b> —
+    150–250 hand-written words is the entire difference between a hub and a thin auto-generated
+    list, and thin auto-generated lists are what get catalog sites demoted. Only the canonical hubs
+    (<code>/genre/x</code>, <code>/language/x</code>, <code>/language/x/&lt;form&gt;</code>) are
+    indexable; every other facet combination lives under <code>/browse?…</code> as
+    <code>noindex, follow</code>, so crawlers walk the links without indexing 4,000 near-duplicates.
+  </p>
+  <div class="note red" style="margin-bottom:24px"><i></i><div>
+    <b>Measured blocker:</b> <code>GET /catalog/browse/genres</code> returns <code>[]</code> in
+    production today — <b>not one seeded work has a genre attached</b>, and
+    <code>/browse/forms</code> returns only <code>["Novel"]</code>. There is currently nothing to
+    build a genre hub out of. Classifying the seed set against a ~40-genre closed vocabulary
+    (plan §9.3) has to land before this page can exist.
+  </div></div>
+
+  <div class="browser w">
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/genre/literary-fiction</div>
+      <div class="ttfb">TTFB 46 ms</div>
+    </div>
+    <div class="viewport"><div class="site">
+      <div class="shead">
+        <a class="brand"><span class="mark"></span><span class="bn">Kitabi<small>Beyond the Bookshelf</small></span></a>
+        <div class="snav"><a class="on">Books</a><a>Authors</a><a>Publishers</a><a>Languages</a><a>Lists</a></div>
+        <div class="ssearch">🔍 <b>Search a book, author or publisher…</b></div>
+        <a class="btn-app">Get the app</a>
+      </div>
+
+      <div class="hubhead">
+        <div class="hubhead-in">
+          <div>
+            <div class="eyebrow">Genre</div>
+            <h1>Literary fiction</h1>
+            <p class="intro">
+              In Indian publishing the line between "literary" and "popular" was drawn late and
+              unevenly — Thakazhi and Basheer were serialised in weekly magazines before they were
+              canonised. What collects here is the fiction that was written to last: the
+              village novels of <a>Kuttanad</a> and <a>Kasaragod</a>, the modernist break of
+              <a>Khasakkinte Ithihasam</a>, and the generation of women writers — <a>Sara Joseph</a>,
+              <a>K. R. Meera</a> — who spent the 2000s rewriting whose story a novel is allowed to be.
+              <b>212 works</b>, across 11 languages, the oldest from 1889.
+            </p>
+          </div>
+          <div class="hubstats">
+            <div class="st"><span class="k">Works</span><b>212</b></div>
+            <div class="st"><span class="k">Languages</span><b>11</b></div>
+            <div class="st"><span class="k">Authors</span><b>134</b></div>
+            <div class="st"><span class="k">Average rating</span><b>★ 4.2</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wrap">
+        <div class="sec" style="margin-top:26px">
+          <div class="sec-h"><h3>Start here</h3><span class="more">Why these six →</span></div>
+          <div class="strip n6">
+            <a class="bk"><div class="cv c1"><span class="rib"></span><div class="ct"><div class="t ml">ചെമ്മീൻ</div></div></div><div class="bt">Chemmeen</div><div class="ba">Thakazhi · 1956</div><div class="brt">★ 4.4</div></a>
+            <a class="bk"><div class="cv c7"><span class="rib"></span><div class="ct"><div class="t">Khasakkinte Ithihasam</div></div></div><div class="bt">Khasakkinte Ithihasam</div><div class="ba">O. V. Vijayan · 1969</div><div class="brt">★ 4.7</div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t">Pather Panchali</div></div></div><div class="bt">Pather Panchali</div><div class="ba">Bibhutibhushan · 1929</div><div class="brt">★ 4.6</div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Randamoozham</div></div></div><div class="bt">Randamoozham</div><div class="ba">M. T. · 1984</div><div class="brt">★ 4.7</div></a>
+            <a class="bk"><div class="cv c3"><div class="ct"><div class="t">Aarachar</div></div></div><div class="bt">Aarachar</div><div class="ba">K. R. Meera · 2012</div><div class="brt">★ 4.5</div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t">Samskara</div></div></div><div class="bt">Samskara</div><div class="ba">U. R. Ananthamurthy · 1965</div><div class="brt">★ 4.4</div></a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="toolbar">
+            <span class="chip on">All</span><span class="chip">Malayalam 96</span><span class="chip">Bengali 34</span>
+            <span class="chip">Tamil 28</span><span class="chip">Hindi 21</span><span class="chip">Kannada 14</span>
+            <span class="chip">Has a translation 61</span>
+            <span class="cnt">Showing <b>1–24</b> of 212 · Sort: highest rated ▾</span>
+          </div>
+          <div class="strip">
+            <a class="bk"><div class="cv c7"><div class="ct"><div class="t">Khasakkinte Ithihasam</div></div></div><div class="bt">Khasakkinte Ithihasam</div><div class="ba">O. V. Vijayan</div><div class="brt">★ 4.7 <span>· 189</span></div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Randamoozham</div></div></div><div class="bt">Randamoozham</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.7 <span>· 291</span></div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t">Pather Panchali</div></div></div><div class="bt">Pather Panchali</div><div class="ba">B. Bandyopadhyay</div><div class="brt">★ 4.6 <span>· 213</span></div></a>
+            <a class="bk"><div class="cv c3"><div class="ct"><div class="t">Aarachar</div></div></div><div class="bt">Aarachar</div><div class="ba">K. R. Meera</div><div class="brt">★ 4.5 <span>· 142</span></div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t">Balyakalasakhi</div></div></div><div class="bt">Balyakalasakhi</div><div class="ba">Vaikom M. Basheer</div><div class="brt">★ 4.5 <span>· 156</span></div></a>
+            <a class="bk"><div class="cv c1"><div class="ct"><div class="t ml">ചെമ്മീൻ</div></div></div><div class="bt">Chemmeen</div><div class="ba">Thakazhi</div><div class="brt">★ 4.4 <span>· 312</span></div></a>
+            <a class="bk"><div class="cv c5"><div class="ct"><div class="t">Samskara</div></div></div><div class="bt">Samskara</div><div class="ba">U. R. Ananthamurthy</div><div class="brt">★ 4.4 <span>· 88</span></div></a>
+            <a class="bk"><div class="cv c2"><div class="ct"><div class="t">Naalukettu</div></div></div><div class="bt">Naalukettu</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.4 <span>· 132</span></div></a>
+          </div>
+          <div class="pager"><a>‹ Previous</a><a class="on">1</a><a>2</a><a>3</a><a>4</a><span class="el">…</span><a>9</a><a>Next ›</a></div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>Related</h3></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="chip">Classic</a><a class="chip">Short stories</a><a class="chip">Modernism</a>
+            <a class="chip">Village novels</a><a class="chip">Partition writing</a><a class="chip">Dalit literature</a>
+            <a class="chip">Malayalam novels</a><a class="chip">Bengali novels</a><a class="chip">Jnanpith winners</a>
+          </div>
+        </div>
+      </div>
+      <div class="sfoot"><div class="sfoot-in">
+        <div><div class="fb">Kitabi</div><p>A reference library for Indian literature.</p></div>
+        <div><h5>Browse</h5><a>Languages</a><a>Genres</a><a>Authors A–Z</a></div>
+        <div><h5>This genre</h5><a>Highest rated</a><a>Newest</a><a>Translated</a></div>
+        <div><h5>Kitabi</h5><a>The app</a><a>Privacy</a></div>
+      </div></div>
+    </div></div>
+  </div>
+
+  <div class="note"><i></i><div>
+    <b>Pagination rule:</b> each page self-canonicals with a unique title
+    (<i>"Literary fiction — page 2 of 9"</i>). Never canonicalize page 2 back to page 1 — that
+    de-indexes the deep catalogue, which is most of it.
+  </div></div>
+</div>
+
+<!-- ============================== W7 · LANGUAGE HUB ============================== -->
+<div class="area" id="w7">
+  <div class="ah"><span class="an">W7</span><h2>Language hub — the most valuable page on the site</h2></div>
+  <p class="desc">
+    <code>/language/malayalam</code> is the page this whole plan is for. Nobody owns
+    <i>"Malayalam novels"</i>, <i>"Malayalam books in English"</i>, or <i>"best Malayalam
+    literature"</i> — the results today are Wikipedia lists and blogspot posts. This page should read
+    like the front of a literature magazine, not a database dump: a real essay, the canon, the living
+    writers, the translations in and out, the houses that publish them.
+  </p>
+
+  <div class="browser w">
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/language/malayalam</div>
+      <div class="ttfb">TTFB 43 ms · <span style="color:#8F681E">hreflang → /ml/ reserved</span></div>
+    </div>
+    <div class="viewport"><div class="site">
+      <div class="shead">
+        <a class="brand"><span class="mark"></span><span class="bn">Kitabi<small>Beyond the Bookshelf</small></span></a>
+        <div class="snav"><a>Books</a><a>Authors</a><a>Publishers</a><a class="on">Languages</a><a>Lists</a></div>
+        <div class="ssearch">🔍 <b>Search a book, author or publisher…</b></div>
+        <a class="btn-app">Get the app</a>
+      </div>
+
+      <div class="hubhead">
+        <div class="hubhead-in">
+          <div>
+            <div class="eyebrow">Language · 418 books</div>
+            <h1><span class="nat ml">മലയാളം</span>Malayalam literature</h1>
+            <p class="intro">
+              Malayalam has one of the shortest and densest literary histories in India: a written
+              novel tradition barely 140 years old, six Jnanpith laureates, and a readership that
+              made a state of 35 million people the most book-buying in the country. It is also the
+              Indian language whose fiction travels best — <a>Chemmeen</a> reached English in 1962,
+              <a>Goat Days</a> reached it in 2012, and in between an entire canon was carried across
+              by translators who are only now being credited on the cover.
+              This is what we have catalogued: <b>418 works</b>, <b>187 authors</b>,
+              <b>64 with translations</b>, and the printings that carried them.
+            </p>
+            <div style="margin-top:16px;display:flex;gap:7px;flex-wrap:wrap">
+              <a class="chip">Novels 214</a><a class="chip">Short stories 88</a><a class="chip">Poetry 61</a>
+              <a class="chip">Memoir 29</a><a class="chip">Criticism 18</a><a class="chip">Drama 8</a>
+            </div>
+          </div>
+          <div class="hubstats">
+            <div class="st"><span class="k">Works</span><b>418</b></div>
+            <div class="st"><span class="k">Authors</span><b>187</b></div>
+            <div class="st"><span class="k">Publishers</span><b>42</b></div>
+            <div class="st"><span class="k">Translated</span><b>64</b></div>
+            <div class="st"><span class="k">Oldest</span><b>1889</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wrap">
+        <div class="sec" style="margin-top:26px">
+          <div class="sec-h"><h3>If you read one thing</h3><span class="more">The full list →</span></div>
+          <div class="strip n6">
+            <a class="bk"><div class="cv c1"><span class="rib"></span><div class="ct"><div class="t ml">ചെമ്മീൻ</div></div></div><div class="bt">Chemmeen</div><div class="ba">Thakazhi · 1956</div><div class="brt">★ 4.4</div></a>
+            <a class="bk"><div class="cv c7"><span class="rib"></span><div class="ct"><div class="t ml">ഖസാക്കിന്റെ ഇതിഹാസം</div></div></div><div class="bt">Khasakkinte Ithihasam</div><div class="ba">O. V. Vijayan · 1969</div><div class="brt">★ 4.7</div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t ml">രണ്ടാമൂഴം</div></div></div><div class="bt">Randamoozham</div><div class="ba">M. T. · 1984</div><div class="brt">★ 4.7</div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t ml">ബാല്യകാലസഖി</div></div></div><div class="bt">Balyakalasakhi</div><div class="ba">Basheer · 1944</div><div class="brt">★ 4.5</div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t ml">ആടുജീവിതം</div></div></div><div class="bt">Aadujeevitham</div><div class="ba">Benyamin · 2008</div><div class="brt">★ 4.6</div></a>
+            <a class="bk"><div class="cv c3"><div class="ct"><div class="t ml">ആരാച്ചാർ</div></div></div><div class="bt">Aarachar</div><div class="ba">K. R. Meera · 2012</div><div class="brt">★ 4.5</div></a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>Read in English</h3><span class="more">All 64 translations →</span></div>
+          <div class="pairs">
+            <div class="pair"><div class="rule"></div><div class="in">
+              <div class="cv c8" style="width:46px"><div class="ct"><div class="t ml" style="font-size:6px">ആടുജീവിതം</div></div></div>
+              <div class="side"><div class="t ml">ആടുജീവിതം</div><div class="m">Benyamin · 2008 · ★ 4.6</div></div><span class="arrow">→</span>
+              <div class="side" style="text-align:right"><div class="t">Goat Days</div><div class="m">trans. Joseph Koyippally · ★ 4.4</div></div>
+            </div></div>
+            <div class="pair"><div class="rule"></div><div class="in">
+              <div class="cv c3" style="width:46px"><div class="ct"><div class="t ml" style="font-size:6px">ആരാച്ചാർ</div></div></div>
+              <div class="side"><div class="t ml">ആരാച്ചാർ</div><div class="m">K. R. Meera · 2012 · ★ 4.5</div></div><span class="arrow">→</span>
+              <div class="side" style="text-align:right"><div class="t">Hangwoman</div><div class="m">trans. J. Devika · ★ 4.3</div></div>
+            </div></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>The writers</h3><span class="more">All 187 →</span></div>
+          <div class="strip n6">
+            <a class="bk" style="text-align:center"><div class="ppl" style="width:100%;aspect-ratio:1;height:auto;font-size:30px;margin:0 auto">ത</div><div class="bt">Thakazhi</div><div class="ba">34 works</div></a>
+            <a class="bk" style="text-align:center"><div class="ppl" style="width:100%;aspect-ratio:1;height:auto;font-size:30px;margin:0 auto">ബ</div><div class="bt">Basheer</div><div class="ba">28 works</div></a>
+            <a class="bk" style="text-align:center"><div class="ppl" style="width:100%;aspect-ratio:1;height:auto;font-size:30px;margin:0 auto">എം</div><div class="bt">M. T. Vasudevan Nair</div><div class="ba">41 works</div></a>
+            <a class="bk" style="text-align:center"><div class="ppl" style="width:100%;aspect-ratio:1;height:auto;font-size:30px;margin:0 auto">ഒ</div><div class="bt">O. V. Vijayan</div><div class="ba">19 works</div></a>
+            <a class="bk" style="text-align:center"><div class="ppl" style="width:100%;aspect-ratio:1;height:auto;font-size:30px;margin:0 auto">കെ</div><div class="bt">K. R. Meera</div><div class="ba">14 works</div></a>
+            <a class="bk" style="text-align:center"><div class="ppl" style="width:100%;aspect-ratio:1;height:auto;font-size:30px;margin:0 auto">സ</div><div class="bt">Sara Joseph</div><div class="ba">11 works</div></a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h3>All 418 Malayalam books</h3><span class="more">Sort: highest rated ▾</span></div>
+          <div class="strip">
+            <a class="bk"><div class="cv c7"><div class="ct"><div class="t ml" style="font-size:10px">ഖസാക്കിന്റെ ഇതിഹാസം</div></div></div><div class="bt">Khasakkinte Ithihasam</div><div class="ba">O. V. Vijayan</div><div class="brt">★ 4.7</div></a>
+            <a class="bk"><div class="cv c4"><div class="ct"><div class="t ml">രണ്ടാമൂഴം</div></div></div><div class="bt">Randamoozham</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.7</div></a>
+            <a class="bk"><div class="cv c8"><div class="ct"><div class="t ml">ആടുജീവിതം</div></div></div><div class="bt">Aadujeevitham</div><div class="ba">Benyamin</div><div class="brt">★ 4.6</div></a>
+            <a class="bk"><div class="cv c6"><div class="ct"><div class="t ml">ബാല്യകാലസഖി</div></div></div><div class="bt">Balyakalasakhi</div><div class="ba">Basheer</div><div class="brt">★ 4.5</div></a>
+            <a class="bk"><div class="cv c3"><div class="ct"><div class="t ml">ആരാച്ചാർ</div></div></div><div class="bt">Aarachar</div><div class="ba">K. R. Meera</div><div class="brt">★ 4.5</div></a>
+            <a class="bk"><div class="cv c1"><div class="ct"><div class="t ml">ചെമ്മീൻ</div></div></div><div class="bt">Chemmeen</div><div class="ba">Thakazhi</div><div class="brt">★ 4.4</div></a>
+            <a class="bk"><div class="cv c2"><div class="ct"><div class="t ml">നാലുകെട്ട്</div></div></div><div class="bt">Naalukettu</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.4</div></a>
+            <a class="bk"><div class="cv c5"><div class="ct"><div class="t ml">ഒരു ദേശത്തിന്റെ കഥ</div></div></div><div class="bt">Oru Desathinte Katha</div><div class="ba">S. K. Pottekkatt</div><div class="brt">★ 4.5</div></a>
+          </div>
+          <div class="pager"><a>‹ Previous</a><a class="on">1</a><a>2</a><a>3</a><span class="el">…</span><a>18</a><a>Next ›</a></div>
+        </div>
+      </div>
+      <div class="sfoot"><div class="sfoot-in">
+        <div><div class="fb">Kitabi</div><p>A reference library for Indian literature.</p></div>
+        <div><h5>Languages</h5><a>Malayalam</a><a>Tamil</a><a>Bengali</a><a>Hindi</a></div>
+        <div><h5>Malayalam</h5><a>Novels</a><a>Short stories</a><a>Poetry</a><a>In English</a></div>
+        <div><h5>Kitabi</h5><a>The app</a><a>Privacy</a></div>
+      </div></div>
+    </div></div>
+  </div>
+
+  <div class="note green"><i></i><div>
+    <b>Sub-hubs multiply the surface honestly.</b> <code>/language/malayalam/novels</code>,
+    <code>/short-stories</code>, <code>/poetry</code> — six real pages per language, each with its own
+    intro, each targeting a query someone actually types. 14 languages × ~6 forms ≈ 84 indexable hub
+    pages, none of them thin. That is the crawl surface an "IMDB for books" needs, built from data
+    that already exists.
+  </div></div>
+</div>
+
+<!-- ============================== W8 / W9 ============================== -->
+<div class="area" id="w8">
+  <div class="ah"><span class="an">W8 · W9</span><h2>Series, and the translation group</h2></div>
+  <p class="desc">
+    Two narrow pages that punch above their weight. <b>Series</b> answers "what order do I read these
+    in", which is a query with no good answer anywhere for Indian series. <b>The translation group</b>
+    is one page for a book across every language it exists in — the page that should win
+    <i>"Aadujeevitham English translation"</i>. It canonicals to the original work, so the group page
+    and the book page never compete with each other.
+  </p>
+
+  <div class="row2">
+    <div class="browser" style="width:600px">
+      <div class="chrome">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/series/malgudi</div>
+      </div>
+      <div class="viewport"><div class="site">
+        <div class="shead" style="padding:11px 20px">
+          <a class="brand"><span class="mark" style="width:28px;height:28px"></span><span class="bn" style="font-size:16px">Kitabi<small>Beyond the Bookshelf</small></span></a>
+          <a class="btn-app" style="margin-left:auto">Get the app</a>
+        </div>
+        <div class="wrap" style="padding:0 20px 24px">
+          <div class="crumb"><a>Home</a><span class="sep">›</span><a>Series</a><span class="sep">›</span><span>Malgudi</span></div>
+          <div style="margin-top:18px">
+            <div class="eyebrow">Series · 7 books · 1935 – 1990</div>
+            <h1 class="serif" style="font-size:30px;font-weight:450;margin-top:6px">The Malgudi books</h1>
+            <p style="font-size:13.5px;line-height:1.75;color:#4a3d2e;margin-top:11px">
+              R. K. Narayan's invented South Indian town, across fifty-five years. Not a sequence —
+              each stands alone — but read in order the town ages with its author.</p>
+          </div>
+          <div class="sec" style="margin-top:22px">
+            <div class="eds">
+              <div class="ed" style="grid-template-columns:30px 44px 1fr 76px">
+                <div class="serif" style="font-size:19px;font-weight:600;color:var(--gold)">1</div>
+                <div class="cv c4"><div class="ct"><div class="t" style="font-size:6px">Swami</div></div></div>
+                <div><div class="et">Swami and Friends</div><div class="em">1935 · Hamish Hamilton</div></div>
+                <div class="col" style="color:var(--gold);font-weight:600">★ 4.3</div>
+              </div>
+              <div class="ed" style="grid-template-columns:30px 44px 1fr 76px">
+                <div class="serif" style="font-size:19px;font-weight:600;color:var(--gold)">2</div>
+                <div class="cv c6"><div class="ct"><div class="t" style="font-size:6px">Bachelor</div></div></div>
+                <div><div class="et">The Bachelor of Arts</div><div class="em">1937 · Nelson</div></div>
+                <div class="col" style="color:var(--gold);font-weight:600">★ 4.1</div>
+              </div>
+              <div class="ed" style="grid-template-columns:30px 44px 1fr 76px">
+                <div class="serif" style="font-size:19px;font-weight:600;color:var(--gold)">3</div>
+                <div class="cv c8"><div class="ct"><div class="t" style="font-size:6px">Dark Room</div></div></div>
+                <div><div class="et">The Dark Room</div><div class="em">1938 · Macmillan</div></div>
+                <div class="col" style="color:var(--gold);font-weight:600">★ 4.0</div>
+              </div>
+              <div class="ed" style="grid-template-columns:30px 44px 1fr 76px">
+                <div class="serif" style="font-size:19px;font-weight:600;color:var(--gold)">4</div>
+                <div class="cv c1"><div class="ct"><div class="t" style="font-size:6px">Guide</div></div></div>
+                <div><div class="et">The Guide</div><div class="em">1958 · Viking</div></div>
+                <div class="col" style="color:var(--gold);font-weight:600">★ 4.5</div>
+              </div>
+              <div class="ed" style="grid-template-columns:30px 44px 1fr 76px;opacity:.6">
+                <div class="serif" style="font-size:19px;font-weight:600;color:var(--stamp-grey)">5</div>
+                <div class="cv" style="background:var(--paper-deep);border:1px dashed var(--line);box-shadow:none"></div>
+                <div><div class="et" style="color:var(--ink-soft)">The Man-Eater of Malgudi</div><div class="em">1961 · not yet in the catalogue</div></div>
+                <div class="col"><span class="pill p-grey">Add it</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="browser" id="w9" style="width:600px">
+      <div class="chrome">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/translations/aadujeevitham</div>
+      </div>
+      <div class="viewport"><div class="site">
+        <div class="shead" style="padding:11px 20px">
+          <a class="brand"><span class="mark" style="width:28px;height:28px"></span><span class="bn" style="font-size:16px">Kitabi<small>Beyond the Bookshelf</small></span></a>
+          <a class="btn-app" style="margin-left:auto">Get the app</a>
+        </div>
+        <div class="wrap" style="padding:0 20px 24px">
+          <div class="crumb"><a>Home</a><span class="sep">›</span><a>Translations</a><span class="sep">›</span><span>Aadujeevitham</span></div>
+          <div style="margin-top:18px">
+            <div class="eyebrow" style="color:var(--gold)">One book · 5 languages</div>
+            <h1 class="serif" style="font-size:29px;font-weight:450;margin-top:6px">
+              <span class="ml">ആടുജീവിതം</span> · Goat Days</h1>
+            <div class="rating-row" style="margin-top:12px">
+              <div class="big" style="font-size:26px">4.5<span> / 5</span></div>
+              <span class="n" style="font-size:12px;color:var(--ink-soft);font-weight:600">across all 5 translations · 1,043 ratings</span>
+            </div>
+            <p style="font-size:13.5px;line-height:1.75;color:#4a3d2e;margin-top:12px">
+              Benyamin's 2008 novel about a Malayali migrant worker enslaved on a Saudi goat farm.
+              Each translation keeps its own rating — they are different books to their readers —
+              and the group average sits above them.</p>
+          </div>
+          <div class="sec" style="margin-top:20px">
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div class="tcard orig">
+                <div class="cv c8" style="width:46px"><span class="rib"></span><div class="ct"><div class="t ml" style="font-size:6px">ആടുജീവിതം</div></div></div>
+                <div class="ti"><div class="lg">Malayalam · the original</div><div class="t ml">ആടുജീവിതം</div>
+                  <div class="m">Benyamin · 2008 · ★ 4.6 · 612 ratings</div></div>
+              </div>
+              <div class="tcard">
+                <div class="cv c3" style="width:46px"><div class="ct"><div class="t" style="font-size:7px">Goat Days</div></div></div>
+                <div class="ti"><div class="lg">English</div><div class="t">Goat Days</div>
+                  <div class="m">trans. <b style="color:var(--oxblood)">Joseph Koyippally</b> · 2012 · ★ 4.4 · 318</div></div>
+              </div>
+              <div class="tcard">
+                <div class="cv c4" style="width:46px"><div class="ct"><div class="t" style="font-size:7px">ஆடு ஜீவிதம்</div></div></div>
+                <div class="ti"><div class="lg">Tamil</div><div class="t">ஆடு ஜீவிதம்</div>
+                  <div class="m">trans. Sri Ramkumar · 2014 · ★ 4.3 · 61</div></div>
+              </div>
+              <div class="tcard">
+                <div class="cv c7" style="width:46px"><div class="ct"><div class="t" style="font-size:7px">बकरियों के दिन</div></div></div>
+                <div class="ti"><div class="lg">Hindi</div><div class="t">बकरियों के दिन</div>
+                  <div class="m">trans. S. Ramachandran · 2015 · ★ 4.2 · 38</div></div>
+              </div>
+              <div class="tcard">
+                <div class="cv c6" style="width:46px"><div class="ct"><div class="t" style="font-size:7px">ಆಡು ಜೀವನ</div></div></div>
+                <div class="ti"><div class="lg">Kannada</div><div class="t">ಆಡು ಜೀವನ</div>
+                  <div class="m">trans. K. K. Gangadharan · 2016 · ★ 4.4 · 14</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="sec">
+            <div class="eyebrow" style="margin-bottom:9px">The translators</div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <a class="chip">Joseph Koyippally</a><a class="chip">Sri Ramkumar</a>
+              <a class="chip">S. Ramachandran</a><a class="chip">K. K. Gangadharan</a>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="note green"><i></i><div>
+    <b>Translators get real pages.</b> They're <code>Author</code> rows joined through
+    <code>work_translators</code> — already in the schema since 21 Jul. A translator with a page,
+    a bibliography and a rating is something no book site currently offers, and translators are a
+    small, well-connected community who <b>link to things that credit them</b>. That is the cheapest
+    inbound-link strategy available here.
+  </div></div>
+</div>
+
+<!-- ============================== W10 · LIST ============================== -->
+<div class="area" id="w10">
+  <div class="ah"><span class="an">W10</span><h2>Editorial list</h2></div>
+  <p class="desc">
+    The highest-ROI artifact on the site and the only one that costs writing rather than
+    engineering. A list is evergreen, links to twelve book pages, targets a real query
+    (<i>"where to start with Malayalam literature"</i>), and is the thing a person actually shares.
+    <b>Ten good lists at launch</b> is a better use of a fortnight than any feature on this page.
+  </p>
+
+  <div class="browser w">
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/list/malayalam-novels-to-start-with</div>
+      <div class="ttfb">TTFB 35 ms</div>
+    </div>
+    <div class="viewport"><div class="site">
+      <div class="shead">
+        <a class="brand"><span class="mark"></span><span class="bn">Kitabi<small>Beyond the Bookshelf</small></span></a>
+        <div class="snav"><a>Books</a><a>Authors</a><a>Publishers</a><a>Languages</a><a class="on">Lists</a></div>
+        <div class="ssearch">🔍 <b>Search a book, author or publisher…</b></div>
+        <a class="btn-app">Get the app</a>
+      </div>
+
+      <div class="listhead">
+        <div class="listhead-in">
+          <div class="eyebrow">An editors' list</div>
+          <h1>Twelve Malayalam novels to start with</h1>
+          <p>If you've never read a Malayalam novel, the canon is intimidating and the
+             recommendations are always the same three books. This is a route through it — ordered
+             not by importance but by <i>how easy they are to fall into</i>, with a note on which
+             translation to look for if you can't read the original.</p>
+          <div class="meta"><span>Updated 4 August 2026</span><span>·</span><span>12 books</span><span>·</span><span>8 available in English</span></div>
+        </div>
+      </div>
+
+      <div class="wrap">
+        <div style="margin-top:8px">
+          <div class="li">
+            <div class="num">1</div>
+            <div class="cv c6"><div class="ct"><div class="t ml" style="font-size:9px">ബാല്യകാലസഖി</div></div></div>
+            <div>
+              <h4>Balyakalasakhi</h4>
+              <div class="la">Vaikom Muhammad Basheer · 1944 · 96 pages · ★ 4.5</div>
+              <p class="why">Ninety-six pages, and the first thirty will teach you more about how
+                Malayalam prose sounds than any history of it. Basheer wrote the way people talk,
+                which in 1944 was a scandal and is now the reason he's still read.
+                <b>In English:</b> <i>Childhood Friend</i>, trans. R. E. Asher.</p>
+            </div>
+          </div>
+          <div class="li">
+            <div class="num">2</div>
+            <div class="cv c1"><span class="rib"></span><div class="ct"><div class="t ml" style="font-size:12px">ചെമ്മീൻ</div></div></div>
+            <div>
+              <h4>Chemmeen</h4>
+              <div class="la">Thakazhi Sivasankara Pillai · 1956 · 218 pages · ★ 4.4</div>
+              <p class="why">The one everyone names, and it earns it. A love story that is really a
+                book about the sea and what a community will do to keep its bargain with it.
+                <b>In English:</b> Narayana Menon's 1962 translation is stately; the Harper reissue is easier to find.</p>
+            </div>
+          </div>
+          <div class="li">
+            <div class="num">3</div>
+            <div class="cv c8"><div class="ct"><div class="t ml" style="font-size:10px">ആടുജീവിതം</div></div></div>
+            <div>
+              <h4>Aadujeevitham</h4>
+              <div class="la">Benyamin · 2008 · 212 pages · ★ 4.6</div>
+              <p class="why">The modern one. A Malayali migrant is enslaved on a Saudi goat farm and
+                survives it; the novel became the biggest Malayalam bestseller of the century and
+                then a film. Reads like a thriller, sits like a documentary.
+                <b>In English:</b> <i>Goat Days</i>, trans. Joseph Koyippally — excellent.</p>
+            </div>
+          </div>
+          <div class="li">
+            <div class="num">4</div>
+            <div class="cv c7"><div class="ct"><div class="t ml" style="font-size:8px">ഖസാക്കിന്റെ ഇതിഹാസം</div></div></div>
+            <div>
+              <h4>Khasakkinte Ithihasam</h4>
+              <div class="la">O. V. Vijayan · 1969 · 204 pages · ★ 4.7</div>
+              <p class="why">The book that broke Malayalam fiction open, and the hardest one here —
+                put it fourth, not first. Vijayan translated it himself thirty years later, which
+                makes the English version a rare thing: a translation with the author's authority.</p>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center;padding:22px 0"><a class="btn-ghost">Show all 12 →</a></div>
+      </div>
+      <div class="sfoot"><div class="sfoot-in">
+        <div><div class="fb">Kitabi</div><p>A reference library for Indian literature.</p></div>
+        <div><h5>Lists</h5><a>All editors' lists</a><a>Highest rated</a><a>Translated</a></div>
+        <div><h5>Browse</h5><a>Malayalam</a><a>Novels</a><a>Authors</a></div>
+        <div><h5>Kitabi</h5><a>The app</a><a>Privacy</a></div>
+      </div></div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================== W11 / W12 ============================== -->
+<div class="area" id="w11">
+  <div class="ah"><span class="an">W11 · W12</span><h2>Reviews, and the public reader</h2></div>
+  <p class="desc">
+    Reviews are the most IMDB-ish thing Kitabi has and they are currently <b>invisible on the
+    web</b> — <code>/catalog/works/{id}/reviews</code> requires a signed-in user. They're already
+    visibility-flagged and the API already anonymizes a reviewer whose profile is private; the auth
+    gate is simply the wrong gate for a public page. Reader profiles render only for readers who
+    opted in — the visibility wiring (rule 16) exists precisely so the web can honour it.
+  </p>
+
+  <div class="row2">
+    <div class="browser" style="width:640px">
+      <div class="chrome">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/book/chemmeen/reviews</div>
+      </div>
+      <div class="viewport"><div class="site">
+        <div class="shead" style="padding:11px 20px">
+          <a class="brand"><span class="mark" style="width:28px;height:28px"></span><span class="bn" style="font-size:16px">Kitabi<small>Beyond the Bookshelf</small></span></a>
+          <a class="btn-app" style="margin-left:auto">Get the app</a>
+        </div>
+        <div class="wrap" style="padding:0 20px 24px">
+          <div class="crumb"><a>Home</a><span class="sep">›</span><a>Chemmeen</a><span class="sep">›</span><span>Reviews</span></div>
+          <h1 class="serif" style="font-size:25px;font-weight:450;margin-top:16px">41 reviews of <i>Chemmeen</i></h1>
+          <div class="ratings" style="margin:18px 0 20px;grid-template-columns:130px 1fr;gap:22px">
+            <div class="score"><div class="n" style="font-size:40px">4.4</div>
+              <div class="of" style="font-size:11.5px">312 ratings</div></div>
+            <div class="hist">
+              <div class="hbar"><span class="lb">5 ★</span><span class="tr"><span class="fl" style="width:62%"></span></span><span class="ct">193</span></div>
+              <div class="hbar"><span class="lb">4 ★</span><span class="tr"><span class="fl" style="width:26%"></span></span><span class="ct">81</span></div>
+              <div class="hbar"><span class="lb">3 ★</span><span class="tr"><span class="fl" style="width:8%"></span></span><span class="ct">25</span></div>
+              <div class="hbar"><span class="lb">2 ★</span><span class="tr"><span class="fl" style="width:3%"></span></span><span class="ct">9</span></div>
+              <div class="hbar"><span class="lb">1 ★</span><span class="tr"><span class="fl" style="width:1%"></span></span><span class="ct">4</span></div>
+            </div>
+          </div>
+          <div class="toolbar" style="padding:11px 0"><span class="chip on">Newest</span><span class="chip">Highest</span>
+            <span class="chip">Lowest</span><span class="chip">In Malayalam 28</span><span class="chip">In English 13</span></div>
+          <div class="rev">
+            <div class="rhd"><div class="av">A</div>
+              <div><div class="who">Arundhati M.</div><div class="when">14 July 2026 · read in Malayalam</div></div>
+              <div class="rs">★★★★★</div></div>
+            <div class="rt">“I read it first at fifteen and thought it was a love story. I read it again
+              at forty and understood it was about the sea.”</div>
+          </div>
+          <div class="rev">
+            <div class="rhd"><div class="av">?</div>
+              <div><div class="who">A reader on Kitabi</div><div class="when">2 July 2026 · profile is private</div></div>
+              <div class="rs">★★★★☆</div></div>
+            <div class="rt">“Menon's translation is of its time — a little stately for Thakazhi's plain
+              voice — but it carries the thing that matters.”</div>
+          </div>
+          <div class="rev">
+            <div class="rhd"><div class="av">S</div>
+              <div><div class="who">Sreekumar V.</div><div class="when">28 June 2026</div></div>
+              <div class="rs">★★★☆☆</div></div>
+            <div class="rt">“Held up less well than I wanted it to. The women are written from outside.
+              Still the best doorway into Thakazhi.”</div>
+          </div>
+          <div class="pager"><a class="on">1</a><a>2</a><a>3</a><a>Next ›</a></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="browser" id="w12" style="width:560px">
+      <div class="chrome">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/reader/arundhati</div>
+      </div>
+      <div class="viewport"><div class="site">
+        <div class="shead" style="padding:11px 20px">
+          <a class="brand"><span class="mark" style="width:28px;height:28px"></span><span class="bn" style="font-size:16px">Kitabi<small>Beyond the Bookshelf</small></span></a>
+          <a class="btn-app" style="margin-left:auto">Get the app</a>
+        </div>
+        <div class="wrap" style="padding:0 20px 24px">
+          <div class="phero">
+            <div class="pav">A</div>
+            <div>
+              <h1>Arundhati M.</h1>
+              <div class="hnd">@arundhati</div>
+              <div class="pstats">
+                <div class="s"><b>214</b><span>Books</span></div>
+                <div class="s"><b>41</b><span>Reviews</span></div>
+                <div class="s"><b>7</b><span>Contributed</span></div>
+                <div class="s"><b>★ 4.1</b><span>Avg rating</span></div>
+              </div>
+            </div>
+          </div>
+          <p style="font-size:13.5px;line-height:1.72;color:#4a3d2e;margin-top:16px">
+            Reads mostly Malayalam and Bengali. Keeps a shelf of first editions and will lend
+            any of them except the Basheer.</p>
+          <div class="sec">
+            <div class="sec-h"><h3>Recently read</h3></div>
+            <div class="strip n5">
+              <a class="bk"><div class="cv c1"><div class="ct"><div class="t ml" style="font-size:10px">ചെമ്മീൻ</div></div></div><div class="bt">Chemmeen</div><div class="brt">★ 5.0</div></a>
+              <a class="bk"><div class="cv c7"><div class="ct"><div class="t" style="font-size:9px">Khasak</div></div></div><div class="bt">Khasakkinte…</div><div class="brt">★ 4.0</div></a>
+              <a class="bk"><div class="cv c8"><div class="ct"><div class="t" style="font-size:9px">Pather Panchali</div></div></div><div class="bt">Pather Panchali</div><div class="brt">★ 5.0</div></a>
+              <a class="bk"><div class="cv c4"><div class="ct"><div class="t" style="font-size:9px">Randamoozham</div></div></div><div class="bt">Randamoozham</div><div class="brt">★ 4.0</div></a>
+              <a class="bk"><div class="cv c3"><div class="ct"><div class="t" style="font-size:9px">Aarachar</div></div></div><div class="bt">Aarachar</div><div class="brt">★ 4.0</div></a>
+            </div>
+          </div>
+          <div class="sec">
+            <div class="sec-h"><h3>Contributed to the catalogue</h3></div>
+            <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.7">
+              7 books, 3 authors and 11 cover photographs — visible here because Arundhati made
+              their profile public. <b style="color:var(--ink)">A private profile has no page at all</b>,
+              not an empty one.</p>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== W13 · MOBILE ============================== -->
+<div class="area" id="w13">
+  <div class="ah"><span class="an">W13</span><h2>Mobile — where the traffic actually lands</h2></div>
+  <p class="desc">
+    Most search traffic to a book page arrives on a phone, from a Google result, on a mediocre
+    connection. The mobile book page is not a squeezed desktop page: the cover shrinks, the rating
+    moves up beside the title, and the <b>translation module stays above the editions table</b>
+    because it is still the most differentiating thing on the page. The app band appears
+    <b>once</b>, after the blurb — never as an interstitial, which Google penalises and readers hate.
+  </p>
+
+  <div class="row2">
+    <div class="phone">
+      <div class="nub"></div>
+      <div class="scr"><div class="site">
+        <div class="shead" style="padding:10px 14px;gap:11px">
+          <a class="brand"><span class="mark" style="width:27px;height:27px"></span><span class="bn" style="font-size:15px">Kitabi<small style="font-size:6px">Beyond the Bookshelf</small></span></a>
+          <span style="margin-left:auto;font-size:15px;color:var(--ink-soft)">🔍</span>
+          <span style="font-size:15px;color:var(--ink-soft)">☰</span>
+        </div>
+        <div style="padding:11px 16px 0" class="crumb"><a>Malayalam</a><span class="sep">›</span><a>Novels</a></div>
+        <div style="padding:12px 16px 0;display:flex;gap:15px">
+          <div class="cv c1" style="width:96px"><span class="rib"></span><div class="ct"><div class="t ml" style="font-size:11px">ചെമ്മീൻ</div><div class="a" style="font-size:6px">Thakazhi</div></div></div>
+          <div style="flex:1;min-width:0">
+            <h1 class="serif" style="font-size:23px;font-weight:500;line-height:1.16">Chemmeen</h1>
+            <div class="ml" style="font-size:15px;color:var(--ink-soft);margin-top:4px">ചെമ്മീൻ</div>
+            <div style="font-size:12.5px;margin-top:7px">by <a style="color:var(--oxblood);font-weight:600">Thakazhi S. Pillai</a></div>
+            <div class="stars" style="margin-top:9px"><span class="s" style="font-size:13px">★★★★<span class="off">★</span></span>
+              <span class="n" style="font-size:11px">4.4 · 312</span></div>
+            <div style="font-size:11.5px;color:var(--ink-soft);margin-top:7px;line-height:1.55">1956 · Malayalam<br>Novel · 218 pages</div>
+          </div>
+        </div>
+        <div style="padding:14px 16px 0">
+          <p style="font-size:13.5px;line-height:1.72;color:#4a3d2e">
+            On the Kerala coast, Karuthamma loves Pareekutti across a line her community will not let
+            her cross… <span style="color:var(--oxblood);font-weight:600">more</span></p>
+          <a class="prim" style="display:block;text-align:center;margin-top:14px">Track this in Kitabi</a>
+        </div>
+        <div style="padding:16px 16px 0">
+          <div class="trans" style="border-radius:12px">
+            <div class="rule"></div>
+            <div class="tin" style="padding:14px 15px">
+              <div class="eyebrow" style="color:#8F681E">Read it in another language</div>
+              <div style="display:flex;flex-direction:column;gap:9px;margin-top:11px">
+                <div class="tcard" style="padding:10px">
+                  <div class="cv c3" style="width:38px"><div class="ct"><div class="t" style="font-size:5px">Chemmeen</div></div></div>
+                  <div class="ti"><div class="lg" style="font-size:8.5px">English</div>
+                    <div class="t" style="font-size:13px">Chemmeen</div>
+                    <div class="m" style="font-size:10.5px">trans. Narayana Menon · ★ 4.2</div></div>
+                </div>
+                <div class="tcard" style="padding:10px">
+                  <div class="cv c4" style="width:38px"><div class="ct"><div class="t" style="font-size:5px">चेम्मीन</div></div></div>
+                  <div class="ti"><div class="lg" style="font-size:8.5px">Hindi</div>
+                    <div class="t" style="font-size:13px">चेम्मीन</div>
+                    <div class="m" style="font-size:10.5px">trans. G. Gopinathan · ★ 4.1</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:16px 16px 20px">
+          <div class="sec-h" style="margin-bottom:12px"><h3 style="font-size:17px">4 editions</h3></div>
+          <div class="eds">
+            <div class="ed" style="grid-template-columns:38px 1fr 62px;padding:10px 12px;gap:11px">
+              <div class="cv c1" style="width:38px"><div class="ct"><div class="t" style="font-size:5px">ചെമ്മീൻ</div></div></div>
+              <div><div class="et" style="font-size:12.5px">DC Books · 14th ed.</div><div class="em" style="font-size:10.5px">Malayalam · Paperback</div></div>
+              <div class="col" style="font-size:11px"><b style="font-size:12px">2019</b>218 pp</div>
+            </div>
+            <div class="ed" style="grid-template-columns:38px 1fr 62px;padding:10px 12px;gap:11px">
+              <div class="cv c5" style="width:38px"><div class="ct"><div class="t" style="font-size:5px">ചെമ്മീൻ</div></div></div>
+              <div><div class="et" style="font-size:12.5px">Sahitya Pravarthaka</div><div class="em" style="font-size:10.5px">Malayalam · Hardcover</div></div>
+              <div class="col" style="font-size:11px"><b style="font-size:12px">1956</b>204 pp</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div style="flex:1;min-width:340px;max-width:620px">
+      <table class="spec">
+        <tr><th>Mobile decision</th><th>Why</th></tr>
+        <tr><td><b>No interstitial, ever</b></td><td>Google demotes intrusive app interstitials on mobile search landings. The app appears as one inline band and one rail card — both dismissible by scrolling past.</td></tr>
+        <tr><td><b>Cover is the LCP element</b></td><td><code>fetchpriority="high"</code>, explicit <code>width</code>/<code>height</code>, <b>no</b> <code>loading="lazy"</code>. Every other cover on the page is lazy.</td></tr>
+        <tr><td><b>Translation module stays high</b></td><td>It's the differentiator. Editions and reviews can wait; a reader who can't read Malayalam needs the English row before anything else.</td></tr>
+        <tr><td><b>Blurb clamps to 3 lines</b></td><td>CSS <code>line-clamp</code> + a <code>&lt;details&gt;</code> fallback — the full text is in the HTML, so it's fully indexed even though it's visually collapsed.</td></tr>
+        <tr><td><b>Malayalam font loads only here</b></td><td><code>unicode-range</code> on the <code>@font-face</code> means an English-only page never downloads the 42 KB Malayalam subset. The browser decides, not the template.</td></tr>
+      </table>
+      <div class="note green" style="margin-top:20px"><i></i><div>
+        <b>The app link is a door, not a wall.</b> Every action a visitor might want — rate, review,
+        shelve, lend — happens in the app. The web stays strictly read-only, which keeps RLS
+        deny-by-default intact and the public attack surface at zero.
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== W14 · THIN ============================== -->
+<div class="area" id="w14">
+  <div class="ah"><span class="an">W14</span><h2>The thin page, the empty search, and the 404</h2></div>
+  <p class="desc">
+    The counter-intuitive part of the plan, drawn. <b>Do not index all 1,402 works.</b> A large
+    share of the seed has a transliteration-garbage title, no description, no cover and one edition —
+    <code>"Hīro-hīro warasip", arathāta, Kalādhārī, kalādhārīpūjā</code> is a real row in production
+    right now. Publishing a thousand pages like that teaches Google the domain produces thin pages,
+    and drags down the two hundred good ones. That mechanism has killed more catalog sites than slow
+    servers ever have.
+  </p>
+  <p class="desc">
+    So a work page is <code>index, follow</code> only if it clears a content floor — <b>a cover, or a
+    description ≥120 chars, or a review, or ≥2 editions, or a rating</b>. Everything else is
+    <code>noindex, follow</code>: still crawlable, still linked, still there for a human with the
+    URL, just not competing. <b>It flips to indexable automatically</b> the moment a reader adds a
+    cover or a blurb — which quietly turns the app's "Improve this entry" flow into the site's SEO
+    engine.
+  </p>
+
+  <div class="row2">
+    <div class="browser" style="width:560px">
+      <div class="chrome">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/book/hiro-hiro-warasip</div>
+        <div class="ttfb" style="background:#EAE4D6;color:#9A8F7C">noindex, follow</div>
+      </div>
+      <div class="viewport"><div class="site">
+        <div class="shead" style="padding:11px 20px">
+          <a class="brand"><span class="mark" style="width:28px;height:28px"></span><span class="bn" style="font-size:16px">Kitabi<small>Beyond the Bookshelf</small></span></a>
+          <a class="btn-app" style="margin-left:auto">Get the app</a>
+        </div>
+        <div class="wrap" style="padding:0 20px 26px">
+          <div class="crumb"><a>Home</a><span class="sep">›</span><a>Punjabi</a><span class="sep">›</span><span>Untitled work</span></div>
+          <div style="display:flex;gap:18px;margin-top:18px">
+            <div class="cv" style="width:96px;background:var(--paper-deep);border:1px dashed var(--line);box-shadow:none;
+              display:flex;align-items:center;justify-content:center;color:#bcae94;font-size:22px">?</div>
+            <div style="flex:1">
+              <h1 class="serif" style="font-size:19px;font-weight:500;line-height:1.28">“Hīro-hīro warasip”, arathāta, Kalādhārī…</h1>
+              <div style="font-size:12.5px;color:var(--ink-soft);margin-top:6px">Thomas Carlyle · Punjabi · 10 pages</div>
+              <div style="margin-top:10px"><span class="pill p-grey">Needs work</span></div>
+            </div>
+          </div>
+          <div class="thin" style="margin-top:20px">
+            <div class="fl">❦</div>
+            <h3>This entry is still a stub</h3>
+            <p>It came from an automated import and hasn't been checked by a reader yet — the title
+               is probably a mangled transliteration, and there's no cover or description.
+               If you know this book, you can fix it in the app in about a minute.</p>
+            <a class="btn-ghost" style="margin-top:15px">Improve this entry →</a>
+            <div class="robots">&lt;meta name="robots" content="noindex, follow"&gt;</div>
+          </div>
+          <div class="sec" style="margin-top:22px">
+            <div class="sec-h"><h3 style="font-size:17px">Try instead</h3></div>
+            <div class="strip n4">
+              <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Punjabi poetry</div></div></div><div class="bt">Punjabi books</div><div class="ba">64 in the catalogue</div></a>
+              <a class="bk"><div class="cv c7"><div class="ct"><div class="t">Carlyle</div></div></div><div class="bt">Thomas Carlyle</div><div class="ba">9 works</div></a>
+              <a class="bk"><div class="cv c2"><div class="ct"><div class="t">Heer Ranjha</div></div></div><div class="bt">Heer Ranjha</div><div class="ba">Waris Shah</div></a>
+              <a class="bk"><div class="cv c6"><div class="ct"><div class="t">Pinjar</div></div></div><div class="bt">Pinjar</div><div class="ba">Amrita Pritam</div></a>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="browser" style="width:560px">
+      <div class="chrome">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="url"><span class="lock">🔒</span><b>kitabi.in</b>/search?q=qwertyuiop</div>
+        <div class="ttfb" style="background:#EAE4D6;color:#9A8F7C">0 results · still a page</div>
+      </div>
+      <div class="viewport"><div class="site">
+        <div class="shead" style="padding:11px 20px">
+          <a class="brand"><span class="mark" style="width:28px;height:28px"></span><span class="bn" style="font-size:16px">Kitabi<small>Beyond the Bookshelf</small></span></a>
+          <a class="btn-app" style="margin-left:auto">Get the app</a>
+        </div>
+        <div class="wrap" style="padding:0 20px 26px">
+          <div style="padding-top:20px">
+            <h1 class="serif" style="font-size:22px;font-weight:450">
+              Nothing for <span style="color:var(--oxblood)">“qwertyuiop”</span></h1>
+            <p style="font-size:13.5px;color:var(--ink-soft);margin-top:9px;line-height:1.7">
+              We searched titles in 14 scripts and their romanizations. If the book exists and isn't
+              here yet, you can add it from the app — scan the ISBN and it's catalogued in seconds.</p>
+            <a class="prim" style="display:inline-block;margin-top:14px">Add a book in Kitabi</a>
+          </div>
+          <div class="sec" style="margin-top:26px">
+            <div class="sec-h"><h3 style="font-size:17px">Or start somewhere else</h3></div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px">
+              <a class="chip ml">മലയാളം</a><a class="chip">தமிழ்</a><a class="chip">বাংলা</a>
+              <a class="chip">हिन्दी</a><a class="chip">ಕನ್ನಡ</a><a class="chip">తెలుగు</a><a class="chip">All 14 →</a>
+            </div>
+            <div class="strip n4">
+              <a class="bk"><div class="cv c1"><span class="rib"></span><div class="ct"><div class="t ml" style="font-size:11px">ചെമ്മീൻ</div></div></div><div class="bt">Chemmeen</div><div class="brt">★ 4.4</div></a>
+              <a class="bk"><div class="cv c7"><div class="ct"><div class="t">Ponniyin Selvan</div></div></div><div class="bt">Ponniyin Selvan</div><div class="brt">★ 4.8</div></a>
+              <a class="bk"><div class="cv c8"><div class="ct"><div class="t">Pather Panchali</div></div></div><div class="bt">Pather Panchali</div><div class="brt">★ 4.6</div></a>
+              <a class="bk"><div class="cv c4"><div class="ct"><div class="t">Randamoozham</div></div></div><div class="bt">Randamoozham</div><div class="brt">★ 4.7</div></a>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="note red"><i></i><div>
+    <b>Expected effect at launch:</b> roughly <b>250–400 indexed works</b> instead of 1,402 — and
+    they rank. The number climbs on its own as the catalogue improves, which puts the incentive in
+    exactly the right place. It also means <code>sitemap_service.build_page</code> has to change:
+    today it emits <i>every</i> non-deleted row, which is precisely the signal we don't want to send.
+  </div></div>
+</div>
+
+<!-- ============================== BUDGET ============================== -->
+<div class="area" id="budget">
+  <div class="ah"><span class="an">Perf</span><h2>The budget — measured today, enforced tomorrow</h2></div>
+  <p class="desc">
+    Not "make it fast" — numbers, with a CI job that fails the build when they're missed. The
+    "today" column was measured against production on 4 August 2026.
+  </p>
+
+  <table class="spec">
+    <tr><th style="width:180px">Metric</th><th style="width:130px">Budget</th><th style="width:180px">Today (measured)</th><th>How it gets met</th></tr>
+    <tr><td><b>TTFB</b> (cache hit)</td><td class="ok">&lt; 100 ms</td><td class="no">620 ms</td>
+      <td>Render at the edge and <code>cache.put()</code> the HTML — <code>s-maxage=300</code>, <code>stale-while-revalidate=86400</code>. A crawler burst then hits Cloudflare, not Railway.</td></tr>
+    <tr><td><b>TTFB</b> (cache miss)</td><td class="ok">&lt; 500 ms</td><td class="no">620 ms + 310 ms client fetch</td>
+      <td>The one-payload rule: <code>GET /public/book/&lt;slug&gt;</code> returns the whole page in one call instead of four.</td></tr>
+    <tr><td><b>LCP</b> (mobile 4G)</td><td class="ok">&lt; 1.2 s</td><td class="no">≈ 2.8 s</td>
+      <td>SSR + self-hosted fonts + <code>fetchpriority="high"</code> on the cover, which is the LCP element.</td></tr>
+    <tr><td><b>CLS</b></td><td class="ok">&lt; 0.02</td><td class="no">unmeasured — no image dimensions</td>
+      <td>Explicit <code>width</code>/<code>height</code> (or <code>aspect-ratio: 2/3</code>, which the design system already specifies) on every cover frame.</td></tr>
+    <tr><td><b>HTML</b>, gzipped</td><td class="ok">≤ 14 KB</td><td>20.5 KB shell, no content</td>
+      <td>14 KB is the first congestion window — an above-fold document that fits arrives in one round trip.</td></tr>
+    <tr><td><b>Blocking requests</b></td><td class="ok">0</td><td class="no">1 CSS + 2 origin handshakes</td>
+      <td>Drop <code>fonts.googleapis.com</code>. Self-host Fraunces (34 KB) + Inter (26 KB) subset woff2, preloaded; Noto Sans Malayalam (42 KB) behind <code>unicode-range</code> so English pages never fetch it. Saves an estimated <b>300–500 ms</b> to first paint.</td></tr>
+    <tr><td><b>JS for content</b></td><td class="ok">0 bytes</td><td class="no">100% of content</td>
+      <td>The whole plan. ~4 KB deferred JS adds typeahead, the cover lightbox and histogram tooltips — each degrading to working plain HTML.</td></tr>
+    <tr><td><b>Third-party origins</b></td><td class="ok">0</td><td class="no">2 (Google Fonts, covers.openlibrary.org)</td>
+      <td>Fonts self-hosted; covers proxied through <code>/img/c/&lt;id&gt;</code> with a 30-day immutable edge cache, backfilled into the existing Supabase <code>covers</code> bucket — no new store, no new credential.</td></tr>
+  </table>
+
+  <div class="note"><i></i><div>
+    <b>A budget nobody measures is a wish.</b> A Lighthouse CI step in
+    <code>.github/workflows/</code> runs against three sampled page types on every deploy and fails
+    the build when LCP or document size regresses.
+  </div></div>
+
+  <div class="note green"><i></i><div>
+    <b>What none of this costs.</b> Cloudflare Pages Functions, the existing FastAPI on Railway, the
+    existing Supabase <code>covers</code> bucket. No framework, no build step, no new service, no new
+    monthly bill, no new credential — CLAUDE.md rule 8 holds all the way through.
+  </div></div>
+</div>
+
+<div style="max-width:1420px;margin:70px auto 0;padding:0 36px;text-align:center;color:#8a7a62;font-size:12.5px">
+  <div style="font-size:20px;color:var(--gold);margin-bottom:12px">❦</div>
+  Kitabi — public web mockups · plan in <b style="color:var(--ink)">docs/web-platform-plan.md</b> ·
+  tokens in <b style="color:var(--ink)">docs/screen-design.md</b><br>
+  Book titles, ratings and review text in these frames are illustrative.
+</div>
+
+</body>
+</html>
