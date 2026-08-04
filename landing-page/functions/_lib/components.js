@@ -28,18 +28,30 @@ export function cover(work, { priority = false, width = 190 } = {}) {
   const height = Math.round(width * 1.5);
   const title = work?.title || 'Untitled';
   const author = work?.authors?.[0]?.name || '';
+
+  // The typeset cover is ALWAYS rendered, and the image sits on top of it.
+  //
+  // Not just a null-cover fallback: a large share of the catalogue hotlinks
+  // OpenLibrary covers, and a good number of those 404 or are blocked. Deciding
+  // server-side on `cover_url != null` gets those wrong — the img renders as a
+  // blank box, which looks broken in a way an empty shelf does not. Layering
+  // means a failed image simply reveals the typeset cover underneath, with no
+  // JavaScript and no onerror handler.
+  const typeset = html`<span class="ct">
+    <span class="t">${title}</span>
+    ${author ? html`<span class="a">${author}</span>` : ''}
+  </span>`;
+
   if (work?.cover_url) {
-    return html`<div class="cv">
+    return html`<span class="cv g${tone(title)}">
+      ${typeset}
       <img src="${work.cover_url}" alt="${`Cover of ${title}`}" width="${width}" height="${height}"
            ${raw(priority ? 'fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"')} />
-    </div>`;
+    </span>`;
   }
-  return html`<div class="cv g${tone(title)}" role="img" aria-label="${`Cover of ${title}`}">
-    <div class="ct">
-      <span class="t">${title}</span>
-      ${author ? html`<span class="a">${author}</span>` : ''}
-    </div>
-  </div>`;
+  return html`<span class="cv g${tone(title)}" role="img" aria-label="${`Cover of ${title}`}">
+    ${typeset}
+  </span>`;
 }
 
 /** ★★★★☆ with a count. Renders nothing when there is no rating — an empty

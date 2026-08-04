@@ -55,6 +55,7 @@ assert(num(999) === '999', 'num leaves small numbers alone');
 // --------------------------------------------------------------------------
 
 var withCover = { title: 'Chemmeen', cover_url: 'https://x/c.jpg', authors: [{ name: 'Thakazhi' }] };
+var withCoverHtml = String(cover(withCover));
 var priority = String(cover(withCover, { priority: true }));
 assertIncludes(priority, 'fetchpriority="high"', 'the LCP cover is high priority');
 assertExcludes(priority, 'loading="lazy"', 'the LCP cover is never lazy — that delays the paint');
@@ -68,6 +69,12 @@ var typeset = String(cover({ title: 'ചെമ്മീൻ', authors: [{ name: '
 assertIncludes(typeset, 'ചെമ്മീൻ', 'no cover image → a typeset cover, not a broken image');
 assertExcludes(typeset, '<img', 'the typeset cover has no img element to fail');
 assertIncludes(typeset, 'role="img"', 'the typeset cover is still announced as an image');
+
+// A cover URL that 404s must not leave a blank box. The typeset cover is always
+// rendered and the image layered over it, so a failed load reveals it — no JS.
+assertIncludes(withCoverHtml, 'class="ct"', 'a typeset cover is rendered UNDER every image');
+assertIncludes(withCoverHtml, 'Chemmeen', 'so a broken image still shows the title');
+assertIncludes(withCoverHtml, '<img', '…and the real cover is still there on top');
 
 // The palette pick must be stable, or a book flickers between pages.
 assert(

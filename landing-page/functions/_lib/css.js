@@ -87,10 +87,13 @@ img{max-width:100%;display:block}
 .eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
 
 /* ---------- covers ---------- */
-.cv{aspect-ratio:2/3;border-radius:3px 7px 7px 3px;position:relative;overflow:hidden;
+.cv{display:block;aspect-ratio:2/3;border-radius:3px 7px 7px 3px;position:relative;overflow:hidden;
   box-shadow:0 7px 18px rgba(43,33,24,.26);background:var(--paper-deep);width:100%}
 .cv::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(0,0,0,.22);z-index:3}
-.cv img{width:100%;height:100%;object-fit:cover}
+/* The image sits ON TOP of the typeset cover, so a cover URL that 404s (plenty
+   of the hotlinked OpenLibrary ones do) reveals the typeset one underneath
+   instead of a blank box. No JS, no onerror. */
+.cv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
 .cv .ct{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
   padding:11% 9%;text-align:center;gap:7%;background:linear-gradient(155deg,#7E2A33,#4E181F);color:#F0E2C2}
 .cv .ct .t{font-family:var(--serif);font-size:13px;font-weight:600;line-height:1.22}
