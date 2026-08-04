@@ -6,6 +6,7 @@
 
 import { cached, fetchPage } from './api.js';
 import { notFound, unavailable } from './layout.js';
+import { renderIndex } from './pages/discover.js';
 
 /**
  * Fetch a /public/* payload and render it.
@@ -41,6 +42,71 @@ export function permanentRedirect(location) {
  * has worked for months must not start failing because of a blip. The only case
  * that 404s is one the API positively confirms is gone.
  */
+/** Read a bounded page number from the query string. */
+function pageParam(url) {
+  const n = parseInt(url.searchParams.get('page') || '1', 10);
+  return Number.isFinite(n) && n >= 1 && n <= 500 ? n : 1;
+}
+
+/** /search?q= — a plain GET form, so it works with JavaScript disabled. */
+export function serveSearch(context, render) {
+  const url = new URL(context.request.url);
+  const q = (url.searchParams.get('q') || '').trim().slice(0, 200);
+  if (!q) return Promise.resolve(permanentRedirect('/browse'));
+  return cached(context, async () => {
+    const { data } = await fetchPage(`/public/search?q=${encodeURIComponent(q)}`);
+    // An unreachable API on search degrades to an empty result set rather than
+    // a 503 — the reader still gets a usable page with somewhere to go.
+    return render(data || { q, works: [], authors: [], publishers: [] });
+  });
+}
+
+/** /browse?language=&form=&genre=&sort=&page= */
+export function serveBrowse(context, render) {
+  const url = new URL(context.request.url);
+  const query = {};
+  for (const key of ['language', 'form', 'genre', 'sort']) {
+    const value = url.searchParams.get(key);
+    if (value) query[key] = value;
+  }
+  const page = pageParam(url);
+  const qs = new URLSearchParams({ ...query, page: String(page) }).toString();
+  return cached(context, async () => {
+    const { data } = await fetchPage(`/public/browse?${qs}`);
+    if (!data) return unavailable();
+    return render(data, { query });
+  });
+}
+
+/** /genre/:slug, /language/:slug, /language/:slug/:form */
+export function serveHub(context, kind, slug, render, { form = null } = {}) {
+  const url = new URL(context.request.url);
+  const params = new URLSearchParams({ page: String(pageParam(url)) });
+  if (form) params.set('form', form);
+  const path = `/public/hub/${kind}/${encodeURIComponent(slug)}?${params.toString()}`;
+  return servePage(context, path, render, { what: kind });
+}
+
+/**
+ * A directory page (/languages, /genres) built from the home payload's facet
+ * counts — no extra endpoint needed, and it stays consistent with the grid on
+ * the home page by construction.
+ */
+export function serveIndex(context, { title, description, kind, field, prefix, canonical }) {
+  return cached(context, async () => {
+    const { data } = await fetchPage('/public/home');
+    if (!data) return unavailable();
+    return renderIndex({
+      title,
+      description,
+      kind,
+      canonical,
+      items: data[field] || [],
+      hrefFor: (i) => `${prefix}${encodeURIComponent(i.slug)}`,
+    });
+  });
+}
+
 export async function legacyRedirect(context, kind, key) {
   const encoded = encodeURIComponent(key);
   const { data, missing } = await fetchPage(`/public/${kind}/${encoded}`);

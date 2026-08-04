@@ -339,3 +339,75 @@ assertIncludes(pubDoc, 'DC Books', 'the publisher name is in the HTML');
 assertIncludes(pubDoc, '214', 'the edition count is shown');
 assertIncludes(pubDoc, 'href="/author/thakazhi"', 'the publisher page links to its authors');
 assertIncludes(pubDoc, '"@type":"Organization"', 'Organization JSON-LD is emitted');
+
+// --------------------------------------------------------------------------
+// Home, search, browse, hubs
+// --------------------------------------------------------------------------
+
+var homeDoc = String(
+  renderHome({
+    featured: { id: 'f', slug: 'chemmeen', title: 'Chemmeen', authors: [{ name: 'Thakazhi' }],
+                year: 1956, language: 'Malayalam', cover_url: 'https://x/c.jpg' },
+    recent: [{ id: 'r', slug: 'kayar', title: 'Kayar', authors: [] }],
+    top_rated: [{ id: 't', slug: 'randamoozham', title: 'Randamoozham', authors: [], rating: 4.7 }],
+    languages: [{ name: 'Malayalam', slug: 'malayalam', count: 418 },
+                { name: 'Tamil', slug: 'tamil', count: 204 }],
+    genres: [{ name: 'Literary fiction', slug: 'literary-fiction', count: 212 }],
+    translation_pairs: [{ original: { id: 'o', slug: 'aadujeevitham', title: 'ആടുജീവിതം',
+                                      language: 'Malayalam', year: 2008, authors: [] },
+                          translation: { id: 'g', slug: 'goat-days', title: 'Goat Days',
+                                         language: 'English', year: 2012, authors: [] } }],
+    work_count: 1403, author_count: 1190, publisher_count: 1067,
+  }).text(),
+);
+assertIncludes(homeDoc, 'action="/search"', 'home leads with a working search form');
+assertIncludes(homeDoc, 'href="/language/malayalam"', 'home links every language hub — the crawl root');
+assertIncludes(homeDoc, 'href="/genre/literary-fiction"', 'home links the genre hubs');
+assertIncludes(homeDoc, 'href="/book/chemmeen"', 'the featured book is a link');
+assertIncludes(homeDoc, '1,403', 'the catalogue size is stated');
+assertIncludes(homeDoc, 'Goat Days', 'the translation-pairs module renders');
+assertIncludes(homeDoc, '"@type":"WebSite"', 'home emits WebSite');
+assertIncludes(homeDoc, 'SearchAction', 'home declares a SearchAction for the sitelinks box');
+assertIncludes(homeDoc, 'content="index, follow"', 'home is indexable');
+
+var searchDoc = String(
+  renderSearch({ q: 'chemmeen', works: [{ id: 'w', slug: 'chemmeen', title: 'ചെമ്മീൻ', authors: [] }],
+                 authors: [], publishers: [], matched_scripts: ['ചെമ്മീൻ'] }).text(),
+);
+assertIncludes(searchDoc, 'content="noindex, follow"',
+  'search is noindex — it generates infinite near-duplicate URLs');
+assertIncludes(searchDoc, 'also matched', 'the cross-script hit is called out');
+assertIncludes(searchDoc, 'href="/book/chemmeen"', 'results are crawlable links even though noindex');
+
+var emptySearch = String(renderSearch({ q: 'qwertyuiop', works: [], authors: [], publishers: [] }).text());
+assertIncludes(emptySearch, 'Nothing for', 'zero results is a real page, not a dead end');
+assertIncludes(emptySearch, 'href="/browse"', 'and it offers somewhere to go');
+
+var hubDoc = String(
+  renderHub({ kind: 'language', name: 'Malayalam', slug: 'malayalam', form: null,
+              works: [{ id: 'w', slug: 'chemmeen', title: 'Chemmeen', authors: [] }],
+              start_here: [{ id: 's', slug: 'kayar', title: 'Kayar', authors: [] }],
+              total: 418, page: 1, per_page: 24,
+              languages: [], forms: [{ name: 'Novel', slug: 'novel', count: 214 }], genres: [] }).text(),
+);
+assertIncludes(hubDoc, 'Malayalam literature', 'the language hub is titled as literature');
+assertIncludes(hubDoc, 'Malayalam has one of the shortest', 'the editorial intro renders');
+assertIncludes(hubDoc, 'content="index, follow"', 'hubs ARE indexed — they win the queries nobody owns');
+assertIncludes(hubDoc, 'href="/language/malayalam/novel"', 'the hub links its form sub-hubs');
+assertIncludes(hubDoc, '"@type":"CollectionPage"', 'hubs emit CollectionPage');
+assertIncludes(hubDoc, 'canonical" href="https://kitabi.in/language/malayalam"', 'page 1 self-canonicals');
+
+// Page 2 must canonical to ITSELF. Canonicalising it back to page 1 de-indexes
+// the deep catalogue, which is most of it.
+var hub2 = String(
+  renderHub({ kind: 'language', name: 'Malayalam', slug: 'malayalam', form: null, works: [],
+              start_here: [], total: 418, page: 2, per_page: 24, languages: [], forms: [], genres: [] }).text(),
+);
+assertIncludes(hub2, 'canonical" href="https://kitabi.in/language/malayalam?page=2"',
+  'page 2 canonicals to itself, never back to page 1');
+assertIncludes(hub2, 'page 2', 'page 2 has its own title');
+
+var browseDoc = String(
+  renderBrowse({ works: [], total: 0, page: 1, per_page: 24, languages: [], forms: [], genres: [] }).text(),
+);
+assertIncludes(browseDoc, 'content="noindex, follow"', 'faceted browse is noindex, follow');

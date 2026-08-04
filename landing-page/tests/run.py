@@ -45,6 +45,8 @@ MODULES = [
     "components.js",
     "pages/book.js",
     "pages/people.js",
+    "pages/home.js",
+    "pages/discover.js",
 ]
 
 # Handles the multi-line form too — `import {\n  a,\n  b,\n} from '...'` — which a
