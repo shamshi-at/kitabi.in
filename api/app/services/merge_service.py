@@ -248,6 +248,16 @@ async def merge(db: AsyncSession, kind: str, survivor_id: uuid.UUID, loser_id: u
         if not getattr(survivor, attr, None) and getattr(loser, attr, None):
             setattr(survivor, attr, getattr(loser, attr))
 
+    # Anything already pointing at the loser must be repointed at the survivor,
+    # or merging a row that others were merged into creates a CHAIN:
+    #   di-si-buks -> di-si-buks-3 -> dc-books
+    # Redirect resolution does a single hop, so the far end of a chain silently
+    # 404s — the exact failure the pointer exists to prevent. Keeping the graph
+    # flat means every merged row always points directly at a live survivor.
+    await db.execute(
+        update(model).where(model.merged_into_id == loser_id).values(merged_into_id=survivor_id)
+    )
+
     loser.merged_into_id = survivor_id
     loser.deleted_at = datetime.now(UTC)
     await db.flush()

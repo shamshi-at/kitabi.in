@@ -409,3 +409,60 @@ async def test_a_dismissal_does_not_block_an_unrelated_duplicate(db_sessionmaker
         cands = await merge_service.find_candidates(db, "authors")
     assert len(cands) == 1
     assert cands[0].survivor_name == "Someone Else"
+
+
+async def test_merging_a_survivor_flattens_the_rows_that_pointed_at_it(db_sessionmaker):
+    """Real case from production: two Malayalam spellings had already been
+    folded into a third, and merging THAT into the English name would have left
+    the first two pointing at a merged row. Redirect resolution does one hop, so
+    the far end of a chain 404s — the exact failure the pointer prevents.
+    """
+    async with db_sessionmaker() as db:
+        english = await _author(db, "DC Books", works=5)
+        malayalam = await _author(db, "Di Si Buks", works=20)
+        variant_a = await _author(db, "Di Si Buks A")
+        variant_b = await _author(db, "Di Si Buks B")
+        await db.commit()
+
+        # First round: the two variants fold into the Malayalam row.
+        await merge_service.merge(db, "authors", malayalam.id, variant_a.id)
+        await merge_service.merge(db, "authors", malayalam.id, variant_b.id)
+        await db.commit()
+
+        # Then the Malayalam row itself folds into the English one.
+        assert await merge_service.merge(db, "authors", english.id, malayalam.id)
+        await db.commit()
+
+        for row in (variant_a, variant_b, malayalam):
+            await db.refresh(row)
+
+    # Every merged row points DIRECTLY at the live survivor — no chains.
+    assert malayalam.merged_into_id == english.id
+    assert variant_a.merged_into_id == english.id, "left pointing at a merged row"
+    assert variant_b.merged_into_id == english.id, "left pointing at a merged row"
+
+
+async def test_every_merged_row_points_at_something_live(db_sessionmaker):
+    """The invariant behind the redirect: follow any pointer once and land on a
+    row that still exists."""
+    async with db_sessionmaker() as db:
+        a = await _author(db, "Survivor", works=3)
+        b = await _author(db, "Dup One")
+        c = await _author(db, "Dup Two")
+        await db.commit()
+        await merge_service.merge(db, "authors", b.id, c.id)
+        await db.commit()
+        await merge_service.merge(db, "authors", a.id, b.id)
+        await db.commit()
+
+        from sqlalchemy import select
+
+        merged = (
+            (await db.execute(select(Author).where(Author.merged_into_id.is_not(None))))
+            .scalars()
+            .all()
+        )
+        for row in merged:
+            target = await db.get(Author, row.merged_into_id)
+            assert target is not None
+            assert target.merged_into_id is None, f"{row.name} points at a merged row"
