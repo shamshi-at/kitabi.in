@@ -862,6 +862,35 @@ cost, never secrecy.
 
 ### W4 — Indexation
 
+**Pre-submission audit (4 Aug 2026)** — run before handing the site to Search
+Console, on the principle that submitting a site with known defects just means
+finding out about them slowly, from Google, weeks later. Three findings, all
+fixed:
+
+- [x] **www.kitabi.in was a complete duplicate host** — serving the entire site
+      byte-identical to the apex at HTTP 200 with `index, follow`, its own
+      robots.txt and all. Canonical tags already pointed at the apex so Google
+      would probably have consolidated it, but that is not a thing to leave to
+      probability at submission time. Now 301s to the apex from a Pages
+      `_middleware.js` (a route file cannot do it — named routes never reach the
+      `[[path]]` catch-all), with `/.well-known/` excluded because Apple does not
+      follow redirects for the app-association file
+- [x] **The static sitemap listed redirects** — `/privacy.html` and `/terms.html`
+      both 308 to the extensionless form, so every crawl would have reported
+      "Page with redirect" for the two pages the app stores require
+- [x] **No hub or directory was in any sitemap** — `/lists`, `/languages`,
+      `/translations`, `/authors`, `/publishers` and the fourteen language hubs
+      are all `index, follow` and appeared nowhere. 3 URLs → 22
+- [ ] **Submit to Search Console + Bing Webmaster** — needs the owner's Google
+      account; cannot be done from here. Domain property (DNS TXT in Cloudflare)
+      is the right shape: one property covering apex, www, http and https
+
+Two things the audit deliberately did **not** treat as bugs: `/browse` and
+`/search` are `noindex, follow` by design (faceted browse explodes
+combinatorially), and a 404 page emitting `canonical` → the homepage is
+harmless, since it is `noindex` and carries a 404 status. The genre hubs stay
+out of the sitemap until a work actually carries a genre.
+
 - [x] The content floor: a work is `index, follow` only with a cover **or** a description
       ≥120 chars **or** ≥1 review **or** ≥2 editions **or** ≥1 rating, and a title that
       isn't transliteration noise. Everything else `noindex, follow`. Same idea for
