@@ -4,7 +4,7 @@
     "details": [
       {
         "appID": "62686X3746.in.kitabi.kitabi",
-        "paths": [ "/b/*", "/a/*", "/p/*" ]
+        "paths": [ "/b/*", "/a/*", "/p/*", "/book/*", "/author/*", "/publisher/*" ]
       }
     ]
   }

@@ -1,8 +1,14 @@
-# 200 = rewrite (proxy), keeping the browser URL as /b/:id so the page's JS can
-# read the id from the path. Destinations are the EXTENSIONLESS clean paths —
-# pointing at /book.html triggers Cloudflare Pages' automatic .html→clean-URL
-# 308 redirect, which drops the :id (bit us: shared links landed on /book with
-# no id and showed the "not available" fallback).
-/b/*   /book   200
-/a/*   /author   200
-/p/*   /publisher   200
+# Empty of rules, deliberately.
+#
+# /b/:id, /a/:id and /p/:id used to be 200-rewrites onto client-rendered shells
+# (book.html etc.) that fetched their content in the browser — which is why a
+# crawler saw "Opening the book…" and no book. Those shells are gone: every page
+# is now server-rendered by a Pages Function, so the crawler and the reader get
+# the same HTML.
+#
+# The three legacy paths are now handled by functions/b|a|p/[id].js, which 301 to
+# the canonical slug URL. They are kept forever — they are in Google's index, in
+# every share card ever generated, and bound to the app's universal links via
+# .well-known/apple-app-site-association, which iOS only re-evaluates at install.
+#
+# Redirects that must run BEFORE a Function would match still belong in here.
