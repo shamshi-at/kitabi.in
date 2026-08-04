@@ -826,12 +826,13 @@ the catalogue-depth work in W5 — which is what actually makes it rank.
       `/translations/<slug>` — one hub template
 - [ ] Editorial intros, 150–250 words each, hand-written per hub. **This is the whole
       difference between a hub and a thin auto-generated list**
-- [x] `/list/<slug>` + `/lists` — editorial lists (three written; ten is the launch
-      target). They live in `landing-page/functions/_lib/lists.js` as content, not data.
+- [x] `/list/<slug>` + `/lists` — **ten editorial lists written** (the launch target),
+      55/55 slugs verified present. They live in
+      `landing-page/functions/_lib/lists.js` as content, not data.
       **Run `landing-page/tests/check_lists.py` after editing one** — it resolves every
       slug against the live API and fails if a list would 404. The first draft was
       curated against the canon rather than the catalogue and every entry was silently
-      skipped
+      skipped, which is why that check exists
 - [ ] Done when: every indexable page is ≤3 clicks from home
 
 ### W4 — Indexation
