@@ -23,11 +23,12 @@
 # first while allowing the second is a coherent position worth revisiting; what
 # was happening before was blocking both by inheritance, which nobody chose.
 #
-# Note this file governs kitabi.in ONLY — robots.txt is per-host. As of 4 Aug
-# 2026 admin.kitabi.in and api.kitabi.in serve no robots.txt at all (both 404)
-# and the admin sign-in page carries no noindex, so the console is crawlable and
-# indexable. It shouldn't be: an admin login in a search index is an invitation
-# to credential stuffing and gains nothing. Tracked in docs/tasks.md Phase S.
+# Note this file governs kitabi.in ONLY — robots.txt is per-host. The other two
+# hosts are deliberately the opposite of this one: admin.kitabi.in and
+# api.kitabi.in both serve "Disallow: /" and stamp X-Robots-Tag on every
+# response (api/app/core/noindex.py, admin/console/noindex.py). An admin login
+# in a search index gains nothing and invites credential stuffing; an indexed
+# API endpoint is free reconnaissance. Only kitabi.in is meant to be found.
 
 User-agent: *
 Allow: /

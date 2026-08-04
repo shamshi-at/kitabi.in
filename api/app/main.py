@@ -24,6 +24,8 @@ from app.api import (
 )
 from app.api import import_ as import_api
 from app.core.config import get_settings
+from app.core.noindex import NoIndexMiddleware
+from app.core.noindex import robots as robots_txt
 from app.core.version_gate import VersionGateMiddleware
 from app.jobs import scheduler
 
@@ -47,6 +49,11 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(VersionGateMiddleware)
+
+    # api.kitabi.in is not a website and must never be indexed — see noindex.py
+    # for why this cannot affect kitabi.in (the edge never forwards origin headers).
+    app.add_middleware(NoIndexMiddleware)
+    app.add_route("/robots.txt", robots_txt, methods=["GET"])
 
     if settings.cors_origins:
         # The mobile app needs no CORS at all (it isn't a browser) and the admin

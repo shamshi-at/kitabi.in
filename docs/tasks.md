@@ -762,42 +762,27 @@ cost, never secrecy.
       Turned off in **AI Crawl Control → Overview**; verified in the served response — no
       managed block, no `Disallow`, no `Content-Signal`. A reference site whose value is
       content nobody else has *wants* to be citable by answer engines
-- [ ] **`robots.txt` + `noindex` on `admin.kitabi.in` and `api.kitabi.in`** — both currently
-      404 on `/robots.txt` and the admin sign-in page carries no `noindex`, so the console is
-      crawlable and indexable. Found 4 Aug 2026 while checking AI Crawl Control, which showed
-      `admin.kitabi.in/graphql/console` as the single most-crawled path in the zone (a scanner
-      probing for a GraphQL console that doesn't exist — it 404s correctly, nothing exposed).
-      An admin login in a search index is an invitation to credential stuffing and gains
-      nothing. Wants `Disallow: /` on both hosts plus `X-Robots-Tag: noindex, nofollow` on
-      every admin response
-
-## Phase W — Public web platform (kitabi.in as a book reference site)
-
-Plan: [web-platform-plan.md](web-platform-plan.md) · Mockups: [web-mockups.html](web-mockups.html).
-Runs alongside the app phases, not after them — the catalogue it publishes already exists.
-
-**Built 4 Aug 2026 (W0–W3):** all fourteen mocked page types are live on
-kitabi.in — home, search, browse, book, author, publisher, genre hub, language
-hub, language+form sub-hub, series, translation group, editorial lists, reviews,
-reader profiles, plus the `/languages` `/genres` `/lists` `/translations`
-directories and the thin/404 states. Verified against production: a non-JS
-crawler now receives the real book content (it received *"Opening the book…"*
-and nothing else before), `/b/<uuid>` 301s to the canonical slug URL, unknown
-keys are real 404s, and **1,195 URLs are in the generated sitemaps** (796 works,
-347 authors, 52 publishers). Self-hosted fonts, the cover proxy, the Supabase
-cover migration, ranked cross-type search and duplicate merging all landed after.
-
-**The first blocker is fixed; the second is not.** A non-JS crawler now gets the
-whole page. But **still no seeded work carries a genre**, so the genre hubs
-remain thin — and that, plus descriptions, is the W5 catalogue-depth work that
-actually makes any of this rank. **Also open:** Search Console + Bing
-verification, Lighthouse CI, `Cache-Control` on the public catalog GETs,
-app-side 429/503 handling, the `/reader` sitemap, and the edge→origin shared
-secret (which must land before more edge routes, or the per-IP rate limit
-throttles the edge itself).
-
-### W0 — Foundations
-
+- [x] **`robots.txt` + `noindex` on `admin.kitabi.in` and `api.kitabi.in`** (4 Aug 2026) —
+      both hosts served no robots.txt at all (a 404) and the admin sign-in page carried no
+      `noindex`, so the console was crawlable and indexable. Found while checking AI Crawl
+      Control, which showed `admin.kitabi.in/graphql/console` as the single most-crawled
+      path in the zone — a scanner probing for a GraphQL console that doesn't exist (it
+      404s correctly; nothing was exposed). Now `Disallow: /` plus
+      `X-Robots-Tag: noindex, nofollow, noarchive` on **every** response of both hosts,
+      including 404s, redirects and static assets — an unconditional middleware, not a path
+      allowlist, because an allowlist rots as routes are added. Two layers because they do
+      different jobs: robots.txt asks crawlers not to *fetch*, the header stops *indexing*
+      on any fetch that happens anyway — and a blanket `Disallow` alone actually makes that
+      worse, since a crawler forbidden to fetch the page can never read a `noindex` inside
+      its HTML. `/.well-known/` is carved out on the API (defensively — nothing is served
+      there today) so a future app-association file or ACME challenge can't be broken
+      silently. **The hazard here was deindexing kitabi.in itself**, so that is the thing
+      the tests actually guard: `test_edge_never_forwards_origin_headers` parses the real
+      edge sources to prove the sitemap proxy and cover proxy build fresh headers rather
+      than passing the origin's through, and `test_no_public_page_emits_an_api_host_url`
+      proves nothing public points at the now-disallowed host. Both were verified by
+      sabotaging the code and watching them fail. Neither layer is access control — the
+      real controls stay the session cookie, TOTP and Cloudflare
 - [x] `slug` column (unique, indexed) on `works` / `authors` / `publishers` / `series`,
       generated from `title` or **`title_translit`** when the title is non-Latin;
       disambiguate by author → year → `-N`. Migration + backfill + generation on create

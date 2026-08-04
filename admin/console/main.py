@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .deps import RedirectException
+from .noindex import NoIndexMiddleware, robots
 from .routers import (
     account,
     admins,
@@ -34,6 +35,11 @@ app = FastAPI(title="Kitabi Admin", docs_url=None, redoc_url=None, openapi_url=N
 
 _STATIC = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
+
+# The back office is not a public site — see noindex.py. Added before the
+# routers so it wraps every response, static files and error pages included.
+app.add_middleware(NoIndexMiddleware)
+app.add_route("/robots.txt", robots, methods=["GET"])
 
 
 @app.exception_handler(RedirectException)
