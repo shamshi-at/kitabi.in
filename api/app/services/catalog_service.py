@@ -41,6 +41,7 @@ from app.schemas.catalog import (
     WorkCreate,
     WorkUpdate,
 )
+from app.services import slug_service
 from app.services.openlibrary_client import OpenLibraryClient, normalize_isbn_lookup
 from app.services.translit import fold, transliterate
 
@@ -118,6 +119,12 @@ async def _get_or_create(db: AsyncSession, model: type, name: str) -> object:
     row = model(name=name.strip())
     db.add(row)
     await db.flush()
+    # Authors/publishers/series reached this way (free-text on the add form,
+    # OpenLibrary caching, CSV import) need a public URL just as much as ones
+    # created through create_author/create_publisher — this is the path those
+    # flows actually take. Genre has no slug column and is skipped.
+    if hasattr(model, "slug"):
+        await slug_service.ensure_slug(db, row)
     return row
 
 
@@ -146,6 +153,8 @@ async def create_author(db: AsyncSession, **fields: object) -> Author:
         return existing
     author = Author(**{**fields, "name": name})
     db.add(author)
+    await db.flush()
+    await slug_service.ensure_slug(db, author)
     await db.commit()
     await db.refresh(author)
     # Even on a brand-new row the link is queued, never applied (owner
@@ -348,6 +357,8 @@ async def create_publisher(db: AsyncSession, **fields: object) -> Publisher:
         return existing
     publisher = Publisher(**{**fields, "name": name})
     db.add(publisher)
+    await db.flush()
+    await slug_service.ensure_slug(db, publisher)
     await db.commit()
     await db.refresh(publisher)
     return publisher
@@ -412,6 +423,10 @@ async def create_work_with_edition(
     )
     db.add(work)
     await db.flush()
+    # `authors` is passed explicitly rather than read off the relationship —
+    # see slug_service.work_extras. The slug disambiguates by author
+    # ("chemmeen-thakazhi") before falling back to a meaningless counter.
+    await slug_service.ensure_slug(db, work, extras=slug_service.work_extras(work, authors))
 
     # "Translated from" (T1/T4): join/create the original's translation group
     # and record the direction, in the same transaction as the create. A
@@ -1056,6 +1071,8 @@ async def create_edition(db: AsyncSession, work: Work, payload: EditionCreate) -
         back_cover_url=payload.back_cover_url,
     )
     db.add(edition)
+    if series is not None:
+        await slug_service.ensure_slug(db, series)
     await db.commit()
     return await get_edition_or_404(db, edition.id)
 

@@ -7,6 +7,7 @@ Jobs to come: Supabase keep-warm ping, lending-due reminders.
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import text
@@ -17,6 +18,7 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 # Stable lock ids per job family (int64 namespace for pg_try_advisory_lock).
 LOCK_KEEP_WARM = 1001
 LOCK_LENDING_REMINDER = 1002
+LOCK_BACKFILL_SLUGS = 1003
 
 
 @asynccontextmanager
@@ -37,10 +39,22 @@ async def advisory_lock(session: AsyncSession, lock_id: int) -> AsyncIterator[bo
 
 
 def start() -> None:
+    from app.jobs.backfill_slugs import backfill_slugs
     from app.jobs.keep_warm import keep_warm
 
     # Every 6 hours — comfortably under Supabase's 7-day idle-pause threshold.
     scheduler.add_job(keep_warm, "interval", hours=6, id="keep_warm", replace_existing=True)
+    # Hourly, and once a minute after boot: a catalog row with no slug has no
+    # clean public URL, and the ETL's bulk-SQL loads never call ensure_slug.
+    # The first run after a deploy is what fills the existing catalog.
+    scheduler.add_job(
+        backfill_slugs,
+        "interval",
+        hours=1,
+        id="backfill_slugs",
+        replace_existing=True,
+        next_run_time=datetime.now(UTC) + timedelta(minutes=1),
+    )
     scheduler.start()
 
 

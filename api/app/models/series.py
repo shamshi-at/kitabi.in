@@ -14,3 +14,5 @@ class Series(CatalogMixin, Base):
     __tablename__ = "series"
 
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    # Public URL segment — /series/malgudi. Assigned once, never recomputed.
+    slug: Mapped[str | None] = mapped_column(String, default=None, unique=True, index=True)

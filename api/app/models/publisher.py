@@ -13,6 +13,8 @@ class Publisher(CatalogMixin, Base):
     __tablename__ = "publishers"
 
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    # Public URL segment — /publisher/dc-books. Assigned once, never recomputed.
+    slug: Mapped[str | None] = mapped_column(String, default=None, unique=True, index=True)
     # Cross-script search form of `name` — see Work.title_translit.
     name_translit: Mapped[str | None] = mapped_column(String, default=None)
     # Spelling-insensitive search skeleton — see Work.title_fold.

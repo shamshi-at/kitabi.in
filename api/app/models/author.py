@@ -16,6 +16,9 @@ class Author(CatalogMixin, Base):
     __tablename__ = "authors"
 
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    # Public URL segment — /author/thakazhi-sivasankara-pillai. Assigned once and
+    # never recomputed; see slug_service for why.
+    slug: Mapped[str | None] = mapped_column(String, default=None, unique=True, index=True)
     # Cross-script search form of `name` — see Work.title_translit.
     name_translit: Mapped[str | None] = mapped_column(String, default=None)
     # Spelling-insensitive search skeleton — see Work.title_fold.

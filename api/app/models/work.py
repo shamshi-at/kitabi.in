@@ -53,6 +53,13 @@ class Work(CatalogMixin, Base):
     __tablename__ = "works"
 
     title: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    # The public URL segment — /book/chemmeen, not /book/<uuid>. Assigned once by
+    # services/slug_service and NEVER recomputed: it is a published URL, so
+    # regenerating it when a title is edited would break every inbound link and
+    # discard the page's ranking. Nullable so a title that romanizes to nothing
+    # (or a row created before this existed) stays reachable by UUID instead of
+    # failing to insert; `slug_service.backfill_missing` sweeps up the gaps.
+    slug: Mapped[str | None] = mapped_column(String, default=None, unique=True, index=True)
     # Lowercase Latin romanization of `title` for cross-script search
     # ("Kayary" finds "കയർ"). Maintained by app/models/translit_hooks.py on
     # every insert/update; GIN-trigram-indexed by migration 000020.
