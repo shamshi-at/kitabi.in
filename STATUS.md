@@ -354,8 +354,16 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   finally public here; they were invisible on the web because the only endpoint serving
   them required a signed-in user. **(3) The edge renderer** (`landing-page/functions/_lib/`)
   — tagged template literals, no framework, no build step, no `node_modules`.
-  Live page types: home, search, browse, book, author, publisher, genre hub, language
-  hub, language+form sub-hub, and the `/languages` / `/genres` directories.
+  **All fourteen mocked page types are live**: home, search, browse, book, author,
+  publisher, genre hub, language hub, language+form sub-hub, series, translation group,
+  editorial lists, reviews and reader profiles, plus the `/languages` `/genres` `/lists`
+  `/translations` directories and the thin/404 states. Reader profiles honour **both**
+  visibility flags and a private profile 404s indistinguishably from a nonexistent
+  handle — "this reader exists but is private" is itself a disclosure. Editorial lists
+  live in the renderer as content, not data (writing one is a text edit, not a
+  migration), and a list whose books aren't in the catalogue yet 404s rather than
+  publishing a title over nothing — it switches on by itself as the books arrive, the
+  same self-healing shape as the content floor.
   `/b/`, `/a/`, `/p/` now **301** to the canonical slug URL and are kept forever;
   `/book/*`, `/author/*`, `/publisher/*` were added to `apple-app-site-association`
   **ahead of** the redirect, because iOS only re-evaluates the association at install.
