@@ -291,6 +291,10 @@ class PeoplePage(BaseModel):
     total: int = 0
     page: int = 1
     per_page: int = 48
+    sort: str = "books"
+    language: str | None = None
+    # Languages present, for the filter row.
+    languages: list[LanguageCount] = []
 
 
 class Suggestion(BaseModel):

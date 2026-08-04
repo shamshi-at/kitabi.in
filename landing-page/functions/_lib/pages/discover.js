@@ -344,9 +344,28 @@ export function renderPeople(data) {
   const isAuthors = data.kind === 'authors';
   const title = isAuthors ? 'Authors' : 'Publishers';
   const path = `/${data.kind}`;
-  const hrefFor = (p) => (p === 1 ? path : `${path}?page=${p}`);
+
+  // Filters and sort live in the query string, so every view is a real URL a
+  // reader can bookmark or share — and one a crawler can follow.
+  const url = (over = {}) => {
+    const p = new URLSearchParams();
+    const sort = over.sort !== undefined ? over.sort : data.sort;
+    const lang = over.language !== undefined ? over.language : data.language;
+    if (sort && sort !== 'books') p.set('sort', sort);
+    if (lang) p.set('language', lang);
+    if (over.page && over.page > 1) p.set('page', String(over.page));
+    const qs = p.toString();
+    return qs ? `${path}?${qs}` : path;
+  };
+
   const first = (data.page - 1) * data.per_page + 1;
   const last = Math.min(data.page * data.per_page, data.total);
+
+  const SORTS = [
+    ['books', 'Most published'],
+    ['name', 'A–Z'],
+    ['newest', 'Recently added'],
+  ];
 
   const body = html`
     <div class="wrap">
@@ -354,40 +373,75 @@ export function renderPeople(data) {
       <h1 class="serif" style="font-size:30px;font-weight:600;margin-top:14px">${title}</h1>
       <p class="intro">
         ${isAuthors
-          ? 'Everyone in the catalogue who has written, translated or been credited on a book — most-published first.'
+          ? 'Everyone in the catalogue who has written, translated or been credited on a book.'
           : 'Every house with a book in the catalogue, from the national imprints to the regional presses that publish most of what is here.'}
       </p>
+
       <div class="toolbar">
-        <span class="cnt">Showing ${num(first)}–${num(last)} of ${num(data.total)}</span>
+        <span class="eyebrow" style="margin-right:2px">Sort</span>
+        ${SORTS.map(
+          ([key, label]) => html`<a class="chip"${data.sort === key ? ' aria-current="true"' : ''}
+            href="${url({ sort: key, page: 1 })}">${label}</a>`,
+        )}
+        <span class="cnt">${num(first)}–${num(last)} of ${num(data.total)}</span>
       </div>
+
+      ${data.languages?.length
+        ? html`<div class="toolbar" style="border-top:0;padding-top:0;margin-top:-8px">
+            <span class="eyebrow" style="margin-right:2px">Language</span>
+            <a class="chip"${!data.language ? ' aria-current="true"' : ''}
+               href="${url({ language: null, page: 1 })}">All</a>
+            ${data.languages
+              .slice(0, 12)
+              .map(
+                (l) => html`<a class="chip"${data.language === l.name ? ' aria-current="true"' : ''}
+                  href="${url({ language: l.name, page: 1 })}"
+                  >${l.name} <span style="opacity:.6">${num(l.count)}</span></a
+                >`,
+              )}
+          </div>`
+        : ''}
+
       ${data.people?.length
-        ? html`<div class="strip" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+        ? html`<div class="people">
               ${data.people.map(
-                (p) => html`<a class="bk" style="text-align:center"
+                (p) => html`<a class="person"
                   href="/${isAuthors ? 'author' : 'publisher'}/${seg(p.slug || p.id)}">
                   ${avatar(p, { className: 'ppl' })}
-                  <span class="bt">${p.name}</span>
-                  ${p.work_count
-                    ? html`<span class="ba">${num(p.work_count)} ${p.work_count === 1 ? 'book' : 'books'}</span>`
-                    : ''}
+                  <span class="pn">${p.name}</span>
+                  <span class="pc"
+                    >${num(p.work_count)} ${p.work_count === 1 ? 'book' : 'books'}</span
+                  >
+                  ${p.language ? html`<span class="pl">${p.language}</span>` : ''}
                 </a>`,
               )}
             </div>
-            ${pager(data.page, data.total, data.per_page, hrefFor)}`
-        : html`<div class="thin"><p>Nothing here yet.</p></div>`}
+            ${pager(data.page, data.total, data.per_page, (n) => url({ page: n }))}`
+        : html`<div class="thin">
+            <div class="fl">❦</div>
+            <h2>Nothing here</h2>
+            <p>No ${title.toLowerCase()} match that filter.</p>
+            <a class="btn-ghost" style="margin-top:14px" href="${path}">Clear the filter</a>
+          </div>`}
       ${appBand()}
     </div>
   `;
 
-  const suffix = data.page > 1 ? ` — page ${data.page}` : '';
+  const bits = [
+    data.language ? `${data.language} ` : '',
+    title.toLowerCase(),
+    data.page > 1 ? ` — page ${data.page}` : '',
+  ].join('');
+
   return page({
-    title: `${title} — ${num(data.total)} in the catalogue${suffix} — Kitabi`,
-    description: isAuthors
-      ? `Every author in the Kitabi catalogue — ${num(data.total)} writers and translators across Indian languages.`
-      : `Every publisher in the Kitabi catalogue — ${num(data.total)} houses.`,
-    canonical: hrefFor(data.page),
+    title: `${data.language ? data.language + ' ' : ''}${title} — ${num(data.total)} in the catalogue${data.page > 1 ? ` — page ${data.page}` : ''} — Kitabi`,
+    description: `${bits} in the Kitabi catalogue — ${num(data.total)} in all.`,
+    // A filtered or re-sorted view is the same set of entities in a different
+    // order: canonical to the plain directory so the variants don't compete
+    // with it, but still crawlable so everything is reachable.
+    canonical: data.language || data.sort !== 'books' ? path : url({ page: data.page }),
     body,
     nav: data.kind,
-    jsonLd: [ld.collectionPage(title, null, hrefFor(data.page))],
+    jsonLd: [ld.collectionPage(title, null, path)],
   });
 }

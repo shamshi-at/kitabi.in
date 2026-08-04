@@ -923,47 +923,72 @@ async def reader_page(db: AsyncSession, username: str) -> P.ReaderPage | None:
 # --------------------------------------------------------------------------
 
 
+# Bibliographic shorthand for "no publisher named" — [s.n.] is *sine nomine*,
+# a cataloguing placeholder, not a publishing house. Listing it in a directory
+# of publishers is simply wrong, and it was showing up with 10 books.
+_NOT_A_PUBLISHER = ("s.n.", "[s.n.]", "[s.n.]]", "s.n", "[s. n.]", "n.p.", "[n.p.]")
+
+PEOPLE_SORTS = ("books", "name", "newest")
+
+
 async def people_page(
-    db: AsyncSession, kind: str, *, page: int = 1, per_page: int = 48
+    db: AsyncSession,
+    kind: str,
+    *,
+    page: int = 1,
+    per_page: int = 48,
+    sort: str = "books",
+    language: str | None = None,
 ) -> P.PeoplePage | None:
     """The /authors and /publishers directories.
 
-    Ordered by how many works they carry, then by name: a directory of 1,190
+    Default order is by how many works each carries: a directory of 1,162
     authors is useless alphabetically — page one would be initials and typos.
     Putting the substantial ones first makes the first page worth landing on,
-    which is also what decides whether it is worth indexing.
+    which is also what decides whether it is worth indexing. A–Z and newest are
+    offered for people who want them.
     """
     if kind == "authors":
-        model, join_table, join_col = Author, work_authors, work_authors.c.author_id
+        model = Author
+        count_col = func.count(func.distinct(work_authors.c.work_id)).label("n")
+        base = select(model, count_col).outerjoin(
+            work_authors, work_authors.c.author_id == model.id
+        )
     elif kind == "publishers":
-        model, join_table, join_col = Publisher, None, None
+        model = Publisher
+        count_col = func.count(func.distinct(Edition.work_id)).label("n")
+        base = select(model, count_col).outerjoin(Edition, Edition.publisher_id == model.id)
     else:
         return None
 
-    if kind == "authors":
-        count_col = func.count(func.distinct(join_table.c.work_id)).label("n")
-        stmt = (
-            select(model, count_col)
-            .outerjoin(join_table, join_col == model.id)
-            .where(model.deleted_at.is_(None))
-            .group_by(model.id)
-            .order_by(count_col.desc(), model.name)
-        )
-    else:
-        count_col = func.count(func.distinct(Edition.work_id)).label("n")
-        stmt = (
-            select(model, count_col)
-            .outerjoin(Edition, Edition.publisher_id == model.id)
-            .where(model.deleted_at.is_(None))
-            .group_by(model.id)
-            .order_by(count_col.desc(), model.name)
-        )
+    where = [model.deleted_at.is_(None)]
+    if kind == "publishers":
+        where.append(func.lower(func.trim(model.name)).notin_(_NOT_A_PUBLISHER))
+    if language:
+        where.append(model.primary_language == language)
 
-    total = int(
-        await db.scalar(select(func.count()).select_from(model).where(model.deleted_at.is_(None)))
-        or 0
-    )
+    order = {
+        "name": (model.name.asc(),),
+        "newest": (model.created_at.desc(),),
+    }.get(sort, (count_col.desc(), model.name.asc()))
+
+    stmt = base.where(*where).group_by(model.id).order_by(*order)
+
+    total = int(await db.scalar(select(func.count()).select_from(model).where(*where)) or 0)
     rows = (await db.execute(stmt.offset((page - 1) * per_page).limit(per_page))).all()
+
+    languages = [
+        P.LanguageCount(name=name, slug=slug_service.slugify(name) or name.lower(), count=count)
+        for name, count in (
+            await db.execute(
+                select(model.primary_language, func.count())
+                .where(model.deleted_at.is_(None), model.primary_language.is_not(None))
+                .group_by(model.primary_language)
+                .order_by(func.count().desc())
+            )
+        ).all()
+    ]
+
     return P.PeoplePage(
         kind=kind,
         people=[
@@ -980,6 +1005,9 @@ async def people_page(
         total=total,
         page=page,
         per_page=per_page,
+        sort=sort,
+        language=language,
+        languages=languages,
     )
 
 

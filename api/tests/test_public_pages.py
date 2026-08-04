@@ -485,3 +485,57 @@ async def test_suggest_is_bounded(db_sessionmaker):
         await db.commit()
         page = await public_service.suggest(db, "common", limit=5)
     assert len(page.suggestions) <= 5
+
+
+async def test_people_directory_sorts_by_name_when_asked(db_sessionmaker):
+    async with db_sessionmaker() as db:
+        prolific = Author(name="Zed Prolific", slug="zed")
+        db.add_all([prolific, Author(name="Aaron Sparse", slug="aaron")])
+        await db.flush()
+        for i in range(3):
+            db.add(Work(title=f"B{i}", authors=[prolific]))
+        await db.commit()
+
+        by_books = await public_service.people_page(db, "authors", sort="books")
+        by_name = await public_service.people_page(db, "authors", sort="name")
+
+    assert by_books.people[0].name == "Zed Prolific"
+    assert by_name.people[0].name == "Aaron Sparse"
+
+
+async def test_people_directory_filters_by_language(db_sessionmaker):
+    async with db_sessionmaker() as db:
+        db.add_all(
+            [
+                Author(name="Malayali Writer", slug="mw", primary_language="Malayalam"),
+                Author(name="Tamil Writer", slug="tw", primary_language="Tamil"),
+            ]
+        )
+        await db.commit()
+        page = await public_service.people_page(db, "authors", language="Malayalam")
+
+    assert [p.name for p in page.people] == ["Malayali Writer"]
+    assert page.total == 1
+    assert any(
+        lang.name == "Tamil" for lang in page.languages
+    ), "the filter row must still offer the languages you are not currently in"
+
+
+async def test_the_no_publisher_named_placeholder_is_not_a_publisher(db_sessionmaker):
+    """[s.n.] is *sine nomine* — a cataloguing placeholder meaning no publisher
+    was named. It was showing in the directory with 10 books."""
+    async with db_sessionmaker() as db:
+        db.add_all(
+            [
+                Publisher(name="[s.n.]", slug="sn-1"),
+                Publisher(name="s.n.", slug="sn-2"),
+                Publisher(name="DC Books", slug="dc"),
+            ]
+        )
+        await db.commit()
+        page = await public_service.people_page(db, "publishers")
+
+    names = [p.name for p in page.people]
+    assert "DC Books" in names
+    assert not any("s.n" in n.lower() for n in names), names
+    assert page.total == 1, "the placeholder must not be counted either"

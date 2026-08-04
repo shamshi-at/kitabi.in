@@ -182,8 +182,13 @@ export function serveTranslationIndex(context) {
 
 /** /authors and /publishers — the directories the header links to. */
 export function servePeople(context, kind) {
-  const page = pageParam(new URL(context.request.url));
-  return servePage(context, `/public/people/${kind}?page=${page}`, renderPeople, {
+  const url = new URL(context.request.url);
+  const params = new URLSearchParams({ page: String(pageParam(url)) });
+  const sort = url.searchParams.get('sort');
+  if (sort && ['books', 'name', 'newest'].includes(sort)) params.set('sort', sort);
+  const language = url.searchParams.get('language');
+  if (language) params.set('language', language.slice(0, 60));
+  return servePage(context, `/public/people/${kind}?${params.toString()}`, renderPeople, {
     what: 'directory',
   });
 }

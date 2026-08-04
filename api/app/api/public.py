@@ -191,9 +191,11 @@ async def people(
     db: DbSession,
     response: Response,
     page: int = Query(default=1, ge=1, le=200),
+    sort: str = Query(default="books", pattern="^(books|name|newest)$"),
+    language: str | None = Query(default=None, max_length=60),
 ) -> P.PeoplePage:
     """The /authors and /publishers directories."""
-    result = await public_service.people_page(db, kind, page=page)
+    result = await public_service.people_page(db, kind, page=page, sort=sort, language=language)
     if result is None:
         raise _not_found("Directory")
     _cached(response, _CACHE)

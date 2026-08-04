@@ -155,6 +155,23 @@ img{max-width:100%;display:block}
 .bk .brt{font-size:11px;color:var(--gold);font-weight:700;margin-top:4px}
 .bk .brt span{color:var(--ink-soft);font-weight:500}
 
+/* ---------- people directory ---------- */
+/* A grid of names whose lengths vary wildly ("Ruskin Bond" beside "Rasipuram
+   Krishnaswamy Narayan"). Without a floor on the name box, a two-line name
+   pushes its book count down and the counts stop lining up across the row —
+   which is what made the first version look untidy. Each cell is a flex column
+   with the name clamped to two lines, so every count sits on the same baseline
+   whatever the name does. */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:22px 16px}
+.person{display:flex;flex-direction:column;align-items:center;text-align:center}
+.person .ppl{width:64px;height:64px;font-size:24px;margin-bottom:10px}
+.person .pn{font-family:var(--serif);font-size:14px;font-weight:600;line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  min-height:2.6em}
+.person:hover .pn{color:var(--oxblood)}
+.person .pc{font-size:11.5px;color:var(--ink-soft);margin-top:4px}
+.person .pl{font-size:10.5px;color:var(--gold);font-weight:700;margin-top:2px}
+
 /* ---------- pills, chips, stars ---------- */
 .pill{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   padding:4px 10px;border-radius:999px;display:inline-block}
