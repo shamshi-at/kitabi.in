@@ -760,8 +760,6 @@ cost, never secrecy.
 
 Plan: [web-platform-plan.md](web-platform-plan.md) · Mockups: [web-mockups.html](web-mockups.html).
 Runs alongside the app phases, not after them — the catalogue it publishes already exists.
-Two measured blockers gate everything below: the public pages render client-side (a
-non-JS crawler gets a spinner), and **no seeded work carries a genre**.
 
 **Built 4 Aug 2026 (W0–W3):** all fourteen mocked page types are live on
 kitabi.in — home, search, browse, book, author, publisher, genre hub, language
@@ -769,10 +767,19 @@ hub, language+form sub-hub, series, translation group, editorial lists, reviews,
 reader profiles, plus the `/languages` `/genres` `/lists` `/translations`
 directories and the thin/404 states. Verified against production: a non-JS
 crawler now receives the real book content (it received *"Opening the book…"*
-and nothing else before), `/b/<uuid>` 301s to the canonical slug URL, and
-unknown keys are real 404s. **Still open:** self-hosted fonts, the cover proxy,
-Search Console + Bing verification, Lighthouse CI, the `/reader` sitemap, and
-the catalogue-depth work in W5 — which is what actually makes it rank.
+and nothing else before), `/b/<uuid>` 301s to the canonical slug URL, unknown
+keys are real 404s, and **1,195 URLs are in the generated sitemaps** (796 works,
+347 authors, 52 publishers). Self-hosted fonts, the cover proxy, the Supabase
+cover migration, ranked cross-type search and duplicate merging all landed after.
+
+**The first blocker is fixed; the second is not.** A non-JS crawler now gets the
+whole page. But **still no seeded work carries a genre**, so the genre hubs
+remain thin — and that, plus descriptions, is the W5 catalogue-depth work that
+actually makes any of this rank. **Also open:** Search Console + Bing
+verification, Lighthouse CI, `Cache-Control` on the public catalog GETs,
+app-side 429/503 handling, the `/reader` sitemap, and the edge→origin shared
+secret (which must land before more edge routes, or the per-IP rate limit
+throttles the edge itself).
 
 ### W0 — Foundations
 
@@ -910,6 +917,77 @@ the catalogue-depth work in W5 — which is what actually makes it rank.
 - [ ] Editorial writing capacity — the descriptions and hub intros are ~40 hours of writing
 - [ ] `buy_links` (`[WIRED]`, empty): affiliate programmes are revenue but also a
       disclosure obligation. In or out for v1?
+
+## Phase A — The author page as a reference page
+
+Plan: [author-page-plan.md](author-page-plan.md) · Mockups: [author-mockups.html](author-mockups.html).
+Depends on W being live (it is). The live page already renders the four blocks we
+can compute — works, publishers, decade bar, stats. This phase adds the ones that
+need a *source*.
+
+**Two rules that are not negotiable, and everything below is shaped by them:**
+an LLM never sources a biographical fact about a real person (§2.2), and every
+fact is stored with its provenance so the page can say "sources disagree" and can
+say nothing at all (§2.3). Where we know nothing, the block disappears — no
+"Unknown", no empty rows.
+
+### A0 — Schema
+
+- [ ] `authors` + `birth_date`, `death_date`, `birth_place`, `description`,
+      `native_name`, `wikidata_id`, `fact_source`, `facts_synced_at`
+- [ ] **Date precision** (`year` | `month` | `day`) alongside every date — Wikidata gives
+      `1912-04-17` for one author and `1914` for another, and rendering the second as
+      "1 January 1914" invents a day
+- [ ] `author_awards` (name, year, awarding_body, source, source_url)
+- [ ] `author_identifiers` (scheme, value) — wikidata | viaf | openlibrary | isni
+- [ ] `author_facts` (field, value, source, source_url, confidence) — the table that makes
+      "born 1912, some sources say 1914" representable rather than a silently picked winner
+- [ ] RLS enabled, zero policies, on all three new tables (rule 11)
+
+### A1 — Enrichment job
+
+- [ ] `jobs/enrich_authors.py` — same trickle shape as the slug and cover backfills
+- [ ] Match on **P648 (OpenLibrary id)**, which 1,159 of 1,162 authors carry. Name search
+      only as a fallback, and only on a single unambiguous hit; **two candidates → skip and
+      queue for review**, never guess. A wrong match here attaches one person's death date
+      to another
+- [ ] Pull labels (native-script names), dates, birthplace, occupations, awards,
+      identifiers, Commons portrait
+- [ ] Never overwrite a verified-author or reviewed-contribution value (the trust ladder, §2.4)
+- [ ] Record `fact_source` + `facts_synced_at` on every write
+- [ ] Store the Commons credit line **at import time** — it cannot be reconstructed later
+
+### A2 — The page
+
+- [ ] Infobox, awards timeline, sources block, "improve this page"
+- [ ] Empty blocks disappear entirely; disagreeing sources render as "born 1912 (some
+      sources say 1914)"
+- [ ] `Person` JSON-LD grows `birthDate`, `deathDate`, `birthPlace`, `award`,
+      `knowsLanguage`, `jobTitle`, `image`, and **`sameAs`** → Wikipedia, Wikidata, VIAF,
+      OpenLibrary. `sameAs` is how a search engine reconciles our page with the entity it
+      already knows, which is what lets a small site surface for a well-documented person
+- [ ] Content floor for authors gets stricter *and* more useful: indexable on a bio **or**
+      a birth date **or** an award **or** ≥2 works
+- [ ] Mobile: infobox **before** the prose (M6) — the question that brought the reader is
+      almost always a fact, not a paragraph
+
+### A3–A6
+
+- [ ] A3 — Wikipedia lead paragraphs, **attributed inline** (CC BY-SA; the credit is a
+      licence obligation, not a design flourish, and survives the mobile squeeze)
+- [ ] A4 — contribution loop, reusing the `work_revisions` approve/reject pattern
+- [ ] A5 — verified authors edit their own page (`author_claims` exists and is unused;
+      Wikipedia structurally cannot let subjects do this, so it is a real differentiator)
+- [ ] A6 — the same treatment for publishers, then series
+
+### Open questions
+
+- [ ] Which Wikipedia language edition leads for a Malayalam author — `en` (more readers)
+      or `ml` (better coverage of the subject)? Probably `ml` with an `en` fallback
+- [ ] Do we re-sync facts, and how often? A writer dies and the page says otherwise
+      (`facts_synced_at` exists for this, but nothing consumes it yet)
+- [ ] Commons portraits carry per-file licences, a few of which are non-commercial.
+      Filter at import, or store the licence and decide at render?
 
 ## Parking lot — v1.5 (designed or deliberately deferred)
 

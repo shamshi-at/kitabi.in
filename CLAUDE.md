@@ -187,7 +187,9 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
 - Landing page stays dependency-free static HTML/CSS — no build step, no frameworks;
   mobile-first, respects `prefers-reduced-motion`; follows the Reading Room theme.
   The **public web platform** ([docs/web-platform-plan.md](docs/web-platform-plan.md),
-  mockups in [docs/web-mockups.html](docs/web-mockups.html)) holds that line: pages
+  mockups in [docs/web-mockups.html](docs/web-mockups.html); the author page is planned
+  separately in [docs/author-page-plan.md](docs/author-page-plan.md) with
+  [docs/author-mockups.html](docs/author-mockups.html)) holds that line: pages
   are rendered by the Cloudflare Pages Functions that already run there, from a
   `functions/_lib/` of plain template literals — no framework, no `node_modules`.
   Two rules it adds: **the public web is strictly read-only** (every write is a door
