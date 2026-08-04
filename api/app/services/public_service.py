@@ -1049,6 +1049,10 @@ async def _candidates(db: AsyncSession, q: str, per_type: int = 12) -> list[dict
                 "tie": 2,
             }
         )
+    # Never discard what the matcher found — see search_rank.MATCHER_FLOOR.
+    for item in out:
+        if item["score"] <= search_rank.WEAK:
+            item["score"] = search_rank.MATCHER_FLOOR
     return out
 
 

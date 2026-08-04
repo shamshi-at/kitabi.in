@@ -232,3 +232,40 @@ async def test_the_search_page_still_leads_with_books_for_a_title(db_sessionmake
         await db.commit()
         page = await public_service.search_page(db, "chemmeen")
     assert page.order[0] == "book", page.order
+
+
+def test_rank_deduplicates_the_same_name_of_the_same_kind():
+    """The catalogue holds duplicate author rows until the merge job runs.
+    Offering the same name twice in a dropdown reads as a bug in the search
+    rather than in the data."""
+    items = [
+        {"kind": "author", "label": "Munshi Premchand", "score": 0.7},
+        {"kind": "author", "label": "Munshi  Premchand", "score": 0.6},
+        {"kind": "book", "label": "Munshi Premchand", "score": 0.5},
+    ]
+    out = search_rank.rank(items, 10)
+    assert len(out) == 2, [i["label"] for i in out]
+    assert out[0]["score"] == 0.7  # the better of the two duplicates survives
+    assert {i["kind"] for i in out} == {"author", "book"}  # different kinds are not duplicates
+
+
+async def test_ranking_never_finds_less_than_the_matcher(db_sessionmaker):
+    """The regression this guards: ranking dropped every zero-scoring candidate,
+    so a query the database matched fuzzily returned nothing at all. The scorer
+    orders results; it must never veto them."""
+    from app.services import catalog_service
+
+    async with db_sessionmaker() as db:
+        # A native-script publisher whose romanization does not line up cleanly
+        # with the query — exactly the case that was being discarded.
+        db.add(Publisher(name="മാതൃഭൂമി ബുക്സ്", slug="mathrubhumi-books"))
+        await db.commit()
+
+        found = await catalog_service.search_publishers(db, "mathrubhumi", limit=10)
+        page = await public_service.suggest(db, "mathrubhumi")
+
+    if found:
+        assert page.suggestions, (
+            "the matcher found it and the ranker threw it away — "
+            "ranking must never reduce recall"
+        )

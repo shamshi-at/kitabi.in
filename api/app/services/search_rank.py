@@ -30,6 +30,17 @@ ALL_WORDS = 0.60
 SOME_WORDS = 0.35
 WEAK = 0.0
 
+# Anything the database matcher returned is a match — its fuzzy trigram index
+# already decided that. A candidate this scorer cannot explain therefore keeps a
+# floor rather than being discarded: the scorer's job is ORDER, and it must
+# never have worse recall than the matcher feeding it.
+#
+# This was a real regression. Ranking initially dropped every zero-scoring
+# candidate, so searching "mathrubhumi" returned nothing at all where the
+# unranked version had found the publisher fine. A search that finds less is
+# worse, however well ordered the little it finds.
+MATCHER_FLOOR = 0.01
+
 # Popularity only ever breaks ties inside a band — a publisher with 200 books
 # should beat one with 2 when both match equally, and never otherwise.
 MAX_POPULARITY_BONUS = 0.049
@@ -136,15 +147,33 @@ def score(
     return best
 
 
-def rank(items: list[dict], limit: int) -> list[dict]:
+def rank(items: list[dict], limit: int, *, dedupe: bool = True) -> list[dict]:
     """Sort scored candidates and take the best.
 
     Ties break by score, then by the caller's `tie` value (lower first), then by
     label — so the order is total and a page does not reshuffle between requests
     for reasons nobody can see.
+
+    `dedupe` collapses entries of the same kind with the same normalised label,
+    keeping the best-scoring one. The catalogue holds duplicate author rows until
+    the merge job runs, and offering the same name twice in a dropdown reads as a
+    bug in the search rather than in the data.
     """
     ordered = sorted(
         items,
         key=lambda i: (-i["score"], i.get("tie", 0), normalize(i.get("label"))),
     )
-    return [i for i in ordered if i["score"] > WEAK][:limit]
+    out: list[dict] = []
+    seen: set = set()
+    for item in ordered:
+        if item["score"] <= WEAK:
+            continue
+        if dedupe:
+            key = (item.get("kind", ""), normalize(item.get("label")))
+            if key in seen:
+                continue
+            seen.add(key)
+        out.append(item)
+        if len(out) >= limit:
+            break
+    return out
