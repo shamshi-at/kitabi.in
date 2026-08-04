@@ -44,13 +44,17 @@ def start() -> None:
 
     # Every 6 hours — comfortably under Supabase's 7-day idle-pause threshold.
     scheduler.add_job(keep_warm, "interval", hours=6, id="keep_warm", replace_existing=True)
-    # Hourly, and once a minute after boot: a catalog row with no slug has no
-    # clean public URL, and the ETL's bulk-SQL loads never call ensure_slug.
-    # The first run after a deploy is what fills the existing catalog.
+    # Every 5 minutes, starting a minute after boot. A catalog row with no slug
+    # has no clean public URL, and the ETL's bulk-SQL loads never call
+    # ensure_slug. Frequent rather than hourly because the cost of a slug
+    # arriving LATE is not cosmetic: the page's canonical URL changes under a
+    # crawler that has already seen it, and canonical churn during first
+    # indexing is expensive to recover from. Once the catalog is filled this is
+    # a single indexed query that matches nothing.
     scheduler.add_job(
         backfill_slugs,
         "interval",
-        hours=1,
+        minutes=5,
         id="backfill_slugs",
         replace_existing=True,
         next_run_time=datetime.now(UTC) + timedelta(minutes=1),

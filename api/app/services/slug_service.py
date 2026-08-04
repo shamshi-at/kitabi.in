@@ -211,7 +211,7 @@ async def ensure_slug(
 _BACKFILL_MODELS: tuple[type, ...] = (Work, Author, Publisher, Series)
 
 
-async def backfill_missing(db: AsyncSession, *, limit: int = 500) -> int:
+async def backfill_missing(db: AsyncSession, *, limit: int = 1000) -> int:
     """Fill `slug IS NULL` rows, newest first. Idempotent and interruptible —
     it exists so a write path that forgot `ensure_slug` (an ETL bulk load, a
     future importer) self-heals instead of silently publishing UUID URLs.

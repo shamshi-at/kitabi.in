@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Author, Publisher, Work
+from app.services import public_service
 
 # The crawler-facing origin. Hardcoded like the Pages Functions hardcode their
 # API base — these URLs must be the public share links, never the API host.
@@ -20,11 +21,16 @@ PUBLIC_BASE = "https://kitabi.in"
 # response small and the page count stable-ish as the catalog grows.
 PAGE_SIZE = 10_000
 
-# kind -> (model, share-path prefix). Order fixed so the index is deterministic.
+# kind -> (model, canonical path prefix). Order fixed so the index is deterministic.
+#
+# These are the CANONICAL page URLs, not the legacy /b/ /a/ /p/ share links —
+# those now 301, and a sitemap full of redirects spends crawl budget on hops
+# instead of pages. Each entry uses the row's slug when it has one and its id
+# when it doesn't; both resolve.
 _KINDS: dict[str, tuple[type, str]] = {
-    "works": (Work, "/b/"),
-    "authors": (Author, "/a/"),
-    "publishers": (Publisher, "/p/"),
+    "works": (Work, "/book/"),
+    "authors": (Author, "/author/"),
+    "publishers": (Publisher, "/publisher/"),
 }
 
 _XML_DECL = '<?xml version="1.0" encoding="UTF-8"?>'
@@ -64,7 +70,7 @@ async def build_page(db: AsyncSession, kind: str, page: int) -> str:
     model, prefix = _KINDS[kind]
     rows = (
         await db.execute(
-            select(model.id, model.updated_at)
+            select(model.id, model.slug, model.updated_at)
             .where(model.deleted_at.is_(None))
             .order_by(model.created_at, model.id)
             .offset((page - 1) * PAGE_SIZE)
@@ -74,10 +80,26 @@ async def build_page(db: AsyncSession, kind: str, page: int) -> str:
     if not rows:
         raise _not_found("Sitemap page out of range")
 
+    # Only advertise pages that clear the content floor. A sitemap listing every
+    # row — most of them thin, imported, coverless — is a direct statement to a
+    # search engine that this domain produces thin pages, and it drags down the
+    # good ones (docs/web-platform-plan.md §8.3). The pages left out are still
+    # crawlable and still linked; they just aren't advertised until they're
+    # worth landing on, which happens on its own as readers improve them.
+    if kind == "works":
+        indexable = await public_service.indexable_work_ids(db, [row_id for row_id, _, _ in rows])
+        rows = [row for row in rows if row[0] in indexable]
+        if not rows:
+            # A page of the catalog where nothing qualifies yet is a valid empty
+            # urlset, not a 404 — the page numbering must stay stable.
+            return f'{_XML_DECL}\n<urlset xmlns="{_NS}"></urlset>\n'
+
     urls: list[str] = []
-    for row_id, updated_at in rows:
-        # Ids are UUIDs today, so escaping is future-proofing, not decoration.
-        loc = escape(f"{PUBLIC_BASE}{prefix}{row_id}")
+    for row_id, slug, updated_at in rows:
+        # The canonical URL: slug when the row has one, id when it doesn't.
+        # Never the legacy /b/ /a/ /p/ form — those 301 now, and a sitemap of
+        # redirects spends crawl budget on hops instead of pages.
+        loc = escape(f"{PUBLIC_BASE}{prefix}{slug or row_id}")
         lastmod = updated_at.date().isoformat()
         urls.append(f"<url><loc>{loc}</loc><lastmod>{lastmod}</lastmod></url>")
     return f'{_XML_DECL}\n<urlset xmlns="{_NS}">{"".join(urls)}</urlset>\n'
