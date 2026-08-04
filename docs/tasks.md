@@ -763,13 +763,16 @@ Runs alongside the app phases, not after them — the catalogue it publishes alr
 Two measured blockers gate everything below: the public pages render client-side (a
 non-JS crawler gets a spinner), and **no seeded work carries a genre**.
 
-**Built 4 Aug 2026 (W0–W2):** slugs, the `/public/*` read layer, the edge
-renderer, and the book / author / publisher / home / search / browse / hub pages
-are live on kitabi.in. Verified against production: a non-JS crawler now
-receives the real book content (it received *"Opening the book…"* and nothing
-else before), `/b/<uuid>` 301s to the canonical slug URL, and unknown keys are
-real 404s. Remaining below: series, translation groups, editorial lists, reader
-profiles, self-hosted fonts, the cover proxy, and Search Console.
+**Built 4 Aug 2026 (W0–W3):** all fourteen mocked page types are live on
+kitabi.in — home, search, browse, book, author, publisher, genre hub, language
+hub, language+form sub-hub, series, translation group, editorial lists, reviews,
+reader profiles, plus the `/languages` `/genres` `/lists` `/translations`
+directories and the thin/404 states. Verified against production: a non-JS
+crawler now receives the real book content (it received *"Opening the book…"*
+and nothing else before), `/b/<uuid>` 301s to the canonical slug URL, and
+unknown keys are real 404s. **Still open:** self-hosted fonts, the cover proxy,
+Search Console + Bing verification, Lighthouse CI, the `/reader` sitemap, and
+the catalogue-depth work in W5 — which is what actually makes it rank.
 
 ### W0 — Foundations
 
@@ -819,11 +822,11 @@ profiles, self-hosted fonts, the cover proxy, and Search Console.
 ### W3 — Hubs
 
 - [x] `/genre/<slug>`, `/language/<slug>`, `/language/<slug>/<form>` (series/translations still open)
-- [ ] `/series/<slug>` and `/translations/<slug>` routes (the API endpoints exist), `/series/<slug>`,
+- [x] `/series/<slug>` and `/translations/<slug>` routes, `/series/<slug>`,
       `/translations/<slug>` — one hub template
 - [ ] Editorial intros, 150–250 words each, hand-written per hub. **This is the whole
       difference between a hub and a thin auto-generated list**
-- [ ] `/list/<slug>` — editorial lists; ten written for launch
+- [x] `/list/<slug>` + `/lists` — editorial lists (three written; ten is the launch target)
 - [ ] Done when: every indexable page is ≤3 clicks from home
 
 ### W4 — Indexation
@@ -855,7 +858,7 @@ profiles, self-hosted fonts, the cover proxy, and Search Console.
 - [ ] Cover coverage — typeset covers where none exists, so no page has a hole
 - [ ] Descriptions for the top 300 works, 120–200 words. Highest-leverage manual task on
       the list: it flips 300 works past the content floor and gives each a real meta description
-- [ ] `/reader/<username>` public profiles (honouring the visibility flags, rule 16)
+- [x] `/reader/<username>` public profiles (both visibility flags honoured; a private profile has no page at all)
 
 ### W6 — `[LATER]`
 
