@@ -611,3 +611,8 @@ assert(isAsset('/terms') && isAsset('/terms.html'), 'terms is reachable both way
 var footerDoc = String(page({ title: 't', body: html`x` }).text());
 assertIncludes(footerDoc, 'href="/privacy"', 'the footer links the clean URL, avoiding the hop');
 assertExcludes(footerDoc, 'href="/privacy.html"', 'not the .html form that 308s');
+
+// "/" is served by the catch-all, because a [[path]] Function shadows
+// index.js for the root — named routes keep winning, "/" does not, and the
+// home page 404'd in production until this was explicit.
+assert(!isAsset('/'), 'home is not an asset — it is rendered, and by the catch-all');

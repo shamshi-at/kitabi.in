@@ -13,7 +13,9 @@
 // /.well-known/apple-app-site-association silently breaks universal links for
 // every installed app, and iOS only re-checks that at install.
 
+import { servePage } from './_lib/handler.js';
 import { notFound } from './_lib/layout.js';
+import { renderHome } from './_lib/pages/home.js';
 
 // Exact files the deploy copies into public/ (see .github/workflows/deploy.yml).
 // NOTE the extensionless twins. Cloudflare Pages 308s /privacy.html to
@@ -48,6 +50,17 @@ export function isAsset(pathname) {
 
 export async function onRequest(context) {
   const { pathname } = new URL(context.request.url);
+
+  // HOME IS HANDLED HERE, not in index.js.
+  //
+  // A [[path]] catch-all shadows functions/index.js for "/" — named routes like
+  // /browse keep winning, but "/" does not, and the home page 404'd in
+  // production until this branch existed. Rather than rely on a precedence rule
+  // that demonstrably does not hold, "/" is served explicitly from the one file
+  // that is guaranteed to run.
+  if (pathname === '/') {
+    return servePage(context, '/public/home', renderHome, { what: 'page' });
+  }
 
   if (isAsset(pathname)) {
     // Hand it back to the static asset handler untouched, so _headers still
