@@ -31,12 +31,17 @@ export function cover(work, { priority = false, width = 190 } = {}) {
 
   // The typeset cover is ALWAYS rendered, and the image sits on top of it.
   //
-  // Not just a null-cover fallback: a large share of the catalogue hotlinks
-  // OpenLibrary covers, and a good number of those 404 or are blocked. Deciding
-  // server-side on `cover_url != null` gets those wrong — the img renders as a
-  // blank box, which looks broken in a way an empty shelf does not. Layering
-  // means a failed image simply reveals the typeset cover underneath, with no
-  // JavaScript and no onerror handler.
+  // Not just a null-cover fallback. Covers are hotlinked from
+  // covers.openlibrary.org — a third-party origin we don't control the latency
+  // or availability of — so between first paint and the image arriving there is
+  // a window where an <img> alone is an empty box, and a genuinely dead URL
+  // leaves one permanently. Deciding the fallback server-side on
+  // `cover_url != null` can't see either case. Layering covers both: the
+  // typeset cover shows while the image loads and stays if it never does, with
+  // no JavaScript and no onerror handler.
+  //
+  // The proper fix for the latency half is the cover proxy (plan §6) — fetch
+  // once, cache at the edge, and drop the third-party origin entirely.
   const typeset = html`<span class="ct">
     <span class="t">${title}</span>
     ${author ? html`<span class="a">${author}</span>` : ''}
