@@ -245,3 +245,60 @@ async def test_the_job_does_nothing_without_a_key(db_sessionmaker, monkeypatch):
 
 async def _noop():
     return None
+
+
+async def test_the_job_backs_off_when_it_is_being_throttled(db_sessionmaker, monkeypatch):
+    """At 100 covers a run, pushing through a 429 is both rude and useless —
+    every subsequent request fails too. The run stops early and the next one
+    picks up where it left off, rather than spending 90 seconds being refused.
+    """
+    from app.jobs import backfill_covers as job
+
+    settings = _settings()
+    monkeypatch.setattr("app.jobs.backfill_covers.get_settings", lambda: settings)
+    monkeypatch.setattr(job.asyncio, "sleep", lambda _: _noop())
+
+    attempts = {"n": 0}
+
+    def throttled(request):
+        attempts["n"] += 1
+        return httpx.Response(429)
+
+    async with db_sessionmaker() as db:
+        for _ in range(20):
+            await _edition(db, "https://covers.openlibrary.org/b/id/x-L.jpg")
+        monkeypatch.setattr("app.jobs.backfill_covers.SessionLocal", db_sessionmaker)
+        async with _client(throttled) as c:
+            await job.backfill_covers(client=c)
+
+    # It gave up after the run of failures instead of working through all 20.
+    assert attempts["n"] == job.MAX_CONSECUTIVE_FAILURES, attempts["n"]
+
+
+async def test_an_isolated_failure_does_not_stop_the_run(db_sessionmaker, monkeypatch):
+    """A single blip is not a signal. Only a consecutive run of them is."""
+    from app.jobs import backfill_covers as job
+
+    settings = _settings()
+    monkeypatch.setattr("app.jobs.backfill_covers.get_settings", lambda: settings)
+    monkeypatch.setattr(job.asyncio, "sleep", lambda _: _noop())
+
+    seen = {"n": 0}
+
+    def flaky(request):
+        if "openlibrary" not in str(request.url):
+            return httpx.Response(200, json={})
+        seen["n"] += 1
+        # Fail every other one — never MAX_CONSECUTIVE_FAILURES in a row.
+        if seen["n"] % 2 == 0:
+            return httpx.Response(503)
+        return httpx.Response(200, content=PNG, headers={"content-type": "image/png"})
+
+    async with db_sessionmaker() as db:
+        for _ in range(10):
+            await _edition(db, "https://covers.openlibrary.org/b/id/y-L.jpg")
+        monkeypatch.setattr("app.jobs.backfill_covers.SessionLocal", db_sessionmaker)
+        async with _client(flaky) as c:
+            await job.backfill_covers(client=c)
+
+    assert seen["n"] == 10, f"stopped early at {seen['n']} — an isolated failure ended the run"

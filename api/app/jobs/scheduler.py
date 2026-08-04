@@ -61,14 +61,15 @@ def start() -> None:
         replace_existing=True,
         next_run_time=datetime.now(UTC) + timedelta(minutes=1),
     )
-    # Every 10 minutes, 25 covers at a time — deliberately a trickle. See
-    # jobs/backfill_covers.py: OpenLibrary is a free non-profit service and a
-    # burst is both abusive and self-defeating. Clears the ~770-cover backlog
-    # in a few hours, then costs one indexed query per run.
+    # Every 5 minutes, 100 covers at a time (raised from 10 min / 25 on owner
+    # request). Clears the backlog in roughly half an hour rather than five,
+    # while still averaging well under one request a second to OpenLibrary —
+    # and the job now backs off on its own if it starts being throttled. Once
+    # the backlog is clear this costs one indexed query per run.
     scheduler.add_job(
         backfill_covers,
         "interval",
-        minutes=10,
+        minutes=5,
         id="backfill_covers",
         replace_existing=True,
         next_run_time=datetime.now(UTC) + timedelta(minutes=2),

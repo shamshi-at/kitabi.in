@@ -28,10 +28,24 @@ from app.services import cover_storage
 
 logger = logging.getLogger(__name__)
 
-# Per run. Small on purpose — see the note about OpenLibrary above.
-BATCH = 25
-# Between fetches, so a run is a trickle rather than a burst.
-PAUSE_SECONDS = 0.4
+# Per run. Raised from 25 (owner request) to clear the backlog in ~30 minutes
+# rather than ~5 hours. At this size a run makes ~100 requests over ~90s — about
+# 1.1/second while running, then idle for the rest of the interval, which
+# averages well under one request a second. Still a trickle by any reasonable
+# reading; it is a burst only relative to the previous setting.
+BATCH = 100
+# Between fetches. Kept non-zero deliberately: the batch size is what changed,
+# not the willingness to hammer a free service flat out.
+PAUSE_SECONDS = 0.3
+# Consecutive transient failures that mean "stop and come back later".
+#
+# This matters far more now than at 25/run. A transient failure is usually a
+# 429, and continuing to push through a rate limit is both rude and useless —
+# every subsequent request fails too. Bailing out early keeps a throttled run
+# short instead of spending 90 seconds being refused, and the next run picks up
+# where this one stopped. A single blip is not a signal, so it takes a run of
+# them.
+MAX_CONSECUTIVE_FAILURES = 5
 
 
 async def backfill_covers(client: httpx.AsyncClient | None = None) -> None:
@@ -73,11 +87,24 @@ async def backfill_covers(client: httpx.AsyncClient | None = None) -> None:
                 return
 
             moved = dropped = 0
+            consecutive_failures = 0
             owns_client = client is None
             client = client or httpx.AsyncClient(timeout=20)
             try:
                 for edition in rows:
                     fetched = await cover_storage.fetch_cover(client, edition.cover_url)
+                    if fetched.gone or fetched.body:
+                        consecutive_failures = 0
+                    else:
+                        consecutive_failures += 1
+                        if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                            # Almost certainly being throttled. Stop pushing.
+                            logger.info(
+                                "backfill_covers: %s consecutive failures — backing off",
+                                consecutive_failures,
+                            )
+                            break
+
                     if fetched.gone:
                         # A cover that definitively does not exist. Clearing it
                         # is the honest outcome — the app and the site both
