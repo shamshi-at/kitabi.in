@@ -17,8 +17,9 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.api.deps import DbSession
+from app.models import Author, Publisher
 from app.schemas import public as P
-from app.services import public_service
+from app.services import merge_service, public_service
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -206,3 +207,22 @@ async def suggest(
     """Search typeahead. Small and cheap — it runs on a keystroke."""
     _cached(response, _CACHE_SHORT)
     return await public_service.suggest(db, q)
+
+
+@router.get("/merged/{kind}/{key}")
+async def merged_target(kind: str, key: str, db: DbSession, response: Response) -> dict:
+    """Where a merged author/publisher now lives, so the edge can 301 to it.
+
+    Returns `{"slug": …}` when `key` names a row that was merged away, and 404
+    otherwise. The site calls this only after a normal lookup misses, so it
+    costs nothing on the happy path.
+    """
+    model = {"author": Author, "publisher": Publisher}.get(kind)
+    if model is None:
+        raise _not_found("Kind")
+    row = await public_service.resolve_including_merged(db, model, key)
+    target = await merge_service.resolve_merged(db, f"{kind}s", row)
+    if target is None:
+        raise _not_found(kind.title())
+    _cached(response, _CACHE)
+    return {"slug": target.slug or str(target.id)}

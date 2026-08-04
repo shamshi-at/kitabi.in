@@ -146,6 +146,27 @@ def _with_relations(stmt: Select) -> Select:
 # --------------------------------------------------------------------------
 
 
+async def resolve_including_merged(db: AsyncSession, model: type, key: str):  # noqa: ANN201
+    """Find a row even if it was merged away, so the caller can redirect.
+
+    A merged author's old URL must 301 to the survivor, never 404: those URLs
+    may be indexed, and a merge that breaks them discards exactly the ranking it
+    was meant to consolidate.
+    """
+    stmt = select(model).where(model.slug == key)
+    row = (await db.execute(stmt)).scalars().first()
+    if row is None:
+        try:
+            row = (
+                (await db.execute(select(model).where(model.id == uuid.UUID(key))))
+                .scalars()
+                .first()
+            )
+        except (ValueError, AttributeError):
+            return None
+    return row
+
+
 async def resolve(db: AsyncSession, model: type, key: str):  # noqa: ANN201
     """Find a row by slug, or by UUID when `key` parses as one.
 

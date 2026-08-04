@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import String, Uuid
+from sqlalchemy import ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, CatalogMixin
@@ -19,6 +19,14 @@ class Author(CatalogMixin, Base):
     # Public URL segment — /author/thakazhi-sivasankara-pillai. Assigned once and
     # never recomputed; see slug_service for why.
     slug: Mapped[str | None] = mapped_column(String, default=None, unique=True, index=True)
+    # Set when this row was merged into another as a duplicate. The row is soft
+    # deleted too, but the pointer is what keeps its URL alive: resolution
+    # follows it and 301s to the survivor rather than 404ing, so a merge
+    # consolidates ranking instead of discarding it. Clearing this column undoes
+    # the merge (services/merge_service).
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("authors.id"), default=None, index=True
+    )
     # Cross-script search form of `name` — see Work.title_translit.
     name_translit: Mapped[str | None] = mapped_column(String, default=None)
     # Spelling-insensitive search skeleton — see Work.title_fold.
