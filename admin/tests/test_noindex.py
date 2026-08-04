@@ -44,7 +44,8 @@ def test_robots_txt_disallows_the_whole_host():
 
 def test_the_header_is_on_every_response_including_errors_and_404s():
     client = TestClient(_app())
-    for path, expected in [("/dashboard", 200), ("/robots.txt", 200), ("/boom", 403), ("/nope", 404)]:
+    cases = [("/dashboard", 200), ("/robots.txt", 200), ("/boom", 403), ("/nope", 404)]
+    for path, expected in cases:
         res = client.get(path)
         assert res.status_code == expected, path
         assert res.headers.get("X-Robots-Tag") == ROBOTS_HEADER, path
