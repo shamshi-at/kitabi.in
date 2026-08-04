@@ -921,6 +921,14 @@ throttles the edge itself).
 ## Phase A — The author page as a reference page
 
 Plan: [author-page-plan.md](author-page-plan.md) · Mockups: [author-mockups.html](author-mockups.html).
+
+> **Deferred — this is a future plan, not current work (owner decision, 4 Aug 2026).**
+> Designed in full so it can be picked up cold. Don't start A0 without saying so.
+> Nothing here decays: Wikidata isn't going anywhere, and the P648 match rate only
+> improves as the catalogue grows. **What comes first is W5** — genre classification
+> (still 0 works with a genre) and descriptions, which is what actually makes any of
+> these pages rank — plus Search Console submission and the edge→origin secret.
+
 Depends on W being live (it is). The live page already renders the four blocks we
 can compute — works, publishers, decade bar, stats. This phase adds the ones that
 need a *source*.
