@@ -42,6 +42,7 @@ from app.models.llm_usage import (
     LLM_FEATURES,
     LlmUsage,
 )
+from app.models.merge_dismissal import MergeDismissal
 from app.models.personal_tag import PersonalTag
 from app.models.profile import Profile
 from app.models.promotion import (
@@ -122,6 +123,7 @@ __all__ = [
     "SyncOp",
     "ConflictHistory",
     "WorkRevision",
+    "MergeDismissal",
     "LlmUsage",
     "LLM_FEATURES",
     "FEATURE_RECOMMENDATIONS",

@@ -345,3 +345,67 @@ async def test_an_unmerged_url_is_not_a_redirect(unauthenticated_client, db_sess
 async def test_unknown_keys_are_not_found_not_errors(unauthenticated_client, key):
     resp = await unauthenticated_client.get(f"/public/merged/author/{key}")
     assert resp.status_code == 404
+
+
+# --------------------------------------------------------------------------
+# Dismissals — what makes the review queue a queue rather than a list
+# --------------------------------------------------------------------------
+
+
+async def test_a_dismissed_pair_never_comes_back(db_sessionmaker):
+    """The matchers recompute from names on every run, so without recording the
+    rejection the reviewer is asked the same question forever."""
+    async with db_sessionmaker() as db:
+        a = await _author(db, "Perkins, John", works=3)
+        b = await _author(db, "John Perkins")
+        await db.commit()
+
+        assert await merge_service.find_candidates(db, "authors"), "expected a proposal first"
+
+        cand = (await merge_service.find_candidates(db, "authors"))[0]
+        loser_id = cand.losers[0][0]
+        await merge_service.dismiss(db, "authors", cand.survivor_id, loser_id)
+        await db.commit()
+
+        assert await merge_service.find_candidates(db, "authors") == []
+        assert a.id and b.id  # both rows still exist, untouched
+
+
+async def test_dismissal_is_symmetric(db_sessionmaker):
+    """ "A is not B" and "B is not A" are one fact, not two."""
+    async with db_sessionmaker() as db:
+        a = await _author(db, "Perkins, John", works=3)
+        b = await _author(db, "John Perkins")
+        await db.commit()
+        await merge_service.dismiss(db, "authors", b.id, a.id)  # reversed order
+        await db.commit()
+        assert await merge_service.find_candidates(db, "authors") == []
+
+
+async def test_dismissing_twice_is_not_an_error(db_sessionmaker):
+    """A reviewer double-clicking a button is not an exceptional condition."""
+    async with db_sessionmaker() as db:
+        a = await _author(db, "One")
+        b = await _author(db, "Two")
+        await db.commit()
+        assert await merge_service.dismiss(db, "authors", a.id, b.id) is True
+        await db.commit()
+        assert await merge_service.dismiss(db, "authors", a.id, b.id) is True
+        await db.commit()
+
+
+async def test_a_dismissal_does_not_block_an_unrelated_duplicate(db_sessionmaker):
+    async with db_sessionmaker() as db:
+        a = await _author(db, "Perkins, John", works=3)
+        b = await _author(db, "John Perkins")
+        await db.commit()
+        await merge_service.dismiss(db, "authors", a.id, b.id)
+        await db.commit()
+
+        await _author(db, "Someone Else", works=2)
+        await _author(db, "Someone Else")
+        await db.commit()
+
+        cands = await merge_service.find_candidates(db, "authors")
+    assert len(cands) == 1
+    assert cands[0].survivor_name == "Someone Else"

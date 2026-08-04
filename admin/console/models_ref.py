@@ -47,6 +47,7 @@ from app.models import (  # noqa: E402
     Review,
     Work,
     WorkRevision,
+    work_authors,
 )
 
 __all__ = [
@@ -84,4 +85,5 @@ __all__ = [
     "Promotion",
     "PromotionContent",
     "PromotionEvent",
+    "work_authors",
 ]

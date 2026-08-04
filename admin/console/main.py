@@ -22,6 +22,7 @@ from .routers import (
     claims,
     dashboard,
     edits,
+    merges,
     promotions,
     readers,
     reports,
@@ -44,6 +45,7 @@ async def _redirect(_: Request, exc: RedirectException) -> RedirectResponse:
 app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(claims.router)
+app.include_router(merges.router)
 app.include_router(edits.router)
 app.include_router(reports.router)
 app.include_router(promotions.router)

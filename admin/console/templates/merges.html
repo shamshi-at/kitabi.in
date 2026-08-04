@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Duplicate review · Kitabi Admin{% endblock %}
+{% block heading %}Duplicate review{% endblock %}
+{% block subheading %}{{ items | length }} awaiting a decision{% endblock %}
+{% block content %}
+
+{% if not items %}
+  <div class="card" style="text-align:center;padding:44px">
+    <div class="lbl">Nothing waiting</div>
+    <p style="margin-top:8px;color:var(--ink-soft);font-size:13px">
+      No duplicates to review. Identical names are folded automatically by a background job;
+      only the softer matches — different word order, different spelling — reach this queue.
+    </p>
+  </div>
+{% else %}
+  <div class="note" style="margin-bottom:16px">
+    Merging moves every book across and keeps the survivor's URL working — the merged row
+    <b>redirects</b> rather than disappearing, so nothing that already links to it breaks.
+    It is reversible. <b>Not the same</b> is remembered, so a pair you reject never comes back.
+  </div>
+{% endif %}
+
+<div class="stack">
+{% for it in items %}
+  <div class="mod">
+    <div class="hd">
+      <span class="pill pend">{{ it.reason }}</span>
+      <b>{{ it.survivor_name }}</b>
+      <span class="pill mute" style="margin-left:auto">{{ it.singular }}</span>
+    </div>
+    <div class="bd">
+
+      <div class="lbl">Keeps everything</div>
+      <div style="margin-top:6px;font-size:14px">
+        <b>{{ it.survivor_name }}</b>
+        <span class="m">· {{ it.survivor_count }} {{ 'book' if it.survivor_count == 1 else 'books' }}</span>
+      </div>
+
+      <div class="lbl" style="margin-top:16px">Proposed duplicates</div>
+      {% for l in it.losers %}
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+                    padding:11px 0;border-bottom:1px solid var(--line)">
+          <div style="flex:1;min-width:200px">
+            <b style="font-size:14px">{{ l.name }}</b>
+            <span class="m">· {{ l.count }} {{ 'book' if l.count == 1 else 'books' }}</span>
+          </div>
+          <form method="post"
+                action="/moderation/merges/{{ it.kind }}/{{ it.survivor_id }}/{{ l.id }}/merge"
+                style="display:inline">
+            <button class="btn" type="submit">Merge into “{{ it.survivor_name }}”</button>
+          </form>
+          <form method="post"
+                action="/moderation/merges/{{ it.kind }}/{{ it.survivor_id }}/{{ l.id }}/dismiss"
+                style="display:inline">
+            <button class="btn ghost" type="submit">Not the same</button>
+          </form>
+        </div>
+      {% endfor %}
+
+      {% if it.survivor_count == 0 %}
+      <div class="note warn" style="margin-top:12px">
+        The row proposed as the survivor carries no books itself. That is usually still correct —
+        it was picked on name completeness — but check it is the spelling you want to keep,
+        because it is the one that becomes the public page.
+      </div>
+      {% endif %}
+
+      <div class="note" style="margin-top:12px">
+        These matched on <b>{{ it.reason | lower }}</b>. That is a suspicion, not proof —
+        two different people can share a name, and merging them is worse than leaving the
+        duplicate because nobody notices afterwards.
+      </div>
+
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

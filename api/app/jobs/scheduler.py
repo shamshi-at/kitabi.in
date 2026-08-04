@@ -20,6 +20,7 @@ LOCK_KEEP_WARM = 1001
 LOCK_LENDING_REMINDER = 1002
 LOCK_BACKFILL_SLUGS = 1003
 LOCK_BACKFILL_COVERS = 1004
+LOCK_MERGE_EXACT = 1005
 
 
 @asynccontextmanager
@@ -43,6 +44,7 @@ def start() -> None:
     from app.jobs.backfill_covers import backfill_covers
     from app.jobs.backfill_slugs import backfill_slugs
     from app.jobs.keep_warm import keep_warm
+    from app.jobs.merge_exact import merge_exact_duplicates
 
     # Every 6 hours — comfortably under Supabase's 7-day idle-pause threshold.
     scheduler.add_job(keep_warm, "interval", hours=6, id="keep_warm", replace_existing=True)
@@ -73,6 +75,18 @@ def start() -> None:
         id="backfill_covers",
         replace_existing=True,
         next_run_time=datetime.now(UTC) + timedelta(minutes=2),
+    )
+    # Hourly. The catalogue keeps growing — the ETL and OpenLibrary's
+    # cache-on-first-use both create authors, and they create duplicates the
+    # same way they did the first time. Only exact-name clusters are folded;
+    # everything softer waits in the console queue for a human.
+    scheduler.add_job(
+        merge_exact_duplicates,
+        "interval",
+        hours=1,
+        id="merge_exact",
+        replace_existing=True,
+        next_run_time=datetime.now(UTC) + timedelta(minutes=3),
     )
     scheduler.start()
 

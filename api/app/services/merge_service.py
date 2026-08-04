@@ -32,7 +32,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Author, Edition, Publisher
+from app.models import Author, Edition, MergeDismissal, Publisher
 from app.models.work import work_authors
 from app.services.search_rank import normalize
 
@@ -124,6 +124,7 @@ async def find_candidates(db: AsyncSession, kind: str) -> list[Candidate]:
         .all()
     )
     counts = await _counts(db, kind, [r.id for r in rows])
+    dismissed = await _dismissed_pairs(db, kind)
 
     seen: set[uuid.UUID] = set()
     out: list[Candidate] = []
@@ -146,8 +147,16 @@ async def find_candidates(db: AsyncSession, kind: str) -> list[Candidate]:
             if len(group) < 2:
                 continue
             survivor = pick_survivor(group, counts)
-            losers = [r for r in group if r.id is not survivor.id and r.id != survivor.id]
+            losers = [
+                r
+                for r in group
+                if r.id != survivor.id and _pair(survivor.id, r.id) not in dismissed
+            ]
             if not losers:
+                # Every pairing here has already been rejected by a human. Mark
+                # the whole group seen so a weaker matcher does not re-offer it.
+                for r in group:
+                    seen.add(r.id)
                 continue
             for r in group:
                 seen.add(r.id)
@@ -282,6 +291,51 @@ async def auto_merge_exact(db: AsyncSession, kind: str, *, limit: int = 200) -> 
     if merged:
         await db.commit()
     return merged
+
+
+def _pair(a: uuid.UUID, b: uuid.UUID) -> tuple[uuid.UUID, uuid.UUID]:
+    """Ordered, so "A is not B" and "B is not A" are one fact."""
+    return (a, b) if str(a) < str(b) else (b, a)
+
+
+async def _dismissed_pairs(db: AsyncSession, kind: str) -> set:
+    rows = (
+        await db.execute(
+            select(MergeDismissal.left_id, MergeDismissal.right_id).where(
+                MergeDismissal.kind == kind
+            )
+        )
+    ).all()
+    return {(left, right) for left, right in rows}
+
+
+async def dismiss(
+    db: AsyncSession, kind: str, a_id: uuid.UUID, b_id: uuid.UUID, by: uuid.UUID | None = None
+) -> bool:
+    """Record that two rows are NOT the same entity, so the queue can empty.
+
+    Idempotent: dismissing the same pair twice is a no-op rather than an error,
+    because a reviewer double-clicking a button is not an exceptional condition.
+    """
+    if a_id == b_id:
+        return False
+    left, right = _pair(a_id, b_id)
+    existing = (
+        await db.execute(
+            select(MergeDismissal.id).where(
+                MergeDismissal.kind == kind,
+                MergeDismissal.left_id == left,
+                MergeDismissal.right_id == right,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return True
+    db.add(
+        MergeDismissal(id=uuid.uuid4(), kind=kind, left_id=left, right_id=right, dismissed_by=by)
+    )
+    await db.flush()
+    return True
 
 
 async def resolve_merged(db: AsyncSession, kind: str, row) -> object | None:  # noqa: ANN001

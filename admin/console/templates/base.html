@@ -26,6 +26,7 @@
     {{ navlink('/moderation/claims', 'Author claims', 'claims', badges.claims) }}
     {{ navlink('/moderation/edits', 'Suggested edits', 'edits', badges.revisions) }}
     {{ navlink('/moderation/reports', 'Reported content', 'reports', badges.reports) }}
+    {{ navlink('/moderation/merges', 'Duplicate review', 'merges', badges.merges) }}
     {% if admin.role in ['editor', 'super_admin'] %}
     {# Editor and above: a moderator handles reports; publishing to every
        reader's Home is an editor's job. #}

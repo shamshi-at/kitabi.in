@@ -77,16 +77,32 @@ async def live_promotions(db: AsyncSession) -> int:
     )
 
 
+async def pending_merges(db: AsyncSession) -> int:
+    """Duplicate clusters awaiting a human. Computed from names rather than
+    stored, so this is a real query rather than a counter — cheap at this scale
+    (a few thousand rows) and it can never drift from what the queue shows."""
+    from app.services import merge_service
+
+    total = 0
+    for kind in ("authors", "publishers"):
+        total += sum(
+            1 for c in await merge_service.find_candidates(db, kind) if not c.auto_mergeable
+        )
+    return total
+
+
 async def nav_badges(db: AsyncSession) -> dict:
     claims = await pending_claims(db)
     revisions = await pending_revisions(db)
     reports = await open_reports(db)
+    merges = await pending_merges(db)
     return {
         "claims": claims,
         "revisions": revisions,
         "reports": reports,
+        "merges": merges,
         "promotions_live": await live_promotions(db),
-        "waiting_total": claims + revisions + reports,
+        "waiting_total": claims + revisions + reports + merges,
     }
 
 
