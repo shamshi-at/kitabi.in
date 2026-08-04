@@ -350,3 +350,39 @@ async def test_reader_lookup_is_case_insensitive(db_sessionmaker):
         )
         await db.commit()
         assert await public_service.reader_page(db, "Arundhati") is not None
+
+
+async def test_batch_lookup_is_one_query_not_one_per_key(db_sessionmaker):
+    """The endpoint exists to avoid N+1; the first version had one inside it.
+    Resolving 55 slugs one at a time took 8.0s in production — right at the edge
+    renderer's timeout, so /lists intermittently rendered as if no list existed.
+
+    Counts statements rather than asserting on wall-clock, which would be flaky.
+    """
+    from sqlalchemy import event
+
+    async with db_sessionmaker() as db:
+        works = []
+        for i in range(12):
+            w = Work(title=f"Book {i}", slug=f"book-{i}")
+            db.add(w)
+            works.append(w)
+        await db.commit()
+
+        statements: list[str] = []
+        sync_engine = db.bind.sync_engine
+
+        def record(conn, cursor, statement, *args):  # noqa: ANN001
+            if statement.lstrip().upper().startswith("SELECT"):
+                statements.append(statement)
+
+        event.listen(sync_engine, "before_cursor_execute", record)
+        try:
+            cards = await public_service.works_by_keys(db, [f"book-{i}" for i in range(12)])
+        finally:
+            event.remove(sync_engine, "before_cursor_execute", record)
+
+    assert len(cards) == 12
+    # One for the works, plus the eager-loaded relations and the batched rating
+    # counts. The point is that it does NOT scale with the number of keys.
+    assert len(statements) < 8, f"{len(statements)} SELECTs for 12 keys:\n" + "\n".join(statements)

@@ -758,11 +758,40 @@ async def works_by_keys(db: AsyncSession, keys: list[str]) -> list[P.WorkCard]:
     Keys that don't resolve are skipped rather than erroring — a list must not
     break because one book was merged away.
     """
-    found: list[Work] = []
-    for key in keys[:60]:
-        work = await resolve(db, Work, key)
-        if work is not None:
-            found.append(work)
+    keys = keys[:60]
+    if not keys:
+        return []
+
+    # ONE query for the whole set, not one per key. The first version resolved
+    # each key separately, which meant 55 sequential round trips to the database
+    # for a ten-list index page — 8.0s measured, right at the edge renderer's
+    # timeout, so /lists intermittently rendered as if no list existed. An N+1
+    # inside the endpoint whose entire purpose is to avoid N+1.
+    ids: list[uuid.UUID] = []
+    for key in keys:
+        try:
+            ids.append(uuid.UUID(key))
+        except (ValueError, AttributeError):
+            pass
+
+    match = Work.slug.in_(keys)
+    if ids:
+        match = or_(match, Work.id.in_(ids))
+    rows = list(
+        (await db.execute(_with_relations(select(Work)).where(match, Work.deleted_at.is_(None))))
+        .scalars()
+        .unique()
+        .all()
+    )
+
+    # Return them in the order asked for — a list is a curated sequence, and the
+    # database has no opinion about it.
+    by_key: dict[str, Work] = {}
+    for row in rows:
+        if row.slug:
+            by_key[row.slug] = row
+        by_key[str(row.id)] = row
+    found = [by_key[k] for k in keys if k in by_key]
     return await _cards(db, found)
 
 
