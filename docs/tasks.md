@@ -884,6 +884,18 @@ the catalogue-depth work in W5 — which is what actually makes it rank.
       the list: it flips 300 works past the content floor and gives each a real meta description
 - [x] `/reader/<username>` public profiles (both visibility flags honoured; a private profile has no page at all)
 
+- [ ] **Unblock AI crawlers in the Cloudflare dashboard** (owner action — needs
+      zone access, which no token here has). Cloudflare prepends a managed block to
+      robots.txt disallowing GPTBot, ClaudeBot, CCBot, Google-Extended, Bytespider,
+      meta-externalagent, Amazonbot and Applebot-Extended, plus
+      `Content-Signal: ai-train=no`. It is **advisory, not enforced** — those user
+      agents still get a full 200 — but well-behaved crawlers obey it, so ChatGPT,
+      Claude and Perplexity will not surface Kitabi. It cannot be overridden from
+      `landing-page/robots.txt`: a specific User-agent group beats `*`. Worth
+      distinguishing crawlers that TRAIN (GPTBot, CCBot, Google-Extended) from those
+      that FETCH to answer with attribution (OAI-SearchBot, PerplexityBot, ClaudeBot)
+      — allowing the second while restricting the first is a coherent position
+
 ### W6 — `[LATER]`
 
 - [ ] `/ml/` Malayalam UI + `hreflang`

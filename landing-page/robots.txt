@@ -1,3 +1,30 @@
+# Kitabi is a public reference site. Everything here is meant to be found —
+# by search engines and by AI answer engines alike. Nothing is disallowed.
+#
+# ⚠️ THIS FILE IS NOT THE WHOLE STORY. Cloudflare PREPENDS a managed block to it
+# (look for "BEGIN Cloudflare Managed content" in the served response), and that
+# block disallows GPTBot, ClaudeBot, CCBot, Google-Extended, Bytespider,
+# meta-externalagent, Amazonbot and Applebot-Extended, and sets
+# Content-Signal: ai-train=no.
+#
+# Those directives CANNOT be overridden from here: in robots.txt a specific
+# User-agent group wins over "*", so the managed block decides for every crawler
+# it names regardless of what this file says. Changing it is a Cloudflare
+# dashboard setting on the kitabi.in zone.
+#
+# The block is advisory, not enforced — verified 4 Aug 2026: requests with those
+# user agents still receive a full 200. Well-behaved crawlers obey it anyway,
+# which is exactly why it is effective.
+#
+# Worth deciding deliberately rather than inheriting: a reference site whose
+# value is content nobody else has wants to be citable by AI answer engines,
+# because that is a real and growing discovery channel. The distinction worth
+# keeping in mind is between crawlers that TRAIN on content (GPTBot, CCBot,
+# Google-Extended) and those that FETCH it to answer a question with attribution
+# (OAI-SearchBot, PerplexityBot, ClaudeBot). Allowing the second while
+# restricting the first is a coherent position; blocking both by default was not
+# a choice anyone here made.
+
 User-agent: *
 Allow: /
 
