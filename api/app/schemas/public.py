@@ -236,6 +236,9 @@ class SearchPage(BaseModel):
     total: int = 0
     # The cross-script party trick, made visible: "also matched ചെമ്മീൻ".
     matched_scripts: list[str] = []
+    # Which sections to render, best-matching group first. Searching a
+    # publisher's exact name should lead with publishers, not with books.
+    order: list[str] = ["book", "author", "publisher"]
 
 
 class BrowsePage(BaseModel):

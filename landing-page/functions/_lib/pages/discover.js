@@ -51,55 +51,62 @@ export function renderSearch(data) {
   const q = data.q || '';
   const total = (data.works?.length || 0) + (data.authors?.length || 0) + (data.publishers?.length || 0);
 
+  // Sections render in the order the API ranked them: the group holding the
+  // single best match leads. Searching a publisher's exact name should not open
+  // with books that merely share a word with it.
+  const sections = {
+    book: () =>
+      data.works?.length
+        ? html`<div class="sgroup">
+            <div class="sgh"><h2>Books</h2><span class="ct">${data.works.length}</span></div>
+            ${data.works.map(
+              (w) => html`<a class="srow" href="${bookPath(w)}">
+                <span class="cvw">${cover(w, { width: 52 })}</span>
+                <span class="si">
+                  <span class="st">${w.title}</span>
+                  <span class="sa"
+                    >${joinDot([
+                      (w.authors || []).map((a) => a.name).join(', '),
+                      w.language,
+                      w.form,
+                      w.year,
+                    ])}</span
+                  >
+                  ${w.rating ? html`<span class="sm"><span>★ ${w.rating.toFixed(1)}</span></span>` : ''}
+                </span>
+              </a>`,
+            )}
+          </div>`
+        : '',
+    author: () =>
+      data.authors?.length
+        ? html`<div class="sgroup">
+            <div class="sgh"><h2>Authors</h2><span class="ct">${data.authors.length}</span></div>
+            ${data.authors.map(
+              (a) => html`<a class="srow" href="${authorPath(a)}">
+                ${avatar(a)}
+                <span class="si"><span class="st">${a.name}</span><span class="sa">Author</span></span>
+              </a>`,
+            )}
+          </div>`
+        : '',
+    publisher: () =>
+      data.publishers?.length
+        ? html`<div class="sgroup">
+            <div class="sgh"><h2>Publishers</h2><span class="ct">${data.publishers.length}</span></div>
+            ${data.publishers.map(
+              (p) => html`<a class="srow" href="${publisherPath(p)}">
+                ${avatar(p)}
+                <span class="si"><span class="st">${p.name}</span><span class="sa">Publisher</span></span>
+              </a>`,
+            )}
+          </div>`
+        : '',
+  };
+
+  const order = (data.order || ['book', 'author', 'publisher']).filter((k) => sections[k]);
   const results = total
-    ? html`
-        ${data.works?.length
-          ? html`<div class="sgroup">
-              <div class="sgh"><h2>Books</h2><span class="ct">${data.works.length}</span></div>
-              ${data.works.map(
-                (w) => html`<a class="srow" href="${bookPath(w)}">
-                  <span class="cvw">${cover(w, { width: 52 })}</span>
-                  <span class="si">
-                    <span class="st">${w.title}</span>
-                    <span class="sa"
-                      >${joinDot([
-                        (w.authors || []).map((a) => a.name).join(', '),
-                        w.language,
-                        w.form,
-                        w.year,
-                      ])}</span
-                    >
-                    ${w.rating
-                      ? html`<span class="sm"><span>★ ${w.rating.toFixed(1)}</span></span>`
-                      : ''}
-                  </span>
-                </a>`,
-              )}
-            </div>`
-          : ''}
-        ${data.authors?.length
-          ? html`<div class="sgroup">
-              <div class="sgh"><h2>Authors</h2><span class="ct">${data.authors.length}</span></div>
-              ${data.authors.map(
-                (a) => html`<a class="srow" href="${authorPath(a)}">
-                  ${avatar(a)}
-                  <span class="si"><span class="st">${a.name}</span></span>
-                </a>`,
-              )}
-            </div>`
-          : ''}
-        ${data.publishers?.length
-          ? html`<div class="sgroup">
-              <div class="sgh"><h2>Publishers</h2><span class="ct">${data.publishers.length}</span></div>
-              ${data.publishers.map(
-                (p) => html`<a class="srow" href="${publisherPath(p)}">
-                  ${avatar(p)}
-                  <span class="si"><span class="st">${p.name}</span></span>
-                </a>`,
-              )}
-            </div>`
-          : ''}
-      `
+    ? html`${order.map((k) => sections[k]())}`
     : html`<div class="thin">
         <div class="fl">❦</div>
         <h2>Nothing for “${q}”</h2>

@@ -28,7 +28,15 @@ from app.models import (
 )
 from app.models.work import work_authors, work_genres
 from app.schemas import public as P
-from app.services import catalog_service, review_service, scoring_service, slug_service
+from app.services import (
+    catalog_service,
+    review_service,
+    scoring_service,
+    search_rank,
+    slug_service,
+)
+from app.services.translit import fold as fold_of
+from app.services.translit import transliterate as translit_of
 
 # --------------------------------------------------------------------------
 # The content floor (docs/web-platform-plan.md §8.3)
@@ -639,23 +647,69 @@ async def browse_page(
 
 
 async def search_page(db: AsyncSession, q: str, limit: int = 20) -> P.SearchPage:
-    works = (await catalog_service.search_local(db, q))[:limit]
-    authors = await catalog_service.search_authors(db, q, limit=8)
-    publishers = await catalog_service.search_publishers(db, q, limit=8)
+    """Full search results, grouped by type and ranked by the same scorer the
+    typeahead uses.
 
-    # Surface the cross-script hit: when the query is Latin but a matched title
-    # isn't, the reader typed "chemmeen" and got ചെമ്മീൻ — worth saying out loud,
-    # since it's the thing that makes this search feel different.
+    The groups stay (a results page reads better sectioned than interleaved)
+    but they are ORDERED BY THEIR BEST MATCH rather than always books-first, and
+    each group is sorted by relevance. Searching a publisher's exact name should
+    lead with publishers.
+    """
+    scored = await _candidates(db, q, per_type=limit)
+    ranked = search_rank.rank(scored, limit * 3)
+
+    by_kind: dict[str, list[dict]] = {"book": [], "author": [], "publisher": []}
+    for item in ranked:
+        by_kind[item["kind"]].append(item)
+
+    ids = {
+        "book": [i["id"] for i in by_kind["book"]],
+        "author": [i["id"] for i in by_kind["author"]],
+        "publisher": [i["id"] for i in by_kind["publisher"]],
+    }
+    work_rows = {w.id: w for w in await _works_by_ids(db, ids["book"])}
+    works = [work_rows[i] for i in ids["book"] if i in work_rows]
+
+    # Surface the cross-script hit: the reader typed Latin and got a native
+    # script back. Worth saying out loud — it is what makes this search
+    # different from everyone else's.
     matched = [w.title for w in works if not w.title.isascii()][:3] if q.isascii() else []
 
     return P.SearchPage(
         q=q,
         works=await _cards(db, works),
-        authors=[_ref(a) for a in authors],
-        publishers=[_ref(p) for p in publishers],
-        total=len(works),
+        authors=[
+            P.Ref(id=i["id"], name=i["label"], slug=i["slug"], image_url=i.get("image_url"))
+            for i in by_kind["author"]
+        ],
+        publishers=[
+            P.Ref(id=i["id"], name=i["label"], slug=i["slug"]) for i in by_kind["publisher"]
+        ],
+        total=len(ranked),
         matched_scripts=matched,
+        # Which section leads. The group holding the single best result goes
+        # first; ties keep books above authors above publishers.
+        order=[
+            k
+            for k, _ in sorted(
+                ((k, max((i["score"] for i in v), default=0.0)) for k, v in by_kind.items()),
+                key=lambda kv: (-kv[1], {"book": 0, "author": 1, "publisher": 2}[kv[0]]),
+            )
+            if by_kind[k]
+        ],
     )
+
+
+async def _works_by_ids(db: AsyncSession, ids: list) -> list[Work]:
+    if not ids:
+        return []
+    rows = (
+        (await db.execute(_with_relations(select(Work)).where(Work.id.in_(ids))))
+        .scalars()
+        .unique()
+        .all()
+    )
+    return list(rows)
 
 
 async def translation_group_page(db: AsyncSession, key: str) -> P.TranslationGroupPage | None:
@@ -908,45 +962,137 @@ async def people_page(
     )
 
 
-async def suggest(db: AsyncSession, q: str, limit: int = 8) -> P.SuggestPage:
-    """Typeahead. Kept deliberately small and cheap — it runs on a keystroke.
+async def _candidates(db: AsyncSession, q: str, per_type: int = 12) -> list[dict]:
+    """Pull the best candidates of each type, then describe them uniformly so
+    one scorer can order them together.
 
-    Reuses the same cross-script matching as full search, so typing "chemmeen"
-    suggests ചെമ്മീൻ. That is the moment worth having in a suggestion list.
+    Each type is fetched with its own index-served fuzzy query — those are good
+    at *finding* — and relevance across types is decided afterwards by
+    `search_rank`, which is good at *ordering*. Conflating the two jobs is what
+    produced a list with an exact publisher match sitting fifth.
     """
-    works = (await catalog_service.search_local(db, q))[:limit]
-    out: list[P.Suggestion] = [
-        P.Suggestion(
-            kind="book",
-            label=w.title,
-            sub=", ".join(a.pen_name or a.name for a in w.authors) or None,
-            href=f"/book/{w.slug or w.id}",
+    qt, qf = translit_of(q), fold_of(q)
+    works = (await catalog_service.search_local(db, q))[:per_type]
+    authors = await catalog_service.search_authors(db, q, limit=per_type)
+    publishers = await catalog_service.search_publishers(db, q, limit=per_type)
+
+    author_counts = await _work_counts_for_authors(db, [a.id for a in authors])
+    publisher_counts = await _edition_counts_for_publishers(db, [p.id for p in publishers])
+
+    out: list[dict] = []
+    for w in works:
+        out.append(
+            {
+                "kind": "book",
+                "id": w.id,
+                "slug": w.slug,
+                "label": w.title,
+                "sub": ", ".join(a.pen_name or a.name for a in w.authors) or None,
+                "href": f"/book/{w.slug or w.id}",
+                "score": search_rank.score(
+                    q,
+                    label=w.title,
+                    translit=w.title_translit,
+                    fold=w.title_fold,
+                    query_translit=qt,
+                    query_fold=qf,
+                    popularity=len(w.editions or []),
+                    popularity_ceiling=10,
+                ),
+                # Books first on an exact tie: most searches here are for books.
+                "tie": 0,
+            }
         )
-        for w in works
-    ]
-    remaining = limit - len(out)
-    if remaining > 0:
-        for a in await catalog_service.search_authors(db, q, limit=remaining):
-            out.append(
-                P.Suggestion(
-                    kind="author",
-                    label=a.pen_name or a.name,
-                    sub="Author",
-                    href=f"/author/{a.slug or a.id}",
-                )
-            )
-    remaining = limit - len(out)
-    if remaining > 0:
-        for p in await catalog_service.search_publishers(db, q, limit=remaining):
-            out.append(
-                P.Suggestion(
-                    kind="publisher",
+    for a in authors:
+        name = a.pen_name or a.name
+        out.append(
+            {
+                "kind": "author",
+                "id": a.id,
+                "slug": a.slug,
+                "image_url": a.image_url,
+                "label": name,
+                "sub": "Author",
+                "href": f"/author/{a.slug or a.id}",
+                "score": search_rank.score(
+                    q,
+                    label=name,
+                    translit=a.name_translit,
+                    fold=a.name_fold,
+                    query_translit=qt,
+                    query_fold=qf,
+                    popularity=author_counts.get(a.id, 0),
+                    popularity_ceiling=40,
+                ),
+                "tie": 1,
+            }
+        )
+    for p in publishers:
+        out.append(
+            {
+                "kind": "publisher",
+                "id": p.id,
+                "slug": p.slug,
+                "label": p.name,
+                "sub": "Publisher",
+                "href": f"/publisher/{p.slug or p.id}",
+                "score": search_rank.score(
+                    q,
                     label=p.name,
-                    sub="Publisher",
-                    href=f"/publisher/{p.slug or p.id}",
-                )
-            )
-    return P.SuggestPage(q=q, suggestions=out[:limit])
+                    translit=p.name_translit,
+                    fold=p.name_fold,
+                    query_translit=qt,
+                    query_fold=qf,
+                    popularity=publisher_counts.get(p.id, 0),
+                    popularity_ceiling=200,
+                ),
+                "tie": 2,
+            }
+        )
+    return out
+
+
+async def _work_counts_for_authors(db: AsyncSession, ids: list) -> dict:
+    if not ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(work_authors.c.author_id, func.count(work_authors.c.work_id))
+            .where(work_authors.c.author_id.in_(ids))
+            .group_by(work_authors.c.author_id)
+        )
+    ).all()
+    return dict(rows)
+
+
+async def _edition_counts_for_publishers(db: AsyncSession, ids: list) -> dict:
+    if not ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(Edition.publisher_id, func.count(Edition.id))
+            .where(Edition.publisher_id.in_(ids), Edition.deleted_at.is_(None))
+            .group_by(Edition.publisher_id)
+        )
+    ).all()
+    return dict(rows)
+
+
+async def suggest(db: AsyncSession, q: str, limit: int = 8) -> P.SuggestPage:
+    """Typeahead, ranked across all three types together.
+
+    Cross-script matching carries through, so a Latin query surfaces a
+    native-script title — and now ranks it properly rather than merely
+    including it somewhere in the list.
+    """
+    ranked = search_rank.rank(await _candidates(db, q), limit)
+    return P.SuggestPage(
+        q=q,
+        suggestions=[
+            P.Suggestion(kind=i["kind"], label=i["label"], sub=i["sub"], href=i["href"])
+            for i in ranked
+        ],
+    )
 
 
 async def indexable_ids(db: AsyncSession, kind: str, ids: list[uuid.UUID]) -> set[uuid.UUID] | None:
