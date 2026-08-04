@@ -755,6 +755,21 @@ cost, never secrecy.
       global breaker tripping, so the first sign isn't the invoice
 - [ ] Edge→origin shared secret on `/public/*` (blocked on W1 — meaningless until the
       browser stops calling the API directly)
+- [x] **Unblock the AI crawlers** (4 Aug 2026) — Cloudflare's "Managed robots.txt" setting
+      prepended a block disallowing GPTBot, ClaudeBot, CCBot, Google-Extended, Bytespider,
+      meta-externalagent, Amazonbot and Applebot-Extended, plus `Content-Signal: ai-train=no`.
+      It could not be overridden from our own file (a named `User-agent` group beats `*`).
+      Turned off in **AI Crawl Control → Overview**; verified in the served response — no
+      managed block, no `Disallow`, no `Content-Signal`. A reference site whose value is
+      content nobody else has *wants* to be citable by answer engines
+- [ ] **`robots.txt` + `noindex` on `admin.kitabi.in` and `api.kitabi.in`** — both currently
+      404 on `/robots.txt` and the admin sign-in page carries no `noindex`, so the console is
+      crawlable and indexable. Found 4 Aug 2026 while checking AI Crawl Control, which showed
+      `admin.kitabi.in/graphql/console` as the single most-crawled path in the zone (a scanner
+      probing for a GraphQL console that doesn't exist — it 404s correctly, nothing exposed).
+      An admin login in a search index is an invitation to credential stuffing and gains
+      nothing. Wants `Disallow: /` on both hosts plus `X-Robots-Tag: noindex, nofollow` on
+      every admin response
 
 ## Phase W — Public web platform (kitabi.in as a book reference site)
 

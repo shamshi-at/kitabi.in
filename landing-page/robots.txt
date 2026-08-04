@@ -1,29 +1,33 @@
 # Kitabi is a public reference site. Everything here is meant to be found —
 # by search engines and by AI answer engines alike. Nothing is disallowed.
 #
-# ⚠️ THIS FILE IS NOT THE WHOLE STORY. Cloudflare PREPENDS a managed block to it
-# (look for "BEGIN Cloudflare Managed content" in the served response), and that
-# block disallows GPTBot, ClaudeBot, CCBot, Google-Extended, Bytespider,
-# meta-externalagent, Amazonbot and Applebot-Extended, and sets
-# Content-Signal: ai-train=no.
+# This file used to be only half the story: Cloudflare's "Managed robots.txt"
+# setting PREPENDED a block that disallowed GPTBot, ClaudeBot, CCBot,
+# Google-Extended, Bytespider, meta-externalagent, Amazonbot and
+# Applebot-Extended, and set Content-Signal: ai-train=no. It could not be
+# overridden from here — in robots.txt a named User-agent group beats "*", so
+# the managed block decided for every crawler it named regardless of what this
+# file said.
 #
-# Those directives CANNOT be overridden from here: in robots.txt a specific
-# User-agent group wins over "*", so the managed block decides for every crawler
-# it names regardless of what this file says. Changing it is a Cloudflare
-# dashboard setting on the kitabi.in zone.
+# That setting was turned OFF on the kitabi.in zone (AI Crawl Control →
+# Overview) on 4 Aug 2026, deliberately. Verified in the served response: no
+# managed block, no Disallow, no Content-Signal. This file is now the whole
+# story again.
 #
-# The block is advisory, not enforced — verified 4 Aug 2026: requests with those
-# user agents still receive a full 200. Well-behaved crawlers obey it anyway,
-# which is exactly why it is effective.
-#
-# Worth deciding deliberately rather than inheriting: a reference site whose
-# value is content nobody else has wants to be citable by AI answer engines,
-# because that is a real and growing discovery channel. The distinction worth
-# keeping in mind is between crawlers that TRAIN on content (GPTBot, CCBot,
+# The reasoning, so nobody re-enables it by reflex: a reference site whose value
+# is content nobody else has WANTS to be citable by AI answer engines, because
+# that is a real and growing discovery channel. The distinction worth keeping in
+# mind is between crawlers that TRAIN on content (GPTBot, CCBot,
 # Google-Extended) and those that FETCH it to answer a question with attribution
-# (OAI-SearchBot, PerplexityBot, ClaudeBot). Allowing the second while
-# restricting the first is a coherent position; blocking both by default was not
-# a choice anyone here made.
+# (OAI-SearchBot, PerplexityBot, ClaudeBot, Claude-SearchBot). Blocking the
+# first while allowing the second is a coherent position worth revisiting; what
+# was happening before was blocking both by inheritance, which nobody chose.
+#
+# Note this file governs kitabi.in ONLY — robots.txt is per-host. As of 4 Aug
+# 2026 admin.kitabi.in and api.kitabi.in serve no robots.txt at all (both 404)
+# and the admin sign-in page carries no noindex, so the console is crawlable and
+# indexable. It shouldn't be: an admin login in a search index is an invitation
+# to credential stuffing and gains nothing. Tracked in docs/tasks.md Phase S.
 
 User-agent: *
 Allow: /
