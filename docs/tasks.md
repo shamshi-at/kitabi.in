@@ -787,11 +787,22 @@ the catalogue-depth work in W5 — which is what actually makes it rank.
       is simply the wrong gate for a public page
 - [x] Totals on browse (as a `total` field on the page payload) — `GET /catalog/browse/works` (no totals today → no "1–40 of 312",
       no finite pagination for crawlers)
-- [ ] Self-host the fonts — Fraunces + Inter variable woff2, latin subset, preloaded;
-      Noto Sans Malayalam behind `unicode-range` so English pages never fetch it.
-      Drops two third-party origins from the critical path (~300–500 ms on mobile)
-- [ ] Cover proxy `/img/c/<id>` — fetch once, 30-day immutable edge cache; backfill hot
-      covers into the **existing Supabase `covers` bucket** (no second store, rule 8)
+- [x] **Self-hosted fonts** (4 Aug 2026) — Fraunces + Inter variable woff2 in
+      `landing-page/fonts/`, latin + latin-ext behind `unicode-range`, `font-display:swap`,
+      the two latin faces preloaded, cached immutable for a year. Verified live:
+      `font/woff2`, zero references to fonts.googleapis/gstatic on any page.
+      **Indic families deliberately NOT bundled** — 14 languages would be ~500 KB and
+      every current platform ships Indic system fonts (native titles render correctly on
+      the deployed hubs). Reasoning in `landing-page/fonts/README.md`
+- [x] **Cover proxy** (4 Aug 2026) — `/img/c?u=…`, fetch once, year-long immutable edge
+      cache, served from our origin. **The allowlist is the security model**: only
+      covers.openlibrary.org and our Supabase bucket, https only, no credentials, no
+      non-standard ports, response content-type must be an image, refusals before any
+      fetch. Probed against the real runtime — every disallowed host returns 400,
+      including the suffix attack. A cover from an unexpected host passes through
+      unproxied rather than breaking
+- [ ] Backfill hot covers into the **existing Supabase `covers` bucket** so the origin is
+      ours as well as the cache (no second store, rule 8)
 - [ ] `POST /internal/purge` → Cloudflare cache purge by URL, fired on catalog writes
 
 ### W1 — Server-render the three pages that already exist
