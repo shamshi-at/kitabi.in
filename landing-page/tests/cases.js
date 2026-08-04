@@ -462,6 +462,11 @@ assertExcludes(listDoc, 'This book was merged away',
   'an entry whose book no longer resolves is skipped, not rendered broken');
 assertIncludes(listDoc, 'content="index, follow"', 'editorial lists are indexable');
 
+// An index with no lists ready is a real page, not a broken one. The lists are
+// written ahead of the catalogue deliberately and switch on as books arrive.
+var emptyIndex = String(renderListIndex([]).text());
+assertIncludes(emptyIndex, "Editors' lists", 'the list index renders even with nothing ready');
+
 var reviewsDoc = String(
   renderReviews({ work: { id: 'w', slug: 'chemmeen', title: 'Chemmeen', authors: [] },
     rating: { average: 4.4, count: 312, distribution: { '5': 193, '4': 81 } },

@@ -126,6 +126,13 @@ export function serveReviews(context, key, render) {
  * The list is content (_lib/lists.js); only the book data comes from the API,
  * fetched as ONE batch call for the whole list rather than one per entry.
  */
+// A list needs at least this many of its books actually in the catalogue to be
+// a page. Below it, the page is a title and an intro over nothing — which is
+// worse than not having the list, and is exactly the thin content the whole
+// indexation strategy exists to avoid. The lists are written ahead of the
+// catalogue on purpose; they switch on by themselves as the books arrive.
+const MIN_LIST_ENTRIES = 3;
+
 export function serveList(context, slug) {
   const list = LIST_BY_SLUG.get(slug);
   if (!list) return Promise.resolve(notFound({ what: 'list' }));
@@ -134,12 +141,29 @@ export function serveList(context, slug) {
     for (const entry of list.entries) params.append('slug', entry.slug);
     const { data } = await fetchPage(`/public/works?${params.toString()}`);
     if (!data) return unavailable();
+    if (data.length < MIN_LIST_ENTRIES) return notFound({ what: 'list' });
     return renderList(list, data);
   });
 }
 
+/**
+ * /lists — only the lists that actually render.
+ *
+ * Resolves every list's books in ONE batch call and hides the ones that would
+ * land on a 404. Linking to a page you know is empty is a worse failure than
+ * the empty page itself.
+ */
 export function serveListIndex(context) {
-  return cached(context, () => Promise.resolve(renderListIndex(LISTS)));
+  return cached(context, async () => {
+    const params = new URLSearchParams();
+    for (const list of LISTS) for (const entry of list.entries) params.append('slug', entry.slug);
+    const { data } = await fetchPage(`/public/works?${params.toString()}`);
+    const available = new Set((data || []).map((w) => w.slug).filter(Boolean));
+    const ready = LISTS.filter(
+      (l) => l.entries.filter((e) => available.has(e.slug)).length >= MIN_LIST_ENTRIES,
+    );
+    return renderListIndex(ready);
+  });
 }
 
 /**
