@@ -84,9 +84,19 @@ docker build -t kitabi-api .                        # MUST always build (rule 9)
   applied migration.
 - Verify `upgrade` **and** `downgrade` on a scratch DB before deploy.
 - Production migrations run automatically on deploy — the Docker `CMD` runs
-  `alembic upgrade head` before uvicorn boots. Because the active `.env`
-  `DATABASE_URL` can point at prod, run migrations against prod **deliberately**,
-  not casually.
+  `alembic upgrade head` before uvicorn boots.
+- The active `.env` `DATABASE_URL` points at **prod**, so `alembic/env.py`
+  refuses any non-local host unless `ALLOW_PROD_MIGRATION=1` is set. Migrate the
+  dev DB by passing its URL explicitly:
+
+  ```bash
+  DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:55442/kitabi \
+    .venv/bin/alembic upgrade head
+  ```
+
+  The container opts past the guard via `ENV ALLOW_PROD_MIGRATION=1` in
+  `api/Dockerfile` — **do not remove that line**, or the boot migration is
+  refused and Railway restart-loops production.
 
 ### Deploy
 

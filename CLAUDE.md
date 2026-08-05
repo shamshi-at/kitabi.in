@@ -121,7 +121,10 @@ docker compose up -d db                  # local Postgres (port 55442)
 .venv/bin/pytest                         # tests (starts kitabi-test-pg container)
 .venv/bin/ruff check . && .venv/bin/black --check .   # lint
 .venv/bin/alembic revision --autogenerate -m ""   # new migration
-.venv/bin/alembic upgrade head           # apply migrations
+# ⚠️ api/.env's DATABASE_URL is PRODUCTION. alembic/env.py refuses a non-local
+# host, so pass the dev URL explicitly (or ALLOW_PROD_MIGRATION=1 to mean it):
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:55442/kitabi \
+  .venv/bin/alembic upgrade head         # apply migrations
 docker build -t kitabi-api .             # must always build
 
 # Flutter (SDK at ~/development/flutter — not on default PATH)
@@ -224,9 +227,39 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   `landing-page/**` or the workflow. Copies `index.html`, `logo.svg`,
   `kitabi-logo.png`, `ico.png` into `public/`. Requires repo secrets
   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
-- **api / app:** no pipelines yet; add per-directory workflows with `paths:` filters
-  matching the pattern above (rupee-diary's `ci.yml` and `backup.yml` are the
-  reference).
+- **api / admin: Railway auto-deploys them from `main`.** ⚠️ **A push to `main` is a
+  production deploy of the API.** Not a GitHub Actions workflow — Railway's own
+  GitHub integration, wired to the `shamshi-at/kitabi.in` repo, so it is invisible
+  in `.github/workflows/` and `gh run list` never shows it. The two services are
+  `api/railway.json` (project `kitabi-api` → `api.kitabi.in`) and
+  `admin/railway.json` (→ `admin.kitabi.in`), both `DOCKERFILE`-built, Southeast
+  Asia, health-checked at `/healthz`. `.github/workflows/api-ci.yml` runs the
+  **tests**; it does not deploy, and it does not gate the deploy either — Railway
+  builds from the push, not from a green CI run.
+
+  **The API's Dockerfile migrates on boot**: its `CMD` is
+  `alembic upgrade head && uvicorn …`, so **every deploy and every restart applies
+  pending migrations to the production database**. Consequences worth holding on
+  to: a migration merged to `main` reaches production within about a minute, with
+  no separate release step and nothing to approve; a migration that fails takes
+  the container's start command with it, so the health check fails and Railway
+  restart-loops rather than serving a half-migrated API; and a migration must
+  therefore be safe to run against the *previous* version of the code, which is
+  what is serving traffic while the new image rolls. The admin Dockerfile
+  deliberately does **not** run alembic — both services share one database, and
+  one migrator is the point.
+
+  **`alembic/env.py` refuses to migrate a non-local host** unless
+  `ALLOW_PROD_MIGRATION=1` is set — because `api/.env`'s `DATABASE_URL` points at
+  the Supabase pooler, so a bare `alembic upgrade head` in `api/` migrates
+  production (it did, 5 Aug 2026, *despite* the hazard being written down: a note
+  in a long file stops nobody, a process that exits does). The container opts in
+  via `ENV ALLOW_PROD_MIGRATION=1` in `api/Dockerfile` — declared in the repo
+  rather than a dashboard, so the one place production may migrate is readable
+  from a checkout. **Never delete that line**: without it the boot migration is
+  refused, the CMD fails, the health check fails, and Railway restart-loops
+  production. `tests/test_migration_guard.py` asserts it is still there.
+- **app:** no pipeline; releases are built locally (see [docs/build.md](docs/build.md)).
 
 ## Lessons imported from rupee-diary ("things that have bitten us")
 
