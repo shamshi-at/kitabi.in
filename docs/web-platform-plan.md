@@ -501,6 +501,18 @@ must not be able to spend a third party's quota on our behalf (§11).
   languages, lists, translation groups**, with `<image:image>` for covers.
 - `hreflang` reserved for `/ml/` when the Malayalam UI lands. Ship the
   `<link rel="alternate">` scaffolding now so it isn't a retrofit.
+- **IndexNow on book create** (`api/app/services/indexnow.py`). A new book got a
+  URL, a rendered page and a sitemap entry immediately — and then waited to be
+  found, which on a young domain is days to weeks. One keyless POST to
+  `api.indexnow.org` now says "come look"; Bing, Yandex, Seznam and Naver
+  consume it. **Google does not participate** — that still needs Search Console
+  and ordinary crawling, and a 200 back from IndexNow must not be read as
+  "indexed". Two rules: it only announces works that **clear the content floor**
+  (announcing a `noindex` page invites the one thing we don't want), and it can
+  never fail a request — it runs as a background task through `announce()`,
+  which cannot raise. Ownership is proved by `kitabi.in/<key>.txt`, a public
+  file committed to the repo; the key is not a secret, which is why it lives
+  next to the code instead of in a dashboard.
 
 ### 8.5 What earns links
 

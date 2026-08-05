@@ -5,7 +5,7 @@ import uuid
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, DbSession, OptionalUser
@@ -37,7 +37,14 @@ from app.schemas.catalog import (
     WorkSummaryOut,
     WorkUpdate,
 )
-from app.services import catalog_service, extraction_service, llm_quota, review_service
+from app.services import (
+    catalog_service,
+    extraction_service,
+    indexnow,
+    llm_quota,
+    public_service,
+    review_service,
+)
 from app.services.openlibrary_client import OpenLibraryClient, get_openlibrary_client
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
@@ -253,12 +260,40 @@ async def similar_works(db: DbSession, title: str = Query(min_length=1)) -> list
 
 
 @router.post("/works", response_model=WorkOut, status_code=status.HTTP_201_CREATED)
-async def create_work(payload: WorkCreate, user: CurrentUser, db: DbSession) -> WorkOut:
+async def create_work(
+    payload: WorkCreate, user: CurrentUser, db: DbSession, background: BackgroundTasks
+) -> WorkOut:
     """Manual add/edit flow (S7b). Credits the contributor for their score."""
     work = await catalog_service.create_work_with_edition(
         db, payload, created_by=uuid.UUID(user["id"])
     )
+    await _announce_new_book(db, work, background)
     return await _work_out(db, work)
+
+
+async def _announce_new_book(
+    db: AsyncSession, work, background: BackgroundTasks
+) -> None:  # noqa: ANN001
+    """Tell IndexNow the book page exists — but only if it is worth landing on.
+
+    Gated on the same content floor the page's own robots tag uses: a work below
+    it renders `noindex, follow`, and inviting a crawler to a page that tells it
+    not to index is both pointless and a good way to lose the goodwill this
+    protocol depends on. Most scanned books clear it immediately (they arrive
+    with a cover); a bare hand-typed row does not, and is picked up later by the
+    sitemap once someone improves it.
+
+    Scheduled as a background task so the reader's book is saved and returned
+    without waiting on a third party. It goes through `announce`, not `submit`:
+    Starlette does not swallow a background task's exceptions, so the one that
+    cannot raise is the one that gets scheduled — adding a book must never
+    depend on Bing being up, or on this module being bug-free.
+    """
+    if not indexnow.is_enabled():
+        return
+    if not public_service.work_is_indexable(work, edition_count=len(work.editions or [])):
+        return
+    background.add_task(indexnow.announce, [indexnow.book_url(work.slug or str(work.id))])
 
 
 @router.get("/works/{work_id}", response_model=WorkOut)

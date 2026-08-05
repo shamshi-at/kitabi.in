@@ -28,6 +28,17 @@ class Settings(BaseSettings):
 
     scheduler_enabled: bool = False
 
+    # IndexNow: ping Bing/Yandex/Seznam/Naver when a book page worth indexing
+    # appears, instead of waiting to be re-crawled. Free and keyless (the key is
+    # public by design — see services/indexnow.py), so rule 8 holds.
+    #
+    # OFF by default so a developer adding a book on a laptop never announces a
+    # page to the internet. Production opts in via `ENV INDEXNOW_ENABLED=1` in
+    # api/Dockerfile — in the repo, not a dashboard, so it is readable from a
+    # checkout. Note Google does NOT consume IndexNow; that still needs Search
+    # Console.
+    indexnow_enabled: bool = False
+
     # Version gate: the app sends `X-App-Version`; anything older than this gets
     # a 426 with an update payload (CLAUDE.md — the update-gate). Bump when a
     # release must be forced.

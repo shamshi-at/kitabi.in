@@ -28,5 +28,11 @@ EXPOSE 8000
 # still exists: removing it would restart-loop production at the next deploy.
 ENV ALLOW_PROD_MIGRATION=1
 
+# Announce newly-indexable book pages to IndexNow (Bing/Yandex/Seznam/Naver).
+# Set here rather than in the Railway dashboard for the same reason as above:
+# the deployed behaviour should be readable from a git checkout. Off everywhere
+# else, so a laptop never announces pages. See app/services/indexnow.py.
+ENV INDEXNOW_ENABLED=1
+
 # Railway injects PORT; default to 8000 locally.
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -38,6 +38,10 @@ const ASSET_FILES = new Set([
   '/og-image.png',
   '/robots.txt',
   '/sitemap.xml',
+  // IndexNow ownership proof. Must stay reachable and byte-match
+  // api/app/services/indexnow.py's KEY — if this 404s, every submission comes
+  // back 403 and the only symptom is that nothing ever gets announced.
+  '/9b4aeafec5fe4eeaba383d6eb42bee5a.txt',
 ]);
 
 // Directories served as files. `.well-known` is load-bearing for app links.
