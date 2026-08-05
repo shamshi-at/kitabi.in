@@ -211,6 +211,28 @@ async def suggest(
     return await public_service.suggest(db, q)
 
 
+@router.get("/isbn/{isbn}")
+async def by_isbn(isbn: str, db: DbSession, response: Response) -> dict:
+    """Where the book with this ISBN lives, so the edge can 301 to it.
+
+    Exists for SEO: an ISBN is how a book is searched for when someone is
+    holding it, and until now the number appeared only in a book page's body
+    text — no URL, title or canonical carried it, so there was nothing for that
+    query to rank. `/isbn/<isbn>` gives every edition an addressable URL that
+    redirects into the canonical page, which is also the shape other catalogues
+    link to us with.
+
+    Returns `{"slug": …}` (the id when a work has no slug yet), 404 otherwise.
+    Read-only, and DB-only — see `public_service.work_by_isbn` for why it must
+    never reach OpenLibrary.
+    """
+    work = await public_service.work_by_isbn(db, isbn)
+    if work is None:
+        raise _not_found("ISBN")
+    _cached(response, _CACHE)
+    return {"slug": work.slug or str(work.id), "id": str(work.id)}
+
+
 @router.get("/merged/{kind}/{key}")
 async def merged_target(kind: str, key: str, db: DbSession, response: Response) -> dict:
     """Where a merged author/publisher now lives, so the edge can 301 to it.

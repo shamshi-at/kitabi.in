@@ -190,15 +190,26 @@ export function renderBook(data) {
   if (data.language) crumbs.push({ label: data.language, href: LANG_PATH(data.language) });
   crumbs.push({ label: data.title });
 
+  // The ISBN goes in the meta description, and the blurb is clamped to leave
+  // room for it rather than the other way round.
+  //
+  // Someone searching an ISBN is holding the book — the highest-intent query
+  // this site can receive — and until this line the number lived only in the
+  // page's body text, where it carries almost no weight. `<title>` is the
+  // stronger signal still, but it belongs to the title and author: a number
+  // there would cost every reader-facing query to win one machine-facing one.
+  // The description is the slot where both fit.
+  const isbnSuffix = primaryEdition.isbn ? ` · ISBN ${primaryEdition.isbn}` : '';
+  const blurbBudget = 155 - isbnSuffix.length;
   const description =
-    clamp(data.description, 155) ||
-    joinDot([
-      authorNames ? `by ${authorNames}` : null,
-      data.language,
-      data.form,
-      data.first_publish_year,
-    ]) ||
-    `${data.title} on Kitabi.`;
+    (clamp(data.description, blurbBudget) ||
+      joinDot([
+        authorNames ? `by ${authorNames}` : null,
+        data.language,
+        data.form,
+        data.first_publish_year,
+      ]) ||
+      `${data.title} on Kitabi.`) + isbnSuffix;
 
   const body = html`
     <div class="wrap">

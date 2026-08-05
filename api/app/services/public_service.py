@@ -35,6 +35,7 @@ from app.services import (
     search_rank,
     slug_service,
 )
+from app.services import isbn as isbn_util
 from app.services.translit import fold as fold_of
 from app.services.translit import transliterate as translit_of
 
@@ -1146,6 +1147,41 @@ async def suggest(db: AsyncSession, q: str, limit: int = 8) -> P.SuggestPage:
             for i in ranked
         ],
     )
+
+
+async def work_by_isbn(db: AsyncSession, raw_isbn: str) -> Work | None:
+    """The Work an ISBN denotes, for the /isbn/<isbn> redirect.
+
+    Deliberately a database lookup and nothing more: it never falls through to
+    OpenLibrary. `/catalog/isbn/{isbn}` is signed-in-only precisely because it
+    spends a third party's quota (CLAUDE.md, metering rule), and this endpoint is
+    the most public thing on the site — a crawler walking guessed ISBNs must not
+    be able to drive traffic to OpenLibrary on our behalf.
+
+    Matches every equivalent form, so an inbound link built from an ISBN-10
+    reaches a book catalogued under its ISBN-13.
+    """
+    forms = isbn_util.variants(raw_isbn)
+    if not forms:
+        return None
+    stmt = (
+        select(Edition)
+        .where(Edition.isbn.in_(forms), Edition.deleted_at.is_(None))
+        .order_by(Edition.created_at, Edition.id)
+    )
+    for edition in (await db.execute(stmt)).scalars().all():
+        work = (
+            (
+                await db.execute(
+                    select(Work).where(Work.id == edition.work_id, Work.deleted_at.is_(None))
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if work is not None:
+            return work
+    return None
 
 
 async def indexable_ids(db: AsyncSession, kind: str, ids: list[uuid.UUID]) -> set[uuid.UUID] | None:

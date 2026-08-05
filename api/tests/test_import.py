@@ -29,6 +29,22 @@ def test_parse_goodreads_maps_shelf_rating_isbn_and_tags():
     assert rows[2].status == "wishlist"  # to-read
 
 
+def test_goodreads_isbn10_column_is_canonicalised():
+    """A Goodreads export carries BOTH an ISBN and an ISBN13 column, and which
+    one is filled varies row by row inside one file. The 10-digit form has to
+    land on the same value as the 13, or half an import misses the catalogue."""
+    csv = (
+        "Title,Author,ISBN,ISBN13,Exclusive Shelf\n"
+        '"Chemmeen",Thakazhi,="8126403454",="",read\n'
+        '"Misprint",Someone,="1234567890",="",read\n'
+    )
+    rows = import_service.parse_csv(csv)
+    assert rows[0].isbn == "9788126403455"
+    # A checksum-invalid ISBN-10 is kept as given rather than dropped or
+    # converted — converting it would produce a valid ISBN for another book.
+    assert rows[1].isbn == "1234567890"
+
+
 def test_is_goodreads_detection():
     assert import_service.is_goodreads(["Title", "My Rating", "Exclusive Shelf"])
     assert not import_service.is_goodreads(["Name", "By", "Rating"])

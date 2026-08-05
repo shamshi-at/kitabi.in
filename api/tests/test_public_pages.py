@@ -15,12 +15,15 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy import select
 
 from app.models import Author, Edition, Publisher, Rating, Series, Work
 from app.services import public_service, slug_service
 
 
-async def _seed_book(db, *, title="Chemmeen", cover=None, description=None, editions=1, **kw):
+async def _seed_book(
+    db, *, title="Chemmeen", cover=None, description=None, editions=1, isbn=None, **kw
+):
     author = Author(name=kw.pop("author_name", "Thakazhi Sivasankara Pillai"))
     db.add(author)
     await db.flush()
@@ -30,7 +33,11 @@ async def _seed_book(db, *, title="Chemmeen", cover=None, description=None, edit
     db.add(work)
     await db.flush()
     for i in range(editions):
-        db.add(Edition(work_id=work.id, cover_url=cover if i == 0 else None))
+        db.add(
+            Edition(
+                work_id=work.id, cover_url=cover if i == 0 else None, isbn=isbn if i == 0 else None
+            )
+        )
     await slug_service.ensure_slug(db, work, extras=[author.name])
     await db.commit()
     return work, author
@@ -231,6 +238,119 @@ async def test_search_calls_out_a_cross_script_hit(db_sessionmaker):
         page = await public_service.search_page(db, "chemmeen")
         assert any(not w.title.isascii() for w in page.works)
         assert page.matched_scripts
+
+
+# --------------------------------------------------------------------------
+# ISBN — the highest-intent query the site can receive
+# --------------------------------------------------------------------------
+#
+# The public search path was never covered for ISBNs: the only ISBN search tests
+# hit /catalog/search, which the app uses and the website does not. That mattered
+# more than it looked, because an ISBN scores ZERO against a book's title in
+# search_rank and `rank()` discards anything scoring zero — the result survives
+# only because `_candidates` lifts it to MATCHER_FLOOR first. One line stands
+# between ISBN search working and returning nothing, on a path nothing tested.
+
+# 8126403454 and 9788126403455 are the same book: a checksum-valid ISBN-10 and
+# the ISBN-13 it converts to.
+ISBN10 = "8126403454"
+ISBN13 = "9788126403455"
+
+
+@pytest.mark.parametrize("query", [ISBN13, ISBN10, "978-81-264-0345-5", "812-640-3454"])
+async def test_public_search_finds_a_book_by_either_isbn_form(db_sessionmaker, query):
+    """A reader holding a 2005 printing types the ISBN-10 off the back cover;
+    we catalogued the 2019 printing's ISBN-13. Same book, and it must be found."""
+    async with db_sessionmaker() as db:
+        work, _ = await _seed_book(db, isbn=ISBN13)
+
+        page = await public_service.search_page(db, query)
+        assert [w.id for w in page.works] == [work.id], query
+        assert page.order[0] == "book"
+
+
+async def test_public_search_by_isbn_survives_the_ranker(db_sessionmaker):
+    """Pins the MATCHER_FLOOR interaction explicitly, because the failure is
+    silent: the database finds the book, the ranker scores it zero against the
+    title, and the reader is told the catalogue has never heard of it."""
+    async with db_sessionmaker() as db:
+        await _seed_book(db, title="Chemmeen", isbn=ISBN13)
+        page = await public_service.search_page(db, ISBN13)
+        assert page.works, "an ISBN shares no words with a title — it must not be ranked away"
+        assert page.total >= 1
+
+
+async def test_isbn_search_does_not_fuzz_into_a_near_miss(db_sessionmaker):
+    """Digits must stay exact. A trigram match on numbers is confident nonsense."""
+    async with db_sessionmaker() as db:
+        await _seed_book(db, isbn=ISBN13)
+        assert (await public_service.search_page(db, "9788126403456")).works == []
+
+
+async def test_isbn_lookup_resolves_to_the_canonical_book_url(
+    unauthenticated_client, db_sessionmaker
+):
+    """/isbn/<isbn> exists so an ISBN query has a URL to rank. Both forms must
+    resolve, or the route only half-solves the problem it was added for."""
+    async with db_sessionmaker() as db:
+        work, _ = await _seed_book(db, isbn=ISBN13, cover="https://x/c.jpg")
+
+    for form in (ISBN13, ISBN10, "978-81-264-0345-5"):
+        resp = await unauthenticated_client.get(f"/public/isbn/{form}")
+        assert resp.status_code == 200, form
+        assert resp.json()["slug"] == work.slug, form
+        assert "s-maxage" in resp.headers.get("cache-control", ""), form
+
+
+async def test_isbn_lookup_finds_a_book_catalogued_under_the_isbn10(
+    unauthenticated_client, db_sessionmaker
+):
+    """The mirror case — the reconciliation has to work in both directions, and
+    testing only one of them is how half a fix ships."""
+    async with db_sessionmaker() as db:
+        work, _ = await _seed_book(db, isbn=ISBN10)
+
+    for form in (ISBN10, ISBN13):
+        resp = await unauthenticated_client.get(f"/public/isbn/{form}")
+        assert resp.status_code == 200, form
+        assert resp.json()["slug"] == work.slug, form
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/public/isbn/9780000000002",  # well-formed, not in the catalogue
+        "/public/isbn/chemmeen",  # not an ISBN at all
+        "/public/isbn/123",
+    ],
+)
+async def test_isbn_lookup_404s_rather_than_guessing(unauthenticated_client, path):
+    resp = await unauthenticated_client.get(path)
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "not_found"
+
+
+async def test_isbn_lookup_never_falls_through_to_openlibrary(client):
+    """The metering rule (CLAUDE.md): a PUBLIC endpoint must not spend a third
+    party's quota. 9780802162175 is a book the fake OpenLibrary client knows
+    about and our catalogue does not — the answer is still 404, not a proxied
+    lookup a crawler could drive by walking guessed ISBNs.
+    """
+    resp = await client.get("/public/isbn/9780802162175")
+    assert resp.status_code == 404
+
+
+async def test_a_soft_deleted_edition_does_not_resolve(unauthenticated_client, db_sessionmaker):
+    async with db_sessionmaker() as db:
+        work, _ = await _seed_book(db, isbn=ISBN13)
+        edition = (
+            (await db.execute(select(Edition).where(Edition.work_id == work.id))).scalars().first()
+        )
+        edition.deleted_at = datetime.now(UTC)
+        await db.commit()
+
+    resp = await unauthenticated_client.get(f"/public/isbn/{ISBN13}")
+    assert resp.status_code == 404
 
 
 # --------------------------------------------------------------------------

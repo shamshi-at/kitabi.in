@@ -184,6 +184,7 @@ is SEO, spend the migration.
 | `/reader/<username>` | Public reader profile | ✅ if opted-in | W12 |
 | `/browse?…` | Faceted browse | ❌ `noindex, follow` | W6b |
 | `/search?q=` | Search results | ❌ `noindex, follow` | **W2** |
+| `/isbn/<isbn>` | **ISBN address** — either form | 301 → `/book/<slug>` | — |
 | `/b/:uuid`, `/a/:uuid`, `/p/:uuid` | **Legacy** | 301 → slug URL | — |
 
 Facet combinations explode; only the canonical hubs (`/genre/x`,
@@ -456,6 +457,37 @@ and publishers (≥3 editions).
 
 Expected effect at launch: ~250–400 indexed works instead of 1,402, and they
 rank. The number goes up as the catalog improves, which is the correct incentive.
+
+### 8.3b The ISBN address — `/isbn/<isbn>`
+
+An ISBN is the highest-intent query this site can receive: the person typing it
+is holding the book. The number was already on every book page, in the editions
+table and the "This edition" rail — and that was worth almost nothing, because
+body text carries little ranking weight and **no URL, title or canonical carried
+the ISBN at all**. There was nothing for that query to rank.
+
+So `/isbn/<isbn>` is an addressable URL per edition that **301s to the canonical
+`/book/<slug>`**, funnelling its authority into the real page rather than
+competing with it. It is also the shape other catalogues and library systems
+naturally link to us with. It stays out of the sitemap deliberately — rule 1 of
+`sitemap.xml` is *list final URLs, never redirects*.
+
+Alongside it, the book page's **meta description** now ends with `· ISBN <n>`
+for the primary edition, with the blurb clamped to make room. The `<title>` was
+considered and rejected: it belongs to the title and author, and a number there
+would cost every reader-facing query to win one machine-facing one.
+
+**Both ISBN forms resolve.** The same book is `8126403454` on a 2005 printing and
+`9788126403455` on a 2019 one, and the catalogue stores whichever form a
+contributor typed, a scanner read, or OpenLibrary answered with. Lookups expand
+to every equivalent form (`services/isbn.variants`), new writes canonicalise to
+ISBN-13 (`NormalizedIsbn`), and migration `000041` backfilled the rows that
+predate both. All three are needed: normalising writes does nothing for stored
+rows, and a backfill can never be assumed to have reached every one.
+
+`GET /public/isbn/{isbn}` is **DB-only and never falls through to OpenLibrary** —
+it is the most public endpoint on the site, and a crawler walking guessed ISBNs
+must not be able to spend a third party's quota on our behalf (§11).
 
 ### 8.4 Crawl architecture
 

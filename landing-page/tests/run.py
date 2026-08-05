@@ -39,6 +39,7 @@ LIB = ROOT / "functions" / "_lib"
 MODULES = [
     "host.js",
     "html.js",
+    "isbn.js",
     "css.js",
     "api.js",
     "suggest.js",

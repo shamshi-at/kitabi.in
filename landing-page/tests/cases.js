@@ -41,6 +41,33 @@ assert(
 );
 
 // --------------------------------------------------------------------------
+// ISBN shape checking — the gate in front of /isbn/:isbn
+//
+// This URL is walkable by anyone with any string, so what it accepts decides
+// what reaches the origin. The checksum is deliberately NOT checked here (the
+// catalogue holds misprinted ISBNs that are still the only identifier those
+// editions have) — that is a rule worth pinning down, not an oversight.
+// --------------------------------------------------------------------------
+
+assert(cleanIsbn('9788126403455') === '9788126403455', 'a bare ISBN-13 passes through');
+assert(cleanIsbn('8126403454') === '8126403454', 'a bare ISBN-10 passes through');
+assert(cleanIsbn('978-81-264-0345-5') === '9788126403455', 'hyphens are stripped');
+assert(cleanIsbn('978 81 264 0345 5') === '9788126403455', 'spaces are stripped');
+assert(cleanIsbn('043942089x') === '043942089X', 'a lowercase check character is normalised');
+assert(cleanIsbn('8126403455') === '8126403455', 'a bad checksum is NOT rejected here');
+
+assert(cleanIsbn('chemmeen') === null, 'a title is not an ISBN');
+assert(cleanIsbn('123456789') === null, 'nine digits is not an ISBN');
+assert(cleanIsbn('12345678901') === null, 'eleven digits is not an ISBN');
+assert(cleanIsbn('978812640345X') === null, 'X is only ever an ISBN-10 check character');
+assert(cleanIsbn('') === null && cleanIsbn(null) === null, 'empty input is not an ISBN');
+assert(cleanIsbn(9788126403455) === null, 'a non-string is not an ISBN');
+assert(
+  cleanIsbn('../../etc/passwd') === null,
+  'a traversal attempt is rejected before it can reach the origin',
+);
+
+// --------------------------------------------------------------------------
 // clamp / num
 // --------------------------------------------------------------------------
 
@@ -302,6 +329,35 @@ assertIncludes(bookDoc, '"@type":"Book"', 'Book JSON-LD is emitted');
 assertIncludes(bookDoc, '"aggregateRating"', 'a real rating is published as structured data');
 assertIncludes(bookDoc, 'og:type" content="book"', 'og:type is book');
 assertIncludes(bookDoc, 'content="index, follow"', 'a complete book page is indexable');
+
+// The ISBN in the meta description — the one place an ISBN query has real
+// weight. Body text alone is why an ISBN search never found us.
+assertIncludes(
+  bookDoc,
+  'ISBN 9788126403455"',
+  'the ISBN is appended to the meta description, not just buried in the body',
+);
+assert(
+  /<meta name="description" content="([^"]*)"/.exec(bookDoc)[1].length <= 155,
+  'the description stays within its budget — the blurb is clamped to make room for the ISBN',
+);
+assertIncludes(
+  /<meta name="description" content="([^"]*)"/.exec(bookDoc)[1],
+  'Karuthamma',
+  '…and the blurb is still there, not crowded out',
+);
+
+// A book with no ISBN gets no dangling separator.
+var noIsbnDoc = String(
+  renderBook(Object.assign({}, BOOK, {
+    editions: [{ id: 'e1', page_count: 218, cover_url: 'https://x/c.jpg' }],
+  })).text(),
+);
+var noIsbnDesc = /<meta name="description" content="([^"]*)"/.exec(noIsbnDoc)[1];
+assertExcludes(noIsbnDesc, 'ISBN', 'no ISBN on the edition means none in the description');
+assertExcludes(noIsbnDesc, ' · ', 'and no orphaned separator left behind');
+// The editions table still says so out loud — that is a different statement.
+assertIncludes(noIsbnDoc, 'No ISBN', 'the editions table still reports the absence');
 
 // A thin book: same renderer, different robots tag, and no invented rating.
 var thinDoc = String(

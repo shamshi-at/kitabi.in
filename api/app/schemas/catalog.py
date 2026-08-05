@@ -3,9 +3,18 @@ publishers, ISBN lookup, CSV import rows, and recommendations."""
 
 import uuid
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, field_validator
+
+from app.services import isbn as isbn_util
+
+# Every ISBN entering the API, canonicalised to ISBN-13 where that can be
+# derived. Applied as a type rather than a per-model validator so a new schema
+# with an ISBN field cannot quietly skip it — the catalogue converging on one
+# form is what lets a lookup be an index hit rather than a set of guesses.
+# Unrecognisable input passes through untouched (see normalize_for_storage).
+NormalizedIsbn = Annotated[str | None, BeforeValidator(isbn_util.normalize_for_storage)]
 
 # The suggested vocabulary for Work.form — the literary form (the app calls it
 # "Type"): one per work, a separate axis from genre (owner decision, 16 Jul
@@ -251,7 +260,7 @@ class WorkCreate(BaseModel):
     publisher_name: str | None = None
     series_name: str | None = None
     series_number: int | None = None
-    isbn: str | None = None
+    isbn: NormalizedIsbn = None
     page_count: int | None = None
     pub_date: date | None = None
     format: str | None = None
@@ -318,7 +327,7 @@ class EditionCreate(BaseModel):
     publisher_name: str | None = None
     series_name: str | None = None
     series_number: int | None = None
-    isbn: str | None = None
+    isbn: NormalizedIsbn = None
     language: str | None = None
     page_count: int | None = None
     pub_date: date | None = None
@@ -332,7 +341,7 @@ class EditionUpdate(BaseModel):
     publisher_name: str | None = None
     series_name: str | None = None
     series_number: int | None = None
-    isbn: str | None = None
+    isbn: NormalizedIsbn = None
     page_count: int | None = None
     pub_date: date | None = None
     format: str | None = None

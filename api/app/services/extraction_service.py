@@ -21,6 +21,7 @@ import httpx
 
 from app.core.config import Settings
 from app.schemas.catalog import WORK_FORMS
+from app.services import isbn as isbn_util
 from app.services.anthropic_client import ANTHROPIC_URL, headers, reply_text
 
 _SYSTEM = (
@@ -36,9 +37,11 @@ _SYSTEM = (
     "book when the cover makes it clear (a Malayalam cover saying നോവൽ means "
     "'Novel', ചെറുകഥകൾ means 'Short stories', കവിതകൾ means 'Poetry'), and it "
     f"must be EXACTLY one of: {', '.join(WORK_FORMS)} — or null when unsure. "
-    "`isbn` is the 13-digit ISBN printed "
-    "next to the back-cover barcode — digits only (no hyphens/spaces), and ONLY "
-    "if you can read all 13 clearly; otherwise null (never guess a digit). "
+    "`isbn` is the ISBN printed next to the back-cover barcode — the 13-digit "
+    "form when the cover shows one, or the 10-digit form on older printings "
+    "that show only that. Digits only (no hyphens/spaces; a trailing X is part "
+    "of a 10-digit ISBN, keep it), and ONLY if you can read every character "
+    "clearly; otherwise null (never guess a digit). "
     "CRITICAL: transcribe ONLY text that is actually printed and legible in the "
     "image. Do NOT guess, translate, or invent a plausible-sounding title or "
     "name — if a field is not clearly readable, return null for it. It is far "
@@ -51,17 +54,26 @@ _SYSTEM = (
 
 
 def valid_isbn13(raw: str | None) -> str | None:
-    """Return the 13 digits if [raw] is a checksum-valid ISBN-13, else None.
-    Photo OCR of a 13-digit code is error-prone, so the checksum is the gate: a
+    """Return the canonical ISBN-13 if [raw] is a checksum-valid ISBN, else None.
+
+    Photo OCR of a printed code is error-prone, so the checksum is the gate: a
     single misread digit fails it and we drop the value rather than prefill the
-    wrong book (the barcode Scan stays the exact path)."""
-    if not isinstance(raw, str):
+    wrong book (the barcode Scan stays the exact path).
+
+    A checksum-valid ISBN-10 is accepted and converted, because the back of a
+    pre-2007 printing — which is most of what a reader photographs in a
+    second-hand shop — prints only the 10-digit form. Rejecting those was
+    dropping a field we could read perfectly well.
+
+    The 978/979 gate stays: a 13-digit code that isn't in the Bookland range is
+    some other product's EAN, and OCR of a cover can easily land on one.
+    """
+    cleaned = isbn_util.clean(raw)
+    if cleaned is None:
         return None
-    digits = "".join(c for c in raw if c.isdigit())
-    if len(digits) != 13 or not digits.startswith(("978", "979")):
+    if len(cleaned) == 13 and not cleaned.startswith(("978", "979")):
         return None
-    checksum = sum((1 if i % 2 == 0 else 3) * int(d) for i, d in enumerate(digits))
-    return digits if checksum % 10 == 0 else None
+    return isbn_util.to_isbn13(cleaned)
 
 
 def _extract_object(text: str) -> dict[str, Any]:

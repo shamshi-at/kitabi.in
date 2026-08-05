@@ -75,12 +75,28 @@ def test_valid_isbn13_accepts_checksum_valid_and_normalises():
     assert valid_isbn13("9789386906366") == "9789386906366"
 
 
+def test_valid_isbn13_converts_an_isbn10_off_an_older_cover():
+    """Pre-2007 printings — most of a second-hand shelf — print only the
+    10-digit form. Rejecting those dropped a field we could read perfectly."""
+    assert valid_isbn13("8126403454") == "9788126403455"
+    assert valid_isbn13("81-264-0345-4") == "9788126403455"
+    assert valid_isbn13("316148410X") == "9783161484100"  # X check character
+
+
 def test_valid_isbn13_rejects_bad_input():
     assert valid_isbn13("9783161484101") is None  # bad checksum (last digit off)
-    assert valid_isbn13("1234567890") is None  # 10 digits, not 13
+    assert valid_isbn13("8126403455") is None  # ISBN-10 shape, bad checksum
+    assert valid_isbn13("1234567890") is None  # 10 digits, fails the ISBN-10 checksum
     assert valid_isbn13("1234567890123") is None  # 13 digits but not 978/979
     assert valid_isbn13("not an isbn") is None
     assert valid_isbn13(None) is None
+
+
+def test_valid_isbn13_still_refuses_a_non_bookland_ean():
+    """OCR of a cover can land on some other product's barcode. 5901234123457
+    is a checksum-valid EAN-13 and not a book — the 978/979 gate is what stops
+    it prefilling a catalogue entry."""
+    assert valid_isbn13("5901234123457") is None
 
 
 def test_clean_only_surfaces_a_valid_isbn():

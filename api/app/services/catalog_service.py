@@ -4,7 +4,6 @@ lookup with OpenLibrary cache-on-first-use, and tuned eager-loading for detail v
 list reads. Catalog rows carry no client-generated id; user contributions land here
 via the API when online (CLAUDE.md rule 2)."""
 
-import re
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -41,11 +40,10 @@ from app.schemas.catalog import (
     WorkCreate,
     WorkUpdate,
 )
+from app.services import isbn as isbn_util
 from app.services import slug_service
 from app.services.openlibrary_client import OpenLibraryClient, normalize_isbn_lookup
 from app.services.translit import fold, transliterate
-
-_ISBN_RE = re.compile(r"^[0-9]{9}[0-9X]$|^[0-9]{13}$")
 
 # Explicit eager loading everywhere a Work is fetched for serialization.
 # Relying on the models' default `lazy=` strategy is NOT enough on its own in
@@ -75,7 +73,9 @@ _SUMMARY_OPTIONS = (
 
 
 def looks_like_isbn(query: str) -> bool:
-    return bool(_ISBN_RE.match(query.replace("-", "").strip()))
+    """Kept as the catalog service's own name for a rule that now lives in
+    `services/isbn` alongside the checksum arithmetic that has to agree with it."""
+    return isbn_util.looks_like_isbn(query)
 
 
 def _fuzzy_match(col, q: str):  # noqa: ANN001 — SQLAlchemy column expression
@@ -723,13 +723,33 @@ async def search_local(
     the top hit as *the* match, so it must not be handed a merely-similar book.
     """
     q = query.strip()
-    if looks_like_isbn(q):
-        stmt = select(Edition).where(Edition.isbn == q.replace("-", "").strip())
-        edition = (await db.execute(stmt)).scalar_one_or_none()
-        if edition is None:
-            return []
-        work = await _load_work(db, edition.work_id)
-        return [work] if work else []
+    forms = isbn_util.variants(q)
+    if forms:
+        # EVERY equivalent form, not the one the reader happened to type. The
+        # same book is 8126403454 on a 2005 printing and 9788126403455 on a
+        # 2019 one; matching only the literal string means a reader holding the
+        # older copy is told we have never heard of the book.
+        #
+        # More than one row can match — the catalogue may hold both forms on two
+        # editions until the backfill or a merge collapses them — so this
+        # returns works rather than a work, oldest edition first for a stable
+        # order. (It also cannot use scalar_one_or_none any more, which would
+        # now raise MultipleResultsFound on exactly that data.)
+        stmt = (
+            select(Edition)
+            .where(Edition.isbn.in_(forms), Edition.deleted_at.is_(None))
+            .order_by(Edition.created_at, Edition.id)
+        )
+        works: list[Work] = []
+        seen: set[uuid.UUID] = set()
+        for edition in (await db.execute(stmt)).scalars().all():
+            if edition.work_id in seen:
+                continue
+            seen.add(edition.work_id)
+            work = await _load_work(db, edition.work_id)
+            if work is not None and work.deleted_at is None:
+                works.append(work)
+        return works
     if not q:
         return []
 
@@ -1016,17 +1036,32 @@ async def find_or_fetch_by_isbn(
 ) -> Edition | None:
     """ISBN scan flow (S7): local match first, then OpenLibrary, caching
     whatever we find so the next scan of the same ISBN never leaves the
-    database."""
-    clean_isbn = isbn.replace("-", "").strip()
-    stmt = select(Edition).where(Edition.isbn == clean_isbn)
-    existing = (await db.execute(stmt)).scalar_one_or_none()
+    database.
+
+    The local match tries every equivalent form, so scanning the ISBN-10 barcode
+    on an older printing finds the row we catalogued under its ISBN-13 instead of
+    spending an OpenLibrary round trip and creating a duplicate edition of a book
+    we already have.
+    """
+    forms = isbn_util.variants(isbn) or [isbn.replace("-", "").strip()]
+    stmt = (
+        select(Edition)
+        .where(Edition.isbn.in_(forms), Edition.deleted_at.is_(None))
+        .order_by(Edition.created_at, Edition.id)
+        .limit(1)
+    )
+    existing = (await db.execute(stmt)).scalars().first()
     if existing is not None:
         return existing
 
-    raw = await ol_client.lookup_isbn(clean_isbn)
+    # OpenLibrary is asked with the form the reader supplied — it resolves both
+    # and knows about editions we don't — but whatever comes back is STORED
+    # canonically, so the catalogue converges on ISBN-13 as rows are added.
+    lookup_isbn = forms[0]
+    raw = await ol_client.lookup_isbn(lookup_isbn)
     if raw is None:
         return None
-    normalized = normalize_isbn_lookup(raw, clean_isbn)
+    normalized = normalize_isbn_lookup(raw, isbn_util.canonical(lookup_isbn) or lookup_isbn)
 
     work_payload = WorkCreate(
         title=normalized["title"],

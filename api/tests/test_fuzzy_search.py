@@ -60,6 +60,39 @@ async def test_isbn_search_stays_exact(client):
     assert resp.json() == []
 
 
+async def test_isbn_search_reconciles_the_two_forms(client):
+    """316148410X and 9783161484100 are the same book. Whichever one the
+    catalogue happens to hold, either one a reader types must find it."""
+    resp = await client.post(
+        "/catalog/works", json={"title": "Randamoozham", "isbn": "9783161484100"}
+    )
+    assert resp.status_code == 201
+
+    for query in ("316148410X", "3-16-148410-X", "9783161484100"):
+        resp = await client.get("/catalog/search", params={"q": query})
+        assert [w["title"] for w in resp.json()] == ["Randamoozham"], query
+
+
+async def test_an_isbn10_is_stored_canonically(client):
+    """Normalising on write is half the fix (variant lookup is the other half):
+    a catalogue that converges on one form makes every later lookup an index hit
+    rather than a set of guesses."""
+    resp = await client.post("/catalog/works", json={"title": "Chemmeen", "isbn": "81-264-0345-4"})
+    assert resp.status_code == 201
+    assert resp.json()["editions"][0]["isbn"] == "9788126403455"
+
+
+async def test_a_checksum_invalid_isbn_is_kept_not_discarded(client):
+    """Real catalogues hold misprinted ISBNs. Storing None instead would lose the
+    only edition identifier we have — and it must still be findable."""
+    resp = await client.post("/catalog/works", json={"title": "Misprint", "isbn": "9788126403454"})
+    assert resp.status_code == 201
+    assert resp.json()["editions"][0]["isbn"] == "9788126403454"
+
+    resp = await client.get("/catalog/search", params={"q": "9788126403454"})
+    assert [w["title"] for w in resp.json()] == ["Misprint"]
+
+
 async def test_import_matching_stays_strict(client):
     """The CSV import takes the top hit as THE match — a typo'd title must
     stay unmatched (fuzzy=False) rather than latch onto a similar book."""

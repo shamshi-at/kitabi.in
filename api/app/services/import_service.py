@@ -8,6 +8,8 @@ import io
 import re
 from dataclasses import dataclass, field
 
+from app.services import isbn as isbn_util
+
 # Goodreads "Exclusive Shelf" -> Kitabi reading status (the 5-state enum).
 _GOODREADS_SHELF_STATUS = {
     "read": "read",
@@ -38,11 +40,14 @@ class ImportRow:
 
 
 def _clean_isbn(raw: str | None) -> str | None:
-    """Goodreads wraps ISBNs as `="9780..."`; strip that and any hyphens."""
-    if not raw:
-        return None
-    digits = re.sub(r"[^0-9Xx]", "", raw)
-    return digits.upper() if len(digits) in (10, 13) else None
+    """Goodreads wraps ISBNs as `="9780..."`; strip that and any hyphens, and
+    canonicalise to ISBN-13.
+
+    Goodreads exports carry BOTH an `ISBN` (10) and an `ISBN13` column, and
+    which one is populated varies row by row within a single file. Canonicalising
+    here is what makes the catalogue lookup in import_.py an exact hit for either.
+    """
+    return isbn_util.canonical(raw)
 
 
 def _clean_rating(raw: str | None) -> int | None:
@@ -66,9 +71,24 @@ def _map_status(raw: str | None) -> str | None:
     return None
 
 
+_GOODREADS_ARMOUR = re.compile(r'^="(.*)"$')
+
+
+def _unwrap(value: str) -> str:
+    """Strip Goodreads' `="…"` cell armour (it stops Excel eating leading zeros).
+
+    An EMPTY armoured cell is `=""` — two characters, and therefore truthy. That
+    is how an empty ISBN13 column silently shadowed a populated ISBN one in
+    `_pick`, making the 10-digit column unreachable for every row that had only
+    that: the import matched on title alone and missed books we had.
+    """
+    match = _GOODREADS_ARMOUR.match(value)
+    return match.group(1).strip() if match else value
+
+
 def _pick(row: dict[str, str], keys: tuple[str, ...]) -> str | None:
     """First non-empty value whose (lowercased) header matches one of `keys`."""
-    lowered = {k.strip().lower(): (v or "").strip() for k, v in row.items() if k}
+    lowered = {k.strip().lower(): _unwrap((v or "").strip()) for k, v in row.items() if k}
     for key in keys:
         if lowered.get(key):
             return lowered[key]
