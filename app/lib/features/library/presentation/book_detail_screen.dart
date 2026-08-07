@@ -1372,6 +1372,15 @@ class _BuySection extends StatelessWidget {
               ),
           ],
         ),
+        // Affiliate links (marked by the API) must carry a reader-visible
+        // disclosure; links that pay nobody get no small print.
+        if (valid.any((link) => link['affiliate'] == true)) ...[
+          SizedBox(height: 8),
+          Text(
+            l10n.bookBuyDisclosure,
+            style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: AppColors.inkSoft),
+          ),
+        ],
       ],
     );
   }

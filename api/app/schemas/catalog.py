@@ -140,12 +140,22 @@ class SeriesOut(BaseModel):
 
 
 class BuyLink(BaseModel):
-    """One external retailer link for an edition ([WIRED] — the book page lists
-    every store the book is available at)."""
+    """One external retailer link for an edition — the stored, contributor-
+    entered shape (the `buy_links` JSONB on Edition). Write paths use exactly
+    this, so nothing computed ever lands in the column."""
 
     model_config = ConfigDict(from_attributes=True)
     retailer: str
     url: str
+
+
+class BuyLinkOut(BuyLink):
+    """What the API *serves*: stored links plus the affiliate links generated
+    from the ISBN at read time (`services/buy_links.py`). `affiliate` is True
+    only for a link that pays Kitabi — clients show a disclosure beside those,
+    and the web renderer marks them rel="sponsored"."""
+
+    affiliate: bool = False
 
 
 class EditionOut(BaseModel):
@@ -158,9 +168,10 @@ class EditionOut(BaseModel):
     format: str | None
     cover_url: str | None
     back_cover_url: str | None
-    # [WIRED] where to buy — empty until store links are populated; the book
-    # page lists each retailer.
-    buy_links: list[BuyLink] = []
+    # Where to buy — the stored links merged with the generated affiliate
+    # links (services/buy_links.py) by the work serializers; the book page
+    # lists each retailer.
+    buy_links: list[BuyLinkOut] = []
     series_number: int | None
     publisher: PublisherOut | None
     series: SeriesOut | None

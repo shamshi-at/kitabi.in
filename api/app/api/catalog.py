@@ -17,6 +17,7 @@ from app.schemas.catalog import (
     AuthorDetailOut,
     AuthorOut,
     AuthorWorksOut,
+    BuyLinkOut,
     CoverExtractIn,
     CoverExtractOut,
     EditionCreate,
@@ -38,6 +39,7 @@ from app.schemas.catalog import (
     WorkUpdate,
 )
 from app.services import (
+    buy_links,
     catalog_service,
     extraction_service,
     indexnow,
@@ -74,13 +76,37 @@ async def _work_out(db: AsyncSession, work) -> WorkOut:  # noqa: ANN001 — Work
     if work.original_work_id is not None:
         original_row = await catalog_service.work_summary_row(db, work.original_work_id)
         original = work_summary(original_row) if original_row is not None else None
-    return WorkOut.model_validate(work).model_copy(
+    out = WorkOut.model_validate(work).model_copy(
         update={
             "translation_group_rating": rating,
             "translations": [work_summary(w) for w in siblings],
             "original": original,
         }
     )
+    # Merge the generated affiliate links into every edition (buy_links is
+    # computed at read time, never stored — see services/buy_links.py). Done
+    # here because this is the one choke point every full-work response goes
+    # through; the lighter WorkSummaryOut (search rows) skips it on purpose.
+    settings = get_settings()
+    first_author = work.authors[0] if work.authors else None
+    author = (first_author.pen_name or first_author.name) if first_author else None
+    stored_by_id = {e.id: e for e in work.editions}
+    for edition_out in out.editions:
+        source = stored_by_id.get(edition_out.id)
+        if source is None:
+            continue
+        edition_out.buy_links = [
+            BuyLinkOut.model_validate(link)
+            for link in buy_links.merged(
+                source.buy_links,
+                isbn=source.isbn,
+                title=work.title,
+                author=author,
+                amazon_tag=settings.amazon_associate_tag,
+                flipkart_affid=settings.flipkart_affiliate_id,
+            )
+        ]
+    return out
 
 
 @router.get("/search", response_model=list[WorkSummaryOut])

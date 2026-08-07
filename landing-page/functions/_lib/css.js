@@ -218,6 +218,8 @@ img{max-width:100%;display:block}
 .rail .buy{display:flex;align-items:center;justify-content:space-between;padding:9px 0;
   border-bottom:1px solid var(--line);font-size:13px}
 .rail .buy:last-child{border-bottom:0}
+.rail .buydisc{padding:7px 0 9px;font-size:10.5px;font-style:italic;color:var(--ink-soft);
+  border-top:1px solid var(--line)}
 .rail.dark{background:linear-gradient(150deg,var(--night-2),var(--night));border-color:var(--night)}
 .rail.dark .rh{background:transparent;color:var(--gold);border-bottom-color:rgba(240,226,194,.16)}
 .rail.dark .rb{color:#CBB897;font-size:12.5px;line-height:1.7}

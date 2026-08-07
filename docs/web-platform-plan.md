@@ -664,4 +664,8 @@ Inherited, non-negotiable:
    there are few readers yet; empty profile pages are thin pages.
 6. **Buy links** — `buy_links` is `[WIRED]` and empty. Affiliate programmes are a
    revenue path but also a disclosure obligation (and a bill-adjacent
-   relationship). In or out for v1?
+   relationship). In or out for v1? — **Resolved in (8 Aug 2026):** generated at
+   read time from the ISBN, never stored (`services/buy_links.py`,
+   docs/revenue-plan.md §3.1); affiliate links are `rel="sponsored"` with a
+   visible disclosure, and with no tag configured the links render untagged —
+   no account, no API, no bill either way.

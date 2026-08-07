@@ -255,10 +255,14 @@ export function renderBook(data) {
                 <h2 class="rh">Where to find it</h2>
                 <div class="rb" style="padding:4px 15px">
                   ${primaryEdition.buy_links.map(
-                    (b) => html`<a class="buy" href="${b.url}" rel="nofollow noopener"
+                    (b) => html`<a class="buy" href="${b.url}"
+                      rel="${b.affiliate ? 'sponsored nofollow noopener' : 'nofollow noopener'}"
                       ><span>${b.retailer}</span><span>→</span></a
                     >`,
                   )}
+                  ${primaryEdition.buy_links.some((b) => b.affiliate)
+                    ? html`<p class="buydisc">Kitabi may earn a commission from bookseller links.</p>`
+                    : ''}
                 </div>
               </div>`
             : ''}

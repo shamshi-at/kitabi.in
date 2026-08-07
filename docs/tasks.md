@@ -944,8 +944,16 @@ out of the sitemap until a work actually carries a genre.
 - [ ] Who owns the ~40-genre vocabulary, and is LLM-assisted classification with human
       review acceptable for the seed set?
 - [ ] Editorial writing capacity — the descriptions and hub intros are ~40 hours of writing
-- [ ] `buy_links` (`[WIRED]`, empty): affiliate programmes are revenue but also a
-      disclosure obligation. In or out for v1?
+- [x] `buy_links` (`[WIRED]`, empty): affiliate programmes are revenue but also a
+      disclosure obligation. In or out for v1? — **In (8 Aug 2026):** links are
+      *generated* at read time from the ISBN (`api/app/services/buy_links.py` —
+      Amazon.in `/dp/<ISBN-10>` + Flipkart search; docs/revenue-plan.md §3.1),
+      merged after any stored links on every work payload, so web + app render
+      them with no client work. Tags come from `AMAZON_ASSOCIATE_TAG` /
+      `FLIPKART_AFFILIATE_ID` (unset = untagged links, no disclosure); affiliate
+      links carry `rel="sponsored"` and a disclosure line on both surfaces.
+      Owner action outstanding: sign up Amazon Associates India, set the tag in
+      Railway
 
 ## Phase A — The author page as a reference page
 

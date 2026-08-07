@@ -5746,6 +5746,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open the store link.'**
   String get bookBuyFailed;
 
+  /// Small disclosure under the buy links when any of them is an affiliate link
+  ///
+  /// In en, this message translates to:
+  /// **'Kitabi may earn a commission from these links.'**
+  String get bookBuyDisclosure;
+
   /// Label on the browse sort control
   ///
   /// In en, this message translates to:

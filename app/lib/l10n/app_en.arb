@@ -2972,6 +2972,8 @@
   "@bookBuySection": {"description": "Header above the list of external retailer buy links on the book page"},
   "bookBuyFailed": "Couldn't open the store link.",
   "@bookBuyFailed": {"description": "Snackbar when the external buy link fails to open"},
+  "bookBuyDisclosure": "Kitabi may earn a commission from these links.",
+  "@bookBuyDisclosure": {"description": "Small disclosure under the buy links when any of them is an affiliate link"},
   "browseSortLabel": "Sort",
   "@browseSortLabel": {"description": "Label on the browse sort control"},
   "browseSortTitle": "Title (A–Z)",

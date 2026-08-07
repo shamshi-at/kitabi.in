@@ -75,6 +75,14 @@ class Settings(BaseSettings):
     # only stop one account from being the whole problem.
     llm_daily_global_cap: int = 1000
 
+    # Affiliate ids for the generated buy links (services/buy_links.py —
+    # docs/revenue-plan.md §3.1). Plain URL parameters, not API credentials
+    # (rule 8): unset means the links render untagged and earn nothing, so the
+    # feature ships dormant and the owner flips revenue on by setting the tag
+    # in Railway after the Associates account is approved.
+    amazon_associate_tag: str = ""
+    flipkart_affiliate_id: str = ""
+
     # Supabase Storage writes (the `covers` bucket the app and admin console
     # already use). Needed only by the cover backfill job, which copies
     # hotlinked catalogue covers into a bucket we own — a cache is not

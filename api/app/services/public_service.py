@@ -14,6 +14,7 @@ from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import get_settings
 from app.models import (
     Author,
     Edition,
@@ -28,6 +29,9 @@ from app.models import (
 )
 from app.models.work import work_authors, work_genres
 from app.schemas import public as P
+from app.services import (
+    buy_links as buy_links_service,
+)
 from app.services import (
     catalog_service,
     review_service,
@@ -116,7 +120,9 @@ def card(work: Work, *, rating_count: int = 0, is_original: bool | None = None) 
     )
 
 
-def _edition(edition: Edition) -> P.PublicEdition:
+def _edition(edition: Edition, work: Work) -> P.PublicEdition:
+    settings = get_settings()
+    first_author = work.authors[0] if work.authors else None
     return P.PublicEdition(
         id=edition.id,
         isbn=edition.isbn,
@@ -130,7 +136,14 @@ def _edition(edition: Edition) -> P.PublicEdition:
         series_number=edition.series_number,
         publisher=_ref(edition.publisher),
         series=_ref(edition.series),
-        buy_links=edition.buy_links or [],
+        buy_links=buy_links_service.merged(
+            edition.buy_links,
+            isbn=edition.isbn,
+            title=work.title,
+            author=(first_author.pen_name or first_author.name) if first_author else None,
+            amazon_tag=settings.amazon_associate_tag,
+            flipkart_affid=settings.flipkart_affiliate_id,
+        ),
     )
 
 
@@ -290,7 +303,9 @@ async def book_page(db: AsyncSession, key: str) -> P.BookPage | None:
         genres=[
             P.Ref(id=g.id, name=g.name, slug=slug_service.slugify(g.name)) for g in work.genres
         ],
-        editions=[_edition(e) for e in sorted(work.editions, key=lambda e: (e.created_at, e.id))],
+        editions=[
+            _edition(e, work) for e in sorted(work.editions, key=lambda e: (e.created_at, e.id))
+        ],
         translations=[card(s, is_original=s.original_work_id is None) for s in siblings],
         original=original,
         translation_group_rating=(

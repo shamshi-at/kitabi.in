@@ -277,7 +277,9 @@ var BOOK = {
   genres: [{ id: 'g1', name: 'Literary fiction', slug: 'literary-fiction' }],
   editions: [{ id: 'e1', isbn: '9788126403455', page_count: 218, format: 'paperback', year: 2019,
                cover_url: 'https://x/c.jpg', publisher: { id: 'p1', name: 'DC Books', slug: 'dc-books' },
-               buy_links: [{ retailer: 'Amazon.in', url: 'https://amazon.in/x' }] }],
+               buy_links: [{ retailer: 'Amazon.in', url: 'https://amazon.in/x' },
+                           { retailer: 'Flipkart', affiliate: true,
+                             url: 'https://www.flipkart.com/search?q=9788126403455&affid=kitabi' }] }],
   translations: [{ id: 'uuid-t', slug: 'chemmeen-english', title: 'Chemmeen', language: 'English',
                    year: 1962, rating: 4.2, rating_count: 88, authors: [] }],
   original: null,
@@ -322,6 +324,19 @@ assert(
 
 assertIncludes(bookDoc, 'Amazon.in', 'buy links render when present');
 assertIncludes(bookDoc, 'rel="nofollow noopener"', 'outbound retailer links are nofollow');
+// The affiliate layer (docs/revenue-plan.md §3.1): a link that pays must say
+// so to crawlers (rel=sponsored is Google's requirement for paid links) and
+// to readers (the disclosure line) — and only when something actually pays.
+assertIncludes(bookDoc, 'rel="sponsored nofollow noopener"', 'affiliate links are rel=sponsored');
+assertIncludes(bookDoc, 'may earn a commission', 'the affiliate disclosure renders');
+var noAffiliate = String(
+  renderBook(Object.assign({}, BOOK, {
+    editions: [Object.assign({}, BOOK.editions[0],
+      { buy_links: [{ retailer: 'Amazon.in', url: 'https://amazon.in/x' }] })],
+  })).text(),
+);
+assertExcludes(noAffiliate, 'may earn a commission', 'no disclosure when no link pays');
+assertExcludes(noAffiliate, 'rel="sponsored', 'no sponsored rel when no link pays');
 assertIncludes(bookDoc, 'What readers said', 'reviews are on the page');
 assertIncludes(bookDoc, 'I read it first at fifteen', 'the review text is in the HTML');
 assertIncludes(bookDoc, 'fetchpriority="high"', 'the hero cover is the LCP element');

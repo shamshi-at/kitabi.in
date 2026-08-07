@@ -414,13 +414,22 @@ async def test_browse_languages_lists_distinct(client):
     assert langs == sorted(langs)  # distinct + ordered
 
 
-async def test_edition_buy_links_wired_and_patchable(client):
+async def test_edition_buy_links_generated_and_patchable(client, monkeypatch):
+    from app.core.config import get_settings
+
+    untagged = get_settings().model_copy(
+        update={"amazon_associate_tag": "", "flipkart_affiliate_id": ""}
+    )
+    monkeypatch.setattr("app.api.catalog.get_settings", lambda: untagged)
     created = await client.post(
         "/catalog/works", json={"title": "Buyable", "isbn": "9789999999999"}
     )
     edition = created.json()["editions"][0]
-    # [WIRED] — the field exists and defaults to an empty list (column is null).
-    assert edition["buy_links"] == []
+    # The stored column starts null; what the API serves is the generated
+    # retailer links (services/buy_links.py) — untagged here since no
+    # affiliate id is configured, so none claims to be an affiliate link.
+    assert [b["retailer"] for b in edition["buy_links"]] == ["Amazon", "Flipkart"]
+    assert all(b["affiliate"] is False for b in edition["buy_links"])
 
     patched = await client.patch(
         f"/catalog/editions/{edition['id']}",
@@ -433,6 +442,8 @@ async def test_edition_buy_links_wired_and_patchable(client):
     )
     assert patched.status_code == 200
     links = patched.json()["buy_links"]
+    # The PATCH echo is the *stored* list (the edit form edits exactly what is
+    # stored); the merged view is what the work-shaped endpoints serve.
     assert [b["retailer"] for b in links] == ["Amazon", "Flipkart"]
     assert links[0]["url"] == "https://amazon.in/dp/x"
 

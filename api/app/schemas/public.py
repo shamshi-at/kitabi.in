@@ -18,7 +18,7 @@ from datetime import date
 
 from pydantic import BaseModel
 
-from app.schemas.catalog import BuyLink, PublicReviewOut
+from app.schemas.catalog import BuyLinkOut, PublicReviewOut
 
 
 class Ref(BaseModel):
@@ -75,7 +75,7 @@ class PublicEdition(BaseModel):
     series_number: int | None = None
     publisher: Ref | None = None
     series: Ref | None = None
-    buy_links: list[BuyLink] = []
+    buy_links: list[BuyLinkOut] = []
 
 
 class BookPage(BaseModel):

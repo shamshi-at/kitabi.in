@@ -3511,6 +3511,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookBuyFailed => 'Couldn\'t open the store link.';
 
   @override
+  String get bookBuyDisclosure =>
+      'Kitabi may earn a commission from these links.';
+
+  @override
   String get browseSortLabel => 'Sort';
 
   @override
