@@ -182,6 +182,43 @@ async def public_library(db: AsyncSession, target_id: uuid.UUID, limit: int = 20
     ]
 
 
+async def public_reviews(db: AsyncSession, target_id: uuid.UUID, limit: int = 50) -> list[dict]:
+    """The reviews a reader has made public, newest first.
+
+    Gated on `profile_visible` only — deliberately NOT on `library_visible`,
+    unlike `public_library` above. The two are different promises: a shelf is
+    private until you say otherwise, while a review carries its own `visible`
+    flag and publishing one is an act (feature-map rule 13's three-way split,
+    rule 16's per-item toggles). Keeping your shelf to yourself doesn't retract
+    what you already chose to say in public.
+    """
+    await get_public_profile(db, target_id)
+    from app.services import catalog_service, review_service  # local: avoids a module cycle
+
+    rows = await review_service.reader_reviews(db, target_id, limit=limit)
+    out = []
+    for r in rows:
+        work = r["work"]
+        # The app's book route is work + edition, so a review (which attaches to
+        # the Work alone) needs a printing chosen for it. Same pick as the cover,
+        # so the row's image and its destination can never disagree.
+        edition = catalog_service.cover_edition(work)
+        out.append(
+            {
+                "id": r["id"],
+                "work_id": work.id,
+                "edition_id": edition.id if edition else None,
+                "title": work.title,
+                "author_names": ", ".join(a.name for a in work.authors),
+                "cover_url": edition.cover_url if edition else None,
+                "body": r["body"],
+                "rating": r["rating"],
+                "created_at": r["created_at"],
+            }
+        )
+    return out
+
+
 async def soft_delete_profile(db: AsyncSession, profile: Profile) -> None:
     profile.deleted_at = datetime.now(UTC)
     await db.commit()

@@ -7,7 +7,12 @@ from fastapi import APIRouter, Query
 from app.api.catalog import work_summary
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.catalog import WorkSummaryOut
-from app.schemas.profile import PublicLibraryItemOut, PublicProfileOut, UserSearchOut
+from app.schemas.profile import (
+    PublicLibraryItemOut,
+    PublicProfileOut,
+    PublicReviewItemOut,
+    UserSearchOut,
+)
 from app.services import catalog_service, connection_service, profile_service, scoring_service
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -52,6 +57,18 @@ async def public_library(
     and library are public."""
     items = await profile_service.public_library(db, user_id)
     return [PublicLibraryItemOut(**item) for item in items]
+
+
+@router.get("/{user_id}/reviews", response_model=list[PublicReviewItemOut])
+async def public_reviews(
+    user_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> list[PublicReviewItemOut]:
+    """The reviews a reader has made public — 404 unless their profile is
+    public. Gated on `profile_visible` only, independent of `library_visible`:
+    a review is published on its own flag, and a private shelf doesn't take
+    it back."""
+    items = await profile_service.public_reviews(db, user_id)
+    return [PublicReviewItemOut(**item) for item in items]
 
 
 @router.get("/{user_id}/works", response_model=list[WorkSummaryOut])

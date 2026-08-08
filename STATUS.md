@@ -470,7 +470,11 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   editorial lists, reviews and reader profiles, plus the `/languages` `/genres` `/lists`
   `/translations` directories and the thin/404 states. Reader profiles honour **both**
   visibility flags and a private profile 404s indistinguishably from a nonexistent
-  handle — "this reader exists but is private" is itself a disclosure. Editorial lists
+  handle — "this reader exists but is private" is itself a disclosure. A profile also
+  carries **the reviews that reader made public** (9 Aug 2026), on the web and in the
+  app — gated on `profile_visible` plus each review's own `visible`, and pointedly not
+  on `library_visible`, since a review is published on its own flag and a private shelf
+  doesn't retract it. Editorial lists
   live in the renderer as content, not data (writing one is a text edit, not a
   migration), and a list whose books aren't in the catalogue yet 404s rather than
   publishing a title over nothing — it switches on by itself as the books arrive, the

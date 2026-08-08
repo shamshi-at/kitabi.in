@@ -96,12 +96,9 @@ def _ref(obj) -> P.Ref | None:  # noqa: ANN001
 
 
 def _cover(work: Work) -> str | None:
-    """The first edition that has one. A book page's LCP element, so the pick
-    has to be deterministic rather than 'whatever the DB returned first'."""
-    for edition in sorted(work.editions, key=lambda e: (e.created_at, e.id)):
-        if edition.cover_url:
-            return edition.cover_url
-    return None
+    """The book page's LCP element. One rule, shared with the app's public
+    profile so the same book never shows two different covers."""
+    return catalog_service.work_cover(work)
 
 
 def card(work: Work, *, rating_count: int = 0, is_original: bool | None = None) -> P.WorkCard:
@@ -927,6 +924,11 @@ async def reader_page(db: AsyncSession, username: str) -> P.ReaderPage | None:
         )
         recent = list((await db.execute(stmt)).scalars().unique().all())
 
+    # Not gated on library_visible: a review the reader marked public is a
+    # thing they published, and a private shelf doesn't retract it.
+    written = await review_service.reader_reviews(db, profile.id)
+    review_counts = await _rating_counts(db, [r["work"].id for r in written])
+
     return P.ReaderPage(
         id=profile.id,
         username=profile.username,
@@ -937,6 +939,16 @@ async def reader_page(db: AsyncSession, username: str) -> P.ReaderPage | None:
         books_finished=0,
         library_visible=profile.library_visible,
         recent=await _cards(db, recent),
+        reviews=[
+            P.ReaderReview(
+                id=r["id"],
+                body=r["body"],
+                rating=r["rating"],
+                created_at=r["created_at"],
+                work=card(r["work"], rating_count=review_counts.get(r["work"].id, 0)),
+            )
+            for r in written
+        ],
     )
 
 

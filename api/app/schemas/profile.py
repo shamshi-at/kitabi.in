@@ -134,3 +134,21 @@ class PublicLibraryItemOut(BaseModel):
     author_names: str
     cover_url: str | None
     status: str
+
+
+class PublicReviewItemOut(BaseModel):
+    """One review on a reader's public profile — the book it is about, plus
+    what they said and the stars they gave it. Keyed on the Work, not an
+    Edition: reviews attach to the Work (rule 17)."""
+
+    id: uuid.UUID
+    work_id: uuid.UUID
+    # The printing the row links to. Null only for a Work with no editions at
+    # all, which the app renders as an untappable row rather than a dead link.
+    edition_id: uuid.UUID | None
+    title: str
+    author_names: str
+    cover_url: str | None
+    body: str
+    rating: int | None
+    created_at: datetime

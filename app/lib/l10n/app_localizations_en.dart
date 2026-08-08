@@ -1130,6 +1130,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get publicProfileTabWorks => 'Works';
 
   @override
+  String get publicProfileTabReviews => 'Reviews';
+
+  @override
+  String get publicProfileReviewsEmpty => 'No public reviews yet.';
+
+  @override
   String get publicProfileConnect => 'Connect';
 
   @override

@@ -14,7 +14,7 @@ duplicated business logic, and nothing here is writable.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -262,6 +262,19 @@ class ReviewsPage(BaseModel):
     per_page: int = 20
 
 
+class ReaderReview(BaseModel):
+    """One review on a reader's own profile — the book it is about, plus what
+    they said. The inverse of `PublicReviewOut`, which carries the reviewer and
+    assumes the book: here the reader is the page, so naming them again on every
+    row would be noise."""
+
+    id: uuid.UUID
+    body: str
+    rating: int | None = None
+    created_at: datetime
+    work: WorkCard
+
+
 class ReaderPage(BaseModel):
     """A reader's public profile. Rendered ONLY for readers who opted in —
     a private profile has no page at all, not an empty one (rule 16)."""
@@ -275,6 +288,10 @@ class ReaderPage(BaseModel):
     books_finished: int = 0
     library_visible: bool = False
     recent: list[WorkCard] = []
+    # Public reviews are gated on the review's own `visible` flag, not on
+    # `library_visible` — a reader may keep their shelf private and still
+    # stand behind what they wrote (rule 13's split, rule 16's toggles).
+    reviews: list[ReaderReview] = []
 
 
 class PersonCard(Ref):

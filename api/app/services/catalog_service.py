@@ -72,6 +72,28 @@ _SUMMARY_OPTIONS = (
 )
 
 
+def cover_edition(work):  # noqa: ANN001, ANN201 — Work ORM in, Edition|None out
+    """The printing a Work is represented by: the oldest edition that actually
+    has a cover, falling back to the oldest of any.
+
+    Deterministic on purpose — "whatever the DB returned first" would let the
+    same book show a different cover on two identical requests, and on the web
+    that image is the book page's LCP element. Lives here, not in a caller,
+    because several surfaces need the same answer and the app additionally
+    needs the *edition* itself: reviews attach to the Work (rule 17), but the
+    app's book route is keyed on work + edition, so something has to choose."""
+    editions = sorted(work.editions, key=lambda e: (e.created_at, e.id))
+    for edition in editions:
+        if edition.cover_url:
+            return edition
+    return editions[0] if editions else None
+
+
+def work_cover(work) -> str | None:  # noqa: ANN001 — Work ORM instance
+    edition = cover_edition(work)
+    return edition.cover_url if edition else None
+
+
 def looks_like_isbn(query: str) -> bool:
     """Kept as the catalog service's own name for a rule that now lives in
     `services/isbn` alongside the checksum arithmetic that has to agree with it."""

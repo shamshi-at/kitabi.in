@@ -1936,6 +1936,18 @@ abstract class AppLocalizations {
   /// **'Works'**
   String get publicProfileTabWorks;
 
+  /// Profile tab: the reviews this reader has made public — only shown when they have at least one
+  ///
+  /// In en, this message translates to:
+  /// **'Reviews'**
+  String get publicProfileTabReviews;
+
+  /// Empty state on a public profile's Reviews tab
+  ///
+  /// In en, this message translates to:
+  /// **'No public reviews yet.'**
+  String get publicProfileReviewsEmpty;
+
   /// Button to send a connection request from a public profile
   ///
   /// In en, this message translates to:

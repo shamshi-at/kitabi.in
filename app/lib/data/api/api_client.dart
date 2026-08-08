@@ -218,6 +218,18 @@ class ApiClient {
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
+  /// The "Reviews" tab — the reviews this reader marked public. Gated on the
+  /// profile being public, NOT on library visibility: a review carries its own
+  /// visibility flag, so a private shelf doesn't retract one.
+  ///
+  /// Parsed eagerly, element by element, rather than with a lazy `.cast()` —
+  /// a shape change then fails here, at the boundary, instead of inside some
+  /// widget's `build` far from the cause (the genre-rows lesson, 21 Jul 2026).
+  Future<List<Map<String, dynamic>>> getPublicReviews(String userId) async {
+    final res = await _dio.get('/users/$userId/reviews');
+    return [for (final row in res.data as List) Map<String, dynamic>.from(row as Map)];
+  }
+
   // --- Push notifications (FCM device tokens) ---
 
   /// Register this install's FCM token for the signed-in user.

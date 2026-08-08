@@ -84,6 +84,15 @@ final _publicWorksProvider =
   return ref.watch(apiClientProvider).getPublicWorks(userId);
 });
 
+/// The reviews this reader made public — the Reviews tab. Like Works, gated
+/// only on the profile itself (the endpoint 404s otherwise); unlike the shelf,
+/// it is NOT gated on `library_visible`, because a review carries its own
+/// visibility flag and publishing one is a separate act from opening a shelf.
+final _publicReviewsProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, userId) {
+  return ref.watch(apiClientProvider).getPublicReviews(userId);
+});
+
 bool _isNotFound(Object err) => err is DioException && err.response?.statusCode == 404;
 
 /// Fire-and-forget connection mutation shared by the plate's action buttons
@@ -201,10 +210,11 @@ class _ProfileBody extends ConsumerStatefulWidget {
 }
 
 /// Which tab is showing below the header. Ledger first — the loans between
-/// you are why most visits happen — with the shelf a tap away. Works only
-/// shows up (as a third segment) when this reader is a linked author of at
-/// least one catalog Work.
-enum _ProfileTab { ledger, shelf, works }
+/// you are why most visits happen — with the shelf a tap away. Works and
+/// Reviews only show up (as further segments) when there is something in
+/// them: most readers aren't a linked author, and plenty have written no
+/// public review, so an empty segment would be noise on every profile.
+enum _ProfileTab { ledger, shelf, works, reviews }
 
 class _ProfileBodyState extends ConsumerState<_ProfileBody> {
   var _tab = _ProfileTab.ledger;
@@ -244,8 +254,15 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     final worksCountRaw =
         isPrivate ? null : ref.watch(_publicWorksProvider(widget.userId)).valueOrNull?.length;
     final worksCount = (worksCountRaw != null && worksCountRaw > 0) ? worksCountRaw : null;
-    // A hidden Works tab can't stay selected (e.g. the count just changed).
-    final tab = (_tab == _ProfileTab.works && worksCount == null) ? _ProfileTab.ledger : _tab;
+    // Same "only when non-empty" rule as Works — a reader with nothing public
+    // to say shouldn't carry an empty Reviews segment on their profile.
+    final reviewsCountRaw =
+        isPrivate ? null : ref.watch(_publicReviewsProvider(widget.userId)).valueOrNull?.length;
+    final reviewsCount = (reviewsCountRaw != null && reviewsCountRaw > 0) ? reviewsCountRaw : null;
+    // A hidden tab can't stay selected (e.g. the count just changed).
+    final hidden = (_tab == _ProfileTab.works && worksCount == null) ||
+        (_tab == _ProfileTab.reviews && reviewsCount == null);
+    final tab = hidden ? _ProfileTab.ledger : _tab;
 
     // The shelf tab pins its own search field (owner request, 16 Jul 2026),
     // so it builds its own slivers directly rather than sitting inside the
@@ -272,6 +289,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                   ledgerCount: loanCount,
                   shelfCount: shelfCount,
                   worksCount: worksCount,
+                  reviewsCount: reviewsCount,
                   onChanged: (t) => setState(() => _tab = t),
                 ),
                 SizedBox(height: 14),
@@ -301,6 +319,12 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
               padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
               sliver: SliverToBoxAdapter(
                 child: _PublicWorksTab(userId: widget.userId),
+              ),
+            ),
+          _ProfileTab.reviews => SliverPadding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+              sliver: SliverToBoxAdapter(
+                child: _PublicReviewsTab(userId: widget.userId),
               ),
             ),
         },
@@ -709,6 +733,7 @@ class _TabBar extends StatelessWidget {
     required this.ledgerCount,
     required this.shelfCount,
     this.worksCount,
+    this.reviewsCount,
     required this.onChanged,
   });
 
@@ -716,18 +741,21 @@ class _TabBar extends StatelessWidget {
   final int? ledgerCount;
   final int? shelfCount;
   final int? worksCount;
+  final int? reviewsCount;
   final ValueChanged<_ProfileTab> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    // The tab list mirrors the enum order (works last, only when present) so
-    // the shared SegTabBar's index maps cleanly back to _ProfileTab.
+    // The tab list mirrors the enum order (the conditional ones last, only
+    // when present) so the shared SegTabBar's index maps back to _ProfileTab.
     final tabs = [
       (_ProfileTab.ledger, SegTabItem(l10n.publicProfileTabLedger, count: ledgerCount)),
       (_ProfileTab.shelf, SegTabItem(l10n.publicProfileTabShelf, count: shelfCount)),
       if (worksCount != null)
         (_ProfileTab.works, SegTabItem(l10n.publicProfileTabWorks, count: worksCount)),
+      if (reviewsCount != null)
+        (_ProfileTab.reviews, SegTabItem(l10n.publicProfileTabReviews, count: reviewsCount)),
     ];
     return SegTabBar(
       tabs: [for (final (_, item) in tabs) item],
@@ -907,6 +935,137 @@ class _PublicWorksTab extends ConsumerWidget {
       data: (items) => items.isEmpty
           ? _MutedNote(AppLocalizations.of(context)!.browseEmpty)
           : Column(children: [for (final work in items) CatalogResultTile(work: work)]),
+    );
+  }
+}
+
+/// The Reviews tab — what this reader chose to say in public, newest first.
+///
+/// The mirror of the book page's review row: there the reviewer heads each
+/// card and the book is assumed; here the reader IS the page, so the book
+/// takes the header and their name never repeats.
+class _PublicReviewsTab extends ConsumerWidget {
+  const _PublicReviewsTab({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviews = ref.watch(_publicReviewsProvider(userId));
+    return reviews.when(
+      loading: () => Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+      ),
+      error: (_, _) => ErrorRetry(onRetry: () => ref.invalidate(_publicReviewsProvider(userId))),
+      data: (items) => items.isEmpty
+          ? _MutedNote(AppLocalizations.of(context)!.publicProfileReviewsEmpty)
+          : Column(children: [for (final review in items) _ReaderReviewRow(review: review)]),
+    );
+  }
+}
+
+/// One review on a reader's own profile: the book it is about, their stars,
+/// and what they wrote. Opens the book — the only thing a reader could want
+/// next from here.
+class _ReaderReviewRow extends StatelessWidget {
+  const _ReaderReviewRow({required this.review});
+
+  final Map<String, dynamic> review;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final rating = review['rating'] as int?;
+    final workId = review['work_id'] as String?;
+    // A catalogued Work can have no printing on file yet; the row still shows,
+    // it just has nowhere to go rather than a link to nowhere.
+    final editionId = review['edition_id'] as String?;
+    final openable = workId != null && editionId != null;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10),
+      child: GestureDetector(
+        onTap: openable ? () => context.push(Routes.bookDetailPath(workId, editionId)) : null,
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 38,
+                height: 57,
+                child: ShelfCover(
+                  title: review['title'] as String? ?? '',
+                  author: review['author_names'] as String?,
+                  coverUrl: review['cover_url'] as String?,
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            review['title'] as String? ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.5,
+                              color: openable ? AppColors.oxblood : AppColors.ink,
+                            ),
+                          ),
+                        ),
+                        if (rating != null)
+                          Row(
+                            children: [
+                              for (var i = 1; i <= 5; i++)
+                                Icon(
+                                  i <= rating ? Icons.star : Icons.star_border,
+                                  size: 12,
+                                  color: AppColors.gold,
+                                ),
+                            ],
+                          )
+                        else
+                          Text(
+                            l10n.bookNoRatingLabel,
+                            style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
+                          ),
+                      ],
+                    ),
+                    if ((review['author_names'] as String?)?.isNotEmpty ?? false)
+                      Padding(
+                        padding: EdgeInsets.only(top: 1),
+                        child: Text(
+                          review['author_names'] as String,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
+                        ),
+                      ),
+                    SizedBox(height: 5),
+                    Text(
+                      review['body'] as String? ?? '',
+                      style: TextStyle(fontSize: 12.5, color: AppColors.ink, height: 1.45),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

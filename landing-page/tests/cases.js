@@ -638,6 +638,50 @@ assertIncludes(privateShelf, 'keeps their shelf private', 'a private shelf says 
 assertIncludes(privateShelf, 'content="noindex, follow"',
   'a profile with nothing public is not indexed');
 
+// A reader's own public reviews. The field is `body` — the name the API
+// actually serialises (PublicReviewOut.body). Fixtures here used to say
+// `text`, which is why every review on the live site rendered as a byline
+// with no review under it.
+var readerReviews = String(
+  renderReader({ id: 'u', username: 'arundhati', display_name: 'Arundhati M.', score: 214,
+    library_visible: true, recent: [{ id: 'b', slug: 'chemmeen', title: 'Chemmeen', authors: [] }],
+    reviews: [{ id: 'r1', rating: 5, body: 'I read it first at fifteen.',
+                created_at: '2026-07-14T00:00:00Z',
+                work: { id: 'b', slug: 'chemmeen', title: 'Chemmeen',
+                        authors: [{ name: 'Thakazhi', slug: 'thakazhi' }] } }] }).text(),
+);
+assertIncludes(readerReviews, 'What they wrote', 'a reader profile shows the reviews they made public');
+assertIncludes(readerReviews, 'I read it first at fifteen', 'the review body is in the HTML');
+assertIncludes(readerReviews, 'href="/book/chemmeen"', 'each review links to the book it is about');
+assertIncludes(readerReviews, 'Thakazhi', "the book's author is named on the row");
+assertIncludes(readerReviews, 'Rated 5 out of 5', 'their star rating rides along, labelled for screen readers');
+// The reviewer is the page. The card's header slot belongs to the BOOK — the
+// mirror of the book page, where it belongs to the reviewer. (Scoped to the
+// card: the name legitimately appears in the title, h1, breadcrumb and meta.)
+var reviewCard = readerReviews.slice(
+  readerReviews.indexOf('<article class="rev">'),
+  readerReviews.indexOf('</article>'),
+);
+assertIncludes(reviewCard, 'Chemmeen', 'the book heads the review card');
+assertExcludes(reviewCard, 'Arundhati M.', 'the reader is not re-announced on their own review');
+
+// A review is original prose that exists nowhere else on the site — it is
+// exactly what makes a profile worth crawling, so it lifts the page past the
+// floor on its own, with no public shelf.
+var reviewerOnly = String(
+  renderReader({ id: 'u', username: 'quiet', display_name: 'Quiet Reader', score: 3,
+    library_visible: false, recent: [],
+    reviews: [{ id: 'r1', rating: 4, body: 'Worth the slow first fifty pages.',
+                work: { id: 'b', slug: 'kayar', title: 'Kayar', authors: [] } }] }).text(),
+);
+assertIncludes(reviewerOnly, 'keeps their shelf private', 'the private shelf note still stands');
+assertIncludes(reviewerOnly, 'Worth the slow first fifty pages', 'and the reviews show anyway');
+assertIncludes(reviewerOnly, 'content="index, follow"',
+  'a private shelf does not suppress reviews the reader chose to publish');
+
+// The old behaviour must not regress: nothing public at all is still noindex.
+assertExcludes(privateShelf, 'What they wrote', 'no reviews section when there are none');
+
 // --------------------------------------------------------------------------
 // Self-hosted fonts
 // --------------------------------------------------------------------------

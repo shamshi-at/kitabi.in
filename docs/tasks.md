@@ -924,6 +924,13 @@ out of the sitemap until a work actually carries a genre.
 - [ ] Descriptions for the top 300 works, 120–200 words. Highest-leverage manual task on
       the list: it flips 300 works past the content floor and gives each a real meta description
 - [x] `/reader/<username>` public profiles (both visibility flags honoured; a private profile has no page at all)
+- [x] A reader's own public reviews, on their profile — web *and* app (9 Aug 2026).
+      `review_service.reader_reviews` behind `GET /users/{id}/reviews` (app) and
+      `ReaderPage.reviews` (web). Gated on `profile_visible` + each review's own
+      `visible`, deliberately **not** on `library_visible`: a review is published on
+      its own flag and a private shelf doesn't retract it. Reviews now also lift a
+      profile past the content floor on their own — original prose is the reason the
+      page is worth crawling
 
 - [ ] **Unblock AI crawlers in the Cloudflare dashboard** (owner action — needs
       zone access, which no token here has). Cloudflare prepends a managed block to

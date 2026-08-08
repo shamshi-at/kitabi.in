@@ -349,9 +349,41 @@ export function renderReviews(data) {
 // W12 — Reader profile
 // --------------------------------------------------------------------------
 
+// A review on the reader's own page. Same card as the book page's, turned
+// around: there the reviewer heads each row and the book is assumed, here the
+// reader IS the page, so the book takes the header and naming them again on
+// every row would just be noise.
+function writtenReviews(reviews) {
+  if (!reviews?.length) return '';
+  return html`${reviews.map((r) => {
+    const work = r.work || {};
+    const authors = (work.authors || []).map((a) => a.name).join(', ');
+    return html`<article class="rev">
+      <div class="rhd">
+        <!-- 44px, the same as the editions table: the typeset fallback cover
+             draws its title at a fixed 13px, so anything narrower clips it. -->
+        <a href="${bookPath(work)}" style="flex:none;width:44px">${cover(work, { width: 44 })}</a>
+        <div style="min-width:0">
+          <div class="who"><a href="${bookPath(work)}">${work.title}</a></div>
+          <div class="when">
+            ${joinDot([authors, r.created_at ? String(r.created_at).slice(0, 10) : null])}
+          </div>
+        </div>
+        ${r.rating
+          ? html`<div class="rs" aria-label="${`Rated ${r.rating} out of 5`}">
+              ${'★'.repeat(Math.round(r.rating))}
+            </div>`
+          : ''}
+      </div>
+      ${r.body ? html`<p class="rt">“${r.body}”</p>` : ''}
+    </article>`;
+  })}`;
+}
+
 export function renderReader(data) {
   const canonical = `/reader/${seg(data.username || data.id)}`;
   const crumbs = [{ label: 'Home', href: '/' }, { label: data.display_name }];
+  const reviews = data.reviews || [];
 
   const body = html`
     <div class="wrap">
@@ -372,6 +404,10 @@ export function renderReader(data) {
               ? html`<span><b class="serif" style="font-size:19px;display:block">${num(data.recent.length)}</b>
                   <span class="eyebrow">Books shown</span></span>`
               : ''}
+            ${reviews.length
+              ? html`<span><b class="serif" style="font-size:19px;display:block">${num(reviews.length)}</b>
+                  <span class="eyebrow">${reviews.length === 1 ? 'Review' : 'Reviews'}</span></span>`
+              : ''}
           </div>
         </div>
       </div>
@@ -383,18 +419,33 @@ export function renderReader(data) {
               <p>This reader keeps their shelf private.</p>
             </div>
           </section>`}
+      ${reviews.length ? section('What they wrote', writtenReviews(reviews)) : ''}
       ${appBand()}
     </div>
   `;
 
   return page({
     title: `${data.display_name} — Kitabi`,
-    description: `${data.display_name} on Kitabi.`,
+    description: reviews.length
+      ? clamp(
+          `${data.display_name} on Kitabi — ${num(reviews.length)} ${
+            reviews.length === 1 ? 'book review' : 'book reviews'
+          }${reviews[0]?.work?.title ? `, including ${reviews[0].work.title}` : ''}.`,
+          160,
+        )
+      : `${data.display_name} on Kitabi.`,
     canonical,
     body,
-    // A profile page is thin by nature and is about a person, not a book.
-    // Followed but not indexed unless they've actually made a shelf public.
-    indexable: Boolean(data.library_visible && data.recent?.length),
+    // A profile page is thin by nature and is about a person, not a book — so
+    // it earns indexing only by carrying something worth landing on. A public
+    // shelf counts; so does a review, which is original prose that exists
+    // nowhere else on the site (and the reason this page is worth crawling at
+    // all). Same self-healing shape as the book page's content floor: nobody
+    // decides, the reader's own activity flips it.
+    indexable: Boolean((data.library_visible && data.recent?.length) || reviews.length),
+    // Deliberately no Review markup, matching renderReviews above: these are
+    // real reviews, but a profile is not a review-rich-result surface, and the
+    // rule at the top of jsonld.js is worth over-honouring.
     jsonLd: [ld.breadcrumbList(crumbs)],
   });
 }
