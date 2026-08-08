@@ -585,6 +585,14 @@ void main() {
     expect(find.text('4.2'), findsWidgets);
     expect(tester.takeException(), isNull);
 
+    // Another reader's public review is readable here — the text itself, not
+    // just their name and stars. The web renderer read `text` instead of
+    // `body` and so printed a headed card with nothing under it for as long
+    // as public reviews existed (found 9 Aug 2026); this pins the app to the
+    // field `PublicReviewOut` actually sends.
+    expect(find.text('Reader One'), findsOneWidget);
+    expect(find.text('Loved it.'), findsOneWidget);
+
     await flushTree(tester);
   });
 

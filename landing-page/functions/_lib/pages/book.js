@@ -138,7 +138,7 @@ function reviewsBlock(reviews) {
             </div>`
           : ''}
       </div>
-      ${r.text ? html`<p class="rt">“${r.text}”</p>` : ''}
+      ${r.body ? html`<p class="rt">“${r.body}”</p>` : ''}
     </article>`,
   )}`;
 }

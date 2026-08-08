@@ -200,7 +200,7 @@ var bookLd = book({
       publisher: { name: 'DC Books' }, cover_url: 'https://x/c.jpg' },
   ],
   rating: { average: 4.4, count: 312 },
-  reviews: [{ rating: 5, text: 'Wonderful.', reviewer: { display_name: 'A reader' } }],
+  reviews: [{ rating: 5, body: 'Wonderful.', reviewer: { display_name: 'A reader' } }],
 });
 
 assert(bookLd['@type'] === 'Book', 'the book emits Book');
@@ -212,6 +212,7 @@ assert(
   'the format maps to a schema.org URL',
 );
 assert(bookLd.review.length === 1, 'public reviews are published as Review');
+assert(bookLd.review[0].reviewBody === 'Wonderful.', 'and carry the review body, not just a star');
 
 // THE ONE THAT MATTERS: no rating means the property is absent, not zero.
 var unrated = book({
@@ -284,7 +285,7 @@ var BOOK = {
                    year: 1962, rating: 4.2, rating_count: 88, authors: [] }],
   original: null,
   rating: { average: 4.4, count: 312, distribution: { '5': 193, '4': 81, '3': 25, '2': 9, '1': 4 } },
-  reviews: [{ rating: 5, text: 'I read it first at fifteen.', created_at: '2026-07-14T00:00:00Z',
+  reviews: [{ rating: 5, body: 'I read it first at fifteen.', created_at: '2026-07-14T00:00:00Z',
               reviewer: { display_name: 'Arundhati M.' } }],
   more_by_author: [{ id: 'uuid-k', slug: 'kayar', title: 'Kayar', authors: [], rating: 4.3 }],
   related: [{ id: 'uuid-r', slug: 'naalukettu', title: 'Naalukettu', authors: [] }],
@@ -541,10 +542,24 @@ assertIncludes(emptyIndex, "Editors' lists", 'the list index renders even with n
 var reviewsDoc = String(
   renderReviews({ work: { id: 'w', slug: 'chemmeen', title: 'Chemmeen', authors: [] },
     rating: { average: 4.4, count: 312, distribution: { '5': 193, '4': 81 } },
-    reviews: [{ rating: 5, text: 'Wonderful.', reviewer: { display_name: 'A reader' } }],
+    reviews: [{ rating: 5, body: 'Wonderful.', reviewer: { display_name: 'A reader' } }],
     total: 41, page: 1, per_page: 20 }).text(),
 );
 assertIncludes(reviewsDoc, 'Wonderful.', 'reviews render');
+// The field is `body` — PublicReviewOut has never had a `text`. Reading the
+// wrong name printed the reviewer's name, stars and date with no review under
+// them, on both this page and the book page, for as long as public reviews
+// have existed (found 9 Aug 2026 on /book/avalkkoppam). It survived because the
+// fixtures said `text` too, so renderer and test agreed with each other rather
+// than with the API.
+assertExcludes(
+  String(renderReviews({ work: { id: 'w', slug: 'c', title: 'C', authors: [] },
+    rating: { average: 5, count: 1, distribution: { '5': 1 } },
+    reviews: [{ rating: 5, text: 'Wrong field.', reviewer: { display_name: 'A reader' } }],
+    total: 1, page: 1, per_page: 20 }).text()),
+  'Wrong field.',
+  'only `body` is the review text — a stray `text` field is not rendered',
+);
 assertIncludes(reviewsDoc, 'href="/book/chemmeen"', 'and link back to the book');
 assertIncludes(reviewsDoc, 'content="index, follow"', 'a page with 41 reviews is worth indexing');
 

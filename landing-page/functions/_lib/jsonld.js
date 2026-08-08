@@ -119,7 +119,7 @@ export function book(page) {
             },
           }
         : {}),
-      ...(r.text ? { reviewBody: clamp(r.text, 800) } : {}),
+      ...(r.body ? { reviewBody: clamp(r.body, 800) } : {}),
     }));
   }
 

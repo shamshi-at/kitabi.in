@@ -573,6 +573,21 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   Corollary for diagnosis: "it's in the progress bar but not the log" points at the
   *reader*, not the writer — prove which half is broken with a test through the real
   screen before changing either.
+- **A test fixture written from the renderer instead of from the schema tests
+  nothing — it just makes the code agree with itself.** Every public review ever
+  written was invisible on the web: `PublicReviewOut` sends `body`, and
+  `book.js`, `more.js` and `jsonld.js` all read `r.text`, so a review rendered as
+  a card with the reviewer's name, avatar, date and stars and *nothing under
+  them* — and the JSON-LD shipped a `Review` with a rating but no `reviewBody`,
+  so Google never had the text either (owner report, 9 Aug 2026,
+  /book/avalkkoppam). `cases.js` had an assertion literally named "the review
+  text is in the HTML" that passed the whole time, because its fixtures said
+  `text:` too. A fixture is a claim about what the API sends; write it from
+  `api/app/schemas/`, never by copying the field the renderer happens to read.
+  Corollary: the app was fine (`review['body']`), which is the tell — one client
+  right and one wrong on the same endpoint means a client-side name, not a
+  server bug. Verify a renderer fix by feeding it the **real** payload
+  (`curl api.kitabi.in/public/...` → `renderBook`), not only a fixture.
 
 ## Open decisions
 
