@@ -130,9 +130,7 @@ def test_the_wrapped_destination_survives_one_decode_intact():
     for title in ("A & B", "ചെമ്മീൻ", "100% Love", "Q?A", "a+b"):
         url = by_retailer(merged(title=title, author=None, cid="12345"), "Flipkart")["url"]
         assert url.count("?") == 1 and url.count("&") == 2, url  # only the wrapper's separators
-        (destination,) = [
-            value for key, value in parse_qsl(urlsplit(url).query) if key == "url"
-        ]
+        (destination,) = [value for key, value in parse_qsl(urlsplit(url).query) if key == "url"]
         expected = by_retailer(merged(title=title, author=None), "Flipkart")["url"]
         assert destination == expected, title
 
