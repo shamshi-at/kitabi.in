@@ -81,7 +81,13 @@ class Settings(BaseSettings):
     # feature ships dormant and the owner flips revenue on by setting the tag
     # in Railway after the Associates account is approved.
     amazon_associate_tag: str = ""
+    # Flipkart closed its direct affiliate programme to new publishers, so
+    # `flipkart_affiliate_id` (the legacy `affid=`) is here for the case this
+    # account ever gets direct access; the reachable route is Cuelinks, whose
+    # Link Kit is a redirect wrapper rather than a parameter — hence a separate
+    # setting. Direct wins over the aggregator when both are set.
     flipkart_affiliate_id: str = ""
+    cuelinks_cid: str = ""
 
     # Supabase Storage writes (the `covers` bucket the app and admin console
     # already use). Needed only by the cover backfill job, which copies

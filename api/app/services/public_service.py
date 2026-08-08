@@ -143,6 +143,7 @@ def _edition(edition: Edition, work: Work) -> P.PublicEdition:
             author=(first_author.pen_name or first_author.name) if first_author else None,
             amazon_tag=settings.amazon_associate_tag,
             flipkart_affid=settings.flipkart_affiliate_id,
+            cuelinks_cid=settings.cuelinks_cid,
         ),
     )
 

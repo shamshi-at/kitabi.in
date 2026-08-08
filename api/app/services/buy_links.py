@@ -34,7 +34,7 @@ pay nobody.
 
 from __future__ import annotations
 
-from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, quote_plus, urlencode, urlsplit, urlunsplit
 
 from app.services import isbn as isbn_service
 
@@ -89,11 +89,32 @@ def _amazon_link(isbn_raw: str | None, title: str, author: str | None, tag: str)
     return {"retailer": AMAZON, "url": url, "affiliate": bool(tag)}
 
 
-def _flipkart_link(isbn_raw: str | None, title: str, author: str | None, affid: str) -> dict:
+def _cuelinks(url: str, cid: str) -> str:
+    """Wrap a retailer URL in Cuelinks' Link Kit redirect.
+
+    Flipkart closed its *direct* affiliate programme to new publishers years
+    ago, so unlike Amazon there is no id to append — the route is an aggregator,
+    and an aggregator tracks by owning the redirect. Cuelinks' documented Link
+    Kit form is a pure URL template, which is the only reason it is acceptable
+    here: no snippet, no client JavaScript, no API call at render time (their
+    Chrome extension / WordPress plugin route would break both the "content is
+    server-rendered" and "no third-party script" rules the public site holds).
+    """
+    destination = quote(url, safe="")
+    return f"https://linksredirect.com/?cid={quote_plus(cid)}&source=linkkit&url={destination}"
+
+
+def _flipkart_link(
+    isbn_raw: str | None, title: str, author: str | None, affid: str, cuelinks_cid: str
+) -> dict:
     url = f"https://www.flipkart.com/search?q={quote_plus(_search_query(isbn_raw, title, author))}"
     if affid:
-        url = f"{url}&affid={quote_plus(affid)}"
-    return {"retailer": FLIPKART, "url": url, "affiliate": bool(affid)}
+        # The legacy direct programme, if this account ever has one: no
+        # middleman, so it wins over the aggregator when both are configured.
+        return {"retailer": FLIPKART, "url": f"{url}&affid={quote_plus(affid)}", "affiliate": True}
+    if cuelinks_cid:
+        return {"retailer": FLIPKART, "url": _cuelinks(url, cuelinks_cid), "affiliate": True}
+    return {"retailer": FLIPKART, "url": url, "affiliate": False}
 
 
 def _tag_stored_amazon(url: str, tag: str) -> tuple[str, bool]:
@@ -125,10 +146,21 @@ def merged(
     author: str | None,
     amazon_tag: str,
     flipkart_affid: str,
+    cuelinks_cid: str = "",
 ) -> list[dict]:
     """The list an edition serves: stored links first (tagged where that is
     safe), then a generated link for every retailer family not already
-    covered. Always returns fresh dicts — the JSONB list is never mutated."""
+    covered. Always returns fresh dicts — the JSONB list is never mutated.
+
+    `cuelinks_cid` deliberately applies to the *generated Flipkart* link only.
+    Not to Amazon (we hold a direct Associates tag — routing it through an
+    aggregator would hand away a cut we don't have to give, and double
+    attribution is worse than none), and not to stored links, whose merchant
+    may not be in the Cuelinks network at all: wrapping an unaffiliated store
+    in a redirect earns nothing and puts a third-party hop in front of a link
+    a contributor entered by hand. Widening it is a matter of listing the
+    merchants that are genuinely in the network.
+    """
     out: list[dict] = []
     covered: set[str] = set()
     for entry in stored or []:
@@ -146,5 +178,5 @@ def merged(
     if AMAZON not in covered:
         out.append(_amazon_link(isbn, title, author, amazon_tag))
     if FLIPKART not in covered:
-        out.append(_flipkart_link(isbn, title, author, flipkart_affid))
+        out.append(_flipkart_link(isbn, title, author, flipkart_affid, cuelinks_cid))
     return out

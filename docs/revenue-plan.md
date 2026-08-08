@@ -100,8 +100,22 @@ The best idea on the list, and it's fully automatable today:
 - **Bounties beat commissions:** Amazon Associates India pays flat bounties for
   Kindle Unlimited / Audible signups — a "Read on Kindle" link on a book page can
   out-earn the low single-digit % on a paper copy. Check the rate card at signup.
-- Later, if Amazon proves clicks: add Flipkart/others via one aggregator
-  (Cuelinks/EarnKaro) — that's an account, so it must earn its place first.
+- **Flipkart needs an aggregator, and that's now wired** (8 Aug 2026). Flipkart
+  closed its *direct* affiliate programme to new publishers years ago, so there
+  is no `affid` to go and get — the reachable route is a network. **Cuelinks**
+  is the one that fits this architecture: free, India-only, no stated traffic
+  minimum, and its **Link Kit is a pure URL template**
+  (`linksredirect.com/?cid=<CID>&source=linkkit&url=<encoded>`), so the server
+  can build it with no snippet, no client JS and no API call at render time —
+  their Chrome-extension/WordPress-plugin route would have broken both the
+  "content is server-rendered" and "no third-party script" rules. Set
+  `CUELINKS_CID` and the generated Flipkart link is wrapped; leave it unset and
+  the link stays plain and useful. Deliberately scoped: the wrapper touches
+  **only the generated Flipkart link** — never Amazon (a direct tag gives away
+  no cut to a middleman) and never a stored contributor link (whose merchant may
+  not be in the network at all). One CID would also unlock other book retailers
+  in the network later, which is the reason to prefer it over EarnKaro/ExtraPe
+  (creator-focused, link-at-a-time, nothing to automate against).
 - **Compliance:** visible disclosure ("Kitabi may earn a commission from these
   links") on web pages and the app screen that show them; no cloaked links; no
   tagged links in push/email (Associates ToS). Amazon Associates requires ~3

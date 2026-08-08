@@ -9,6 +9,7 @@ a wrong False is an undisclosed ad.
 """
 
 import uuid
+from urllib.parse import parse_qsl, urlsplit
 
 from app.core.config import get_settings
 from app.models import Author, Edition, Work
@@ -22,9 +23,17 @@ ISBN13 = "9788126403455"
 ISBN13_979 = "9791234567896"
 
 
-def merged(stored=None, *, isbn=None, title="Chemmeen", author="Thakazhi", tag="", affid=""):
+def merged(
+    stored=None, *, isbn=None, title="Chemmeen", author="Thakazhi", tag="", affid="", cid=""
+):
     return buy_links.merged(
-        stored, isbn=isbn, title=title, author=author, amazon_tag=tag, flipkart_affid=affid
+        stored,
+        isbn=isbn,
+        title=title,
+        author=author,
+        amazon_tag=tag,
+        flipkart_affid=affid,
+        cuelinks_cid=cid,
     )
 
 
@@ -90,6 +99,70 @@ def test_flipkart_gets_the_affid():
     flipkart = by_retailer(merged(isbn=ISBN13, affid=AFFID), "Flipkart")
     assert flipkart["url"] == f"https://www.flipkart.com/search?q={ISBN13}&affid={AFFID}"
     assert flipkart["affiliate"] is True
+
+
+# --------------------------------------------------------------------------
+# Cuelinks — the only reachable Flipkart route (direct signups are closed)
+# --------------------------------------------------------------------------
+
+
+def test_cuelinks_wraps_the_flipkart_link_in_the_link_kit_redirect():
+    """An aggregator tracks by owning the redirect, so there is no id to
+    append — the whole destination is url-encoded into their Link Kit form."""
+    flipkart = by_retailer(merged(isbn=ISBN13, cid="12345"), "Flipkart")
+    assert flipkart["url"] == (
+        "https://linksredirect.com/?cid=12345&source=linkkit"
+        f"&url=https%3A%2F%2Fwww.flipkart.com%2Fsearch%3Fq%3D{ISBN13}"
+    )
+    assert flipkart["affiliate"] is True
+
+
+def test_the_wrapped_destination_survives_one_decode_intact():
+    """The property that matters: the redirect url-decodes `url=` once and must
+    get the destination back byte-for-byte. A raw `&` (or a single-encoded `%`)
+    would truncate it there and land the reader on Flipkart's home page.
+
+    Nested encoding therefore double-encodes a percent — `%26` inside the
+    destination becomes `%2526` in the wrapper — which looks wrong at a glance
+    and is exactly right; asserting the round trip instead of a hand-computed
+    string is what makes that checkable rather than guessed at.
+    """
+    for title in ("A & B", "ചെമ്മീൻ", "100% Love", "Q?A", "a+b"):
+        url = by_retailer(merged(title=title, author=None, cid="12345"), "Flipkart")["url"]
+        assert url.count("?") == 1 and url.count("&") == 2, url  # only the wrapper's separators
+        (destination,) = [
+            value for key, value in parse_qsl(urlsplit(url).query) if key == "url"
+        ]
+        expected = by_retailer(merged(title=title, author=None), "Flipkart")["url"]
+        assert destination == expected, title
+
+
+def test_a_direct_affid_beats_the_aggregator():
+    """Direct pays without a middleman's cut, so it wins when both are set —
+    and the two mechanisms must never combine into one link."""
+    flipkart = by_retailer(merged(isbn=ISBN13, affid=AFFID, cid="12345"), "Flipkart")
+    assert flipkart["url"] == f"https://www.flipkart.com/search?q={ISBN13}&affid={AFFID}"
+    assert "linksredirect" not in flipkart["url"]
+
+
+def test_cuelinks_never_touches_amazon_or_stored_links():
+    """We hold a direct Amazon tag (an aggregator hop would give away a cut we
+    don't owe), and a stored store may not be in the network at all."""
+    stored = [{"retailer": "DC Books", "url": "https://onlinestore.dcbooks.com/x"}]
+    links = merged(stored, isbn=ISBN13, tag=TAG, cid="12345")
+    assert "linksredirect" not in by_retailer(links, "Amazon")["url"]
+    assert by_retailer(links, "DC Books")["url"] == "https://onlinestore.dcbooks.com/x"
+    assert by_retailer(links, "DC Books")["affiliate"] is False
+    assert "linksredirect" in by_retailer(links, "Flipkart")["url"]
+
+
+def test_a_stored_flipkart_link_still_suppresses_the_wrapped_one():
+    """One Flipkart row, never a hand-entered one plus a wrapped one."""
+    stored = [{"retailer": "Flipkart", "url": "https://www.flipkart.com/x/p/itm123"}]
+    links = merged(stored, isbn=ISBN13, cid="12345")
+    flipkarts = [link for link in links if "flipkart" in link["url"]]
+    assert len(flipkarts) == 1
+    assert flipkarts[0]["url"] == "https://www.flipkart.com/x/p/itm123"
 
 
 # --------------------------------------------------------------------------
