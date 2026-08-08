@@ -350,6 +350,22 @@ img{max-width:100%;display:block}
 .toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:16px 0;
   border-bottom:1px solid var(--line);margin-bottom:20px}
 .toolbar .cnt{font-size:12.5px;color:var(--ink-soft);margin-left:auto}
+/* Browse's collapsed filter bar: one row, facet rows behind a native
+   <details> — no JS, links crawlable either way. */
+.fbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:13px 0;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:16px 0 20px}
+.fbar .cnt{font-size:12.5px;color:var(--ink-soft);margin-left:auto}
+.fdisc[open]{flex-basis:100%}
+.fdisc summary{list-style:none;cursor:pointer;display:inline-block}
+.fdisc summary::-webkit-details-marker{display:none}
+.fbtn.live{background:var(--oxblood);border-color:var(--oxblood);color:#F6F0E3}
+.fdisc[open] .fbtn{border-color:var(--oxblood);color:var(--oxblood)}
+.fdisc[open] .fbtn.live{color:#F6F0E3}
+.fpanel{margin:10px 0 4px;padding:2px 14px 12px;border:1px solid var(--line);
+  border-radius:12px;background:var(--card)}
+.frow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:11px}
+.frow .chip{background:var(--paper)}
+.frow .chip[aria-current]{background:var(--oxblood)}
 .pager{display:flex;gap:6px;justify-content:center;margin-top:26px;align-items:center;flex-wrap:wrap}
 .pager a,.pager span{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 13px;
   font-size:12.5px;font-weight:600;color:var(--ink-soft)}

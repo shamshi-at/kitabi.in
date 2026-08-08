@@ -529,6 +529,25 @@ assertExcludes(facetedBrowse, 'aria-current=&quot;',
 assertIncludes(facetedBrowse, 'under 200 pp', 'the short-reads chip says the number readers search');
 assertIncludes(facetedBrowse, 'Clear all', 'an active filter can always be cleared');
 
+// The facet rows fold behind a native <details> so the books stay above the
+// fold (owner report, 9 Aug 2026) — but the collapsed bar must still show
+// every active filter as its own removable chip: collapsing hides controls,
+// never state. No JS involved; the panel's links are in the DOM regardless.
+assertIncludes(facetedBrowse, '<details class="fdisc">', 'the filters are a native disclosure');
+assertIncludes(facetedBrowse, 'Filter &amp; sort · 2', 'the summary counts the active facets');
+assertIncludes(facetedBrowse, 'Crime ✕', 'the active genre is removable from the collapsed bar');
+assertIncludes(facetedBrowse, 'Top rated ✕', 'so is the non-default sort');
+
+var pristineBrowse = String(
+  renderBrowse(
+    { works: [{ id: 'w', slug: 'x', title: 'X', authors: [] }], total: 1, page: 1,
+      per_page: 24, languages: [], forms: [], genres: [] },
+    { query: {} },
+  ).text(),
+);
+assertExcludes(pristineBrowse, '✕', 'no filters active → nothing to remove, no ✕ anywhere');
+assertIncludes(pristineBrowse, 'Filter &amp; sort ▾', 'the pristine summary carries no count');
+
 // A dead-end browse names each active filter and offers to drop exactly it.
 var deadEnd = String(
   renderBrowse(

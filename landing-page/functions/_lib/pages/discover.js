@@ -224,25 +224,36 @@ export function renderBrowse(data, { query = {} } = {}) {
   const last = Math.min(data.page * data.per_page, data.total);
   const sort = query.sort || 'title';
   const genreActive = (g) => (query.genre || '').toLowerCase() === g.name.toLowerCase();
-  const anyFilter = query.language || query.form || query.genre || query.length;
+
+  // What's narrowing the list right now — each one a chip in the collapsed
+  // bar with its own ✕ (remove exactly this), so the state is visible and
+  // undoable without ever opening the panel.
+  const activeChips = [
+    sort !== 'title'
+      ? ['sort', (BROWSE_SORTS.find(([k]) => k === sort) || ['', sort])[1]]
+      : null,
+    query.form ? ['form', query.form] : null,
+    query.genre ? ['genre', query.genre] : null,
+    query.language ? ['language', query.language] : null,
+    query.length
+      ? ['length', (LENGTHS.find(([k]) => k === query.length) || ['', query.length])[1]]
+      : null,
+  ].filter(Boolean);
 
   // One row per facet, every chip a plain link. aria-current marks the
   // active one for assistive tech and for the stylesheet.
-  const facetRow = (label, chips) => html`<div class="toolbar" style="border-top:0;padding-top:0">
+  const facetRow = (label, chips) => html`<div class="frow">
     <span class="eyebrow" style="margin-right:2px">${label}</span>${chips}
   </div>`;
 
-  const toolbar = html`
-    <div class="toolbar" style="padding-bottom:0">
-      <span class="eyebrow" style="margin-right:2px">Sort</span>
-      ${BROWSE_SORTS.map(
+  const panel = html`
+    ${facetRow(
+      'Sort',
+      html`${BROWSE_SORTS.map(
         ([key, label]) => html`<a class="chip"${mark(sort === key)}
           href="${url({ sort: key === 'title' ? null : key, page: 1 })}">${label}</a>`,
-      )}
-      <span class="cnt"
-        >${data.total ? `Showing ${num(first)}–${num(last)} of ${num(data.total)}` : 'Nothing here'}</span
-      >
-    </div>
+      )}`,
+    )}
     ${data.forms?.length
       ? facetRow(
           'Type',
@@ -289,11 +300,32 @@ export function renderBrowse(data, { query = {} } = {}) {
         ${LENGTHS.map(
           ([key, label]) => html`<a class="chip"${mark(query.length === key)}
             href="${url({ length: key, page: 1 })}">${label}</a>`,
-        )}
-        ${anyFilter || sort !== 'title'
-          ? html`<a class="chip" href="/browse" style="color:#7E2A33">Clear all ✕</a>`
-          : ''}`,
+        )}`,
     )}
+  `;
+
+  // One compact bar; the facet rows live behind a native <details> disclosure
+  // (the app folded the same controls into its filter sheet for the same
+  // reason — five open rows push every book below the fold). Zero JS: the
+  // panel's links are in the DOM either way, so crawlers and no-JS readers
+  // lose nothing. The bar always shows what's active, each chip removable,
+  // so collapsing hides the *controls*, never the *state*.
+  const toolbar = html`
+    <div class="fbar">
+      <details class="fdisc">
+        <summary><span class="chip fbtn${activeChips.length ? ' live' : ''}"
+            >Filter &amp; sort${activeChips.length ? ` · ${activeChips.length}` : ''} ▾</span></summary>
+        <div class="fpanel">${panel}</div>
+      </details>
+      ${activeChips.map(
+        ([key, label]) => html`<a class="chip" href="${url({ [key]: null, page: 1 })}"
+          title="Remove this filter">${label} ✕</a>`,
+      )}
+      ${activeChips.length ? html`<a class="chip" href="/browse" style="color:#7E2A33">Clear all</a>` : ''}
+      <span class="cnt"
+        >${data.total ? `Showing ${num(first)}–${num(last)} of ${num(data.total)}` : 'Nothing here'}</span
+      >
+    </div>
   `;
 
   // A dead end is a reader lost: name each active filter and offer to drop
