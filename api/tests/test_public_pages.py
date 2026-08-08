@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import select
 
-from app.models import Author, Edition, Publisher, Rating, Series, Work
+from app.models import Author, Edition, Genre, Publisher, Rating, Series, Work
 from app.services import public_service, slug_service
 
 
@@ -227,6 +227,38 @@ async def test_browse_reports_a_total_so_pages_can_be_walked(db_sessionmaker):
         page = await public_service.browse_page(db, languages=["Malayalam"], per_page=2)
         assert page.total == 5
         assert len(page.works) == 2
+
+
+async def test_browse_length_filter_counts_match_rows(db_sessionmaker):
+    """The Length facet's total and its rows must come from the same
+    predicate, or the toolbar says "Nothing here" over a page of books."""
+    async with db_sessionmaker() as db:
+        short = Work(title="Novella")
+        long_ = Work(title="Saga")
+        db.add_all([short, long_])
+        await db.flush()
+        db.add(Edition(work_id=short.id, page_count=150))
+        db.add(Edition(work_id=long_.id, page_count=640))
+        await db.commit()
+
+        page = await public_service.browse_page(db, length="short")
+        assert page.total == 1
+        assert [w.title for w in page.works] == ["Novella"]
+
+
+async def test_browse_genre_count_is_case_insensitive_like_the_rows(db_sessionmaker):
+    """count_works matched genre case-sensitively while browse_works folded
+    case — so ?genre=fiction rendered books under a zero total. The two
+    predicates must agree."""
+    async with db_sessionmaker() as db:
+        genre = Genre(name="Fiction")
+        work = Work(title="Genre-Carried", genres=[genre])
+        db.add_all([genre, work])
+        await db.commit()
+
+        page = await public_service.browse_page(db, genre="fiction")
+        assert [w.title for w in page.works] == ["Genre-Carried"]
+        assert page.total == 1
 
 
 async def test_search_calls_out_a_cross_script_hit(db_sessionmaker):

@@ -588,6 +588,18 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   right and one wrong on the same endpoint means a client-side name, not a
   server bug. Verify a renderer fix by feeding it the **real** payload
   (`curl api.kitabi.in/public/...` → `renderBook`), not only a fixture.
+- **An HTML attribute interpolated as a template *value* ships entity-escaped —
+  and can pass every visual check anyway.** Every chip row on the web platform
+  wrote `${active ? ' aria-current="true"' : ''}`, so production served
+  `aria-current=&quot;true&quot;` (9 Aug 2026). It *looked* correct because the
+  stylesheet matches on presence (`[aria-current]`), and an unquoted-attribute
+  parse keeps the attribute present with garbage in its value — only assistive
+  tech saw the difference. Attributes must go through `raw()`
+  (`_lib/pages/discover.js` `mark()` is the pattern); `cases.js` now asserts
+  `aria-current=&quot;` never appears. Corollary: the JSC test harness shims
+  Workers globals — `URL`, and now `URLSearchParams` — so a renderer using a
+  Web API that JavaScriptCore lacks fails the harness, not production; extend
+  the shim in `tests/run.py` rather than avoiding the API.
 
 ## Open decisions
 

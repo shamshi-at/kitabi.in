@@ -3545,6 +3545,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseSortAuthor => 'Author (A–Z)';
 
   @override
+  String get browseSortTopRated => 'Top rated';
+
+  @override
+  String get browseSortJustAdded => 'Just added';
+
+  @override
+  String get browseFilterLength => 'Length';
+
+  @override
+  String get browseLengthShort => 'Short · under 200 pp';
+
+  @override
+  String get browseLengthMedium => 'Medium · 200–400 pp';
+
+  @override
+  String get browseLengthLong => 'Long · 400+ pp';
+
+  @override
   String get browseFilterAllLanguages => 'All languages';
 
   @override

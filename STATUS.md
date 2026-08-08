@@ -355,6 +355,34 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **9 Aug 2026** — **Finding a book stopped being a scroll.** The browse API's facets
+  (language / form / genre) existed since the site launched, and the web `/browse` page drew
+  none of them — one row of language chips that *left* the page for the hubs, no sort control,
+  no genre or type cut at all. Grounded in a search-trends pass first
+  ([docs/discovery-trends.md](docs/discovery-trends.md)): the query families readers actually
+  type map to two sorts and one facet we didn't have — **`sort=rating`** ("best malayalam
+  novels"; live average over the ratings table, rated-before-unrated, ties to the bigger pool),
+  **`sort=added`** ("what's new here" — catalogue arrival, distinct from publication year), and
+  a **`length` facet** (`short` <200pp / `medium` / `long` ≥400pp over any live edition —
+  the #ShortReads query, which none of the incumbents expose as a filter). Both browse
+  endpoints (`/public/browse`, `/catalog/browse/works`) take all of it; `count_works` got its
+  predicates aligned with the rows in passing (genre matching was case-sensitive on the count
+  side only, so `?genre=fiction` rendered books under a "Nothing here" total). The web
+  `/browse` now renders the full toolbar — Sort × Type × Genre × Language × Length as
+  plain-link chips that **merge into the current query** (every view a bookmarkable URL,
+  browse stays `noindex, follow`), facet counts on the chips, active chip marked, and a
+  dead-end state that names each active filter and offers to drop exactly that one. The empty
+  search page gained the same doors (Top rated / genres / languages / translations). The app's
+  filter sheet gained the two sorts and a Length row (server-side like every other facet).
+  Found along the way: every `aria-current="true"` interpolated as a template *value* had been
+  entity-escaped into `aria-current=&quot;true&quot;` — present, so the `[aria-current]` CSS
+  matched and it *looked* right, but assistive tech read a value of literal `"true"` quotes;
+  all chip rows now emit it `raw()`, with a regression assertion, and the test harness gained
+  the `URLSearchParams` shim JavaScriptCore lacks. **Data caveat, not UI:** the catalogue seed
+  carries genres/forms on almost nothing (1 genre-tagged work of 1,405), so those chip rows
+  stay thin until the ETL enrichment lands — the rows hide when empty by design. 577 API tests
+  (+9), 318 Flutter (+2, and one brittle positional selector fixed), 269 edge assertions
+  (+14), lint clean, Docker builds.
 - **8 Aug 2026** — **Every book page now sends buyers somewhere — and can pay the bills.**
   The first revenue line from [docs/revenue-plan.md](docs/revenue-plan.md) (§3.1): retailer
   buy links are **generated at read time from the ISBN** (`api/app/services/buy_links.py`) and

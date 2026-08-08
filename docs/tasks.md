@@ -914,7 +914,12 @@ out of the sitemap until a work actually carries a genre.
 - [ ] Fix imported titles — ~30% carry OpenLibrary transliteration noise
 - [ ] **Attach genres** — `browse/genres` returns `[]`. Classify the seed set against a
       ~40-genre closed vocabulary, LLM-assisted with human review (the Anthropic client
-      already exists in the API). Nothing genre-shaped can ship before this
+      already exists in the API). Nothing genre-shaped can ship before this.
+      **Raised stakes (9 Aug 2026):** the browse filter UI now exists on web + app
+      (genre/type/length chips, rating + just-added sorts — docs/discovery-trends.md),
+      so this and form/page-count enrichment are what stand between those filters and
+      being useful — 1 genre-tagged work of 1,405 today; the empty chip rows hide
+      themselves until the data lands
 - [ ] Cover coverage — typeset covers where none exists, so no page has a hole
 - [ ] Descriptions for the top 300 works, 120–200 words. Highest-leverage manual task on
       the list: it flips 300 works past the content floor and gives each a real meta description

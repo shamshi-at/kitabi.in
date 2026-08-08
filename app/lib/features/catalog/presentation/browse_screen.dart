@@ -50,6 +50,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
   bool _langTouched = false;
   String? _form;
   String? _genre;
+  String? _length;
 
   // What the filter sheet offers — best-effort; a failed fetch just leaves
   // that facet showing "All", never blocks browsing.
@@ -110,7 +111,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
   }
 
   int get _activeFacetCount =>
-      (_languages != null ? 1 : 0) + (_form != null ? 1 : 0) + (_genre != null ? 1 : 0);
+      (_languages != null ? 1 : 0) +
+      (_form != null ? 1 : 0) +
+      (_genre != null ? 1 : 0) +
+      (_length != null ? 1 : 0);
 
   Future<void> _openFilterSheet() async {
     final result = await showModalBottomSheet<_CatalogFacets>(
@@ -121,7 +125,13 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _CatalogFilterSheet(
-        current: _CatalogFacets(sort: _sort, languages: _languages, form: _form, genre: _genre),
+        current: _CatalogFacets(
+          sort: _sort,
+          languages: _languages,
+          form: _form,
+          genre: _genre,
+          length: _length,
+        ),
         languages: _languageOptions,
         preferred: _preferred,
         forms: _forms,
@@ -136,6 +146,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
       _langTouched = true;
       _form = result.form;
       _genre = result.genre;
+      _length = result.length;
     });
   }
 
@@ -199,7 +210,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
                     // Re-key on facet/sort change so pagination resets to page 1
                     // (every facet is applied server-side; filtering an
                     // already-fetched page would hide matches further in).
-                    key: ValueKey('books|$_sort|${_languages?.join('+')}|$_form|$_genre'),
+                    key: ValueKey('books|$_sort|${_languages?.join('+')}|$_form|$_genre|$_length'),
                     storageKey: 'catalog-books',
                     fetch: (limit, offset) => api.browseWorks(
                       limit: limit,
@@ -208,6 +219,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
                       languages: _languages,
                       form: _form,
                       genre: _genre,
+                      length: _length,
                     ),
                     emptyText:
                         _languages != null ? l10n.browseEmptyInYourLanguages : l10n.browseEmpty,
@@ -668,12 +680,13 @@ class _QuickAddBadge extends ConsumerWidget {
 /// default filter is the reader's profile languages, and a single sheet pick
 /// travels as a one-element list.
 class _CatalogFacets {
-  const _CatalogFacets({required this.sort, this.languages, this.form, this.genre});
+  const _CatalogFacets({required this.sort, this.languages, this.form, this.genre, this.length});
 
   final String sort;
   final List<String>? languages;
   final String? form;
   final String? genre;
+  final String? length;
 }
 
 /// The floating Filter's sheet — the sort/type/genre/language controls that
@@ -712,6 +725,7 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
   late String? _langChoice = _initialLangChoice();
   late String? _form = widget.current.form;
   late String? _genre = widget.current.genre;
+  late String? _length = widget.current.length;
 
   String? _initialLangChoice() {
     final cur = widget.current.languages;
@@ -790,6 +804,8 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
     final l10n = AppLocalizations.of(context)!;
     final sorts = {
       'title': l10n.browseSortTitle,
+      'rating': l10n.browseSortTopRated,
+      'added': l10n.browseSortJustAdded,
       'year_desc': l10n.browseSortNewest,
       'year_asc': l10n.browseSortOldest,
       'author': l10n.browseSortAuthor,
@@ -821,13 +837,18 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const Spacer(),
-                  if (_langChoice != null || _form != null || _genre != null || _sort != 'title')
+                  if (_langChoice != null ||
+                      _form != null ||
+                      _genre != null ||
+                      _length != null ||
+                      _sort != 'title')
                     TextButton(
                       onPressed: () => setState(() {
                         _sort = 'title';
                         _langChoice = null;
                         _form = null;
                         _genre = null;
+                        _length = null;
                       }),
                       child: Text(l10n.browseFilterClear,
                           style: TextStyle(color: AppColors.oxblood)),
@@ -893,6 +914,21 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                       : null,
                 ),
               ],
+              // Length is a static vocabulary (the server's short/medium/long
+              // page-count buckets), not a fetched facet — it can never be
+              // empty, so no isNotEmpty guard. "Short" is the bucket readers
+              // search for by name ("short books under 200 pages").
+              _FacetLabel(l10n.browseFilterLength),
+              _ChipRow(
+                options: [
+                  (null, l10n.browseFilterAllTitle),
+                  ('short', l10n.browseLengthShort),
+                  ('medium', l10n.browseLengthMedium),
+                  ('long', l10n.browseLengthLong),
+                ],
+                selected: _length,
+                onSelect: (v) => setState(() => _length = v),
+              ),
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
@@ -903,6 +939,7 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
                       languages: _resultLanguages,
                       form: _form,
                       genre: _genre,
+                      length: _length,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(

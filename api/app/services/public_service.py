@@ -637,20 +637,23 @@ async def count_works(
     languages: list[str] | None = None,
     form: str | None = None,
     genre: str | None = None,
+    length: str | None = None,
 ) -> int:
     """Total for a filtered browse — without it a page can't say "1–24 of 312"
-    or offer a last page, and a crawler has no finite set to walk."""
+    or offer a last page, and a crawler has no finite set to walk.
+
+    Every predicate here must match `catalog_service.browse_works` exactly —
+    the genre match used to be case-sensitive while browse's was not, so a
+    lowercased genre param rendered books under a "Nothing here" total."""
     stmt = select(func.count(func.distinct(Work.id))).where(Work.deleted_at.is_(None))
     if languages:
         stmt = stmt.where(Work.language.in_(languages))
     if form:
         stmt = stmt.where(Work.form == form)
     if genre:
-        stmt = (
-            stmt.join(work_genres, work_genres.c.work_id == Work.id)
-            .join(Genre, Genre.id == work_genres.c.genre_id)
-            .where(Genre.name == genre)
-        )
+        stmt = stmt.where(Work.genres.any(func.lower(Genre.name) == genre.strip().lower()))
+    if length:
+        stmt = stmt.where(catalog_service.length_filter(length))
     return int(await db.scalar(stmt) or 0)
 
 
@@ -660,6 +663,7 @@ async def browse_page(
     languages: list[str] | None = None,
     form: str | None = None,
     genre: str | None = None,
+    length: str | None = None,
     sort: str = "title",
     page: int = 1,
     per_page: int = 24,
@@ -671,11 +675,12 @@ async def browse_page(
         languages=languages,
         form=form,
         genre=genre,
+        length=length,
         sort=sort,
     )
     return P.BrowsePage(
         works=await _cards(db, works),
-        total=await count_works(db, languages=languages, form=form, genre=genre),
+        total=await count_works(db, languages=languages, form=form, genre=genre, length=length),
         page=page,
         per_page=per_page,
         languages=await _language_counts(db),

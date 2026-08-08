@@ -121,6 +121,43 @@ class URL {
   }
   toString() { return this.href; }
 }
+
+// Same story as URL above: URLSearchParams is a Web API JavaScriptCore does
+// not ship, and the browse/people renderers build every chip href through it.
+// Without the shim those pages cannot render in the harness at all. Minimal on
+// purpose — set/get/toString and the constructors the renderers actually use.
+class URLSearchParams {
+  constructor(init) {
+    this.entries_ = [];
+    if (init instanceof URLSearchParams) {
+      this.entries_ = init.entries_.map((e) => e.slice());
+    } else if (typeof init === 'string') {
+      for (const pair of init.replace(/^\\?/, '').split('&')) {
+        if (!pair) continue;
+        const i = pair.indexOf('=');
+        const raw = (s) => decodeURIComponent(s.replace(/\\+/g, ' '));
+        this.entries_.push(i < 0 ? [raw(pair), ''] : [raw(pair.slice(0, i)), raw(pair.slice(i + 1))]);
+      }
+    } else if (init) {
+      for (const k in init) this.entries_.push([String(k), String(init[k])]);
+    }
+  }
+  set(k, v) {
+    k = String(k);
+    const first = this.entries_.findIndex((e) => e[0] === k);
+    this.entries_ = this.entries_.filter((e, i) => e[0] !== k || i === first);
+    if (first < 0) this.entries_.push([k, String(v)]);
+    else this.entries_[first][1] = String(v);
+  }
+  get(k) {
+    const e = this.entries_.find((x) => x[0] === String(k));
+    return e ? e[1] : null;
+  }
+  toString() {
+    const enc = (s) => encodeURIComponent(s).replace(/%20/g, '+');
+    return this.entries_.map(([k, v]) => enc(k) + '=' + enc(v)).join('&');
+  }
+}
 class Request { constructor(url, init) { this.url = url; this.method = (init && init.method) || 'GET'; } }
 const caches = { default: { match() { return null; }, put() {} } };
 function fetch() { throw new Error('fetch is not available in the test harness'); }

@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, literal, or_, select, text, update
+from sqlalchemy import and_, func, literal, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -857,6 +857,29 @@ async def find_similar_works(db: AsyncSession, title: str, limit: int = 5) -> li
     return list((await db.execute(stmt)).scalars().all())
 
 
+# The Length filter's buckets. The bounds follow the query readers actually
+# type ("short books under 200 pages" — a documented search surge since the
+# BookTok #ShortReads wave): short < 200, medium 200–399, long ≥ 400. A work
+# qualifies when ANY live edition's page_count lands in the bucket, because
+# counts differ per printing and the reader is asking about the book, not one
+# ISBN. Values are the API's `length` vocabulary — endpoints validate against
+# these keys.
+LENGTH_BOUNDS: dict[str, tuple[int, int | None]] = {
+    "short": (1, 200),
+    "medium": (200, 400),
+    "long": (400, None),
+}
+
+
+def length_filter(length: str):  # noqa: ANN201 — SQLAlchemy boolean clause
+    """EXISTS over live editions whose page_count falls in the named bucket."""
+    lo, hi = LENGTH_BOUNDS[length]
+    conds = [Edition.deleted_at.is_(None), Edition.page_count >= lo]
+    if hi is not None:
+        conds.append(Edition.page_count < hi)
+    return Work.editions.any(and_(*conds))
+
+
 async def browse_works(
     db: AsyncSession,
     limit: int,
@@ -864,13 +887,15 @@ async def browse_works(
     languages: list[str] | None = None,
     form: str | None = None,
     genre: str | None = None,
+    length: str | None = None,
     sort: str = "title",
 ) -> list[Work]:
     """The Discover/browse screen — catalog works, paged, with optional
-    language(s) / form (Type) / genre filters and sort (title / newest /
-    oldest / author). Layer 1 is server-authoritative, so this reads straight
-    from our catalog. `languages` is a list because the app's default filter
-    is the reader's preferred languages — usually more than one."""
+    language(s) / form (Type) / genre / length filters and sort (title /
+    newest / oldest / author / top-rated / recently added). Layer 1 is
+    server-authoritative, so this reads straight from our catalog.
+    `languages` is a list because the app's default filter is the reader's
+    preferred languages — usually more than one."""
     stmt = select(Work).options(*_SUMMARY_OPTIONS).where(Work.deleted_at.is_(None))
     if languages:
         stmt = stmt.where(Work.language.in_(languages))
@@ -883,8 +908,36 @@ async def browse_works(
         stmt = stmt.where(
             Work.genres.any(func.lower(Genre.name) == genre.strip().lower()),
         )
+    if length:
+        stmt = stmt.where(length_filter(length))
 
-    if sort == "author":
+    if sort == "rating":
+        # "Best X" is the highest-intent browse there is, so the order is the
+        # live average over the ratings table (Work.aggregate_rating is never
+        # written — see review_service.rating_summary). Ties break toward the
+        # book more readers rated, then title for a stable page walk.
+        # SCALE: denormalize onto Work if this grouped join ever shows in
+        # traces; fine at catalogue size.
+        rated = (
+            select(
+                Rating.work_id.label("work_id"),
+                func.avg(Rating.value).label("avg_rating"),
+                func.count().label("rating_count"),
+            )
+            .where(Rating.deleted_at.is_(None))
+            .group_by(Rating.work_id)
+            .subquery()
+        )
+        stmt = stmt.outerjoin(rated, rated.c.work_id == Work.id).order_by(
+            rated.c.avg_rating.desc().nullslast(),
+            rated.c.rating_count.desc().nullslast(),
+            Work.title.asc(),
+        )
+    elif sort == "added":
+        # "What's new here" — arrival in the catalogue, not publication year
+        # (year_desc already covers that). Keeps the shelf feeling alive.
+        stmt = stmt.order_by(Work.created_at.desc(), Work.title.asc())
+    elif sort == "author":
         # One row per work, ordered by its earliest author name. group_by the
         # PK collapses the M2M join without a DISTINCT-vs-ORDER-BY conflict.
         stmt = (

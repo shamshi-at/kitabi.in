@@ -5812,6 +5812,42 @@ abstract class AppLocalizations {
   /// **'Author (A–Z)'**
   String get browseSortAuthor;
 
+  /// Browse sort option: best community rating first — the "best books" query
+  ///
+  /// In en, this message translates to:
+  /// **'Top rated'**
+  String get browseSortTopRated;
+
+  /// Browse sort option: newest arrivals in the catalogue first (created, not published)
+  ///
+  /// In en, this message translates to:
+  /// **'Just added'**
+  String get browseSortJustAdded;
+
+  /// Label on the catalogue length facet (page-count buckets)
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get browseFilterLength;
+
+  /// Length chip: any edition under 200 pages — the "short books" search readers type
+  ///
+  /// In en, this message translates to:
+  /// **'Short · under 200 pp'**
+  String get browseLengthShort;
+
+  /// Length chip: 200–400 pages
+  ///
+  /// In en, this message translates to:
+  /// **'Medium · 200–400 pp'**
+  String get browseLengthMedium;
+
+  /// Length chip: 400 pages or more
+  ///
+  /// In en, this message translates to:
+  /// **'Long · 400+ pp'**
+  String get browseLengthLong;
+
   /// Browse language filter: no language filter
   ///
   /// In en, this message translates to:

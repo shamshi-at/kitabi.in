@@ -2,6 +2,8 @@ import uuid
 
 from sqlalchemy import text
 
+from app.models import Rating
+
 
 async def test_create_work_manual(client):
     resp = await client.post(
@@ -391,6 +393,82 @@ async def test_browse_works_filters_by_multiple_languages(client):
     titles = [w["title"] for w in both.json()]
     assert "Mal Book" in titles and "Tam Book" in titles
     assert "Eng Book" not in titles
+
+
+async def test_browse_works_sort_by_rating(client, db_sessionmaker):
+    """`sort=rating` answers the "best X" query shape: live average over the
+    ratings table (Work.aggregate_rating is never written), rated books before
+    unrated, higher averages first."""
+    adored = await client.post("/catalog/works", json={"title": "Adored"})
+    mixed = await client.post("/catalog/works", json={"title": "Mixed Feelings"})
+    await client.post("/catalog/works", json={"title": "Never Rated"})
+    async with db_sessionmaker() as db:
+        for work_id, values in [
+            (adored.json()["id"], [5, 5]),
+            (mixed.json()["id"], [3]),
+        ]:
+            for value in values:
+                db.add(
+                    Rating(
+                        id=uuid.uuid4(),
+                        user_id=uuid.uuid4(),
+                        work_id=uuid.UUID(work_id),
+                        value=value,
+                    )
+                )
+        await db.commit()
+
+    resp = await client.get("/catalog/browse/works", params={"sort": "rating", "limit": 100})
+    assert resp.status_code == 200
+    titles = [w["title"] for w in resp.json()]
+    assert titles.index("Adored") < titles.index("Mixed Feelings") < titles.index("Never Rated")
+
+
+async def test_browse_works_sort_by_recently_added(client, db_sessionmaker):
+    """`sort=added` is catalogue arrival, not publication year — the "what's
+    new here" shelf. Timestamps are pushed apart explicitly so the assertion
+    can't hinge on two requests landing in different microseconds."""
+    await client.post("/catalog/works", json={"title": "Arrived Long Ago"})
+    await client.post("/catalog/works", json={"title": "Arrived Today"})
+    async with db_sessionmaker() as db:
+        await db.execute(
+            text("UPDATE works SET created_at = created_at - interval '1 day' WHERE title = :t"),
+            {"t": "Arrived Long Ago"},
+        )
+        await db.commit()
+
+    resp = await client.get("/catalog/browse/works", params={"sort": "added", "limit": 100})
+    assert resp.status_code == 200
+    titles = [w["title"] for w in resp.json()]
+    assert titles.index("Arrived Today") < titles.index("Arrived Long Ago")
+
+
+async def test_browse_works_length_filter(client):
+    """`length` buckets by any live edition's page count — short is the
+    "books under 200 pages" query, long is ≥400, medium between. A work with
+    no page count on any edition matches no bucket rather than a wrong one."""
+    await client.post("/catalog/works", json={"title": "Novella", "page_count": 120})
+    await client.post("/catalog/works", json={"title": "Standard", "page_count": 250})
+    await client.post("/catalog/works", json={"title": "Saga", "page_count": 650})
+    await client.post("/catalog/works", json={"title": "Uncounted"})
+
+    async def titles_for(length):
+        resp = await client.get("/catalog/browse/works", params={"length": length, "limit": 100})
+        assert resp.status_code == 200
+        return [w["title"] for w in resp.json()]
+
+    assert "Novella" in await titles_for("short")
+    assert "Standard" not in await titles_for("short")
+    assert "Standard" in await titles_for("medium")
+    assert "Saga" in await titles_for("long")
+    for bucket in ("short", "medium", "long"):
+        assert "Uncounted" not in await titles_for(bucket)
+
+    everything = await client.get("/catalog/browse/works", params={"limit": 100})
+    assert "Uncounted" in [w["title"] for w in everything.json()]
+
+    rejected = await client.get("/catalog/browse/works", params={"length": "epic"})
+    assert rejected.status_code == 422
 
 
 async def test_browse_works_sort_by_author(client):

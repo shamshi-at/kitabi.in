@@ -123,12 +123,13 @@ async def browse(
     language: Annotated[list[str] | None, Query()] = None,
     form: str | None = Query(default=None),
     genre: str | None = Query(default=None),
-    sort: str = Query(default="title", pattern="^(title|year_desc|year_asc|author)$"),
+    length: str | None = Query(default=None, pattern="^(short|medium|long)$"),
+    sort: str = Query(default="title", pattern="^(title|year_desc|year_asc|author|rating|added)$"),
     page: int = Query(default=1, ge=1, le=500),
 ) -> P.BrowsePage:
     _cached(response, _CACHE_SHORT)
     return await public_service.browse_page(
-        db, languages=language, form=form, genre=genre, sort=sort, page=page
+        db, languages=language, form=form, genre=genre, length=length, sort=sort, page=page
     )
 
 

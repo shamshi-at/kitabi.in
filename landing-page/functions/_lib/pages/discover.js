@@ -11,8 +11,15 @@
 
 import * as ld from '../jsonld.js';
 import { appBand, avatar, bookStrip, breadcrumb, cover, pager, section } from '../components.js';
-import { authorPath, bookPath, clamp, html, joinDot, num, publisherPath, seg } from '../html.js';
+import { authorPath, bookPath, clamp, html, joinDot, num, publisherPath, raw, seg } from '../html.js';
 import { page } from '../layout.js';
+
+/** The active chip's attribute. raw() is load-bearing: interpolated as a
+ * plain value the html`` tagger entity-escapes it into
+ * `aria-current=&quot;true&quot;` — still *present*, so the [aria-current]
+ * CSS matched and the flaw shipped invisibly, but the value assistive tech
+ * read was `"true"` with literal quotes. Every chip row goes through here. */
+const mark = (active) => (active ? raw(' aria-current="true"') : '');
 
 // Editorial intros live here, not in the API: they are content, not data, and
 // keeping them in the renderer means writing one doesn't need a backend deploy.
@@ -36,7 +43,7 @@ function facetList(title, items, hrefFor, current) {
       ${items
         .slice(0, 14)
         .map(
-          (i) => html`<a class="chip"${i.slug === current ? ' aria-current="true"' : ''}
+          (i) => html`<a class="chip"${mark(i.slug === current)}
             href="${hrefFor(i)}">${i.name} <span style="opacity:.6">${num(i.count)}</span></a>`,
         )}
     </p>
@@ -115,7 +122,13 @@ export function renderSearch(data) {
           exists and isn't here yet, you can add it from the app — scan the ISBN and it's catalogued
           in seconds.
         </p>
-        <a class="btn-ghost" style="margin-top:15px" href="/browse">Browse everything instead</a>
+        <p class="chips" style="justify-content:center;margin-top:15px">
+          <a class="chip" href="/browse">Browse everything</a>
+          <a class="chip" href="/browse?sort=rating">Top rated</a>
+          <a class="chip" href="/genres">By genre</a>
+          <a class="chip" href="/languages">By language</a>
+          <a class="chip" href="/translations">In translation</a>
+        </p>
       </div>`;
 
   const body = html`
@@ -163,28 +176,143 @@ export function renderSearch(data) {
 // Browse
 // --------------------------------------------------------------------------
 
+// The Length facet's vocabulary — mirrors the API's LENGTH_BOUNDS. "Short"
+// is the query readers actually type ("short books under 200 pages"), so the
+// label says the number, not just the adjective.
+const LENGTHS = [
+  ['short', 'Short · under 200 pp'],
+  ['medium', 'Medium · 200–400 pp'],
+  ['long', 'Long · 400+ pp'],
+];
+
+const BROWSE_SORTS = [
+  ['title', 'A–Z'],
+  ['rating', 'Top rated'],
+  ['added', 'Just added'],
+  ['year_desc', 'Newest'],
+  ['year_asc', 'Oldest'],
+  ['author', 'By author'],
+];
+
+/** The first `max` facet options with the active one guaranteed a seat, so a
+ * filter can never hide behind its own chip row (same rule the app's sheet
+ * follows). `isActive` compares a facet row to the current query value. */
+function facetSeats(items, isActive, max) {
+  const active = (items || []).filter(isActive);
+  const rest = (items || []).filter((i) => !isActive(i));
+  return [...active, ...rest].slice(0, max);
+}
+
 export function renderBrowse(data, { query = {} } = {}) {
-  const hrefFor = (p) => {
-    const params = new URLSearchParams(query);
-    params.set('page', String(p));
-    return `/browse?${params.toString()}`;
+  // Every view is a URL: a chip merges its facet into the current query
+  // rather than replacing it, so Sort × Type × Genre × Language × Length
+  // compose freely — and any view can be bookmarked, shared, or crawled.
+  // A null value drops its key; page resets unless explicitly carried.
+  const url = (over = {}) => {
+    const merged = { ...query, ...over };
+    const p = new URLSearchParams();
+    for (const key of ['language', 'form', 'genre', 'length', 'sort']) {
+      if (merged[key]) p.set(key, merged[key]);
+    }
+    if (over.page && over.page > 1) p.set('page', String(over.page));
+    const qs = p.toString();
+    return qs ? `/browse?${qs}` : '/browse';
   };
+  const hrefFor = (p) => url({ page: p });
+
   const first = (data.page - 1) * data.per_page + 1;
   const last = Math.min(data.page * data.per_page, data.total);
+  const sort = query.sort || 'title';
+  const genreActive = (g) => (query.genre || '').toLowerCase() === g.name.toLowerCase();
+  const anyFilter = query.language || query.form || query.genre || query.length;
+
+  // One row per facet, every chip a plain link. aria-current marks the
+  // active one for assistive tech and for the stylesheet.
+  const facetRow = (label, chips) => html`<div class="toolbar" style="border-top:0;padding-top:0">
+    <span class="eyebrow" style="margin-right:2px">${label}</span>${chips}
+  </div>`;
+
+  const toolbar = html`
+    <div class="toolbar" style="padding-bottom:0">
+      <span class="eyebrow" style="margin-right:2px">Sort</span>
+      ${BROWSE_SORTS.map(
+        ([key, label]) => html`<a class="chip"${mark(sort === key)}
+          href="${url({ sort: key === 'title' ? null : key, page: 1 })}">${label}</a>`,
+      )}
+      <span class="cnt"
+        >${data.total ? `Showing ${num(first)}–${num(last)} of ${num(data.total)}` : 'Nothing here'}</span
+      >
+    </div>
+    ${data.forms?.length
+      ? facetRow(
+          'Type',
+          html`<a class="chip"${mark(!query.form)}
+              href="${url({ form: null, page: 1 })}">All</a>
+            ${facetSeats(data.forms, (f) => f.name === query.form, 6).map(
+              (f) => html`<a class="chip"${mark(f.name === query.form)}
+                href="${url({ form: f.name, page: 1 })}"
+                >${f.name} <span style="opacity:.6">${num(f.count)}</span></a
+              >`,
+            )}`,
+        )
+      : ''}
+    ${data.genres?.length
+      ? facetRow(
+          'Genre',
+          html`<a class="chip"${mark(!query.genre)}
+              href="${url({ genre: null, page: 1 })}">All</a>
+            ${facetSeats(data.genres, genreActive, 10).map(
+              (g) => html`<a class="chip"${mark(genreActive(g))}
+                href="${url({ genre: g.name, page: 1 })}"
+                >${g.name} <span style="opacity:.6">${num(g.count)}</span></a
+              >`,
+            )}`,
+        )
+      : ''}
+    ${data.languages?.length
+      ? facetRow(
+          'Language',
+          html`<a class="chip"${mark(!query.language)}
+              href="${url({ language: null, page: 1 })}">All</a>
+            ${facetSeats(data.languages, (l) => l.name === query.language, 8).map(
+              (l) => html`<a class="chip"${mark(l.name === query.language)}
+                href="${url({ language: l.name, page: 1 })}"
+                >${l.name} <span style="opacity:.6">${num(l.count)}</span></a
+              >`,
+            )}`,
+        )
+      : ''}
+    ${facetRow(
+      'Length',
+      html`<a class="chip"${mark(!query.length)}
+          href="${url({ length: null, page: 1 })}">All</a>
+        ${LENGTHS.map(
+          ([key, label]) => html`<a class="chip"${mark(query.length === key)}
+            href="${url({ length: key, page: 1 })}">${label}</a>`,
+        )}
+        ${anyFilter || sort !== 'title'
+          ? html`<a class="chip" href="/browse" style="color:#7E2A33">Clear all ✕</a>`
+          : ''}`,
+    )}
+  `;
+
+  // A dead end is a reader lost: name each active filter and offer to drop
+  // exactly that one, so "Malayalam × Poetry × Short" fails soft into the
+  // nearest view that has books.
+  const activeFilters = [
+    query.language ? ['language', `Language: ${query.language}`] : null,
+    query.form ? ['form', `Type: ${query.form}`] : null,
+    query.genre ? ['genre', `Genre: ${query.genre}`] : null,
+    query.length
+      ? ['length', `Length: ${(LENGTHS.find(([k]) => k === query.length) || ['', query.length])[1]}`]
+      : null,
+  ].filter(Boolean);
 
   const body = html`
     <div class="wrap">
       ${breadcrumb([{ label: 'Home', href: '/' }, { label: 'Browse' }])}
       <h1 class="serif" style="font-size:30px;font-weight:600;margin-top:14px">Browse the catalogue</h1>
-      <div class="toolbar">
-        <a class="chip"${!query.language ? ' aria-current="true"' : ''} href="/browse">All</a>
-        ${(data.languages || []).slice(0, 8).map(
-          (l) => html`<a class="chip" href="/language/${seg(l.slug)}">${l.name}</a>`,
-        )}
-        <span class="cnt"
-          >${data.total ? `Showing ${num(first)}–${num(last)} of ${num(data.total)}` : 'Nothing here'}</span
-        >
-      </div>
+      ${toolbar}
       ${data.works?.length
         ? html`${bookStrip(data.works, { priorityFirst: true })}${pager(
             data.page,
@@ -195,7 +323,15 @@ export function renderBrowse(data, { query = {} } = {}) {
         : html`<div class="thin">
             <div class="fl">❦</div>
             <h2>Nothing matches those filters</h2>
-            <p>Try widening them, or browse a language hub instead.</p>
+            <p>Drop one and there's more to see:</p>
+            <p class="chips" style="justify-content:center;margin-top:12px">
+              ${activeFilters.map(
+                ([key, label]) => html`<a class="chip" href="${url({ [key]: null, page: 1 })}"
+                  >${label} ✕</a
+                >`,
+              )}
+              <a class="chip" href="/browse">Clear all</a>
+            </p>
           </div>`}
       ${appBand()}
     </div>
@@ -203,7 +339,7 @@ export function renderBrowse(data, { query = {} } = {}) {
 
   return page({
     title: `Browse — page ${data.page} — Kitabi`,
-    description: 'Browse every book in the Kitabi catalogue by language, type and genre.',
+    description: 'Browse every book in the Kitabi catalogue by language, type, genre and length.',
     canonical: null,
     body,
     nav: 'books',
@@ -246,7 +382,7 @@ export function renderHub(data) {
                 ${data.forms
                   .slice(0, 8)
                   .map(
-                    (f) => html`<a class="chip"${data.form === f.name ? ' aria-current="true"' : ''}
+                    (f) => html`<a class="chip"${mark(data.form === f.name)}
                       href="${base}/${seg(f.slug)}">${f.name}</a>`,
                   )}
               </p>`
@@ -380,7 +516,7 @@ export function renderPeople(data) {
       <div class="toolbar">
         <span class="eyebrow" style="margin-right:2px">Sort</span>
         ${SORTS.map(
-          ([key, label]) => html`<a class="chip"${data.sort === key ? ' aria-current="true"' : ''}
+          ([key, label]) => html`<a class="chip"${mark(data.sort === key)}
             href="${url({ sort: key, page: 1 })}">${label}</a>`,
         )}
         <span class="cnt">${num(first)}–${num(last)} of ${num(data.total)}</span>
@@ -389,12 +525,12 @@ export function renderPeople(data) {
       ${data.languages?.length
         ? html`<div class="toolbar" style="border-top:0;padding-top:0;margin-top:-8px">
             <span class="eyebrow" style="margin-right:2px">Language</span>
-            <a class="chip"${!data.language ? ' aria-current="true"' : ''}
+            <a class="chip"${mark(!data.language)}
                href="${url({ language: null, page: 1 })}">All</a>
             ${data.languages
               .slice(0, 12)
               .map(
-                (l) => html`<a class="chip"${data.language === l.name ? ' aria-current="true"' : ''}
+                (l) => html`<a class="chip"${mark(data.language === l.name)}
                   href="${url({ language: l.name, page: 1 })}"
                   >${l.name} <span style="opacity:.6">${num(l.count)}</span></a
                 >`,

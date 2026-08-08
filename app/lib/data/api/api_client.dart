@@ -336,6 +336,7 @@ class ApiClient {
     List<String>? languages,
     String? form,
     String? genre,
+    String? length,
     String sort = 'title',
   }) async {
     final res = await _dio.get(
@@ -347,6 +348,7 @@ class ApiClient {
         'language': ?languages,
         'form': ?form,
         'genre': ?genre,
+        'length': ?length,
       },
       // FastAPI binds a repeated `language=A&language=B`; Dio's query default
       // (multiCompatible) would send `language[]=A`, which it ignores.

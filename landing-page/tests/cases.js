@@ -461,6 +461,8 @@ assertIncludes(searchDoc, 'href="/book/chemmeen"', 'results are crawlable links 
 var emptySearch = String(renderSearch({ q: 'qwertyuiop', works: [], authors: [], publishers: [] }).text());
 assertIncludes(emptySearch, 'Nothing for', 'zero results is a real page, not a dead end');
 assertIncludes(emptySearch, 'href="/browse"', 'and it offers somewhere to go');
+assertIncludes(emptySearch, 'href="/genres"', 'zero results offers the genre door');
+assertIncludes(emptySearch, 'href="/browse?sort=rating"', '…and the top-rated door');
 
 var hubDoc = String(
   renderHub({ kind: 'language', name: 'Malayalam', slug: 'malayalam', form: null,
@@ -490,6 +492,56 @@ var browseDoc = String(
   renderBrowse({ works: [], total: 0, page: 1, per_page: 24, languages: [], forms: [], genres: [] }).text(),
 );
 assertIncludes(browseDoc, 'content="noindex, follow"', 'faceted browse is noindex, follow');
+
+// The browse toolbar: every facet the API takes is a chip row, chips merge
+// into the current query (Sort × Type × Genre × Language × Length compose),
+// and the active chip is marked. The facets were in the payload all along —
+// the old renderer just never drew them.
+var facetedBrowse = String(
+  renderBrowse(
+    {
+      works: [{ id: 'w', slug: 'chemmeen', title: 'Chemmeen', authors: [] }],
+      total: 30, page: 1, per_page: 24,
+      languages: [{ name: 'Malayalam', slug: 'malayalam', count: 300 },
+                  { name: 'Tamil', slug: 'tamil', count: 120 }],
+      forms: [{ name: 'Novel', slug: 'novel', count: 214 }],
+      genres: [{ name: 'Fiction', slug: 'fiction', count: 190 },
+               { name: 'Crime', slug: 'crime', count: 41 }],
+    },
+    { query: { genre: 'Crime', sort: 'rating' } },
+  ).text(),
+);
+assertIncludes(facetedBrowse, 'href="/browse?genre=Crime&amp;sort=rating&amp;page=2"',
+  'the pager keeps every active facet');
+assertIncludes(facetedBrowse, 'href="/browse?genre=Crime&amp;length=short&amp;sort=rating"',
+  'a length chip merges into the active query instead of replacing it');
+assertIncludes(facetedBrowse, 'href="/browse?form=Novel&amp;genre=Crime&amp;sort=rating"',
+  'a type chip composes with genre and sort');
+assertIncludes(facetedBrowse, 'href="/browse?genre=Crime"',
+  'the A–Z sort chip drops the sort param rather than pinning sort=title');
+assert(
+  /aria-current="true"\s+href="\/browse\?genre=Crime&amp;sort=rating">Top rated</.test(facetedBrowse),
+  'the active sort chip is marked with aria-current',
+);
+assertIncludes(facetedBrowse, 'Top rated', 'the "best books" sort exists');
+assertExcludes(facetedBrowse, 'aria-current=&quot;',
+  'the attribute is emitted raw — entity-escaped quotes reached production for weeks');
+assertIncludes(facetedBrowse, 'under 200 pp', 'the short-reads chip says the number readers search');
+assertIncludes(facetedBrowse, 'Clear all', 'an active filter can always be cleared');
+
+// A dead-end browse names each active filter and offers to drop exactly it.
+var deadEnd = String(
+  renderBrowse(
+    { works: [], total: 0, page: 1, per_page: 24, languages: [], forms: [], genres: [] },
+    { query: { language: 'Malayalam', length: 'short' } },
+  ).text(),
+);
+assertIncludes(deadEnd, 'Nothing matches those filters', 'the empty state is honest');
+assertIncludes(deadEnd, 'href="/browse?length=short"',
+  'dropping the language keeps the length filter');
+assertIncludes(deadEnd, 'href="/browse?language=Malayalam"',
+  'dropping the length keeps the language filter');
+assertIncludes(deadEnd, 'Language: Malayalam', 'each active filter is named');
 
 // --------------------------------------------------------------------------
 // Series, translation groups, lists, reviews, readers (W8–W12)

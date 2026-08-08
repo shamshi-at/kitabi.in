@@ -121,6 +121,7 @@ class _FakeApiClient extends ApiClient {
   String? lastBrowseForm;
   String? lastBrowseGenre;
   List<String>? lastBrowseLanguages;
+  String? lastBrowseLength;
   String? lastBrowseSort;
 
   /// When set, a language-filtered query returns nothing — the "no books in
@@ -134,11 +135,13 @@ class _FakeApiClient extends ApiClient {
     List<String>? languages,
     String? form,
     String? genre,
+    String? length,
     String sort = 'title',
   }) async {
     lastBrowseForm = form;
     lastBrowseGenre = genre;
     lastBrowseLanguages = languages;
+    lastBrowseLength = length;
     lastBrowseSort = sort;
     if (emptyWhenLanguageFiltered && languages != null) return [];
     if (offset > 0) return []; // one page, then end
@@ -938,6 +941,44 @@ void main() {
     expect(fake.lastBrowseGenre, 'Historical');
   });
 
+  testWidgets('the catalogue sorts by rating and filters by length from the sheet',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const BrowseScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+    expect(fake.lastBrowseSort, 'title');
+    expect(fake.lastBrowseLength, isNull);
+
+    await tester.tap(find.byIcon(Icons.manage_search));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Filter'));
+    await tester.pumpAndSettle();
+
+    // "Top rated" is the "best books" query; "Short" is the page-count bucket
+    // readers search by name. Both go to the server together.
+    await tester.tap(find.text('Top rated'));
+    await tester.tap(find.text('Short · under 200 pp'));
+    await tester.tap(find.text('Show books'));
+    await tester.pumpAndSettle();
+
+    expect(fake.lastBrowseSort, 'rating');
+    expect(fake.lastBrowseLength, 'short');
+
+    // Clear resets every facet, length included — reopen and wipe.
+    await tester.tap(find.byIcon(Icons.manage_search));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Filter'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clear'));
+    await tester.tap(find.text('Show books'));
+    await tester.pumpAndSettle();
+    expect(fake.lastBrowseSort, 'title');
+    expect(fake.lastBrowseLength, isNull);
+  });
+
   // ── Default language filter (29 Jul 2026) ────────────────────────────────
   // The catalogue opens filtered to the reader's configured languages; the
   // sheet's "Your languages" chip names the state, All/single override it,
@@ -973,8 +1014,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Your languages'), findsOneWidget);
 
-    // Switching to All re-queries the whole catalogue.
-    await tester.tap(find.text('All').last);
+    // Switching to All re-queries the whole catalogue. The chip is found via
+    // its row (the one holding "Your languages"), not by position — a `.last`
+    // here broke the day the Length row brought a fourth "All" chip.
+    await tester.tap(find.descendant(
+      of: find.ancestor(of: find.text('Your languages'), matching: find.byType(Wrap)),
+      matching: find.text('All'),
+    ));
     await tester.tap(find.text('Show books'));
     await tester.pumpAndSettle();
     expect(fake.lastBrowseLanguages, isNull);

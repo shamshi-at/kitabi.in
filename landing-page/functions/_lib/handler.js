@@ -63,11 +63,11 @@ export function serveSearch(context, render) {
   });
 }
 
-/** /browse?language=&form=&genre=&sort=&page= */
+/** /browse?language=&form=&genre=&length=&sort=&page= */
 export function serveBrowse(context, render) {
   const url = new URL(context.request.url);
   const query = {};
-  for (const key of ['language', 'form', 'genre', 'sort']) {
+  for (const key of ['language', 'form', 'genre', 'length', 'sort']) {
     const value = url.searchParams.get(key);
     if (value) query[key] = value;
   }
