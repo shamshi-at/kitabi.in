@@ -30,9 +30,10 @@ lending events, opt-in), **CSV import/export**, **insights/stats**, **opt-in LLM
 recommendations**, **share cards**, and **launch plumbing** (version gate, backups,
 icons/splash, privacy/terms). The landing page is live and public.
 
-**Shipping state:** the mobile app now has release builds — an iOS **IPA (build 111)**
-and an Android **AAB (build 111)** — and is in **Play Store internal testing**; a
-TestFlight build exists in App Store Connect. **Still worth a real device pass:** a
+**Shipping state:** the mobile app now has release builds — an iOS **IPA (build 112)**
+and an Android **AAB (build 112)**, built 9 Aug 2026 with the chained front→back cover
+capture, **not yet uploaded** — the stores still run build 111 (**Play Store internal
+testing**; a TestFlight build exists in App Store Connect). **Still worth a real device pass:** a
 literal airplane-mode Layer-2 check and on-device verification of FCM push + the ISBN
 scanner (the scanner can't build on an Apple Silicon iOS Simulator). The sync engine is
 thoroughly unit-tested (in-memory Drift + fake API client).
@@ -273,8 +274,8 @@ Deliberately **not** using: any paid metadata API (open decision), Redis/queues
 | Landing page | https://kitabi.in | Cloudflare Pages, git-deploy from `landing-page/` on push to `main` | Live, public. `/b/:id`, `/a/:id`, `/p/:id` are served by Cloudflare **Pages Functions** (`landing-page/functions/`) that inject real Open Graph tags (cover/title/blurb) server-side, so shared links preview richly in iMessage/WhatsApp/Slack — bots don't run the pages' client JS. Humans still get the JS-rendered page. Book pages show the back-cover photo (when the owner photographed one) and both covers open in a dependency-free lightbox (8 Jul 2026). **Universal / app links live (22 Jul 2026):** the `.well-known` association files finally carry real values (Apple Team ID `62686X3746`; three Android SHA-256s — Play app signing, upload key, local debug), and `_headers` forces `application/json` on the extension-less `apple-app-site-association`, which Cloudflare otherwise serves as `octet-stream` and iOS silently rejects. Verified: Google's Digital Asset Links accepts all three fingerprints, and an Android device reports `kitabi.in`/`www.kitabi.in` **verified**. Note both caches lag a change — Apple's CDN up to ~24h, Google's ~1h — and iOS only re-evaluates the association at **install**, so a device must reinstall after a fix |
 | API | https://api.kitabi.in | Railway service `kitabi-api`, proxied CNAME via Cloudflare (Full strict) | Live; auth/profile + catalog endpoints (incl. global search + author/publisher create). CORS now allows `kitabi.in` for the public share pages |
 | API (origin, fallback) | https://kitabi-api-production.up.railway.app | Direct Railway domain | Keep working in case the custom domain ever breaks |
-| Mobile app (iOS) | — | TestFlight | Release **IPA build 111** (`app/build/ios/ipa/kitabi.ipa`, App Store distribution) built via `scripts/build_ipa.sh`; a TestFlight build exists in App Store Connect. Deployment target 15.5. `mobile_scanner`'s MLKit can't build on an Apple Silicon iOS Simulator (no arm64 slice) — verify the scan screen on a real iPhone/Android. APNs **Production** key required for TestFlight push |
-| Mobile app (Android) | — | Play Store internal testing | Release **AAB build 111** (`app/build/app/outputs/bundle/release/app-release.aab`) via `scripts/build_aab.sh`, uploaded to Play Console internal testing. Google-managed app signing (upload key local at `~/keys/kitabi-upload.jks`, gitignored). R8 minification off (was stripping WorkManager/Firebase registrars) |
+| Mobile app (iOS) | — | TestFlight | Release **IPA build 112** (`app/build/ios/ipa/kitabi.ipa`, App Store distribution) built via `scripts/build_ipa.sh`, **upload pending** — App Store Connect / TestFlight still has build 111. Deployment target 15.5. `mobile_scanner`'s MLKit can't build on an Apple Silicon iOS Simulator (no arm64 slice) — verify the scan screen on a real iPhone/Android. APNs **Production** key required for TestFlight push |
+| Mobile app (Android) | — | Play Store internal testing | Release **AAB build 112** (`app/build/app/outputs/bundle/release/app-release.aab`) via `scripts/build_aab.sh`, **upload pending** — Play Console internal testing still runs build 111. Google-managed app signing (upload key local at `~/keys/kitabi-upload.jks`, gitignored). R8 minification off (was stripping WorkManager/Firebase registrars) |
 
 Redeploy the API by pushing to `main` (Railway auto-deploys); no manual `railway up`
 needed anymore. Redeploy the landing page the same way (push to `main` touching
