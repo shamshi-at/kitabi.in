@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/image_crop.dart';
 import '../../../core/quiet_error.dart';
@@ -83,18 +84,37 @@ class _AddEditionScreenState extends ConsumerState<AddEditionScreen> {
     setState(() => _publisher = result);
   }
 
+  /// A camera capture on an edition with no covers yet chains to the other
+  /// side (same flow as the add-book form — the two must not drift).
   Future<void> _captureCover({required bool back}) async {
+    final bothEmpty = _coverUrl == null && _backCoverUrl == null;
     final source = await showImageSourceSheet(context);
     if (source == null || !mounted) return;
+    final captured = await _captureCoverFrom(source, back: back);
+    if (captured &&
+        source == ImageSource.camera &&
+        bothEmpty &&
+        mounted &&
+        (back ? _coverUrl == null : _backCoverUrl == null)) {
+      final next = await showChainedCoverSheet(context, nextIsBack: !back);
+      if (next && mounted) await _captureCoverFrom(ImageSource.camera, back: !back);
+    }
+  }
+
+  /// One capture/pick → crop → upload into the [back] slot; true if a photo
+  /// landed.
+  Future<bool> _captureCoverFrom(ImageSource source, {required bool back}) async {
     setState(() => back ? _uploadingBack = true : _uploadingFront = true);
     try {
       final url =
           await pickCropUploadImage(source: source, folder: 'covers', ratio: CropRatio.cover);
       if (mounted && url != null) setState(() => back ? _backCoverUrl = url : _coverUrl = url);
+      return url != null;
     } catch (err) {
       if (mounted) {
         showQuietError(context, AppLocalizations.of(context)!.coverUploadFailed, err);
       }
+      return false;
     } finally {
       if (mounted) setState(() => back ? _uploadingBack = false : _uploadingFront = false);
     }

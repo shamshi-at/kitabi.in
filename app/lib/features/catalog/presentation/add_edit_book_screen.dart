@@ -921,8 +921,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// existing photo; "remove" clears it. Cancelling anywhere — the sheet, the
   /// camera, or the crop — is a clean no-op, so a mis-tap never forces a capture.
   /// New books have no edition id yet, so images land under `covers/<uuid>.jpg`.
+  ///
+  /// A camera capture on a book with *no* covers yet chains: once the first
+  /// side lands, a sheet offers the other side straight away, so both covers
+  /// come from one camera run instead of tap-slot → capture → come back →
+  /// tap-other-slot → capture (owner request, 9 Aug 2026).
   Future<void> _onCoverTap({required bool back}) async {
     final current = back ? _backCoverUrl : _coverUrl;
+    final bothEmpty = _coverUrl == null && _backCoverUrl == null;
     final action = await showCoverActionSheet(context, hasImage: current != null);
     if (action == null || !mounted) return;
 
@@ -931,13 +937,22 @@ class _BookFormState extends ConsumerState<_BookForm> {
       return;
     }
 
+    if (action == CoverAction.camera) {
+      final captured = await _captureCoverCamera(back: back);
+      if (captured &&
+          bothEmpty &&
+          mounted &&
+          (back ? _coverUrl == null : _backCoverUrl == null)) {
+        final next = await showChainedCoverSheet(context, nextIsBack: !back);
+        if (next && mounted) await _captureCoverCamera(back: !back);
+      }
+      return;
+    }
+
     setState(() => back ? _uploadingBack = true : _uploadingFront = true);
     try {
       final String? url;
       switch (action) {
-        case CoverAction.camera:
-          url = await pickCropUploadImage(
-              source: ImageSource.camera, folder: 'covers', ratio: CropRatio.cover);
         case CoverAction.gallery:
           url = await pickCropUploadImage(
               source: ImageSource.gallery, folder: 'covers', ratio: CropRatio.cover);
@@ -950,6 +965,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
             folder: 'covers',
             ratio: CropRatio.cover,
           );
+        case CoverAction.camera:
         case CoverAction.remove:
           url = null; // handled above
       }
@@ -964,6 +980,28 @@ class _BookFormState extends ConsumerState<_BookForm> {
         // on a real device before shipping, so surface what actually failed.
         showQuietError(context, base, err);
       }
+    } finally {
+      if (mounted) setState(() => back ? _uploadingBack = false : _uploadingFront = false);
+    }
+  }
+
+  /// One camera capture → crop → upload into the [back] slot. Returns whether
+  /// a photo actually landed (false on cancel or failure) so the caller knows
+  /// whether chaining to the other side makes sense.
+  Future<bool> _captureCoverCamera({required bool back}) async {
+    setState(() => back ? _uploadingBack = true : _uploadingFront = true);
+    try {
+      final url = await pickCropUploadImage(
+          source: ImageSource.camera, folder: 'covers', ratio: CropRatio.cover);
+      if (mounted && url != null) {
+        setState(() => back ? _backCoverUrl = url : _coverUrl = url);
+      }
+      return url != null;
+    } catch (err) {
+      if (mounted) {
+        showQuietError(context, AppLocalizations.of(context)!.coverUploadFailed, err);
+      }
+      return false;
     } finally {
       if (mounted) setState(() => back ? _uploadingBack = false : _uploadingFront = false);
     }

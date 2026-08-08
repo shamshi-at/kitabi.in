@@ -104,6 +104,59 @@ Future<CoverAction?> showCoverActionSheet(
   );
 }
 
+/// The step between two chained cover captures. When a camera capture has just
+/// filled one side of a coverless book and the other side is still empty, this
+/// asks — right in the capture flow, before returning to the screen — whether
+/// to keep the camera going for the other side. Returns true to capture the
+/// side named by [nextIsBack] now; false (also on dismiss) to stop with what's
+/// there. Without this, adding both covers meant: tap front, capture, come all
+/// the way back, tap back, capture again (owner request, 9 Aug 2026).
+Future<bool> showChainedCoverSheet(
+  BuildContext context, {
+  required bool nextIsBack,
+}) async {
+  final l10n = AppLocalizations.of(context)!;
+  final capture = await showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: AppColors.paper,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _SheetGrip(),
+          ListTile(
+            leading: Icon(Icons.check_circle_outline, color: AppColors.oxblood),
+            title: Text(
+              nextIsBack ? l10n.coverChainFrontAdded : l10n.coverChainBackAdded,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          ListTile(
+            leading: Icon(Icons.photo_camera_outlined, color: AppColors.oxblood),
+            title: Text(
+              nextIsBack ? l10n.coverChainCaptureBack : l10n.coverChainCaptureFront,
+            ),
+            onTap: () => Navigator.of(context).pop(true),
+          ),
+          ListTile(
+            leading: Icon(Icons.close, color: AppColors.inkSoft),
+            title: Text(
+              l10n.coverChainSkip,
+              style: TextStyle(color: AppColors.inkSoft, fontWeight: FontWeight.w600),
+            ),
+            onTap: () => Navigator.of(context).pop(false),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+  return capture ?? false;
+}
+
 class _SheetGrip extends StatelessWidget {
   const _SheetGrip();
 

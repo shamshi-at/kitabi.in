@@ -3179,6 +3179,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t open that image to adjust. Try replacing it instead.';
 
   @override
+  String get coverChainFrontAdded => 'Front cover added';
+
+  @override
+  String get coverChainBackAdded => 'Back cover added';
+
+  @override
+  String get coverChainCaptureBack => 'Now capture the back cover';
+
+  @override
+  String get coverChainCaptureFront => 'Now capture the front cover';
+
+  @override
+  String get coverChainSkip => 'Skip for now';
+
+  @override
   String pickerChoose(String label) {
     return 'Choose $label';
   }

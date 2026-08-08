@@ -5200,6 +5200,36 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open that image to adjust. Try replacing it instead.'**
   String get coverAdjustFailed;
 
+  /// Chained-capture sheet header after the front cover is photographed while the back is still empty
+  ///
+  /// In en, this message translates to:
+  /// **'Front cover added'**
+  String get coverChainFrontAdded;
+
+  /// Chained-capture sheet header after the back cover is photographed while the front is still empty
+  ///
+  /// In en, this message translates to:
+  /// **'Back cover added'**
+  String get coverChainBackAdded;
+
+  /// Chained-capture sheet action: open the camera again for the back cover
+  ///
+  /// In en, this message translates to:
+  /// **'Now capture the back cover'**
+  String get coverChainCaptureBack;
+
+  /// Chained-capture sheet action: open the camera again for the front cover
+  ///
+  /// In en, this message translates to:
+  /// **'Now capture the front cover'**
+  String get coverChainCaptureFront;
+
+  /// Chained-capture sheet action: keep just the side already captured
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for now'**
+  String get coverChainSkip;
+
   /// Title of the option-picker bottom sheet (e.g. Choose format)
   ///
   /// In en, this message translates to:

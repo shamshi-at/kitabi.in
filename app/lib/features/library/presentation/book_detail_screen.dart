@@ -383,6 +383,7 @@ class _Frontispiece extends ConsumerWidget {
                             author: authorName,
                             coverUrl: front,
                             workId: workId,
+                            otherSideEmpty: backCover == null,
                             width: 104,
                             height: 156,
                             viewerPages: pages,
@@ -396,6 +397,7 @@ class _Frontispiece extends ConsumerWidget {
                               coverUrl: backCover,
                               workId: workId,
                               back: true,
+                              otherSideEmpty: front == null,
                               width: 38,
                               height: 54,
                               viewerPages: pages,
@@ -1077,6 +1079,7 @@ class _CoverUploader extends ConsumerStatefulWidget {
     this.title,
     this.author,
     this.back = false,
+    this.otherSideEmpty = false,
     this.width = 58,
     this.height = 84,
     this.viewerPages = const [],
@@ -1089,6 +1092,12 @@ class _CoverUploader extends ConsumerStatefulWidget {
   final String? coverUrl;
   final String workId;
   final bool back;
+
+  /// Whether the edition's *other* cover side (back for the front slot, front
+  /// for the back slot) has no photo either — a camera capture then chains to
+  /// it instead of making the user come back and tap the other slot.
+  final bool otherSideEmpty;
+
   final double width;
   final double height;
 
@@ -1125,6 +1134,11 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
+      // Whether this capture is the first cover on a coverless book — decided
+      // before anything uploads, because the invalidations below rebuild this
+      // widget with fresh urls.
+      final chainToOther =
+          action == CoverAction.camera && widget.coverUrl == null && widget.otherSideEmpty;
       final url = switch (action) {
         CoverAction.rotate || CoverAction.adjust => await rotateAndUploadCover(
             ref,
@@ -1144,6 +1158,25 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
         ref.invalidate(workProvider(widget.workId));
         ref.invalidate(cachedBookProvider(widget.editionId));
         messenger.showSnackBar(SnackBar(content: Text(l10n.coverUploaded)));
+        // Both sides were empty and the camera just filled one — offer the
+        // other side right away, in the same camera run, instead of sending
+        // the user back to the page to find and tap the other slot.
+        if (chainToOther && mounted) {
+          final next = await showChainedCoverSheet(context, nextIsBack: !widget.back);
+          if (next && mounted) {
+            final otherUrl = await pickAndUploadCover(
+              ref,
+              editionId: widget.editionId,
+              source: ImageSource.camera,
+              back: !widget.back,
+            );
+            if (otherUrl != null && mounted) {
+              ref.invalidate(workProvider(widget.workId));
+              ref.invalidate(cachedBookProvider(widget.editionId));
+              messenger.showSnackBar(SnackBar(content: Text(l10n.coverUploaded)));
+            }
+          }
+        }
       }
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.coverUploadFailed)));
