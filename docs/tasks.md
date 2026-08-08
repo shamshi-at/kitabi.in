@@ -912,14 +912,17 @@ out of the sitemap until a work actually carries a genre.
       live right now as two rows for one person. Two rows = two thin pages competing.
       **Prerequisite for indexing author pages at all**
 - [ ] Fix imported titles — ~30% carry OpenLibrary transliteration noise
-- [ ] **Attach genres** — `browse/genres` returns `[]`. Classify the seed set against a
-      ~40-genre closed vocabulary, LLM-assisted with human review (the Anthropic client
-      already exists in the API). Nothing genre-shaped can ship before this.
-      **Raised stakes (9 Aug 2026):** the browse filter UI now exists on web + app
-      (genre/type/length chips, rating + just-added sorts — docs/discovery-trends.md),
-      so this and form/page-count enrichment are what stand between those filters and
-      being useful — 1 genre-tagged work of 1,405 today; the empty chip rows hide
-      themselves until the data lands
+- [x] **Attach genres** — **Done, 9 Aug 2026.** Closed 33-genre vocabulary in
+      `api/app/services/genre_vocab.py` (slug-unique, deliberately orthogonal to
+      `WORK_FORMS`; ≤40 by design), classified by `etl/08_genre_classify.py`
+      (claude-sonnet-5, plan → human review → apply → revert, production guard,
+      receipts). 1,405/1,405 works classified: 637 high / 520 medium / 222 low /
+      26 unknown; **high+medium applied → 1,519 genre links + 774 forms** filled
+      (forms were 3). Low/unknown deliberately left unclassified — an honest blank
+      beats a guess on an indexed page. Artifacts in `etl/runs/2026-08-09-genres/`
+      (plan + receipt = the revert key). Genre hubs now have mass
+      (Literary fiction 229, Religion & spirituality 166, History 118…) and the
+      browse Genre/Type rows are full on web + app
 - [ ] Cover coverage — typeset covers where none exists, so no page has a hole
 - [ ] Descriptions for the top 300 works, 120–200 words. Highest-leverage manual task on
       the list: it flips 300 works past the content floor and gives each a real meta description

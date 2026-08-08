@@ -355,6 +355,33 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **9 Aug 2026** — **The catalogue knows what its books are: genres and forms, classified.**
+  W5's blocker fell. A closed **33-genre vocabulary** now lives in
+  `api/app/services/genre_vocab.py` — slug-unique (two names on one slug would shadow a hub),
+  deliberately **orthogonal to `WORK_FORMS`** (no "Poetry" genre splitting the Type facet;
+  a work is `form=Biography, genres=[History]`, never `genres=[Biography]`) — and
+  `etl/08_genre_classify.py` classified all **1,405 works** against it with claude-sonnet-5
+  (thinking disabled), **a human between the model and the database**: plan (DB read-only,
+  resumable) → review → apply → revert. Confidence honesty is the design: the model may say
+  *unknown*, only high+medium apply (637 high / 520 medium; 222 low + 26 unknown stay
+  unclassified — an honest blank beats a plausible guess on an indexed page), the parser
+  drops anything outside the vocabulary at the boundary (126 drops, almost all form-words
+  offered as genres — the orthogonality rule working), apply never overwrites an existing
+  form, and every write landed in a **receipt** (`etl/runs/2026-08-09-genres/`, committed)
+  that `revert` can undo exactly. The apply-side guard refuses a non-local DATABASE_URL
+  without `--production` — the alembic/env.py lesson, applied before it could bite.
+  **Result on production: 1,519 genre links (from 1) and 774 forms (from 3).** Spot-checks
+  held across languages: Godan → Social fiction, Kumaravyasa Mahabharata → Poetry +
+  Mythological fiction, Huckleberry Finn recognised through Hindi romanization, Bhairappa's
+  Āvaraṇa → Historical fiction. Genre hubs now have real mass (Literary fiction 229,
+  Religion & spirituality 166, History 118, Language & linguistics 72) and the browse
+  Genre/Type rows are full on web + app. Cost: ~70 Sonnet calls, well under a dollar, no new
+  credential (rule 8 holds). Follow-ups now unblocked/tracked: genre hubs into the sitemap,
+  duplicate-work merging (the Kannada spot-check surfaced "Avarana"/"Āvaraṇa" twins).
+  Same day, owner feedback on the new browse toolbar — five facet rows ate the first screen —
+  folded it behind a **native `<details>` disclosure**: one compact "Filter & sort · N" bar,
+  every active facet a removable ✕ chip, zero JS (the server-rendered rule holds; panel links
+  are in the DOM either way), verified at desktop + mobile widths against the live payload.
 - **9 Aug 2026** — **Finding a book stopped being a scroll.** The browse API's facets
   (language / form / genre) existed since the site launched, and the web `/browse` page drew
   none of them — one row of language chips that *left* the page for the hubs, no sort control,

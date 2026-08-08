@@ -193,6 +193,35 @@ How it stays sane:
 .jsonl.gz` files as `02_filter.py`, so the transform + load stay the shared,
 already-tested path.
 
+## Genre & form classification (`08_genre_classify.py`)
+
+Genres are deliberately *not* seeded from OL subjects (too noisy — see above).
+Instead, `08_genre_classify.py` classifies the seeded works against the API's
+**closed ~34-genre vocabulary** (`api/app/services/genre_vocab.py` — one
+source of truth, the script imports it) plus the existing `WORK_FORMS` Type
+vocabulary, LLM-assisted with a human between the model and the database
+(docs/tasks.md W5):
+
+```bash
+cd etl
+../api/.venv/bin/python 08_genre_classify.py plan --out genre_plan.jsonl   # DB read-only
+# review: jq -c 'select(.confidence=="low")' genre_plan.jsonl
+../api/.venv/bin/python 08_genre_classify.py apply --plan genre_plan.jsonl --production
+../api/.venv/bin/python 08_genre_classify.py revert --receipt genre_receipt.jsonl --production
+```
+
+The guard-rails, because genre hubs are **indexed public pages**:
+
+- Claude (`claude-sonnet-5`, thinking disabled) may answer **unknown** — an
+  honest blank beats a plausible guess; only `high,medium` confidence applies
+  by default, and rows outside the vocabulary are dropped at parse time.
+- `apply` refuses a non-local `DATABASE_URL` without `--production` (the
+  alembic/env.py rule), never overwrites an existing `works.form`, is
+  idempotent, and writes a **receipt** of exactly what it changed.
+- `revert --receipt` undoes exactly one receipt — links it created, forms it
+  set (only if still unchanged) — so a bad batch is one command from gone.
+- `plan` is resumable: works already in the plan file are skipped.
+
 ## Sizing before you commit to a tier
 
 `sample_stats.py` estimates row counts, field coverage, language mix, and the
