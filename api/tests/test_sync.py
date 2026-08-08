@@ -297,6 +297,45 @@ async def test_rating_and_review_and_tag_and_lending_flow(client):
     assert statuses == ["applied"] * len(ops)
 
 
+async def test_rating_ops_keep_the_works_average_written(client, db_sessionmaker):
+    """Every applied rating op rewrites Work.aggregate_rating in the same
+    transaction. The column existed from the first migration and nothing ever
+    wrote it — five orderings and every public card read permanent NULL, so
+    "Top rated" sorted a grid it couldn't caption."""
+    from sqlalchemy import select
+
+    from app.models import Work
+
+    work_id, _ = await _seed_edition(client)
+    rating_id = str(uuid.uuid4())
+
+    async def aggregate() -> float | None:
+        async with db_sessionmaker() as db:
+            return await db.scalar(
+                select(Work.aggregate_rating).where(Work.id == uuid.UUID(work_id))
+            )
+
+    # Create writes it...
+    resp = await client.post(
+        "/sync/push",
+        json={"ops": [_op("ratings", rating_id, "create", {"work_id": work_id, "value": 4})]},
+    )
+    assert resp.json()["results"][0]["status"] == "applied"
+    assert await aggregate() == 4.0
+
+    # ...an update rewrites it...
+    resp = await client.post(
+        "/sync/push", json={"ops": [_op("ratings", rating_id, "update", {"value": 2})]}
+    )
+    assert resp.json()["results"][0]["status"] == "applied"
+    assert await aggregate() == 2.0
+
+    # ...and deleting the last rating returns it to NULL, not a stale figure.
+    resp = await client.post("/sync/push", json={"ops": [_op("ratings", rating_id, "delete", {})]})
+    assert resp.json()["results"][0]["status"] == "applied"
+    assert await aggregate() is None
+
+
 async def test_push_borrowed_lending_record_without_library_entry(client):
     """A borrowed record has no owned library entry — it points at the catalog
     edition instead, with direction='borrowed' and an optional note."""

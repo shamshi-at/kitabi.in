@@ -382,7 +382,16 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   carries genres/forms on almost nothing (1 genre-tagged work of 1,405), so those chip rows
   stay thin until the ETL enrichment lands — the rows hide when empty by design. 577 API tests
   (+9), 318 Flutter (+2, and one brittle positional selector fixed), 269 edge assertions
-  (+14), lint clean, Docker builds.
+  (+14), lint clean, Docker builds. **Follow-through, same day:** verifying "Top rated" live
+  exposed that `Work.aggregate_rating` had **never been written by anything** — five orderings
+  (more-by-author, home rails, translation-group averages) and every public WorkCard read
+  permanent NULL, so the sort led with the right book and no card could say "★ 5.0".
+  `review_service.refresh_aggregate_rating` now rewrites the column inside the same
+  transaction as every applied rating sync op (sync is the only writer of ratings), and
+  migration `000042` backfills rows rated before the writer existed (data-only, idempotent,
+  rounds to 2 exactly like `rating_summary` so page and card can never visibly disagree).
+  578 API tests: create → 4.0, update → 2.0, delete-last → NULL, all asserted through the
+  real `/sync/push`.
 - **8 Aug 2026** — **Every book page now sends buyers somewhere — and can pay the bills.**
   The first revenue line from [docs/revenue-plan.md](docs/revenue-plan.md) (§3.1): retailer
   buy links are **generated at read time from the ISBN** (`api/app/services/buy_links.py`) and

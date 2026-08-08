@@ -11,7 +11,7 @@ public — never an anonymous rating with no accompanying text.
 
 import uuid
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import Float, Numeric, and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -145,6 +145,23 @@ async def reader_reviews(db: AsyncSession, user_id: uuid.UUID, limit: int = 50) 
         }
         for review, work, rating_value in rows
     ]
+
+
+async def refresh_aggregate_rating(db: AsyncSession, work_id: uuid.UUID) -> None:
+    """Write the live average onto `Work.aggregate_rating`.
+
+    Until 9 Aug 2026 nothing ever wrote this column, so five orderings and
+    every WorkCard read permanent NULL — "Top rated" sorted correctly (it
+    computes live) while the cards it fronted couldn't show a figure. Sync is
+    the only writer of ratings, so calling this on every applied rating op
+    keeps the denormalized column honest; migration 000042 backfilled it.
+    Round to 2 like `rating_summary` so the two never disagree visibly."""
+    live_avg = (
+        select(func.round(func.avg(Rating.value).cast(Numeric), 2).cast(Float))
+        .where(Rating.work_id == work_id, Rating.deleted_at.is_(None))
+        .scalar_subquery()
+    )
+    await db.execute(update(Work).where(Work.id == work_id).values(aggregate_rating=live_avg))
 
 
 async def rating_summary(db: AsyncSession, work_id: uuid.UUID) -> dict:

@@ -51,7 +51,7 @@ from app.schemas.sync import (
     SyncOpResult,
     SyncPullOut,
 )
-from app.services import lend_mirror_service
+from app.services import lend_mirror_service, review_service
 
 logger = logging.getLogger(__name__)
 
@@ -295,6 +295,9 @@ async def apply_ops(
     # Lending records that applied — mirrored onto the borrower's account after
     # the main commit (so a mirror failure can't reject the lender's own op).
     lending_applied: list[uuid.UUID] = []
+    # Works whose community average must be rewritten because a rating op
+    # landed — deduped, since one batch can carry several ratings of one book.
+    rating_touched_works: set[uuid.UUID] = set()
 
     for op in ops:
         existing_op = await db.get(SyncOp, op.op_id)
@@ -338,8 +341,19 @@ async def apply_ops(
             await _log_activity(db, user_id, activity)
         if op.entity == "lending_records" and result.status == "applied":
             lending_applied.append(op.entity_id)
+        if op.entity == "ratings" and result.status == "applied":
+            # db.get hits the identity map — _apply_one just loaded this row.
+            rating = await db.get(Rating, op.entity_id)
+            if rating is not None:
+                rating_touched_works.add(rating.work_id)
 
         results.append(result)
+
+    # Inside the same transaction as the ops themselves: a rating that commits
+    # without its work's denormalized average is exactly how aggregate_rating
+    # spent a month as permanent NULL (sync is the only writer of ratings).
+    for work_id in rating_touched_works:
+        await review_service.refresh_aggregate_rating(db, work_id)
 
     await db.commit()
 
