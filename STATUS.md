@@ -385,6 +385,14 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   as a diagnosis shape: the payload proved the new code was live (the `affiliate` field was
   there) while the tag was absent, which points at config, not at the deploy — confirmed by
   listing the service's variables rather than guessing, and ruled out on `kitabi-admin` too.
+  **The installed app needed no release for the links, but does for the disclosure.** The
+  app's book page reads `GET /catalog/works/{id}`, which the same serializer feeds, and its
+  "Where to buy" section shipped back in `1c12fcb` — so **build 26 renders the tagged Amazon
+  link on its next fetch** (an added JSON key is backwards-compatible for a keyed Map read).
+  The reader-visible disclosure, however, is in today's app commit, so it appears only in
+  build 27+. Amazon's Operating Agreement wants the disclosure wherever affiliate links show,
+  so **build 27 must precede the public store release** — no real exposure today, since the
+  only installs are internal testing / TestFlight.
   **Flipkart needed a different mechanism than expected:** its direct affiliate programme is
   closed to new publishers, so there is no id to append. The reachable route is an aggregator,
   and `CUELINKS_CID` now wraps the *generated* Flipkart link in Cuelinks' Link Kit redirect
