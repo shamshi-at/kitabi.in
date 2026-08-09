@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — browse filters, organised — three directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ==============================================================
+   Browse filter panel — reorganisation mockups (9 Aug 2026).
+   Owner report on the shipped panel: "everything is mixed".
+   Tokens: docs/screen-design.md · Site: landing-page/functions/
+   ============================================================== */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --night:#241811;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#E7DFCC;color:var(--ink);padding-bottom:90px}
+.serif{font-family:'Fraunces',Georgia,serif}
+.ml{font-family:'Noto Sans Malayalam','Inter',sans-serif}
+
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:52px 32px 42px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:37px;font-weight:400;margin:0 0 12px}
+.hero .tag{font-size:14.5px;color:#CBB897;max-width:860px;margin:0 auto;line-height:1.7}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+.toc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:22px auto 0}
+.toc a{font-size:12px;font-weight:600;color:#E9DCC2;text-decoration:none;
+  border:1px solid rgba(240,226,194,.28);padding:6px 13px;border-radius:999px}
+.toc a:hover{background:var(--gold);color:#241811;border-color:var(--gold)}
+
+.area{max-width:1380px;margin:56px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.area h2{font-family:'Fraunces',serif;font-size:27px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:10px 0 24px;max-width:960px;font-size:14.5px;line-height:1.72}
+.area .desc b{color:var(--ink)}
+.note{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;display:flex;margin-top:20px;max-width:1240px;clip-path:inset(0 round 12px)}
+.note i{width:4px;background:var(--gold);flex-shrink:0}
+.note div{padding:13px 18px;font-size:13px;line-height:1.7;color:#6d5f4b}
+.note b{color:var(--ink)}
+.note.red i{background:var(--oxblood)}
+.note.green i{background:var(--moss)}
+
+/* ---------- browser frame ---------- */
+.browser{background:var(--paper);border-radius:12px;overflow:hidden;margin-top:22px;
+  box-shadow:0 18px 50px rgba(43,33,24,.18);border:1px solid #d5c9ad}
+.browser .bar{background:#EFE6D2;border-bottom:1px solid var(--line);padding:9px 14px;
+  display:flex;gap:7px;align-items:center}
+.browser .bar i{width:10px;height:10px;border-radius:50%;background:#d5c9ad;display:block}
+.browser .bar .url{margin-left:10px;background:var(--card);border:1px solid var(--line);
+  font-size:11px;color:var(--ink-soft);border-radius:7px;padding:4px 12px;flex:1;max-width:420px}
+.browser.w{width:1240px;max-width:100%}
+.browser.m{width:380px;max-width:100%}
+.frames{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+
+/* ---------- shared page bits ---------- */
+.site{padding:0 26px 26px}
+.sitehead{display:flex;align-items:center;gap:18px;padding:13px 0;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:9px}
+.logo .tile{width:30px;height:30px;border-radius:7px;background:var(--oxblood);position:relative}
+.logo .tile:after{content:"";position:absolute;inset:7px;border-radius:3px;background:
+  linear-gradient(90deg,#F6F0E3 46%,var(--gold) 46%,var(--gold) 54%,#F6F0E3 54%)}
+.logo b{font-family:'Fraunces',serif;font-size:17px;font-weight:600}
+.logo span{display:block;font-size:7.5px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase}
+.nav{display:flex;gap:15px;font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.nav b{color:var(--oxblood);border-bottom:2px solid var(--gold);padding-bottom:2px}
+.search{margin-left:auto;background:var(--card);border:1px solid var(--line);border-radius:999px;
+  font-size:11.5px;color:#a0937d;padding:7px 16px;width:250px}
+.h1{font-family:'Fraunces',serif;font-size:26px;font-weight:600;margin:18px 0 0}
+.crumb{font-size:11px;color:var(--ink-soft);padding-top:14px}
+.cnt{font-size:12px;color:var(--ink-soft)}
+
+/* chips (site-accurate) */
+.chip{font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink-soft);display:inline-block}
+.chip.on{background:var(--oxblood);border-color:var(--oxblood);color:#F6F0E3}
+.chip .n{opacity:.55;font-weight:500}
+
+/* segmented sort — a different control for a different job */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  background:var(--card)}
+.seg a{padding:7px 13px;font-size:11.5px;font-weight:600;color:var(--ink-soft);
+  border-right:1px solid var(--line);text-decoration:none}
+.seg a:last-child{border-right:0}
+.seg a.on{background:var(--oxblood);color:#F6F0E3}
+.eyebrow{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+
+/* covers strip */
+.grid{display:grid;grid-template-columns:repeat(8,1fr);gap:14px;margin-top:18px}
+.m .grid{grid-template-columns:repeat(2,1fr)}
+.bk .cv{aspect-ratio:2/3;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  padding:10px;text-align:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 2px 8px rgba(43,33,24,.14)}
+.bk .cv span{font-family:'Fraunces',serif;font-size:11.5px;font-weight:600;color:#F2E8D5;line-height:1.35}
+.bk .t{font-family:'Fraunces',serif;font-size:11.5px;font-weight:600;margin-top:7px;line-height:1.3}
+.bk .a{font-size:10px;color:var(--ink-soft);margin-top:2px}
+.g1{background:linear-gradient(160deg,#7E2A33,#5E1F26)}.g2{background:linear-gradient(160deg,#48663F,#324a2c)}
+.g3{background:linear-gradient(160deg,#43617E,#2f4560)}.g4{background:linear-gradient(160deg,#8a6a24,#6b501a)}
+.g5{background:linear-gradient(160deg,#33241A,#241811)}.g6{background:linear-gradient(160deg,#5d4a72,#443354)}
+
+/* ---------- A. facet-card grid ---------- */
+.fgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.m .fgrid{grid-template-columns:1fr;gap:9px}
+.fcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.fcard h4{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.fcard h4 b{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft)}
+.fcard h4 a{font-size:10.5px;font-weight:600;color:var(--oxblood);text-decoration:none}
+.fcard .opts{display:flex;flex-wrap:wrap;gap:6px}
+.fopt{font-size:11px;font-weight:600;color:var(--ink);border:1px solid var(--line);
+  background:var(--paper);border-radius:8px;padding:4px 9px;display:inline-flex;gap:6px;align-items:center}
+.fopt i{font-style:normal;font-size:9.5px;font-weight:700;color:#8F681E;background:var(--gold-soft);
+  border-radius:99px;padding:1px 6px}
+.fopt.on{background:var(--oxblood);border-color:var(--oxblood);color:#F6F0E3}
+.fopt.on i{background:rgba(255,255,255,.22);color:#F6F0E3}
+.arow{display:flex;align-items:center;gap:10px;padding:14px 0 2px;flex-wrap:wrap}
+
+/* ---------- B. sidebar ---------- */
+.blayout{display:grid;grid-template-columns:246px 1fr;gap:24px;margin-top:16px}
+.rail{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px 14px 10px;height:max-content}
+.rgroup{padding:11px 0 12px;border-bottom:1px solid var(--line)}
+.rgroup:last-child{border-bottom:0}
+.rgroup h4{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);
+  margin-bottom:7px;display:flex;justify-content:space-between}
+.rgroup h4 em{font-style:normal;color:var(--gold);letter-spacing:0}
+.ropt{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:500;
+  color:var(--ink);padding:4px 8px;border-radius:7px}
+.ropt i{font-style:normal;font-size:10.5px;color:var(--ink-soft)}
+.ropt.on{background:var(--oxblood);color:#F6F0E3;font-weight:600}
+.ropt.on i{color:#E9C9CC}
+.rmore{font-size:11px;font-weight:600;color:var(--oxblood);padding:5px 8px 0;display:block;text-decoration:none}
+.reshead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:2px 0 4px}
+
+/* ---------- C. door bar ---------- */
+.doors{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.door{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--line);
+  background:var(--card);border-radius:10px;padding:7px 12px;font-size:12px;font-weight:600;color:var(--ink)}
+.door small{font-weight:700;color:var(--ink-soft);font-size:9px}
+.door.live{background:var(--oxblood);border-color:var(--oxblood);color:#F6F0E3}
+.door.live small{color:#E9C9CC}
+.door.open{border-color:var(--oxblood);color:var(--oxblood);box-shadow:0 1px 0 var(--card),0 0 0 1px var(--oxblood)}
+.popwrap{position:relative}
+.pop{position:absolute;top:calc(100% + 8px);left:0;z-index:3;width:420px;background:var(--card);
+  border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px rgba(43,33,24,.22);padding:8px 10px}
+.m .pop{position:static;width:auto;margin-top:8px;box-shadow:none}
+.pop .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.m .pop .cols{grid-template-columns:1fr}
+.pop .ropt{padding:5px 8px}
+.pop .foot{border-top:1px solid var(--line);margin-top:8px;padding:8px 8px 2px;display:flex;justify-content:space-between}
+.pop .foot a{font-size:11px;font-weight:600;color:var(--oxblood);text-decoration:none}
+.dim{position:relative}
+.dim:after{content:"";position:absolute;inset:0;background:rgba(43,33,24,.05)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>The browse filters, organised</h1>
+  <p class="tag">Owner report on the shipped panel: <b>"everything is mixed."</b> Correct — five different
+  jobs (sort · type · genre · language · length) all wear the same pill, so the open panel reads as a tag
+  cloud. Three directions below, all zero-JS and server-rendered like everything else on the site.
+  The collapsed bar from yesterday stays exactly as it is in every one of them — these mockups reorganise
+  what you see <b>after</b> you tap "Filter&nbsp;&amp;&nbsp;sort".</p>
+  <div class="toc">
+    <a href="#f0">The problem</a>
+    <a href="#fa">A · Facet cards</a>
+    <a href="#fb">B · Library rail</a>
+    <a href="#fc">C · Five doors ★</a>
+  </div>
+</div>
+
+<!-- ================================================================
+     F0 — the problem, annotated
+     ================================================================ -->
+<div class="area" id="f0">
+  <div class="ah"><span class="an">F0 · shipped today</span><h2>Why it feels mixed</h2></div>
+  <p class="desc">Four defects, one root cause — <b>one visual voice for five different controls</b>:
+  ① a <b>sort</b> (pick exactly one) is drawn identically to a <b>facet</b> (narrows the list), so
+  the eye can't parse what kind of choice each row offers; ② the rows have <b>no containment</b> —
+  genre wraps to a second line mid-list and the labels float loose; ③ <b>counts compete with names</b>
+  ("Literary fiction 229" is one grey blob); ④ the panel stretches edge-to-edge at desktop widths,
+  so every row is long, ragged, and differently so.</p>
+  <div class="note red"><i></i><div><b>What must survive any redesign:</b> plain links (crawlable,
+  no-JS), <code>aria-current</code> on the active choice, the composable URLs, the collapsed
+  one-line bar with removable ✕ chips, and the count line. These are behaviours, not looks.</div></div>
+</div>
+
+<!-- ================================================================
+     A — facet cards
+     ================================================================ -->
+<div class="area" id="fa">
+  <div class="ah"><span class="an">Direction A</span><h2>Facet cards — four titled boxes and a real sort control</h2></div>
+  <p class="desc"><b>Sort stops being chips.</b> It becomes a segmented control on its own line —
+  joined buttons, one active — which is the universal shape for "exactly one of these". The four
+  facets each get a <b>titled card</b>: Type, Genre, Language, Length. Counts move into small gold
+  badges so names read as names. The genre card shows the eight biggest and opens the full list
+  through an "All 33 →" door to <code>/genres</code>. Cards give the panel a grid rhythm at any width.</p>
+
+  <div class="browser w">
+    <div class="bar"><i></i><i></i><i></i><span class="url">kitabi.in/browse — panel open</span></div>
+    <div class="site">
+      <div class="sitehead">
+        <div class="logo"><div class="tile"></div><div><b>Kitabi</b><span>Beyond the bookshelf</span></div></div>
+        <nav class="nav"><b>Books</b><span>Authors</span><span>Publishers</span><span>Languages</span><span>Lists</span></nav>
+        <div class="search">Search a book, author or publisher…</div>
+      </div>
+      <div class="crumb">Home › Browse</div>
+      <div class="h1">Browse the catalogue</div>
+
+      <div class="arow">
+        <span class="chip on">Filter &amp; sort · 2 ▾</span>
+        <span class="chip">Top rated ✕</span><span class="chip">Malayalam ✕</span>
+        <span class="chip" style="color:var(--oxblood)">Clear all</span>
+        <span class="cnt" style="margin-left:auto">Showing 1–24 of 103</span>
+      </div>
+
+      <div class="arow" style="padding-top:10px">
+        <span class="eyebrow">Sort</span>
+        <span class="seg"><a>A–Z</a><a class="on">Top rated</a><a>Just added</a><a>Newest</a><a>Oldest</a><a>By author</a></span>
+      </div>
+
+      <div class="fgrid">
+        <div class="fcard">
+          <h4><b>Type</b><a>All 10 →</a></h4>
+          <div class="opts">
+            <span class="fopt">Novel <i>339</i></span><span class="fopt">Essays <i>106</i></span>
+            <span class="fopt">Poetry <i>93</i></span><span class="fopt">Short stories <i>59</i></span>
+            <span class="fopt">Play <i>52</i></span><span class="fopt">Memoir <i>47</i></span>
+          </div>
+        </div>
+        <div class="fcard">
+          <h4><b>Genre</b><a>All 33 →</a></h4>
+          <div class="opts">
+            <span class="fopt">Literary fiction <i>229</i></span><span class="fopt">Religion &amp; spirituality <i>166</i></span>
+            <span class="fopt">History <i>118</i></span><span class="fopt">Philosophy <i>80</i></span>
+            <span class="fopt">Mythological fiction <i>60</i></span><span class="fopt">Historical fiction <i>57</i></span>
+          </div>
+        </div>
+        <div class="fcard">
+          <h4><b>Language</b><a>All 14 →</a></h4>
+          <div class="opts">
+            <span class="fopt on">Malayalam <i>103</i></span><span class="fopt">English <i>101</i></span>
+            <span class="fopt">Hindi <i>100</i></span><span class="fopt">Tamil <i>100</i></span>
+            <span class="fopt">Bengali <i>100</i></span><span class="fopt">Kannada <i>100</i></span>
+          </div>
+        </div>
+        <div class="fcard">
+          <h4><b>Length</b></h4>
+          <div class="opts">
+            <span class="fopt">Short · under 200 pp</span>
+            <span class="fopt">Medium · 200–400 pp</span>
+            <span class="fopt">Long · 400+ pp</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="bk"><div class="cv g1"><span class="ml">ചെമ്മീൻ</span></div><div class="t">ചെമ്മീൻ</div><div class="a">Thakazhi</div></div>
+        <div class="bk"><div class="cv g5"><span class="ml">ഖസാക്കിന്റെ ഇതിഹാസം</span></div><div class="t">ഖസാക്കിന്റെ ഇതിഹാസം</div><div class="a">O.V. Vijayan</div></div>
+        <div class="bk"><div class="cv g2"><span class="ml">ആടുജീവിതം</span></div><div class="t">ആടുജീവിതം</div><div class="a">Benyamin</div></div>
+        <div class="bk"><div class="cv g3"><span class="ml">ആരാച്ചാർ</span></div><div class="t">ആരാച്ചാർ</div><div class="a">K.R. Meera</div></div>
+        <div class="bk"><div class="cv g4"><span class="ml">രണ്ടാമൂഴം</span></div><div class="t">രണ്ടാമൂഴം</div><div class="a">M.T. Vasudevan Nair</div></div>
+        <div class="bk"><div class="cv g6"><span class="ml">മയ്യഴിപ്പുഴയുടെ തീരങ്ങളിൽ</span></div><div class="t">മയ്യഴിപ്പുഴയുടെ…</div><div class="a">M. Mukundan</div></div>
+        <div class="bk"><div class="cv g2"><span class="ml">പാത്തുമ്മായുടെ ആട്</span></div><div class="t">പാത്തുമ്മായുടെ ആട്</div><div class="a">Basheer</div></div>
+        <div class="bk"><div class="cv g1"><span class="ml">നാലുകെട്ട്</span></div><div class="t">നാലുകെട്ട്</div><div class="a">M.T. Vasudevan Nair</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><i></i><div><b>Trade-offs.</b> Cheapest rebuild of the three (the panel's rows
+  become cards; nothing moves). The panel is still tall-ish when open — four cards ≈ the height of
+  today's five rows, just legible. Genre shows 6–8 of 33; the door to <code>/genres</code> carries
+  the rest.</div></div>
+</div>
+
+<!-- ================================================================
+     B — library rail
+     ================================================================ -->
+<div class="area" id="fb">
+  <div class="ah"><span class="an">Direction B</span><h2>The library rail — facets live beside the books, not above them</h2></div>
+  <p class="desc">The reference-site answer (this is what "IMDB for books" implies). A permanent
+  <b>left rail</b> holds the facets as titled groups of <b>rows, not pills</b> — name left,
+  count right-aligned in its own quiet column, active row oxblood with its ✕. Vertical lists scan;
+  33 genres become a readable column with a "Show all" tail instead of a wrapping cloud.
+  <b>Sort moves to the results header</b> next to the count, where every list on the web puts it.
+  Nothing sits above the books at all — the grid starts at the top.</p>
+
+  <div class="browser w">
+    <div class="bar"><i></i><i></i><i></i><span class="url">kitabi.in/browse?genre=History&amp;sort=rating — desktop</span></div>
+    <div class="site">
+      <div class="sitehead">
+        <div class="logo"><div class="tile"></div><div><b>Kitabi</b><span>Beyond the bookshelf</span></div></div>
+        <nav class="nav"><b>Books</b><span>Authors</span><span>Publishers</span><span>Languages</span><span>Lists</span></nav>
+        <div class="search">Search a book, author or publisher…</div>
+      </div>
+      <div class="crumb">Home › Browse</div>
+      <div class="h1">Browse the catalogue</div>
+
+      <div class="blayout">
+        <aside class="rail">
+          <div class="rgroup">
+            <h4>Type <em>all 10 →</em></h4>
+            <div class="ropt"><span>Novel</span><i>339</i></div>
+            <div class="ropt"><span>Essays</span><i>106</i></div>
+            <div class="ropt"><span>Poetry</span><i>93</i></div>
+            <div class="ropt"><span>Short stories</span><i>59</i></div>
+          </div>
+          <div class="rgroup">
+            <h4>Genre <em>all 33 →</em></h4>
+            <div class="ropt on"><span>History</span><i>✕</i></div>
+            <div class="ropt"><span>Literary fiction</span><i>229</i></div>
+            <div class="ropt"><span>Religion &amp; spirituality</span><i>166</i></div>
+            <div class="ropt"><span>Philosophy</span><i>80</i></div>
+            <div class="ropt"><span>Politics &amp; society</span><i>80</i></div>
+            <div class="ropt"><span>Mythological fiction</span><i>60</i></div>
+            <a class="rmore">Show all 33…</a>
+          </div>
+          <div class="rgroup">
+            <h4>Language <em>all 14 →</em></h4>
+            <div class="ropt"><span>Malayalam</span><i>103</i></div>
+            <div class="ropt"><span>English</span><i>101</i></div>
+            <div class="ropt"><span>Hindi</span><i>100</i></div>
+            <div class="ropt"><span>Tamil</span><i>100</i></div>
+            <a class="rmore">Show all 14…</a>
+          </div>
+          <div class="rgroup">
+            <h4>Length</h4>
+            <div class="ropt"><span>Short · under 200 pp</span></div>
+            <div class="ropt"><span>Medium · 200–400 pp</span></div>
+            <div class="ropt"><span>Long · 400+ pp</span></div>
+          </div>
+        </aside>
+
+        <div>
+          <div class="reshead">
+            <span class="cnt"><b style="color:var(--ink)">118 books</b> · Genre: History</span>
+            <span class="chip">History ✕</span>
+            <span class="chip" style="color:var(--oxblood)">Clear</span>
+            <span style="margin-left:auto"></span>
+            <span class="eyebrow" style="margin-right:6px">Sort</span>
+            <span class="seg"><a>A–Z</a><a class="on">Top rated</a><a>Just added</a><a>Newest</a></span>
+          </div>
+          <div class="grid" style="grid-template-columns:repeat(6,1fr)">
+            <div class="bk"><div class="cv g3"><span>A History of Ancient India</span></div><div class="t">A History of Ancient…</div><div class="a">Upinder Singh</div></div>
+            <div class="bk"><div class="cv g5"><span>Discovery of India</span></div><div class="t">Discovery of India</div><div class="a">Jawaharlal Nehru</div></div>
+            <div class="bk"><div class="cv g1"><span class="ml">കേരള ചരിത്രം</span></div><div class="t">കേരള ചരിത്രം</div><div class="a">A. Sreedhara Menon</div></div>
+            <div class="bk"><div class="cv g4"><span>A Concise History of Pakistan</span></div><div class="t">A Concise History…</div><div class="a">M.R. Kāẓmī</div></div>
+            <div class="bk"><div class="cv g2"><span>Satsari Asam Buranji</span></div><div class="t">Satsari Asam Buranji</div><div class="a">S.K. Bhuyan</div></div>
+            <div class="bk"><div class="cv g6"><span>1600 Varṣagaḷa Itihāsa</span></div><div class="t">1600 Varṣagaḷa…</div><div class="a">Bi Pāṇḍukumār</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><i></i><div><b>Trade-offs.</b> The strongest desktop organisation and the most
+  conventional — readers already know how to use it. Costs ~250px of grid width (6 covers per row
+  instead of 8) and is the biggest rebuild. <b>On mobile the rail cannot exist</b>; it folds back
+  into yesterday's collapsed bar, so the site carries two filter layouts — that's normal (every
+  e-commerce site does exactly this) but it is two layouts to keep in step.</div></div>
+</div>
+
+<!-- ================================================================
+     C — five doors
+     ================================================================ -->
+<div class="area" id="fc">
+  <div class="ah"><span class="an">Direction C · recommended</span><h2>Five doors — one small panel per facet, never a wall</h2></div>
+  <p class="desc">The bar opens into a <b>row of five labelled doors</b> — Sort · Type · Genre ·
+  Language · Length — each a <code>&lt;details&gt;</code> that opens a <b>small popover with only
+  that facet</b>, drawn as B's row-list (names left, counts right, two columns for genre). One door
+  open at a time via the native <code>name=</code> attribute — still zero JS. An active door turns
+  oxblood and carries its value in the label ("Genre · History"), so the closed state reads as a
+  sentence: <b>what you're seeing, in five words</b>. The panel can never become a wall because
+  no more than one facet is ever visible.</p>
+
+  <div class="frames">
+  <div class="browser w" style="width:900px">
+    <div class="bar"><i></i><i></i><i></i><span class="url">kitabi.in/browse — Genre door open</span></div>
+    <div class="site">
+      <div class="sitehead">
+        <div class="logo"><div class="tile"></div><div><b>Kitabi</b><span>Beyond the bookshelf</span></div></div>
+        <nav class="nav"><b>Books</b><span>Authors</span><span>Publishers</span></nav>
+        <div class="search">Search…</div>
+      </div>
+      <div class="crumb">Home › Browse</div>
+      <div class="h1">Browse the catalogue</div>
+
+      <div class="doors">
+        <span class="door">Sort · Top rated <small>▾</small></span>
+        <span class="door">Type <small>▾</small></span>
+        <span class="popwrap">
+          <span class="door open">Genre <small>▴</small></span>
+          <span class="pop">
+            <div class="cols">
+              <div>
+                <div class="ropt on"><span>All genres</span></div>
+                <div class="ropt"><span>Literary fiction</span><i>229</i></div>
+                <div class="ropt"><span>Religion &amp; spirituality</span><i>166</i></div>
+                <div class="ropt"><span>History</span><i>118</i></div>
+                <div class="ropt"><span>Philosophy</span><i>80</i></div>
+              </div>
+              <div>
+                <div class="ropt"><span>Politics &amp; society</span><i>80</i></div>
+                <div class="ropt"><span>Language &amp; linguistics</span><i>72</i></div>
+                <div class="ropt"><span>Literary criticism</span><i>60</i></div>
+                <div class="ropt"><span>Mythological fiction</span><i>60</i></div>
+                <div class="ropt"><span>Historical fiction</span><i>57</i></div>
+              </div>
+            </div>
+            <div class="foot"><a>All 33 genres →</a><a>Clear genre</a></div>
+          </span>
+        </span>
+        <span class="door live">Language · Malayalam <small>✕</small></span>
+        <span class="door">Length <small>▾</small></span>
+        <span class="cnt" style="margin-left:auto">Showing 1–24 of 103</span>
+      </div>
+
+      <div class="grid dim" style="grid-template-columns:repeat(6,1fr);margin-top:16px">
+        <div class="bk"><div class="cv g1"><span class="ml">ചെമ്മീൻ</span></div><div class="t">ചെമ്മീൻ</div><div class="a">Thakazhi</div></div>
+        <div class="bk"><div class="cv g5"><span class="ml">ഖസാക്കിന്റെ ഇതിഹാസം</span></div><div class="t">ഖസാക്കിന്റെ…</div><div class="a">O.V. Vijayan</div></div>
+        <div class="bk"><div class="cv g2"><span class="ml">ആടുജീവിതം</span></div><div class="t">ആടുജീവിതം</div><div class="a">Benyamin</div></div>
+        <div class="bk"><div class="cv g3"><span class="ml">ആരാച്ചാർ</span></div><div class="t">ആരാച്ചാർ</div><div class="a">K.R. Meera</div></div>
+        <div class="bk"><div class="cv g4"><span class="ml">രണ്ടാമൂഴം</span></div><div class="t">രണ്ടാമൂഴം</div><div class="a">M.T. Vasudevan Nair</div></div>
+        <div class="bk"><div class="cv g6"><span class="ml">നാലുകെട്ട്</span></div><div class="t">നാലുകെട്ട്</div><div class="a">M.T. Vasudevan Nair</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="browser m">
+    <div class="bar"><i></i><i></i><i></i><span class="url">mobile — same doors, stacked</span></div>
+    <div class="site" style="padding:0 16px 18px">
+      <div class="sitehead" style="gap:10px">
+        <div class="logo"><div class="tile"></div><div><b>Kitabi</b></div></div>
+        <div class="search" style="width:auto;flex:1">Search…</div>
+      </div>
+      <div class="crumb">Home › Browse</div>
+      <div class="h1" style="font-size:21px">Browse the catalogue</div>
+      <div class="doors" style="gap:6px">
+        <span class="door" style="font-size:11px">Sort · Top rated <small>▾</small></span>
+        <span class="door" style="font-size:11px">Type <small>▾</small></span>
+        <span class="door" style="font-size:11px">Length <small>▾</small></span>
+        <span class="door live" style="font-size:11px">Language · Malayalam <small>✕</small></span>
+        <span class="door open" style="font-size:11px">Genre <small>▴</small></span>
+      </div>
+      <div class="pop" style="position:static;width:auto;margin-top:8px;box-shadow:none;display:block">
+        <div class="cols" style="grid-template-columns:1fr">
+          <div>
+            <div class="ropt on"><span>All genres</span></div>
+            <div class="ropt"><span>Literary fiction</span><i>229</i></div>
+            <div class="ropt"><span>Religion &amp; spirituality</span><i>166</i></div>
+            <div class="ropt"><span>History</span><i>118</i></div>
+          </div>
+        </div>
+        <div class="foot"><a>All 33 →</a><a>Clear</a></div>
+      </div>
+      <div class="grid" style="margin-top:14px">
+        <div class="bk"><div class="cv g1"><span class="ml">ചെമ്മീൻ</span></div><div class="t">ചെമ്മീൻ</div><div class="a">Thakazhi</div></div>
+        <div class="bk"><div class="cv g2"><span class="ml">ആടുജീവിതം</span></div><div class="t">ആടുജീവിതം</div><div class="a">Benyamin</div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="note green"><i></i><div><b>Why this is the recommendation.</b> It keeps yesterday's
+  win (nothing tall above the books, ever), fixes the mixing completely (each facet in its own
+  labelled door; sort visually distinct and worded as a value), scales to 33 genres (a two-column
+  list with aligned counts, not a wrapping cloud), reads as a sentence when closed
+  ("Sort · Top rated | Genre · History | Language · Malayalam"), and is one layout for desktop
+  AND mobile. Native <code>&lt;details name="facet"&gt;</code> gives one-open-at-a-time with zero
+  JS. B remains the better answer if you want the full reference-site feel and accept two layouts;
+  A is the fallback if you want tomorrow's smallest diff.</div></div>
+</div>
+
+</body>
+</html>
