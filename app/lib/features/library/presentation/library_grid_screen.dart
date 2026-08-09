@@ -1137,6 +1137,7 @@ class _LibraryGridItem extends ConsumerWidget {
         status: entry.status,
         progress: progress,
         favorite: entry.isFavorite,
+        rating: book.aggregateRating,
         lentToName: activeLending?.borrowerName,
         borrowedFromName: isReturned ? null : borrowRecord?.borrowerName,
         returned: isReturned,

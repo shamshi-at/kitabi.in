@@ -29,6 +29,10 @@ class CatalogResultTile extends ConsumerWidget {
     final edition = work['edition'] as Map<String, dynamic>?;
     final publisher = edition?['publisher'] as Map<String, dynamic>?;
     final year = work['first_publish_year'] as int?;
+    // On the cover would match the shelf/browse grids, but this row's cover
+    // is 30×44 — smaller than the chip itself — so the rating leads the meta
+    // line instead.
+    final rating = (work['aggregate_rating'] as num?)?.toDouble();
 
     final workId = work['id'] as String?;
     final editionId = edition?['id'] as String?;
@@ -94,10 +98,27 @@ class CatalogResultTile extends ConsumerWidget {
                               ],
                             ],
                           ),
-                        if (publisher != null || year != null)
+                        if (publisher != null || year != null || rating != null)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (rating != null)
+                                Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 6),
+                                  child: Text(
+                                    '★ ${rating.toStringAsFixed(1)}',
+                                    style: TextStyle(
+                                      color: AppColors.goldInk,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              if (rating != null && (publisher != null || year != null))
+                                Text(
+                                  ' · ',
+                                  style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                                ),
                               // Flexible + ellipsis: a long imprint name must
                               // truncate, not RenderFlex-overflow the row.
                               if (publisher != null)

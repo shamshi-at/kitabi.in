@@ -6,6 +6,7 @@ import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/cover_rating_chip.dart';
 import '../../../core/widgets/expanding_fab.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
@@ -664,6 +665,7 @@ class _CatalogGridCell extends StatelessWidget {
     final coverUrl = edition?['cover_url'] as String?;
     final workId = work['id'] as String?;
     final editionId = edition?['id'] as String?;
+    final rating = (work['aggregate_rating'] as num?)?.toDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -689,6 +691,15 @@ class _CatalogGridCell extends StatelessWidget {
                           height: double.infinity,
                         ),
                       ),
+                      // The community rating on the cover itself — this grid
+                      // is where a reader shops for the next read, so the
+                      // signal sits on the object they're scanning.
+                      if (rating != null)
+                        Positioned(
+                          left: 5,
+                          bottom: 5,
+                          child: CoverRatingChip(rating: rating),
+                        ),
                       if (editionId != null)
                         Positioned(
                           top: -4,

@@ -59,12 +59,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 11) {
+            // The community rating mirrored onto shelf covers (9 Aug 2026).
+            // Null until each book's next catalog re-fetch fills it.
+            await m.addColumn(cachedBooks, cachedBooks.aggregateRating);
+          }
           // Promotions, v8 → v10. Exclusive branches on purpose: a device that
           // has never seen the tables just creates them at the final shape,
           // and one that has them at an older shape recreates the cache. The

@@ -901,6 +901,9 @@ class _PublicShelfState extends ConsumerState<_PublicShelf> {
                           title: b['title'] as String? ?? '',
                           author: b['author_names'] as String?,
                           coverUrl: b['cover_url'] as String?,
+                          // Absent on an API deployed behind the app — null
+                          // simply means no chip.
+                          rating: (b['aggregate_rating'] as num?)?.toDouble(),
                         ),
                       );
                     },

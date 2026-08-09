@@ -36,6 +36,7 @@ Future<void> cacheBookForOffline(
       firstPublishYear: Value(work['first_publish_year'] as int?),
       genreNames: Value(genres.map((g) => g['name'] as String).join(', ')),
       form: Value(work['form'] as String?),
+      aggregateRating: Value((work['aggregate_rating'] as num?)?.toDouble()),
     ),
   );
 }

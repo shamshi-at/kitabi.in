@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
+import 'cover_rating_chip.dart';
 import 'status_pill.dart';
 import 'typeset_cover.dart';
 
@@ -15,6 +16,11 @@ import 'typeset_cover.dart';
 /// - [status] → a solid tinted pill, bottom-left, lifted off the cover.
 /// - [progress] (0..1) → an oxblood reading sliver along the very bottom.
 /// - [favorite] → a gold ribbon bookmark, top-right corner.
+/// - [rating] → a dark "★ 4.4" chip, top-left — the community average worn on
+///   the cover itself, so a reader scanning the shelf for the next read sees
+///   it without opening each book (owner request, 9 Aug 2026). Same chip as
+///   the public web's cards. Hidden while [returned] shows — that stamp owns
+///   the top-left corner and is the rarer, more urgent message.
 /// - [lentToName] → a gold "WITH `NAME`" band across the bottom.
 /// - [borrowedFromName] → a slate "FROM `NAME`" band across the bottom, for
 ///   an *active* borrow.
@@ -35,6 +41,7 @@ class ShelfCover extends StatelessWidget {
     this.status,
     this.progress,
     this.favorite = false,
+    this.rating,
     this.lentToName,
     this.borrowedFromName,
     this.returned = false,
@@ -47,6 +54,10 @@ class ShelfCover extends StatelessWidget {
   final String? status;
   final double? progress;
   final bool favorite;
+
+  /// The Work's community star average (null → no chip; absent is not zero).
+  final double? rating;
+
   final String? lentToName;
   final String? borrowedFromName;
   final bool returned;
@@ -90,6 +101,12 @@ class ShelfCover extends StatelessWidget {
               clipper: _RibbonClipper(),
               child: Container(width: 9, height: 20, color: AppColors.gold),
             ),
+          ),
+        if (rating != null && !returned)
+          Positioned(
+            top: 5,
+            left: 5,
+            child: CoverRatingChip(rating: rating!),
           ),
         if (returned)
           Positioned(
