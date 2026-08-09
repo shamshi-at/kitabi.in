@@ -257,6 +257,18 @@ var strip = String(
 assertIncludes(strip, 'href="/book/a"', 'cards link to the book page');
 assertExcludes(strip, '<script>alert', 'a hostile title in a card is escaped');
 assertIncludes(strip, 'fetchpriority="high"', 'the first card in a hero strip is the LCP image');
+// The rating rides ON the cover (class="rt"), so a reader scanning a shelf of
+// covers sees it without reading captions — and an unrated book wears nothing,
+// because an absent rating is not a zero.
+assertIncludes(strip, 'class="rt"', 'a rated card wears the rating chip on its cover');
+assertIncludes(strip, '★ 4.4', 'the chip shows the rating value');
+assertIncludes(strip, 'Rated 4.4 out of 5', 'the chip has a screen-reader label');
+var unratedCard = String(bookCard({ title: 'No rating', slug: 'nr', authors: [] }));
+assertExcludes(unratedCard, 'class="rt"', 'an unrated card wears no chip');
+// A rated typeset cover is role="img", which silences child sr text — the
+// rating must ride in the aria-label instead.
+var ratedTypeset = String(bookCard({ title: 'Typeset', slug: 't', authors: [], rating: 4.1 }));
+assertIncludes(ratedTypeset, 'rated 4.1 out of 5', 'a typeset cover carries the rating in its label');
 // A typeset cover has no image to prioritise, and must not pretend otherwise.
 var typesetStrip = String(bookStrip([{ title: 'No cover', slug: 'n' }], { priorityFirst: true }));
 assertExcludes(typesetStrip, 'fetchpriority', 'a generated cover carries no image priority hint');

@@ -71,7 +71,7 @@ export const CSS = `
    Spans are inline by default, so every span that is meant to be a LINE in a
    stacked card has to be told so — otherwise the lines run together and text
    wraps mid-phrase ("Marathi 100 / books"). One rule instead of a dozen. */
-.bk .bt,.bk .ba,.bk .brt,.cvw,.feat .eyebrow,.feat .fa,
+.bk .bt,.bk .ba,.cvw,.feat .eyebrow,.feat .fa,
 .tcard .ti .lg,.tcard .ti .t,.tcard .ti .m,
 .pair .side .t,.pair .side .m,
 .srow .st,.srow .sa{display:block}
@@ -152,8 +152,10 @@ img{max-width:100%;display:block}
 .bk .bt{font-family:var(--serif);font-size:13.5px;font-weight:600;margin-top:9px;line-height:1.3}
 .bk:hover .bt{color:var(--oxblood)}
 .bk .ba{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
-.bk .brt{font-size:11px;color:var(--gold);font-weight:700;margin-top:4px}
-.bk .brt span{color:var(--ink-soft);font-weight:500}
+/* The rating chip worn on the cover itself — dark scrim + gold so it reads
+   over photo covers and every typeset tone alike, in both site themes. */
+.cv .rt{position:absolute;left:6px;bottom:6px;z-index:3;padding:2px 7px;border-radius:999px;
+  background:rgba(22,13,7,.78);color:#D1A04A;font-size:10px;font-weight:700;letter-spacing:.02em;line-height:1.6}
 
 /* ---------- people directory ---------- */
 /* A grid of names whose lengths vary wildly ("Ruskin Bond" beside "Rasipuram

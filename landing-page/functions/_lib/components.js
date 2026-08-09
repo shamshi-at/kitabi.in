@@ -42,10 +42,22 @@ function tone(text) {
  * height are always set so the layout never shifts — that alone takes CLS to
  * roughly zero, and it was unmeasured-but-likely-poor on the old pages.
  */
-export function cover(work, { priority = false, width = 190 } = {}) {
+export function cover(work, { priority = false, width = 190, rating = null } = {}) {
   const height = Math.round(width * 1.5);
   const title = work?.title || 'Untitled';
   const author = work?.authors?.[0]?.name || '';
+
+  // The community rating, worn on the cover itself — the shelf is where a
+  // reader picks the next book, so the signal lives on the object they scan,
+  // not in a caption under it. Opt-in per call site: cards pass it, the book
+  // hero doesn't (its stars already sit beside the cover). A dark chip with
+  // gold text is readable over any cover art and any typeset tone.
+  const badge = rating
+    ? html`<span class="rt"
+        ><span aria-hidden="true">★ ${rating.toFixed(1)}</span
+        ><span class="sr">Rated ${rating.toFixed(1)} out of 5</span></span
+      >`
+    : '';
 
   // The typeset cover is ALWAYS rendered, and the image sits on top of it.
   //
@@ -70,10 +82,15 @@ export function cover(work, { priority = false, width = 190 } = {}) {
       ${typeset}
       <img src="${coverSrc(work.cover_url)}" alt="${`Cover of ${title}`}" width="${width}" height="${height}"
            ${raw(priority ? 'fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"')} />
+      ${badge}
     </span>`;
   }
-  return html`<span class="cv g${tone(title)}" role="img" aria-label="${`Cover of ${title}`}">
+  // role="img" makes children presentational, so the badge's sr text would be
+  // silenced here — carry the rating in the label instead.
+  return html`<span class="cv g${tone(title)}" role="img"
+    aria-label="${rating ? `Cover of ${title} — rated ${rating.toFixed(1)} out of 5` : `Cover of ${title}`}">
     ${typeset}
+    ${badge}
   </span>`;
 }
 
@@ -95,16 +112,9 @@ export function stars(rating, count) {
 export function bookCard(work, { priority = false } = {}) {
   const authors = (work.authors || []).map((a) => a.name).join(', ');
   return html`<a class="bk" href="${bookPath(work)}">
-    ${cover(work, { priority, width: 140 })}
+    ${cover(work, { priority, width: 140, rating: work.rating })}
     <span class="bt">${work.title}</span>
     ${authors ? html`<span class="ba">${authors}</span>` : ''}
-    ${work.rating
-      ? html`<span class="brt"
-          >★ ${work.rating.toFixed(1)}${work.rating_count
-            ? html` <span>· ${num(work.rating_count)}</span>`
-            : ''}</span
-        >`
-      : ''}
   </a>`;
 }
 
