@@ -382,6 +382,14 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   folded it behind a **native `<details>` disclosure**: one compact "Filter & sort · N" bar,
   every active facet a removable ✕ chip, zero JS (the server-rendered rule holds; panel links
   are in the DOM either way), verified at desktop + mobile widths against the live payload.
+  **Superseded same day by the owner-picked redesign:** "everything is mixed" → three mockup
+  directions ([docs/browse-filters-mockups.html](docs/browse-filters-mockups.html)); the pick
+  was **C + A's sort** — a segmented sort control (the pick-exactly-one shape, visually distinct
+  from filters) plus **one `<details name="facet"> door per facet**, each opening a small
+  bar-width popover holding only that facet (rows: name left, count right), native
+  one-open-at-a-time via the `name` attribute, still zero JS. An active door says its value
+  ("Genre · History"), so the closed bar reads as a sentence; Clear all appears only when
+  something is active. 289 edge assertions.
 - **9 Aug 2026** — **Finding a book stopped being a scroll.** The browse API's facets
   (language / form / genre) existed since the site launched, and the web `/browse` page drew
   none of them — one row of language chips that *left* the page for the hubs, no sort control,

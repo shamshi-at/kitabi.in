@@ -184,6 +184,8 @@ const LENGTHS = [
   ['medium', 'Medium · 200–400 pp'],
   ['long', 'Long · 400+ pp'],
 ];
+// The door label wants just the word; the popover rows keep the page counts.
+const LENGTH_WORD = { short: 'Short', medium: 'Medium', long: 'Long' };
 
 const BROWSE_SORTS = [
   ['title', 'A–Z'],
@@ -225,103 +227,93 @@ export function renderBrowse(data, { query = {} } = {}) {
   const sort = query.sort || 'title';
   const genreActive = (g) => (query.genre || '').toLowerCase() === g.name.toLowerCase();
 
-  // What's narrowing the list right now — each one a chip in the collapsed
-  // bar with its own ✕ (remove exactly this), so the state is visible and
-  // undoable without ever opening the panel.
-  const activeChips = [
-    sort !== 'title'
-      ? ['sort', (BROWSE_SORTS.find(([k]) => k === sort) || ['', sort])[1]]
-      : null,
-    query.form ? ['form', query.form] : null,
-    query.genre ? ['genre', query.genre] : null,
-    query.language ? ['language', query.language] : null,
-    query.length
-      ? ['length', (LENGTHS.find(([k]) => k === query.length) || ['', query.length])[1]]
-      : null,
-  ].filter(Boolean);
+  const anyFilter = Boolean(query.form || query.genre || query.language || query.length);
 
-  // One row per facet, every chip a plain link. aria-current marks the
-  // active one for assistive tech and for the stylesheet.
-  const facetRow = (label, chips) => html`<div class="frow">
-    <span class="eyebrow" style="margin-right:2px">${label}</span>${chips}
+  // One facet's popover row — a plain link, name left, count right,
+  // aria-current on the choice that's active right now.
+  const popRow = (label, href, active, count = null) => html`<a class="row"${mark(active)}
+    href="${href}">${label}${count === null ? '' : html` <i>${num(count)}</i>`}</a>`;
+
+  // One door: a <details> whose summary is the labelled button and whose
+  // popover holds ONLY this facet. `name="facet"` makes the doors a native
+  // exclusive group — opening one closes the rest, zero JS. An active door
+  // says its value in the label, so the closed bar reads as a sentence:
+  // "Top rated | Genre · History | Language · Malayalam".
+  const door = (label, value, pop) => html`<details class="fdoor${value ? ' live' : ''}" name="facet">
+      <summary>${label}${value ? ` · ${value}` : ''} <i>▾</i></summary>
+      <div class="pop">${pop}</div>
+    </details>`;
+
+  const foot = (clearLabel, clearHref, moreLabel = null, moreHref = null) => html`<div class="foot">
+    ${moreHref ? html`<a href="${moreHref}">${moreLabel}</a>` : html`<span></span>`}
+    ${clearHref ? html`<a href="${clearHref}">${clearLabel}</a>` : ''}
   </div>`;
 
-  const panel = html`
-    ${facetRow(
-      'Sort',
-      html`${BROWSE_SORTS.map(
-        ([key, label]) => html`<a class="chip"${mark(sort === key)}
-          href="${url({ sort: key === 'title' ? null : key, page: 1 })}">${label}</a>`,
-      )}`,
-    )}
-    ${data.forms?.length
-      ? facetRow(
-          'Type',
-          html`<a class="chip"${mark(!query.form)}
-              href="${url({ form: null, page: 1 })}">All</a>
-            ${facetSeats(data.forms, (f) => f.name === query.form, 6).map(
-              (f) => html`<a class="chip"${mark(f.name === query.form)}
-                href="${url({ form: f.name, page: 1 })}"
-                >${f.name} <span style="opacity:.6">${num(f.count)}</span></a
-              >`,
-            )}`,
-        )
-      : ''}
-    ${data.genres?.length
-      ? facetRow(
-          'Genre',
-          html`<a class="chip"${mark(!query.genre)}
-              href="${url({ genre: null, page: 1 })}">All</a>
-            ${facetSeats(data.genres, genreActive, 10).map(
-              (g) => html`<a class="chip"${mark(genreActive(g))}
-                href="${url({ genre: g.name, page: 1 })}"
-                >${g.name} <span style="opacity:.6">${num(g.count)}</span></a
-              >`,
-            )}`,
-        )
-      : ''}
-    ${data.languages?.length
-      ? facetRow(
-          'Language',
-          html`<a class="chip"${mark(!query.language)}
-              href="${url({ language: null, page: 1 })}">All</a>
-            ${facetSeats(data.languages, (l) => l.name === query.language, 8).map(
-              (l) => html`<a class="chip"${mark(l.name === query.language)}
-                href="${url({ language: l.name, page: 1 })}"
-                >${l.name} <span style="opacity:.6">${num(l.count)}</span></a
-              >`,
-            )}`,
-        )
-      : ''}
-    ${facetRow(
-      'Length',
-      html`<a class="chip"${mark(!query.length)}
-          href="${url({ length: null, page: 1 })}">All</a>
-        ${LENGTHS.map(
-          ([key, label]) => html`<a class="chip"${mark(query.length === key)}
-            href="${url({ length: key, page: 1 })}">${label}</a>`,
-        )}`,
-    )}
-  `;
-
-  // One compact bar; the facet rows live behind a native <details> disclosure
-  // (the app folded the same controls into its filter sheet for the same
-  // reason — five open rows push every book below the fold). Zero JS: the
-  // panel's links are in the DOM either way, so crawlers and no-JS readers
-  // lose nothing. The bar always shows what's active, each chip removable,
-  // so collapsing hides the *controls*, never the *state*.
+  // A's segmented control for the one pick-exactly-one choice on the page —
+  // sort is not a filter, so it doesn't dress like one (mockups F/A+C).
   const toolbar = html`
     <div class="fbar">
-      <details class="fdisc">
-        <summary><span class="chip fbtn${activeChips.length ? ' live' : ''}"
-            >Filter &amp; sort${activeChips.length ? ` · ${activeChips.length}` : ''} ▾</span></summary>
-        <div class="fpanel">${panel}</div>
-      </details>
-      ${activeChips.map(
-        ([key, label]) => html`<a class="chip" href="${url({ [key]: null, page: 1 })}"
-          title="Remove this filter">${label} ✕</a>`,
+      <span class="seg">
+        ${BROWSE_SORTS.map(
+          ([key, label]) => html`<a${mark(sort === key)}
+            href="${url({ sort: key === 'title' ? null : key, page: 1 })}">${label}</a>`,
+        )}
+      </span>
+      ${data.forms?.length
+        ? door(
+            'Type',
+            query.form,
+            html`<div class="cols">
+                ${popRow('All types', url({ form: null, page: 1 }), !query.form)}
+                ${facetSeats(data.forms, (f) => f.name === query.form, 10).map((f) =>
+                  popRow(f.name, url({ form: f.name, page: 1 }), f.name === query.form, f.count),
+                )}
+              </div>
+              ${query.form ? foot('Clear type', url({ form: null, page: 1 })) : ''}`,
+          )
+        : ''}
+      ${data.genres?.length
+        ? door(
+            'Genre',
+            query.genre,
+            html`<div class="cols">
+                ${popRow('All genres', url({ genre: null, page: 1 }), !query.genre)}
+                ${facetSeats(data.genres, genreActive, 10).map((g) =>
+                  popRow(g.name, url({ genre: g.name, page: 1 }), genreActive(g), g.count),
+                )}
+              </div>
+              ${foot('Clear genre', query.genre ? url({ genre: null, page: 1 }) : null,
+                     `All ${num(data.genres.length)} genres →`, '/genres')}`,
+          )
+        : ''}
+      ${data.languages?.length
+        ? door(
+            'Language',
+            query.language,
+            html`<div class="cols">
+                ${popRow('All languages', url({ language: null, page: 1 }), !query.language)}
+                ${facetSeats(data.languages, (l) => l.name === query.language, 10).map((l) =>
+                  popRow(l.name, url({ language: l.name, page: 1 }), l.name === query.language, l.count),
+                )}
+              </div>
+              ${foot('Clear language', query.language ? url({ language: null, page: 1 }) : null,
+                     'All languages →', '/languages')}`,
+          )
+        : ''}
+      ${door(
+        'Length',
+        query.length ? LENGTH_WORD[query.length] || query.length : null,
+        html`<div class="cols">
+            ${popRow('Any length', url({ length: null, page: 1 }), !query.length)}
+            ${LENGTHS.map(([key, label]) =>
+              popRow(label, url({ length: key, page: 1 }), query.length === key),
+            )}
+          </div>
+          ${query.length ? foot('Clear length', url({ length: null, page: 1 })) : ''}`,
       )}
-      ${activeChips.length ? html`<a class="chip" href="/browse" style="color:#7E2A33">Clear all</a>` : ''}
+      ${anyFilter || sort !== 'title'
+        ? html`<a class="chip" href="/browse" style="color:#7E2A33">Clear all</a>`
+        : ''}
       <span class="cnt"
         >${data.total ? `Showing ${num(first)}–${num(last)} of ${num(data.total)}` : 'Nothing here'}</span
       >

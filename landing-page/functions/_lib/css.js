@@ -350,22 +350,50 @@ img{max-width:100%;display:block}
 .toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:16px 0;
   border-bottom:1px solid var(--line);margin-bottom:20px}
 .toolbar .cnt{font-size:12.5px;color:var(--ink-soft);margin-left:auto}
-/* Browse's collapsed filter bar: one row, facet rows behind a native
-   <details> — no JS, links crawlable either way. */
-.fbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:13px 0;
-  border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:16px 0 20px}
+/* Browse's filter bar (docs/browse-filters-mockups.html, direction C + A's
+   sort): a segmented sort control, then one <details> door per facet whose
+   popover holds ONLY that facet — small panels, never a wall. Zero JS: the
+   popover links are in the DOM regardless, and name="facet" gives native
+   one-open-at-a-time. The bar is the positioning context, so every popover
+   spans the bar's own width and can't overflow a small screen. */
+.fbar{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  margin:16px 0 20px}
 .fbar .cnt{font-size:12.5px;color:var(--ink-soft);margin-left:auto}
-.fdisc[open]{flex-basis:100%}
-.fdisc summary{list-style:none;cursor:pointer;display:inline-block}
-.fdisc summary::-webkit-details-marker{display:none}
-.fbtn.live{background:var(--oxblood);border-color:var(--oxblood);color:#F6F0E3}
-.fdisc[open] .fbtn{border-color:var(--oxblood);color:var(--oxblood)}
-.fdisc[open] .fbtn.live{color:#F6F0E3}
-.fpanel{margin:10px 0 4px;padding:2px 14px 12px;border:1px solid var(--line);
-  border-radius:12px;background:var(--card)}
-.frow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:11px}
-.frow .chip{background:var(--paper)}
-.frow .chip[aria-current]{background:var(--oxblood)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  background:var(--card);max-width:100%;overflow-x:auto;scrollbar-width:none;
+  /* min-width:0 lets the flex item shrink below its ~430px of nowrap sort
+     labels on narrow screens — without it the bar can't wrap and the whole
+     page scrolls sideways; with it the control scrolls inside itself. */
+  min-width:0}
+.seg::-webkit-scrollbar{display:none}
+.seg a{padding:7px 12px;font-size:11.5px;font-weight:600;color:var(--ink-soft);
+  border-right:1px solid var(--line);white-space:nowrap}
+.seg a:last-child{border-right:0}
+.seg a[aria-current]{background:var(--oxblood);color:#F6F0E3}
+.fdoor summary{list-style:none;cursor:pointer;display:inline-flex;gap:6px;align-items:center;
+  border:1px solid var(--line);background:var(--card);border-radius:10px;padding:6px 12px;
+  font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap}
+.fdoor summary::-webkit-details-marker{display:none}
+.fdoor summary i{font-style:normal;font-size:9px;color:var(--ink-soft)}
+.fdoor.live summary{background:var(--oxblood);border-color:var(--oxblood);color:#F6F0E3}
+.fdoor.live summary i{color:#E9C9CC}
+.fdoor[open] summary{border-color:var(--oxblood);color:var(--oxblood);
+  box-shadow:0 0 0 1px var(--oxblood)}
+.fdoor.live[open] summary{color:#F6F0E3}
+.fdoor .pop{position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:5;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 16px 40px rgba(43,33,24,.22);padding:8px 10px}
+.pop .cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0 16px}
+.pop .row{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  font-size:12.5px;font-weight:500;color:var(--ink);padding:6px 9px;border-radius:7px}
+.pop .row:hover{background:var(--paper-deep);color:var(--ink)}
+.pop .row i{font-style:normal;font-size:11px;color:var(--ink-soft)}
+.pop .row[aria-current]{background:var(--oxblood);color:#F6F0E3;font-weight:600}
+.pop .row[aria-current] i{color:#E9C9CC}
+.pop .foot{border-top:1px solid var(--line);margin-top:8px;padding:8px 9px 3px;
+  display:flex;justify-content:space-between;gap:12px}
+.pop .foot a{font-size:11.5px;font-weight:600;color:var(--oxblood)}
 .pager{display:flex;gap:6px;justify-content:center;margin-top:26px;align-items:center;flex-wrap:wrap}
 .pager a,.pager span{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 13px;
   font-size:12.5px;font-weight:600;color:var(--ink-soft)}

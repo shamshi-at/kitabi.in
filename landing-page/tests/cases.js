@@ -529,14 +529,19 @@ assertExcludes(facetedBrowse, 'aria-current=&quot;',
 assertIncludes(facetedBrowse, 'under 200 pp', 'the short-reads chip says the number readers search');
 assertIncludes(facetedBrowse, 'Clear all', 'an active filter can always be cleared');
 
-// The facet rows fold behind a native <details> so the books stay above the
-// fold (owner report, 9 Aug 2026) — but the collapsed bar must still show
-// every active filter as its own removable chip: collapsing hides controls,
-// never state. No JS involved; the panel's links are in the DOM regardless.
-assertIncludes(facetedBrowse, '<details class="fdisc">', 'the filters are a native disclosure');
-assertIncludes(facetedBrowse, 'Filter &amp; sort · 2', 'the summary counts the active facets');
-assertIncludes(facetedBrowse, 'Crime ✕', 'the active genre is removable from the collapsed bar');
-assertIncludes(facetedBrowse, 'Top rated ✕', 'so is the non-default sort');
+// Direction C + A's sort (docs/browse-filters-mockups.html, owner pick,
+// 9 Aug 2026): a segmented sort control, then one <details> door per facet
+// whose popover holds only that facet. name="facet" gives native
+// one-open-at-a-time — zero JS, links in the DOM regardless.
+assertIncludes(facetedBrowse, '<details class="fdoor live" name="facet">',
+  'the active facet is a live door in the exclusive group');
+assertIncludes(facetedBrowse, 'Genre · Crime <i>▾</i>',
+  'an active door carries its value — the closed bar reads as a sentence');
+assertIncludes(facetedBrowse, '<span class="seg">', 'sort is a segmented control, not chips');
+assertIncludes(facetedBrowse, 'All genres', 'each popover offers its own All');
+assertIncludes(facetedBrowse, 'Clear genre', 'an active facet clears from inside its door');
+assertIncludes(facetedBrowse, 'href="/genres">All 2 genres →',
+  'the genre popover doors out to the full directory');
 
 var pristineBrowse = String(
   renderBrowse(
@@ -545,8 +550,9 @@ var pristineBrowse = String(
     { query: {} },
   ).text(),
 );
-assertExcludes(pristineBrowse, '✕', 'no filters active → nothing to remove, no ✕ anywhere');
-assertIncludes(pristineBrowse, 'Filter &amp; sort ▾', 'the pristine summary carries no count');
+assertExcludes(pristineBrowse, 'fdoor live', 'no filters active → no live doors');
+assertExcludes(pristineBrowse, 'Clear all', 'nothing to clear on a pristine browse');
+assertExcludes(pristineBrowse, '✕', 'and no ✕ anywhere');
 
 // A dead-end browse names each active filter and offers to drop exactly it.
 var deadEnd = String(
