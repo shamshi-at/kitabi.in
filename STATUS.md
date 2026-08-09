@@ -389,7 +389,17 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   bar-width popover holding only that facet (rows: name left, count right), native
   one-open-at-a-time via the `name` attribute, still zero JS. An active door says its value
   ("Genre · History"), so the closed bar reads as a sentence; Clear all appears only when
-  something is active. 289 edge assertions.
+  something is active. 289 edge assertions. **The app got the same doors** (owner request):
+  the fab's one-big-filter-sheet is gone (two filter surfaces drift — the 19 Jul lesson) and
+  the Books tab carries the bar as a two-row header sliver — segmented sort scrolling inside
+  itself, then the four doors, each opening a small per-facet bottom sheet with counts. Two
+  on-device catches the widget tests couldn't see: a lazy horizontal ListView never *built*
+  the bar's tail (Length, Clear all) — finders, semantics and ensureVisible all blind to it —
+  now an eager SingleChildScrollView+Row; and a single scrolling line hid every door behind
+  the seg on a 360dp phone, so the bar wraps to two rows exactly like the web's does. Driven
+  on the emulator against production signed-out: Genre door → the real 33-genre sheet
+  (Literary fiction 229…), pick History → "Genre · History" door + the Thapar/Dalrymple
+  shelf. 324 Flutter tests.
 - **9 Aug 2026** — **Finding a book stopped being a scroll.** The browse API's facets
   (language / form / genre) existed since the site launched, and the web `/browse` page drew
   none of them — one row of language chips that *left* the page for the hubs, no sort control,

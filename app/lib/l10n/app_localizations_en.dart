@@ -3539,16 +3539,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseSortLabel => 'Sort';
 
   @override
-  String get browseSortTitle => 'Title (A–Z)';
+  String get browseSortTitle => 'A–Z';
 
   @override
-  String get browseSortNewest => 'Newest first';
+  String get browseSortNewest => 'Newest';
 
   @override
-  String get browseSortOldest => 'Oldest first';
+  String get browseSortOldest => 'Oldest';
 
   @override
-  String get browseSortAuthor => 'Author (A–Z)';
+  String get browseSortAuthor => 'By author';
 
   @override
   String get browseSortTopRated => 'Top rated';
@@ -3600,7 +3600,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseShowAllBooks => 'Show all books';
 
   @override
-  String get browseFabLabel => 'Search and filter the catalogue';
+  String get browseFabLabel => 'Search the catalogue';
+
+  @override
+  String get browseAllTypes => 'All types';
+
+  @override
+  String get browseAllGenres => 'All genres';
+
+  @override
+  String get browseAllLanguages => 'All languages';
+
+  @override
+  String get browseAnyLength => 'Any length';
+
+  @override
+  String get browseClearAll => 'Clear all';
+
+  @override
+  String get browseLengthShortWord => 'Short';
+
+  @override
+  String get browseLengthMediumWord => 'Medium';
+
+  @override
+  String get browseLengthLongWord => 'Long';
 
   @override
   String get paceLabel => 'Time to finish';

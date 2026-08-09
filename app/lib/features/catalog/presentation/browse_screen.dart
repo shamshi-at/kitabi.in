@@ -17,15 +17,17 @@ import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
 import '../../profile/providers/profile_providers.dart';
 import 'catalog_entity_tiles.dart';
-import 'chip_picker_sheet.dart';
 
 /// Discover (S4/browse) — wander the whole catalog: every book, author and
 /// publisher. Rebuilt 18 Jul 2026 to match the library's "cool" feel (owner
 /// request, Apple Books reference): the Books tab is a wall of standing covers
 /// on gold ledges, the tall header steps back on scroll while the tabs stay
-/// pinned, and search + filter live on the same expanding floating control the
-/// library uses — the old inline sort/language/type/genre dropdown row is gone,
-/// folded into the fab's filter sheet.
+/// pinned. Filtering is the web's doors bar (owner pick, 9 Aug 2026,
+/// docs/browse-filters-mockups.html direction C + A's sort): a segmented sort
+/// control plus one small per-facet sheet — Type, Genre, Language, Length —
+/// whose door label carries its value ("Genre · History"), so the bar reads
+/// as a sentence. The fab keeps only Search; the old one-big-filter-sheet is
+/// gone (two filter surfaces would drift — CLAUDE.md, 19 Jul lesson).
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
 
@@ -37,23 +39,23 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tab;
 
-  // Books facets — lifted out of the tab into the screen so the floating
-  // filter sheet drives them (the tab just reads them and re-keys on change).
+  // Books facets — lifted out of the tab into the screen so the doors bar
+  // drives them (the tab just reads them and re-keys on change).
   String _sort = 'title';
   // null = the whole catalogue; otherwise a server-side language filter. The
   // catalogue *opens* filtered to the reader's profile languages (their
   // configured reading languages) — Discover should greet a Malayalam reader
   // with Malayalam shelves, not the global alphabet.
   List<String>? _languages;
-  // Set once the reader applies any choice from the sheet (or the empty-state
+  // Set once the reader touches the Language door (or the empty-state
   // escape) — after that, a late /me arrival must not overwrite their pick.
   bool _langTouched = false;
   String? _form;
   String? _genre;
   String? _length;
 
-  // What the filter sheet offers — best-effort; a failed fetch just leaves
-  // that facet showing "All", never blocks browsing.
+  // What the doors offer — best-effort; a failed fetch just leaves that
+  // door showing "All", never blocks browsing.
   List<String> _languageOptions = [];
   List<String> _forms = [];
   List<String> _genres = [];
@@ -70,12 +72,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 3, vsync: this)
-      // The fab's Filter action only exists on the Books tab (the facets are
-      // book-only) — rebuild when the tab changes so it appears/vanishes.
-      ..addListener(() {
-        if (!_tab.indexIsChanging) setState(() {});
-      });
+    _tab = TabController(length: 3, vsync: this);
     // Default filter: the reader's configured languages. /me is normally
     // cached by the router's onboarding gate long before Discover opens, but
     // a cold start straight into this screen can beat it — listen and apply
@@ -110,45 +107,128 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
     super.dispose();
   }
 
-  int get _activeFacetCount =>
-      (_languages != null ? 1 : 0) +
-      (_form != null ? 1 : 0) +
-      (_genre != null ? 1 : 0) +
-      (_length != null ? 1 : 0);
+  bool get _anyActive =>
+      _sort != 'title' ||
+      _languages != null ||
+      _form != null ||
+      _genre != null ||
+      _length != null;
 
-  Future<void> _openFilterSheet() async {
-    final result = await showModalBottomSheet<_CatalogFacets>(
+  bool _isPreferredSet(List<String> langs) =>
+      _preferred.isNotEmpty &&
+      langs.length == _preferred.length &&
+      langs.toSet().containsAll(_preferred);
+
+  /// The Language door's value label: nothing, "Your languages", or the one
+  /// picked language.
+  String? _languageValue(AppLocalizations l10n) {
+    final langs = _languages;
+    if (langs == null) return null;
+    if (_isPreferredSet(langs)) return l10n.browseFilterYourLanguages;
+    return langs.first;
+  }
+
+  /// One door's sheet: rows with optional counts, the current pick marked.
+  /// Returns a 1-field record so "picked the clearing row" (value null) and
+  /// "dismissed, change nothing" (record null) stay distinguishable.
+  Future<(String?,)?> _openDoor({
+    required String title,
+    required List<_DoorOption> options,
+    required String? selected,
+  }) {
+    return showModalBottomSheet<(String?,)>(
       context: context,
-      isScrollControlled: true,
       backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _CatalogFilterSheet(
-        current: _CatalogFacets(
-          sort: _sort,
-          languages: _languages,
-          form: _form,
-          genre: _genre,
-          length: _length,
-        ),
-        languages: _languageOptions,
-        preferred: _preferred,
-        forms: _forms,
-        genres: _genres,
-        genreRows: _genreRows,
-      ),
+      builder: (_) => _FacetDoorSheet(title: title, options: options, selected: selected),
     );
-    if (result == null) return;
+  }
+
+  Future<void> _typeDoor(AppLocalizations l10n) async {
+    final picked = await _openDoor(
+      title: l10n.libraryFilterType,
+      options: [
+        _DoorOption(null, l10n.browseAllTypes),
+        for (final f in _forms) _DoorOption(f, f),
+      ],
+      selected: _form,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _form = picked.$1);
+  }
+
+  Future<void> _genreDoor(AppLocalizations l10n) async {
+    final counts = {
+      for (final g in _genreRows)
+        if (g['name'] is String) g['name'] as String: g['work_count'] as int?,
+    };
+    final picked = await _openDoor(
+      title: l10n.libraryFilterGenre,
+      options: [
+        _DoorOption(null, l10n.browseAllGenres),
+        for (final g in _genres) _DoorOption(g, g, count: counts[g]),
+      ],
+      selected: _genre,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _genre = picked.$1);
+  }
+
+  /// "Your languages" travels as this sentinel so the sheet stays a plain
+  /// single-select over strings.
+  static const _kMine = '__your_languages__';
+
+  Future<void> _languageDoor(AppLocalizations l10n) async {
+    final langs = _languages;
+    final picked = await _openDoor(
+      title: l10n.libraryFilterLanguage,
+      options: [
+        if (_preferred.isNotEmpty) _DoorOption(_kMine, l10n.browseFilterYourLanguages),
+        _DoorOption(null, l10n.browseAllLanguages),
+        for (final lang in _languageOptions) _DoorOption(lang, lang),
+      ],
+      selected: langs == null
+          ? null
+          : _isPreferredSet(langs)
+              ? _kMine
+              : langs.first,
+    );
+    if (picked == null || !mounted) return;
     setState(() {
-      _sort = result.sort;
-      _languages = result.languages;
       _langTouched = true;
-      _form = result.form;
-      _genre = result.genre;
-      _length = result.length;
+      _languages = picked.$1 == null
+          ? null
+          : picked.$1 == _kMine
+              ? List.of(_preferred)
+              : [picked.$1!];
     });
   }
+
+  Future<void> _lengthDoor(AppLocalizations l10n) async {
+    final picked = await _openDoor(
+      title: l10n.browseFilterLength,
+      options: [
+        _DoorOption(null, l10n.browseAnyLength),
+        _DoorOption('short', l10n.browseLengthShort),
+        _DoorOption('medium', l10n.browseLengthMedium),
+        _DoorOption('long', l10n.browseLengthLong),
+      ],
+      selected: _length,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _length = picked.$1);
+  }
+
+  void _clearAll() => setState(() {
+        _sort = 'title';
+        _languages = null;
+        _langTouched = true;
+        _form = null;
+        _genre = null;
+        _length = null;
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -212,6 +292,45 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
                     // already-fetched page would hide matches further in).
                     key: ValueKey('books|$_sort|${_languages?.join('+')}|$_form|$_genre|$_length'),
                     storageKey: 'catalog-books',
+                    // The doors bar scrolls with the shelf (not pinned) and
+                    // survives the empty state, so a dead-end filter can
+                    // always be undone from where you stand.
+                    headerSliver: SliverToBoxAdapter(
+                      child: _DoorsBar(
+                        sort: _sort,
+                        sortLabels: {
+                          'title': l10n.browseSortTitle,
+                          'rating': l10n.browseSortTopRated,
+                          'added': l10n.browseSortJustAdded,
+                          'year_desc': l10n.browseSortNewest,
+                          'year_asc': l10n.browseSortOldest,
+                          'author': l10n.browseSortAuthor,
+                        },
+                        onSort: (v) => setState(() => _sort = v),
+                        doors: [
+                          _DoorSpec(l10n.libraryFilterType, _form, () => _typeDoor(l10n)),
+                          _DoorSpec(l10n.libraryFilterGenre, _genre, () => _genreDoor(l10n)),
+                          _DoorSpec(
+                            l10n.libraryFilterLanguage,
+                            _languageValue(l10n),
+                            () => _languageDoor(l10n),
+                          ),
+                          _DoorSpec(
+                            l10n.browseFilterLength,
+                            switch (_length) {
+                              'short' => l10n.browseLengthShortWord,
+                              'medium' => l10n.browseLengthMediumWord,
+                              'long' => l10n.browseLengthLongWord,
+                              _ => null,
+                            },
+                            () => _lengthDoor(l10n),
+                          ),
+                        ],
+                        showClearAll: _anyActive,
+                        onClearAll: _clearAll,
+                        clearAllLabel: l10n.browseClearAll,
+                      ),
+                    ),
                     fetch: (limit, offset) => api.browseWorks(
                       limit: limit,
                       offset: offset,
@@ -276,8 +395,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
                 ],
               ),
             ),
-            // Search follows you down every tab; Filter only where facets mean
-            // something — the Books tab (owner request, 18 Jul 2026).
+            // Search follows you down every tab. Filtering lives in the
+            // Books tab's doors bar (9 Aug 2026) — the fab's old Filter
+            // action would have been a second surface for the same facets,
+            // and two surfaces drift (CLAUDE.md, 19 Jul lesson).
             ExpandingFab(
               semanticLabel: l10n.browseFabLabel,
               actions: [
@@ -286,13 +407,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
                   label: l10n.searchTitle,
                   onPressed: () => context.push(Routes.catalogSearch),
                 ),
-                if (_tab.index == 0)
-                  ExpandingFabAction(
-                    icon: Icons.tune,
-                    label: l10n.libraryFilterTitle,
-                    badge: _activeFacetCount,
-                    onPressed: _openFilterSheet,
-                  ),
               ],
             ),
           ],
@@ -341,6 +455,7 @@ class _PagedCatalogView extends StatefulWidget {
     required this.emptyText,
     required this.storageKey,
     this.emptyAction,
+    this.headerSliver,
   });
 
   final Future<List<Map<String, dynamic>>> Function(int limit, int offset) fetch;
@@ -351,6 +466,10 @@ class _PagedCatalogView extends StatefulWidget {
   /// Optional escape hatch under the empty state (e.g. "Show all books" when
   /// the your-languages default filter matched nothing).
   final Widget? emptyAction;
+
+  /// Optional sliver rendered above the content — the Books tab's doors bar.
+  /// Present in the empty state too, so a dead-end filter can be undone.
+  final Widget? headerSliver;
 
   @override
   State<_PagedCatalogView> createState() => _PagedCatalogViewState();
@@ -449,6 +568,7 @@ class _PagedCatalogViewState extends State<_PagedCatalogView>
         key: PageStorageKey(widget.storageKey),
         slivers: [
           injector,
+          if (widget.headerSliver != null) widget.headerSliver!,
           content,
           // Trailing row: spinner while loading more, retry on error, nothing
           // when the end is reached. Bottom pad clears the floating control.
@@ -679,277 +799,189 @@ class _QuickAddBadge extends ConsumerWidget {
 /// languages/form/genre are null when "All". [languages] is a *list*: the
 /// default filter is the reader's profile languages, and a single sheet pick
 /// travels as a one-element list.
-class _CatalogFacets {
-  const _CatalogFacets({required this.sort, this.languages, this.form, this.genre, this.length});
 
-  final String sort;
-  final List<String>? languages;
-  final String? form;
-  final String? genre;
-  final String? length;
+/// One door's descriptor: its noun, its current value (null = inactive), and
+/// what opens it.
+class _DoorSpec {
+  const _DoorSpec(this.label, this.value, this.open);
+
+  final String label;
+  final String? value;
+  final VoidCallback open;
 }
 
-/// The floating Filter's sheet — the sort/type/genre/language controls that
-/// used to sit inline above the list, now reachable from the bottom of a long
-/// catalogue. Edits a local copy; "Show books" applies it, "Clear" resets.
-class _CatalogFilterSheet extends StatefulWidget {
-  const _CatalogFilterSheet({
-    required this.current,
-    required this.languages,
-    required this.preferred,
-    required this.forms,
-    required this.genres,
-    required this.genreRows,
+/// One row a door's sheet offers. [value] null is the clearing row
+/// ("All genres" / "Any length").
+class _DoorOption {
+  const _DoorOption(this.value, this.label, {this.count});
+
+  final String? value;
+  final String label;
+  final int? count;
+}
+
+/// The web's doors bar, in Flutter (docs/browse-filters-mockups.html,
+/// direction C + A's sort — owner pick, 9 Aug 2026): a segmented sort control
+/// — the pick-exactly-one shape, so sort doesn't dress like a filter — then
+/// one door per facet whose label carries its value ("Genre · History"), so
+/// the bar reads as a sentence. Horizontally scrollable, exactly like the
+/// web's control scrolls inside itself on narrow screens.
+class _DoorsBar extends StatelessWidget {
+  const _DoorsBar({
+    required this.sort,
+    required this.sortLabels,
+    required this.onSort,
+    required this.doors,
+    required this.showClearAll,
+    required this.onClearAll,
+    required this.clearAllLabel,
   });
 
-  final _CatalogFacets current;
-  final List<String> languages;
-
-  /// The reader's profile languages — the "Your languages" chip's value.
-  final List<String> preferred;
-  final List<String> forms;
-  final List<String> genres;
-  final List<Map<String, dynamic>> genreRows;
-
-  @override
-  State<_CatalogFilterSheet> createState() => _CatalogFilterSheetState();
-}
-
-class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
-  /// The language row's selection, flattened to one value so the shared chip
-  /// row can drive it: null = All, [_kMine] = the reader's profile languages,
-  /// anything else = that single language.
-  static const _kMine = '__your_languages__';
-
-  late String _sort = widget.current.sort;
-  late String? _langChoice = _initialLangChoice();
-  late String? _form = widget.current.form;
-  late String? _genre = widget.current.genre;
-  late String? _length = widget.current.length;
-
-  String? _initialLangChoice() {
-    final cur = widget.current.languages;
-    if (cur == null) return null;
-    if (cur.length == 1 && !_isPreferredSet(cur)) return cur.first;
-    return widget.preferred.isEmpty ? cur.first : _kMine;
-  }
-
-  bool _isPreferredSet(List<String> langs) =>
-      langs.length == widget.preferred.length && langs.toSet().containsAll(widget.preferred);
-
-  /// What the sheet hands back for the language facet.
-  List<String>? get _resultLanguages => _langChoice == null
-      ? null
-      : _langChoice == _kMine
-          ? List.of(widget.preferred)
-          : [_langChoice!];
-
-  // M10: chips are a shortcut, not the vocabulary — the row shows a handful
-  // and the "All N" door opens the full searchable picker.
-  static const _kVisibleFacetChips = 6;
-
-  /// The first [_kVisibleFacetChips] options with the selected one guaranteed
-  /// a seat, so the active facet can never hide behind the door.
-  List<String> _visible(List<String> options, String? selected) {
-    final ordered = [
-      if (selected != null && options.contains(selected)) selected,
-      ...options.where((o) => o != selected),
-    ];
-    return ordered.take(_kVisibleFacetChips).toList();
-  }
-
-  /// The "All N ⌕" door — the same [ChipPickerSheet] the add form taught,
-  /// in single-select mode; its subdued None row clears the facet. A dismiss
-  /// changes nothing. Filtering itself stays server-side: this only picks the
-  /// facet value that [_PagedCatalogView] re-queries with.
-  Future<void> _openFacetPicker({required bool genre}) async {
-    final l10n = AppLocalizations.of(context)!;
-    final title = genre
-        ? l10n.pickerChoose(l10n.libraryFilterGenre.toLowerCase())
-        : l10n.pickerChoose(l10n.libraryFilterLanguage.toLowerCase());
-    final options = genre
-        ? [
-            for (final g in widget.genreRows)
-              PickerOption(g['name'] as String? ?? '', count: g['work_count'] as int?),
-          ]
-        : [for (final lang in widget.languages) PickerOption(lang)];
-    final picked = await showModalBottomSheet<Set<String>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.paper,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => ChipPickerSheet(
-        title: title,
-        options: options,
-        selected: {?(genre ? _genre : (_langChoice == _kMine ? null : _langChoice))},
-        multiSelect: false,
-        allowCreate: false,
-      ),
-    );
-    if (picked == null || !mounted) return;
-    setState(() {
-      final value = picked.isEmpty ? null : picked.first;
-      if (genre) {
-        _genre = value;
-      } else {
-        _langChoice = value;
-      }
-    });
-  }
+  final String sort;
+  final Map<String, String> sortLabels;
+  final ValueChanged<String> onSort;
+  final List<_DoorSpec> doors;
+  final bool showClearAll;
+  final VoidCallback onClearAll;
+  final String clearAllLabel;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final sorts = {
-      'title': l10n.browseSortTitle,
-      'rating': l10n.browseSortTopRated,
-      'added': l10n.browseSortJustAdded,
-      'year_desc': l10n.browseSortNewest,
-      'year_asc': l10n.browseSortOldest,
-      'author': l10n.browseSortAuthor,
-    };
+    // Two rows, like the web bar wraps on a phone: the segmented sort on its
+    // own line (it scrolls inside itself — six labels outgrow any phone), the
+    // doors on the next, always on screen. A single scrolling line hid the
+    // doors entirely behind the seg on a 360dp device (caught on-device,
+    // 9 Aug 2026) — filters a reader can't see are filters that don't exist.
+    // SingleChildScrollView + Row, NOT a lazy ListView, so the tail (Length,
+    // Clear all) exists for finders and semantics without scrolling.
+    Widget scrollRow(Widget child) => SizedBox(
+          height: 36,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            child: child,
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          scrollRow(_SegSort(sort: sort, labels: sortLabels, onSort: onSort)),
+          const SizedBox(height: 8),
+          scrollRow(
+            Row(
+              children: [
+                for (final door in doors) ...[
+                  _Door(spec: door),
+                  const SizedBox(width: 8),
+                ],
+                if (showClearAll)
+                  TextButton(
+                    onPressed: onClearAll,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.oxblood,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                    child: Text(clearAllLabel),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-        child: SingleChildScrollView(
-          child: Column(
+/// Joined single-choice buttons — the universal "exactly one of these" shape.
+class _SegSort extends StatelessWidget {
+  const _SegSort({required this.sort, required this.labels, required this.onSort});
+
+  final String sort;
+  final Map<String, String> labels;
+  final ValueChanged<String> onSort;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(10),
+        // Uniform border on purpose (CLAUDE.md, 21 Jul 2026).
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (i, entry) in labels.entries.indexed)
+            InkWell(
+              onTap: () => onSort(entry.key),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: entry.key == sort ? AppColors.oxblood : null,
+                  border: i == 0
+                      ? null
+                      : Border(left: BorderSide(color: AppColors.line)),
+                ),
+                child: Text(
+                  entry.value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: entry.key == sort ? AppColors.paper : AppColors.inkSoft,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A facet's door: its noun, and its value when active ("Genre · History").
+class _Door extends StatelessWidget {
+  const _Door({required this.spec});
+
+  final _DoorSpec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final live = spec.value != null;
+    return Material(
+      color: live ? AppColors.oxblood : AppColors.card,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: spec.open,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: live ? AppColors.oxblood : AppColors.line),
+          ),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 32,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.line,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
+              Text(
+                live ? '${spec.label} · ${spec.value}' : spec.label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: live ? AppColors.paper : AppColors.ink,
                 ),
               ),
-              Row(
-                children: [
-                  Text(
-                    l10n.browseFilterHeading,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Spacer(),
-                  if (_langChoice != null ||
-                      _form != null ||
-                      _genre != null ||
-                      _length != null ||
-                      _sort != 'title')
-                    TextButton(
-                      onPressed: () => setState(() {
-                        _sort = 'title';
-                        _langChoice = null;
-                        _form = null;
-                        _genre = null;
-                        _length = null;
-                      }),
-                      child: Text(l10n.browseFilterClear,
-                          style: TextStyle(color: AppColors.oxblood)),
-                    ),
-                ],
-              ),
-              _FacetLabel(l10n.browseSortLabel),
-              _ChipRow(
-                options: [for (final e in sorts.entries) (e.key, e.value)],
-                selected: _sort,
-                onSelect: (v) => setState(() => _sort = v),
-              ),
-              if (widget.forms.isNotEmpty) ...[
-                _FacetLabel(l10n.libraryFilterType),
-                _ChipRow(
-                  options: [
-                    (null, l10n.browseFilterAllTitle),
-                    for (final f in widget.forms) (f, f),
-                  ],
-                  selected: _form,
-                  onSelect: (v) => setState(() => _form = v),
-                ),
-              ],
-              if (widget.genres.isNotEmpty) ...[
-                _FacetLabel(l10n.libraryFilterGenre),
-                _ChipRow(
-                  options: [
-                    (null, l10n.browseFilterAllTitle),
-                    for (final g in _visible(widget.genres, _genre)) (g, g),
-                  ],
-                  selected: _genre,
-                  onSelect: (v) => setState(() => _genre = v),
-                  trailing: widget.genres.length > _kVisibleFacetChips
-                      ? _AllDoorChip(
-                          label: l10n.browseFilterAllCount(widget.genres.length),
-                          onTap: () => _openFacetPicker(genre: true),
-                        )
-                      : null,
-                ),
-              ],
-              if (widget.languages.isNotEmpty) ...[
-                _FacetLabel(l10n.libraryFilterLanguage),
-                _ChipRow(
-                  options: [
-                    // "Your languages" leads — it's the state the catalogue
-                    // opens in, so it must be visible and re-selectable.
-                    if (widget.preferred.isNotEmpty)
-                      (_kMine, l10n.browseFilterYourLanguages),
-                    (null, l10n.browseFilterAllTitle),
-                    for (final lang in _visible(
-                      widget.languages,
-                      _langChoice == _kMine ? null : _langChoice,
-                    ))
-                      (lang, lang),
-                  ],
-                  selected: _langChoice,
-                  onSelect: (v) => setState(() => _langChoice = v),
-                  trailing: widget.languages.length > _kVisibleFacetChips
-                      ? _AllDoorChip(
-                          label: l10n.browseFilterAllCount(widget.languages.length),
-                          onTap: () => _openFacetPicker(genre: false),
-                        )
-                      : null,
-                ),
-              ],
-              // Length is a static vocabulary (the server's short/medium/long
-              // page-count buckets), not a fetched facet — it can never be
-              // empty, so no isNotEmpty guard. "Short" is the bucket readers
-              // search for by name ("short books under 200 pages").
-              _FacetLabel(l10n.browseFilterLength),
-              _ChipRow(
-                options: [
-                  (null, l10n.browseFilterAllTitle),
-                  ('short', l10n.browseLengthShort),
-                  ('medium', l10n.browseLengthMedium),
-                  ('long', l10n.browseLengthLong),
-                ],
-                selected: _length,
-                onSelect: (v) => setState(() => _length = v),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(
-                    _CatalogFacets(
-                      sort: _sort,
-                      languages: _resultLanguages,
-                      form: _form,
-                      genre: _genre,
-                      length: _length,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.oxblood,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-                  child: Text(l10n.browseFilterApply),
-                ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.expand_more,
+                size: 14,
+                color: live ? AppColors.paper : AppColors.inkSoft,
               ),
             ],
           ),
@@ -959,115 +991,102 @@ class _CatalogFilterSheetState extends State<_CatalogFilterSheet> {
   }
 }
 
-class _FacetLabel extends StatelessWidget {
-  const _FacetLabel(this.text);
+/// One facet's small sheet — the web door's popover: rows with the name left
+/// and the count right, the current pick filled oxblood, the clearing row
+/// first. Pops a 1-field record so "picked All" (value null) and "dismissed"
+/// (record null) stay distinguishable.
+class _FacetDoorSheet extends StatelessWidget {
+  const _FacetDoorSheet({
+    required this.title,
+    required this.options,
+    required this.selected,
+  });
 
-  final String text;
+  final String title;
+  final List<_DoorOption> options;
+  final String? selected;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 14, 0, 8),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1,
-          color: AppColors.inkSoft,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 32,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 6, bottom: 8),
+              child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final option in options)
+                    _DoorRow(
+                      option: option,
+                      selected: option.value == selected,
+                      onTap: () => Navigator.of(context).pop((option.value,)),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// A single-select chip row — the sheet's one control shape, reused for sort,
-/// type, genre and language. [T] is the value; a chip's [label] is what shows.
-class _ChipRow<T> extends StatelessWidget {
-  const _ChipRow({
-    required this.options,
-    required this.selected,
-    required this.onSelect,
-    this.trailing,
-  });
+class _DoorRow extends StatelessWidget {
+  const _DoorRow({required this.option, required this.selected, required this.onTap});
 
-  final List<(T, String)> options;
-  final T selected;
-  final ValueChanged<T> onSelect;
-
-  /// The optional "All N ⌕" door at the end of a capped row.
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final (value, label) in options)
-          GestureDetector(
-            onTap: () => onSelect(value),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-              decoration: BoxDecoration(
-                color: value == selected ? AppColors.oxblood : AppColors.paper,
-                borderRadius: BorderRadius.circular(99),
-                border: Border.all(
-                  color: value == selected ? AppColors.oxblood : AppColors.line,
-                ),
-              ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: value == selected ? AppColors.paper : AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-        ?trailing,
-      ],
-    );
-  }
-}
-
-/// The "All N ⌕" chip at the end of a capped facet row — visually the add
-/// form's "Search or add" door, opening the full picker.
-class _AllDoorChip extends StatelessWidget {
-  const _AllDoorChip({required this.label, required this.onTap});
-
-  final String label;
+  final _DoorOption option;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.goldSoft,
-      borderRadius: BorderRadius.circular(99),
+      color: selected ? AppColors.oxblood : Colors.transparent,
+      borderRadius: BorderRadius.circular(9),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(99),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(99),
-            // Uniform border on purpose (CLAUDE.md, 21 Jul 2026).
-            border: Border.all(color: AppColors.gold),
-          ),
+        borderRadius: BorderRadius.circular(9),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.search, size: 13, color: AppColors.oxblood),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.oxblood,
+              Expanded(
+                child: Text(
+                  option.label,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? AppColors.paper : AppColors.ink,
+                  ),
                 ),
               ),
+              if (option.count != null)
+                Text(
+                  '${option.count}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: selected ? AppColors.paper.withValues(alpha: .8) : AppColors.inkSoft,
+                  ),
+                ),
             ],
           ),
         ),

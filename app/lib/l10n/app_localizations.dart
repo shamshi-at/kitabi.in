@@ -5800,28 +5800,28 @@ abstract class AppLocalizations {
   /// **'Sort'**
   String get browseSortLabel;
 
-  /// Browse sort option: alphabetical by title
+  /// Browse sort option: alphabetical by title — compact, it lives in the doors bar's segmented control (matches the web)
   ///
   /// In en, this message translates to:
-  /// **'Title (A–Z)'**
+  /// **'A–Z'**
   String get browseSortTitle;
 
-  /// Browse sort option: newest publication year first
+  /// Browse sort option: newest publication year first (compact segmented label)
   ///
   /// In en, this message translates to:
-  /// **'Newest first'**
+  /// **'Newest'**
   String get browseSortNewest;
 
-  /// Browse sort option: oldest publication year first
+  /// Browse sort option: oldest publication year first (compact segmented label)
   ///
   /// In en, this message translates to:
-  /// **'Oldest first'**
+  /// **'Oldest'**
   String get browseSortOldest;
 
-  /// Browse sort option: alphabetical by author
+  /// Browse sort option: alphabetical by author (compact segmented label)
   ///
   /// In en, this message translates to:
-  /// **'Author (A–Z)'**
+  /// **'By author'**
   String get browseSortAuthor;
 
   /// Browse sort option: best community rating first — the "best books" query
@@ -5920,11 +5920,59 @@ abstract class AppLocalizations {
   /// **'Show all books'**
   String get browseShowAllBooks;
 
-  /// Accessibility label for the catalogue floating search/filter control
+  /// Accessibility label for the catalogue floating search control (filtering lives in the doors bar since 9 Aug 2026)
   ///
   /// In en, this message translates to:
-  /// **'Search and filter the catalogue'**
+  /// **'Search the catalogue'**
   String get browseFabLabel;
+
+  /// Type door sheet: the row that clears the Type facet
+  ///
+  /// In en, this message translates to:
+  /// **'All types'**
+  String get browseAllTypes;
+
+  /// Genre door sheet: the row that clears the genre facet
+  ///
+  /// In en, this message translates to:
+  /// **'All genres'**
+  String get browseAllGenres;
+
+  /// Language door sheet: the row that clears the language facet
+  ///
+  /// In en, this message translates to:
+  /// **'All languages'**
+  String get browseAllLanguages;
+
+  /// Length door sheet: the row that clears the length facet
+  ///
+  /// In en, this message translates to:
+  /// **'Any length'**
+  String get browseAnyLength;
+
+  /// Doors bar action that resets sort and every facet
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get browseClearAll;
+
+  /// Length door label value — just the word; the sheet rows carry the page counts
+  ///
+  /// In en, this message translates to:
+  /// **'Short'**
+  String get browseLengthShortWord;
+
+  /// Length door label value — just the word
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get browseLengthMediumWord;
+
+  /// Length door label value — just the word
+  ///
+  /// In en, this message translates to:
+  /// **'Long'**
+  String get browseLengthLongWord;
 
   /// Section label on the reading card for the time-to-finish estimate
   ///

@@ -906,7 +906,7 @@ void main() {
 
     expect(fake.lastCreatePayload?['form'], isNull);
   });
-  testWidgets('the catalogue filters by Type and genre from the floating control',
+  testWidgets('the catalogue filters by Type and genre from the doors bar',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -915,33 +915,38 @@ void main() {
     await tester.pumpWidget(_wrap(const BrowseScreen(), apiClient: fake));
     await tester.pumpAndSettle();
 
-    // Nothing narrowed yet — the list is the whole catalog. The old inline
-    // filter row is gone; the facets live behind the floating control now.
+    // Nothing narrowed yet; each door shows its bare noun, sheets closed.
     expect(find.text('All types'), findsNothing);
     expect(fake.lastBrowseForm, isNull);
     expect(fake.lastBrowseGenre, isNull);
 
-    // Fan the floating control open and reach the filter sheet.
-    await tester.tap(find.byIcon(Icons.manage_search));
+    // Type door → its small sheet holds ONLY that facet. The bar scrolls
+    // horizontally, so bring each door on-screen first, like a thumb would.
+    await tester.ensureVisible(find.text('Type'));
+    await tester.tap(find.text('Type'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Filter'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Filter & sort'), findsOneWidget);
-    // The sheet offers only what the catalog actually has.
     expect(find.text('Poetry'), findsOneWidget);
     await tester.tap(find.text('Novel'));
-    await tester.tap(find.text('Historical'));
-    await tester.tap(find.text('Show books'));
     await tester.pumpAndSettle();
 
-    // Applying re-queries the server (not the fetched page — that would hide
-    // matches further into the pagination), and the facets compose.
+    // The door now carries its value — the bar reads as a sentence — and the
+    // pick re-queried the server (not the fetched page, which would hide
+    // matches further into the pagination).
+    expect(find.text('Type · Novel'), findsOneWidget);
+    expect(fake.lastBrowseForm, 'Novel');
+
+    // Genre door composes with it.
+    await tester.ensureVisible(find.text('Genre'));
+    await tester.tap(find.text('Genre'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Historical'));
+    await tester.pumpAndSettle();
+    expect(find.text('Genre · Historical'), findsOneWidget);
     expect(fake.lastBrowseForm, 'Novel');
     expect(fake.lastBrowseGenre, 'Historical');
   });
 
-  testWidgets('the catalogue sorts by rating and filters by length from the sheet',
+  testWidgets('the catalogue sorts by rating and filters by length from the doors bar',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -952,31 +957,28 @@ void main() {
     expect(fake.lastBrowseSort, 'title');
     expect(fake.lastBrowseLength, isNull);
 
-    await tester.tap(find.byIcon(Icons.manage_search));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Filter'));
-    await tester.pumpAndSettle();
-
-    // "Top rated" is the "best books" query; "Short" is the page-count bucket
-    // readers search by name. Both go to the server together.
+    // Sort is the segmented control in the bar itself — one tap, no sheet.
+    // "Top rated" is the "best books" query.
     await tester.tap(find.text('Top rated'));
-    await tester.tap(find.text('Short · under 200 pp'));
-    await tester.tap(find.text('Show books'));
     await tester.pumpAndSettle();
-
     expect(fake.lastBrowseSort, 'rating');
+
+    // "Short" is the page-count bucket readers search by name.
+    await tester.ensureVisible(find.text('Length'));
+    await tester.tap(find.text('Length'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Short · under 200 pp'));
+    await tester.pumpAndSettle();
+    expect(find.text('Length · Short'), findsOneWidget);
     expect(fake.lastBrowseLength, 'short');
 
-    // Clear resets every facet, length included — reopen and wipe.
-    await tester.tap(find.byIcon(Icons.manage_search));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Filter'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Clear'));
-    await tester.tap(find.text('Show books'));
+    // Clear all resets sort and every facet in one tap.
+    await tester.ensureVisible(find.text('Clear all'));
+    await tester.tap(find.text('Clear all'));
     await tester.pumpAndSettle();
     expect(fake.lastBrowseSort, 'title');
     expect(fake.lastBrowseLength, isNull);
+    expect(find.text('Length · Short'), findsNothing);
   });
 
   // ── Default language filter (29 Jul 2026) ────────────────────────────────
@@ -1003,27 +1005,20 @@ void main() {
 
     // The first page was already narrowed server-side to the profile languages.
     expect(fake.lastBrowseLanguages, ['Malayalam', 'Tamil']);
-    // The floating control's badge says one facet is active — the filter must
-    // never be invisible.
-    expect(find.text('1'), findsOneWidget);
+    // The Language door names the state — the filter is never invisible.
+    expect(find.text('Language · Your languages'), findsOneWidget);
 
-    // The sheet names the state: "Your languages" is the selected chip.
-    await tester.tap(find.byIcon(Icons.manage_search));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Filter'));
+    // Its sheet leads with "Your languages"; "All languages" re-queries the
+    // whole catalogue. Each door's sheet holds only its own facet, so there
+    // is exactly one clearing row to find — no positional selectors.
+    await tester.ensureVisible(find.text('Language · Your languages'));
+    await tester.tap(find.text('Language · Your languages'));
     await tester.pumpAndSettle();
     expect(find.text('Your languages'), findsOneWidget);
-
-    // Switching to All re-queries the whole catalogue. The chip is found via
-    // its row (the one holding "Your languages"), not by position — a `.last`
-    // here broke the day the Length row brought a fourth "All" chip.
-    await tester.tap(find.descendant(
-      of: find.ancestor(of: find.text('Your languages'), matching: find.byType(Wrap)),
-      matching: find.text('All'),
-    ));
-    await tester.tap(find.text('Show books'));
+    await tester.tap(find.text('All languages'));
     await tester.pumpAndSettle();
     expect(fake.lastBrowseLanguages, isNull);
+    expect(find.text('Language · Your languages'), findsNothing);
   });
 
   testWidgets('no configured languages → the catalogue opens unfiltered', (tester) async {
@@ -1106,13 +1101,14 @@ void main() {
     // quick-add badge, not the old row tiles.
     expect(find.byType(TypesetCover), findsWidgets);
     expect(find.byIcon(Icons.add), findsWidgets);
-    // The collapsed floating control is the tune circle; open it and both
-    // actions are there.
+    // The collapsed floating control is the tune circle; it opens to Search
+    // alone — filtering lives in the doors bar now, and a second Filter
+    // surface would drift (9 Aug 2026).
     expect(find.byIcon(Icons.manage_search), findsOneWidget);
     await tester.tap(find.byIcon(Icons.manage_search));
     await tester.pumpAndSettle();
     expect(find.text('Search'), findsOneWidget);
-    expect(find.text('Filter'), findsOneWidget);
+    expect(find.text('Filter'), findsNothing);
   });
   // ── Type & Genre rows and their picker sheet (M10/M11) ───────────────────
   // The row is a shortcut, not the vocabulary: it stays ~6 chips however big
