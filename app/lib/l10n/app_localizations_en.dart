@@ -3526,7 +3526,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseTabPublishers => 'Publishers';
 
   @override
-  String get bookBuySection => 'Where to buy';
+  String get bookBuySection => 'Get this book';
+
+  @override
+  String get bookBuyAmazon => 'Buy on Amazon.in';
 
   @override
   String get bookBuyFailed => 'Couldn\'t open the store link.';

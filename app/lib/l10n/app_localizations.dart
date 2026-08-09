@@ -5776,11 +5776,17 @@ abstract class AppLocalizations {
   /// **'Publishers'**
   String get browseTabPublishers;
 
-  /// Header above the list of external retailer buy links on the book page
+  /// Header above the Amazon buy button on the book page
   ///
   /// In en, this message translates to:
-  /// **'Where to buy'**
+  /// **'Get this book'**
   String get bookBuySection;
+
+  /// CTA text inside the branded Amazon buy button
+  ///
+  /// In en, this message translates to:
+  /// **'Buy on Amazon.in'**
+  String get bookBuyAmazon;
 
   /// Snackbar when the external buy link fails to open
   ///

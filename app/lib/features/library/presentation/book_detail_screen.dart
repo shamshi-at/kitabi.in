@@ -1347,9 +1347,13 @@ class _ShareButton extends ConsumerWidget {
   }
 }
 
-/// [WIRED] "Where to buy" — lists every external retailer an edition is
-/// available at (Amazon, Flipkart, …), each opening its store link in the
-/// browser. Shown only when the edition carries buy_links.
+/// "Get this book" — the branded Amazon buy button (owner decision,
+/// 9 Aug 2026: the API serves exactly one Amazon link, and one recognisable
+/// button converts better than a row of quiet outlined retailers). Squid-ink
+/// card, white lowercase wordmark over the orange smile, orange pill CTA —
+/// the same design the public web's book page renders. Shown only when the
+/// edition carries buy_links; tolerant of an older API still sending several
+/// links (the first is the one the button opens).
 class _BuySection extends StatelessWidget {
   const _BuySection({required this.links});
 
@@ -1373,6 +1377,7 @@ class _BuySection extends StatelessWidget {
         if ((link['url'] as String?)?.isNotEmpty ?? false) link,
     ];
     if (valid.isEmpty) return SizedBox.shrink();
+    final link = valid.first;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1387,26 +1392,66 @@ class _BuySection extends StatelessWidget {
           ),
         ),
         SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final link in valid)
-              OutlinedButton.icon(
-                onPressed: () => _open(context, link['url'] as String),
-                icon: Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.oxblood),
-                label: Text(
-                  (link['retailer'] as String?)?.trim().isNotEmpty ?? false
-                      ? link['retailer'] as String
-                      : l10n.bookBuySection,
-                  style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
+        Semantics(
+          button: true,
+          label: l10n.bookBuyAmazon,
+          child: Material(
+            color: const Color(0xFF131921),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _open(context, link['url'] as String),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                child: Row(
+                  children: [
+                    ExcludeSemantics(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'amazon',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                              height: 1,
+                            ),
+                          ),
+                          SizedBox(height: 3),
+                          CustomPaint(
+                            size: Size(44, 11),
+                            painter: const _AmazonSmilePainter(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Spacer(),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFA41C),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        l10n.bookBuyAmazon,
+                        style: TextStyle(
+                          color: const Color(0xFF131921),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.gold)),
               ),
-          ],
+            ),
+          ),
         ),
-        // Affiliate links (marked by the API) must carry a reader-visible
-        // disclosure; links that pay nobody get no small print.
+        // An affiliate link (marked by the API) must carry a reader-visible
+        // disclosure; a link that pays nobody gets no small print.
         if (valid.any((link) => link['affiliate'] == true)) ...[
           SizedBox(height: 8),
           Text(
@@ -1417,6 +1462,42 @@ class _BuySection extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Amazon's smile-arrow under the wordmark — drawn, not an asset, so it costs
+/// no new dependency and inherits nothing. Geometry mirrors the web button's
+/// inline SVG (viewBox 54×13): an arc dipping through the middle with an open
+/// arrowhead at the right tip.
+class _AmazonSmilePainter extends CustomPainter {
+  const _AmazonSmilePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 54;
+    final sy = size.height / 13;
+    final paint = Paint()
+      ..color = const Color(0xFFFF9900)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(
+      Path()
+        ..moveTo(2 * sx, 3 * sy)
+        ..cubicTo(13 * sx, 11 * sy, 34 * sx, 11 * sy, 48 * sx, 4.5 * sy),
+      paint,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(44.5 * sx, 1.5 * sy)
+        ..lineTo(49.8 * sx, 4.1 * sy)
+        ..lineTo(46.2 * sx, 8.5 * sy),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _LibraryEntryMenu extends ConsumerWidget {
