@@ -217,11 +217,20 @@ img{max-width:100%;display:block}
 .rail .kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:12.5px}
 .rail .kv .k{color:var(--ink-soft);flex-shrink:0}
 .rail .kv .v{font-weight:600;text-align:right;word-break:break-word}
-.rail .buy{display:flex;align-items:center;justify-content:space-between;padding:9px 0;
-  border-bottom:1px solid var(--line);font-size:13px}
-.rail .buy:last-child{border-bottom:0}
-.rail .buydisc{padding:7px 0 9px;font-size:10.5px;font-style:italic;color:var(--ink-soft);
-  border-top:1px solid var(--line)}
+/* The Amazon button — squid-ink card, white lowercase wordmark over the
+   orange smile, and an orange pill CTA. Deliberately the one loud, branded
+   element on the page: recognisable at a glance, which is what earns the
+   click (owner decision, 9 Aug 2026 — Amazon only). */
+.rail .amzn{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:10px 12px;margin:2px 0 8px;padding:13px 16px;border-radius:12px;background:#131921;
+  color:#fff;text-decoration:none;transition:box-shadow .15s ease}
+.rail .amzn:hover{box-shadow:0 6px 18px rgba(19,25,33,.38);background:#1c2733}
+.rail .amzn .wm{display:inline-flex;flex-direction:column;align-items:flex-start;
+  font-weight:800;font-size:19px;letter-spacing:-.5px;line-height:1}
+.rail .amzn .wm .sm{width:44px;height:11px;color:#FF9900;margin:2px 0 0 2px;display:block}
+.rail .amzn .go{background:#FFA41C;color:#131921;font-weight:800;font-size:12.5px;
+  padding:8px 13px;border-radius:999px;white-space:nowrap}
+.rail .buydisc{padding:5px 0 7px;font-size:10.5px;font-style:italic;color:var(--ink-soft)}
 .rail.dark{background:linear-gradient(150deg,var(--night-2),var(--night));border-color:var(--night)}
 .rail.dark .rh{background:transparent;color:var(--gold);border-bottom-color:rgba(240,226,194,.16)}
 .rail.dark .rb{color:#CBB897;font-size:12.5px;line-height:1.7}

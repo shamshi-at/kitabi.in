@@ -21,7 +21,7 @@ import {
   section,
   stars,
 } from '../components.js';
-import { authorPath, bookPath, clamp, html, joinDot, num, publisherPath, seg } from '../html.js';
+import { authorPath, bookPath, clamp, html, joinDot, num, publisherPath, raw, seg } from '../html.js';
 import { page } from '../layout.js';
 
 const LANG_PATH = (l) => `/language/${seg(String(l).toLowerCase())}`;
@@ -252,12 +252,19 @@ export function renderBook(data) {
         <div>
           ${primaryEdition.buy_links?.length
             ? html`<div class="rail">
-                <h2 class="rh">Where to find it</h2>
-                <div class="rb" style="padding:4px 15px">
+                <h2 class="rh">Get this book</h2>
+                <div class="rb" style="padding:12px 15px 6px">
                   ${primaryEdition.buy_links.map(
-                    (b) => html`<a class="buy" href="${b.url}"
+                    (b) => html`<a class="amzn" href="${b.url}"
                       rel="${b.affiliate ? 'sponsored nofollow noopener' : 'nofollow noopener'}"
-                      ><span>${b.retailer}</span><span>→</span></a
+                      ><span class="wm" aria-hidden="true"
+                        >amazon${raw(
+                          '<svg class="sm" viewBox="0 0 54 13" aria-hidden="true">' +
+                            '<path d="M2 3c11 8 32 8 46 1.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>' +
+                            '<path d="M44.5 1.5l5.3 2.6-3.6 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+                            '</svg>',
+                        )}</span
+                      ><span class="go">Buy on Amazon.in <span aria-hidden="true">→</span></span></a
                     >`,
                   )}
                   ${primaryEdition.buy_links.some((b) => b.affiliate)

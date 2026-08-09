@@ -290,9 +290,10 @@ var BOOK = {
   genres: [{ id: 'g1', name: 'Literary fiction', slug: 'literary-fiction' }],
   editions: [{ id: 'e1', isbn: '9788126403455', page_count: 218, format: 'paperback', year: 2019,
                cover_url: 'https://x/c.jpg', publisher: { id: 'p1', name: 'DC Books', slug: 'dc-books' },
-               buy_links: [{ retailer: 'Amazon.in', url: 'https://amazon.in/x' },
-                           { retailer: 'Flipkart', affiliate: true,
-                             url: 'https://www.flipkart.com/search?q=9788126403455&affid=kitabi' }] }],
+               // Written from the API schema (BuyLinkOut via services/buy_links.py):
+               // Amazon-only since 9 Aug 2026 — one entry, affiliate when tagged.
+               buy_links: [{ retailer: 'Amazon', affiliate: true,
+                             url: 'https://www.amazon.in/dp/8126403454?tag=kitabi0f-21' }] }],
   translations: [{ id: 'uuid-t', slug: 'chemmeen-english', title: 'Chemmeen', language: 'English',
                    year: 1962, rating: 4.2, rating_count: 88, authors: [] }],
   original: null,
@@ -335,8 +336,12 @@ assert(
   '…and above the reviews',
 );
 
-assertIncludes(bookDoc, 'Amazon.in', 'buy links render when present');
-assertIncludes(bookDoc, 'rel="nofollow noopener"', 'outbound retailer links are nofollow');
+// The Amazon button (owner decision, 9 Aug 2026): one branded button, not a
+// retailer list — wordmark + smile are decorative, the CTA is the real text.
+assertIncludes(bookDoc, 'class="amzn"', 'the branded Amazon button renders');
+assertIncludes(bookDoc, 'Buy on Amazon.in', 'the button says what it does');
+assertIncludes(bookDoc, 'https://www.amazon.in/dp/8126403454?tag=kitabi0f-21',
+  'the button links to the served URL untouched');
 // The affiliate layer (docs/revenue-plan.md §3.1): a link that pays must say
 // so to crawlers (rel=sponsored is Google's requirement for paid links) and
 // to readers (the disclosure line) — and only when something actually pays.
@@ -345,9 +350,10 @@ assertIncludes(bookDoc, 'may earn a commission', 'the affiliate disclosure rende
 var noAffiliate = String(
   renderBook(Object.assign({}, BOOK, {
     editions: [Object.assign({}, BOOK.editions[0],
-      { buy_links: [{ retailer: 'Amazon.in', url: 'https://amazon.in/x' }] })],
+      { buy_links: [{ retailer: 'Amazon', url: 'https://www.amazon.in/dp/8126403454' }] })],
   })).text(),
 );
+assertIncludes(noAffiliate, 'rel="nofollow noopener"', 'an unpaid link is still nofollow');
 assertExcludes(noAffiliate, 'may earn a commission', 'no disclosure when no link pays');
 assertExcludes(noAffiliate, 'rel="sponsored', 'no sponsored rel when no link pays');
 assertIncludes(bookDoc, 'What readers said', 'reviews are on the page');
