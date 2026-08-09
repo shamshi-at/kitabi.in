@@ -103,8 +103,6 @@ async def _work_out(db: AsyncSession, work) -> WorkOut:  # noqa: ANN001 — Work
                 title=work.title,
                 author=author,
                 amazon_tag=settings.amazon_associate_tag,
-                flipkart_affid=settings.flipkart_affiliate_id,
-                cuelinks_cid=settings.cuelinks_cid,
             )
         ]
     return out

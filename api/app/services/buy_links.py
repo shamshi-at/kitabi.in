@@ -1,53 +1,54 @@
-"""Retailer buy links, generated from what the catalogue already knows.
+"""The Amazon buy link, generated from what the catalogue already knows.
 
 Every edition can carry hand-entered `buy_links` (JSONB, wired since the
-book-page rework) — but nobody enters them, so the "Where to find it" block
-sat empty while the site sent buyers nowhere. This module fills it at READ
-time: given an ISBN (failing that, a title), it derives store links for the
-retailers a reader in India would actually check, and — when an affiliate id
-is configured — tags them so the click pays Kitabi's bills. The plan this
-implements is docs/revenue-plan.md §3.1.
+book-page rework) — but almost nobody enters them, so the buy block sat empty
+while the site sent buyers nowhere. This module fills it at READ time: given
+an ISBN (failing that, a title), it derives the Amazon.in link and — when an
+affiliate tag is configured — tags it so the click pays Kitabi's bills. The
+plan this implements is docs/revenue-plan.md §3.1, narrowed on 9 Aug 2026
+(owner decision) to **Amazon only**: one recognisable, attractive button
+converts better than a row of retailers, and Amazon is the programme we hold
+a direct tag for. (Flipkart/Cuelinks generation lived here until then —
+see git history if a second retailer ever comes back.)
 
 Three rules:
 
-* **Generated, never stored.** Links are computed at serialization time, so a
-  tag change in config reaches every page on the next request and there is no
-  backfill to run or forget. The stored list stays exactly what a contributor
-  typed.
+* **Generated, never stored.** The served link is computed at serialization
+  time, so a tag change in config reaches every page on the next request and
+  there is no backfill to run or forget. The stored list stays exactly what a
+  contributor typed — including non-Amazon links, which are simply not served
+  while the one-button policy holds.
 * **No credential, no API** (CLAUDE.md rule 8). Amazon's PA-API needs an
   approved account and a key; a `tag=` query parameter needs neither. For most
   printed books the Amazon ASIN *is* the ISBN-10 — `services/isbn.py` already
   derives it — so a direct product link is one string concatenation. 979-boxed
   ISBNs (no ISBN-10 exists) and ISBN-less editions degrade to a search link.
-* **Stored links win.** A contributor's hand-entered link suppresses the
-  generated one for the same retailer family (theirs is edition-exact; ours is
-  derived) — but a stored amazon.in link with no tag still gets ours appended,
-  because the page it sits on is ours either way. A link that already carries
-  a tag is left alone: overwriting someone's attribution is not ours to do.
+* **Stored links win.** A hand-entered Amazon link (the admin console has a
+  per-edition field for exactly this) suppresses the generated one — theirs is
+  edition-exact; ours is derived. A stored amazon.in link with no tag still
+  gets ours appended, because the page it sits on is ours either way. A link
+  that already carries a tag is left alone: overwriting someone's attribution
+  is not ours to do.
 
 Pure and dependency-free — no ORM, no I/O, no config import — so the URL
-arithmetic is testable directly. Callers pass the affiliate ids in from
-Settings; empty ids mean the links render untagged (the block is still worth
-having) and `affiliate` stays False so no disclosure is shown for links that
-pay nobody.
+arithmetic is testable directly. Callers pass the affiliate tag in from
+Settings; an empty tag means the link renders untagged (the button is still
+worth having) and `affiliate` stays False so no disclosure is shown for a
+link that pays nobody.
 """
 
 from __future__ import annotations
 
-from urllib.parse import parse_qsl, quote, quote_plus, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 from app.services import isbn as isbn_service
 
 AMAZON = "Amazon"
-FLIPKART = "Flipkart"
 
-# Hostname labels that identify a retailer family, so a stored short link
-# (amzn.to, fkrt.it) or foreign marketplace (amazon.com) still suppresses the
-# generated link for the same store instead of producing two "Amazon" rows.
-_FAMILY_LABELS = {
-    AMAZON: {"amazon", "amzn"},
-    FLIPKART: {"flipkart", "fkrt"},
-}
+# Hostname labels that identify the Amazon family, so a stored short link
+# (amzn.to) or foreign marketplace (amazon.com) still counts as "the admin
+# entered an Amazon link" and suppresses the generated one.
+_AMAZON_LABELS = {"amazon", "amzn"}
 
 
 def _host(url: str) -> str:
@@ -57,16 +58,14 @@ def _host(url: str) -> str:
         return ""
 
 
-def _family(url: str) -> str | None:
-    labels = set(_host(url).split("."))
-    for family, markers in _FAMILY_LABELS.items():
-        if labels & markers:
-            return family
-    return None
+def is_amazon(url: str) -> bool:
+    """Whether a URL belongs to the Amazon family (any marketplace or short
+    link). Public: the admin console's Amazon-link field validates with it."""
+    return bool(set(_host(url).split(".")) & _AMAZON_LABELS)
 
 
 def _search_query(isbn_raw: str | None, title: str, author: str | None) -> str:
-    """What to search a store for: the canonical ISBN-13 when one can be
+    """What to search the store for: the canonical ISBN-13 when one can be
     derived (unambiguous), else title + author. A checksum-invalid ISBN is
     *not* searched — a mis-keyed number matches nothing, or worse, some other
     product; the title at least finds the right shelf."""
@@ -87,34 +86,6 @@ def _amazon_link(isbn_raw: str | None, title: str, author: str | None, tag: str)
     if tag:
         url = f"{url}{joiner}tag={quote_plus(tag)}"
     return {"retailer": AMAZON, "url": url, "affiliate": bool(tag)}
-
-
-def _cuelinks(url: str, cid: str) -> str:
-    """Wrap a retailer URL in Cuelinks' Link Kit redirect.
-
-    Flipkart closed its *direct* affiliate programme to new publishers years
-    ago, so unlike Amazon there is no id to append — the route is an aggregator,
-    and an aggregator tracks by owning the redirect. Cuelinks' documented Link
-    Kit form is a pure URL template, which is the only reason it is acceptable
-    here: no snippet, no client JavaScript, no API call at render time (their
-    Chrome extension / WordPress plugin route would break both the "content is
-    server-rendered" and "no third-party script" rules the public site holds).
-    """
-    destination = quote(url, safe="")
-    return f"https://linksredirect.com/?cid={quote_plus(cid)}&source=linkkit&url={destination}"
-
-
-def _flipkart_link(
-    isbn_raw: str | None, title: str, author: str | None, affid: str, cuelinks_cid: str
-) -> dict:
-    url = f"https://www.flipkart.com/search?q={quote_plus(_search_query(isbn_raw, title, author))}"
-    if affid:
-        # The legacy direct programme, if this account ever has one: no
-        # middleman, so it wins over the aggregator when both are configured.
-        return {"retailer": FLIPKART, "url": f"{url}&affid={quote_plus(affid)}", "affiliate": True}
-    if cuelinks_cid:
-        return {"retailer": FLIPKART, "url": _cuelinks(url, cuelinks_cid), "affiliate": True}
-    return {"retailer": FLIPKART, "url": url, "affiliate": False}
 
 
 def _tag_stored_amazon(url: str, tag: str) -> tuple[str, bool]:
@@ -145,38 +116,17 @@ def merged(
     title: str,
     author: str | None,
     amazon_tag: str,
-    flipkart_affid: str,
-    cuelinks_cid: str = "",
 ) -> list[dict]:
-    """The list an edition serves: stored links first (tagged where that is
-    safe), then a generated link for every retailer family not already
-    covered. Always returns fresh dicts — the JSONB list is never mutated.
-
-    `cuelinks_cid` deliberately applies to the *generated Flipkart* link only.
-    Not to Amazon (we hold a direct Associates tag — routing it through an
-    aggregator would hand away a cut we don't have to give, and double
-    attribution is worse than none), and not to stored links, whose merchant
-    may not be in the Cuelinks network at all: wrapping an unaffiliated store
-    in a redirect earns nothing and puts a third-party hop in front of a link
-    a contributor entered by hand. Widening it is a matter of listing the
-    merchants that are genuinely in the network.
-    """
-    out: list[dict] = []
-    covered: set[str] = set()
+    """The single link an edition serves: the first stored Amazon-family link
+    when one was entered (edition-exact beats derived; tagged where that is
+    safe), else one generated from the ISBN. Always returns fresh dicts — the
+    JSONB list is never mutated, and its non-Amazon entries are preserved
+    there even though they are not served."""
     for entry in stored or []:
         if not isinstance(entry, dict) or not entry.get("url"):
             continue
         url = str(entry["url"])
-        family = _family(url)
-        affiliate = False
-        if family == AMAZON:
+        if is_amazon(url):
             url, affiliate = _tag_stored_amazon(url, amazon_tag)
-        if family:
-            covered.add(family)
-        retailer = str(entry.get("retailer") or "")
-        out.append({"retailer": retailer, "url": url, "affiliate": affiliate})
-    if AMAZON not in covered:
-        out.append(_amazon_link(isbn, title, author, amazon_tag))
-    if FLIPKART not in covered:
-        out.append(_flipkart_link(isbn, title, author, flipkart_affid, cuelinks_cid))
-    return out
+            return [{"retailer": AMAZON, "url": url, "affiliate": affiliate}]
+    return [_amazon_link(isbn, title, author, amazon_tag)]

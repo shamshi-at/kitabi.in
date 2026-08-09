@@ -495,18 +495,17 @@ async def test_browse_languages_lists_distinct(client):
 async def test_edition_buy_links_generated_and_patchable(client, monkeypatch):
     from app.core.config import get_settings
 
-    untagged = get_settings().model_copy(
-        update={"amazon_associate_tag": "", "flipkart_affiliate_id": ""}
-    )
+    untagged = get_settings().model_copy(update={"amazon_associate_tag": ""})
     monkeypatch.setattr("app.api.catalog.get_settings", lambda: untagged)
     created = await client.post(
         "/catalog/works", json={"title": "Buyable", "isbn": "9789999999999"}
     )
     edition = created.json()["editions"][0]
     # The stored column starts null; what the API serves is the generated
-    # retailer links (services/buy_links.py) — untagged here since no
-    # affiliate id is configured, so none claims to be an affiliate link.
-    assert [b["retailer"] for b in edition["buy_links"]] == ["Amazon", "Flipkart"]
+    # Amazon link (services/buy_links.py, Amazon-only since 9 Aug 2026) —
+    # untagged here since no affiliate tag is configured, so it must not
+    # claim to be an affiliate link.
+    assert [b["retailer"] for b in edition["buy_links"]] == ["Amazon"]
     assert all(b["affiliate"] is False for b in edition["buy_links"])
 
     patched = await client.patch(
