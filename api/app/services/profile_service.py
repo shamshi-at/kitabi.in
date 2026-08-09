@@ -177,6 +177,7 @@ async def public_library(db: AsyncSession, target_id: uuid.UUID, limit: int = 20
             "author_names": ", ".join(a.name for a in work.authors),
             "cover_url": edition.cover_url,
             "status": entry.status,
+            "aggregate_rating": work.aggregate_rating,
         }
         for entry, edition, work in rows
     ]

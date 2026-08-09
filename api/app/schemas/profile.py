@@ -134,6 +134,9 @@ class PublicLibraryItemOut(BaseModel):
     author_names: str
     cover_url: str | None
     status: str
+    # The Work's community star average, so a friend's shelf can wear the
+    # same on-cover rating chip the owner's own shelf does.
+    aggregate_rating: float | None = None
 
 
 class PublicReviewItemOut(BaseModel):
