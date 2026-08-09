@@ -8,6 +8,7 @@ is editor+ only, and is audited. It reuses the API's merge_preview / merge_works
 import uuid
 from typing import Annotated
 
+from app.services import buy_links as buy_links_service  # noqa: E402
 from app.services import catalog_service  # noqa: E402
 from fastapi import APIRouter, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -179,6 +180,20 @@ async def book_detail(
         resp = RedirectResponse("/catalog", status_code=303)
         set_flash(resp, "err", "Work not found.")
         return resp
+    # The stored Amazon link per edition (first Amazon-family entry in the
+    # buy_links JSONB) — prefills the curation field. Editions without one
+    # get the read-time generated link, so an empty field is normal, not a gap.
+    amazon_links = {
+        e.id: next(
+            (
+                str(link["url"])
+                for link in (e.buy_links or [])
+                if isinstance(link, dict) and buy_links_service.is_amazon(str(link.get("url", "")))
+            ),
+            "",
+        )
+        for e in work.editions
+    }
     ratings = int(
         await db.scalar(select(func.count()).select_from(Rating).where(Rating.work_id == work_id))
         or 0
@@ -198,7 +213,8 @@ async def book_detail(
         or 0
     )
     badges = await queries.nav_badges(db)
-    return templates.TemplateResponse(
+    flash = pop_flash(request)
+    resp = templates.TemplateResponse(
         request,
         "book_detail.html",
         {
@@ -209,8 +225,67 @@ async def book_detail(
             "ratings": ratings,
             "reviews": reviews,
             "shelved": shelved,
+            "amazon_links": amazon_links,
+            "flash": flash,
         },
     )
+    if flash:
+        resp.delete_cookie("admin_flash", path="/")
+    return resp
+
+
+@router.post("/works/{work_id}/editions/{edition_id}/amazon-link")
+async def set_edition_amazon_link(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    work_id: uuid.UUID,
+    edition_id: uuid.UUID,
+    url: Annotated[str, Form()] = "",
+) -> RedirectResponse:
+    """Curate the edition's Amazon link. A stored link wins over the read-time
+    generated one (services/buy_links.py), so this is the override for the
+    books where the ISBN-derived link lands wrong — everything else keeps the
+    dynamic link. An empty submit clears the override; other stored retailers
+    in the JSONB are preserved either way."""
+    resp = RedirectResponse(f"/catalog/works/{work_id}", status_code=303)
+    edition = await db.get(Edition, edition_id)
+    if edition is None or edition.work_id != work_id or edition.deleted_at is not None:
+        set_flash(resp, "err", "Edition not found on this work.")
+        return resp
+    url = url.strip()
+    if url and not buy_links_service.is_amazon(url):
+        set_flash(resp, "err", "That doesn't look like an Amazon link (amazon.in / amzn.to).")
+        return resp
+
+    kept = [
+        link
+        for link in (edition.buy_links or [])
+        if isinstance(link, dict)
+        and link.get("url")
+        and not buy_links_service.is_amazon(str(link["url"]))
+    ]
+    # Reassigned, never mutated in place — a JSONB column only registers a
+    # change when the attribute is set to a new object.
+    edition.buy_links = ([{"retailer": "Amazon", "url": url}] if url else []) + kept or None
+    await db.commit()
+    await security.audit(
+        db,
+        "catalog.amazon_link.set" if url else "catalog.amazon_link.clear",
+        admin_id=admin.id,
+        target_type="edition",
+        target_id=str(edition_id),
+        summary=(f"Amazon link → {url}" if url else "Amazon link cleared")
+        + f" (edition {edition.isbn or 'no ISBN'})",
+        ip=client_ip(request),
+    )
+    await db.commit()
+    set_flash(
+        resp,
+        "ok",
+        "Amazon link saved." if url else "Amazon link cleared — back to the generated one.",
+    )
+    return resp
 
 
 @router.get("/authors")

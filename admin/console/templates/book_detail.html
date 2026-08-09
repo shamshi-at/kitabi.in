@@ -29,7 +29,7 @@
     <div class="lbl">Editions ({{ w.editions | length }})</div>
     <div class="tbl" style="margin-top:8px;border:none">
       <table>
-        <tr><th>ISBN</th><th>Publisher</th><th>Lang</th><th>Pages</th><th>Cover</th></tr>
+        <tr><th>ISBN</th><th>Publisher</th><th>Lang</th><th>Pages</th><th>Cover</th><th>Amazon link</th></tr>
         {% for e in w.editions %}
         <tr>
           <td class="mono" style="font-size:11px">{{ e.isbn or '—' }}</td>
@@ -37,10 +37,22 @@
           <td class="m">{{ e.language or '—' }}</td>
           <td>{{ e.page_count or '—' }}</td>
           <td>{% if e.cover_url %}<a href="{{ e.cover_url }}" target="_blank" rel="noopener">view</a>{% else %}<span class="pill mute">none</span>{% endif %}</td>
+          <td>
+            <form method="post" action="/catalog/works/{{ w.id }}/editions/{{ e.id }}/amazon-link"
+                  style="display:flex;gap:4px;align-items:center;margin:0">
+              <input type="url" name="url" value="{{ amazon_links.get(e.id, '') }}"
+                     placeholder="auto from ISBN" style="width:170px;font-size:11px"/>
+              <button class="btn s" type="submit">Save</button>
+            </form>
+          </td>
         </tr>
-        {% else %}<tr><td colspan="5" class="m">No editions.</td></tr>{% endfor %}
+        {% else %}<tr><td colspan="6" class="m">No editions.</td></tr>{% endfor %}
       </table>
     </div>
+    <div class="note" style="margin-top:8px">A saved Amazon link overrides the one generated
+      from the ISBN — set it when the automatic link lands on the wrong product. Leave the
+      field empty and save to go back to the generated link. Books without a saved link keep
+      getting the dynamic one; the affiliate tag is appended either way.</div>
   </div>
 </div>
 {% endblock %}
