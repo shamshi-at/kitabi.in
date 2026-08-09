@@ -981,6 +981,65 @@ void main() {
     expect(find.text('Length · Short'), findsNothing);
   });
 
+  testWidgets('the fab re-hosts the doors bar, so filtering never needs a scroll to the top',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const BrowseScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    // The fab fans out to Filter & sort + Search on the Books tab.
+    await tester.tap(find.byIcon(Icons.manage_search));
+    await tester.pumpAndSettle();
+    expect(find.text('Filter & sort'), findsOneWidget);
+    expect(find.text('Search'), findsOneWidget);
+
+    // Filter & sort opens the SAME doors bar in a sheet — seg sort + doors.
+    await tester.tap(find.text('Filter & sort'));
+    await tester.pumpAndSettle();
+    // Two bars exist now (header + sheet); the sheet's copy is on top.
+    expect(find.text('Type'), findsNWidgets(2));
+
+    // A pick made in the sheet applies server-side immediately…
+    await tester.tap(find.text('Type').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Novel'));
+    await tester.pumpAndSettle();
+    expect(fake.lastBrowseForm, 'Novel');
+    // …and the sheet's own bar repaints to carry the value (both copies do).
+    expect(find.text('Type · Novel'), findsNWidgets(2));
+
+    // Same for sort, tapped in the sheet's segmented control.
+    await tester.tap(find.text('Top rated').last);
+    await tester.pumpAndSettle();
+    expect(fake.lastBrowseSort, 'rating');
+
+    // Closing the sheet leaves the shelf filtered; the collapsed fab wears
+    // the active-control count so the narrowing is never invisible.
+    await tester.tapAt(const Offset(600, 60)); // scrim, well above the sheet
+    await tester.pumpAndSettle();
+    expect(find.text('Type · Novel'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget); // form + sort
+  });
+
+  testWidgets('the fab offers no Filter & sort off the Books tab', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const BrowseScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Authors'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.manage_search));
+    await tester.pumpAndSettle();
+    expect(find.text('Search'), findsOneWidget);
+    expect(find.text('Filter & sort'), findsNothing);
+  });
+
   // ── Default language filter (29 Jul 2026) ────────────────────────────────
   // The catalogue opens filtered to the reader's configured languages; the
   // sheet's "Your languages" chip names the state, All/single override it,

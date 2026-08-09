@@ -5920,11 +5920,17 @@ abstract class AppLocalizations {
   /// **'Show all books'**
   String get browseShowAllBooks;
 
-  /// Accessibility label for the catalogue floating search control (filtering lives in the doors bar since 9 Aug 2026)
+  /// Accessibility label for the catalogue floating control (search + the filter sheet)
   ///
   /// In en, this message translates to:
-  /// **'Search the catalogue'**
+  /// **'Search and filter the catalogue'**
   String get browseFabLabel;
+
+  /// Catalogue fab action opening the doors bar in a bottom sheet, so filtering never needs a scroll back to the top
+  ///
+  /// In en, this message translates to:
+  /// **'Filter & sort'**
+  String get browseFabFilterSort;
 
   /// Type door sheet: the row that clears the Type facet
   ///

@@ -27,8 +27,12 @@ import 'catalog_entity_tiles.dart';
 /// docs/browse-filters-mockups.html direction C + A's sort): a segmented sort
 /// control plus one small per-facet sheet — Type, Genre, Language, Length —
 /// whose door label carries its value ("Genre · History"), so the bar reads
-/// as a sentence. The fab keeps only Search; the old one-big-filter-sheet is
-/// gone (two filter surfaces would drift — CLAUDE.md, 19 Jul lesson).
+/// as a sentence. The bar scrolls with the shelf, so the fab carries a
+/// "Filter & sort" action too (owner request, 9 Aug 2026): it opens the SAME
+/// doors bar in a bottom sheet — one filter implementation with two entry
+/// points, never a second surface that could drift (CLAUDE.md, 19 Jul
+/// lesson; the old fab filter was removed for exactly that, and came back
+/// only as a re-host of the bar).
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
 
@@ -231,6 +235,114 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
         _length = null;
       });
 
+  /// How many controls are off their default — the fab badge, so "2 filters
+  /// are narrowing this shelf" is visible without opening anything. Counts the
+  /// opening your-languages default too: it genuinely narrows the list.
+  int get _activeFilterCount =>
+      (_sort != 'title' ? 1 : 0) +
+      (_languages != null ? 1 : 0) +
+      (_form != null ? 1 : 0) +
+      (_genre != null ? 1 : 0) +
+      (_length != null ? 1 : 0);
+
+  /// The one doors bar, built for either host: the Books tab's header sliver,
+  /// or the fab's bottom sheet. [onChanged] lets the sheet repaint its copy
+  /// after any pick (the parent setState alone can't reach a modal's subtree).
+  /// Every facet, sheet and callback is shared — the two hosts cannot drift.
+  _DoorsBar _doorsBar(AppLocalizations l10n, {VoidCallback? onChanged}) {
+    return _DoorsBar(
+      sort: _sort,
+      sortLabels: {
+        'title': l10n.browseSortTitle,
+        'rating': l10n.browseSortTopRated,
+        'added': l10n.browseSortJustAdded,
+        'year_desc': l10n.browseSortNewest,
+        'year_asc': l10n.browseSortOldest,
+        'author': l10n.browseSortAuthor,
+      },
+      onSort: (v) {
+        setState(() => _sort = v);
+        onChanged?.call();
+      },
+      doors: [
+        _DoorSpec(l10n.libraryFilterType, _form, () async {
+          await _typeDoor(l10n);
+          onChanged?.call();
+        }),
+        _DoorSpec(l10n.libraryFilterGenre, _genre, () async {
+          await _genreDoor(l10n);
+          onChanged?.call();
+        }),
+        _DoorSpec(l10n.libraryFilterLanguage, _languageValue(l10n), () async {
+          await _languageDoor(l10n);
+          onChanged?.call();
+        }),
+        _DoorSpec(
+          l10n.browseFilterLength,
+          switch (_length) {
+            'short' => l10n.browseLengthShortWord,
+            'medium' => l10n.browseLengthMediumWord,
+            'long' => l10n.browseLengthLongWord,
+            _ => null,
+          },
+          () async {
+            await _lengthDoor(l10n);
+            onChanged?.call();
+          },
+        ),
+      ],
+      showClearAll: _anyActive,
+      onClearAll: () {
+        _clearAll();
+        onChanged?.call();
+      },
+      clearAllLabel: l10n.browseClearAll,
+    );
+  }
+
+  /// The fab's door to the doors: the same bar, re-hosted in a bottom sheet,
+  /// so a reader deep in the shelf filters from where they stand instead of
+  /// scrolling back to the top. Picks apply behind the sheet immediately.
+  Future<void> _openFilterSheet(AppLocalizations l10n) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 6),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 2),
+                child: Text(
+                  l10n.browseFabFilterSort,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              _doorsBar(l10n, onChanged: () => setSheetState(() {})),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -296,42 +408,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
                     // The doors bar scrolls with the shelf (not pinned) and
                     // survives the empty state, so a dead-end filter can
                     // always be undone from where you stand.
-                    headerSliver: SliverToBoxAdapter(
-                      child: _DoorsBar(
-                        sort: _sort,
-                        sortLabels: {
-                          'title': l10n.browseSortTitle,
-                          'rating': l10n.browseSortTopRated,
-                          'added': l10n.browseSortJustAdded,
-                          'year_desc': l10n.browseSortNewest,
-                          'year_asc': l10n.browseSortOldest,
-                          'author': l10n.browseSortAuthor,
-                        },
-                        onSort: (v) => setState(() => _sort = v),
-                        doors: [
-                          _DoorSpec(l10n.libraryFilterType, _form, () => _typeDoor(l10n)),
-                          _DoorSpec(l10n.libraryFilterGenre, _genre, () => _genreDoor(l10n)),
-                          _DoorSpec(
-                            l10n.libraryFilterLanguage,
-                            _languageValue(l10n),
-                            () => _languageDoor(l10n),
-                          ),
-                          _DoorSpec(
-                            l10n.browseFilterLength,
-                            switch (_length) {
-                              'short' => l10n.browseLengthShortWord,
-                              'medium' => l10n.browseLengthMediumWord,
-                              'long' => l10n.browseLengthLongWord,
-                              _ => null,
-                            },
-                            () => _lengthDoor(l10n),
-                          ),
-                        ],
-                        showClearAll: _anyActive,
-                        onClearAll: _clearAll,
-                        clearAllLabel: l10n.browseClearAll,
-                      ),
-                    ),
+                    headerSliver: SliverToBoxAdapter(child: _doorsBar(l10n)),
                     fetch: (limit, offset) => api.browseWorks(
                       limit: limit,
                       offset: offset,
@@ -396,19 +473,32 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen>
                 ],
               ),
             ),
-            // Search follows you down every tab. Filtering lives in the
-            // Books tab's doors bar (9 Aug 2026) — the fab's old Filter
-            // action would have been a second surface for the same facets,
-            // and two surfaces drift (CLAUDE.md, 19 Jul lesson).
-            ExpandingFab(
-              semanticLabel: l10n.browseFabLabel,
-              actions: [
-                ExpandingFabAction(
-                  icon: Icons.search,
-                  label: l10n.searchTitle,
-                  onPressed: () => context.push(Routes.catalogSearch),
-                ),
-              ],
+            // Search follows you down every tab; on Books, Filter & sort
+            // rides along (owner request, 9 Aug 2026 — the doors bar scrolls
+            // away with the header, and filtering must not mean scrolling
+            // back up). The sheet re-hosts the SAME doors bar, so this is one
+            // filter surface with two doors, not the two-drifting-surfaces
+            // trap that got the old fab filter removed. Rebuilds on tab
+            // change so the action only exists where the facets do.
+            ListenableBuilder(
+              listenable: _tab,
+              builder: (context, _) => ExpandingFab(
+                semanticLabel: l10n.browseFabLabel,
+                actions: [
+                  if (_tab.index == 0)
+                    ExpandingFabAction(
+                      icon: Icons.tune,
+                      label: l10n.browseFabFilterSort,
+                      badge: _activeFilterCount == 0 ? null : _activeFilterCount,
+                      onPressed: () => _openFilterSheet(l10n),
+                    ),
+                  ExpandingFabAction(
+                    icon: Icons.search,
+                    label: l10n.searchTitle,
+                    onPressed: () => context.push(Routes.catalogSearch),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

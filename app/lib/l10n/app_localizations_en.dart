@@ -3600,7 +3600,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseShowAllBooks => 'Show all books';
 
   @override
-  String get browseFabLabel => 'Search the catalogue';
+  String get browseFabLabel => 'Search and filter the catalogue';
+
+  @override
+  String get browseFabFilterSort => 'Filter & sort';
 
   @override
   String get browseAllTypes => 'All types';
