@@ -161,6 +161,36 @@ void main() {
       final pace = computeReadingPace(sessions: sessions, hits: [], now: _now);
 
       expect(pace.weeklySeconds, (7200 / 6).round());
+      // Only the 2-day-old sitting is inside the last 7 days.
+      expect(pace.recentWeekSeconds, 3600);
+    });
+
+    test('a current streak outweighs the diluted six-week average', () {
+      // Three heavy days after five quiet weeks — the owner's own case
+      // (12 Aug 2026): 5h40m in a streak, nothing before it.
+      final sessions = [
+        for (var i = 0; i < 3; i++) _session(_now.subtract(Duration(days: i)), 6800),
+      ];
+
+      final pace = computeReadingPace(sessions: sessions, hits: [], now: _now);
+
+      expect(pace.recentWeekSeconds, 20400);
+      expect(pace.weeklySeconds, (20400 / 6).round());
+      expect(pace.usesRecentHabit, isTrue);
+      expect(pace.effectiveWeeklySeconds, 20400);
+    });
+
+    test('a quiet week falls back to the habit — never worsens the estimate', () {
+      final sessions = [
+        for (var w = 2; w < 6; w++)
+          _session(_now.subtract(Duration(days: w * 7)), 7200),
+      ];
+
+      final pace = computeReadingPace(sessions: sessions, hits: [], now: _now);
+
+      expect(pace.recentWeekSeconds, 0);
+      expect(pace.usesRecentHabit, isFalse);
+      expect(pace.effectiveWeeklySeconds, pace.weeklySeconds);
     });
 
     test('below the minimum sample it is not measured and falls back to typical', () {
@@ -187,13 +217,15 @@ void main() {
   });
 
   group('estimateFinish', () {
-    ReadingPace measured({double pph = 40, int weekly = 19200, int? sitting = 4320}) {
+    ReadingPace measured(
+        {double pph = 40, int weekly = 19200, int? sitting = 4320, int recent = 0}) {
       return ReadingPace(
         pagesPerHour: pph,
         sampleSessions: 12,
         byLanguage: const {},
         weeklySeconds: weekly,
         medianSittingSeconds: sitting,
+        recentWeekSeconds: recent,
       );
     }
 
@@ -241,6 +273,29 @@ void main() {
       expect(e.weeks, isNull);
       expect(e.finishDate, isNull);
       expect(e.sittings, isNull);
+    });
+
+    test('the weeks figure divides by the streak when it beats the habit', () {
+      // 10h of book at 40 pp/h; habit says 19200 s/week (≈ 1.9 weeks) but the
+      // reader has put in 36000 s just this week → ≈ 1 week, flagged as such.
+      final e = estimateFinish(
+        pageCount: 400,
+        pace: measured(pph: 40, weekly: 19200, recent: 36000),
+        now: _now,
+      )!;
+
+      expect(e.weeks, closeTo(1.0, 0.001));
+      expect(e.weeklySecondsUsed, 36000);
+      expect(e.usedRecentHabit, isTrue);
+
+      // And with no streak, the habit figure is used and reported as such.
+      final habitual = estimateFinish(
+        pageCount: 400,
+        pace: measured(pph: 40, weekly: 19200, recent: 3600),
+        now: _now,
+      )!;
+      expect(habitual.weeklySecondsUsed, 19200);
+      expect(habitual.usedRecentHabit, isFalse);
     });
 
     test("this book's own pace wins over the reader's average", () {

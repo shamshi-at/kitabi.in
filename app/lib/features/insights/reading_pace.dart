@@ -38,6 +38,7 @@ class ReadingPace {
     required this.byLanguage,
     required this.weeklySeconds,
     required this.medianSittingSeconds,
+    this.recentWeekSeconds = 0,
   });
 
   /// Pages per hour across every measurable sitting in the window — null when
@@ -59,6 +60,22 @@ class ReadingPace {
 
   /// Typical length of one sitting, for the "≈ 14 sittings" unit.
   final int? medianSittingSeconds;
+
+  /// Seconds read in the last 7 days alone. A reader three days into a binge
+  /// is better described by this than by [weeklySeconds], which dilutes those
+  /// days across five quieter weeks — "you'd finish in 2 weeks" to someone
+  /// reading two hours a night is the average talking, not the reader.
+  final int recentWeekSeconds;
+
+  /// The weekly figure a finish estimate should divide by: the current week
+  /// when it's the reader's busiest evidence, the long average otherwise (so
+  /// a few quiet days never *worsen* the estimate below the habit).
+  int get effectiveWeeklySeconds =>
+      recentWeekSeconds > weeklySeconds ? recentWeekSeconds : weeklySeconds;
+
+  /// True when [effectiveWeeklySeconds] is the streak, not the habit — the UI
+  /// says which week it believed.
+  bool get usesRecentHabit => recentWeekSeconds > weeklySeconds;
 
   bool get isMeasured => pagesPerHour != null && sampleSessions >= minSessionsForPace;
 
@@ -103,6 +120,8 @@ class FinishEstimate {
     required this.sittings,
     required this.weeks,
     required this.finishDate,
+    required this.weeklySecondsUsed,
+    required this.usedRecentHabit,
   });
 
   /// The whole book, cover to cover, at [pagesPerHour].
@@ -131,6 +150,14 @@ class FinishEstimate {
 
   /// When [weeks] says they'd be done, or null for the same reason.
   final DateTime? finishDate;
+
+  /// The weekly figure [weeks] divided by — so the footnote quotes the number
+  /// the estimate actually used, not a different one.
+  final int weeklySecondsUsed;
+
+  /// [weeklySecondsUsed] is the current week (a streak), not the six-week
+  /// habit — the footnote phrases it as "this past week", not "lately".
+  final bool usedRecentHabit;
 }
 
 /// [now] is injectable for tests only — real callers never pass it.
@@ -157,7 +184,7 @@ FinishEstimate? estimateFinish({
   final remainingSeconds = secondsFor(remainingPages);
 
   final sitting = pace.medianSittingSeconds;
-  final weekly = pace.weeklySeconds;
+  final weekly = pace.effectiveWeeklySeconds;
   final weeks = weekly > 0 ? remainingSeconds / weekly : null;
 
   return FinishEstimate(
@@ -172,6 +199,8 @@ FinishEstimate? estimateFinish({
     finishDate: weeks == null
         ? null
         : (now ?? DateTime.now()).add(Duration(days: (weeks * 7).ceil())),
+    weeklySecondsUsed: weekly,
+    usedRecentHabit: pace.usesRecentHabit,
   );
 }
 
@@ -217,6 +246,7 @@ ReadingPace computeReadingPace({
   final effectiveNow = now ?? DateTime.now();
   final windowStart = effectiveNow.subtract(const Duration(days: paceWindowDays));
   final habitStart = effectiveNow.subtract(const Duration(days: weeklyHabitWeeks * 7));
+  final recentStart = effectiveNow.subtract(const Duration(days: 7));
 
   final languageOf = <String, String?>{
     for (final hit in hits) hit.entry.id: hit.book.language,
@@ -225,11 +255,13 @@ ReadingPace computeReadingPace({
   final inWindow = <ReadingSession>[];
   final byLanguageSessions = <String, List<ReadingSession>>{};
   var habitSeconds = 0;
+  var recentSeconds = 0;
   final sittingLengths = <int>[];
 
   for (final s in sessions) {
     if (s.deletedAt != null) continue;
     if (!s.startedAt.isBefore(habitStart)) habitSeconds += s.durationSeconds;
+    if (!s.startedAt.isBefore(recentStart)) recentSeconds += s.durationSeconds;
     if (s.startedAt.isBefore(windowStart)) continue;
 
     inWindow.add(s);
@@ -258,6 +290,7 @@ ReadingPace computeReadingPace({
     weeklySeconds: (habitSeconds / weeklyHabitWeeks).round(),
     medianSittingSeconds:
         sittingLengths.isEmpty ? null : sittingLengths[sittingLengths.length ~/ 2],
+    recentWeekSeconds: recentSeconds,
   );
 }
 

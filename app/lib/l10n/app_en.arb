@@ -3102,6 +3102,11 @@
     "description": "Footnote naming the weekly reading habit behind the weeks figure",
     "placeholders": {"duration": {"type": "String"}}
   },
+  "paceRecentHabit": "You've read {duration} this past week.",
+  "@paceRecentHabit": {
+    "description": "Footnote when the estimate used the current week's reading (a streak) instead of the six-week average",
+    "placeholders": {"duration": {"type": "String"}}
+  },
   "paceAssumedValue": "at a typical {pph} pages/hour",
   "@paceAssumedValue": {
     "description": "Caption beside an estimate built on the typical fallback pace",

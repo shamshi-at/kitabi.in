@@ -315,8 +315,13 @@ class _EstimateBlock extends StatelessWidget {
     } else {
       parts.add(l10n.paceYourPaceLine(_pph(estimate.pagesPerHour), pace.sampleSessions));
     }
-    if (pace.weeklySeconds > 0) {
-      parts.add(l10n.paceWeeklyHabit(formatDuration(Duration(seconds: pace.weeklySeconds))));
+    // Quote the weekly figure the estimate actually divided by — a footnote
+    // citing the six-week average under a streak-based date reads as a bug.
+    if (estimate.weeklySecondsUsed > 0) {
+      final weekly = formatDuration(Duration(seconds: estimate.weeklySecondsUsed));
+      parts.add(estimate.usedRecentHabit
+          ? l10n.paceRecentHabit(weekly)
+          : l10n.paceWeeklyHabit(weekly));
     }
     return parts.join(' ');
   }

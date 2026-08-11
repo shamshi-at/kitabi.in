@@ -2699,11 +2699,33 @@ class _ReadingLogSheet extends ConsumerWidget {
             : DateUtils.isSameDay(s.startedAt, DateTime.now().subtract(const Duration(days: 1)))
                 ? l10n.timerYesterday
                 : _fmtDayMonth(s.startedAt);
+        // The day's own tally, so a heavy day is legible without adding up its
+        // rows (owner request, 12 Aug 2026).
+        final daySessions =
+            sessions.where((x) => DateUtils.isSameDay(x.startedAt, s.startedAt)).toList();
+        final daySecs = daySessions.fold<int>(0, (a, x) => a + x.durationSeconds);
+        final dayPages = totalPagesRead(daySessions);
+        final labelStyle = TextStyle(
+            fontSize: 8.5, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: AppColors.inkSoft);
         out.add(Padding(
           padding: EdgeInsets.only(top: out.isEmpty ? 0 : 14, bottom: 3),
-          child: Text(header.toUpperCase(),
-              style: TextStyle(
-                  fontSize: 8.5, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: AppColors.inkSoft)),
+          child: Row(
+            children: [
+              Expanded(child: Text(header.toUpperCase(), style: labelStyle)),
+              // Right padding lines the tally up with the rows' duration
+              // column, clear of the delete-button gutter.
+              Padding(
+                padding: const EdgeInsets.only(right: 48),
+                child: Text(
+                  [
+                    formatDuration(Duration(seconds: daySecs)),
+                    if (dayPages != null) l10n.bookLogTotalPages(dayPages),
+                  ].join(' · ').toUpperCase(),
+                  style: labelStyle,
+                ),
+              ),
+            ],
+          ),
         ));
       }
       out.add(SessionLogRow(

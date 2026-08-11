@@ -3713,6 +3713,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String paceRecentHabit(String duration) {
+    return 'You\'ve read $duration this past week.';
+  }
+
+  @override
   String paceAssumedValue(String pph) {
     return 'at a typical $pph pages/hour';
   }

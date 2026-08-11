@@ -6070,6 +6070,12 @@ abstract class AppLocalizations {
   /// **'You\'ve read {duration} a week lately.'**
   String paceWeeklyHabit(String duration);
 
+  /// Footnote when the estimate used the current week's reading (a streak) instead of the six-week average
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve read {duration} this past week.'**
+  String paceRecentHabit(String duration);
+
   /// Caption beside an estimate built on the typical fallback pace
   ///
   /// In en, this message translates to:
