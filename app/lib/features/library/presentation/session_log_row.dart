@@ -122,11 +122,44 @@ class SessionLogRow extends StatelessWidget {
               visualDensity: VisualDensity.compact,
               icon: Icon(Icons.delete_outline, size: 18, color: AppColors.inkSoft),
               tooltip: l10n.bookLogDelete,
-              onPressed: onDelete,
+              // Confirm here, in the shared row, so every log surface gets the
+              // guard — a per-caller dialog would drift (CLAUDE.md, 19 Jul 2026).
+              onPressed: () => _confirmDelete(context, l10n, noted ? pages : null),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// A sitting is synced history, not a draft — deleting one deserves a pause.
+  /// The body names what goes ("30m · p. 244 → 269"), so a mis-tap on the
+  /// wrong row is catchable before it happens.
+  Future<void> _confirmDelete(
+      BuildContext context, AppLocalizations l10n, String? pages) async {
+    final summary = [
+      formatDuration(Duration(seconds: session.durationSeconds)),
+      ?pages,
+    ].join(' · ');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text(l10n.bookLogDeleteConfirmTitle, style: const TextStyle(fontSize: 16)),
+        content: Text(
+          l10n.bookLogDeleteConfirmBody(summary),
+          style: TextStyle(fontSize: 13, color: AppColors.inkSoft, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.bookLogDelete, style: TextStyle(color: AppColors.oxblood)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await onDelete();
   }
 }

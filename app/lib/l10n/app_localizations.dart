@@ -994,6 +994,18 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get bookLogDelete;
 
+  /// Title of the confirmation dialog before deleting a logged reading session
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this sitting?'**
+  String get bookLogDeleteConfirmTitle;
+
+  /// Body of the delete-sitting confirmation; summary is the sitting's duration, plus its pages when noted
+  ///
+  /// In en, this message translates to:
+  /// **'{summary} will be removed from this book\'s reading log.'**
+  String bookLogDeleteConfirmBody(String summary);
+
   /// Snackbar after deleting a reading session
   ///
   /// In en, this message translates to:

@@ -41,7 +41,11 @@ ReadingSession _session({int? pageStart, int? pageEnd}) {
   );
 }
 
-Future<void> _pumpRow(WidgetTester tester, ReadingSession session) async {
+Future<void> _pumpRow(
+  WidgetTester tester,
+  ReadingSession session, {
+  Future<void> Function()? onDelete,
+}) async {
   await tester.pumpWidget(MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
@@ -49,7 +53,7 @@ Future<void> _pumpRow(WidgetTester tester, ReadingSession session) async {
       body: SessionLogRow(
         session: session,
         primary: '9:00 – 9:40',
-        onDelete: () async {},
+        onDelete: onDelete ?? () async {},
       ),
     ),
   ));
@@ -97,6 +101,42 @@ void main() {
 
       expect(find.text('p. 42 → 96'), findsOneWidget);
       expect(find.text('+54'), findsOneWidget);
+    });
+  });
+
+  group('deleting a sitting asks first', () {
+    testWidgets('the trash icon opens a confirmation naming the sitting',
+        (tester) async {
+      // Owner request, 12 Aug 2026: a logged sitting is synced history —
+      // one mis-tap on the trash icon must not silently erase it.
+      var deleted = false;
+      await _pumpRow(tester, _session(pageStart: 42, pageEnd: 96),
+          onDelete: () async => deleted = true);
+
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete this sitting?'), findsOneWidget);
+      expect(find.textContaining('p. 42 → 96'), findsWidgets);
+      expect(deleted, isFalse, reason: 'nothing may be deleted before the answer');
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(deleted, isFalse);
+      expect(find.text('Delete this sitting?'), findsNothing);
+    });
+
+    testWidgets('confirming actually deletes', (tester) async {
+      var deleted = false;
+      await _pumpRow(tester, _session(pageEnd: 120),
+          onDelete: () async => deleted = true);
+
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      expect(deleted, isTrue);
     });
   });
 

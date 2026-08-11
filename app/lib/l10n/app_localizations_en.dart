@@ -558,6 +558,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookLogDelete => 'Delete';
 
   @override
+  String get bookLogDeleteConfirmTitle => 'Delete this sitting?';
+
+  @override
+  String bookLogDeleteConfirmBody(String summary) {
+    return '$summary will be removed from this book\'s reading log.';
+  }
+
+  @override
   String get bookLogDeleted => 'Session removed';
 
   @override

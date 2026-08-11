@@ -542,6 +542,13 @@
   "bookLogEmpty": "No reading sessions yet — start one to build your log.",
   "@bookLogEmpty": {"description": "Empty state in the reading-log sheet"},
   "bookLogDelete": "Delete",
+  "bookLogDeleteConfirmTitle": "Delete this sitting?",
+  "@bookLogDeleteConfirmTitle": {"description": "Title of the confirmation dialog before deleting a logged reading session"},
+  "bookLogDeleteConfirmBody": "{summary} will be removed from this book's reading log.",
+  "@bookLogDeleteConfirmBody": {
+    "description": "Body of the delete-sitting confirmation; summary is the sitting's duration, plus its pages when noted",
+    "placeholders": {"summary": {"type": "String"}}
+  },
   "@bookLogDelete": {"description": "Swipe action to remove a reading session"},
   "bookLogDeleted": "Session removed",
   "@bookLogDeleted": {"description": "Snackbar after deleting a reading session"},
