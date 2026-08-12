@@ -228,15 +228,38 @@ class RatingsRepository extends Repo {
 
   Stream<Rating?> watchForWork(String workId) => db.ratingsDao.watchForWork(workId);
 
+  /// The reader's rating of a *series* — its own row, never the average of
+  /// what they thought of the volumes.
+  Stream<Rating?> watchForSeries(String seriesId) => db.ratingsDao.watchForSeries(seriesId);
+
   /// workId -> value, across every rated Work — the shape Insights' finished-
   /// books strip needs (one lookup per cover, not one stream per cover).
+  /// Series ratings are not in here: the DAO filters them out, because that
+  /// strip is about books on a shelf and a series has no cover to sit under.
   Stream<Map<String, int>> watchAllByWorkId() => db.ratingsDao
       .watchAll()
-      .map((rows) => {for (final r in rows) r.workId: r.value});
+      .map((rows) => {for (final r in rows) if (r.workId != null) r.workId!: r.value});
 
   /// One rating per work — updates the existing row if there is one.
-  Future<void> setRating(String workId, int value) async {
-    final existing = await db.ratingsDao.watchForWork(workId).first;
+  Future<void> setRating(String workId, int value) async =>
+      _set(await db.ratingsDao.watchForWork(workId).first, value, workId: workId);
+
+  /// Rate the saga as a whole. A different claim from rating its volumes, so a
+  /// different row — and the server keeps the two pools apart as well.
+  Future<void> setSeriesRating(String seriesId, int value) async =>
+      _set(await db.ratingsDao.watchForSeries(seriesId).first, value, seriesId: seriesId);
+
+  /// Takes the rating back (soft delete, rule 3) — a second tap on the
+  /// selected star means "no rating", not "rate it again".
+  Future<void> clearRating(String workId) async =>
+      _clear(await db.ratingsDao.watchForWork(workId).first);
+
+  Future<void> clearSeriesRating(String seriesId) async =>
+      _clear(await db.ratingsDao.watchForSeries(seriesId).first);
+
+  /// The one write path, whichever subject it is about — so the book flow and
+  /// the series flow can never drift into behaving differently.
+  Future<void> _set(Rating? existing, int value, {String? workId, String? seriesId}) async {
     if (existing != null) {
       await db.ratingsDao.patch(
         existing.id,
@@ -257,20 +280,25 @@ class RatingsRepository extends Repo {
 
     final id = _uuid.v4();
     await db.ratingsDao.insertOne(
-      RatingsCompanion.insert(id: id, userId: session.userId, workId: workId, value: value),
+      RatingsCompanion.insert(
+        id: id,
+        userId: session.userId,
+        workId: Value(workId),
+        seriesId: Value(seriesId),
+        value: value,
+      ),
     );
     await enqueue(
       entity: 'ratings',
       entityId: id,
       opType: 'create',
-      data: {'work_id': workId, 'value': value},
+      // Exactly one subject key — the server rejects an op naming both or
+      // neither, so sending only the one that applies is the contract.
+      data: {'work_id': ?workId, 'series_id': ?seriesId, 'value': value},
     );
   }
 
-  /// Takes the rating back (soft delete, rule 3) — a second tap on the
-  /// selected star means "no rating", not "rate it again".
-  Future<void> clearRating(String workId) async {
-    final existing = await db.ratingsDao.watchForWork(workId).first;
+  Future<void> _clear(Rating? existing) async {
     if (existing == null) return;
     await db.ratingsDao.patch(
       existing.id,
@@ -486,8 +514,42 @@ class ReviewsRepository extends Repo {
 
   Stream<Review?> watchForWork(String workId) => db.reviewsDao.watchForWork(workId);
 
-  Future<void> upsert(String workId, {required String body, required bool visible}) async {
-    final existing = await db.reviewsDao.watchForWork(workId).first;
+  /// The reader's review *of the series* — separate from anything they wrote
+  /// about its volumes.
+  Stream<Review?> watchForSeries(String seriesId) => db.reviewsDao.watchForSeries(seriesId);
+
+  Future<void> upsert(String workId, {required String body, required bool visible}) async =>
+      _upsert(await db.reviewsDao.watchForWork(workId).first,
+          body: body, visible: visible, workId: workId);
+
+  /// Review the saga as a whole.
+  Future<void> upsertForSeries(
+    String seriesId, {
+    required String body,
+    required bool visible,
+  }) async =>
+      _upsert(await db.reviewsDao.watchForSeries(seriesId).first,
+          body: body, visible: visible, seriesId: seriesId);
+
+  Future<void> removeForSeries(String seriesId) async {
+    final existing = await db.reviewsDao.watchForSeries(seriesId).first;
+    if (existing == null) return;
+    await db.reviewsDao.patch(
+      existing.id,
+      ReviewsCompanion(deletedAt: Value(DateTime.now()), syncStatus: Value('pending')),
+    );
+    await enqueue(entity: 'reviews', entityId: existing.id, opType: 'delete', data: {});
+  }
+
+  /// One write path for both subjects, so the book flow and the series flow
+  /// cannot drift apart.
+  Future<void> _upsert(
+    Review? existing, {
+    required String body,
+    required bool visible,
+    String? workId,
+    String? seriesId,
+  }) async {
     if (existing != null) {
       await db.reviewsDao.patch(
         existing.id,
@@ -512,7 +574,8 @@ class ReviewsRepository extends Repo {
       ReviewsCompanion.insert(
         id: id,
         userId: session.userId,
-        workId: workId,
+        workId: Value(workId),
+        seriesId: Value(seriesId),
         body: body,
         visible: Value(visible),
       ),
@@ -521,7 +584,13 @@ class ReviewsRepository extends Repo {
       entity: 'reviews',
       entityId: id,
       opType: 'create',
-      data: {'work_id': workId, 'body': body, 'visible': visible},
+      // Exactly one subject key — the server rejects an op naming both.
+      data: {
+        'work_id': ?workId,
+        'series_id': ?seriesId,
+        'body': body,
+        'visible': visible,
+      },
     );
   }
 

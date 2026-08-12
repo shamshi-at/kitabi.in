@@ -416,7 +416,10 @@ class ApiClient {
   /// `catchError` meant to make the fetch best-effort (CLAUDE.md, 21 Jul 2026).
   /// A non-list body still throws here, at the boundary, which is where an API
   /// that broke its contract should surface.
-  @visibleForTesting
+  ///
+  /// Public rather than test-only: a screen handed a raw list out of a
+  /// page-shaped response (a series' reviews, say) needs the same eager parse,
+  /// and pushing it through here is what keeps that guarantee in one place.
   static List<Map<String, dynamic>> parseRows(dynamic data) => [
         for (final row in data as List)
           if (row is Map) Map<String, dynamic>.from(row),
@@ -532,6 +535,13 @@ class ApiClient {
   /// reflects the reviewer's current profile visibility.
   Future<Map<String, dynamic>> getWorkReviews(String workId) async {
     final res = await _dio.get('/catalog/works/$workId/reviews');
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Reviews of the *series itself*, plus its own rating picture — a separate
+  /// pool from the ratings on the books inside it.
+  Future<Map<String, dynamic>> getSeriesReviews(String seriesId) async {
+    final res = await _dio.get('/catalog/series/$seriesId/reviews');
     return res.data as Map<String, dynamic>;
   }
 

@@ -114,10 +114,18 @@ class RatingsDao extends DatabaseAccessor<AppDatabase> with _$RatingsDaoMixin {
       )..where((t) => t.workId.equals(workId) & t.deletedAt.isNull()))
           .watchSingleOrNull();
 
-  /// Every active rating, across every Work — Insights' finished-books strip
-  /// needs a workId->value map, not one lookup per book.
+  /// The reader's rating of a *series* — a separate row from any rating they
+  /// gave its volumes, and never mixed with them.
+  Stream<Rating?> watchForSeries(String seriesId) => (select(
+        ratings,
+      )..where((t) => t.seriesId.equals(seriesId) & t.deletedAt.isNull()))
+          .watchSingleOrNull();
+
+  /// Every active rating **of a book**, across every Work — Insights'
+  /// finished-books strip needs a workId->value map, not one lookup per book.
+  /// Series ratings are excluded: that strip is about books on a shelf.
   Stream<List<Rating>> watchAll() =>
-      (select(ratings)..where((t) => t.deletedAt.isNull())).watch();
+      (select(ratings)..where((t) => t.deletedAt.isNull() & t.workId.isNotNull())).watch();
 
   Future<void> insertOne(RatingsCompanion row) => into(ratings).insert(row);
 
@@ -209,6 +217,13 @@ class ReviewsDao extends DatabaseAccessor<AppDatabase> with _$ReviewsDaoMixin {
   Stream<Review?> watchForWork(String workId) => (select(
         reviews,
       )..where((t) => t.workId.equals(workId) & t.deletedAt.isNull()))
+          .watchSingleOrNull();
+
+  /// The reader's review *of the series itself* — separate from anything they
+  /// wrote about its volumes.
+  Stream<Review?> watchForSeries(String seriesId) => (select(
+        reviews,
+      )..where((t) => t.seriesId.equals(seriesId) & t.deletedAt.isNull()))
           .watchSingleOrNull();
 
   Future<void> insertOne(ReviewsCompanion row) => into(reviews).insert(row);

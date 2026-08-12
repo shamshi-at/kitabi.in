@@ -668,6 +668,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewSaved => 'Review saved';
 
   @override
+  String get seriesYourRating => 'Your rating of the series';
+
+  @override
+  String get seriesRatingHint =>
+      'This rates the series as a whole — every book in it keeps its own rating.';
+
+  @override
+  String get seriesWriteReview => 'Review this series';
+
+  @override
+  String get seriesEditReview => 'Edit your series review';
+
+  @override
+  String get seriesReviewHint => 'What did you think of the series?';
+
+  @override
+  String get seriesReviewsHeading => 'What readers say about the series';
+
+  @override
+  String get seriesReviewsEmpty => 'No reviews of the series yet.';
+
+  @override
+  String seriesRatingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ratings',
+      one: '1 rating',
+      zero: 'No ratings yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get reviewDeleted => 'Review deleted';
 
   @override

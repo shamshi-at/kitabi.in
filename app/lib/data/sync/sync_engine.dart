@@ -406,7 +406,11 @@ class SyncEngine {
                 syncStatus: synced.syncStatus,
                 lastSyncedAt: synced.lastSyncedAt,
                 serverSeq: synced.serverSeq,
-                workId: Value(d['work_id'] as String),
+                // Nullable since a rating can name a series instead — casting
+                // through `as String` would throw on the first series rating
+                // pulled from another device.
+                workId: Value(d['work_id'] as String?),
+                seriesId: Value(d['series_id'] as String?),
                 value: Value(d['value'] as int),
               ),
             );
@@ -421,7 +425,8 @@ class SyncEngine {
                 syncStatus: synced.syncStatus,
                 lastSyncedAt: synced.lastSyncedAt,
                 serverSeq: synced.serverSeq,
-                workId: Value(d['work_id'] as String),
+                workId: Value(d['work_id'] as String?),
+                seriesId: Value(d['series_id'] as String?),
                 body: Value(d['body'] as String),
                 visible: Value(d['visible'] as bool),
               ),

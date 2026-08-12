@@ -28,6 +28,20 @@ final reviewProvider = FutureProvider.autoDispose.family<Review?, String>((ref, 
   return repo.watchForWork(workId).first;
 });
 
+/// The reader's own rating of a *series* — its own row, never derived from
+/// what they thought of the volumes.
+final seriesRatingProvider =
+    FutureProvider.autoDispose.family<Rating?, String>((ref, seriesId) async {
+  final repo = await ref.watch(ratingsRepositoryProvider.future);
+  return repo.watchForSeries(seriesId).first;
+});
+
+final seriesReviewProvider =
+    FutureProvider.autoDispose.family<Review?, String>((ref, seriesId) async {
+  final repo = await ref.watch(reviewsRepositoryProvider.future);
+  return repo.watchForSeries(seriesId).first;
+});
+
 final lendingRecordsProvider =
     FutureProvider.autoDispose.family<List<LendingRecord>, String>((ref, libraryEntryId) async {
   final repo = await ref.watch(lendingRepositoryProvider.future);

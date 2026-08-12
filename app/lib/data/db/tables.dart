@@ -42,7 +42,11 @@ class LibraryEntries extends Table with SyncColumns {
 /// Star rating (1-5) — attaches to the Work (rule 17), shared across every
 /// edition/printing; a translation is its own Work, so its own rating pool.
 class Ratings extends Table with SyncColumns {
-  TextColumn get workId => text()();
+  /// A rating names exactly one subject: a book, or a series. Rating the saga
+  /// is a different claim from rating volume 3 — a reader who does both has two
+  /// honest numbers, and the pools never mix (API migration 000044).
+  TextColumn get workId => text().nullable()();
+  TextColumn get seriesId => text().nullable()();
   IntColumn get value => integer()();
 }
 
@@ -78,7 +82,9 @@ class ReadingNotes extends Table with SyncColumns {
 }
 
 class Reviews extends Table with SyncColumns {
-  TextColumn get workId => text()();
+  /// Like Ratings: exactly one subject, a book or a series.
+  TextColumn get workId => text().nullable()();
+  TextColumn get seriesId => text().nullable()();
   TextColumn get body => text()();
   BoolColumn get visible => boolean().withDefault(Constant(false))();
 }

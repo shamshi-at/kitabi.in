@@ -59,12 +59,28 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 12) {
+            // A rating or a review now names a book OR a series (13 Aug 2026),
+            // so `work_id` has to be nullable. SQLite cannot relax NOT NULL in
+            // place, and Drift's TableMigration is the supported way: it builds
+            // the table at its current Dart shape and copies every column the
+            // two shapes share, so existing rows keep their book and simply
+            // gain a null series.
+            // TableMigration is marked experimental in drift but is its
+            // documented answer for relaxing a NOT NULL, and the alternative is
+            // hand-written create/copy/drop/rename SQL that would have to be
+            // kept in step with the generated schema by hand.
+            // ignore: experimental_member_use
+            await m.alterTable(TableMigration(ratings));
+            // ignore: experimental_member_use
+            await m.alterTable(TableMigration(reviews));
+          }
           if (from < 11) {
             // The community rating mirrored onto shelf covers (9 Aug 2026).
             // Null until each book's next catalog re-fetch fills it.

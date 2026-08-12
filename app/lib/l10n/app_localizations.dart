@@ -1168,6 +1168,54 @@ abstract class AppLocalizations {
   /// **'Review saved'**
   String get reviewSaved;
 
+  /// Label above the reader's own star rating on the series screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your rating of the series'**
+  String get seriesYourRating;
+
+  /// Explains that a series rating is separate from the books' ratings
+  ///
+  /// In en, this message translates to:
+  /// **'This rates the series as a whole — every book in it keeps its own rating.'**
+  String get seriesRatingHint;
+
+  /// Button opening the series review editor
+  ///
+  /// In en, this message translates to:
+  /// **'Review this series'**
+  String get seriesWriteReview;
+
+  /// Button opening the series review editor when one already exists
+  ///
+  /// In en, this message translates to:
+  /// **'Edit your series review'**
+  String get seriesEditReview;
+
+  /// Placeholder in the series review editor
+  ///
+  /// In en, this message translates to:
+  /// **'What did you think of the series?'**
+  String get seriesReviewHint;
+
+  /// Heading above other readers' series reviews
+  ///
+  /// In en, this message translates to:
+  /// **'What readers say about the series'**
+  String get seriesReviewsHeading;
+
+  /// Empty state under the series reviews heading
+  ///
+  /// In en, this message translates to:
+  /// **'No reviews of the series yet.'**
+  String get seriesReviewsEmpty;
+
+  /// How many readers rated the series
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No ratings yet} =1{1 rating} other{{count} ratings}}'**
+  String seriesRatingCount(int count);
+
   /// Snackbar after the review editor removes a review whose body was emptied
   ///
   /// In en, this message translates to:

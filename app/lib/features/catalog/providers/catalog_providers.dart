@@ -71,6 +71,13 @@ final publicReviewsProvider =
   return ref.watch(apiClientProvider).getWorkReviews(workId);
 });
 
+/// What other readers said about the *series* — its own rating picture and
+/// reviews, not an aggregate of the books inside it.
+final seriesReviewsProvider =
+    FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, seriesId) {
+  return ref.watch(apiClientProvider).getSeriesReviews(seriesId);
+});
+
 // ─── Search idle state (S4h) ────────────────────────────────────────────────
 // What the search page shows before you type. Everything here is real data:
 // the reader's own history, the newest catalogue rows in their languages, and
