@@ -48,6 +48,34 @@ async def test_search_all_is_fuzzy_across_all_three_sections(client):
     assert any(p["name"] == "DC Books" for p in body["publishers"])
 
 
+async def test_merged_duplicates_leave_author_and_publisher_search(client, db_sessionmaker):
+    """Folding a duplicate must actually remove it from search — the merge
+    soft-deletes the loser, and search filters deleted rows. Without that,
+    every merge left the duplicate visible in the app's typeaheads."""
+    from sqlalchemy import select
+
+    from app.models import Author, Publisher
+    from app.services import catalog_service, merge_service
+
+    await _seed(client)
+    async with db_sessionmaker() as db:
+        for model, kind in ((Author, "authors"), (Publisher, "publishers")):
+            rows = (await db.execute(select(model))).scalars().all()
+            keep = rows[0]
+            dup = model(name=keep.name, name_translit=keep.name_translit)
+            db.add(dup)
+            await db.flush()
+            assert await merge_service.merge(db, kind, keep.id, dup.id)
+        await db.commit()
+
+        authors = await catalog_service.search_authors(db, "Thakazhi")
+        publishers = await catalog_service.search_publishers(db, "DC Books")
+
+    assert all(a.merged_into_id is None for a in authors)
+    assert all(p.merged_into_id is None for p in publishers)
+    assert authors and publishers  # the survivors themselves still match
+
+
 async def test_isbn_search_stays_exact(client):
     resp = await client.post(
         "/catalog/works", json={"title": "Randamoozham", "isbn": "9783161484100"}

@@ -6,6 +6,8 @@ are about what merging must never do: lose a book, lose a bio, break a URL, or
 become impossible to undo.
 """
 
+import uuid
+
 import pytest
 
 from app.models import Author, Edition, Publisher, Work
@@ -161,6 +163,22 @@ async def test_merging_rescues_fields_the_survivor_is_missing(db_sessionmaker):
 
     assert keep.bio == "A real biography."
     assert keep.image_url == "https://x/p.jpg"
+
+
+async def test_merging_carries_an_approved_author_claim(db_sessionmaker):
+    """linked_user_id is written only by an approved "this is me" claim — the
+    verification is of the person, so it must survive their duplicate row
+    losing a merge."""
+    reader = uuid.uuid4()
+    async with db_sessionmaker() as db:
+        keep = await _author(db, "Madhavikutty", works=3)
+        drop = await _author(db, "Madhavikutty", linked_user_id=reader)
+        await db.commit()
+        await merge_service.merge(db, "authors", keep.id, drop.id)
+        await db.commit()
+        await db.refresh(keep)
+
+    assert keep.linked_user_id == reader
 
 
 async def test_the_survivor_keeps_its_own_fields(db_sessionmaker):

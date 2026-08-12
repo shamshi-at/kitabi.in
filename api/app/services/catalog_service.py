@@ -1089,7 +1089,14 @@ async def search_authors(db: AsyncSession, query: str, limit: int = 10) -> list[
         return []
     await _relax_word_similarity(db)
     match, rank = _name_match_and_rank(Author.name, Author.name_translit, Author.name_fold, q)
-    stmt = select(Author).where(match).order_by(rank.desc(), Author.name).limit(limit)
+    # deleted_at also covers merged duplicates (merge soft-deletes the loser) —
+    # without this filter a folded row kept surfacing in search and typeaheads.
+    stmt = (
+        select(Author)
+        .where(match, Author.deleted_at.is_(None))
+        .order_by(rank.desc(), Author.name)
+        .limit(limit)
+    )
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -1102,7 +1109,12 @@ async def search_publishers(db: AsyncSession, query: str, limit: int = 10) -> li
     match, rank = _name_match_and_rank(
         Publisher.name, Publisher.name_translit, Publisher.name_fold, q
     )
-    stmt = select(Publisher).where(match).order_by(rank.desc(), Publisher.name).limit(limit)
+    stmt = (
+        select(Publisher)
+        .where(match, Publisher.deleted_at.is_(None))
+        .order_by(rank.desc(), Publisher.name)
+        .limit(limit)
+    )
     return list((await db.execute(stmt)).scalars().all())
 
 

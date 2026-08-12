@@ -182,6 +182,9 @@ _CARRY_OVER = {
         "pen_name",
         "external_id",
         "external_source",
+        # An approved claim ("this reader IS this author") must survive the
+        # duplicate row losing a merge — the verification was of the person.
+        "linked_user_id",
     ),
     "publishers": ("logo_url", "primary_language", "external_id", "external_source"),
 }
