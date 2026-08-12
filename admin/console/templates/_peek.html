@@ -1,0 +1,53 @@
+{# One record, as a popup: who it is and what it carries. Injected into the
+   shared <dialog> by admin.js — see catalog.peek for why this exists. #}
+{% if not p %}
+<div class="pk-hd"><b>Not found</b></div>
+<div class="pk-bd"><p class="m">That {{ kind[:-1] if kind else 'record' }} no longer exists.</p></div>
+{% else %}
+<div class="pk-hd">
+  <div style="min-width:0">
+    <span class="lbl">{{ p.singular }}</span>
+    <h4>{{ p.title }}</h4>
+    {% if p.sub %}<div class="m mono">{{ p.sub }}</div>{% endif %}
+  </div>
+  <div class="pk-hd-act">
+    <a class="btn s" href="{{ p.href }}">Open full page ↗</a>
+    <button class="btn s" type="button" data-peek-close>Close</button>
+  </div>
+</div>
+<div class="pk-bd">
+  {% if p.merged_into %}
+  <div class="note warn">Already merged into <b>{{ p.merged_into.name }}</b> — its URL redirects there.</div>
+  {% elif p.deleted %}
+  <div class="note warn">This record is deleted.</div>
+  {% endif %}
+
+  <div class="pk-top">
+    {% if p.image %}<img class="pk-img" src="{{ p.image }}" alt="">{% endif %}
+    <table>
+      {% for label, value in p.facts %}
+      <tr><td>{{ label }}</td><td style="text-align:right">{{ value }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  {% if p.body %}
+  <div class="lbl" style="margin-top:14px">About</div>
+  <p class="pk-body">{{ p.body }}</p>
+  {% endif %}
+
+  <div class="lbl" style="margin-top:14px">{{ p.list_label }}</div>
+  <div class="pk-list">
+    {% for i in p.entries %}
+    <a class="pk-item" href="{{ i.href }}">
+      <b>{{ i.title }}</b>
+      {% if i.sub %}<s>{{ i.sub }}</s>{% endif %}
+    </a>
+    {% else %}
+    <div class="pk-empty">Nothing in the catalog under this record — which is itself a
+      signal: a row carrying nothing is cheap to merge away.</div>
+    {% endfor %}
+  </div>
+  <div class="note" style="margin-top:12px">Id <span class="mono">{{ p.id }}</span></div>
+</div>
+{% endif %}

@@ -118,6 +118,52 @@
   });
 })();
 
+// Peek popup — "who is this, really?" Any element carrying data-peek="<url>"
+// opens that fragment in the shared dialog, so a merge decision can be checked
+// against the record's actual catalog without leaving the queue (and losing
+// the comparison you were in the middle of).
+(function () {
+  const dlg = document.getElementById("peek");
+  const body = document.getElementById("peekBody");
+  if (!dlg || !body) return;
+
+  document.addEventListener("click", async (e) => {
+    const trigger = e.target.closest("[data-peek]");
+    if (trigger) {
+      e.preventDefault();
+      body.innerHTML = '<div class="pk-bd"><p class="m">Loading…</p></div>';
+      dlg.showModal();
+      try {
+        const res = await fetch(trigger.dataset.peek, {
+          headers: { "X-Requested-With": "fetch" },
+        });
+        body.innerHTML = await res.text();
+      } catch (_) {
+        body.innerHTML =
+          '<div class="pk-bd"><p class="m">Could not load that record.</p></div>';
+      }
+      return;
+    }
+    // Close on the button, or on a click in the backdrop outside the panel.
+    if (e.target.closest("[data-peek-close]") || e.target === dlg) dlg.close();
+  });
+})();
+
+// Duplicate review — the "name to keep" field follows whichever row is
+// selected, so picking a survivor also proposes its name. Once the reviewer
+// types their own, it stops following: their correction outranks any row.
+(function () {
+  document.addEventListener("change", (e) => {
+    const radio = e.target.closest('input[name="survivor_id"]');
+    if (!radio || !radio.form) return;
+    const field = radio.form.querySelector("[data-cluster-name]");
+    if (field && !field.dataset.dirty) field.value = radio.dataset.name || field.value;
+  });
+  document.addEventListener("input", (e) => {
+    if (e.target.matches("[data-cluster-name]")) e.target.dataset.dirty = "1";
+  });
+})();
+
 // Merge picker — Keep/Absorb buttons on catalog rows fill the merge form, so
 // nobody copies UUIDs by hand (impossible on a phone). Marks the chosen row's
 // button so the current selection is visible, and flashes the form when both

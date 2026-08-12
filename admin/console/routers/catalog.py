@@ -19,7 +19,7 @@ from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from .. import assets, queries, security
-from ..deps import DbSession, RequireEditor, client_ip
+from ..deps import CurrentAdmin, DbSession, RequireEditor, client_ip
 from ..flash import pop_flash, set_flash
 from ..models_ref import (
     CLAIM_PENDING,
@@ -37,6 +37,258 @@ from ..templating import templates
 from .merges import _counts as _merge_counts
 
 router = APIRouter(prefix="/catalog")
+
+
+# ---------------------------------------------------------------------------
+# Peek — "who is this, really?"
+#
+# Every merge decision is a question about identity, and a name plus a book
+# count does not answer it: two Rev. William Benhams are told apart by what
+# they wrote, not by how they are spelled. So any record anywhere in the
+# console can be opened as a popup showing its catalog, without leaving the
+# queue and losing the comparison you were in the middle of.
+#
+# Moderator-visible (not editor+) because the duplicate queue is, and every
+# field here is already public on the website.
+# ---------------------------------------------------------------------------
+
+PEEK_MODELS = {"authors": Author, "publishers": Publisher, "works": Work}
+
+
+def _fact(label: str, value) -> tuple | None:  # noqa: ANN001
+    return (label, value) if value else None
+
+
+async def _peek_author(db: DbSession, row: Author) -> dict:
+    works = await catalog_service.author_works(db, row.id)
+    linked = await db.get(Profile, row.linked_user_id) if row.linked_user_id else None
+    return {
+        "title": row.name,
+        "sub": row.name_translit or "",
+        "href": f"/catalog/authors/{row.id}",
+        "image": row.image_url,
+        "body": row.bio,
+        "facts": [
+            f
+            for f in (
+                _fact("Writes in", row.primary_language),
+                _fact("Also known as", row.pen_name),
+                _fact("Books in catalog", len(works)),
+                _fact("Source", row.external_source or "reader-added"),
+                _fact(
+                    "On Kitabi",
+                    (linked.full_name or linked.email) if linked else None,
+                ),
+            )
+            if f
+        ],
+        "list_label": f"Books ({len(works)})",
+        "entries": [
+            {
+                "href": f"/catalog/works/{w.id}",
+                "title": w.title,
+                "sub": " · ".join(
+                    str(x) for x in (w.title_translit, w.first_publish_year, w.language) if x
+                ),
+            }
+            for w in works
+        ],
+    }
+
+
+async def _peek_publisher(db: DbSession, row: Publisher) -> dict:
+    works = await catalog_service.publisher_works(db, row.id)
+    editions = int(
+        await db.scalar(
+            select(func.count())
+            .select_from(Edition)
+            .where(Edition.publisher_id == row.id, Edition.deleted_at.is_(None))
+        )
+        or 0
+    )
+    return {
+        "title": row.name,
+        "sub": row.name_translit or "",
+        "href": f"/catalog/publishers/{row.id}",
+        "image": row.logo_url,
+        "body": None,
+        "facts": [
+            f
+            for f in (
+                _fact("Publishes in", row.primary_language),
+                _fact("Editions", editions),
+                _fact("Works", len(works)),
+                _fact("Source", row.external_source or "reader-added"),
+            )
+            if f
+        ],
+        "list_label": f"Works ({len(works)})",
+        "entries": [
+            {
+                "href": f"/catalog/works/{w.id}",
+                "title": w.title,
+                "sub": " · ".join(str(x) for x in (w.title_translit, w.first_publish_year) if x),
+            }
+            for w in works
+        ],
+    }
+
+
+async def _peek_work(db: DbSession, row: Work) -> dict:
+    # Loaded here rather than through get_work_or_404, which 404s on a
+    # soft-deleted work — peeking a row that was already merged away is exactly
+    # when "what was this?" matters most.
+    work = (
+        (
+            await db.execute(
+                select(Work)
+                .where(Work.id == row.id)
+                .options(selectinload(Work.authors), selectinload(Work.editions))
+            )
+        )
+        .unique()
+        .scalar_one()
+    )
+    shelved = int(
+        await db.scalar(
+            select(func.count())
+            .select_from(LibraryEntry)
+            .where(
+                LibraryEntry.edition_id.in_(select(Edition.id).where(Edition.work_id == row.id)),
+                LibraryEntry.deleted_at.is_(None),
+            )
+        )
+        or 0
+    )
+    ratings = int(
+        await db.scalar(select(func.count()).select_from(Rating).where(Rating.work_id == row.id))
+        or 0
+    )
+    reviews = int(
+        await db.scalar(select(func.count()).select_from(Review).where(Review.work_id == row.id))
+        or 0
+    )
+    cover = next((e.cover_url for e in work.editions if e.cover_url), None)
+    return {
+        "title": work.title,
+        "sub": work.title_translit or "",
+        "href": f"/catalog/works/{work.id}",
+        "image": cover,
+        "body": work.description,
+        "facts": [
+            f
+            for f in (
+                _fact("By", ", ".join(a.name for a in work.authors)),
+                _fact("First published", work.first_publish_year),
+                _fact("Language", work.language),
+                _fact("Shelved by readers", shelved),
+                _fact("Ratings / reviews", f"{ratings} / {reviews}"),
+                _fact("Source", work.external_source or "reader-added"),
+            )
+            if f
+        ],
+        "list_label": f"Editions ({len(work.editions)})",
+        "entries": [
+            {
+                "href": f"/catalog/works/{work.id}",
+                "title": e.isbn or "no ISBN",
+                "sub": " · ".join(
+                    str(x)
+                    for x in (
+                        e.language,
+                        e.publisher.name if e.publisher else None,
+                        f"{e.page_count} pp" if e.page_count else None,
+                    )
+                    if x
+                ),
+            }
+            for e in work.editions
+        ],
+    }
+
+
+@router.get("/peek/{kind}/{row_id}")
+async def peek(
+    request: Request, admin: CurrentAdmin, db: DbSession, kind: str, row_id: uuid.UUID
+) -> HTMLResponse:
+    """One record's identity and its catalog, as a fragment for the popup."""
+    row = await db.get(PEEK_MODELS[kind], row_id) if kind in PEEK_MODELS else None
+    if row is None:
+        return templates.TemplateResponse(
+            request, "_peek.html", {"p": None, "kind": kind}, status_code=404
+        )
+    builder = {
+        "authors": _peek_author,
+        "publishers": _peek_publisher,
+        "works": _peek_work,
+    }[kind]
+    peeked = await builder(db, row)
+    peeked.update(
+        kind=kind,
+        singular={"authors": "Author", "publishers": "Publisher", "works": "Work"}[kind],
+        id=str(row.id),
+        merged_into=await merge_service.resolve_merged(db, kind, row) if kind != "works" else None,
+        deleted=row.deleted_at is not None,
+    )
+    return templates.TemplateResponse(request, "_peek.html", {"p": peeked, "kind": kind})
+
+
+@router.post("/rename")
+async def rename(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    kind: Annotated[str, Form()],
+    row_id: Annotated[uuid.UUID, Form()],
+    name: Annotated[str, Form()],
+    next_url: Annotated[str, Form(alias="next")] = "",
+) -> RedirectResponse:
+    """Fix a record's name (a work's title).
+
+    The duplicate queue needs this: when a cluster is one entity under two bad
+    spellings — "Rev. William Rev. William Benham" beside "Rev. William Benham"
+    — neither row is the record to keep, and without a rename the reviewer can
+    only choose which mistake becomes the public page.
+
+    Renaming the row you keep beats creating a fresh one: the kept row already
+    holds the books, the ratings and whatever ranking its URL earned, and the
+    slug deliberately does not follow the name (services/slug_service), so the
+    published URL keeps working.
+    """
+    back = next_url if next_url.startswith(("/catalog", "/moderation")) else "/catalog"
+    resp = RedirectResponse(back, status_code=303)
+    if kind not in PEEK_MODELS:
+        set_flash(resp, "err", "Unknown kind.")
+        return resp
+    row = await db.get(PEEK_MODELS[kind], row_id)
+    if row is None:
+        set_flash(resp, "err", "Record not found.")
+        return resp
+    name = " ".join(name.split())  # collapse the whitespace a paste drags in
+    if not name:
+        set_flash(resp, "err", "A name can't be empty.")
+        return resp
+
+    attr = "title" if kind == "works" else "name"
+    previous = getattr(row, attr)
+    if previous == name:
+        set_flash(resp, "ok", "That was already the name.")
+        return resp
+    setattr(row, attr, name)
+    # name_translit / name_fold follow automatically (models/translit_hooks).
+    await db.commit()
+    await security.audit(
+        db,
+        "catalog.rename",
+        admin_id=admin.id,
+        target_type=kind,
+        target_id=str(row_id),
+        summary=f"“{previous}” → “{name}”",
+        ip=client_ip(request),
+    )
+    await db.commit()
+    set_flash(resp, "ok", f"Renamed to “{name}”. Its URL is unchanged.")
+    return resp
 
 
 async def _work_rows(db: DbSession, works: list) -> list[dict]:

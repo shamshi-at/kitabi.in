@@ -46,8 +46,9 @@
     <tr><th style="width:38%">Title</th><th>Author</th><th>Editions</th><th>Shelved</th><th>Merge</th></tr>
     {% for r in rows %}
     <tr>
-      <td><a class="t" href="/catalog/works/{{ r.w.id }}" style="text-decoration:none">{{ r.w.title }}</a>
-        <div class="m mono">{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}</div></td>
+      <td><button type="button" class="peek t" data-peek="/catalog/peek/works/{{ r.w.id }}">{{ r.w.title }}</button>
+        <div class="m mono">{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}
+          · <a href="/catalog/works/{{ r.w.id }}">open ↗</a></div></td>
       <td class="m">{{ r.author }}</td>
       <td>{{ r.editions }}</td>
       <td>{{ r.shelved }}</td>

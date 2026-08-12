@@ -41,6 +41,15 @@
     {% if not uploads_on %}
     <div class="hint" style="margin-top:8px">{{ uploads_why }}</div>
     {% endif %}
+    <div class="lbl" style="margin-top:16px">Name</div>
+    <form method="post" action="/catalog/rename" class="mgc-rename" style="margin-top:6px">
+      <input type="hidden" name="kind" value="publishers">
+      <input type="hidden" name="row_id" value="{{ p.id }}">
+      <input type="hidden" name="next" value="/catalog/publishers/{{ p.id }}">
+      <input class="search" name="name" value="{{ p.name }}" aria-label="Publisher name">
+      <button class="btn s p">Rename</button>
+      <span class="hint">Fixes a bad import in place. The published URL doesn’t change.</span>
+    </form>
     <div class="note" style="margin-top:12px">Publisher id <span class="mono">{{ p.id }}</span></div>
   </div>
   <div class="card">

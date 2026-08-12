@@ -34,9 +34,11 @@
     {% for c in merge_candidates %}
     <div class="mg-row">
       <div class="mg-info">
-        <a href="/catalog/{{ kind }}/{{ c.r.id }}" style="font-weight:600;text-decoration:none">{{ c.r.name }}</a>
+        <button type="button" class="peek" style="font-weight:600;font-size:13.5px"
+          data-peek="/catalog/peek/{{ kind }}/{{ c.r.id }}">{{ c.r.name }}</button>
         <div class="m mono">{{ c.r.name_translit or '' }}</div>
-        <div class="m">{{ c.count }} {{ unit[:-1] if c.count == 1 else unit }}</div>
+        <div class="m">{{ c.count }} {{ unit[:-1] if c.count == 1 else unit }}
+          · <a href="/catalog/{{ kind }}/{{ c.r.id }}">open ↗</a></div>
       </div>
       <div class="mg-act">
         <form method="post" action="/catalog/entity-merge"
@@ -59,9 +61,11 @@
     <div class="note">No other {{ kind }} match “{{ merge_q }}”.</div>
     {% endfor %}
   </div>
-  <p class="hint" style="margin-top:8px"><b>Keep that one</b> folds this page into the record you
-    picked; <b>Keep this page</b> pulls that record in here. Either way the losing URL redirects
-    to the kept record, and Unmerge undoes it.</p>
+  <p class="hint" style="margin-top:8px">Tap a name to see what it carries before deciding.
+    <b>Keep that one</b> folds this page into the record you picked; <b>Keep this page</b> pulls
+    that record in here. Either way the losing URL redirects to the kept record, and Unmerge
+    undoes it. If neither name is right, fix the one you keep — the Name field above renames
+    without changing the URL.</p>
   {% endif %}
 </div>
 {% endif %}

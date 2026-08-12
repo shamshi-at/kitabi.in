@@ -19,6 +19,16 @@
     </table>
     {% if a.bio %}<div class="lbl" style="margin-top:14px">Bio</div>
       <p style="margin-top:6px;font-size:13px;line-height:1.6">{{ a.bio }}</p>{% endif %}
+    <div class="lbl" style="margin-top:16px">Name</div>
+    <form method="post" action="/catalog/rename" class="mgc-rename" style="margin-top:6px">
+      <input type="hidden" name="kind" value="authors">
+      <input type="hidden" name="row_id" value="{{ a.id }}">
+      <input type="hidden" name="next" value="/catalog/authors/{{ a.id }}">
+      <input class="search" name="name" value="{{ a.name }}" aria-label="Author name">
+      <button class="btn s p">Rename</button>
+      <span class="hint">Fixes a bad import (“Rev. William Rev. William Benham”) in place. The
+        published URL doesn’t change, so nothing that links here breaks.</span>
+    </form>
     <div class="note" style="margin-top:12px">Author id <span class="mono">{{ a.id }}</span></div>
   </div>
   <div class="card">

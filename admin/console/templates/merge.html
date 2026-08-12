@@ -7,15 +7,32 @@
   <div class="split">
     <div>
       <div class="lbl">Keep</div>
-      <div style="margin-top:6px;font-size:15px;font-weight:600">{{ p.keep.title }}</div>
+      <div style="margin-top:6px">
+        <button type="button" class="peek" style="font-size:15px;font-weight:600"
+          data-peek="/catalog/peek/works/{{ p.keep.id }}">{{ p.keep.title }}</button></div>
       <div class="m mono" style="font-size:10.5px;margin-top:3px">{{ p.keep.id }}</div>
     </div>
     <div>
       <div class="lbl">Absorb (soft-deleted after)</div>
-      <div style="margin-top:6px;font-size:15px;font-weight:600">{{ p.absorb.title }}</div>
+      <div style="margin-top:6px">
+        <button type="button" class="peek" style="font-size:15px;font-weight:600"
+          data-peek="/catalog/peek/works/{{ p.absorb.id }}">{{ p.absorb.title }}</button></div>
       <div class="m mono" style="font-size:10.5px;margin-top:3px">{{ p.absorb.id }}</div>
     </div>
   </div>
+  <p class="hint" style="margin-top:10px">Tap either title to see its editions, authors and
+    reader activity before committing.
+    <a href="/catalog/merge?keep={{ absorb }}&absorb={{ keep }}">Swap — keep the other one instead</a></p>
+
+  <div class="lbl" style="margin-top:14px">Title of the kept work</div>
+  <form method="post" action="/catalog/rename" class="mgc-rename" style="margin-top:6px">
+    <input type="hidden" name="kind" value="works">
+    <input type="hidden" name="row_id" value="{{ keep }}">
+    <input type="hidden" name="next" value="/catalog/merge?keep={{ keep }}&absorb={{ absorb }}">
+    <input class="search" name="name" value="{{ p.keep.title }}" aria-label="Title of the kept work">
+    <button class="btn s">Rename</button>
+    <span class="hint">When neither title is the one to publish, fix it before merging.</span>
+  </form>
 
   <div class="note warn" style="margin-top:16px">
     Moving from <b>{{ p.absorb.title }}</b> onto <b>{{ p.keep.title }}</b>:

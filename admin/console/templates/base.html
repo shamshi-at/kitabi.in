@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/logo.svg?v=2" type="image/svg+xml">
-<link rel="stylesheet" href="/static/admin.css?v=18">
-<script src="/static/admin.js?v=4" defer></script>
+<link rel="stylesheet" href="/static/admin.css?v=23">
+<script src="/static/admin.js?v=6" defer></script>
 </head>
 <body>
 {% macro navlink(href, label, key, badge=0) %}
@@ -52,6 +52,9 @@
       <a class="out" href="/sign-out">Sign out</a>
     </div>
   </nav>
+  {# The shared peek popup. One dialog for the whole console; admin.js fills it
+     from /catalog/peek/... whenever something with data-peek is clicked. #}
+  <dialog id="peek" class="pk"><div id="peekBody"></div></dialog>
   <div class="main">
     <div class="top">
       <button class="railtoggle" id="railToggle" type="button" aria-label="Menu" aria-controls="rail">

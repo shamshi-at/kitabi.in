@@ -201,6 +201,70 @@ a.healthrow .bar{margin-top:6px}
 .btn.on{border-color:var(--oxblood);background:var(--gold-soft);box-shadow:inset 0 0 0 1px var(--oxblood)}
 #mergeform.ready button{background:var(--moss);border-color:var(--moss);color:#fff}
 
+/* ---- duplicate review: one cluster, one decision ---- */
+.mgc-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px 0;
+  border-bottom:1px solid var(--line)}
+.mgc-pick{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+  background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px;
+  cursor:pointer;flex-shrink:0;white-space:nowrap}
+.mgc-pick input{width:auto;margin:0}
+.mgc-pick:has(input:checked){background:var(--gold-soft);border-color:var(--gold);color:#7A5A16}
+.mgc-info{flex:1;min-width:170px}
+.mgc-info .peek{font-size:14px;font-weight:600;color:var(--ink);text-decoration-color:var(--line)}
+.mgc-info .peek:hover{color:var(--oxblood);text-decoration-color:currentColor}
+.mgc-info s{display:block;text-decoration:none;font-size:11px;color:var(--ink-soft);
+  font-family:'JetBrains Mono',ui-monospace,monospace;margin-top:2px}
+.mgc-count{flex-shrink:0}
+.mgc-act{display:flex;gap:6px;flex-wrap:wrap}
+.mgc-go{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:13px}
+.mgc-name{display:flex;flex-direction:column;gap:4px;flex:1;min-width:210px}
+.mgc-name .search{width:100%}
+/* On a phone the flex row wraps into "2 books | Not the same" orphans, so the
+   row becomes an explicit grid: choice + name on top, count and actions under. */
+@media (max-width:720px){
+  .mgc-row{display:grid;grid-template-columns:auto 1fr;
+    grid-template-areas:"pick info" "count act";gap:8px;align-items:center}
+  .mgc-pick{grid-area:pick;align-self:start}
+  .mgc-info{grid-area:info;min-width:0}
+  .mgc-count{grid-area:count}
+  .mgc-act{grid-area:act;justify-content:flex-end}
+  .mgc-go{flex-direction:column;align-items:stretch}
+  .mgc-go .btn{width:100%}
+}
+.mgc-rename{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
+  background:var(--paper-deep);border:1px solid var(--line);border-radius:9px;
+  padding:9px 11px;margin:0 0 9px}
+.mgc-rename .search{flex:1;min-width:180px;background:var(--card)}
+.mgc-rename[hidden]{display:none}
+
+/* ---- peek popup (identity check without leaving the page) ---- */
+dialog.pk{width:min(680px,calc(100vw - 24px));max-height:min(84vh,900px);padding:0;border:none;
+  border-radius:14px;background:var(--card);color:var(--ink);overflow:hidden;
+  margin:auto;box-shadow:0 30px 80px rgba(40,28,16,.4)}
+dialog.pk::backdrop{background:rgba(35,24,14,.55)}
+dialog.pk>div{display:flex;flex-direction:column;max-height:inherit}
+.pk-hd{display:flex;gap:12px;align-items:flex-start;padding:15px 18px;background:var(--paper-deep);
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pk-hd h4{font-family:'Fraunces',serif;font-size:19px;font-weight:500;line-height:1.25;margin-top:3px;
+  overflow-wrap:anywhere}
+.pk-hd-act{margin-left:auto;display:flex;gap:7px;flex-shrink:0}
+.pk-bd{padding:15px 18px;overflow-y:auto}
+.pk-top{display:flex;gap:14px;align-items:flex-start}
+.pk-top table{flex:1;min-width:0}
+.pk-img{width:74px;flex-shrink:0;border-radius:6px;border:1px solid var(--line);display:block}
+.pk-body{font-size:12.5px;line-height:1.65;margin-top:6px;color:var(--ink-soft)}
+.pk-list{border:1px solid var(--line);border-radius:9px;margin-top:7px;overflow:hidden}
+.pk-item{display:block;padding:8px 11px;text-decoration:none;border-bottom:1px solid var(--line)}
+.pk-item:last-child{border-bottom:0}
+.pk-item:hover{background:var(--paper-deep)}
+.pk-item b{font-size:12.5px;font-weight:600;display:block}
+.pk-item s{display:block;text-decoration:none;font-size:11px;color:var(--ink-soft);margin-top:1px}
+.pk-empty{padding:11px;font-size:11.5px;color:var(--stamp-grey);line-height:1.55}
+/* The trigger reads as a link but must not look like navigation away. */
+.peek{background:none;border:none;padding:0;font:inherit;font-size:inherit;color:var(--oxblood);
+  cursor:pointer;text-decoration:underline;text-underline-offset:2px;text-align:left}
+.peek:hover{color:var(--oxblood-deep)}
+
 /* ---- manual entity-merge picker (author/publisher detail) ---- */
 .mg-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card);
   border:1px solid var(--line);border-radius:10px;padding:10px 12px}

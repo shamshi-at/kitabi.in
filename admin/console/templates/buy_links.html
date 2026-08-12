@@ -35,7 +35,7 @@
   {% if r.e.cover_url %}<img class="bl-cover" src="{{ r.e.cover_url }}" alt="" loading="lazy">
   {% else %}<div class="bl-cover"></div>{% endif %}
   <div class="bl-info">
-    <a class="t" href="/catalog/works/{{ r.w.id }}" style="text-decoration:none">{{ r.w.title }}</a>
+    <button type="button" class="peek t" data-peek="/catalog/peek/works/{{ r.w.id }}">{{ r.w.title }}</button>
     <div class="m">{{ r.author or '—' }}</div>
     <div class="m bl-meta">{{ r.e.language or 'language not set' }}
       {%- if r.e.format %} · {{ r.e.format }}{% endif %}

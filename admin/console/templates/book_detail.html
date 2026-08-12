@@ -22,6 +22,15 @@
     <div class="lbl" style="margin-top:14px">Description</div>
     <p style="margin-top:6px;font-size:13px;line-height:1.6;color:{{ 'var(--ink)' if w.description else 'var(--ink-soft)' }}">
       {{ w.description or '— none —' }}</p>
+    <div class="lbl" style="margin-top:16px">Title</div>
+    <form method="post" action="/catalog/rename" class="mgc-rename" style="margin-top:6px">
+      <input type="hidden" name="kind" value="works">
+      <input type="hidden" name="row_id" value="{{ w.id }}">
+      <input type="hidden" name="next" value="/catalog/works/{{ w.id }}">
+      <input class="search" name="name" value="{{ w.title }}" aria-label="Work title">
+      <button class="btn s p">Rename</button>
+      <span class="hint">Fixes a bad import in place. The published URL doesn’t change.</span>
+    </form>
     <div style="margin-top:14px"><a class="btn s"
       href="/catalog?q={{ w.title_translit or w.title }}&keep={{ w.id }}">Find a duplicate to merge</a></div>
     <div class="note" style="margin-top:10px">Work id <span class="mono">{{ w.id }}</span></div>

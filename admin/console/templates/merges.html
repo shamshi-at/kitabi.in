@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Duplicate review · Kitabi Admin{% endblock %}
 {% block heading %}Duplicate review{% endblock %}
-{% block subheading %}{{ items | length }} awaiting a decision{% endblock %}
+{% block subheading %}{{ items | length }} cluster{{ '' if items | length == 1 else 's' }} awaiting a decision{% endblock %}
 {% block content %}
+{% set can_edit = admin.role in ['editor', 'super_admin'] %}
 
 {% if not items %}
   <div class="card" style="text-align:center;padding:44px">
@@ -14,54 +15,88 @@
   </div>
 {% else %}
   <div class="note" style="margin-bottom:16px">
-    Merging moves every book across and keeps the survivor's URL working — the merged row
-    <b>redirects</b> rather than disappearing, so nothing that already links to it breaks.
-    It is reversible. <b>Not the same</b> is remembered, so a pair you reject never comes back.
+    Pick the record to <b>keep</b> — the machine's choice is only a default. Open any name to
+    see what it actually carries before deciding{% if can_edit %}, and <b>fix the name</b> if
+    neither spelling is the one you want to publish{% endif %}. Merging moves every book across
+    and keeps the merged rows' URLs working — they <b>redirect</b> rather than disappearing, and
+    it is reversible. <b>Not the same</b> is remembered, so a pair you reject never comes back.
   </div>
 {% endif %}
 
 <div class="stack">
 {% for it in items %}
+  {% set cluster = it.kind ~ '-' ~ loop.index %}
   <div class="mod">
     <div class="hd">
       <span class="pill pend">{{ it.reason }}</span>
-      <b>{{ it.survivor_name }}</b>
+      <b>{{ it.members[0].name }}</b>
+      <span class="m">· {{ it.members | length }} records</span>
       <span class="pill mute" style="margin-left:auto">{{ it.singular }}</span>
     </div>
     <div class="bd">
 
-      <div class="lbl">Keeps everything</div>
-      <div style="margin-top:6px;font-size:14px">
-        <b>{{ it.survivor_name }}</b>
-        <span class="m">· {{ it.survivor_count }} {{ 'book' if it.survivor_count == 1 else 'books' }}</span>
-      </div>
-
-      <div class="lbl" style="margin-top:16px">Proposed duplicates</div>
-      {% for l in it.losers %}
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-                    padding:11px 0;border-bottom:1px solid var(--line)">
-          <div style="flex:1;min-width:200px">
-            <b style="font-size:14px">{{ l.name }}</b>
-            <span class="m">· {{ l.count }} {{ 'book' if l.count == 1 else 'books' }}</span>
+      <form method="post" action="/moderation/merges/{{ it.kind }}/merge" id="f-{{ cluster }}">
+        <div class="lbl">Which one stays?</div>
+        {% for m in it.members %}
+        <div class="mgc-row">
+          <label class="mgc-pick">
+            <input type="radio" name="survivor_id" value="{{ m.id }}" data-name="{{ m.name }}"
+                   {% if m.id == it.survivor_id %}checked{% endif %}>
+            <span>Keep</span>
+          </label>
+          <input type="hidden" name="member_ids" value="{{ m.id }}">
+          <div class="mgc-info">
+            <button type="button" class="peek" data-peek="/catalog/peek/{{ it.kind }}/{{ m.id }}">{{ m.name }}</button>
+            {% if m.suspect %}<span class="pill no" title="A run of words repeats — usually a bad import">repeats itself</span>{% endif %}
+            <s>{{ m.translit or '' }}{% if m.language %} · {{ m.language }}{% endif %}</s>
           </div>
-          <form method="post"
-                action="/moderation/merges/{{ it.kind }}/{{ it.survivor_id }}/{{ l.id }}/merge"
-                style="display:inline">
-            <button class="btn" type="submit">Merge into “{{ it.survivor_name }}”</button>
-          </form>
-          <form method="post"
-                action="/moderation/merges/{{ it.kind }}/{{ it.survivor_id }}/{{ l.id }}/dismiss"
-                style="display:inline">
-            <button class="btn ghost" type="submit">Not the same</button>
-          </form>
+          <div class="m mgc-count">{{ m.count }} {{ it.unit }}{{ '' if m.count == 1 else 's' }}</div>
+          <div class="mgc-act">
+            <button class="btn s" type="submit" form="d-{{ cluster }}-{{ loop.index }}">Not the same</button>
+          </div>
         </div>
+        {% endfor %}
+
+        {# The name is edited here rather than per row, so "keep this one, call
+           it that, fold the rest in" is one decision. Renaming first and
+           merging second cannot work from a queue: change a name and the
+           matcher stops grouping the cluster, so it vanishes before you can
+           merge it (found while testing, 12 Aug 2026). #}
+        <div class="mgc-go">
+          {% if can_edit %}
+          <label class="mgc-name">
+            <span class="lbl">Name to keep</span>
+            <input class="search" name="survivor_name" data-cluster-name
+                   value="{{ it.members[0].name }}" aria-label="Name of the record you keep">
+          </label>
+          {% endif %}
+          <button class="btn p" type="submit">Merge the rest into it</button>
+          <span class="hint">{{ it.members | length - 1 }} record{{ '' if it.members | length == 2 else 's' }} fold in.
+            {%- if can_edit %} Edit the name above if neither spelling is right — the URL doesn’t change.{% endif %} Reversible.</span>
+        </div>
+      </form>
+
+      {# Dismissal lives outside the cluster form — HTML forbids nesting forms,
+         so the row buttons above reach it by the form= attribute. #}
+      {% for m in it.members %}
+        <form method="post" hidden id="d-{{ cluster }}-{{ loop.index }}"
+              action="/moderation/merges/{{ it.kind }}/dismiss">
+          <input type="hidden" name="row_id" value="{{ m.id }}">
+          {% for other in it.members %}
+          <input type="hidden" name="member_ids" value="{{ other.id }}">
+          {% endfor %}
+        </form>
       {% endfor %}
 
-      {% if it.survivor_count == 0 %}
+      {% if it.suspect %}
       <div class="note warn" style="margin-top:12px">
-        The row proposed as the survivor carries no books itself. That is usually still correct —
-        it was picked on name completeness — but check it is the spelling you want to keep,
-        because it is the one that becomes the public page.
+        One of these names repeats a run of words — the signature of a bad import rather than a
+        fuller name.{% if can_edit %} Keep the row with the books, then <b>Fix name</b> on it.{% endif %}
+      </div>
+      {% elif it.empty %}
+      <div class="note" style="margin-top:12px">
+        None of these rows carries anything yet, so this merge is pure tidying — whichever
+        spelling you keep becomes the public page.
       </div>
       {% endif %}
 
