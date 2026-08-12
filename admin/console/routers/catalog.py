@@ -162,9 +162,7 @@ async def _peek_series(db: DbSession, row: Series) -> dict:
             {
                 "href": f"/catalog/works/{w.id}",
                 "title": (f"{w.series_number}. " if w.series_number else "") + w.title,
-                "sub": " · ".join(
-                    str(x) for x in (w.language, w.first_publish_year) if x
-                ),
+                "sub": " · ".join(str(x) for x in (w.language, w.first_publish_year) if x),
             }
             for w in works
         ],
@@ -697,9 +695,11 @@ async def set_work_series(
         admin_id=admin.id,
         target_type="work",
         target_id=str(work_id),
-        summary=(f"{work.title} → {series.name}" + (f" #{position}" if position else ""))
-        if series
-        else f"{work.title} taken out of its series",
+        summary=(
+            (f"{work.title} → {series.name}" + (f" #{position}" if position else ""))
+            if series
+            else f"{work.title} taken out of its series"
+        ),
         ip=client_ip(request),
     )
     await db.commit()
