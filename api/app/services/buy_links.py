@@ -75,6 +75,14 @@ def _search_query(isbn_raw: str | None, title: str, author: str | None) -> str:
     return f"{title} {author}".strip() if author else title
 
 
+def search_url(isbn_raw: str | None, title: str, author: str | None) -> str:
+    """The amazon.in search page for an edition — untagged, because it exists
+    to *find* the product, not to be served. The admin console's bulk-link
+    screen opens it beside the paste field so curating a link is search →
+    copy → paste rather than retyping the title."""
+    return f"https://www.amazon.in/s?k={quote_plus(_search_query(isbn_raw, title, author))}"
+
+
 def _amazon_link(isbn_raw: str | None, title: str, author: str | None, tag: str) -> dict:
     isbn10 = isbn_service.to_isbn10(isbn_raw)
     if isbn10:

@@ -9,11 +9,14 @@ import uuid
 from typing import Annotated
 
 from app.services import buy_links as buy_links_service  # noqa: E402
-from app.services import catalog_service  # noqa: E402
+from app.services import (
+    catalog_service,  # noqa: E402
+    merge_service,  # noqa: E402
+)
 from fastapi import APIRouter, Form, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
+from sqlalchemy import Text, cast, func, or_, select
+from sqlalchemy.orm import joinedload, selectinload
 
 from .. import assets, queries, security
 from ..deps import DbSession, RequireEditor, client_ip
@@ -31,6 +34,7 @@ from ..models_ref import (
     Work,
 )
 from ..templating import templates
+from .merges import _counts as _merge_counts
 
 router = APIRouter(prefix="/catalog")
 
@@ -106,6 +110,7 @@ async def catalog(
     q: str = Query(default=""),
     gap: str = Query(default="", alias="filter"),
     added_by: Annotated[uuid.UUID | None, Query()] = None,
+    keep: Annotated[uuid.UUID | None, Query()] = None,
 ) -> HTMLResponse:
     q = q.strip()
     filter_label = None
@@ -141,6 +146,7 @@ async def catalog(
         "no_cover": await count(Edition, Edition.deleted_at.is_(None), Edition.cover_url.is_(None)),
         "no_desc": await count(Work, Work.deleted_at.is_(None), Work.description.is_(None)),
         "no_isbn": await count(Edition, Edition.deleted_at.is_(None), Edition.isbn.is_(None)),
+        "no_amazon": await count(Edition, Edition.deleted_at.is_(None), _no_stored_amazon()),
         "no_works_author": await count(
             Author,
             Author.deleted_at.is_(None),
@@ -161,6 +167,7 @@ async def catalog(
             "gaps": gaps,
             "gap": gap,
             "added_by": added_by,
+            "keep": keep,
             "filter_label": filter_label,
             "flash": flash,
         },
@@ -234,6 +241,121 @@ async def book_detail(
     return resp
 
 
+def _no_stored_amazon():  # noqa: ANN202 — SQLAlchemy boolean expression
+    """Editions with no hand-entered Amazon-family link in buy_links. A text
+    scan of the JSONB, deliberately broader than buy_links.is_amazon — a false
+    "has one" hides a row from the worklist, a false "missing" just shows a row
+    whose generated link already works, so broad is the safe direction."""
+    txt = func.coalesce(cast(Edition.buy_links, Text), "")
+    return txt.notilike("%amazon%") & txt.notilike("%amzn%")
+
+
+_BL_PER_PAGE = 50
+
+
+@router.get("/buy-links")
+async def buy_links_worklist(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    q: str = Query(default=""),
+    lang: str = Query(default=""),
+    page: int = Query(default=1, ge=1),
+) -> HTMLResponse:
+    """The bulk curation table: every edition still missing a stored Amazon
+    link, one row per edition (a translation is its own edition, so each
+    language gets its own link), with the amazon.in search open-in-new-tab so
+    the loop is search → copy → paste → save, never retype."""
+    q, lang = q.strip(), lang.strip()
+    cond = [Edition.deleted_at.is_(None), Work.deleted_at.is_(None), _no_stored_amazon()]
+    if q:
+        like = f"%{q}%"
+        cond.append(or_(Work.title.ilike(like), Work.title_translit.ilike(like)))
+
+    # Language facets, counted before the language filter is applied so the
+    # other options stay visible (and pickable) while one is active. One
+    # expression object reused in SELECT and GROUP BY — two separately-built
+    # coalesce() calls bind as two different parameters and Postgres rejects
+    # the GROUP BY as not matching.
+    lang_col = func.coalesce(Edition.language, "")
+    lang_rows = (
+        await db.execute(
+            select(lang_col, func.count())
+            .select_from(Edition)
+            .join(Work, Edition.work_id == Work.id)
+            .where(*cond)
+            .group_by(lang_col)
+            .order_by(func.count().desc())
+        )
+    ).all()
+
+    if lang:
+        cond.append(func.coalesce(Edition.language, "") == ("" if lang == "none" else lang))
+
+    total = int(
+        await db.scalar(
+            select(func.count())
+            .select_from(Edition)
+            .join(Work, Edition.work_id == Work.id)
+            .where(*cond)
+        )
+        or 0
+    )
+    editions = (
+        (
+            await db.execute(
+                select(Edition)
+                .join(Work, Edition.work_id == Work.id)
+                .where(*cond)
+                .options(joinedload(Edition.work).selectinload(Work.authors))
+                .order_by(Work.title.asc(), Edition.id)
+                .limit(_BL_PER_PAGE)
+                .offset((page - 1) * _BL_PER_PAGE)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    rows = [
+        {
+            "e": e,
+            "w": e.work,
+            "author": ", ".join(a.name for a in e.work.authors) if e.work.authors else "",
+            "search": buy_links_service.search_url(
+                e.isbn, e.work.title, e.work.authors[0].name if e.work.authors else None
+            ),
+        }
+        for e in editions
+    ]
+    here = request.url.path + (f"?{request.url.query}" if request.url.query else "")
+    badges = await queries.nav_badges(db)
+    flash = pop_flash(request)
+    resp = templates.TemplateResponse(
+        request,
+        "buy_links.html",
+        {
+            "admin": admin,
+            "active": "buylinks",
+            "badges": badges,
+            "rows": rows,
+            "total": total,
+            "page": page,
+            "pages": max(1, -(-total // _BL_PER_PAGE)),
+            "q": q,
+            "lang": lang,
+            "langs": [
+                {"value": value or "none", "label": value or "(not set)", "count": count_}
+                for value, count_ in lang_rows
+            ],
+            "here": here,
+            "flash": flash,
+        },
+    )
+    if flash:
+        resp.delete_cookie("admin_flash", path="/")
+    return resp
+
+
 @router.post("/works/{work_id}/editions/{edition_id}/amazon-link")
 async def set_edition_amazon_link(
     request: Request,
@@ -242,21 +364,34 @@ async def set_edition_amazon_link(
     work_id: uuid.UUID,
     edition_id: uuid.UUID,
     url: Annotated[str, Form()] = "",
-) -> RedirectResponse:
+    next_url: Annotated[str, Form(alias="next")] = "",
+) -> Response:
     """Curate the edition's Amazon link. A stored link wins over the read-time
     generated one (services/buy_links.py), so this is the override for the
     books where the ISBN-derived link lands wrong — everything else keeps the
     dynamic link. An empty submit clears the override; other stored retailers
-    in the JSONB are preserved either way."""
-    resp = RedirectResponse(f"/catalog/works/{work_id}", status_code=303)
+    in the JSONB are preserved either way.
+
+    Serves two callers: the book page (plain form → redirect + flash) and the
+    buy-links worklist (fetch → bare status, the row marks itself saved without
+    a reload). `next` sends the non-JS fallback back to the worklist; it must
+    be a console-local path or it is ignored, so it can't become a redirector."""
+    is_fetch = request.headers.get("x-requested-with") == "fetch"
+    back = next_url if next_url.startswith("/catalog") else f"/catalog/works/{work_id}"
+
+    def fail(message: str) -> Response:
+        if is_fetch:
+            return PlainTextResponse(message, status_code=400)
+        r = RedirectResponse(back, status_code=303)
+        set_flash(r, "err", message)
+        return r
+
     edition = await db.get(Edition, edition_id)
     if edition is None or edition.work_id != work_id or edition.deleted_at is not None:
-        set_flash(resp, "err", "Edition not found on this work.")
-        return resp
+        return fail("Edition not found on this work.")
     url = url.strip()
     if url and not buy_links_service.is_amazon(url):
-        set_flash(resp, "err", "That doesn't look like an Amazon link (amazon.in / amzn.to).")
-        return resp
+        return fail("That doesn't look like an Amazon link (amazon.in / amzn.to).")
 
     kept = [
         link
@@ -280,6 +415,9 @@ async def set_edition_amazon_link(
         ip=client_ip(request),
     )
     await db.commit()
+    if is_fetch:
+        return Response(status_code=204)
+    resp = RedirectResponse(back, status_code=303)
     set_flash(
         resp,
         "ok",
@@ -351,9 +489,103 @@ async def authors(
     )
 
 
+# The manual side of duplicate handling. The matchers propose what they can
+# (moderation/merges), but a cross-script duplicate — "ഡിസി ബുക്സ്" beside
+# "DC Books" — shares no spelling with its twin, so no matcher will ever offer
+# it. The detail pages let a human search for the true record (search IS
+# cross-script) and link the two by hand.
+
+
+async def _merge_candidates(
+    db: DbSession, kind: str, current_id: uuid.UUID, merge_q: str
+) -> list[dict]:
+    """Rows the current entity could be folded into (or absorb), with how much
+    each carries — the reviewer needs the counts to pick the right survivor."""
+    if not merge_q:
+        return []
+    if kind == "authors":
+        found = await catalog_service.search_authors(db, merge_q, limit=8)
+    else:
+        found = await catalog_service.search_publishers(db, merge_q, limit=8)
+    rows = [r for r in found if r.id != current_id and r.merged_into_id is None]
+    counts = await _merge_counts(db, kind, [r.id for r in rows])
+    return [{"r": r, "count": counts.get(r.id, 0)} for r in rows]
+
+
+@router.post("/entity-merge")
+async def entity_merge(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    kind: Annotated[str, Form()],
+    survivor_id: Annotated[uuid.UUID, Form()],
+    loser_id: Annotated[uuid.UUID, Form()],
+) -> RedirectResponse:
+    """Fold one author/publisher into another, picked by hand on a detail page.
+    Same engine and same guards as the moderation queue (merge_service); the
+    queue handles what the matchers propose, this handles what they can't see."""
+    if kind not in merge_service.MODELS:
+        resp = RedirectResponse("/catalog", status_code=303)
+        set_flash(resp, "err", "Unknown kind.")
+        return resp
+    resp = RedirectResponse(f"/catalog/{kind}/{survivor_id}", status_code=303)
+    model = merge_service.MODELS[kind]
+    loser = await db.get(model, loser_id)
+    loser_name = loser.name if loser else "?"
+    if not await merge_service.merge(db, kind, survivor_id, loser_id):
+        back = RedirectResponse(f"/catalog/{kind}/{loser_id}", status_code=303)
+        set_flash(back, "err", "Could not merge those — one may already be merged.")
+        return back
+    await db.commit()
+    survivor = await db.get(model, survivor_id)
+    await security.audit(
+        db,
+        "merge.apply",
+        admin_id=admin.id,
+        target_type=kind,
+        target_id=str(survivor_id),
+        summary=f"merged “{loser_name}” into “{survivor.name if survivor else '?'}” (manual)",
+        ip=client_ip(request),
+    )
+    await db.commit()
+    set_flash(resp, "ok", f"Merged “{loser_name}” in. Its old URL redirects here now.")
+    return resp
+
+
+@router.post("/entity-unmerge")
+async def entity_unmerge(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    kind: Annotated[str, Form()],
+    row_id: Annotated[uuid.UUID, Form()],
+) -> RedirectResponse:
+    resp = RedirectResponse(f"/catalog/{kind}/{row_id}", status_code=303)
+    if kind not in merge_service.MODELS or not await merge_service.unmerge(db, kind, row_id):
+        set_flash(resp, "err", "That row is not merged.")
+        return resp
+    await db.commit()
+    await security.audit(
+        db,
+        "merge.undo",
+        admin_id=admin.id,
+        target_type=kind,
+        target_id=str(row_id),
+        summary="unmerged (works stay with the survivor)",
+        ip=client_ip(request),
+    )
+    await db.commit()
+    set_flash(resp, "ok", "Unmerged. Its books stayed with the survivor — move them by hand.")
+    return resp
+
+
 @router.get("/authors/{author_id}")
 async def author_detail(
-    request: Request, admin: RequireEditor, db: DbSession, author_id: uuid.UUID
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    author_id: uuid.UUID,
+    merge_q: str = Query(default=""),
 ) -> HTMLResponse:
     author = await db.get(Author, author_id)
     if author is None:
@@ -372,8 +604,10 @@ async def author_detail(
         )
         or 0
     )
+    merge_q = merge_q.strip()
     badges = await queries.nav_badges(db)
-    return templates.TemplateResponse(
+    flash = pop_flash(request)
+    resp = templates.TemplateResponse(
         request,
         "author_detail.html",
         {
@@ -384,8 +618,16 @@ async def author_detail(
             "works": works,
             "linked": linked,
             "pending_claims": pending_claims,
+            "kind": "authors",
+            "merge_q": merge_q,
+            "merge_candidates": await _merge_candidates(db, "authors", author_id, merge_q),
+            "merged_into": await merge_service.resolve_merged(db, "authors", author),
+            "flash": flash,
         },
     )
+    if flash:
+        resp.delete_cookie("admin_flash", path="/")
+    return resp
 
 
 @router.get("/publishers")
@@ -408,7 +650,11 @@ async def publishers(
 
 @router.get("/publishers/{publisher_id}")
 async def publisher_detail(
-    request: Request, admin: RequireEditor, db: DbSession, publisher_id: uuid.UUID
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    publisher_id: uuid.UUID,
+    merge_q: str = Query(default=""),
 ) -> HTMLResponse:
     publisher = await db.get(Publisher, publisher_id)
     if publisher is None:
@@ -416,8 +662,10 @@ async def publisher_detail(
         set_flash(resp, "err", "Publisher not found.")
         return resp
     works = await catalog_service.publisher_works(db, publisher_id)
+    merge_q = merge_q.strip()
     badges = await queries.nav_badges(db)
-    return templates.TemplateResponse(
+    flash = pop_flash(request)
+    resp = templates.TemplateResponse(
         request,
         "publisher_detail.html",
         {
@@ -428,8 +676,16 @@ async def publisher_detail(
             "works": works,
             "uploads_on": assets.configured(),
             "uploads_why": assets.why_not_configured(),
+            "kind": "publishers",
+            "merge_q": merge_q,
+            "merge_candidates": await _merge_candidates(db, "publishers", publisher_id, merge_q),
+            "merged_into": await merge_service.resolve_merged(db, "publishers", publisher),
+            "flash": flash,
         },
     )
+    if flash:
+        resp.delete_cookie("admin_flash", path="/")
+    return resp
 
 
 @router.post("/publishers/{publisher_id}/logo/remove")

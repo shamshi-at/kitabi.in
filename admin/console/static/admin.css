@@ -113,6 +113,12 @@ a.kpi:hover{border-color:#c9b48a;box-shadow:0 6px 16px rgba(60,42,25,.10);transf
 .kpi .k{font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-soft);
   font-weight:700;margin-top:5px}
 .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* Grid items default to min-width:auto, so one unbreakable string (a UUID in a
+   .note) silently forces its column — and the whole page — wider than a phone
+   viewport. min-width:0 lets the column actually shrink; anywhere-wrapping
+   lets the id break mid-token instead of overflowing. */
+.split>*{min-width:0}
+.note{overflow-wrap:anywhere}
 .split3{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
 .bar{height:6px;background:var(--paper-deep);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;border-radius:3px}
@@ -190,6 +196,43 @@ a.healthrow .bar{margin-top:6px}
   flex-wrap:wrap;margin-bottom:12px}
 .worklist-head .lbl{display:block;margin-bottom:2px}
 .worklist-head b{font-size:14px}
+
+/* ---- merge picker (catalog rows fill the merge form) ---- */
+.btn.on{border-color:var(--oxblood);background:var(--gold-soft);box-shadow:inset 0 0 0 1px var(--oxblood)}
+#mergeform.ready button{background:var(--moss);border-color:var(--moss);color:#fff}
+
+/* ---- manual entity-merge picker (author/publisher detail) ---- */
+.mg-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card);
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.mg-row+.mg-row{margin-top:8px}
+.mg-info{flex:1;min-width:170px}
+.mg-act{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ---- buy-links worklist ---- */
+.bl-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bl-row{display:flex;gap:12px;align-items:center;background:var(--card);
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.bl-row+.bl-row{margin-top:8px}
+.bl-row.done{border-color:var(--moss);background:#F2F5EC}
+.bl-cover{width:34px;height:50px;object-fit:cover;border-radius:3px;flex-shrink:0;
+  background:var(--paper-deep);border:1px solid var(--line)}
+.bl-info{flex:1;min-width:0}
+.bl-info .t{font-weight:600;font-size:13px}
+.bl-meta{margin-top:2px}
+.bl-act{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1;min-width:260px;
+  justify-content:flex-end}
+.bl-act form{display:flex;gap:6px;align-items:center;flex:1;min-width:0;flex-wrap:wrap}
+.bl-url{flex:1;min-width:150px;padding:6px 10px;font-size:12px}
+.inline-err{font-size:11px;color:var(--danger);flex-basis:100%}
+.inline-err:empty{display:none}
+.bl-pager{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px}
+@media (max-width:900px){
+  .bl-row{flex-wrap:wrap}
+  /* flex-basis, not width — as a flex item .bl-act has flex:1 (basis 0%),
+     and a basis always beats width, so width:100% silently did nothing and
+     the form overflowed the viewport (found at 375px). */
+  .bl-act{flex-basis:100%;min-width:0;justify-content:flex-start}
+}
 
 /* ---- mobile nav (hamburger + off-canvas rail) ---- */
 .railtoggle{display:none;flex-direction:column;justify-content:center;gap:4px;

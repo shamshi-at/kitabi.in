@@ -118,6 +118,77 @@
   });
 })();
 
+// Merge picker — Keep/Absorb buttons on catalog rows fill the merge form, so
+// nobody copies UUIDs by hand (impossible on a phone). Marks the chosen row's
+// button so the current selection is visible, and flashes the form when both
+// halves are set.
+(function () {
+  const form = document.getElementById("mergeform");
+  if (!form) return;
+  const inputs = {
+    keep: form.querySelector('[name="keep"]'),
+    absorb: form.querySelector('[name="absorb"]'),
+  };
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-mergepick]");
+    if (!btn) return;
+    const role = btn.dataset.mergepick;
+    inputs[role].value = btn.dataset.id;
+    document
+      .querySelectorAll(`[data-mergepick="${role}"].on`)
+      .forEach((b) => b.classList.remove("on"));
+    btn.classList.add("on");
+    if (inputs.keep.value && inputs.absorb.value) {
+      form.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      form.classList.add("ready");
+    }
+  });
+})();
+
+// Inline save — a form marked data-inline posts via fetch and marks itself
+// saved in place, so the buy-links worklist doesn't reload the whole page
+// (and lose scroll position) for every row saved.
+(function () {
+  document.addEventListener("submit", async (e) => {
+    const form = e.target.closest("form[data-inline]");
+    if (!form) return;
+    e.preventDefault();
+    const btn = form.querySelector("button");
+    const err = form.querySelector(".inline-err");
+    btn.disabled = true;
+    if (err) err.textContent = "";
+    try {
+      const res = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        headers: { "X-Requested-With": "fetch" },
+      });
+      if (res.ok) {
+        const row = form.closest("[data-row]") || form;
+        row.classList.add("done");
+        btn.textContent = "Saved ✓";
+      } else {
+        if (err) err.textContent = await res.text();
+        btn.disabled = false;
+      }
+    } catch (_) {
+      if (err) err.textContent = "Network error — try again.";
+      btn.disabled = false;
+    }
+  });
+  // Retyping after a save re-arms the button.
+  document.addEventListener("input", (e) => {
+    const form = e.target.closest("form[data-inline]");
+    if (!form) return;
+    const btn = form.querySelector("button");
+    if (btn.textContent.startsWith("Saved")) {
+      btn.textContent = "Save";
+      btn.disabled = false;
+      (form.closest("[data-row]") || form).classList.remove("done");
+    }
+  });
+})();
+
 // Six-box one-time-code input: auto-advance, backspace-to-previous, paste-fills,
 // and it keeps a hidden `code` field in sync (that's what the form submits).
 // Auto-submits the moment all six digits are present.

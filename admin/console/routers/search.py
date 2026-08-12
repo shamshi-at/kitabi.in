@@ -57,6 +57,12 @@ _ACTIONS = [
         "role": "editor",
     },
     {
+        "label": "Buy links",
+        "href": "/catalog/buy-links",
+        "keys": "amazon affiliate buy retail worklist links",
+        "role": "editor",
+    },
+    {
         "label": "Readers",
         "href": "/readers",
         "keys": "readers users accounts suspend support",

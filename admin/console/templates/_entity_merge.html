@@ -1,0 +1,67 @@
+{# Manual duplicate linking, shared by author_detail and publisher_detail.
+   Context: kind ("authors"/"publishers"), ent (the row), merge_q,
+   merge_candidates [{r, count}], merged_into (survivor row or None).
+   The matchers propose what they can (Duplicate review); this card is for
+   what they can't see — a cross-script twin shares no spelling with its
+   duplicate, so only a human search will ever pair them. #}
+{% set singular = 'author' if kind == 'authors' else 'publisher' %}
+{% set unit = 'works' if kind == 'authors' else 'editions' %}
+
+{% if ent.merged_into_id %}
+<div class="note warn" style="margin-top:14px">
+  This {{ singular }} was merged into
+  {% if merged_into %}<a href="/catalog/{{ kind }}/{{ merged_into.id }}"><b>{{ merged_into.name }}</b></a>{% else %}another record{% endif %}
+  — its URL redirects there.
+  <form method="post" action="/catalog/entity-unmerge" style="display:inline;margin-left:8px">
+    <input type="hidden" name="kind" value="{{ kind }}">
+    <input type="hidden" name="row_id" value="{{ ent.id }}">
+    <button class="btn s">Unmerge</button>
+  </form>
+</div>
+{% else %}
+<div class="card" style="margin-top:14px">
+  <div class="lbl">Duplicate of another {{ singular }}?</div>
+  <p class="hint" style="margin-top:6px">When the machine can’t see the match — “ഡിസി ബുക്സ്” beside
+    “DC Books” shares no spelling with its twin — link the records by hand.
+    Search here is cross-script and typo-tolerant.</p>
+  <form method="get" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+    <input class="search" name="merge_q" value="{{ merge_q }}"
+      placeholder="Search {{ kind }} in any script…" style="flex:1;min-width:180px">
+    <button class="btn">Search</button>
+  </form>
+  {% if merge_q %}
+  <div style="margin-top:10px">
+    {% for c in merge_candidates %}
+    <div class="mg-row">
+      <div class="mg-info">
+        <a href="/catalog/{{ kind }}/{{ c.r.id }}" style="font-weight:600;text-decoration:none">{{ c.r.name }}</a>
+        <div class="m mono">{{ c.r.name_translit or '' }}</div>
+        <div class="m">{{ c.count }} {{ unit[:-1] if c.count == 1 else unit }}</div>
+      </div>
+      <div class="mg-act">
+        <form method="post" action="/catalog/entity-merge"
+          onsubmit="return confirm('Fold ' + {{ ent.name|tojson }} + ' into ' + {{ c.r.name|tojson }} + '? Everything it carries moves there. Reversible.')">
+          <input type="hidden" name="kind" value="{{ kind }}">
+          <input type="hidden" name="survivor_id" value="{{ c.r.id }}">
+          <input type="hidden" name="loser_id" value="{{ ent.id }}">
+          <button class="btn s p">Keep that one</button>
+        </form>
+        <form method="post" action="/catalog/entity-merge"
+          onsubmit="return confirm('Fold ' + {{ c.r.name|tojson }} + ' into ' + {{ ent.name|tojson }} + '? Everything it carries moves here. Reversible.')">
+          <input type="hidden" name="kind" value="{{ kind }}">
+          <input type="hidden" name="survivor_id" value="{{ ent.id }}">
+          <input type="hidden" name="loser_id" value="{{ c.r.id }}">
+          <button class="btn s">Keep this page</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="note">No other {{ kind }} match “{{ merge_q }}”.</div>
+    {% endfor %}
+  </div>
+  <p class="hint" style="margin-top:8px"><b>Keep that one</b> folds this page into the record you
+    picked; <b>Keep this page</b> pulls that record in here. Either way the losing URL redirects
+    to the kept record, and Unmerge undoes it.</p>
+  {% endif %}
+</div>
+{% endif %}

@@ -22,7 +22,8 @@
     <div class="lbl" style="margin-top:14px">Description</div>
     <p style="margin-top:6px;font-size:13px;line-height:1.6;color:{{ 'var(--ink)' if w.description else 'var(--ink-soft)' }}">
       {{ w.description or '— none —' }}</p>
-    <div style="margin-top:14px"><a class="btn s" href="/catalog?q={{ w.title_translit or w.title }}">Find a duplicate to merge</a></div>
+    <div style="margin-top:14px"><a class="btn s"
+      href="/catalog?q={{ w.title_translit or w.title }}&keep={{ w.id }}">Find a duplicate to merge</a></div>
     <div class="note" style="margin-top:10px">Work id <span class="mono">{{ w.id }}</span></div>
   </div>
   <div class="card">

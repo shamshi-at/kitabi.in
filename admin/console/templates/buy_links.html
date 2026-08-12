@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Buy links · Kitabi Admin{% endblock %}
+{% block heading %}Buy links{% endblock %}
+{% block subheading %}Editions with no curated Amazon link — each translation is its own edition, so each language gets its own link{% endblock %}
+{% block content %}
+
+<div class="card" style="margin-bottom:14px">
+  <form method="get" action="/catalog/buy-links" class="bl-filters">
+    <input class="search" name="q" value="{{ q }}" placeholder="Filter by title…"
+      style="flex:1;min-width:160px">
+    <select name="lang" class="search">
+      <option value="">All languages</option>
+      {% for l in langs %}
+      <option value="{{ l.value }}" {% if lang == l.value %}selected{% endif %}>
+        {{ l.label }} ({{ "{:,}".format(l.count) }})</option>
+      {% endfor %}
+    </select>
+    <button class="btn">Apply</button>
+    {% if q or lang %}<a class="btn s" href="/catalog/buy-links">Clear</a>{% endif %}
+  </form>
+  <p class="hint" style="margin-top:8px">Every edition here still serves the <i>generated</i>
+    ISBN-derived link, so nothing is broken — but a pasted product link is edition-exact and
+    always beats a search page. <b>Search Amazon</b> opens the pre-filled search in a new tab;
+    paste the product URL back and <b>Save</b>. The row saves in place — no reload.</p>
+</div>
+
+<div class="worklist-head">
+  <div><span class="lbl">Worklist</span>
+    <b>{{ "{:,}".format(total) }} edition{{ 's' if total != 1 }} missing a link</b>
+    {% if pages > 1 %} · page {{ page }} of {{ pages }}{% endif %}</div>
+</div>
+
+{% for r in rows %}
+<div class="bl-row" data-row>
+  {% if r.e.cover_url %}<img class="bl-cover" src="{{ r.e.cover_url }}" alt="" loading="lazy">
+  {% else %}<div class="bl-cover"></div>{% endif %}
+  <div class="bl-info">
+    <a class="t" href="/catalog/works/{{ r.w.id }}" style="text-decoration:none">{{ r.w.title }}</a>
+    <div class="m">{{ r.author or '—' }}</div>
+    <div class="m bl-meta">{{ r.e.language or 'language not set' }}
+      {%- if r.e.format %} · {{ r.e.format }}{% endif %}
+      · {{ 'ISBN ' ~ r.e.isbn if r.e.isbn else 'no ISBN' }}
+      {%- if r.e.publisher %} · {{ r.e.publisher.name }}{% endif %}</div>
+  </div>
+  <div class="bl-act">
+    <a class="btn s" href="{{ r.search }}" target="_blank" rel="noopener">Search Amazon ↗</a>
+    <form data-inline method="post"
+      action="/catalog/works/{{ r.w.id }}/editions/{{ r.e.id }}/amazon-link">
+      <input type="hidden" name="next" value="{{ here }}">
+      <input class="search bl-url" type="url" name="url" placeholder="Paste amazon.in link…"
+        aria-label="Amazon link for {{ r.w.title }}">
+      <button class="btn s p">Save</button>
+      <span class="inline-err" role="alert"></span>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="note">Nothing here — every edition{% if q or lang %} matching this filter{% endif %}
+  has a curated Amazon link. 🎉</div>
+{% endfor %}
+
+{% if pages > 1 %}
+<div class="bl-pager">
+  {% set keep_q = (('&q=' ~ (q | urlencode)) if q else '') ~ (('&lang=' ~ (lang | urlencode)) if lang else '') %}
+  {% if page > 1 %}<a class="btn s" href="/catalog/buy-links?page={{ page - 1 }}{{ keep_q }}">← Previous</a>{% endif %}
+  <span class="m">page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a class="btn s" href="/catalog/buy-links?page={{ page + 1 }}{{ keep_q }}">Next →</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -232,6 +232,23 @@ async def test_stored_amazon_link_leads_on_the_public_page(
     assert amazon["affiliate"] is False, "nothing configured, nothing claimed"
 
 
+def test_search_url_prefers_the_isbn():
+    url = buy_links.search_url(ISBN13, "Chemmeen", "Thakazhi")
+    assert url == f"https://www.amazon.in/s?k={ISBN13}"
+
+
+def test_search_url_falls_back_to_title_and_author():
+    assert (
+        buy_links.search_url(None, "Chemmeen", "Thakazhi")
+        == "https://www.amazon.in/s?k=Chemmeen+Thakazhi"
+    )
+    # A checksum-invalid ISBN searches the title, not the mis-keyed number.
+    assert (
+        buy_links.search_url("9788126403450", "Chemmeen", None)
+        == "https://www.amazon.in/s?k=Chemmeen"
+    )
+
+
 async def test_the_stored_shape_stays_clean_on_write(db_sessionmaker, client):
     """A client that echoes the served shape back (affiliate flag included)
     must not get computed fields into the JSONB — the column stays exactly
