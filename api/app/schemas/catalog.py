@@ -137,6 +137,24 @@ class SeriesOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     name: str
+    slug: str | None = None
+    name_translit: str | None = None
+    primary_language: str | None = None
+    description: str | None = None
+
+
+class SeriesWithCountOut(SeriesOut):
+    """A series and how many books it holds — the browse list and the picker.
+    The count is what separates a real series from the empty row a typo left
+    behind, so it travels with the name everywhere a series is chosen."""
+
+    book_count: int = 0
+
+
+class SeriesCreate(BaseModel):
+    name: str
+    primary_language: str | None = None
+    description: str | None = None
 
 
 class BuyLink(BaseModel):
@@ -194,6 +212,11 @@ class WorkOut(BaseModel):
     # The literary form ("Type" in the UI) — one of WORK_FORMS, or null.
     form: str | None = None
     aggregate_rating: float | None
+    # Where this book sits in a series, if it does. On the Work since migration
+    # 000043; EditionOut carries the same values for app installs that still
+    # read them there.
+    series: SeriesOut | None = None
+    series_number: int | None = None
     translation_group_id: uuid.UUID | None
     # Which Work this one was translated *from* — the direction on top of the
     # undirected group. Null on originals and legacy flat-linked groups.
@@ -233,6 +256,9 @@ class WorkSummaryOut(BaseModel):
     # "in group" without a detail fetch (T2's stamps).
     translation_group_id: uuid.UUID | None = None
     original_work_id: uuid.UUID | None = None
+    # So a browse row can say "Book 2 of Malgudi" without a detail fetch.
+    series: SeriesOut | None = None
+    series_number: int | None = None
     authors: list[AuthorOut]
     translators: list[AuthorOut] = []
     edition: EditionOut | None
@@ -269,6 +295,8 @@ class WorkCreate(BaseModel):
     genre_names: list[str] = []
     publisher_id: uuid.UUID | None = None
     publisher_name: str | None = None
+    # Picked series wins over typed; both land on the Work (migration 000043).
+    series_id: uuid.UUID | None = None
     series_name: str | None = None
     series_number: int | None = None
     isbn: NormalizedIsbn = None
@@ -293,6 +321,12 @@ class WorkUpdate(BaseModel):
     translator_ids: list[uuid.UUID] | None = None
     translator_names: list[str] | None = None
     genre_names: list[str] | None = None
+    # Series membership is a property of the Work (migration 000043). `_id` is
+    # what every picker sends; `_name` stays for the import/extraction paths
+    # that only ever have a string.
+    series_id: uuid.UUID | None = None
+    series_name: str | None = None
+    series_number: int | None = None
 
     _check_form = field_validator("form")(_validate_form)
 
@@ -336,6 +370,9 @@ class EditionCreate(BaseModel):
 
     publisher_id: uuid.UUID | None = None
     publisher_name: str | None = None
+    # Accepted here for app installs that predate the move to the Work; the
+    # service redirects it there rather than writing the edition's own column.
+    series_id: uuid.UUID | None = None
     series_name: str | None = None
     series_number: int | None = None
     isbn: NormalizedIsbn = None
@@ -350,6 +387,8 @@ class EditionCreate(BaseModel):
 class EditionUpdate(BaseModel):
     publisher_id: uuid.UUID | None = None
     publisher_name: str | None = None
+    # Picked series wins over typed; both land on the Work (migration 000043).
+    series_id: uuid.UUID | None = None
     series_name: str | None = None
     series_number: int | None = None
     isbn: NormalizedIsbn = None

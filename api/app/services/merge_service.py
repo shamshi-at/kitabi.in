@@ -32,7 +32,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Author, Edition, MergeDismissal, Publisher
+from app.models import Author, Edition, MergeDismissal, Publisher, Series, Work
 from app.models.work import work_authors
 from app.services.search_rank import normalize
 
@@ -41,7 +41,7 @@ EXACT = "exact"
 WORD_ORDER = "word_order"
 SPELLING = "spelling"
 
-MODELS = {"authors": Author, "publishers": Publisher}
+MODELS = {"authors": Author, "publishers": Publisher, "series": Series}
 
 
 @dataclass
@@ -83,6 +83,12 @@ async def _counts(db: AsyncSession, kind: str, ids: list[uuid.UUID]) -> dict[uui
             select(work_authors.c.author_id, func.count(work_authors.c.work_id))
             .where(work_authors.c.author_id.in_(ids))
             .group_by(work_authors.c.author_id)
+        )
+    elif kind == "series":
+        stmt = (
+            select(Work.series_id, func.count(Work.id))
+            .where(Work.series_id.in_(ids), Work.deleted_at.is_(None))
+            .group_by(Work.series_id)
         )
     else:
         stmt = (
@@ -214,6 +220,7 @@ _CARRY_OVER = {
         "linked_user_id",
     ),
     "publishers": ("logo_url", "primary_language", "external_id", "external_source"),
+    "series": ("description", "primary_language", "external_id", "external_source"),
 }
 
 
@@ -268,6 +275,12 @@ async def merge(db: AsyncSession, kind: str, survivor_id: uuid.UUID, loser_id: u
             work_authors.update()
             .where(work_authors.c.author_id == loser_id)
             .values(author_id=survivor_id)
+        )
+    elif kind == "series":
+        # The books move, and keep their positions: two rows for one series
+        # hold the same ordering, so a merge should not renumber anything.
+        await db.execute(
+            update(Work).where(Work.series_id == loser_id).values(series_id=survivor_id)
         )
     else:
         await db.execute(

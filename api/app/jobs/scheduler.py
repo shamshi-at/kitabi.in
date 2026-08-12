@@ -21,6 +21,7 @@ LOCK_LENDING_REMINDER = 1002
 LOCK_BACKFILL_SLUGS = 1003
 LOCK_BACKFILL_COVERS = 1004
 LOCK_MERGE_EXACT = 1005
+LOCK_BACKFILL_SERIES = 1006
 
 
 @asynccontextmanager
@@ -42,6 +43,7 @@ async def advisory_lock(session: AsyncSession, lock_id: int) -> AsyncIterator[bo
 
 def start() -> None:
     from app.jobs.backfill_covers import backfill_covers
+    from app.jobs.backfill_series_search import backfill_series_search
     from app.jobs.backfill_slugs import backfill_slugs
     from app.jobs.keep_warm import keep_warm
     from app.jobs.merge_exact import merge_exact_duplicates
@@ -87,6 +89,19 @@ def start() -> None:
         id="merge_exact",
         replace_existing=True,
         next_run_time=datetime.now(UTC) + timedelta(minutes=3),
+    )
+    # Hourly, and normally a no-op: migration 000043 left the series search
+    # columns NULL by design (it could not transliterate in SQL), so this
+    # fills the rows that predate them. A series nobody edits is never written
+    # again, and until it is, its Malayalam name can't be found by a Latin
+    # query — so it can't wait for organic writes.
+    scheduler.add_job(
+        backfill_series_search,
+        "interval",
+        hours=1,
+        id="backfill_series_search",
+        replace_existing=True,
+        next_run_time=datetime.now(UTC) + timedelta(minutes=4),
     )
     scheduler.start()
 

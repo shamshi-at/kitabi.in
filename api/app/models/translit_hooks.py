@@ -13,6 +13,7 @@ from sqlalchemy import event
 
 from app.models.author import Author
 from app.models.publisher import Publisher
+from app.models.series import Series
 from app.models.work import Work
 from app.services.translit import fold, transliterate
 
@@ -34,5 +35,12 @@ def _author_translit(mapper, connection, target: Author) -> None:  # noqa: ANN00
 @event.listens_for(Publisher, "before_insert")
 @event.listens_for(Publisher, "before_update")
 def _publisher_translit(mapper, connection, target: Publisher) -> None:  # noqa: ANN001
+    target.name_translit = transliterate(target.name)
+    target.name_fold = fold(target.name)
+
+
+@event.listens_for(Series, "before_insert")
+@event.listens_for(Series, "before_update")
+def _series_translit(mapper, connection, target: Series) -> None:  # noqa: ANN001
     target.name_translit = transliterate(target.name)
     target.name_fold = fold(target.name)

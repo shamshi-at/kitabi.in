@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.models.author import Author
     from app.models.edition import Edition
     from app.models.genre import Genre
+    from app.models.series import Series
 
 # Many-to-many join tables — plain association tables (no extra columns yet),
 # so a lightweight Table object is enough; no need for a mapped class.
@@ -86,6 +87,16 @@ class Work(CatalogMixin, Base):
     # Never written to directly by the add/edit flow.
     aggregate_rating: Mapped[float | None] = mapped_column(Float, default=None)
 
+    # Which series this book belongs to, and where in it. On the Work, not the
+    # Edition (migration 000043): the position is a property of the story, so
+    # it cannot differ between two printings — and every translation of the
+    # same story sits at the same position, which is what lets the series page
+    # show one entry per book instead of one per language. See models/series.py.
+    series_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("series.id"), default=None, index=True
+    )
+    series_number: Mapped[int | None] = mapped_column(default=None)
+
     # Translation linking (feature-map.md; UI landed 21 Jul 2026). Works
     # sharing a non-null value here are translations of one another — the
     # undirected cross-navigation set.
@@ -108,5 +119,10 @@ class Work(CatalogMixin, Base):
     translators: Mapped[list["Author"]] = relationship(secondary=work_translators, lazy="selectin")
     genres: Mapped[list["Genre"]] = relationship(secondary=work_genres, lazy="selectin")
     editions: Mapped[list["Edition"]] = relationship(back_populates="work", lazy="selectin")
+    # selectin, not joined: a joined eager load welds a LEFT JOIN onto every
+    # Work query, and the browse screen's author sort groups by works.id —
+    # which Postgres then rejects, because the joined series columns are in the
+    # select list and not in the GROUP BY. A second query has no such reach.
+    series: Mapped["Series | None"] = relationship(lazy="selectin")
 
     __table_args__ = (Index("ix_works_translation_group", "translation_group_id"),)

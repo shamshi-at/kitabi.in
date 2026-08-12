@@ -179,16 +179,18 @@ async def test_author_page_aggregates_without_a_second_request(db_sessionmaker):
 
 
 async def test_series_page_orders_by_reading_order(db_sessionmaker):
+    """Membership is on the Work since migration 000043 — one row, one
+    position, rather than a number per printing that the page had to `min()`."""
     async with db_sessionmaker() as db:
         series = Series(name="Malgudi")
         db.add(series)
         await db.flush()
         await slug_service.ensure_slug(db, series)
         for n, title in ((3, "The Dark Room"), (1, "Swami and Friends"), (2, "The Bachelor")):
-            w = Work(title=title)
+            w = Work(title=title, series_id=series.id, series_number=n)
             db.add(w)
             await db.flush()
-            db.add(Edition(work_id=w.id, series_id=series.id, series_number=n))
+            db.add(Edition(work_id=w.id))
         await db.commit()
 
         page = await public_service.series_page(db, "malgudi")
@@ -197,6 +199,7 @@ async def test_series_page_orders_by_reading_order(db_sessionmaker):
             "The Bachelor",
             "The Dark Room",
         ]
+        assert [e.number for e in page.entries] == [1, 2, 3]
 
 
 async def test_home_prefers_a_featured_book_that_will_actually_look_good(db_sessionmaker):

@@ -413,33 +413,82 @@ async def publisher_page(db: AsyncSession, key: str) -> P.PublisherPage | None:
     )
 
 
+def _pick_primary(group: list[Work], series: Series) -> Work:
+    """Which translation represents a position on a page with no reader.
+
+    The original first — it is the book the others are versions of, and the one
+    whose title the series is usually known by. Then the series' own language,
+    then the earliest published. Deterministic either way, because a page whose
+    main card changes between two identical requests is a page a crawler sees
+    flicker.
+    """
+    originals = {w.original_work_id for w in group if w.original_work_id is not None}
+    return sorted(
+        group,
+        key=lambda w: (
+            w.original_work_id is not None and w.id not in originals,
+            (series.primary_language or "") != (w.language or ""),
+            w.first_publish_year or 9999,
+            w.title or "",
+        ),
+    )[0]
+
+
 async def series_page(db: AsyncSession, key: str) -> P.SeriesPage | None:
     series = await resolve(db, Series, key)
     if series is None:
         return None
-    # One row per work with its position, then join. A plain DISTINCT join
-    # can't order by `series_number` — Postgres requires ORDER BY expressions to
-    # appear in the select list under SELECT DISTINCT — and grouping first also
-    # settles what a book with two editions in the series is numbered.
-    positions = (
-        select(Edition.work_id, func.min(Edition.series_number).label("position"))
-        .where(Edition.series_id == series.id)
-        .group_by(Edition.work_id)
-        .subquery()
-    )
+    # Membership is on the Work since migration 000043 — one row, one position,
+    # no `min()` over the editions to decide which number counted.
     stmt = (
         _with_relations(select(Work))
-        .join(positions, positions.c.work_id == Work.id)
-        .where(Work.deleted_at.is_(None))
-        .order_by(positions.c.position.asc().nullslast(), Work.first_publish_year.asc())
+        .where(Work.series_id == series.id, Work.deleted_at.is_(None))
+        .order_by(
+            Work.series_number.asc().nullslast(),
+            Work.first_publish_year.asc().nullslast(),
+            Work.title.asc(),
+        )
     )
     works = list((await db.execute(stmt)).scalars().unique().all())
+
+    # Collapse each position's translations into one entry. A work with no
+    # translation group is its own position.
+    groups: dict[tuple, list[Work]] = {}
+    order: list[tuple] = []
+    for work in works:
+        key_ = ("g", work.translation_group_id) if work.translation_group_id else ("w", work.id)
+        if key_ not in groups:
+            groups[key_] = []
+            order.append(key_)
+        groups[key_].append(work)
+
+    counts = await _rating_counts(db, [w.id for w in works])
+    entries = []
+    for key_ in order:
+        group = groups[key_]
+        primary = _pick_primary(group, series)
+        entries.append(
+            P.SeriesEntry(
+                number=primary.series_number,
+                book=card(primary, rating_count=counts.get(primary.id, 0)),
+                also=[
+                    card(w, rating_count=counts.get(w.id, 0)) for w in group if w.id != primary.id
+                ],
+            )
+        )
+
     return P.SeriesPage(
         id=series.id,
         slug=series.slug,
         name=series.name,
-        works=await _cards(db, works),
-        indexable=len(works) >= 2,
+        description=series.description,
+        primary_language=series.primary_language,
+        entries=entries,
+        works=[card(w, rating_count=counts.get(w.id, 0)) for w in works],
+        languages=sorted({w.language for w in works if w.language}),
+        # Two entries, not two works: a single book listed in three languages
+        # is not a series, and indexing it as one is what makes thin pages.
+        indexable=len(entries) >= 2,
     )
 
 

@@ -30,6 +30,9 @@ from app.schemas.catalog import (
     PublisherCreate,
     PublisherOut,
     PublisherWorksOut,
+    SeriesCreate,
+    SeriesOut,
+    SeriesWithCountOut,
     TranslationLinkIn,
     WorkCreate,
     WorkOut,
@@ -54,6 +57,21 @@ router = APIRouter(prefix="/catalog", tags=["catalog"])
 OlClient = Annotated[OpenLibraryClient, Depends(get_openlibrary_client)]
 
 
+def _edition_out(edition, work) -> EditionOut:  # noqa: ANN001 — ORM instances
+    """One edition, with the series read off its Work.
+
+    Series moved to the Work in migration 000043, but every app install in the
+    field reads `edition.series` / `edition.series_number` — so the response
+    keeps carrying them. Served from the work rather than mirrored into the
+    edition's own columns: one place holds the truth, and the old shape is a
+    view of it, not a second copy that can drift.
+    """
+    out = EditionOut.model_validate(edition)
+    out.series = SeriesOut.model_validate(work.series) if work.series else None
+    out.series_number = work.series_number
+    return out
+
+
 def work_summary(work) -> WorkSummaryOut:  # noqa: ANN001 — Work ORM instance
     edition = work.editions[0] if work.editions else None
     return WorkSummaryOut(
@@ -63,9 +81,11 @@ def work_summary(work) -> WorkSummaryOut:  # noqa: ANN001 — Work ORM instance
         aggregate_rating=work.aggregate_rating,
         translation_group_id=work.translation_group_id,
         original_work_id=work.original_work_id,
+        series=SeriesOut.model_validate(work.series) if work.series else None,
+        series_number=work.series_number,
         authors=work.authors,
         translators=work.translators,
-        edition=EditionOut.model_validate(edition) if edition else None,
+        edition=_edition_out(edition, work) if edition else None,
     )
 
 
@@ -91,10 +111,14 @@ async def _work_out(db: AsyncSession, work) -> WorkOut:  # noqa: ANN001 — Work
     first_author = work.authors[0] if work.authors else None
     author = (first_author.pen_name or first_author.name) if first_author else None
     stored_by_id = {e.id: e for e in work.editions}
+    series_out = SeriesOut.model_validate(work.series) if work.series else None
     for edition_out in out.editions:
         source = stored_by_id.get(edition_out.id)
         if source is None:
             continue
+        # See _edition_out — the series line every app install reads.
+        edition_out.series = series_out
+        edition_out.series_number = work.series_number
         edition_out.buy_links = [
             BuyLinkOut.model_validate(link)
             for link in buy_links.merged(
@@ -142,18 +166,32 @@ async def browse_works(
     form: str | None = Query(default=None),
     genre: str | None = Query(default=None),
     length: str | None = Query(default=None, pattern="^(short|medium|long)$"),
-    sort: str = Query(default="title", pattern="^(title|year_desc|year_asc|author|rating|added)$"),
+    series: Annotated[uuid.UUID | None, Query()] = None,
+    sort: str = Query(
+        default="title", pattern="^(title|year_desc|year_asc|author|rating|added|series)$"
+    ),
 ) -> list[WorkSummaryOut]:
     """Discover screen — catalog books, paged, filterable by language, form
-    (Type), genre and length (short <200pp / medium / long ≥400pp — the
-    "short books" query readers actually type), sortable by title / newest /
-    oldest / author / top-rated / recently added (S4/browse).
+    (Type), genre, length (short <200pp / medium / long ≥400pp — the "short
+    books" query readers actually type) and series, sortable by title / newest
+    / oldest / author / top-rated / recently added / reading order (S4/browse).
 
     `language` repeats (`?language=Malayalam&language=Tamil`): the app opens
     the catalogue filtered to the reader's preferred languages by default.
-    A single value still works, so older app builds are unaffected."""
+    A single value still works, so older app builds are unaffected.
+
+    `sort=series` is reading order — book 1, 2, 3, unnumbered last. It is only
+    meaningful alongside `series`, and the app pairs them."""
     works = await catalog_service.browse_works(
-        db, limit, offset, languages=language, form=form, genre=genre, length=length, sort=sort
+        db,
+        limit,
+        offset,
+        languages=language,
+        form=form,
+        genre=genre,
+        length=length,
+        series=series,
+        sort=sort,
     )
     return [work_summary(w) for w in works]
 
@@ -178,6 +216,54 @@ async def browse_genres(db: DbSession) -> list[GenreCountOut]:
     existing spelling instead of a new one."""
     rows = await catalog_service.catalog_genres(db)
     return [GenreCountOut(name=name, work_count=count) for name, count in rows]
+
+
+@router.get("/browse/series", response_model=list[SeriesWithCountOut])
+async def browse_series(
+    db: DbSession,
+    limit: int = Query(default=40, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    sort: str = Query(default="name", pattern="^(name|popular)$"),
+) -> list[SeriesWithCountOut]:
+    """The series browse list, and the series picker's blank-state suggestions
+    (`sort=popular` → the ones actually holding books first). The count travels
+    with the name so a reader picking a series can tell a real one from the
+    empty row a typo left behind."""
+    rows = await catalog_service.browse_series(db, limit, offset, popular=sort == "popular")
+    return [
+        SeriesWithCountOut(**SeriesOut.model_validate(series).model_dump(), book_count=count)
+        for series, count in rows
+    ]
+
+
+@router.get("/search/series", response_model=list[SeriesWithCountOut])
+async def search_series(db: DbSession, q: str = Query(min_length=1)) -> list[SeriesWithCountOut]:
+    """Series typeahead — cross-script and typo-tolerant like the author and
+    publisher searches, so "aithihyamala" finds "ഐതിഹ്യമാല" instead of the
+    reader creating a second series beside it."""
+    found = await catalog_service.search_series(db, q, limit=10)
+    counts = await catalog_service.series_book_counts(db, [s.id for s in found])
+    return [
+        SeriesWithCountOut(
+            **SeriesOut.model_validate(s).model_dump(), book_count=counts.get(s.id, 0)
+        )
+        for s in found
+    ]
+
+
+@router.post("/series", response_model=SeriesOut, status_code=status.HTTP_201_CREATED)
+async def create_series(payload: SeriesCreate, user: CurrentUser, db: DbSession) -> SeriesOut:
+    """The picker's "add new series". Get-or-create by name, so two readers
+    adding the same one a minute apart get a single ordering."""
+    series = await catalog_service.create_series(db, **payload.model_dump(exclude_none=True))
+    return SeriesOut.model_validate(series)
+
+
+@router.get("/series/{series_id}/works", response_model=list[WorkSummaryOut])
+async def series_works(series_id: uuid.UUID, db: DbSession) -> list[WorkSummaryOut]:
+    """Everything in a series, in reading order — the app's series page."""
+    works = await catalog_service.series_works(db, series_id)
+    return [work_summary(w) for w in works]
 
 
 @router.get("/browse/authors", response_model=list[AuthorOut])

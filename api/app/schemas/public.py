@@ -153,11 +153,36 @@ class PublisherPage(BaseModel):
     indexable: bool = True
 
 
+class SeriesEntry(BaseModel):
+    """One position in a series.
+
+    A position holds a *story*, not a book: book 3 of a series that has been
+    translated exists as several Works, one per language, and listing each of
+    them separately would show "book 3" three times and make the page as long
+    as the number of languages. So the translations of one position collapse
+    into a single entry — one card, with its siblings beside it.
+    """
+
+    number: int | None = None
+    book: WorkCard
+    # The same position in other languages, if it has been translated.
+    also: list[WorkCard] = []
+
+
 class SeriesPage(BaseModel):
     id: uuid.UUID
     slug: str | None = None
     name: str
+    description: str | None = None
+    primary_language: str | None = None
+    # One per position, translations collapsed — what the page renders.
+    entries: list[SeriesEntry] = []
+    # Every work in the series, flat and in reading order. Kept because the
+    # renderer deployed before `entries` existed reads it, and a page whose
+    # body needs the newest API to appear is a page crawlers lose during a
+    # rollout.
     works: list[WorkCard] = []
+    languages: list[str] = []
     indexable: bool = True
 
 

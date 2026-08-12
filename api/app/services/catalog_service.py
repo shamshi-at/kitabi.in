@@ -419,6 +419,81 @@ async def _resolve_publisher(
     return None
 
 
+async def _resolve_series(
+    db: AsyncSession, series_id: uuid.UUID | None, series_name: str | None
+) -> Series | None:
+    """A picked series wins over a typed one. The name path stays because the
+    CSV import, the OpenLibrary cache and the cover extractor all arrive with a
+    string and no id — but every UI now sends the id, which is what stops
+    "Ponniyin Selvan" and "ponniyin selvan " becoming two orderings."""
+    if series_id is not None:
+        series = await db.get(Series, series_id)
+        if series is not None:
+            # The merge check comes FIRST: merging soft-deletes the loser, so a
+            # `deleted_at is None` guard in front of it would reject exactly the
+            # rows the redirect exists for, and the app would silently drop the
+            # series instead of landing on the canonical one.
+            if series.merged_into_id is not None:
+                survivor = await db.get(Series, series.merged_into_id)
+                if survivor is not None and survivor.deleted_at is None:
+                    return survivor
+            elif series.deleted_at is None:
+                return series
+    if series_name:
+        return await _get_or_create(db, Series, series_name)
+    return None
+
+
+async def set_work_series(
+    db: AsyncSession,
+    work: Work,
+    series: Series | None,
+    number: int | None,
+    *,
+    propagate: bool = True,
+) -> int:
+    """Put a Work at a position in a series (or take it out with series=None).
+
+    Returns how many *other* Works in its translation group inherited the
+    position. Book 3 is book 3 in every language, so the ordering is recorded
+    once and shared: a translation with no series of its own follows the book
+    it was translated from, and one that belongs to a different local series
+    keeps what it has (never overwritten).
+    """
+    work.series_id = series.id if series else None
+    work.series_number = number if series else None
+    return await _propagate_series_to_group(db, work) if propagate else 0
+
+
+async def _propagate_series_to_group(db: AsyncSession, work: Work) -> int:
+    if work.translation_group_id is None:
+        return 0
+    siblings = (
+        (
+            await db.execute(
+                select(Work).where(
+                    Work.translation_group_id == work.translation_group_id,
+                    Work.id != work.id,
+                    Work.deleted_at.is_(None),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    touched = 0
+    for sibling in siblings:
+        if sibling.series_id is None and work.series_id is not None:
+            sibling.series_id = work.series_id
+            sibling.series_number = work.series_number
+            touched += 1
+        elif sibling.series_id == work.series_id and sibling.series_number is None:
+            # Same series, no number yet — the position is the shared fact.
+            sibling.series_number = work.series_number
+            touched += 1
+    return touched
+
+
 async def create_work_with_edition(
     db: AsyncSession, payload: WorkCreate, *, created_by: uuid.UUID | None = None
 ) -> Work:
@@ -429,7 +504,7 @@ async def create_work_with_edition(
     translators = await _resolve_authors(db, payload.translator_ids, payload.translator_names)
     genres = [await _get_or_create(db, Genre, name) for name in payload.genre_names]
     publisher = await _resolve_publisher(db, payload.publisher_id, payload.publisher_name)
-    series = await _get_or_create(db, Series, payload.series_name) if payload.series_name else None
+    series = await _resolve_series(db, payload.series_id, payload.series_name)
 
     work = Work(
         title=payload.title,
@@ -441,6 +516,8 @@ async def create_work_with_edition(
         authors=authors,
         translators=translators,
         genres=genres,
+        series_id=series.id if series else None,
+        series_number=payload.series_number if series else None,
         created_by_user_id=created_by,
     )
     db.add(work)
@@ -460,12 +537,18 @@ async def create_work_with_edition(
             original.translation_group_id = group_id
             work.translation_group_id = group_id
             work.original_work_id = original.id
+            # A translation added to a book that's in a series is at the same
+            # position in it — inherited here so the ordering is entered once,
+            # in whichever language someone happened to catalogue first.
+            if work.series_id is None and original.series_id is not None:
+                work.series_id = original.series_id
+                work.series_number = original.series_number
+            elif work.series_id is not None:
+                await _propagate_series_to_group(db, work)
 
     edition = Edition(
         work_id=work.id,
         publisher_id=publisher.id if publisher else None,
-        series_id=series.id if series else None,
-        series_number=payload.series_number,
         isbn=payload.isbn,
         language=payload.language,
         page_count=payload.page_count,
@@ -482,10 +565,27 @@ async def create_work_with_edition(
 async def update_work(db: AsyncSession, work: Work, patch: WorkUpdate) -> Work:
     data = patch.model_dump(
         exclude_unset=True,
-        exclude={"author_ids", "author_names", "translator_ids", "translator_names", "genre_names"},
+        exclude={
+            "author_ids",
+            "author_names",
+            "translator_ids",
+            "translator_names",
+            "genre_names",
+            "series_id",
+            "series_name",
+            "series_number",
+        },
     )
     for field, value in data.items():
         setattr(work, field, value)
+    # Series is set through the service, not by attribute assignment, because
+    # putting a book at a position also places its translations there.
+    if patch.series_id is not None or patch.series_name is not None:
+        series = await _resolve_series(db, patch.series_id, patch.series_name)
+        number = patch.series_number if patch.series_number is not None else work.series_number
+        await set_work_series(db, work, series, number)
+    elif patch.series_number is not None and work.series_id is not None:
+        await set_work_series(db, work, await db.get(Series, work.series_id), patch.series_number)
     if patch.author_ids is not None or patch.author_names is not None:
         work.authors = await _resolve_authors(db, patch.author_ids or [], patch.author_names or [])
     if patch.translator_ids is not None or patch.translator_names is not None:
@@ -681,7 +781,14 @@ async def merge_works(db: AsyncSession, keep_id: uuid.UUID, absorb_id: uuid.UUID
 
 async def update_edition(db: AsyncSession, edition: Edition, patch: EditionUpdate) -> Edition:
     data = patch.model_dump(
-        exclude_unset=True, exclude={"publisher_id", "publisher_name", "series_name"}
+        exclude_unset=True,
+        exclude={
+            "publisher_id",
+            "publisher_name",
+            "series_id",
+            "series_name",
+            "series_number",
+        },
     )
     for field, value in data.items():
         setattr(edition, field, value)
@@ -689,9 +796,23 @@ async def update_edition(db: AsyncSession, edition: Edition, patch: EditionUpdat
         publisher = await _resolve_publisher(db, patch.publisher_id, patch.publisher_name)
         if publisher is not None:
             edition.publisher_id = publisher.id
-    if patch.series_name is not None:
-        series = await _get_or_create(db, Series, patch.series_name)
-        edition.series_id = series.id
+    # Series arriving on an edition patch is redirected to the work. App
+    # installs in the field still send it here (it lived on the edition until
+    # migration 000043) and their edits must keep landing somewhere real —
+    # writing the edition's own column instead would put a second, divergent
+    # answer next to the authoritative one.
+    if (
+        patch.series_id is not None
+        or patch.series_name is not None
+        or patch.series_number is not None
+    ):
+        work = await db.get(Work, edition.work_id)
+        if work is not None:
+            series = await _resolve_series(db, patch.series_id, patch.series_name)
+            if series is None and patch.series_number is not None and work.series_id is not None:
+                series = await db.get(Series, work.series_id)
+            number = patch.series_number if patch.series_number is not None else work.series_number
+            await set_work_series(db, work, series, number)
     await db.commit()
     return await get_edition_or_404(db, edition.id)
 
@@ -910,6 +1031,7 @@ async def browse_works(
     form: str | None = None,
     genre: str | None = None,
     length: str | None = None,
+    series: uuid.UUID | None = None,
     sort: str = "title",
 ) -> list[Work]:
     """The Discover/browse screen — catalog works, paged, with optional
@@ -932,6 +1054,28 @@ async def browse_works(
         )
     if length:
         stmt = stmt.where(length_filter(length))
+    if series is not None:
+        stmt = stmt.where(Work.series_id == series)
+
+    if sort == "series":
+        # Reading order — the only sort that makes sense once a series filter
+        # is on, and meaningless without one, so it is offered with it.
+        return list(
+            (
+                await db.execute(
+                    stmt.order_by(
+                        Work.series_number.asc().nullslast(),
+                        Work.first_publish_year.asc().nullslast(),
+                        Work.title.asc(),
+                    )
+                    .limit(limit)
+                    .offset(offset)
+                )
+            )
+            .unique()
+            .scalars()
+            .all()
+        )
 
     if sort == "rating":
         # "Best X" is the highest-intent browse there is, so the order is the
@@ -1063,10 +1207,82 @@ async def browse_publishers(
     return list((await db.execute(stmt)).scalars().all())
 
 
+async def browse_series(
+    db: AsyncSession, limit: int, offset: int, *, popular: bool = False
+) -> list[tuple[Series, int]]:
+    """Series with how many books each holds — the browse list and the picker's
+    suggestions both need the count, because "Malgudi · 4 books" is what tells
+    a real series apart from the empty row a typo left behind."""
+    counted = (
+        select(Work.series_id, func.count(Work.id).label("books"))
+        .where(Work.deleted_at.is_(None), Work.series_id.is_not(None))
+        .group_by(Work.series_id)
+        .subquery()
+    )
+    books = func.coalesce(counted.c.books, 0)
+    stmt = (
+        select(Series, books)
+        .outerjoin(counted, counted.c.series_id == Series.id)
+        .where(Series.deleted_at.is_(None), Series.merged_into_id.is_(None))
+    )
+    stmt = stmt.order_by(books.desc(), Series.name) if popular else stmt.order_by(Series.name)
+    rows = (await db.execute(stmt.limit(limit).offset(offset))).all()
+    return [(series, int(count or 0)) for series, count in rows]
+
+
+async def series_book_counts(db: AsyncSession, ids: list[uuid.UUID]) -> dict[uuid.UUID, int]:
+    """How many books each of these series holds."""
+    if not ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(Work.series_id, func.count(Work.id))
+            .where(Work.series_id.in_(ids), Work.deleted_at.is_(None))
+            .group_by(Work.series_id)
+        )
+    ).all()
+    return {series_id: int(count) for series_id, count in rows}
+
+
+async def create_series(db: AsyncSession, **fields: object) -> Series:
+    """The picker's "add new" — get-or-create by name, so two readers adding
+    the same series a minute apart get one row, not a duplicate to merge."""
+    name = str(fields["name"]).strip()
+    existing = (
+        await db.execute(select(Series).where(Series.name.ilike(name), Series.deleted_at.is_(None)))
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    series = Series(**{**fields, "name": name})
+    db.add(series)
+    await db.flush()
+    await slug_service.ensure_slug(db, series)
+    await db.commit()
+    await db.refresh(series)
+    return series
+
+
+async def series_works(db: AsyncSession, series_id: uuid.UUID) -> list[Work]:
+    """Everything in the series, in reading order. Unnumbered books sort last
+    (by year, then title) rather than jumping to the front as NULLs do."""
+    stmt = (
+        select(Work)
+        .options(*_SUMMARY_OPTIONS)
+        .where(Work.series_id == series_id, Work.deleted_at.is_(None))
+        .order_by(
+            Work.series_number.asc().nullslast(),
+            Work.first_publish_year.asc().nullslast(),
+            Work.title.asc(),
+        )
+        .execution_options(populate_existing=True)
+    )
+    return list((await db.execute(stmt)).unique().scalars().all())
+
+
 def _name_match_and_rank(name_col, translit_col, fold_col, q: str):  # noqa: ANN001
     """Fuzzy predicate + rank over a name column, its romanized twin and its
-    spelling-insensitive fold — shared by the author/publisher searches so both
-    are cross-script and spelling-tolerant."""
+    spelling-insensitive fold — shared by the author/publisher/series searches
+    so all three are cross-script and spelling-tolerant."""
     qt = transliterate(q)
     qf = fold(q)
     match = _fuzzy_match(name_col, q)
@@ -1113,6 +1329,25 @@ async def search_publishers(db: AsyncSession, query: str, limit: int = 10) -> li
         select(Publisher)
         .where(match, Publisher.deleted_at.is_(None))
         .order_by(rank.desc(), Publisher.name)
+        .limit(limit)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def search_series(db: AsyncSession, query: str, limit: int = 10) -> list[Series]:
+    """Series search for the picker — same fuzzy, cross-script shape as the
+    author and publisher searches. Without it a reader typing "aithihyamala"
+    would never find "ഐതിഹ്യമാല" and would create a second series beside it,
+    which is how the free-text field kept splitting one ordering in two."""
+    q = query.strip()
+    if not q:
+        return []
+    await _relax_word_similarity(db)
+    match, rank = _name_match_and_rank(Series.name, Series.name_translit, Series.name_fold, q)
+    stmt = (
+        select(Series)
+        .where(match, Series.deleted_at.is_(None))
+        .order_by(rank.desc(), Series.name)
         .limit(limit)
     )
     return list((await db.execute(stmt)).scalars().all())
@@ -1176,13 +1411,18 @@ async def create_edition(db: AsyncSession, work: Work, payload: EditionCreate) -
     different physical copy. Mirrors the edition half of create_work_with_edition
     but leaves the Work (title/authors/genres) untouched."""
     publisher = await _resolve_publisher(db, payload.publisher_id, payload.publisher_name)
-    series = await _get_or_create(db, Series, payload.series_name) if payload.series_name else None
+    # A series arriving with a new printing describes the *book*, not the
+    # printing — so it lands on the Work, the same as on the edit path. An app
+    # install that predates migration 000043 sends it here.
+    series = await _resolve_series(db, payload.series_id, payload.series_name)
+    if series is not None or payload.series_number is not None:
+        target = series or (await db.get(Series, work.series_id) if work.series_id else None)
+        number = payload.series_number if payload.series_number is not None else work.series_number
+        await set_work_series(db, work, target, number)
 
     edition = Edition(
         work_id=work.id,
         publisher_id=publisher.id if publisher else None,
-        series_id=series.id if series else None,
-        series_number=payload.series_number,
         isbn=payload.isbn,
         # An edition inherits the Work's language unless told otherwise.
         language=payload.language or work.language,
@@ -1193,8 +1433,6 @@ async def create_edition(db: AsyncSession, work: Work, payload: EditionCreate) -
         back_cover_url=payload.back_cover_url,
     )
     db.add(edition)
-    if series is not None:
-        await slug_service.ensure_slug(db, series)
     await db.commit()
     return await get_edition_or_404(db, edition.id)
 
@@ -1235,6 +1473,13 @@ async def link_translation(
         work.original_work_id = other_work.id
     elif relation == "translation":
         other_work.original_work_id = work.id
+    # Book 3 is book 3 in every language, so joining a group joins its
+    # position: whichever side already has one lends it to the side that
+    # doesn't. A translation that belongs to a different local series keeps
+    # what it has — _propagate_series_to_group never overwrites.
+    for source in (work, other_work):
+        if source.series_id is not None:
+            await _propagate_series_to_group(db, source)
     await db.commit()
 
 
