@@ -15,30 +15,64 @@ export function renderSeries(data) {
   const canonical = `/series/${seg(data.slug || data.id)}`;
   const crumbs = [{ label: 'Home', href: '/' }, { label: data.name }];
 
+  // One entry per position, translations collapsed into it. `entries` is what
+  // the API serves now; the fallback keeps this page rendering against an API
+  // that hasn't rolled yet — the two deploy separately, and a body that needs
+  // the newest API to appear is a body crawlers lose in between.
+  const entries =
+    data.entries?.length
+      ? data.entries
+      : (data.works || []).map((w, i) => ({ number: i + 1, book: w, also: [] }));
+
   const body = html`
     <div class="wrap">
       ${breadcrumb(crumbs)}
       <div style="margin-top:18px">
-        <p class="eyebrow">Series · ${data.works?.length || 0} books</p>
+        <p class="eyebrow">
+          Series · ${entries.length} ${entries.length === 1 ? 'book' : 'books'}${data.languages
+            ?.length > 1
+            ? ` · in ${data.languages.join(', ')}`
+            : ''}
+        </p>
         <h1 class="serif" style="font-size:clamp(25px,5vw,32px);font-weight:600;margin-top:6px">
           ${data.name}
         </h1>
+        ${data.description
+          ? html`<p style="margin-top:10px;max-width:62ch;line-height:1.7">${data.description}</p>`
+          : ''}
       </div>
       <section class="sec">
         <div class="eds">
-          ${(data.works || []).map(
-            (w, i) => html`<a class="ed" href="${bookPath(w)}" style="grid-template-columns:34px 44px 1fr">
-              <span class="serif" style="font-size:19px;font-weight:700;color:#B8862B">${i + 1}</span>
-              <span>${cover(w, { width: 44 })}</span>
+          ${entries.map(
+            (e) => html`<a class="ed" href="${bookPath(e.book)}" style="grid-template-columns:34px 44px 1fr">
+              <span class="serif" style="font-size:19px;font-weight:700;color:#B8862B"
+                >${e.number ?? '·'}</span
+              >
+              <span>${cover(e.book, { width: 44 })}</span>
               <span>
-                <span class="et">${w.title}</span>
+                <span class="et">${e.book.title}</span>
                 <span class="em"
-                  >${joinDot([(w.authors || []).map((a) => a.name).join(', '), w.year])}</span
+                  >${joinDot([
+                    (e.book.authors || []).map((a) => a.name).join(', '),
+                    e.book.year,
+                    e.book.language,
+                  ])}</span
                 >
+                ${e.also?.length
+                  ? html`<span class="em"
+                      >${'Also in ' + e.also.map((t) => t.language || t.title).join(', ')}</span
+                    >`
+                  : ''}
               </span>
             </a>`,
           )}
         </div>
+        ${entries.some((e) => e.also?.length)
+          ? html`<p class="cap" style="margin-top:10px">
+              Each book is listed once, under the number it holds in the series — a translation
+              sits at the same position as the book it was translated from.
+            </p>`
+          : ''}
       </section>
       ${appBand()}
     </div>
@@ -53,9 +87,11 @@ export function renderSeries(data) {
     // A one-book "series" is not a series — it's a thin page.
     indexable: data.indexable !== false,
     jsonLd: [
-      ld.collectionPage(data.name, null, canonical),
+      ld.collectionPage(data.name, data.description || null, canonical),
       ld.breadcrumbList(crumbs),
-      ...(data.works?.length ? [ld.itemList(data.works, data.name)] : []),
+      // The positions, not every translation of them: an ItemList that repeats
+      // a book once per language describes a longer series than exists.
+      ...(entries.length ? [ld.itemList(entries.map((e) => e.book), data.name)] : []),
     ],
   });
 }

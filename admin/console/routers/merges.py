@@ -36,7 +36,7 @@ from sqlalchemy import func, select
 from .. import queries, security
 from ..deps import CurrentAdmin, DbSession, client_ip
 from ..flash import pop_flash, set_flash
-from ..models_ref import Edition
+from ..models_ref import Edition, Work
 from ..models_ref import work_authors as WA
 from ..templating import templates
 
@@ -57,6 +57,12 @@ async def _counts(db: DbSession, kind: str, ids: list[uuid.UUID]) -> dict:
             select(WA.c.author_id, func.count(WA.c.work_id))
             .where(WA.c.author_id.in_(ids))
             .group_by(WA.c.author_id)
+        )
+    elif kind == "series":
+        stmt = (
+            select(Work.series_id, func.count(Work.id))
+            .where(Work.series_id.in_(ids), Work.deleted_at.is_(None))
+            .group_by(Work.series_id)
         )
     else:
         stmt = (
@@ -86,7 +92,7 @@ async def _queue(db: DbSession) -> list[dict]:
     is a default (`survivor_id`), not a verdict.
     """
     out: list[dict] = []
-    for kind in ("authors", "publishers"):
+    for kind in ("authors", "publishers", "series"):
         candidates = [
             c for c in await merge_service.find_candidates(db, kind) if not c.auto_mergeable
         ]
@@ -108,8 +114,12 @@ async def _queue(db: DbSession) -> list[dict]:
             out.append(
                 {
                     "kind": kind,
-                    "singular": "author" if kind == "authors" else "publisher",
-                    "unit": "book" if kind == "authors" else "edition",
+                    "singular": {
+                        "authors": "author",
+                        "publishers": "publisher",
+                        "series": "series",
+                    }[kind],
+                    "unit": "edition" if kind == "publishers" else "book",
                     "reason": _LABEL.get(c.reason, c.reason),
                     "survivor_id": c.survivor_id,
                     "members": members,

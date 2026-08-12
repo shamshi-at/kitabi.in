@@ -31,6 +31,7 @@ from ..models_ref import (
     Publisher,
     Rating,
     Review,
+    Series,
     Work,
 )
 from ..templating import templates
@@ -52,7 +53,12 @@ router = APIRouter(prefix="/catalog")
 # field here is already public on the website.
 # ---------------------------------------------------------------------------
 
-PEEK_MODELS = {"authors": Author, "publishers": Publisher, "works": Work}
+PEEK_MODELS = {
+    "authors": Author,
+    "publishers": Publisher,
+    "works": Work,
+    "series": Series,
+}
 
 
 def _fact(label: str, value) -> tuple | None:  # noqa: ANN001
@@ -128,6 +134,37 @@ async def _peek_publisher(db: DbSession, row: Publisher) -> dict:
                 "href": f"/catalog/works/{w.id}",
                 "title": w.title,
                 "sub": " · ".join(str(x) for x in (w.title_translit, w.first_publish_year) if x),
+            }
+            for w in works
+        ],
+    }
+
+
+async def _peek_series(db: DbSession, row: Series) -> dict:
+    works = await catalog_service.series_works(db, row.id)
+    return {
+        "title": row.name,
+        "sub": row.name_translit or "",
+        "href": f"/catalog/series/{row.id}",
+        "image": None,
+        "body": row.description,
+        "facts": [
+            f
+            for f in (
+                _fact("Language", row.primary_language),
+                _fact("Books", len(works)),
+                _fact("Source", row.external_source or "reader-added"),
+            )
+            if f
+        ],
+        "list_label": f"Reading order ({len(works)})",
+        "entries": [
+            {
+                "href": f"/catalog/works/{w.id}",
+                "title": (f"{w.series_number}. " if w.series_number else "") + w.title,
+                "sub": " · ".join(
+                    str(x) for x in (w.language, w.first_publish_year) if x
+                ),
             }
             for w in works
         ],
@@ -221,11 +258,17 @@ async def peek(
         "authors": _peek_author,
         "publishers": _peek_publisher,
         "works": _peek_work,
+        "series": _peek_series,
     }[kind]
     peeked = await builder(db, row)
     peeked.update(
         kind=kind,
-        singular={"authors": "Author", "publishers": "Publisher", "works": "Work"}[kind],
+        singular={
+            "authors": "Author",
+            "publishers": "Publisher",
+            "works": "Work",
+            "series": "Series",
+        }[kind],
         id=str(row.id),
         merged_into=await merge_service.resolve_merged(db, kind, row) if kind != "works" else None,
         deleted=row.deleted_at is not None,
@@ -431,7 +474,11 @@ async def catalog(
 
 @router.get("/works/{work_id}")
 async def book_detail(
-    request: Request, admin: RequireEditor, db: DbSession, work_id: uuid.UUID
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    work_id: uuid.UUID,
+    series_q: str = Query(default=""),
 ) -> HTMLResponse:
     try:
         work = await catalog_service.get_work_or_404(db, work_id)
@@ -471,6 +518,9 @@ async def book_detail(
         )
         or 0
     )
+    series_q = series_q.strip()
+    series_matches = await catalog_service.search_series(db, series_q, limit=8) if series_q else []
+    series_counts = await catalog_service.series_book_counts(db, [s.id for s in series_matches])
     badges = await queries.nav_badges(db)
     flash = pop_flash(request)
     resp = templates.TemplateResponse(
@@ -485,6 +535,10 @@ async def book_detail(
             "reviews": reviews,
             "shelved": shelved,
             "amazon_links": amazon_links,
+            "series_q": series_q,
+            "series_matches": [
+                {"s": s, "count": series_counts.get(s.id, 0)} for s in series_matches
+            ],
             "flash": flash,
         },
     )
@@ -605,6 +659,56 @@ async def buy_links_worklist(
     )
     if flash:
         resp.delete_cookie("admin_flash", path="/")
+    return resp
+
+
+@router.post("/works/{work_id}/series")
+async def set_work_series(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    work_id: uuid.UUID,
+    series_id: Annotated[str, Form()] = "",
+    series_name: Annotated[str, Form()] = "",
+    number: Annotated[str, Form()] = "",
+) -> RedirectResponse:
+    """Set (or clear) a book's series from its own page — the other direction
+    of the same act as adding it from the series page. An empty `series_id`
+    with an empty name takes it out."""
+    resp = RedirectResponse(f"/catalog/works/{work_id}", status_code=303)
+    work = await db.get(Work, work_id)
+    if work is None or work.deleted_at is not None:
+        set_flash(resp, "err", "Work not found.")
+        return resp
+    series = None
+    if series_id.strip():
+        try:
+            series = await db.get(Series, uuid.UUID(series_id.strip()))
+        except ValueError:
+            series = None
+    elif series_name.strip():
+        series = await catalog_service.create_series(db, name=series_name.strip())
+    position = int(number) if number.strip().isdigit() else None
+    shared = await catalog_service.set_work_series(db, work, series, position)
+    await db.commit()
+    await security.audit(
+        db,
+        "series.set" if series else "series.clear",
+        admin_id=admin.id,
+        target_type="work",
+        target_id=str(work_id),
+        summary=(f"{work.title} → {series.name}" + (f" #{position}" if position else ""))
+        if series
+        else f"{work.title} taken out of its series",
+        ip=client_ip(request),
+    )
+    await db.commit()
+    set_flash(
+        resp,
+        "ok",
+        (f"Series set to “{series.name}”." if series else "Series cleared.")
+        + (f" {shared} translation(s) took the same position." if shared else ""),
+    )
     return resp
 
 
@@ -755,10 +859,12 @@ async def _merge_candidates(
     each carries — the reviewer needs the counts to pick the right survivor."""
     if not merge_q:
         return []
-    if kind == "authors":
-        found = await catalog_service.search_authors(db, merge_q, limit=8)
-    else:
-        found = await catalog_service.search_publishers(db, merge_q, limit=8)
+    search = {
+        "authors": catalog_service.search_authors,
+        "publishers": catalog_service.search_publishers,
+        "series": catalog_service.search_series,
+    }[kind]
+    found = await search(db, merge_q, limit=8)
     rows = [r for r in found if r.id != current_id and r.merged_into_id is None]
     counts = await _merge_counts(db, kind, [r.id for r in rows])
     return [{"r": r, "count": counts.get(r.id, 0)} for r in rows]
@@ -879,6 +985,160 @@ async def author_detail(
     )
     if flash:
         resp.delete_cookie("admin_flash", path="/")
+    return resp
+
+
+@router.get("/series")
+async def series_list(
+    request: Request, admin: RequireEditor, db: DbSession, q: str = Query(default="")
+) -> HTMLResponse:
+    """Every series with what it holds. The empty ones are shown, not hidden:
+    a series with no books is the residue of a typo in the old free-text field,
+    and finding them is the point of the screen."""
+    q = q.strip()
+    if q:
+        found = await catalog_service.search_series(db, q, limit=100)
+        counts = await catalog_service.series_book_counts(db, [s.id for s in found])
+        rows = [(s, counts.get(s.id, 0)) for s in found]
+    else:
+        rows = await catalog_service.browse_series(db, 200, 0, popular=True)
+    badges = await queries.nav_badges(db)
+    flash = pop_flash(request)
+    resp = templates.TemplateResponse(
+        request,
+        "series.html",
+        {
+            "admin": admin,
+            "active": "series",
+            "badges": badges,
+            "q": q,
+            "rows": [{"s": s, "count": count} for s, count in rows],
+            "empty_count": sum(1 for _, count in rows if not count),
+            "flash": flash,
+        },
+    )
+    if flash:
+        resp.delete_cookie("admin_flash", path="/")
+    return resp
+
+
+@router.get("/series/{series_id}")
+async def series_detail(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    series_id: uuid.UUID,
+    merge_q: str = Query(default=""),
+    add_q: str = Query(default=""),
+) -> HTMLResponse:
+    series = await db.get(Series, series_id)
+    if series is None:
+        resp = RedirectResponse("/catalog/series", status_code=303)
+        set_flash(resp, "err", "Series not found.")
+        return resp
+    works = await catalog_service.series_works(db, series_id)
+    # Candidates to add: a title search, minus what is already in the series.
+    add_q = add_q.strip()
+    in_series = {w.id for w in works}
+    candidates = [
+        w
+        for w in (await catalog_service.search_local(db, add_q) if add_q else [])
+        if w.id not in in_series
+    ]
+    merge_q = merge_q.strip()
+    badges = await queries.nav_badges(db)
+    flash = pop_flash(request)
+    resp = templates.TemplateResponse(
+        request,
+        "series_detail.html",
+        {
+            "admin": admin,
+            "active": "series",
+            "badges": badges,
+            "s": series,
+            "works": works,
+            "add_q": add_q,
+            "candidates": candidates,
+            "kind": "series",
+            "merge_q": merge_q,
+            "merge_candidates": await _merge_candidates(db, "series", series_id, merge_q),
+            "merged_into": await merge_service.resolve_merged(db, "series", series),
+            "flash": flash,
+        },
+    )
+    if flash:
+        resp.delete_cookie("admin_flash", path="/")
+    return resp
+
+
+@router.post("/series/{series_id}/works")
+async def series_add_work(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    series_id: uuid.UUID,
+    work_id: Annotated[uuid.UUID, Form()],
+    number: Annotated[str, Form()] = "",
+) -> RedirectResponse:
+    """Put a book in the series at a position. Goes through the service, so
+    every translation of that book lands at the same position too."""
+    resp = RedirectResponse(f"/catalog/series/{series_id}", status_code=303)
+    series = await db.get(Series, series_id)
+    work = await db.get(Work, work_id)
+    if series is None or work is None or work.deleted_at is not None:
+        set_flash(resp, "err", "Series or book not found.")
+        return resp
+    position = int(number) if number.strip().isdigit() else None
+    shared = await catalog_service.set_work_series(db, work, series, position)
+    await db.commit()
+    await security.audit(
+        db,
+        "series.add_work",
+        admin_id=admin.id,
+        target_type="series",
+        target_id=str(series_id),
+        summary=f"“{work.title}” → {series.name}" + (f" #{position}" if position else ""),
+        ip=client_ip(request),
+    )
+    await db.commit()
+    set_flash(
+        resp,
+        "ok",
+        f"Added “{work.title}”."
+        + (f" {shared} translation(s) took the same position." if shared else ""),
+    )
+    return resp
+
+
+@router.post("/series/{series_id}/works/{work_id}/remove")
+async def series_remove_work(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    series_id: uuid.UUID,
+    work_id: uuid.UUID,
+) -> RedirectResponse:
+    resp = RedirectResponse(f"/catalog/series/{series_id}", status_code=303)
+    work = await db.get(Work, work_id)
+    if work is None or work.series_id != series_id:
+        set_flash(resp, "err", "That book isn't in this series.")
+        return resp
+    # propagate=False: taking one book out is not a statement about its
+    # translations, and silently emptying the series in three other languages
+    # is not what "remove" looks like to anyone.
+    await catalog_service.set_work_series(db, work, None, None, propagate=False)
+    await db.commit()
+    await security.audit(
+        db,
+        "series.remove_work",
+        admin_id=admin.id,
+        target_type="series",
+        target_id=str(series_id),
+        summary=f"removed “{work.title}”",
+        ip=client_ip(request),
+    )
+    await db.commit()
+    set_flash(resp, "ok", f"Removed “{work.title}” from the series.")
     return resp
 
 

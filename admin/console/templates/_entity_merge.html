@@ -4,8 +4,8 @@
    The matchers propose what they can (Duplicate review); this card is for
    what they can't see — a cross-script twin shares no spelling with its
    duplicate, so only a human search will ever pair them. #}
-{% set singular = 'author' if kind == 'authors' else 'publisher' %}
-{% set unit = 'works' if kind == 'authors' else 'editions' %}
+{% set singular = {'authors': 'author', 'publishers': 'publisher', 'series': 'series'}[kind] %}
+{% set unit = {'authors': 'works', 'publishers': 'editions', 'series': 'books'}[kind] %}
 
 {% if ent.merged_into_id %}
 <div class="note warn" style="margin-top:14px">

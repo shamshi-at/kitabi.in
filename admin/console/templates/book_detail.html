@@ -22,6 +22,65 @@
     <div class="lbl" style="margin-top:14px">Description</div>
     <p style="margin-top:6px;font-size:13px;line-height:1.6;color:{{ 'var(--ink)' if w.description else 'var(--ink-soft)' }}">
       {{ w.description or '— none —' }}</p>
+    <div class="lbl" style="margin-top:16px">Series</div>
+    {% if w.series %}
+    <div class="mg-row" style="margin-top:6px">
+      <div class="mg-info">
+        <button type="button" class="peek" style="font-weight:600;font-size:13.5px"
+          data-peek="/catalog/peek/series/{{ w.series.id }}">{{ w.series.name }}</button>
+        <div class="m">Book {{ w.series_number if w.series_number is not none else '—' }}
+          · <a href="/catalog/series/{{ w.series.id }}">open ↗</a></div>
+      </div>
+      <form method="post" action="/catalog/works/{{ w.id }}/series" class="mg-act">
+        <input type="hidden" name="series_id" value="{{ w.series.id }}">
+        <input class="search" name="number" value="{{ w.series_number if w.series_number is not none else '' }}"
+          placeholder="№" inputmode="numeric" style="width:70px" aria-label="Position in the series">
+        <button class="btn s p">Save №</button>
+      </form>
+      <form method="post" action="/catalog/works/{{ w.id }}/series"
+            onsubmit="return confirm('Take this book out of its series?')">
+        <button class="btn s">Clear</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="hint" style="margin-top:6px">Not in a series. Search for one — a picked series keeps
+      one ordering instead of a new row per spelling, and every translation of this book takes the
+      same position.</p>
+    {% endif %}
+    <form method="get" style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <input class="search" name="series_q" value="{{ series_q }}"
+        placeholder="Search series in any script…" style="flex:1;min-width:160px">
+      <button class="btn s">Find</button>
+    </form>
+    {% if series_q %}
+    <div style="margin-top:8px">
+      {% for m in series_matches %}
+      <div class="mg-row">
+        <div class="mg-info">
+          <button type="button" class="peek" style="font-weight:600"
+            data-peek="/catalog/peek/series/{{ m.s.id }}">{{ m.s.name }}</button>
+          <div class="m">{{ m.count }} book{{ '' if m.count == 1 else 's' }}</div>
+        </div>
+        <form method="post" action="/catalog/works/{{ w.id }}/series" class="mg-act">
+          <input type="hidden" name="series_id" value="{{ m.s.id }}">
+          <input class="search" name="number" placeholder="№" inputmode="numeric"
+            style="width:70px" aria-label="Position in the series">
+          <button class="btn s p">Use this</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="note">No series match “{{ series_q }}”.
+        <form method="post" action="/catalog/works/{{ w.id }}/series"
+              style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">
+          <input type="hidden" name="series_name" value="{{ series_q }}">
+          <input class="search" name="number" placeholder="№" inputmode="numeric" style="width:70px">
+          <button class="btn s p">Create “{{ series_q }}” and add this book</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="lbl" style="margin-top:16px">Title</div>
     <form method="post" action="/catalog/rename" class="mgc-rename" style="margin-top:6px">
       <input type="hidden" name="kind" value="works">

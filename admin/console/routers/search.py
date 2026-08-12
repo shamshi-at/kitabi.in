@@ -57,6 +57,12 @@ _ACTIONS = [
         "role": "editor",
     },
     {
+        "label": "Series",
+        "href": "/catalog/series",
+        "keys": "series saga sequence trilogy reading order",
+        "role": "editor",
+    },
+    {
         "label": "Buy links",
         "href": "/catalog/buy-links",
         "keys": "amazon affiliate buy retail worklist links",

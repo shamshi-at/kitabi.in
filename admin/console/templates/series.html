@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Series · Kitabi Admin{% endblock %}
+{% block heading %}Series{% endblock %}
+{% block subheading %}A position in a series belongs to the story — every translation of a book sits at the same number{% endblock %}
+{% block topactions %}
+<form method="get" action="/catalog/series"><input class="search" name="q" value="{{ q }}"
+  placeholder="Search series in any script" style="width:240px"></form>
+{% endblock %}
+{% block content %}
+
+{% if empty_count and not q %}
+<div class="note" style="margin-bottom:14px">
+  <b>{{ empty_count }}</b> of these hold no books. That is what the old free-text field left
+  behind — a name typed once, never used again. Open one to merge it into the real series or
+  leave it; an empty series is invisible to readers either way.
+</div>
+{% endif %}
+
+<div class="tbl">
+  <table>
+    <tr><th style="width:50%">Series</th><th>Books</th><th>Language</th><th></th></tr>
+    {% for r in rows %}
+    <tr>
+      <td>
+        <button type="button" class="peek t" data-peek="/catalog/peek/series/{{ r.s.id }}">{{ r.s.name }}</button>
+        <div class="m mono">{{ r.s.name_translit or '' }}
+          · <a href="/catalog/series/{{ r.s.id }}">open ↗</a></div>
+      </td>
+      <td>{% if r.count %}<b>{{ r.count }}</b>{% else %}<span class="pill mute">empty</span>{% endif %}</td>
+      <td class="m">{{ r.s.primary_language or '—' }}</td>
+      <td style="text-align:right"><a class="btn s" href="/catalog/series/{{ r.s.id }}">Manage</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="m" style="text-align:center;padding:24px">
+      {% if q %}No series match “{{ q }}”.{% else %}No series in the catalog yet.{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

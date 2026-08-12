@@ -590,14 +590,36 @@ assertIncludes(deadEnd, 'Language: Malayalam', 'each active filter is named');
 // Series, translation groups, lists, reviews, readers (W8–W12)
 // --------------------------------------------------------------------------
 
+// Fixtures follow schemas/public.py SeriesPage — `entries` (one per position,
+// translations collapsed) plus the flat `works` the API still serves.
+var swami = { id: '1', slug: 'swami', title: 'Swami and Friends', authors: [{ name: 'Narayan' }], year: 1935, language: 'English' };
+var swamiMl = { id: '1b', slug: 'swami-ml', title: 'സ്വാമിയും കൂട്ടുകാരും', authors: [{ name: 'Narayan' }], year: 1985, language: 'Malayalam' };
+var bachelor = { id: '2', slug: 'bachelor', title: 'The Bachelor of Arts', authors: [], year: 1937, language: 'English' };
 var seriesDoc = String(
   renderSeries({ id: 's', slug: 'malgudi', name: 'Malgudi', indexable: true,
-    works: [{ id: '1', slug: 'swami', title: 'Swami and Friends', authors: [{ name: 'Narayan' }], year: 1935 },
-            { id: '2', slug: 'bachelor', title: 'The Bachelor of Arts', authors: [], year: 1937 }] }).text(),
+    description: 'R. K. Narayan’s fictional town.',
+    languages: ['English', 'Malayalam'],
+    entries: [{ number: 1, book: swami, also: [swamiMl] }, { number: 2, book: bachelor, also: [] }],
+    works: [swami, swamiMl, bachelor] }).text(),
 );
 assertIncludes(seriesDoc, 'Swami and Friends', 'the series lists its books');
 assertIncludes(seriesDoc, 'href="/book/swami"', 'each entry links to the book');
 assertIncludes(seriesDoc, '"@type":"ItemList"', 'a series is an ItemList');
+assertIncludes(seriesDoc, 'Also in Malayalam', 'a translated position names its other languages');
+assertIncludes(seriesDoc, 'R. K. Narayan', 'the series description is rendered');
+// Three works, two positions: the page counts books, not translations.
+assertIncludes(seriesDoc, 'Series · 2 books', 'a position is counted once, not once per language');
+if (seriesDoc.split('സ്വാമിയും').length - 1 > 1) {
+  throw new Error('the Malayalam translation is listed twice — positions must collapse');
+}
+
+// The renderer deploys separately from the API, so it must still render the
+// flat shape it was fed before `entries` existed.
+var seriesLegacyDoc = String(
+  renderSeries({ id: 's', slug: 'malgudi', name: 'Malgudi', indexable: true, works: [swami, bachelor] }).text(),
+);
+assertIncludes(seriesLegacyDoc, 'Swami and Friends', 'the pre-entries payload still renders');
+assertIncludes(seriesLegacyDoc, 'Series · 2 books', 'and still counts its books');
 
 var transDoc = String(
   renderTranslations({ group_id: 'g', title: 'ആടുജീവിതം', group_rating: 4.5, group_rating_count: 1043,

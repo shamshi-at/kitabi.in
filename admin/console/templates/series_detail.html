@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ s.name }} · Kitabi Admin{% endblock %}
+{% block heading %}{{ s.name }}{% endblock %}
+{% block subheading %}{{ s.name_translit or '' }}{% endblock %}
+{% block topactions %}<a class="btn s" href="/catalog/series">← Series</a>{% endblock %}
+{% block content %}
+<div class="split">
+  <div class="card">
+    <div class="lbl">Series</div>
+    <table style="margin-top:6px">
+      <tr><td>Language</td><td style="text-align:right">{{ s.primary_language or '—' }}</td></tr>
+      <tr><td>Books</td><td style="text-align:right"><b>{{ works | length }}</b></td></tr>
+      <tr><td>Public page</td><td style="text-align:right">
+        {% if s.slug %}<a href="https://kitabi.in/series/{{ s.slug }}" target="_blank" rel="noopener">/series/{{ s.slug }}</a>
+        {% else %}<span class="m">no slug yet</span>{% endif %}</td></tr>
+      <tr><td>Source</td><td style="text-align:right">{{ s.external_source or 'reader-added' }}</td></tr>
+    </table>
+    <div class="lbl" style="margin-top:16px">Name</div>
+    <form method="post" action="/catalog/rename" class="mgc-rename" style="margin-top:6px">
+      <input type="hidden" name="kind" value="series">
+      <input type="hidden" name="row_id" value="{{ s.id }}">
+      <input type="hidden" name="next" value="/catalog/series/{{ s.id }}">
+      <input class="search" name="name" value="{{ s.name }}" aria-label="Series name">
+      <button class="btn s p">Rename</button>
+      <span class="hint">The published URL doesn’t change.</span>
+    </form>
+    <div class="note" style="margin-top:12px">Series id <span class="mono">{{ s.id }}</span></div>
+  </div>
+
+  <div class="card">
+    <div class="lbl">Reading order ({{ works | length }})</div>
+    <div class="tbl" style="margin-top:8px;border:none">
+      <table>
+        <tr><th style="width:96px">№</th><th>Book</th><th></th></tr>
+        {% for w in works %}
+        <tr>
+          <td>
+            <form method="post" action="/catalog/series/{{ s.id }}/works" style="display:flex;gap:4px">
+              <input type="hidden" name="work_id" value="{{ w.id }}">
+              <input class="search" name="number" style="width:52px;padding:5px 7px;font-size:12px"
+                value="{{ w.series_number if w.series_number is not none else '' }}"
+                placeholder="—" inputmode="numeric" aria-label="Position of {{ w.title }}">
+              <button class="btn s" title="Save this position">✓</button>
+            </form>
+          </td>
+          <td>
+            <button type="button" class="peek" data-peek="/catalog/peek/works/{{ w.id }}">{{ w.title }}</button>
+            <div class="m">{{ w.language or '—' }}{% if w.first_publish_year %} · {{ w.first_publish_year }}{% endif %}
+              {%- if w.translation_group_id %} · <span class="pill info">translated</span>{% endif %}</div>
+          </td>
+          <td style="text-align:right">
+            <form method="post" action="/catalog/series/{{ s.id }}/works/{{ w.id }}/remove"
+                  onsubmit="return confirm({{ ('Take “' ~ w.title ~ '” out of this series?')|tojson }})">
+              <button class="btn s">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="m" style="padding:14px">
+          Nothing in this series yet — add a book below.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <p class="hint" style="margin-top:8px">Books with no number sort last. A translated book shows
+      once here per language, because each translation is its own record — they all share the
+      number, and the public page collapses them into one entry.</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <div class="lbl">Add a book</div>
+  <p class="hint" style="margin-top:6px">Search the catalog and give the book its position. Every
+    translation of that book takes the same position automatically.</p>
+  <form method="get" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+    <input class="search" name="add_q" value="{{ add_q }}" placeholder="Search a title…"
+      style="flex:1;min-width:180px">
+    {% if merge_q %}<input type="hidden" name="merge_q" value="{{ merge_q }}">{% endif %}
+    <button class="btn">Search</button>
+  </form>
+  {% if add_q %}
+  <div style="margin-top:10px">
+    {% for w in candidates %}
+    <div class="mg-row">
+      <div class="mg-info">
+        <button type="button" class="peek" style="font-weight:600;font-size:13.5px"
+          data-peek="/catalog/peek/works/{{ w.id }}">{{ w.title }}</button>
+        <div class="m">{{ w.authors | map(attribute='name') | join(', ') or '—' }}
+          {%- if w.language %} · {{ w.language }}{% endif %}
+          {%- if w.series_id %} · <span class="pill pend">already in a series</span>{% endif %}</div>
+      </div>
+      <form method="post" action="/catalog/series/{{ s.id }}/works" class="mg-act">
+        <input type="hidden" name="work_id" value="{{ w.id }}">
+        <input class="search" name="number" placeholder="№" inputmode="numeric"
+          style="width:70px" aria-label="Position in the series">
+        <button class="btn s p">Add</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="note">No books match “{{ add_q }}”.</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% with ent = s %}{% include "_entity_merge.html" %}{% endwith %}
+{% endblock %}
