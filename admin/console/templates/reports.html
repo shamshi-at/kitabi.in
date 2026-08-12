@@ -17,6 +17,9 @@
       {% if it.reasons %}<span class="pill no">{{ it.reasons | join(', ') }}</span>{% else %}<span class="pill no">Reported</span>{% endif %}
       <b>Review by {{ it.author }}</b>
       <span style="font-size:11.5px;color:var(--ink-soft)">flagged by {{ it.count }} reader{{ 's' if it.count != 1 }}</span>
+      {% if it.subject %}<span class="m">on
+        <button type="button" class="peek" data-peek="/catalog/peek/{{ it.subject.kind }}/{{ it.subject.id }}">{{ it.subject.name }}</button>
+        {%- if it.subject.kind == 'series' %} <span class="pill info">series</span>{% endif %}</span>{% endif %}
       {% if not it.review.visible %}<span class="pill mute" style="margin-left:auto">Already hidden</span>{% endif %}
     </div>
     <div class="bd">

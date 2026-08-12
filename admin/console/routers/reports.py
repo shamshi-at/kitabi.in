@@ -22,6 +22,8 @@ from ..models_ref import (
     ContentReport,
     Profile,
     Review,
+    Series,
+    Work,
 )
 from ..templating import templates
 
@@ -40,12 +42,28 @@ async def _open_reports(db: DbSession) -> list[dict]:
             .order_by(ContentReport.created_at.desc())
         )
     ).all()
+    # What each review is *about*. A review names either a book or a series
+    # (API migration 000044), and "is this abusive?" is not answerable from the
+    # text alone — a moderator needs to see what it was aimed at.
+    subjects: dict = {}
+    work_ids = {r.work_id for _, r, _, _ in rows if r.work_id}
+    series_ids = {r.series_id for _, r, _, _ in rows if r.series_id}
+    if work_ids:
+        for work in (await db.execute(select(Work).where(Work.id.in_(work_ids)))).scalars().all():
+            subjects[work.id] = {"kind": "works", "id": work.id, "name": work.title}
+    if series_ids:
+        for series in (
+            (await db.execute(select(Series).where(Series.id.in_(series_ids)))).scalars().all()
+        ):
+            subjects[series.id] = {"kind": "series", "id": series.id, "name": series.name}
+
     by_review: dict = {}
     for report, review, full_name, username in rows:
         entry = by_review.setdefault(
             review.id,
             {
                 "review": review,
+                "subject": subjects.get(review.work_id or review.series_id),
                 "author": full_name or (f"@{username}" if username else "a reader"),
                 "count": 0,
                 "report_ids": [],

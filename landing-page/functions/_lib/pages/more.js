@@ -4,7 +4,7 @@
 
 import * as ld from '../jsonld.js';
 import { appBand, avatar, bookStrip, breadcrumb, cover, pager, section, stars } from '../components.js';
-import { authorPath, bookPath, clamp, html, joinDot, num, seg } from '../html.js';
+import { authorPath, bookPath, clamp, html, joinDot, num, seg, seriesPath } from '../html.js';
 import { page } from '../layout.js';
 
 // --------------------------------------------------------------------------
@@ -74,6 +74,38 @@ export function renderSeries(data) {
             </p>`
           : ''}
       </section>
+      ${data.reviews?.length || data.rating?.count
+        ? html`<section class="sec">
+            <h2 class="serif" style="font-size:20px;font-weight:600">
+              ${'What readers say about the series'}
+            </h2>
+            <p class="cap" style="margin-top:4px">
+              About the series as a whole — each book has its own rating and reviews.
+            </p>
+            ${data.rating?.count
+              ? html`<div style="margin-top:10px">${stars(data.rating.average, data.rating.count)}</div>`
+              : ''}
+            ${(data.reviews || []).map(
+              (r) => html`<article class="rev">
+                <div class="rhd">
+                  ${avatar({ name: r.reviewer?.display_name || 'A reader' }, { className: 'av' })}
+                  <div>
+                    <div class="who">${r.reviewer?.display_name || 'A reader on Kitabi'}</div>
+                    ${r.created_at
+                      ? html`<div class="when">${String(r.created_at).slice(0, 10)}</div>`
+                      : ''}
+                  </div>
+                  ${r.rating
+                    ? html`<div class="rs" aria-label="${`Rated ${r.rating} out of 5`}">
+                        ${'★'.repeat(Math.round(r.rating))}
+                      </div>`
+                    : ''}
+                </div>
+                ${r.body ? html`<p class="rt">“${r.body}”</p>` : ''}
+              </article>`,
+            )}
+          </section>`
+        : ''}
       ${appBand()}
     </div>
   `;
@@ -392,17 +424,26 @@ export function renderReviews(data) {
 function writtenReviews(reviews) {
   if (!reviews?.length) return '';
   return html`${reviews.map((r) => {
+    // A review names one subject: a book, or a series. The series case has no
+    // cover and no authors — rendering it through the book branch would print
+    // an empty card linking to "/" (bookPath degrades that way on purpose).
+    const series = r.series;
     const work = r.work || {};
     const authors = (work.authors || []).map((a) => a.name).join(', ');
+    const href = series ? seriesPath(series) : bookPath(work);
+    const title = series ? series.name : work.title;
+    const meta = series ? 'Series' : authors;
     return html`<article class="rev">
       <div class="rhd">
         <!-- 44px, the same as the editions table: the typeset fallback cover
              draws its title at a fixed 13px, so anything narrower clips it. -->
-        <a href="${bookPath(work)}" style="flex:none;width:44px">${cover(work, { width: 44 })}</a>
+        <a href="${href}" style="flex:none;width:44px"
+          >${series ? html`<span class="ct" aria-hidden="true">📚</span>` : cover(work, { width: 44 })}</a
+        >
         <div style="min-width:0">
-          <div class="who"><a href="${bookPath(work)}">${work.title}</a></div>
+          <div class="who"><a href="${href}">${title}</a></div>
           <div class="when">
-            ${joinDot([authors, r.created_at ? String(r.created_at).slice(0, 10) : null])}
+            ${joinDot([meta, r.created_at ? String(r.created_at).slice(0, 10) : null])}
           </div>
         </div>
         ${r.rating

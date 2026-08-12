@@ -477,12 +477,24 @@ async def series_page(db: AsyncSession, key: str) -> P.SeriesPage | None:
             )
         )
 
+    # The series' own rating and reviews. Its books' ratings are a different
+    # pool and are not folded in — a five-star saga made of one weak volume is
+    # a thing a reader is allowed to say, and averaging the two would erase it.
+    summary = await review_service.rating_summary(db, series_id=series.id)
+    series_reviews = await review_service.public_reviews(db, series_id=series.id, limit=20)
+
     return P.SeriesPage(
         id=series.id,
         slug=series.slug,
         name=series.name,
         description=series.description,
         primary_language=series.primary_language,
+        rating=P.RatingSummary(
+            average=summary["average"],
+            count=summary["count"],
+            distribution={str(k): v for k, v in (summary["distribution"] or {}).items()},
+        ),
+        reviews=[P.PublicReviewOut(**r) for r in series_reviews],
         entries=entries,
         works=[card(w, rating_count=counts.get(w.id, 0)) for w in works],
         languages=sorted({w.language for w in works if w.language}),
@@ -974,7 +986,7 @@ async def reader_page(db: AsyncSession, username: str) -> P.ReaderPage | None:
     # Not gated on library_visible: a review the reader marked public is a
     # thing they published, and a private shelf doesn't retract it.
     written = await review_service.reader_reviews(db, profile.id)
-    review_counts = await _rating_counts(db, [r["work"].id for r in written])
+    review_counts = await _rating_counts(db, [r["work"].id for r in written if r["work"]])
 
     return P.ReaderPage(
         id=profile.id,
@@ -992,7 +1004,12 @@ async def reader_page(db: AsyncSession, username: str) -> P.ReaderPage | None:
                 body=r["body"],
                 rating=r["rating"],
                 created_at=r["created_at"],
-                work=card(r["work"], rating_count=review_counts.get(r["work"].id, 0)),
+                work=(
+                    card(r["work"], rating_count=review_counts.get(r["work"].id, 0))
+                    if r["work"]
+                    else None
+                ),
+                series=_ref(r["series"]),
             )
             for r in written
         ],

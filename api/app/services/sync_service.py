@@ -344,7 +344,10 @@ async def apply_ops(
         if op.entity == "ratings" and result.status == "applied":
             # db.get hits the identity map — _apply_one just loaded this row.
             rating = await db.get(Rating, op.entity_id)
-            if rating is not None:
+            # A series rating has no work to denormalize onto (its average is
+            # computed live), and adding its NULL here would run the refresh
+            # against `works.id IS NULL` — a silent no-op that looks like work.
+            if rating is not None and rating.work_id is not None:
                 rating_touched_works.add(rating.work_id)
 
         results.append(result)

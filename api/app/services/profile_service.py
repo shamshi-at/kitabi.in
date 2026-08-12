@@ -200,6 +200,23 @@ async def public_reviews(db: AsyncSession, target_id: uuid.UUID, limit: int = 50
     out = []
     for r in rows:
         work = r["work"]
+        if work is None:
+            # A series review — no printing to pick, and the app routes it to
+            # the series screen instead of a book page.
+            series = r["series"]
+            out.append(
+                {
+                    "id": r["id"],
+                    "series_id": series.id,
+                    "title": series.name,
+                    "author_names": "",
+                    "cover_url": None,
+                    "body": r["body"],
+                    "rating": r["rating"],
+                    "created_at": r["created_at"],
+                }
+            )
+            continue
         # The app's book route is work + edition, so a review (which attaches to
         # the Work alone) needs a printing chosen for it. Same pick as the cover,
         # so the row's image and its destination can never disagree.

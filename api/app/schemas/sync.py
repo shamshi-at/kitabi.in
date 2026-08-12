@@ -5,7 +5,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # Entities the client can push. `activity_log_entries` is pull-only — it's
 # written server-side as a side effect of other ops, never created directly.
@@ -88,9 +88,28 @@ class LibraryEntryUpdate(BaseModel):
     notes: str | None = None
 
 
-class RatingCreate(BaseModel):
+class _OneSubject(BaseModel):
+    """A rating or review names exactly one subject: a book or a series.
+
+    Checked here as well as by the database constraint so a malformed op comes
+    back as `invalid_payload` against that one op — a raw IntegrityError would
+    surface as a 500 and take the whole push batch down with it, which is how a
+    single bad row once cost a device every queued change (CLAUDE.md,
+    7 Jul 2026).
+    """
+
+    work_id: uuid.UUID | None = None
+    series_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def _exactly_one_subject(self):  # noqa: ANN201
+        if (self.work_id is None) == (self.series_id is None):
+            raise ValueError("exactly one of work_id or series_id is required")
+        return self
+
+
+class RatingCreate(_OneSubject):
     id: uuid.UUID
-    work_id: uuid.UUID
     value: int = Field(ge=1, le=5)
 
 
@@ -138,9 +157,8 @@ class ReadingNoteUpdate(BaseModel):
     page_end: int | None = Field(default=None, ge=1)
 
 
-class ReviewCreate(BaseModel):
+class ReviewCreate(_OneSubject):
     id: uuid.UUID
-    work_id: uuid.UUID
     body: str
     visible: bool = False
 

@@ -621,6 +621,40 @@ var seriesLegacyDoc = String(
 assertIncludes(seriesLegacyDoc, 'Swami and Friends', 'the pre-entries payload still renders');
 assertIncludes(seriesLegacyDoc, 'Series · 2 books', 'and still counts its books');
 
+// A series carries its OWN rating and reviews (schemas/public.py SeriesPage) —
+// about the saga, separate from the ratings on the books inside it.
+var seriesRatedDoc = String(
+  renderSeries({ id: 's', slug: 'ps', name: 'Ponniyin Selvan', indexable: true,
+    entries: [{ number: 1, book: swami, also: [] }, { number: 2, book: bachelor, also: [] }],
+    works: [swami, bachelor],
+    rating: { average: 4.6, count: 32, distribution: { '5': 24, '4': 6, '3': 2 } },
+    reviews: [{ id: 'r1', body: 'A monumental saga.', rating: 5, created_at: '2026-08-13T00:00:00Z',
+                reviewer: { id: 'u1', display_name: 'Shamshi', is_public: true } }] }).text(),
+);
+assertIncludes(seriesRatedDoc, 'A monumental saga.', 'the series review text is in the HTML');
+assertIncludes(seriesRatedDoc, '4.6', 'the series average is shown');
+assertIncludes(seriesRatedDoc, '32 ratings', 'and how many gave it');
+assertIncludes(seriesRatedDoc, 'each book has its own rating', 'the page says the pools are separate');
+// A series with no ratings of its own must not print an empty review block.
+assertExcludes(seriesDoc, 'What readers say about the series', 'no series rating, no block');
+
+// A reader's profile lists series reviews beside book reviews. Before this the
+// row shape only knew about books, so a series review rendered as an empty card
+// pointing at "/" — bookPath degrades that way by design.
+var readerDoc = String(
+  renderReader({ id: 'u1', username: 'shamshi', display_name: 'Shamshi', score: 10,
+    reviews: [
+      { id: 'r1', body: 'A monumental saga.', rating: 5, created_at: '2026-08-13T00:00:00Z',
+        work: null, series: { id: 's', slug: 'ps', name: 'Ponniyin Selvan' } },
+      { id: 'r2', body: 'This volume drags.', rating: 2, created_at: '2026-08-12T00:00:00Z',
+        work: swami, series: null },
+    ] }).text(),
+);
+assertIncludes(readerDoc, 'href="/series/ps"', 'a series review links to the series');
+assertIncludes(readerDoc, 'Ponniyin Selvan', 'and names it');
+assertIncludes(readerDoc, 'A monumental saga.', 'the series review body is rendered');
+assertIncludes(readerDoc, 'href="/book/swami"', 'a book review still links to the book');
+
 var transDoc = String(
   renderTranslations({ group_id: 'g', title: 'ആടുജീവിതം', group_rating: 4.5, group_rating_count: 1043,
     description: 'A Malayali migrant is enslaved on a Saudi goat farm.',

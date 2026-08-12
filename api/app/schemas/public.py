@@ -183,6 +183,10 @@ class SeriesPage(BaseModel):
     # rollout.
     works: list[WorkCard] = []
     languages: list[str] = []
+    # The series' own rating and reviews — about the saga, not about any one
+    # volume. The books inside it keep their own, untouched.
+    rating: RatingSummary = RatingSummary()
+    reviews: list[PublicReviewOut] = []
     indexable: bool = True
 
 
@@ -297,7 +301,11 @@ class ReaderReview(BaseModel):
     body: str
     rating: int | None = None
     created_at: datetime
-    work: WorkCard
+    # Exactly one of these: the review is about a book or about a series. A
+    # series review on a reader's profile is still theirs — dropping it because
+    # the row shape only knew about books would be a silent omission.
+    work: WorkCard | None = None
+    series: Ref | None = None
 
 
 class ReaderPage(BaseModel):

@@ -266,6 +266,27 @@ async def series_works(series_id: uuid.UUID, db: DbSession) -> list[WorkSummaryO
     return [work_summary(w) for w in works]
 
 
+@router.get("/series/{series_id}/reviews", response_model=PublicReviewsPageOut)
+async def series_reviews(
+    series_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> PublicReviewsPageOut:
+    """Every public review of the *series*, plus its own rating picture.
+
+    Separate from the reviews on the books inside it, and deliberately: "the
+    saga is worth reading" and "volume 3 drags" are different claims, and a
+    reader who rated both should see both numbers rather than one blended
+    figure that is true of neither.
+    """
+    reviews = await review_service.public_reviews(db, series_id=series_id)
+    summary = await review_service.rating_summary(db, series_id=series_id)
+    return PublicReviewsPageOut(
+        reviews=[PublicReviewOut(**r) for r in reviews],
+        rating_average=summary["average"],
+        rating_count=summary["count"],
+        rating_distribution=summary["distribution"],
+    )
+
+
 @router.get("/browse/authors", response_model=list[AuthorOut])
 async def browse_authors(
     db: DbSession,
