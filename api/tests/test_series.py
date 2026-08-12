@@ -137,9 +137,7 @@ async def test_browse_filters_by_series_in_reading_order(client, db_sessionmaker
         await db.commit()
         series_id = str(series.id)
 
-    resp = await client.get(
-        "/catalog/browse/works", params={"series": series_id, "sort": "series"}
-    )
+    resp = await client.get("/catalog/browse/works", params={"series": series_id, "sort": "series"})
     titles = [w["title"] for w in resp.json()]
     assert titles == ["First", "Third", "Unnumbered"]  # unnumbered sorts last, not first
 

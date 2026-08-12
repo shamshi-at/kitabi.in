@@ -103,9 +103,7 @@ async def test_a_books_rating_stays_out_of_its_series_average(db_sessionmaker, u
     assert summary["average"] is None, "no one has rated the series itself"
 
 
-async def test_reviews_of_a_series_and_its_book_do_not_appear_on_each_other(
-    db_sessionmaker, user
-):
+async def test_reviews_of_a_series_and_its_book_do_not_appear_on_each_other(db_sessionmaker, user):
     async with db_sessionmaker() as db:
         await _profile(db, user["id"])
         series = await _series(db)
@@ -141,9 +139,7 @@ async def test_the_rating_beside_a_review_is_for_the_same_subject(db_sessionmake
     assert on_book[0]["rating"] == 1
 
 
-async def test_a_series_rating_never_touches_the_works_denormalized_average(
-    db_sessionmaker, user
-):
+async def test_a_series_rating_never_touches_the_works_denormalized_average(db_sessionmaker, user):
     """`refresh_aggregate_rating` writes `works.aggregate_rating`; a series
     rating has no work to write to, and must not silently update one."""
     async with db_sessionmaker() as db:
@@ -172,7 +168,13 @@ async def test_a_row_naming_both_subjects_is_rejected(db_sessionmaker, user, mod
         await db.commit()
         extra = {"value": 4} if model is Rating else {"body": "x"}
         db.add(
-            model(id=uuid.uuid4(), user_id=user["id"], work_id=book.id, series_id=series.id, **extra)
+            model(
+                id=uuid.uuid4(),
+                user_id=user["id"],
+                work_id=book.id,
+                series_id=series.id,
+                **extra,
+            )
         )
         with pytest.raises(IntegrityError):
             await db.commit()
