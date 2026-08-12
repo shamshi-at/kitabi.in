@@ -14,6 +14,8 @@ import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
 import '../../features/catalog/presentation/publisher_browse_screen.dart';
 import '../../features/catalog/presentation/publisher_picker_screen.dart';
+import '../../features/catalog/presentation/series_browse_screen.dart';
+import '../../features/catalog/presentation/series_picker_screen.dart';
 import '../../features/catalog/presentation/revision_inbox_screen.dart';
 import '../../features/catalog/presentation/work_picker_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
@@ -59,10 +61,13 @@ abstract final class Routes {
   static const catalogAddEdition = '/catalog/add-edition';
   static const authorPicker = '/catalog/author-picker';
   static const publisherPicker = '/catalog/publisher-picker';
+  // Pick a series instead of typing one — see SeriesPickerScreen for why.
+  static const seriesPicker = '/catalog/series-picker';
   // Pick an existing Work — used when linking a translation.
   static const workPicker = '/catalog/work-picker';
   static const authorBrowse = '/catalog/authors/:authorId';
   static const publisherBrowse = '/catalog/publishers/:publisherId';
+  static const seriesBrowse = '/catalog/series/:seriesId';
   // Short, shareable/deep-link paths that mirror the landing page's public
   // pages (kitabi.in/b/:id, /a/:id, /p/:id). Registering them here means an
   // opened universal link lands on the right screen in-app.
@@ -90,6 +95,7 @@ abstract final class Routes {
 
   static String authorBrowsePath(String authorId) => '/catalog/authors/$authorId';
   static String publisherBrowsePath(String publisherId) => '/catalog/publishers/$publisherId';
+  static String seriesBrowsePath(String seriesId) => '/catalog/series/$seriesId';
   static String bookDetailPath(String workId, String editionId) => '/book/$workId/$editionId';
   static String reviewEditorPath(String workId) => '/review/$workId';
   static String readingTimerPath(String libraryEntryId) => '/reading-timer/$libraryEntryId';
@@ -466,6 +472,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => PublisherPickerScreen(),
       ),
       GoRoute(
+        path: Routes.seriesPicker,
+        name: 'series-picker',
+        builder: (context, state) => SeriesPickerScreen(
+          initialName: (state.extra as Map<String, dynamic>?)?['name'] as String?,
+        ),
+      ),
+      GoRoute(
         path: Routes.workPicker,
         name: 'work-picker',
         builder: (context, state) {
@@ -504,6 +517,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'publisher-browse',
         builder: (context, state) =>
             PublisherBrowseScreen(publisherId: state.pathParameters['publisherId']!),
+      ),
+      GoRoute(
+        path: Routes.seriesBrowse,
+        name: 'series-browse',
+        builder: (context, state) => SeriesBrowseScreen(
+          seriesId: state.pathParameters['seriesId']!,
+          // A first-frame hint only — the list itself is fetched, never taken
+          // from `extra`, so an entry point that carries none still works.
+          seriesName: (state.extra as Map<String, dynamic>?)?['name'] as String?,
+        ),
       ),
       // Deep-link / share-link targets — short paths that mirror kitabi.in.
       GoRoute(

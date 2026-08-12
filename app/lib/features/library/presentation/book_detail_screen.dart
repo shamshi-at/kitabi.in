@@ -333,6 +333,9 @@ class _Frontispiece extends ConsumerWidget {
       if (front != null) (url: front, label: l10n.coverFrontLabel),
       if (backCover != null) (url: backCover, label: l10n.coverBackLabel),
     ];
+    final series = (work['series'] as Map?)?.cast<String, dynamic>() ??
+        (edition?['series'] as Map?)?.cast<String, dynamic>();
+    final seriesNumber = (work['series_number'] ?? edition?['series_number']) as int?;
     final metaBits = <String>[
       if (work['first_publish_year'] != null) '${work['first_publish_year']}',
       if (edition?['page_count'] != null) l10n.bookPagesShort(edition!['page_count'] as int),
@@ -519,6 +522,44 @@ class _Frontispiece extends ConsumerWidget {
                                 child: Text(
                                   publisher!['name'] as String,
                                   style: TextStyle(color: AppColors.oxblood, fontSize: 11.5),
+                                ),
+                              ),
+                            ),
+                          // "Book 3 of Malgudi" — the door to the rest of the
+                          // series, and the first time the app has shown a
+                          // reader that a book belongs to one at all. Read off
+                          // the work: the position is the story's, not the
+                          // printing's (API migration 000043).
+                          if (series != null)
+                            Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: GestureDetector(
+                                onTap: () => context.push(
+                                  Routes.seriesBrowsePath(series['id'] as String),
+                                  extra: <String, dynamic>{'name': series['name']},
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.auto_stories_outlined,
+                                        size: 13, color: AppColors.oxblood),
+                                    SizedBox(width: 5),
+                                    Flexible(
+                                      child: Text(
+                                        seriesNumber != null
+                                            ? l10n.formSeriesBookOf(
+                                                seriesNumber, series['name'] as String)
+                                            : l10n.formSeriesPartOf(series['name'] as String),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: AppColors.oxblood,
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),

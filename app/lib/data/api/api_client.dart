@@ -408,6 +408,20 @@ class ApiClient {
           else if (row is String) {'name': row, 'work_count': null},
       ];
 
+  /// Decode a list of object rows **eagerly**, element by element.
+  ///
+  /// `(res.data as List).cast<Map<String, dynamic>>()` is lazy: a payload whose
+  /// element shape changed passes the call untouched and throws later, inside
+  /// whichever `build()` first iterates it — far from the cause, and past any
+  /// `catchError` meant to make the fetch best-effort (CLAUDE.md, 21 Jul 2026).
+  /// A non-list body still throws here, at the boundary, which is where an API
+  /// that broke its contract should surface.
+  @visibleForTesting
+  static List<Map<String, dynamic>> parseRows(dynamic data) => [
+        for (final row in data as List)
+          if (row is Map) Map<String, dynamic>.from(row),
+      ];
+
   Future<List<Map<String, dynamic>>> browseAuthors({
     int limit = 40,
     int offset = 0,
@@ -430,6 +444,40 @@ class ApiClient {
       queryParameters: {'limit': limit, 'offset': offset, 'sort': sort},
     );
     return (res.data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Series for the picker's blank state — `sort: 'popular'` puts the ones
+  /// actually holding books first. Each row carries `book_count`, which is what
+  /// separates a real series from the empty row a typo left behind.
+  Future<List<Map<String, dynamic>>> browseSeries({
+    int limit = 40,
+    int offset = 0,
+    String sort = 'name',
+  }) async {
+    final res = await _dio.get(
+      '/catalog/browse/series',
+      queryParameters: {'limit': limit, 'offset': offset, 'sort': sort},
+    );
+    return parseRows(res.data);
+  }
+
+  /// Series typeahead — cross-script, so "aithihyamala" finds "ഐതിഹ്യമാല"
+  /// rather than the reader creating a second series beside it.
+  Future<List<Map<String, dynamic>>> searchSeries(String query) async {
+    final res = await _dio.get('/catalog/search/series', queryParameters: {'q': query});
+    return parseRows(res.data);
+  }
+
+  /// The picker's "add new series". Idempotent on name server-side.
+  Future<Map<String, dynamic>> createSeries(Map<String, dynamic> payload) async {
+    final res = await _dio.post('/catalog/series', data: payload);
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Every book in a series, in reading order — the reader's series screen.
+  Future<List<Map<String, dynamic>>> seriesWorks(String seriesId) async {
+    final res = await _dio.get('/catalog/series/$seriesId/works');
+    return parseRows(res.data);
   }
 
   /// ISBN scan flow (S7) — local match first, else OpenLibrary, cached

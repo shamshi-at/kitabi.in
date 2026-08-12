@@ -3024,6 +3024,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get publisherPickerAddNew => 'Add a new publisher';
 
   @override
+  String get seriesPickerTitle => 'Series';
+
+  @override
+  String get seriesPickerSearchHint => 'Search series in any script';
+
+  @override
+  String get seriesPickerEmpty => 'No series match — add a new one below.';
+
+  @override
+  String get seriesPickerAddNew => 'Add a new series';
+
+  @override
+  String get pickerSaveSeries => 'Add this series';
+
+  @override
+  String get pickerSuggestedSeries => 'SUGGESTED';
+
+  @override
+  String seriesBookCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books',
+      one: '1 book',
+      zero: 'No books yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesBrowseLabel => 'SERIES';
+
+  @override
+  String get seriesBrowseEmpty => 'No books in this series yet.';
+
+  @override
+  String formSeriesBookOf(int number, String series) {
+    return 'Book $number of $series';
+  }
+
+  @override
+  String formSeriesPartOf(String series) {
+    return 'Part of $series';
+  }
+
+  @override
+  String get formSeriesPick => 'Choose a series';
+
+  @override
   String get pickerFieldName => 'NAME';
 
   @override
@@ -3978,6 +4027,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pickerSavePublisherFailed =>
       'Couldn\'t save the publisher — try again.';
+
+  @override
+  String get pickerSaveSeriesFailed => 'Couldn\'t save the series — try again.';
 
   @override
   String get pickerNone => 'None';

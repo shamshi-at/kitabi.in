@@ -4912,6 +4912,78 @@ abstract class AppLocalizations {
   /// **'Add a new publisher'**
   String get publisherPickerAddNew;
 
+  /// Title of the series picker page
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get seriesPickerTitle;
+
+  /// Search field hint on the series picker
+  ///
+  /// In en, this message translates to:
+  /// **'Search series in any script'**
+  String get seriesPickerSearchHint;
+
+  /// Empty state on the series picker
+  ///
+  /// In en, this message translates to:
+  /// **'No series match — add a new one below.'**
+  String get seriesPickerEmpty;
+
+  /// Expands the add-new-series form on the picker
+  ///
+  /// In en, this message translates to:
+  /// **'Add a new series'**
+  String get seriesPickerAddNew;
+
+  /// Submit button on the series picker add-new form
+  ///
+  /// In en, this message translates to:
+  /// **'Add this series'**
+  String get pickerSaveSeries;
+
+  /// Header above the most-used series suggestions shown when the series picker search is empty
+  ///
+  /// In en, this message translates to:
+  /// **'SUGGESTED'**
+  String get pickerSuggestedSeries;
+
+  /// How many books a series holds
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No books yet} =1{1 book} other{{count} books}}'**
+  String seriesBookCount(int count);
+
+  /// Eyebrow label on the series screen
+  ///
+  /// In en, this message translates to:
+  /// **'SERIES'**
+  String get seriesBrowseLabel;
+
+  /// Empty state on the series screen
+  ///
+  /// In en, this message translates to:
+  /// **'No books in this series yet.'**
+  String get seriesBrowseEmpty;
+
+  /// The series line on a book page
+  ///
+  /// In en, this message translates to:
+  /// **'Book {number} of {series}'**
+  String formSeriesBookOf(int number, String series);
+
+  /// The series line on a book page when the book has no number
+  ///
+  /// In en, this message translates to:
+  /// **'Part of {series}'**
+  String formSeriesPartOf(String series);
+
+  /// Placeholder on the add-book form's series picker button
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a series'**
+  String get formSeriesPick;
+
   /// Name field label on the author/publisher picker add-new form
   ///
   /// In en, this message translates to:
@@ -6465,6 +6537,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t save the publisher — try again.'**
   String get pickerSavePublisherFailed;
+
+  /// Snackbar when creating a new series from the picker fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the series — try again.'**
+  String get pickerSaveSeriesFailed;
 
   /// Subdued clear row in a single-select chip picker sheet
   ///

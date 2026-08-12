@@ -45,6 +45,13 @@ final publisherWorksProvider =
   return ref.watch(apiClientProvider).getPublisherWorks(publisherId);
 });
 
+/// Every book in a series, in reading order — the series screen. Unnumbered
+/// books come last, so a half-catalogued series still reads top to bottom.
+final seriesWorksProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, seriesId) {
+  return ref.watch(apiClientProvider).seriesWorks(seriesId);
+});
+
 /// Full Work detail — used by the add/edit form when editing an existing
 /// catalog entry (create passes no id and skips this entirely).
 final workProvider =

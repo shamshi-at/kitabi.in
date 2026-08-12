@@ -131,6 +131,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _title;
   late final TextEditingController _description;
+  // The picked series row ({id, name, ...}). `_series` still holds a *name*,
+  // because a series read off a scanned cover or an extracted photo arrives as
+  // a string with no id — it prefills the picker rather than becoming a row.
+  Map<String, dynamic>? _seriesPick;
   late final TextEditingController _series;
   late final TextEditingController _seriesNumber;
   late final TextEditingController _pages;
@@ -187,6 +191,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
   String? _initialFormat;
   String? _initialPublisherId;
   String? _initialSeriesName;
+  String? _initialSeriesId;
   int? _initialSeriesNumber;
   bool _uploadingFront = false;
   bool _uploadingBack = false;
@@ -267,8 +272,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
     if (work == null) _title.addListener(_onTitleChangedForSimilar);
     _description = TextEditingController(text: work?['description'] as String? ?? '');
     _language = work?['language'] as String?;
-    _series = TextEditingController(text: (edition?['series'] as Map?)?['name'] as String? ?? '');
-    _hasSeries = (edition?['series'] as Map?)?['name'] != null;
+    final seededSeries = (edition?['series'] as Map?)?.cast<String, dynamic>();
+    _seriesPick = seededSeries;
+    _series = TextEditingController(text: seededSeries?['name'] as String? ?? '');
+    _hasSeries = seededSeries?['name'] != null;
     _seriesNumber =
         TextEditingController(text: edition?['series_number']?.toString() ?? '');
     _pages = TextEditingController(text: edition?['page_count']?.toString() ?? '');
@@ -288,7 +295,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _initialIsbn = edition?['isbn'] as String?;
     _initialFormat = edition?['format'] as String?;
     _initialPublisherId = (edition?['publisher'] as Map?)?['id'] as String?;
-    _initialSeriesName = (edition?['series'] as Map?)?['name'] as String?;
+    _initialSeriesName = seededSeries?['name'] as String?;
+    _initialSeriesId = seededSeries?['id'] as String?;
     _initialSeriesNumber = edition?['series_number'] as int?;
     // A genre that isn't one of ours is the reader's own — it must come back
     // as a selected chip on edit, not vanish for being off-list.
@@ -304,7 +312,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
   String _fingerprint() => [
         _title.text,
         _description.text,
-        _series.text,
+        _seriesPick?['id'] as String? ?? _series.text,
         _seriesNumber.text,
         _pages.text,
         _isbn.text,
@@ -705,6 +713,21 @@ class _BookFormState extends ConsumerState<_BookForm> {
     });
   }
 
+  /// Choose the series from the catalog rather than typing it. Seeded with
+  /// whatever is in the field — a scanned or extracted name should be shown
+  /// its existing matches before it becomes a new row.
+  Future<void> _pickSeries() async {
+    final result = await context.push<Map<String, dynamic>>(
+      Routes.seriesPicker,
+      extra: <String, dynamic>{'name': _series.text.trim()},
+    );
+    if (result == null) return;
+    setState(() {
+      _seriesPick = result;
+      _series.text = result['name'] as String? ?? '';
+    });
+  }
+
   Future<void> _pickPublisher() async {
     final result = await context.push<Map<String, dynamic>>(Routes.publisherPicker);
     if (result == null) return;
@@ -1062,7 +1085,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
       'publisher_id': publisherId,
       'publisher_name':
           publisherId == null ? (_publisher?['name'] as String?) : null,
-      'series_name': _hasSeries && _series.text.trim().isNotEmpty ? _series.text.trim() : null,
+      'series_id': _hasSeries ? (_seriesPick?['id'] as String?) : null,
+      // Only when nothing was picked: a name off a scanned cover still beats
+      // losing the series, and the server get-or-creates it.
+      'series_name': _hasSeries && _seriesPick == null && _series.text.trim().isNotEmpty
+          ? _series.text.trim()
+          : null,
       'series_number': _hasSeries ? int.tryParse(_seriesNumber.text.trim()) : null,
       'isbn': _isbn.text.trim().isEmpty ? null : _isbn.text.trim(),
       'page_count': int.tryParse(_pages.text.trim()),
@@ -1098,8 +1126,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
         if (editionId != null) {
           final pageCount = int.tryParse(_pages.text.trim());
           final isbn = _isbn.text.trim().isEmpty ? null : _isbn.text.trim();
-          final seriesName =
-              _hasSeries && _series.text.trim().isNotEmpty ? _series.text.trim() : null;
+          final seriesId = _hasSeries ? (_seriesPick?['id'] as String?) : null;
+          final seriesName = _hasSeries && _seriesPick == null && _series.text.trim().isNotEmpty
+              ? _series.text.trim()
+              : null;
           final seriesNumber = _hasSeries ? int.tryParse(_seriesNumber.text.trim()) : null;
           final publisherName = _publisher?['name'] as String?;
           final edPatch = <String, dynamic>{
@@ -1110,7 +1140,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
             if (isbn != null && isbn != _initialIsbn) 'isbn': isbn,
             // Never null an existing format out — same rule as covers.
             if (_format != null && _format != _initialFormat) 'format': _format,
-            if (seriesName != null && seriesName != _initialSeriesName) 'series_name': seriesName,
+            if (seriesId != null && seriesId != _initialSeriesId) 'series_id': seriesId,
+            if (seriesId == null && seriesName != null && seriesName != _initialSeriesName)
+              'series_name': seriesName,
             if (seriesNumber != null && seriesNumber != _initialSeriesNumber)
               'series_number': seriesNumber,
             // Publisher rides as an id when picked from the catalog, else by
@@ -1181,6 +1213,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
       _formKey.currentState?.reset();
       _title.clear();
       _description.clear();
+      _seriesPick = null;
       _series.clear();
       _seriesNumber.clear();
       _pages.clear();
@@ -1779,11 +1812,23 @@ class _BookFormState extends ConsumerState<_BookForm> {
                                   children: [
                                     Expanded(
                                       flex: 14,
-                                      child: FormTextField(
+                                      // Picked, not typed: one ordering per
+                                      // series only survives if the reader
+                                      // chooses the existing row. A name that
+                                      // arrived from a scan still shows here,
+                                      // and tapping opens the picker seeded
+                                      // with it.
+                                      child: PickerButtonField(
                                         label: l10n.formFieldSeries,
-                                        controller: _series,
-                                        fillColor: AppColors.card,
-                                        helper: l10n.formSeriesNameHelp,
+                                        value: _series.text.isEmpty ? null : _series.text,
+                                        placeholder: l10n.formSeriesPick,
+                                        onTap: _pickSeries,
+                                        onClear: _series.text.isEmpty
+                                            ? null
+                                            : () => setState(() {
+                                                  _seriesPick = null;
+                                                  _series.clear();
+                                                }),
                                       ),
                                     ),
                                     SizedBox(width: 8),
