@@ -107,6 +107,40 @@ async def test_the_survivor_is_the_row_carrying_the_most(db_sessionmaker):
     assert cands[0].survivor_id == big.id
 
 
+def test_a_self_repeating_name_is_detected():
+    """The shape of a bad import, not of a longer name."""
+    assert merge_service.repeats_itself("Rev. William Rev. William Benham")
+    assert merge_service.repeats_itself("John Perkins John Perkins")
+    # A name that genuinely says a word twice is not corrupt.
+    assert not merge_service.repeats_itself("Sri Sri Ravi Shankar")
+    assert not merge_service.repeats_itself("Rev. William Benham")
+    assert not merge_service.repeats_itself(None)
+
+
+async def test_a_repeated_name_does_not_win_the_tie(db_sessionmaker):
+    """Both rows carry one book, so the longest-name rule would hand the tie to
+    the corrupted row — the exact proposal reported on 12 Aug 2026."""
+    async with db_sessionmaker() as db:
+        await _author(db, "Rev. William Rev. William Benham", works=1)
+        clean = await _author(db, "Rev. William Benham", works=1)
+        await db.commit()
+        cands = await merge_service.find_candidates(db, "authors")
+
+    assert cands[0].survivor_id == clean.id
+
+
+async def test_a_repeated_name_still_wins_when_it_carries_more(db_sessionmaker):
+    """Books outrank tidiness: the row with the links survives, and the reviewer
+    fixes its name rather than moving five books to rescue a typo."""
+    async with db_sessionmaker() as db:
+        big = await _author(db, "Rev. William Rev. William Benham", works=5)
+        await _author(db, "Rev. William Benham", works=1)
+        await db.commit()
+        cands = await merge_service.find_candidates(db, "authors")
+
+    assert cands[0].survivor_id == big.id
+
+
 async def test_proposals_are_deterministic(db_sessionmaker):
     """Proposing twice must propose the same thing, or a review queue reshuffles
     under the reviewer."""

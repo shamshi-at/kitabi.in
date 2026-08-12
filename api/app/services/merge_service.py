@@ -93,17 +93,44 @@ async def _counts(db: AsyncSession, kind: str, ids: list[uuid.UUID]) -> dict[uui
     return dict((await db.execute(stmt)).all())
 
 
+def repeats_itself(name: str | None) -> bool:
+    """Whether a name contains a multi-word run repeated back to back — the
+    shape of a bad import ("Rev. William Rev. William Benham"), not of a fuller
+    name. Only runs of two words or more count, so a name that genuinely says a
+    word twice (Sri Sri Ravi Shankar) is left alone.
+    """
+    words = normalize(name).split()
+    for size in range(2, len(words) // 2 + 1):
+        for start in range(len(words) - 2 * size + 1):
+            if words[start : start + size] == words[start + size : start + 2 * size]:
+                return True
+    return False
+
+
 def pick_survivor(rows: list, counts: dict) -> object:
     """Which row wins. Deterministic, so proposing twice proposes the same thing.
 
     Most works first — that row already has the most inbound links and the most
-    to lose. Then the longest name, because "Basheer, Vaikom Muhammad" carries
-    more information than "V. M. Basheer" and a merge should not throw detail
-    away. Then oldest, as a stable final tiebreak.
+    to lose. Then a name that doesn't repeat itself, because the longest-name
+    rule below otherwise hands the tie to exactly the corrupted row it should
+    reject (reported 12 Aug 2026: "Rev. William Rev. William Benham" was
+    proposed as the survivor over "Rev. William Benham"). Then the longest name,
+    because "Basheer, Vaikom Muhammad" carries more information than
+    "V. M. Basheer" and a merge should not throw detail away. Then oldest, as a
+    stable final tiebreak.
+
+    Only a default. The reviewer picks the survivor in the console, and can fix
+    the kept row's name before merging — no heuristic gets every name right.
     """
     return sorted(
         rows,
-        key=lambda r: (-counts.get(r.id, 0), -len(r.name or ""), r.created_at, str(r.id)),
+        key=lambda r: (
+            -counts.get(r.id, 0),
+            repeats_itself(r.name),
+            -len(r.name or ""),
+            r.created_at,
+            str(r.id),
+        ),
     )[0]
 
 
