@@ -33,6 +33,10 @@ WORK_FORMS = (
     "Biography",
     "Essays",
     "Play",
+    # തിരക്കഥ is a shelf of its own in Malayalam publishing — the screenplay of
+    # a novel is sold as its own book, and readers own both (owner report,
+    # 13 Aug 2026). Also teaches the cover-extract prompt to recognise it.
+    "Screenplay",
     "Travelogue",
     "Children's",
     "Graphic novel",
@@ -231,6 +235,13 @@ class WorkOut(BaseModel):
     translators: list[AuthorOut] = []
     genres: list[GenreOut]
     editions: list[EditionOut]
+    # Which of those editions the caller actually asked for. Set only by
+    # `GET /catalog/isbn/{isbn}`, which knows precisely which printing carries
+    # the barcode that was scanned — the rest of the response is the whole
+    # Work, and picking `editions[0]` out of it shelved the wrong printing
+    # (owner report, 13 Aug 2026: scanning a 240-page reprint put the 55-page
+    # first edition on the shelf). Null everywhere else.
+    scanned_edition_id: uuid.UUID | None = None
     # Other Works sharing this one's translation_group_id — e.g. the Malayalam
     # "Dantha Simhasanam" listed on the English "Ivory Throne" and vice versa.
     # Computed at read time (a translation is its own Work, only group-linked).
@@ -366,7 +377,15 @@ class AuthorClaimOut(BaseModel):
 
 class EditionCreate(BaseModel):
     """Add another printing/ISBN to an existing Work — the edition-level library
-    (a paperback of a book you own in hardcover, a regional reprint, …)."""
+    (a paperback of a book you own in hardcover, a regional reprint, …).
+
+    The three Work-level fields at the bottom are not edition data and are
+    never written onto the Edition. They exist because the reader adding a
+    printing is standing there with the book, often in front of a Work that is
+    a bare stub: whatever the back cover says goes to fill the *Work's* empty
+    blurb, type and year (owner request, 13 Aug 2026). An answer the Work
+    already has is never overwritten.
+    """
 
     publisher_id: uuid.UUID | None = None
     publisher_name: str | None = None
@@ -382,6 +401,12 @@ class EditionCreate(BaseModel):
     format: str | None = None
     cover_url: str | None = None
     back_cover_url: str | None = None
+    # Work-level, fill-if-empty — see the class docstring.
+    description: str | None = None
+    form: str | None = None
+    first_publish_year: int | None = None
+
+    _check_form = field_validator("form")(_validate_form)
 
 
 class EditionUpdate(BaseModel):
@@ -439,6 +464,12 @@ class CoverExtractOut(BaseModel):
     title: str | None = None
     authors: list[str] = []
     publisher: str | None = None
+    # The catalogue row the read name resolves to, when the catalogue already
+    # has that house. Sent so the form can show — and save against — the
+    # publisher every other book sits on, instead of the spelling this one
+    # cover happens to print. Null when it would be a genuinely new house, and
+    # then `publisher` is the read name verbatim.
+    publisher_id: uuid.UUID | None = None
     description: str | None = None
     series_name: str | None = None
     series_number: int | None = None

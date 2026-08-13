@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, func, literal, or_, select, text, update
+from sqlalchemy import and_, case, func, literal, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -130,12 +130,55 @@ async def _relax_word_similarity(db: AsyncSession) -> None:
     await db.execute(text("SET LOCAL pg_trgm.word_similarity_threshold = 0.45"))
 
 
+async def _existing_by_name(db: AsyncSession, model: type, name: str) -> object | None:
+    """The live catalog row a free-text name refers to, or None.
+
+    Deliberately NOT `scalar_one_or_none()`: names are unique only on Genre, so
+    the moment the catalogue holds two publishers (or authors, or series)
+    spelled the same, that call *raises* and takes the whole save with it.
+    Oldest live row wins instead — deterministic, and the same answer on every
+    request.
+
+    Soft-deleted rows are skipped, but a merged one is followed to its
+    survivor: merging soft-deletes the loser, so without the hop the next cover
+    that reads the loser's name re-creates the very duplicate an admin had just
+    merged away.
+    """
+    cleaned = name.strip()
+    stmt = (
+        select(model)
+        .where(model.name.ilike(cleaned), model.deleted_at.is_(None))
+        .order_by(model.created_at, model.id)
+        .limit(1)
+    )
+    live = (await db.execute(stmt)).scalars().first()
+    if live is not None:
+        return live
+    if not hasattr(model, "merged_into_id"):
+        return None
+    merged = (
+        (
+            await db.execute(
+                select(model)
+                .where(model.name.ilike(cleaned), model.merged_into_id.is_not(None))
+                .order_by(model.created_at, model.id)
+                .limit(1)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if merged is None:
+        return None
+    survivor = await db.get(model, merged.merged_into_id)
+    return survivor if survivor is not None and survivor.deleted_at is None else None
+
+
 async def _get_or_create(db: AsyncSession, model: type, name: str) -> object:
     """Case-insensitive get-or-create by name — authors/publishers/genres/series
     all share this shape. Catalog entities are server-authoritative (no
     client-generated id), so a plain insert-if-missing is correct here."""
-    stmt = select(model).where(model.name.ilike(name.strip()))
-    existing = (await db.execute(stmt)).scalar_one_or_none()
+    existing = await _existing_by_name(db, model, name)
     if existing is not None:
         return existing
     row = model(name=name.strip())
@@ -407,6 +450,54 @@ async def _resolve_authors(
     return resolved
 
 
+async def publisher_by_name(db: AsyncSession, name: str) -> Publisher | None:
+    """The house a free-text publisher name refers to — the *most-used* row
+    among the ones that match it, or None if the catalogue has none.
+
+    A publisher name almost never arrives from the picker: it is read off a
+    photographed cover, imported from OpenLibrary, or typed. The catalogue
+    meanwhile really does hold near-duplicate publisher rows (merging them is a
+    manual admin job), so an exact-spelling lookup would land such a name on
+    whichever duplicate happened to be created first — often the empty one —
+    while every other book sits on the row beside it (owner report,
+    13 Aug 2026).
+
+    So: exact case-insensitive spellings first, then rows sharing the
+    spelling-insensitive fold ("Mathrubhumi Books" and "Mathrubhoomi Books"
+    have one skeleton — see services/translit.fold), and within each tier the
+    row carrying the most editions wins. Fold *equality* only, never the fuzzy
+    search predicate: the picker is where a reader chooses between houses, this
+    only collapses two spellings of one.
+    """
+    cleaned = name.strip()
+    if not cleaned:
+        return None
+    uses = (
+        select(Edition.publisher_id.label("publisher_id"), func.count().label("n"))
+        .where(Edition.deleted_at.is_(None))
+        .group_by(Edition.publisher_id)
+        .subquery()
+    )
+    exact = Publisher.name.ilike(cleaned)
+    match = exact
+    folded = fold(cleaned)
+    if folded:
+        match = or_(exact, Publisher.name_fold == folded)
+    stmt = (
+        select(Publisher)
+        .outerjoin(uses, uses.c.publisher_id == Publisher.id)
+        .where(match, Publisher.deleted_at.is_(None))
+        .order_by(
+            case((exact, 0), else_=1),
+            func.coalesce(uses.c.n, 0).desc(),
+            Publisher.created_at,
+            Publisher.id,
+        )
+        .limit(1)
+    )
+    return (await db.execute(stmt)).scalars().first()
+
+
 async def _resolve_publisher(
     db: AsyncSession, publisher_id: uuid.UUID | None, publisher_name: str | None
 ) -> Publisher | None:
@@ -415,6 +506,11 @@ async def _resolve_publisher(
         if publisher is not None:
             return publisher
     if publisher_name:
+        # Most-used match first; `_get_or_create` only ever gets to run when the
+        # catalogue genuinely has no such house yet.
+        existing = await publisher_by_name(db, publisher_name)
+        if existing is not None:
+            return existing
         return await _get_or_create(db, Publisher, publisher_name)
     return None
 
@@ -1409,7 +1505,15 @@ async def find_or_fetch_by_isbn(
 async def create_edition(db: AsyncSession, work: Work, payload: EditionCreate) -> Edition:
     """Attach another edition (printing/ISBN) to an existing Work — same book,
     different physical copy. Mirrors the edition half of create_work_with_edition
-    but leaves the Work (title/authors/genres) untouched."""
+    but leaves the Work's title/authors/genres untouched.
+
+    It does *not* leave the Work's empty fields untouched. Most Works a reader
+    adds a printing to were created by an ISBN lookup or a bare stub, so they
+    have no blurb, no type and no year — and the reader adding the printing is
+    holding the book, back cover and all (owner request, 13 Aug 2026). Anything
+    the Work is missing gets filled from what they supplied; anything it
+    already answers is left exactly as it is.
+    """
     publisher = await _resolve_publisher(db, payload.publisher_id, payload.publisher_name)
     # A series arriving with a new printing describes the *book*, not the
     # printing — so it lands on the Work, the same as on the edit path. An app
@@ -1433,8 +1537,27 @@ async def create_edition(db: AsyncSession, work: Work, payload: EditionCreate) -
         back_cover_url=payload.back_cover_url,
     )
     db.add(edition)
+    _fill_empty_work_fields(work, payload)
     await db.commit()
     return await get_edition_or_404(db, edition.id)
+
+
+def _fill_empty_work_fields(work: Work, payload: EditionCreate) -> None:
+    """Lift the Work-level facts off a new printing into the gaps on its Work.
+
+    Strictly gap-filling: a blank string counts as a gap, an existing answer
+    never does. Language is the one field that lives on both — the Edition
+    keeps its own (a Malayalam printing of an English book is a real thing),
+    and the Work only takes it when it has none at all.
+    """
+    if not (work.description or "").strip() and (payload.description or "").strip():
+        work.description = payload.description.strip()
+    if not work.form and payload.form:
+        work.form = payload.form
+    if work.first_publish_year is None and payload.first_publish_year is not None:
+        work.first_publish_year = payload.first_publish_year
+    if not work.language and payload.language:
+        work.language = payload.language
 
 
 async def translation_siblings(db: AsyncSession, work: Work) -> list[Work]:

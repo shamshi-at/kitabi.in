@@ -335,7 +335,13 @@ async def lookup_isbn(isbn: str, user: CurrentUser, db: DbSession, ol_client: Ol
             detail={"code": "not_found", "message": "No book found for that ISBN"},
         )
     work = await catalog_service.get_work_or_404(db, edition.work_id)
-    return await _work_out(db, work)
+    out = await _work_out(db, work)
+    # Say which printing the barcode belongs to. The response is the whole
+    # Work, and the caller cannot work this out from the outside: two editions
+    # of the same book differ in exactly the fields a reader cares about
+    # (page count, cover, publisher), so guessing costs them the right one.
+    out.scanned_edition_id = edition.id
+    return out
 
 
 @router.post("/cover-extract", response_model=CoverExtractOut)
@@ -380,6 +386,15 @@ async def cover_extract(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail={"code": "extraction_failed", "message": "Couldn't read the photos"},
         ) from err
+    # A house read off a cover is a *name*, and names are how duplicate
+    # publishers get made. Hand back the catalogue's canonical row for it when
+    # there is one, so the form shows the publisher the rest of the shelf
+    # already uses rather than this cover's spelling of it.
+    name = fields.get("publisher")
+    if name:
+        known = await catalog_service.publisher_by_name(db, name)
+        if known is not None:
+            fields = {**fields, "publisher": known.name, "publisher_id": known.id}
     return CoverExtractOut(**fields)
 
 
