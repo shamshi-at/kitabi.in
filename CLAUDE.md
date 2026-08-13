@@ -600,6 +600,29 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   Workers globals — `URL`, and now `URLSearchParams` — so a renderer using a
   Web API that JavaScriptCore lacks fails the harness, not production; extend
   the shim in `tests/run.py` rather than avoiding the API.
+- **`editions[0]` is a *representative*, never an answer.** Three of six add-book
+  reports in one session were the same bug wearing different clothes (13 Aug 2026):
+  scanning a 240-page reprint shelved the 55-page first edition, "I own this one"
+  shelved whichever printing was catalogued first, and adding an edition left the
+  reader on the parent so the next "Add to library" shelved that. `cover_edition`
+  exists precisely because a *display* pick must be deterministic — but a pick the
+  reader will own has to be the reader's, and page count is what makes it visible
+  (every progress figure is a lie against the wrong printing). Two rules: an
+  endpoint that resolved a specific row must **say which** — `GET /catalog/isbn/{isbn}`
+  had the matched Edition in hand and returned the whole Work without naming it, so
+  the app could only guess; and any "put this on my shelf" path must ask when the
+  work has more than one printing (`chooseEdition`).
+- **A client-side `allowCreate: false` can quietly repeal a server-side product
+  decision, and nothing fails.** `WORK_FORMS` is documented in
+  `api/app/schemas/catalog.py` as *suggested, not closed* — "a reader whose book is a
+  form we didn't think of must be able to say so" — and `normalize_form` folds free
+  values instead of rejecting them. The Type picker sheet shipped closed anyway, so
+  a reader holding the തിരക്കഥ of a novel had nowhere to put it (13 Aug 2026). The
+  tells were all there and all passive: orphaned `formTypeOther*` l10n strings from
+  the affordance the sheet replaced, and a widget test named "the type sheet is a
+  **closed vocabulary**" that pinned the regression in place. A test asserting an
+  absence is only as good as the decision behind it — when a comment on one side
+  says "open" and the code on the other says "closed", the code is not the spec.
 
 ## Open decisions
 
