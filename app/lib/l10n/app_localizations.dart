@@ -148,6 +148,18 @@ abstract class AppLocalizations {
   /// **'Opening your reading room…'**
   String get splashLoading;
 
+  /// Shown on the splash when the profile bootstrap call fails, with a retry
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t finish setting up your account.'**
+  String get splashSetupFailed;
+
+  /// Sub-line under the bootstrap failure message on the splash
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get splashSetupFailedHint;
+
   /// Rotating literary quote on the sign-in screen and home quote card
   ///
   /// In en, this message translates to:

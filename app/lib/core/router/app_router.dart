@@ -235,8 +235,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       // authStateProvider settling — which Riverpod exposes as "loading" but
       // still carrying the previous build's value — still holds here instead
       // of reading that stale value as final.
+      // Hold on splash while the bootstrap resolves — AND if it failed without
+      // ever having succeeded. Letting an *error* through was how a signed-in
+      // reader reached the language picker with no profile row: its first save
+      // is a PATCH /me, which could only 404, and nothing ever called bootstrap
+      // again (owner report, 13 Aug 2026). The splash offers a retry, so this
+      // is a held door with a handle, not a dead end.
+      //
+      // `!bootstrap.hasValue` matters: once a session has bootstrapped, a later
+      // background re-run that errors (a token refresh during a tunnel) must not
+      // yank a reader out of the app and back to the splash.
       final bootstrap = ref.read(bootstrapProvider);
-      if (bootstrap.isLoading) {
+      if (bootstrap.isLoading || (bootstrap.hasError && !bootstrap.hasValue)) {
         return loc == Routes.splash ? null : Routes.splash;
       }
 

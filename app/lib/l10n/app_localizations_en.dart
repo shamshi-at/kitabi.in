@@ -37,6 +37,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get splashLoading => 'Opening your reading room…';
 
   @override
+  String get splashSetupFailed => 'Couldn\'t finish setting up your account.';
+
+  @override
+  String get splashSetupFailedHint => 'Check your connection and try again.';
+
+  @override
   String get signInQuote1 => 'A reader lives a thousand lives before he dies.';
 
   @override

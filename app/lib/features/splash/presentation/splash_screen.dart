@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/auth/auth_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/brand_mark.dart';
 import '../../../l10n/app_localizations.dart';
@@ -13,14 +15,14 @@ import '../../../l10n/app_localizations.dart';
 /// across ("The Gold Line" brand mark), the tagline fades in — then a quiet
 /// three-dot loader keeps time while auth/profile resolve. Honours
 /// `MediaQuery.disableAnimations` (reduced motion) by showing the settled state.
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProviderStateMixin {
   late final AnimationController _intro =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
   late final AnimationController _loop =
@@ -52,6 +54,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // Only a bootstrap that has *never* succeeded is a failure worth showing —
+    // matching the router's gate, so the two can't disagree about who is stuck.
+    final bootstrap = ref.watch(bootstrapProvider);
+    final bootstrapFailed = bootstrap.hasError && !bootstrap.hasValue;
     final logo = _slice(0.0, 0.55, curve: Curves.easeOutBack);
     final name = _slice(0.35, 0.72);
     final line = _slice(0.55, 0.9, curve: Curves.easeInOut);
@@ -132,16 +138,45 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             bottom: 44,
             child: FadeTransition(
               opacity: footer,
-              child: Column(
-                children: [
-                  _DotsLoader(controller: _loop),
-                  const SizedBox(height: 14),
-                  Text(
-                    l10n.splashLoading,
-                    style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
-                  ),
-                ],
-              ),
+              // The router holds a signed-in reader here until the profile
+              // bootstrap succeeds. If it failed, saying so with a retry is the
+              // whole point — an endless spinner would just be a prettier dead
+              // end than the 404 this replaced.
+              child: bootstrapFailed
+                  ? Column(
+                      children: [
+                        Text(
+                          l10n.splashSetupFailed,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.splashSetupFailedHint,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: () => ref.invalidate(bootstrapProvider),
+                          child: Text(l10n.commonRetry),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        _DotsLoader(controller: _loop),
+                        const SizedBox(height: 14),
+                        Text(
+                          l10n.splashLoading,
+                          style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ],
