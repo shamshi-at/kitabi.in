@@ -26,13 +26,24 @@ async def _profile_out(db: DbSession, profile: Profile) -> ProfileOut:
 
 @router.get("", response_model=ProfileOut)
 async def get_me(user: CurrentUser, db: DbSession) -> ProfileOut:
-    profile = await profile_service.get_profile_or_404(db, uuid.UUID(user["id"]))
+    # Bootstraps rather than 404s. `POST /auth/bootstrap` is still what the app
+    # calls on sign-in, but if that one call is missed — it returned early on a
+    # session that had not settled, or failed on a network blip — the reader was
+    # stuck forever: /me answered "call bootstrap first", the router let them
+    # through to the language picker anyway, and *nothing ever called bootstrap
+    # again*. That is exactly how a signed-in reader reached a 404 they could not
+    # get past (owner report, 13 Aug 2026). The token is already verified here,
+    # so creating the row is no more privileged than the bootstrap endpoint; it
+    # is the same idempotent call, made where the need is discovered.
+    profile = await profile_service.get_or_selfheal_profile(db, user)
     return await _profile_out(db, profile)
 
 
 @router.patch("", response_model=ProfileOut)
 async def update_me(patch: ProfileUpdate, user: CurrentUser, db: DbSession) -> ProfileOut:
-    profile = await profile_service.get_profile_or_404(db, uuid.UUID(user["id"]))
+    # Same self-heal as GET: the language picker's save is the first write a new
+    # reader makes, and it must not be the thing that dead-ends them.
+    profile = await profile_service.get_or_selfheal_profile(db, user)
     profile = await profile_service.update_profile(db, profile, patch)
     return await _profile_out(db, profile)
 

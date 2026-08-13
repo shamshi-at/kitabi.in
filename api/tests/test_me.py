@@ -1,7 +1,48 @@
-async def test_get_me_requires_bootstrap(client):
+async def test_get_me_bootstraps_instead_of_dead_ending(client):
+    """A signed-in reader whose profile row is missing must not be stuck.
+
+    /me used to 404 with "call bootstrap first" — but the app calls bootstrap
+    once, at sign-in, and nothing calls it again. So a single missed bootstrap
+    (a session that had not settled yet, a network blip) left the reader signed
+    in, on the language picker, hitting a 404 they could never get past (owner
+    report, 13 Aug 2026). The token is verified by the time we are here, so the
+    row is created where the need is discovered.
+    """
     resp = await client.get("/me")
-    assert resp.status_code == 404
-    assert resp.json()["code"] == "not_bootstrapped"
+    assert resp.status_code == 200
+
+    # …and it really persisted, rather than being conjured per request.
+    again = await client.get("/me")
+    assert again.status_code == 200
+    assert again.json()["id"] == resp.json()["id"]
+
+
+async def test_a_deleted_account_is_never_revived_by_a_passive_read(client):
+    """The self-heal above must not undo an account deletion.
+
+    A missing profile is a gap to close; a soft-deleted one is a reader who
+    asked us to delete their account. If /me recreated that, the deletion would
+    be reversed by nothing more than the app polling in the background — the
+    reader having done nothing at all.
+    """
+    await client.post("/auth/bootstrap")
+    assert (await client.delete("/me")).status_code in (200, 204)
+
+    assert (await client.get("/me")).status_code == 404
+    patched = await client.patch("/me", json={"preferred_languages": ["Malayalam"]})
+    assert patched.status_code == 404
+
+    # Only signing back in — an explicit re-bootstrap — brings it back.
+    assert (await client.post("/auth/bootstrap")).status_code == 200
+    assert (await client.get("/me")).status_code == 200
+
+
+async def test_patch_me_bootstraps_too(client):
+    """The language picker's save is the first write a new reader makes, and was
+    the exact call that dead-ended them."""
+    resp = await client.patch("/me", json={"preferred_languages": ["Malayalam"]})
+    assert resp.status_code == 200
+    assert resp.json()["preferred_languages"] == ["Malayalam"]
 
 
 async def test_get_me_after_bootstrap(client):

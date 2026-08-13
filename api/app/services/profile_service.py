@@ -77,6 +77,28 @@ async def get_or_bootstrap_profile(db: AsyncSession, user: dict) -> Profile:
     return profile
 
 
+async def get_or_selfheal_profile(db: AsyncSession, user: dict) -> Profile:
+    """`/me`'s lookup: create the row when it is *missing*, never revive one the
+    reader deleted.
+
+    The app calls `POST /auth/bootstrap` once, at sign-in, and nothing calls it
+    again — so a single missed bootstrap left a signed-in reader stuck on a 404
+    forever (owner report, 13 Aug 2026). Creating it here closes that hole.
+
+    But a **soft-deleted** profile is not a missing one: it is a reader who asked
+    us to delete their account. Reviving that silently, on a passive GET, would
+    undo their decision without them doing anything. Only an explicit
+    re-bootstrap at sign-in revives (see [get_or_bootstrap_profile]).
+    """
+    profile = await db.get(Profile, uuid.UUID(user["id"]))
+    if profile is not None and profile.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_bootstrapped", "message": "Call POST /auth/bootstrap first"},
+        )
+    return await get_or_bootstrap_profile(db, user)
+
+
 async def get_profile_or_404(db: AsyncSession, user_id: uuid.UUID) -> Profile:
     profile = await db.get(Profile, user_id)
     if profile is None or profile.deleted_at is not None:
