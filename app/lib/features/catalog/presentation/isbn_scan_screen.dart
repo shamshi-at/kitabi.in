@@ -12,6 +12,7 @@ import '../../../data/db/catalog_cache.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../work_editions.dart';
 
 /// S7 — point the camera at a barcode; on a decode, resolve it through
 /// `GET /catalog/isbn/{isbn}` (local match, else OpenLibrary, cached either
@@ -307,8 +308,7 @@ class _ConfirmCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final editions = (work['editions'] as List?) ?? [];
-    final edition = editions.isNotEmpty ? editions.first as Map<String, dynamic> : null;
+    final edition = scannedEdition(work);
     final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final authorNames = authors.map((a) => a['name'] as String).join(', ');
 
@@ -350,6 +350,17 @@ class _ConfirmCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: _nightMuted, fontSize: 11),
+                    ),
+                  // Which *printing* the barcode belongs to. A book with
+                  // several editions in the catalogue is exactly where a
+                  // silent "first one" pick goes wrong, so name the one
+                  // that's going on the shelf.
+                  if (edition != null && editionLabel(edition).isNotEmpty)
+                    Text(
+                      editionLabel(edition),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: _nightSoft, fontSize: 10.5),
                     ),
                 ],
               ),

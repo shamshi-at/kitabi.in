@@ -23,8 +23,10 @@ import '../../../l10n/app_localizations.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../catalog_image_upload.dart';
 import '../providers/catalog_providers.dart';
+import '../work_editions.dart';
 import '../work_forms.dart';
 import 'chip_picker_sheet.dart';
+import 'edition_picker.dart';
 import 'form_widgets.dart';
 
 /// S4d — form to add a new catalog Work + first Edition, or edit an existing one:
@@ -56,6 +58,7 @@ class AddEditBookScreen extends ConsumerWidget {
     this.initialIsbn,
     this.initialTitle,
     this.initialOriginal,
+    this.seed,
     this.returnCreated = false,
   });
 
@@ -74,6 +77,11 @@ class AddEditBookScreen extends ConsumerWidget {
   /// author carried over) and links the group on save.
   final Map<String, dynamic>? initialOriginal;
 
+  /// Details already captured somewhere else — the add form's "it's this one,
+  /// add what I have" fork. Applied over the loaded Work, into empty fields
+  /// only. See [_BookFormState._applySeed].
+  final Map<String, dynamic>? seed;
+
   /// Pick mode: this screen was opened to *produce a book for the caller*, so
   /// on save it pops with the created Work instead of showing the standalone
   /// "Added to the catalog" popup — the caller selects it and carries on.
@@ -89,6 +97,7 @@ class AddEditBookScreen extends ConsumerWidget {
             initialIsbn: initialIsbn,
             initialTitle: initialTitle,
             initialOriginal: initialOriginal,
+            seed: seed,
             returnCreated: returnCreated,
           ),
         ),
@@ -101,7 +110,7 @@ class AddEditBookScreen extends ConsumerWidget {
         child: work.when(
           loading: () => ListSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId!))),
-          data: (body) => _BookForm(initialWork: body),
+          data: (body) => _BookForm(initialWork: body, seed: seed),
         ),
       ),
     );
@@ -114,6 +123,7 @@ class _BookForm extends ConsumerStatefulWidget {
     this.initialIsbn,
     this.initialTitle,
     this.initialOriginal,
+    this.seed,
     this.returnCreated = false,
   });
 
@@ -121,6 +131,7 @@ class _BookForm extends ConsumerStatefulWidget {
   final String? initialIsbn;
   final String? initialTitle;
   final Map<String, dynamic>? initialOriginal;
+  final Map<String, dynamic>? seed;
   final bool returnCreated;
 
   @override
@@ -190,6 +201,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
   String? _initialIsbn;
   String? _initialFormat;
   String? _initialPublisherId;
+  String? _initialPublisherName;
   String? _initialSeriesName;
   String? _initialSeriesId;
   int? _initialSeriesNumber;
@@ -216,6 +228,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
   String _similarDismissedQuery = '';
   Timer? _similarDebounce;
   int _similarSeq = 0;
+  // The catalogue Work this form was prefilled from, if any. It is not a
+  // "possible duplicate" — it is the book the reader just told us this is, so
+  // offering it back under "Already in the catalogue?" was noise (owner
+  // report, 13 Aug 2026: "it still shows the same book … but I am editing the
+  // same one").
+  String? _prefillWorkId;
 
   // Unsaved-changes guard: a fingerprint of the form as it was seeded, so any
   // divergence means "dirty". [_confirmedLeave] lets the post-save pops (and a
@@ -295,6 +313,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _initialIsbn = edition?['isbn'] as String?;
     _initialFormat = edition?['format'] as String?;
     _initialPublisherId = (edition?['publisher'] as Map?)?['id'] as String?;
+    _initialPublisherName = (edition?['publisher'] as Map?)?['name'] as String?;
     _initialSeriesName = seededSeries?['name'] as String?;
     _initialSeriesId = seededSeries?['id'] as String?;
     _initialSeriesNumber = edition?['series_number'] as int?;
@@ -302,8 +321,80 @@ class _BookFormState extends ConsumerState<_BookForm> {
     // as a selected chip on edit, not vanish for being off-list.
     _selectedGenres = {...genreNames};
     _customGenreList.addAll(genreNames.where((g) => !_commonGenres.contains(g)));
+    // Captured on the *other* screen, applied after the fingerprint is taken:
+    // the seed is a change the reader has yet to save, so the form must open
+    // dirty. Taking the fingerprint afterwards would let a back-tap drop the
+    // photos without so much as a question.
     _cleanFingerprint = _fingerprint();
+    _applySeed();
     _loadGenreVocabulary();
+  }
+
+  /// Fill this form's *empty* fields from details captured elsewhere (the add
+  /// form's "it's this one — add what I have" fork).
+  ///
+  /// Empty-only, deliberately: this is the shared catalogue, and an entry that
+  /// already answers a question keeps its answer. What this rescues is the
+  /// common case — a stub entry with no cover, no blurb, no page count, and a
+  /// reader standing there with the book and two fresh photographs of it.
+  void _applySeed() {
+    final seed = widget.seed;
+    if (seed == null || seed.isEmpty) return;
+    var filled = false;
+    void text(TextEditingController c, Object? value) {
+      if (value == null || c.text.trim().isNotEmpty) return;
+      c.text = '$value';
+      filled = true;
+    }
+
+    _coverUrl ??= seed['cover_url'] as String?;
+    _backCoverUrl ??= seed['back_cover_url'] as String?;
+    filled |= _coverUrl != _initialCoverUrl || _backCoverUrl != _initialBackCoverUrl;
+    text(_description, seed['description']);
+    text(_isbn, seed['isbn']);
+    text(_pages, seed['page_count']);
+    if (_format == null && seed['format'] != null) {
+      _format = seed['format'] as String?;
+      filled = true;
+    }
+    if (_language == null && seed['language'] != null) {
+      _language = seed['language'] as String?;
+      filled = true;
+    }
+    if (_form == null && seed['form'] != null) {
+      _form = seed['form'] as String?;
+      filled = true;
+    }
+    if (_publisher == null && seed['publisher'] != null) {
+      _publisher = Map<String, dynamic>.from(seed['publisher'] as Map);
+      filled = true;
+    }
+    if (!_hasSeries) {
+      final pick = seed['series'] as Map?;
+      final name = pick?['name'] as String? ?? seed['series_name'] as String?;
+      if (name != null && name.isNotEmpty) {
+        _seriesPick = pick == null ? null : Map<String, dynamic>.from(pick);
+        _series.text = name;
+        _hasSeries = true;
+        text(_seriesNumber, seed['series_number']);
+        filled = true;
+      }
+    }
+    final genres = (seed['genre_names'] as List?)?.cast<String>() ?? const <String>[];
+    if (_selectedGenres.isEmpty && genres.isNotEmpty) {
+      _selectedGenres.addAll(genres);
+      _customGenreList.addAll(genres.where((g) => !_commonGenres.contains(g)));
+      filled = true;
+    }
+    final authors = (seed['author_names'] as List?)?.cast<String>() ?? const <String>[];
+    if (_authors.isEmpty && authors.isNotEmpty) {
+      _authors.addAll([for (final name in authors) {'name': name}]);
+      filled = true;
+    }
+    if (filled) {
+      _prefillSource = 'seed';
+      _detailsExpanded = true;
+    }
   }
 
   /// Everything the reader can change, joined into one comparable string —
@@ -416,7 +507,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
       final results = await ref.read(apiClientProvider).similarWorks(q);
       // Drop stale responses (a newer keystroke started a newer lookup).
       if (!mounted || seq != _similarSeq || _title.text.trim() != q) return;
-      setState(() => _similar = results);
+      setState(() => _similar = [
+            for (final work in results)
+              if (work['id'] != _prefillWorkId) work,
+          ]);
     } catch (_) {
       // Best-effort suggestion — never surface an error for it.
     }
@@ -515,10 +609,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
     });
   }
 
-  /// M1 — the fork. A similar-title match means one of four things, and only
-  /// the reader knows which: their copy of that same book (→ shelf), a
-  /// different printing (→ add edition), a translation (→ link as original
-  /// and keep typing), or a genuinely different book (→ dismiss the match).
+  /// M1 — the fork. A similar-title match means one of several things, and
+  /// only the reader knows which: their copy of that same book (→ shelf), that
+  /// same book but the entry is thin and they have better details (→ improve
+  /// it), a different printing (→ add edition), a translation (→ link as
+  /// original and keep typing), the same story in another literary form — the
+  /// screenplay, the play (→ its own book, prefilled), or a genuinely
+  /// different book (→ dismiss the match).
   Future<void> _openFork(Map<String, dynamic> work) async {
     final choice = await showModalBottomSheet<String>(
       context: context,
@@ -526,17 +623,34 @@ class _BookFormState extends ConsumerState<_BookForm> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _ForkSheet(work: work),
+      builder: (ctx) => _ForkSheet(work: work, hasCaptured: _hasCapturedDetails),
     );
     if (choice == null || !mounted) return;
     switch (choice) {
       case 'shelf':
         await _forkAddToShelf(work);
+      case 'improve':
+        _forkImproveEntry(work);
+      case 'form':
+        await _forkDifferentForm(work);
       case 'edition':
-        context.push(Routes.catalogAddEdition, extra: {
-          'workId': work['id'] as String,
-          'title': work['title'] as String?,
-        });
+        final added = await context.push<Map<String, dynamic>>(
+          Routes.catalogAddEdition,
+          extra: {
+            'workId': work['id'] as String,
+            'title': work['title'] as String?,
+            // The covers and details already captured here belong to the
+            // printing being described — carrying them saves photographing
+            // the same book twice.
+            'seed': _capturedFields(),
+          },
+        );
+        if (added != null && mounted) {
+          _confirmedLeave = true; // the new edition replaced what this form was for
+          context.pushReplacement(
+            Routes.bookDetailPath(work['id'] as String, added['id'] as String),
+          );
+        }
       case 'translation':
         setState(() {
           _original = work;
@@ -557,15 +671,127 @@ class _BookFormState extends ConsumerState<_BookForm> {
     }
   }
 
+  /// Everything this form is holding that a *different* screen could use —
+  /// the photographed covers first, then whatever was typed or read off them.
+  ///
+  /// The reader photographs both covers and has them read, then discovers the
+  /// book is already catalogued. Every fork that leaves this screen used to
+  /// drop that work on the floor (owner report, 13 Aug 2026); this is what
+  /// they carry instead. Only free-text authors go — a picked author already
+  /// exists on the entry or doesn't belong on it.
+  /// Is there anything here a matched entry could actually gain? A cover is
+  /// the usual answer, but a typed blurb, ISBN or page count counts too.
+  bool get _hasCapturedDetails {
+    final captured = _capturedFields();
+    return captured.keys.any((k) => k != 'author_names') ||
+        (captured['author_names'] as List).isNotEmpty;
+  }
+
+  Map<String, dynamic> _capturedFields() {
+    final pages = int.tryParse(_pages.text.trim());
+    final isbn = _isbn.text.trim();
+    final series = _series.text.trim();
+    final description = _description.text.trim();
+    return {
+      if (_coverUrl != null) 'cover_url': _coverUrl,
+      if (_backCoverUrl != null) 'back_cover_url': _backCoverUrl,
+      if (description.isNotEmpty) 'description': description,
+      if (isbn.isNotEmpty) 'isbn': isbn,
+      'page_count': ?pages,
+      if (_format != null) 'format': _format,
+      if (_language != null) 'language': _language,
+      if (_form != null) 'form': _form,
+      if (_publisher != null) 'publisher': _publisher,
+      if (_hasSeries && _seriesPick != null) 'series': _seriesPick,
+      if (_hasSeries && _seriesPick == null && series.isNotEmpty) 'series_name': series,
+      if (_hasSeries) 'series_number': ?int.tryParse(_seriesNumber.text.trim()),
+      if (_selectedGenres.isNotEmpty) 'genre_names': _selectedGenres.toList(),
+      'author_names': [
+        for (final a in _authors)
+          if (a['id'] == null) a['name'] as String,
+      ],
+    };
+  }
+
+  /// The fork's "it's this one, my details are better" — open the matched
+  /// entry for editing with everything captured here filled in.
+  ///
+  /// This is the option the sheet was missing. A reader who had just
+  /// photographed both covers of a book whose catalogue entry is a bare stub
+  /// had only "I own this one", which shelves the stub and throws the photos
+  /// away. Seeded values land only in the entry's *empty* fields — the shared
+  /// catalogue's existing answer always beats this copy's.
+  ///
+  /// `pushReplacement`, because this form's reason to exist is gone: the book
+  /// is not being added, it is being improved, and backing into a stale
+  /// half-filled add form would invite the duplicate all over again.
+  void _forkImproveEntry(Map<String, dynamic> work) {
+    _confirmedLeave = true;
+    context.pushReplacement(Routes.catalogAdd, extra: <String, dynamic>{
+      'workId': work['id'] as String,
+      'seed': _capturedFields(),
+    });
+  }
+
+  /// The fork's "mine's a different form" — the screenplay of a novel, the
+  /// play of a story (owner report, 13 Aug 2026: there was no way to record
+  /// the Naalukett screenplay next to the Naalukett novel).
+  ///
+  /// It stays in this form as a *new* Work rather than becoming an edition of
+  /// the matched one: rule 17 attaches ratings and reviews to the Work, and a
+  /// screenplay is not the novel — different text, different page count,
+  /// different thing to have an opinion about. What it does share is carried
+  /// over so nothing is retyped, and then the one field that actually differs
+  /// is asked for.
+  Future<void> _forkDifferentForm(Map<String, dynamic> summary) async {
+    // The similar panel is a list of summaries — genres and language live on
+    // the full Work. Best-effort: a failed fetch just carries less.
+    Map<String, dynamic> work = summary;
+    try {
+      work = await ref.read(apiClientProvider).getWork(summary['id'] as String);
+    } catch (_) {
+      // Offline or a hiccup — the summary's authors are still worth carrying.
+    }
+    if (!mounted) return;
+    setState(() {
+      _similar = const [];
+      _similarDismissed = true;
+      _similarDismissedQuery = _title.text.trim().toLowerCase();
+      if (_title.text.trim().isEmpty) _title.text = work['title'] as String? ?? '';
+      if (_authors.isEmpty) {
+        _authors.addAll(
+          (work['authors'] as List?)?.map((a) => Map<String, dynamic>.from(a as Map)) ??
+              const <Map<String, dynamic>>[],
+        );
+      }
+      _language ??= work['language'] as String?;
+      if (_selectedGenres.isEmpty) {
+        final names =
+            (work['genres'] as List?)?.map((g) => (g as Map)['name'] as String).toSet() ??
+                <String>{};
+        _selectedGenres.addAll(names);
+        _customGenreList.addAll(names.where((g) => !_commonGenres.contains(g)));
+      }
+      // The one thing that is *not* shared — ask for it rather than inherit it.
+      _form = null;
+      _detailsExpanded = true;
+    });
+    await _openTypePicker();
+  }
+
   /// The fork's "I own this one" — same shape as the scanner's Add: cache the
   /// catalog data, create the entry (idempotent), open the book.
+  ///
+  /// Which printing, though, is the reader's to answer when the catalogue
+  /// holds more than one: they differ in page count, and a wrong one makes
+  /// every progress figure lie.
   Future<void> _forkAddToShelf(Map<String, dynamic> summary) async {
     final l10n = AppLocalizations.of(context)!;
     try {
       final work = await ref.read(apiClientProvider).getWork(summary['id'] as String);
-      final editions = (work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
-      final edition = editions.firstOrNull;
-      if (edition == null) return;
+      if (!mounted) return;
+      final edition = await chooseEdition(context, editionsOf(work));
+      if (edition == null || !mounted) return;
       final editionId = edition['id'] as String;
       final repo = await ref.read(libraryRepositoryProvider.future);
       final existing = await repo.getByEditionId(editionId);
@@ -635,10 +861,17 @@ class _BookFormState extends ConsumerState<_BookForm> {
 
   List<String> get _visibleGenres => _genreOptions.take(_kVisibleChips).toList();
 
-  /// Open the full Type picker — a closed vocabulary (kWorkForms), so
-  /// single-select with no create row: the sheet is a chooser, not a door for
-  /// new vocabulary. An off-list value already on the book stays pickable via
-  /// [_typeOptions], so old data never vanishes.
+  /// Open the full Type picker — single-select over [kWorkForms], plus a
+  /// create row.
+  ///
+  /// The list is *suggested, not closed*: that is what the server does
+  /// (`normalize_form` folds a typed value onto a known spelling instead of
+  /// rejecting it) and what it was asked to do — "a reader whose book is a
+  /// form we didn't think of must be able to say so". This sheet shipped with
+  /// `allowCreate: false`, which quietly took that back: a reader holding the
+  /// തിരക്കഥ of a novel had nowhere to put it (owner report, 13 Aug 2026). An
+  /// off-list value already on the book stays pickable via [_typeOptions], so
+  /// old data never vanishes either.
   Future<void> _openTypePicker() async {
     final picked = await showModalBottomSheet<Set<String>>(
       context: context,
@@ -652,7 +885,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
         options: [for (final f in _typeOptions) PickerOption(f)],
         selected: {?_form},
         multiSelect: false,
-        allowCreate: false,
+        allowCreate: true,
+        createSharedNote: AppLocalizations.of(ctx)!.pickerCreateTypeNote,
       ),
     );
     if (picked == null || !mounted) return;
@@ -840,7 +1074,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
       }
       final publisher = fields['publisher'] as String?;
       if (publisher != null && _publisher == null) {
-        _publisher = {'name': publisher};
+        // The server resolves a read name onto the catalogue's canonical house
+        // when it knows one, and sends its id — carry the id, so the save
+        // lands on that row instead of a fourth "DC Books" beside it.
+        final publisherId = fields['publisher_id'] as String?;
+        _publisher = {'name': publisher, 'id': ?publisherId};
         filled = true;
       }
       final description = fields['description'] as String?;
@@ -886,14 +1124,20 @@ class _BookFormState extends ConsumerState<_BookForm> {
   }
 
   void _applyScannedWork(Map<String, dynamic> work) {
-    final editions = work['editions'] as List?;
-    final edition =
-        editions != null && editions.isNotEmpty ? editions.first as Map<String, dynamic> : null;
+    final edition = scannedEdition(work);
     final genreNames =
         (work['genres'] as List?)?.map((g) => (g as Map)['name'] as String).toSet() ?? <String>{};
 
     setState(() {
       _prefillSource = 'scan';
+      // A scan resolves through the catalogue (an OpenLibrary hit is cached on
+      // the way past), so the book is always in it by the time we get here —
+      // which is exactly why it must not then be offered back as a match.
+      _prefillWorkId = work['id'] as String?;
+      _similar = [
+        for (final w in _similar)
+          if (w['id'] != _prefillWorkId) w,
+      ];
       _detailsExpanded = true;
       _title.text = work['title'] as String? ?? _title.text;
       final language = work['language'] as String?;
@@ -1146,10 +1390,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
             if (seriesNumber != null && seriesNumber != _initialSeriesNumber)
               'series_number': seriesNumber,
             // Publisher rides as an id when picked from the catalog, else by
-            // name for the server to get-or-create — same shape as create.
+            // name for the server to resolve — same shape as create. The
+            // name branch used to require `_initialPublisherId != null`,
+            // which meant a publisher could be *changed* by name but never
+            // *added* by one: the exact case the extraction fills in on an
+            // entry that has no publisher at all.
             if (publisherId != null && publisherId != _initialPublisherId)
               'publisher_id': publisherId,
-            if (publisherId == null && publisherName != null && _initialPublisherId != null)
+            if (publisherId == null && publisherName != null && publisherName != _initialPublisherName)
               'publisher_name': publisherName,
           };
           if (edPatch.isNotEmpty) {
@@ -1527,8 +1775,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
           if (_prefillSource != null) ...[
             SizedBox(height: 10),
             _PrefillBanner(
-              message:
-                  _prefillSource == 'scan' ? l10n.formPrefillScan : l10n.formPrefillPhotos,
+              message: switch (_prefillSource) {
+                'scan' => l10n.formPrefillScan,
+                'seed' => l10n.formPrefillCarried,
+                _ => l10n.formPrefillPhotos,
+              },
               onDismiss: () => setState(() => _prefillSource = null),
             ),
           ],
@@ -2727,9 +2978,14 @@ class _TranslatorField extends StatelessWidget {
 /// fork, phrased in the reader's words; pops one of
 /// 'shelf' | 'edition' | 'translation' | 'different'.
 class _ForkSheet extends StatelessWidget {
-  const _ForkSheet({required this.work});
+  const _ForkSheet({required this.work, required this.hasCaptured});
 
   final Map<String, dynamic> work;
+
+  /// Whether the form is holding covers or details worth carrying onto the
+  /// matched entry — the difference between "improve this entry" being the
+  /// right answer and being noise.
+  final bool hasCaptured;
 
   @override
   Widget build(BuildContext context) {
@@ -2874,6 +3130,15 @@ class _ForkSheet extends StatelessWidget {
               title: l10n.forkOwnThis,
               accent: AppColors.moss,
             ),
+            // Offered only when there is something to carry over — otherwise
+            // it is "I own this one" with extra steps.
+            if (hasCaptured)
+              option(
+                value: 'improve',
+                title: l10n.forkImproveThis,
+                help: l10n.forkImproveThisHelp,
+                accent: AppColors.moss,
+              ),
             option(
               value: 'edition',
               title: l10n.forkDifferentPrinting,
@@ -2884,6 +3149,12 @@ class _ForkSheet extends StatelessWidget {
               value: 'translation',
               title: l10n.forkTranslation,
               help: l10n.forkTranslationHelp,
+              accent: AppColors.oxblood,
+            ),
+            option(
+              value: 'form',
+              title: l10n.forkDifferentForm,
+              help: l10n.forkDifferentFormHelp,
               accent: AppColors.oxblood,
             ),
             option(

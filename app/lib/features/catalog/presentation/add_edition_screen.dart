@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,7 @@ import '../../../core/widgets/image_source_sheet.dart';
 import '../../../data/api/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../catalog_image_upload.dart';
+import '../work_editions.dart';
 import 'form_widgets.dart';
 
 /// Add another edition (printing/ISBN) to an existing Work — same book, a
@@ -19,10 +21,16 @@ import 'form_widgets.dart';
 /// edition. Every field widget is shared with the add/edit book form
 /// (form_widgets.dart) so the two screens can't drift apart again.
 class AddEditionScreen extends ConsumerStatefulWidget {
-  const AddEditionScreen({super.key, required this.workId, this.workTitle});
+  const AddEditionScreen({super.key, required this.workId, this.workTitle, this.seed});
 
   final String workId;
   final String? workTitle;
+
+  /// Details already captured on the add form before the reader discovered the
+  /// book was catalogued and chose "mine's a different printing" — the covers
+  /// especially. Without this the fork threw two fresh photographs away and
+  /// asked for them again (owner report, 13 Aug 2026).
+  final Map<String, dynamic>? seed;
 
   @override
   ConsumerState<AddEditionScreen> createState() => _AddEditionScreenState();
@@ -33,23 +41,127 @@ class _AddEditionScreenState extends ConsumerState<AddEditionScreen> {
   final _pages = TextEditingController();
   final _series = TextEditingController();
   final _seriesNumber = TextEditingController();
+  final _description = TextEditingController();
   // Optional; null when unset — no silent 'Paperback' on an edition the
   // reader never described.
   String? _format;
   Map<String, dynamic>? _publisher;
   String? _coverUrl;
   String? _backCoverUrl;
+  // Read off the covers, sent with the printing, and used by the server only
+  // where the Work has no answer of its own. Not shown as fields: they are not
+  // edition data, and a Type row on a printing form would say they were.
+  String? _workForm;
+  String? _language;
   bool _scanning = false;
+  bool _extracting = false;
   bool _uploadingFront = false;
   bool _uploadingBack = false;
   bool _saving = false;
 
   @override
+  void initState() {
+    super.initState();
+    final seed = widget.seed;
+    if (seed == null) return;
+    // A printing *is* its covers, its ISBN and its page count — everything the
+    // seed carries is edition-level, so all of it applies here.
+    _coverUrl = seed['cover_url'] as String?;
+    _backCoverUrl = seed['back_cover_url'] as String?;
+    _isbn.text = seed['isbn'] as String? ?? '';
+    final pages = seed['page_count'];
+    if (pages != null) _pages.text = '$pages';
+    final format = seed['format'] as String?;
+    if (format != null && kEditionFormats.contains(format)) _format = format;
+    final publisher = seed['publisher'] as Map?;
+    if (publisher != null) _publisher = Map<String, dynamic>.from(publisher);
+    final series = seed['series'] as Map?;
+    _series.text = series?['name'] as String? ?? seed['series_name'] as String? ?? '';
+    final number = seed['series_number'];
+    if (number != null) _seriesNumber.text = '$number';
+    _description.text = seed['description'] as String? ?? '';
+    _workForm = seed['form'] as String?;
+    _language = seed['language'] as String?;
+  }
+
+  @override
   void dispose() {
-    for (final c in [_isbn, _pages, _series, _seriesNumber]) {
+    for (final c in [_isbn, _pages, _series, _seriesNumber, _description]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  /// Only photos uploaded through this app (our covers bucket) can be read —
+  /// same rule as the add-book form, which the server enforces anyway.
+  bool _isOwnUpload(String? url) =>
+      url != null && url.contains('/storage/v1/object/public/covers/');
+
+  /// "Read the covers" on a *printing*: the ISBN, page count, publisher and
+  /// series belong to this edition, while the blurb, type and language are
+  /// what a bare parent Work is usually missing (owner request, 13 Aug 2026 —
+  /// a work with no covers, no blurb and no info should get them from the
+  /// edition being added). Fills only empty fields; the reader's typing wins.
+  Future<void> _fillFromPhotos() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _extracting = true);
+    try {
+      final fields = await ref.read(apiClientProvider).extractFromCovers(
+            frontUrl: _isOwnUpload(_coverUrl) ? _coverUrl : null,
+            backUrl: _isOwnUpload(_backCoverUrl) ? _backCoverUrl : null,
+          );
+      if (!mounted) return;
+      if (!_applyExtracted(fields)) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractNothing)));
+      }
+    } on DioException catch (err) {
+      final data = err.response?.data;
+      final code = data is Map ? data['code'] : null;
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+          code == 'extraction_disabled' ? l10n.formExtractUnavailable : l10n.formExtractFailed,
+        ),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractFailed)));
+    } finally {
+      if (mounted) setState(() => _extracting = false);
+    }
+  }
+
+  bool _applyExtracted(Map<String, dynamic> fields) {
+    var filled = false;
+    setState(() {
+      void text(TextEditingController c, Object? value) {
+        if (value == null || c.text.trim().isNotEmpty) return;
+        c.text = '$value';
+        filled = true;
+      }
+
+      text(_isbn, fields['isbn']);
+      text(_description, fields['description']);
+      text(_series, fields['series_name']);
+      if (_series.text.trim().isNotEmpty) text(_seriesNumber, fields['series_number']);
+      final publisher = fields['publisher'] as String?;
+      if (publisher != null && _publisher == null) {
+        // The server hands back the catalogue's canonical house and its id
+        // where it knows one — carry the id so this printing joins that row.
+        _publisher = {'name': publisher, 'id': ?fields['publisher_id'] as String?};
+        filled = true;
+      }
+      final form = fields['form'] as String?;
+      if (form != null && _workForm == null) {
+        _workForm = form;
+        filled = true;
+      }
+      final language = fields['language'] as String?;
+      if (language != null && _language == null) {
+        _language = language;
+        filled = true;
+      }
+    });
+    return filled;
   }
 
   Future<void> _scanIsbn() async {
@@ -57,9 +169,7 @@ class _AddEditionScreenState extends ConsumerState<AddEditionScreen> {
     try {
       final result = await context.push<Map<String, dynamic>>(Routes.catalogScanResult);
       if (result == null || !mounted) return;
-      final editions = result['editions'] as List?;
-      final edition =
-          editions != null && editions.isNotEmpty ? editions.first as Map<String, dynamic> : null;
+      final edition = scannedEdition(result);
       setState(() {
         if (result['isbn'] is String) _isbn.text = result['isbn'] as String;
         if (edition != null) {
@@ -136,9 +246,15 @@ class _AddEditionScreenState extends ConsumerState<AddEditionScreen> {
       'series_number': int.tryParse(_seriesNumber.text.trim()),
       if (_coverUrl != null) 'cover_url': _coverUrl,
       if (_backCoverUrl != null) 'back_cover_url': _backCoverUrl,
+      // Work-level, and gap-fill only on the server: a book whose entry has no
+      // blurb, type or language gets them from the copy in the reader's hands
+      // rather than staying blank forever.
+      'description': ?(_description.text.trim().isEmpty ? null : _description.text.trim()),
+      'form': ?_workForm,
+      'language': ?_language,
     };
     try {
-      await ref.read(apiClientProvider).createEdition(widget.workId, payload);
+      final created = await ref.read(apiClientProvider).createEdition(widget.workId, payload);
       if (!mounted) return;
       // M9 — every add path ends at a confirmation, not a silent pop. The
       // root messenger outlives this screen, so the toast survives the pop.
@@ -150,7 +266,11 @@ class _AddEditionScreenState extends ConsumerState<AddEditionScreen> {
               : l10n.addEditionAdded(title),
         ),
       ));
-      context.pop(true);
+      // Pop with the edition itself, not a bare `true`: the caller has to be
+      // able to send the reader to *this* printing. Landing them back on the
+      // work's representative edition is how "add to library" kept shelving
+      // the parent, page count and all (owner report, 13 Aug 2026).
+      context.pop(created);
     } catch (err) {
       if (mounted) {
         showQuietError(context, l10n.formSaveFailed, err);
@@ -224,6 +344,31 @@ class _AddEditionScreenState extends ConsumerState<AddEditionScreen> {
                       ),
                     ],
                   ),
+                  // Same rescue path as the add-book form: once a photo is up,
+                  // read the printing off it. Shared behaviour, so the two
+                  // screens can't drift (the reason every field widget here is
+                  // imported rather than re-written).
+                  if (_isOwnUpload(_coverUrl) || _isOwnUpload(_backCoverUrl)) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: (_extracting || _uploadingBack) ? null : _fillFromPhotos,
+                        icon: _extracting
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Icon(Icons.auto_awesome, size: 16, color: AppColors.oxblood),
+                        label: Text(l10n.formFillFromPhotos),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   IsbnScanField(controller: _isbn, onScan: _scanIsbn, scanning: _scanning),
                   const SizedBox(height: 10),
@@ -272,6 +417,18 @@ class _AddEditionScreenState extends ConsumerState<AddEditionScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  // The blurb is the Work's, not this printing's — the helper
+                  // says so. It's here because the reader adding a printing is
+                  // holding the book, and the parent entry is usually the bare
+                  // stub an ISBN lookup left behind.
+                  FormTextField(
+                    label: l10n.formFieldDescription,
+                    controller: _description,
+                    maxLines: 4,
+                    expandable: true,
+                    helper: l10n.addEditionDescriptionHelp,
                   ),
                 ],
               ),

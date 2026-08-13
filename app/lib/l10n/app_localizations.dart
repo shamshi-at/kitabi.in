@@ -772,6 +772,12 @@ abstract class AppLocalizations {
   /// **'Read from your photos — check and edit anything'**
   String get formPrefillPhotos;
 
+  /// Banner on the edit form when the add form's 'this is it' fork carried captured covers and details onto an existing entry
+  ///
+  /// In en, this message translates to:
+  /// **'Your covers and details came with you — check and save'**
+  String get formPrefillCarried;
+
   /// One-line consequence note under the sticky Save button on the add-book form
   ///
   /// In en, this message translates to:
@@ -5758,11 +5764,53 @@ abstract class AppLocalizations {
   /// **'Its own book, linked to this one'**
   String get forkTranslationHelp;
 
+  /// Fork option: open the matched entry for editing, carrying the covers and details already captured on the add form
+  ///
+  /// In en, this message translates to:
+  /// **'This is it — add my covers and details'**
+  String get forkImproveThis;
+
+  /// Helper under the improve-this-entry fork option
+  ///
+  /// In en, this message translates to:
+  /// **'Fills in whatever this entry is missing'**
+  String get forkImproveThisHelp;
+
+  /// Fork option: the same story in another literary form — its own book, prefilled from the match
+  ///
+  /// In en, this message translates to:
+  /// **'Mine\'s the screenplay, play or comic'**
+  String get forkDifferentForm;
+
+  /// Helper under the different-form fork option
+  ///
+  /// In en, this message translates to:
+  /// **'Same story, different form — its own book'**
+  String get forkDifferentFormHelp;
+
   /// Fork option: dismiss the match and continue the add
   ///
   /// In en, this message translates to:
   /// **'Different book, same title — keep typing'**
   String get forkDifferentBook;
+
+  /// Title of the sheet asking which edition to put on the shelf when a work has several
+  ///
+  /// In en, this message translates to:
+  /// **'Which printing is yours?'**
+  String get editionPickTitle;
+
+  /// Row label in the edition chooser when the catalogue knows nothing distinguishing about that printing
+  ///
+  /// In en, this message translates to:
+  /// **'This printing'**
+  String get editionPickFallback;
+
+  /// Line under Create in the Type picker, spelling out that the literary form is a shared facet
+  ///
+  /// In en, this message translates to:
+  /// **'Only if none of the above is it — a new type joins the shared list for every reader.'**
+  String get pickerCreateTypeNote;
 
   /// Eyebrow label on the shareable author card
   ///
@@ -6549,6 +6597,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Self-help'**
   String get genreSelfHelp;
+
+  /// Helper under the Description field on the add-edition screen — the blurb belongs to the book, and only fills a gap
+  ///
+  /// In en, this message translates to:
+  /// **'Used only if this book has no description yet'**
+  String get addEditionDescriptionHelp;
 
   /// One-line consequence note under the sticky save bar on the add-edition screen
   ///

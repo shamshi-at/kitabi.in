@@ -439,6 +439,10 @@
   "@formPrefillPhotos": {
     "description": "Banner after the cover-photo extraction prefilled the add-book form"
   },
+  "formPrefillCarried": "Your covers and details came with you — check and save",
+  "@formPrefillCarried": {
+    "description": "Banner on the edit form when the add form's 'this is it' fork carried captured covers and details onto an existing entry"
+  },
   "formSaveHint": "Saved books join the shared catalogue for every reader",
   "@formSaveHint": {
     "description": "One-line consequence note under the sticky Save button on the add-book form"
@@ -2959,8 +2963,22 @@
   "@forkTranslation": {"description": "Fork option: mark the book being typed as a translation of the match"},
   "forkTranslationHelp": "Its own book, linked to this one",
   "@forkTranslationHelp": {"description": "Helper under the translation fork option"},
+  "forkImproveThis": "This is it — add my covers and details",
+  "@forkImproveThis": {"description": "Fork option: open the matched entry for editing, carrying the covers and details already captured on the add form"},
+  "forkImproveThisHelp": "Fills in whatever this entry is missing",
+  "@forkImproveThisHelp": {"description": "Helper under the improve-this-entry fork option"},
+  "forkDifferentForm": "Mine's the screenplay, play or comic",
+  "@forkDifferentForm": {"description": "Fork option: the same story in another literary form — its own book, prefilled from the match"},
+  "forkDifferentFormHelp": "Same story, different form — its own book",
+  "@forkDifferentFormHelp": {"description": "Helper under the different-form fork option"},
   "forkDifferentBook": "Different book, same title — keep typing",
   "@forkDifferentBook": {"description": "Fork option: dismiss the match and continue the add"},
+  "editionPickTitle": "Which printing is yours?",
+  "@editionPickTitle": {"description": "Title of the sheet asking which edition to put on the shelf when a work has several"},
+  "editionPickFallback": "This printing",
+  "@editionPickFallback": {"description": "Row label in the edition chooser when the catalogue knows nothing distinguishing about that printing"},
+  "pickerCreateTypeNote": "Only if none of the above is it — a new type joins the shared list for every reader.",
+  "@pickerCreateTypeNote": {"description": "Line under Create in the Type picker, spelling out that the literary form is a shared facet"},
   "shareAuthorEyebrow": "AN AUTHOR ON KITABI",
   "@shareAuthorEyebrow": {"description": "Eyebrow label on the shareable author card"},
   "sharePublisherEyebrow": "A PUBLISHER ON KITABI",
@@ -3321,6 +3339,8 @@
   "@genreScience": {"description": "Display label for the suggested genre chip (stored value stays English)"},
   "genreSelfHelp": "Self-help",
   "@genreSelfHelp": {"description": "Display label for the suggested genre chip (stored value stays English)"},
+  "addEditionDescriptionHelp": "Used only if this book has no description yet",
+  "@addEditionDescriptionHelp": {"description": "Helper under the Description field on the add-edition screen — the blurb belongs to the book, and only fills a gap"},
   "addEditionSaveHint": "New editions join the shared catalogue for every reader",
   "@addEditionSaveHint": {"description": "One-line consequence note under the sticky save bar on the add-edition screen"},
   "addEditionAdded": "Edition added to {title}",

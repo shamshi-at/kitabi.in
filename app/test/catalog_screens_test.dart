@@ -1263,8 +1263,12 @@ void main() {
     );
   });
 
-  testWidgets('the type sheet is a closed vocabulary — no Create for an off-list type',
-      (tester) async {
+  testWidgets('the type sheet takes a form we did not think of', (tester) async {
+    // The vocabulary is *suggested, not closed* — the server folds a typed
+    // value onto a known spelling rather than rejecting it, and was asked to.
+    // The sheet shipped with allowCreate:false, which quietly took that back:
+    // a reader holding the തിരക്കഥ of a novel had nowhere to put it (owner
+    // report, 13 Aug 2026).
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -1278,10 +1282,35 @@ void main() {
     await tester.enterText(find.byType(TextField).last, 'Novella');
     await tester.pumpAndSettle();
 
-    // Type has a fixed vocabulary (per its own comment) — unlike genres,
-    // nothing off-list can be created from the sheet.
-    expect(find.textContaining('Create'), findsNothing);
-    expect(find.text('Nothing matches that.'), findsOneWidget);
+    expect(find.textContaining('Create'), findsOneWidget);
+    await tester.tap(find.textContaining('Create'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save to catalogue'));
+    await tester.pumpAndSettle();
+    expect(fake.lastCreatePayload?['form'], 'Novella');
+  });
+
+  testWidgets('Screenplay is offered without typing it', (tester) async {
+    // The screenplay of a novel is its own book in Malayalam publishing, and
+    // the reader who owns both should not have to invent the word.
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient();
+    await tester.pumpWidget(_wrap(const AddEditBookScreen(), apiClient: fake));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Naalukett');
+    await tester.tap(find.text('Search or add').first);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: find.byType(ChipPickerSheet), matching: find.text('Screenplay')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save to catalogue'));
+    await tester.pumpAndSettle();
+    expect(fake.lastCreatePayload?['form'], 'Screenplay');
   });
 
   testWidgets('a custom type that is really a known one folds onto it', (tester) async {

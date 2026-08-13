@@ -401,6 +401,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Read from your photos — check and edit anything';
 
   @override
+  String get formPrefillCarried =>
+      'Your covers and details came with you — check and save';
+
+  @override
   String get formSaveHint =>
       'Saved books join the shared catalogue for every reader';
 
@@ -3502,7 +3506,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forkTranslationHelp => 'Its own book, linked to this one';
 
   @override
+  String get forkImproveThis => 'This is it — add my covers and details';
+
+  @override
+  String get forkImproveThisHelp => 'Fills in whatever this entry is missing';
+
+  @override
+  String get forkDifferentForm => 'Mine\'s the screenplay, play or comic';
+
+  @override
+  String get forkDifferentFormHelp =>
+      'Same story, different form — its own book';
+
+  @override
   String get forkDifferentBook => 'Different book, same title — keep typing';
+
+  @override
+  String get editionPickTitle => 'Which printing is yours?';
+
+  @override
+  String get editionPickFallback => 'This printing';
+
+  @override
+  String get pickerCreateTypeNote =>
+      'Only if none of the above is it — a new type joins the shared list for every reader.';
 
   @override
   String get shareAuthorEyebrow => 'AN AUTHOR ON KITABI';
@@ -4037,6 +4064,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get genreSelfHelp => 'Self-help';
+
+  @override
+  String get addEditionDescriptionHelp =>
+      'Used only if this book has no description yet';
 
   @override
   String get addEditionSaveHint =>

@@ -16,6 +16,10 @@ const kWorkForms = [
   'Biography',
   'Essays',
   'Play',
+  // തിരക്കഥ is a shelf of its own in Malayalam publishing — the screenplay of
+  // a novel is sold as its own book, and readers own both (owner report,
+  // 13 Aug 2026: no way to record the Naalukett screenplay beside the novel).
+  'Screenplay',
   'Travelogue',
   "Children's",
   'Graphic novel',

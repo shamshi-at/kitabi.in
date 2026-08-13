@@ -445,6 +445,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             workId: extra is String ? extra : map['workId'] as String?,
             initialIsbn: map['isbn'] as String?,
             initialTitle: map['title'] as String?,
+            // The add form's "it's this one — add what I have" fork: the
+            // covers and details already captured there, to fill whatever
+            // this entry is still missing.
+            seed: map['seed'] as Map<String, dynamic>?,
             // T6's "Add a translation": the original's summary, pre-linking
             // the form's Translated-from row.
             initialOriginal: map['originalWork'] as Map<String, dynamic>?,
@@ -513,6 +517,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return AddEditionScreen(
             workId: args['workId'] as String,
             workTitle: args['title'] as String?,
+            seed: args['seed'] as Map<String, dynamic>?,
           );
         },
       ),

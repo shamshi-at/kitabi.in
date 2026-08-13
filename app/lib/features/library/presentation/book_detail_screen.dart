@@ -771,16 +771,20 @@ class _EditionsSection extends ConsumerWidget {
             visualDensity: VisualDensity.compact,
           ),
           onPressed: () async {
-            final added = await context.push<bool>(
+            final added = await context.push<Map<String, dynamic>>(
               Routes.catalogAddEdition,
               extra: {'workId': workId, 'title': work['title'] as String?},
             );
-            if (added == true && context.mounted) {
-              ref.invalidate(workProvider(workId));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.bookEditionAdded)),
-              );
-            }
+            if (added == null || !context.mounted) return;
+            ref.invalidate(workProvider(workId));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.bookEditionAdded)),
+            );
+            // Open the printing they just described. Staying here left them
+            // looking at the representative edition, so the next "Add to
+            // library" shelved that one instead of theirs.
+            final newId = added['id'] as String?;
+            if (newId != null) context.push(Routes.bookDetailPath(workId, newId));
           },
           icon: Icon(Icons.add, size: 18),
           label: Text(l10n.bookAddEdition),
@@ -802,7 +806,16 @@ class _EditionRow extends StatelessWidget {
     final format = edition['format'] as String?;
     final isbn = edition['isbn'] as String?;
     final language = edition['language'] as String?;
+    final pages = edition['page_count'];
+    final publisher = (edition['publisher'] as Map?)?['name'] as String?;
+    // Page count and publisher lead: they are what actually tells two
+    // printings apart on a shelf, and the page count is the one a reader
+    // notices immediately when the wrong edition ends up on it (owner
+    // report, 13 Aug 2026). ISBN goes last — it identifies, it doesn't
+    // describe.
     final parts = [
+      if (publisher != null && publisher.trim().isNotEmpty) publisher.trim(),
+      if (pages != null) '$pages pp',
       ?format,
       ?language,
       if (isbn != null) 'ISBN $isbn',
