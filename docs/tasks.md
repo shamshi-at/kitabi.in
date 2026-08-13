@@ -200,6 +200,44 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       the rest of the form. Never a dialog, never an error. Tested end to end
       (pytest against real pg_trgm incl. the 'Chemeen'→'Chemmeen' typo case; widget
       tests for debounce/dismiss/edit-mode-off) and eyeballed on the emulator.
+- [x] Series as a real entity, not a free-text box (13 Aug 2026, owner request):
+      migration `000043` moves membership from Edition to **Work**
+      (`works.series_id` / `series_number`, backfilled from the editions' lowest
+      number — the rule the read path already applied). A position belongs to the
+      *story*: every Work in a translation group carries the same number,
+      inherited when a translation is linked or when the series is set on any
+      member, and a translation in a different local series keeps it. Series gains
+      `name_translit` / `name_fold` (a Malayalam name had nothing for a Latin query
+      to match), `merged_into_id`, `primary_language`, `description`, and joins
+      `merge_service.MODELS`, so the duplicate queue, manual picker and peek cover
+      it with no second implementation. New: `GET /catalog/search/series`,
+      `GET /catalog/browse/series` (with book counts), `POST /catalog/series`,
+      `GET /catalog/series/{id}/works`, and `browse/works?series=&sort=series`.
+      `EditionOut.series` is still served — from the Work, as a view, so installs in
+      the field keep their series line. Public page groups by position (one entry
+      per book, other languages beside it) and indexes on entries, not works.
+- [x] Series in the app and the console (13 Aug 2026): the add/edit form's text
+      field became a **picker** (cross-script search, suggestions ranked by book
+      count, add-new; a series read off a scanned cover prefills it and is shown its
+      existing matches first), the book page gained *"Book 2 of Ponniyin Selvan"*
+      opening the series in reading order, and the console gained a Series list +
+      detail page — reading order with the number editable in place, add a book by
+      searching, remove, rename, merge duplicates — plus the series card on a book's
+      own page. Empty series (a typo's residue) are shown rather than hidden.
+- [x] Rate and review a **series**, separately from its books (13 Aug 2026, owner
+      request): migration `000044` lets a rating or review name a series instead of
+      a work — one table per *act*, not per subject, with
+      `CHECK (num_nonnulls(work_id, series_id) = 1)` so a row can never mean both or
+      neither. Every existing query keeps excluding series rows by construction; the
+      two that don't filter by subject got a deliberate answer (a series review
+      counts toward the contribution score, and appears on the reader's public
+      profile). Push validates the one-subject rule in the schema, so a malformed op
+      is `invalid_payload` against itself rather than an IntegrityError taking the
+      batch down. Series rating + reviews on the public page and in the app's series
+      screen; the moderation queue now shows what a reported review is *about*.
+      Drift **v12** rebuilds ratings/reviews so `work_id` can be null — tested
+      against a real file database seeded at the v11 shape, and that test confirmed
+      to fail with the migration disabled before being trusted.
 
 ## Phase 3 — Personal library + sync engine (Layer 2)
 

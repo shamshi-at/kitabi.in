@@ -357,6 +357,49 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **13 Aug 2026** — **Series became a real entity, and can be rated in its own right.**
+  It was a free-text box that wrote a number onto the *Edition*, which had two
+  consequences: a work with two printings had two answers to "which book in the series
+  is this?" (the public page picked one with `min()`), and a translation — its own Work
+  here — either duplicated the whole ordering under a second series row or lost it.
+  **A position in a series belongs to the story**, so membership moved to the Work
+  (migration `000043`, backfilled from the editions' lowest number) and is shared by a
+  translation group: linking a translation, or setting the series on any member, places
+  the whole group at the same number, while a translation that belongs to a different
+  *local* series keeps it. The public series page now groups by position — one entry per
+  book, the original leading, other languages beside it — and counts entries, not works,
+  when deciding it is thick enough to index. Series also gained what Author and Publisher
+  already had: cross-script search columns (a Malayalam series name had **nothing** for a
+  Latin query to match), a `merged_into_id` pointer so duplicates fold and redirect, a
+  primary language and a description — so the existing merge tooling covers it and a stale
+  id resolves to the survivor. Picking became possible at all: `GET /catalog/search/series`,
+  `GET /catalog/browse/series` with book counts, `POST /catalog/series`, a series filter
+  with reading-order sort on browse. Free text still works for the CSV import and the cover
+  extractor, which only ever have a string. **The app** replaced the text field with a
+  picker (a series read off a scanned cover prefills it and is offered its existing matches
+  before it can become a new row) and the book page finally says *"Book 2 of Ponniyin
+  Selvan"*, opening the series in reading order — the app had never shown a reader that a
+  book was in a series at all. **The console** gained a Series list (the empty rows a typo
+  left behind are shown, not hidden) and a detail page that is the curation surface:
+  reading order with the number editable in place, add a book by searching, remove, rename,
+  merge duplicates — plus the series card on a book's own page. Then, **ratings and reviews
+  of a series** (migration `000044`): "the saga is worth reading" and "volume 3 drags" are
+  different claims, so a series carries its own pool and the books inside it keep theirs.
+  One table per *act*, not per subject — a `CHECK (num_nonnulls(work_id, series_id) = 1)`
+  means a row can never mean both or neither, so all sixteen existing queries keep
+  excluding series rows by construction rather than by remembering to; the two that don't
+  filter got a deliberate answer (a series review counts toward the contribution score and
+  appears on the reader's public profile). Drift went to **v12**, rebuilding the ratings and
+  reviews tables so `work_id` can be null — the step that touches data already on readers'
+  phones, so it has its own test against a real file database, seeded at the v11 shape, and
+  that test was confirmed to fail with the migration disabled before being trusted.
+  Verified against the running API and rendered through the real web renderer, not only
+  fixtures: 5 works → 3 positions on the series page, and a series at 5.0 while a book
+  inside it still shows none. Earlier the same session: the duplicate queue became a
+  **cluster** review (choose the survivor, fix its name in the same action, fold N at once,
+  peek any record's catalog before deciding) and a **buy-links worklist** for editions with
+  no curated Amazon link.
+
 - **9 Aug 2026** — **The catalogue knows what its books are: genres and forms, classified.**
   W5's blocker fell. A closed **33-genre vocabulary** now lives in
   `api/app/services/genre_vocab.py` — slug-unique (two names on one slug would shadow a hub),
