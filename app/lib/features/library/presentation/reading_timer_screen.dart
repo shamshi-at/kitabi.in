@@ -80,6 +80,10 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   final _totalController = TextEditingController();
   bool _saving = false;
 
+  /// This screen's own Stop & log is mid-flight — see [_stop] for why the
+  /// "stopped elsewhere" guard has to know.
+  bool _stopping = false;
+
   /// Null while the typed page is savable. A backwards page must not be
   /// written by Done *or* by the back gesture, which also saves.
   PageEntryError? _pageError;
@@ -210,12 +214,32 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     super.dispose();
   }
 
+  /// Stop the clock and move to the wax-seal face (where the page question is).
+  ///
+  /// [_stopping] is set *synchronously*, before the first await, because the
+  /// stop clears the session mid-flight: the notifier nulls its state and then
+  /// publishes the stop to the reader's other devices, which is a network round
+  /// trip. Frames render during it — this screen animates a sweeping hand, so
+  /// they certainly do — and the build below reads "no session for this book"
+  /// as "stopped on another device" and pops the route. The reader tapped
+  /// Stop & log and was returned to the book page, never seeing the page
+  /// question (owner report, 14 Aug 2026). Same hazard the notifier's own
+  /// `_stopping` flag guards the safety net against; this is its screen-side
+  /// twin, and it must not wait on a `setState` to take effect.
   Future<void> _stop() async {
+    if (_stopping) return;
+    _stopping = true;
     Haptics.success();
-    final logged = await ref.read(activeSessionProvider.notifier).stop();
-    if (!mounted || logged == null) return;
-    ref.invalidate(weeklyReadingSecondsProvider);
-    setState(() => _logged = logged);
+    try {
+      final logged = await ref.read(activeSessionProvider.notifier).stop();
+      if (!mounted || logged == null) return;
+      ref.invalidate(weeklyReadingSecondsProvider);
+      setState(() => _logged = logged);
+    } finally {
+      // Cleared last: once `_logged` is set the guard no longer applies, and
+      // if nothing was running the screen *should* be free to close.
+      _stopping = false;
+    }
   }
 
   /// The book had no page count and the reader typed one on the way out.
@@ -409,9 +433,12 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     ref.listen<ActiveSession?>(activeSessionProvider, (_, next) {
       if (next != null) _seedHandIfReady();
     });
-    // Stopped from elsewhere (the mini-bar's own quick-stop) while this
-    // screen sat in the background — nothing left to show here.
-    if (_logged == null && active?.libraryEntryId != widget.libraryEntryId) {
+    // Stopped from elsewhere (the mini-bar's own quick-stop, or the reader's
+    // other device) while this screen sat in the background — nothing left to
+    // show here. Never while *this* screen's stop is in flight: that window
+    // looks identical from here and is the one case where the session ending
+    // is precisely the reason to stay.
+    if (_logged == null && !_stopping && active?.libraryEntryId != widget.libraryEntryId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && context.canPop()) context.pop();
       });

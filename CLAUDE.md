@@ -683,6 +683,22 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   "some other device", and matched with `IS DISTINCT FROM` so a NULL row isn't
   dropped from every fan-out by `!=`). Exclude by *device*, never by token: one
   install holds several tokens over its life.
+- **Adding a network round trip inside `stop()` turned a local state change into a
+  window several frames wide — and a guard that reads state as an event fired in
+  it.** Publishing the stop to the reader's other devices put an awaited HTTP call
+  between "session cleared" and "wax-seal face shown", so the timer screen's "this
+  sitting was stopped somewhere else" check saw the empty session, popped the route,
+  and Stop & log returned the reader to the book page with no page question (owner
+  report, 14 Aug 2026 — the third time this screen has lost that question, after the
+  16 Jul back-gesture and the 26 Jul stacked-route cases). Any guard that infers an
+  *event* ("someone else did this") from *state* ("nothing is running") needs an
+  explicit "…and it wasn't me" flag, set synchronously before the first await —
+  never via `setState`. Two testing corollaries, both cost a cycle here: a popped
+  route stays in the widget tree while its transition plays, so `find.byType` still
+  finds the screen for several frames — assert on
+  `router.routerDelegate.currentConfiguration.matches.last.matchedLocation`; and a
+  test for a pop guard proves nothing unless the screen is *pushed onto something*,
+  since `canPop()` is false at the root and the bug cannot fire.
 - **A tap handler's `else` branch is a routing decision, and it will outlive the
   two cases it was written for.** Notification taps sent lending pushes to the
   ledger and *everything else* to the connections inbox — so tapping "your sitting
