@@ -3479,5 +3479,14 @@
   "@notesFromThisSitting": {
     "description": "Collapsed disclosure header on the note editor listing the sitting's other notes",
     "placeholders": {"count": {"type": "int"}}
+  },
+  "paceNotEnoughTitle": "Not enough reading yet to tell you",
+  "@paceNotEnoughTitle": {"description": "Time-to-finish headline before the reader has a measured pace"},
+  "paceNotEnoughBody": "Kitabi times a sitting and looks at the pages you covered. After a few, it can say how long this book will take you — and it will be your number, not an average.",
+  "@paceNotEnoughBody": {"description": "Explains what the app needs before it can estimate, and why it is worth doing"},
+  "paceNotEnoughProgress": "{done} of {needed} timed sittings · finish one and log the page you reached",
+  "@paceNotEnoughProgress": {
+    "description": "Progress toward a measured reading pace",
+    "placeholders": {"done": {"type": "int"}, "needed": {"type": "int"}}
   }
 }

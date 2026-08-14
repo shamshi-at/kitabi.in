@@ -6843,6 +6843,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notes from this sitting · {count}'**
   String notesFromThisSitting(int count);
+
+  /// Time-to-finish headline before the reader has a measured pace
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough reading yet to tell you'**
+  String get paceNotEnoughTitle;
+
+  /// Explains what the app needs before it can estimate, and why it is worth doing
+  ///
+  /// In en, this message translates to:
+  /// **'Kitabi times a sitting and looks at the pages you covered. After a few, it can say how long this book will take you — and it will be your number, not an average.'**
+  String get paceNotEnoughBody;
+
+  /// Progress toward a measured reading pace
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {needed} timed sittings · finish one and log the page you reached'**
+  String paceNotEnoughProgress(int done, int needed);
 }
 
 class _AppLocalizationsDelegate

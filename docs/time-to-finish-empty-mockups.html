@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kitabi — Time to finish, before there's data</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#17120C;--card:#221A11;--ink:#EDE3D0;--ink-soft:#A9997F;--line:#3A2F20;
+  --oxblood:#C06770;--gold:#D1A04A;--gold-soft:#3A2E17;--moss:#83A876;--slate:#7A9CC0;--grey:#8A8070}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:#2B2118;padding-bottom:80px}
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:48px 32px 40px;text-align:center;border-bottom:3px solid #B8862B}
+.hero h1{font-family:'Fraunces',serif;font-size:36px;font-weight:400;margin-bottom:8px}
+.hero .tag{font-size:14.5px;color:#CBB897;max-width:760px;margin:0 auto;line-height:1.65}
+.hero .tag b{color:#F0E2C2}
+.area{max-width:1520px;margin:48px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.an.gold{color:#7a5a16;background:#F3E7C8}
+.area h2{font-family:'Fraunces',serif;font-size:27px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:8px 0 24px;max-width:900px;font-size:14.5px;line-height:1.65}
+.row{display:flex;flex-wrap:wrap;gap:30px}
+.shot{display:flex;flex-direction:column;gap:11px;width:300px}
+.cap{font-size:12.5px;color:#6d5f4b;line-height:1.55}
+.cap b{display:block;color:#2B2118;font-size:13.5px;margin-bottom:3px}
+.cap .pro{color:#48663F;display:block;margin-top:6px}
+.cap .con{color:#7E2A33;display:block;margin-top:3px}
+/* the card, as it appears inside the book page's reading block */
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;color:var(--ink)}
+.lbl{font-size:9px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-soft)}
+.lbl .warn{color:var(--gold)}
+.big{font-family:'Fraunces',serif;font-size:34px;font-weight:300;letter-spacing:.5px}
+.big.mut{color:var(--grey)}
+.sub{font-size:12px;color:var(--ink-soft)}
+.tiles{display:flex;gap:9px;margin-top:12px}
+.tile{flex:1;border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center}
+.tile.gold{border-color:var(--gold);background:rgba(209,160,74,.08)}
+.tile .v{font-size:14px;font-weight:600}
+.tile .k{font-size:10px;color:var(--ink-soft);margin-top:2px}
+.tile.dash{border-style:dashed;border-color:var(--grey)}
+.tile.dash .v{color:var(--grey)}
+.foot{font-size:11.5px;color:var(--ink-soft);margin-top:11px;line-height:1.5}
+.cta{margin-top:13px;height:44px;border-radius:10px;background:linear-gradient(175deg,#7E2A33,#571E25);
+  box-shadow:inset 0 0 0 1px rgba(184,134,43,.55);display:flex;align-items:center;justify-content:center;gap:7px}
+.cta span{font-family:'Fraunces',serif;font-size:14px;color:#EFD9A4}
+.ghost{margin-top:8px;height:40px;border:1px solid var(--line);border-radius:10px;display:flex;
+  align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--slate)}
+.dots{display:flex;gap:5px;align-items:center;margin-top:10px}
+.dot{width:9px;height:9px;border-radius:50%;border:1px solid var(--grey)}
+.dot.on{background:var(--gold);border-color:var(--gold)}
+.bar{height:4px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:9px}
+.bar i{display:block;height:100%;background:var(--gold);border-radius:99px}
+.ann{font-size:11px;color:#7E2A33;font-weight:600;margin-top:6px}
+.note{max-width:940px;margin:40px auto 0;padding:0 36px;font-size:13.5px;line-height:1.7;color:#5d5140}
+.note h3{font-family:'Fraunces',serif;font-size:19px;margin:24px 0 8px;color:#2B2118}
+.note li{margin-bottom:6px}.note ul{margin-left:18px}
+.note code{background:#E4DAC4;padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>“≈ 149 weeks at your rate”</h1>
+  <p class="tag">On a 176-page screenplay, from <b>one sitting of one minute</b>. The number is arithmetic
+  working perfectly on a sample that means nothing — and it is labelled <b>“at your rate”</b>, which is the
+  part that costs trust: the reader has no rate. Four ways to say so instead.</p>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">The problem</span><h2>Three figures, one of them absurd</h2></div>
+  <p class="desc">The block already knows it is guessing — it says <i>NOT YOURS YET</i> and <i>at a typical
+  40 pages/hour</i>. Then it prints two derived figures anyway, and the weeks tile silently switches
+  authority to “<i>at your rate</i>”. Hours from a stated typical rate is a defensible guess. Weeks needs
+  a <i>weekly volume</i>, which one minute of history cannot supply.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="card">
+        <div class="lbl">◷ Time to finish · <span class="warn">not yours yet</span></div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:7px">
+          <div class="big mut">4h 24m</div><div class="sub">at a typical 40 pages/hour</div>
+        </div>
+        <div class="tiles">
+          <div class="tile"><div class="v">≈ 150</div><div class="k">sittings</div></div>
+          <div class="tile gold"><div class="v">≈ 149 weeks</div><div class="k">at your rate</div></div>
+        </div>
+        <div class="foot">0 of 3 timed sittings. Log a page when you stop and this becomes your number.</div>
+      </div>
+      <p class="cap"><b>Today</b>
+      <span class="con">✕ 149 weeks to read 176 pages — the reader stops believing the feature here.</span>
+      <span class="con">✕ “at your rate” when there is no rate; the gold border makes it the hero figure.</span>
+      <span class="con">✕ “≈ 150 sittings” divides by a one-minute sitting.</span>
+      <span class="con">✕ “0 of 3” contradicts the “1 session · 1m” logged further down the same screen.</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">Direction A</span><h2>Keep what’s defensible, drop what isn’t</h2></div>
+  <p class="desc">Hours from a stated typical rate is honest — it says whose rate it is. Sittings and weeks
+  both need <i>you</i>, so they don’t appear until you exist in the data. The freed space carries the ask.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="card">
+        <div class="lbl">◷ Time to finish</div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:7px">
+          <div class="big">4h 24m</div><div class="sub">at a typical reader’s 40 pages/hour</div>
+        </div>
+        <div class="foot">How long it takes <i>you</i> needs your own pace — three timed sittings with a
+          page logged at the end, and this becomes your number.</div>
+        <div class="dots"><span class="dot on"></span><span class="dot"></span><span class="dot"></span>
+          <span style="font-size:11px;color:var(--ink-soft);margin-left:4px">1 of 3</span></div>
+        <div class="cta"><span>▶ Start a session</span></div>
+      </div>
+      <p class="cap"><b>A · one number, one ask</b>
+      <span class="pro">✓ Nothing on screen claims to know the reader.</span>
+      <span class="pro">✓ The dots make the unlock feel near, and count the sitting they just did.</span>
+      <span class="con">✕ Still leads with a figure some readers will treat as personal anyway.</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">Direction B</span><h2>No number at all until it’s earned</h2></div>
+  <p class="desc">The strongest version of “don’t take the risk”: the block stops being an estimate and
+  becomes an invitation. Nothing to misread, and the reason is stated in the reader’s terms.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="card">
+        <div class="lbl">◷ Time to finish</div>
+        <div style="font-family:'Fraunces',serif;font-size:17px;margin-top:8px;line-height:1.35">
+          Not enough reading yet to tell you</div>
+        <div class="foot">Kitabi times a sitting and looks at the pages you covered. After three, it can
+          say how long <i>this</i> book will take you — and it will be your number, not an average.</div>
+        <div class="bar"><i style="width:33%"></i></div>
+        <div class="foot" style="margin-top:6px">1 of 3 sittings · finish one and log the page you reached</div>
+        <div class="cta"><span>▶ Start a session</span></div>
+        <div class="ghost">✎ I read without the timer — log it</div>
+      </div>
+      <p class="cap"><b>B · the invitation</b>
+      <span class="pro">✓ Impossible to misread; no figure to screenshot and disbelieve.</span>
+      <span class="pro">✓ Names the two things the reader must do — time it, and log a page.</span>
+      <span class="pro">✓ The manual-log door matters: most reading happens away from the timer.</span>
+      <span class="con">✕ Loses the “is this a weekend or a month?” hint a browsing reader wants.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="card">
+        <div class="lbl">◷ Time to finish · <span style="color:var(--moss)">yours now</span></div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:7px">
+          <div class="big">3h 05m</div><div class="sub">at your 57 pages/hour</div>
+        </div>
+        <div class="tiles">
+          <div class="tile"><div class="v">≈ 3</div><div class="k">sittings</div></div>
+          <div class="tile gold"><div class="v">≈ 2 weeks</div><div class="k">at your rate</div></div>
+        </div>
+        <div class="foot">From your last 6 sittings on this book. <span style="color:var(--slate)">How is this worked out? ›</span></div>
+      </div>
+      <p class="cap"><b>The state it unlocks into</b> Same block, earned. The eyebrow flips to
+      <i>yours now</i>, the tiles appear, and “at your rate” finally means something — which is what makes
+      the empty state worth being strict about (P6: it must visibly change when it becomes real).</p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an gold">Direction C</span><h2>Show the tiles, locked</h2></div>
+  <p class="desc">The middle road: the reader sees what they will get, dashed and greyed, with the unlock
+  condition on the face of it. Tempting — but it still puts two shapes on screen that look like numbers.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="card">
+        <div class="lbl">◷ Time to finish</div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:7px">
+          <div class="big">4h 24m</div><div class="sub">at a typical reader’s pace</div>
+        </div>
+        <div class="tiles">
+          <div class="tile dash"><div class="v">🔒</div><div class="k">sittings</div></div>
+          <div class="tile dash"><div class="v">🔒</div><div class="k">weeks</div></div>
+        </div>
+        <div class="foot">Both need your own pace — 2 more timed sittings.</div>
+        <div class="cta"><span>▶ Start a session</span></div>
+      </div>
+      <p class="cap"><b>C · locked tiles</b>
+      <span class="pro">✓ Teaches what the feature becomes.</span>
+      <span class="con">✕ Two padlocks are two pieces of clutter on a card that already earns its space.</span>
+      <span class="con">✕ Reads as a paywall — the one association Kitabi shouldn’t invite.</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h3>The rule I’d apply, whichever direction wins</h3>
+  <p>The bug isn’t the arithmetic, it’s that <b>every figure is printed at the same confidence</b>. Each one
+  needs a different amount of evidence, so each should have its own gate:</p>
+  <ul>
+    <li><b>Hours</b> — safe with no data at all, <i>provided</i> it names whose pace it used. It divides
+      pages by a pace; a stated typical rate is a real answer to “how long is this book”.</li>
+    <li><b>Sittings</b> — needs a believable <i>sitting length</i>. One minute is not one. Require ≥3
+      sittings and drop any sitting under ~5 minutes from the median.</li>
+    <li><b>Weeks</b> — needs <i>weekly volume</i>, the noisiest input of the three: it depends on how often
+      you read, not how fast. Require at least 2 calendar weeks of history. This is the tile that printed
+      149 and it should be the last to unlock, not the one wearing the gold border.</li>
+  </ul>
+  <h3>Two things this screenshot also shows</h3>
+  <ul>
+    <li><b>“0 of 3 timed sittings” contradicts “1 session · 1m”</b> lower down the same card. Whatever the
+      threshold is, the count must come from the same query the log does.</li>
+    <li><b>Status says Reading, progress says “Not started”.</b> Related honesty problem, different fix —
+      worth its own look, since a reader who has logged a sitting has plainly started.</li>
+  </ul>
+  <h3>What I’d build</h3>
+  <p><b>B</b>, with A’s hours line kept for a book you don’t own yet (P7 — the deciding screen, where
+  “roughly four hours” is the whole point and no personal claim is made). On a book you <i>are</i> reading,
+  B: the reader is one tap from fixing the data, so the block should ask rather than guess.</p>
+</div>
+</body>
+</html>

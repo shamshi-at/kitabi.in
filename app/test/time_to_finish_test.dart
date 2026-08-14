@@ -111,14 +111,33 @@ void main() {
     expect(find.text('15h 0m'), findsOneWidget); // 300 pages at the book's 20 pp/h
   });
 
-  testWidgets('an unmeasured reader gets a grey, explicitly borrowed number', (tester) async {
+  testWidgets('an unmeasured reader is asked, not given a borrowed number',
+      (tester) async {
+    // Was: a grey "at a typical 40 pages/hour" plus derived units. On a
+    // 176-page screenplay with one one-minute sitting that produced
+    // "≈ 150 sittings" and "≈ 149 weeks at your rate" — arithmetic working
+    // perfectly on a sample that means nothing, over a label claiming it was
+    // the reader's (owner report, 14 Aug 2026). On a book they own, the block
+    // now asks instead of guessing.
     await _pump(tester, pageCount: 400, entry: _entry(), pace: ReadingPace.empty);
 
-    expect(find.textContaining('at a typical 40 pages/hour'), findsOneWidget);
+    expect(find.text('Not enough reading yet to tell you'), findsOneWidget);
     expect(find.textContaining('of 3 timed sittings'), findsOneWidget);
-    // No habit to divide by, so neither derived unit is claimed.
+    // Nothing on screen may look like an answer.
+    expect(find.textContaining('at a typical'), findsNothing);
     expect(find.textContaining('weeks'), findsNothing);
     expect(find.text('sittings'), findsNothing);
+    expect(find.textContaining('at your rate'), findsNothing);
+  });
+
+  testWidgets('a book you do not own keeps the typical-pace hours', (tester) async {
+    // P7's deciding screen: there is nothing to ask a reader *for* here, and
+    // "roughly this long at a typical pace" is the entire point of showing it
+    // on a book they are considering.
+    await _pump(tester, pageCount: 400, pace: ReadingPace.empty);
+
+    expect(find.textContaining('at a typical 40 pages/hour'), findsOneWidget);
+    expect(find.text('Not enough reading yet to tell you'), findsNothing);
   });
 
   testWidgets('no page count asks for the one number that fixes it', (tester) async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/format_duration.dart';
@@ -114,6 +115,13 @@ class TimeToFinish extends ConsumerWidget {
             pageCount: pageCount!,
             currentPage: entry?.currentPage,
             bookPace: bookPace,
+            // On a book the reader owns, an unmeasured pace stops printing
+            // borrowed figures and asks instead (owner pick, 14 Aug 2026 —
+            // docs/time-to-finish-empty-mockups.html direction B). On a book
+            // they don't own there is nothing to ask *for*, and "roughly four
+            // hours at a typical pace" is the whole point of P7 — so the
+            // hours line stays there.
+            owned: entry != null,
           );
   }
 
@@ -185,6 +193,7 @@ class _EstimateBlock extends StatelessWidget {
     required this.pageCount,
     required this.currentPage,
     required this.bookPace,
+    this.owned = false,
   });
 
   final FinishEstimate estimate;
@@ -197,10 +206,21 @@ class _EstimateBlock extends StatelessWidget {
   /// the footnote can't quote the global sample size for a per-book claim.
   final ({double pagesPerHour, int sessions})? bookPace;
 
+  /// Whether this book is on the reader's shelf — the only case where the
+  /// invitation makes sense, because it is the only case where they can act.
+  final bool owned;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final assumed = estimate.isAssumedPace;
+    // The figures below all divide by something this reader hasn't supplied.
+    // Hours is defensible (it names whose pace it borrowed); "≈ 150 sittings"
+    // and "≈ 149 weeks at your rate" are not — the second says "your rate"
+    // when there is no rate, which is what cost the feature its credibility
+    // (owner report, 14 Aug 2026: 149 weeks for a 176-page screenplay, from
+    // one sitting of one minute). On a book the reader owns, say so instead.
+    if (assumed && owned) return _NotEnoughYet(pace: pace);
     final started = (currentPage ?? 0) > 0;
     final pagesLeft = pageCount - (currentPage ?? 0).clamp(0, pageCount);
     final span = _spanLabel(l10n, estimate.weeks);
@@ -591,6 +611,67 @@ class _Strip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+/// Direction B: before there is enough reading to know the reader, the block
+/// stops estimating and asks.
+///
+/// The gate is deliberately **reader-level, not per book** — `pace.isMeasured`
+/// counts sittings across every book (`minSessionsForPace`), so a reader with
+/// history gets a real number on a book they opened a minute ago. Only someone
+/// genuinely new to the timer sees this.
+///
+/// No button of its own: "Start a session" and "Log manually" sit directly
+/// below in the reading card, and a third copy of the same action would be
+/// clutter pretending to be helpfulness.
+class _NotEnoughYet extends StatelessWidget {
+  const _NotEnoughYet({required this.pace});
+
+  final ReadingPace pace;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final done = pace.sampleSessions.clamp(0, minSessionsForPace);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Header(text: '◷ ${l10n.paceLabel}'),
+        SizedBox(height: 7),
+        Text(
+          l10n.paceNotEnoughTitle,
+          style: GoogleFonts.fraunces(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: AppColors.ink,
+            height: 1.3,
+          ),
+        ),
+        SizedBox(height: 6),
+        Text(
+          l10n.paceNotEnoughBody,
+          style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.45),
+        ),
+        SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: done / minSessionsForPace,
+            minHeight: 4,
+            backgroundColor: AppColors.line,
+            valueColor: AlwaysStoppedAnimation(AppColors.gold),
+          ),
+        ),
+        SizedBox(height: 6),
+        Text(
+          l10n.paceNotEnoughProgress(done, minSessionsForPace),
+          style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.4),
+        ),
+      ],
     );
   }
 }

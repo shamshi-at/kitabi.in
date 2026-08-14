@@ -4225,4 +4225,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String notesFromThisSitting(int count) {
     return 'Notes from this sitting · $count';
   }
+
+  @override
+  String get paceNotEnoughTitle => 'Not enough reading yet to tell you';
+
+  @override
+  String get paceNotEnoughBody =>
+      'Kitabi times a sitting and looks at the pages you covered. After a few, it can say how long this book will take you — and it will be your number, not an average.';
+
+  @override
+  String paceNotEnoughProgress(int done, int needed) {
+    return '$done of $needed timed sittings · finish one and log the page you reached';
+  }
 }
