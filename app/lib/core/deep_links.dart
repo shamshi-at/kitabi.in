@@ -40,8 +40,6 @@ class DeepLinkListener {
   Uri? _lastHandled;
   DateTime? _lastHandledAt;
 
-  static const _hosts = {'kitabi.in', 'www.kitabi.in'};
-
   /// Window in which an identical link counts as the cold-start echo rather
   /// than a deliberate second tap.
   static const _echoWindow = Duration(milliseconds: 1500);
@@ -67,12 +65,11 @@ class DeepLinkListener {
 
   void _handle(Uri uri) {
     if (_handleReadingTimer(uri)) return;
-    if (!uri.isScheme('https') || !_hosts.contains(uri.host)) return;
-    final segments = uri.pathSegments;
-    if (segments.length < 2) return;
-    final id = segments[1];
-    if (id.isEmpty) return;
-    if (!const {'b', 'a', 'p'}.contains(segments[0])) return;
+    // One rule for what a shared link means, shared with the router's redirect
+    // — the engine delivers these links there, not here, so the two must not
+    // drift (owner report, 14 Aug 2026: they had).
+    final route = shareRouteFor(uri);
+    if (route == null) return;
 
     // Collapse the cold-start echo (stream + getInitialLink for one tap)
     // without swallowing a genuine re-tap of the same link later on.
@@ -88,7 +85,7 @@ class DeepLinkListener {
     final router = _ref.read(routerProvider);
     // Via the external-nav helper: a cold-start link (app launched by the tap)
     // must wait out the splash/bootstrap redirect or it's swallowed into home.
-    navigateFromExternal(router, '/${segments[0]}/$id');
+    navigateFromExternal(router, route);
   }
 
   /// `in.kitabi.kitabi://reading-timer/:libraryEntryId` — a tap on the iOS

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
+
 import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
@@ -37,7 +39,13 @@ class PublisherBrowseScreen extends ConsumerWidget {
                 children: [
                   IconButton(
                     icon: Icon(Icons.arrow_back, color: AppColors.ink),
-                    onPressed: () => context.pop(),
+                    // A shared link is *replaced* into the stack by the
+                    // engine, so there is nothing beneath it — a bare pop()
+                    // strands the reader on the page with no way out (owner
+                    // report, 14 Aug 2026; same shape as the reading timer's,
+                    // 26 Jul). Home is the way out when there is no back.
+                    onPressed: () =>
+                        context.canPop() ? context.pop() : context.go(Routes.home),
                   ),
                   Text(
                     l10n.publisherBrowseLabel,

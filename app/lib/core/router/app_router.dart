@@ -130,6 +130,39 @@ String? readingTimerRouteFor(Uri uri) {
   return Routes.readingTimerPath(id);
 }
 
+/// The kitabi.in hosts whose share links open in the app, and the three
+/// sections they can name (`/b/` book, `/a/` author, `/p/` publisher) — the
+/// same set the Android manifest's autoVerify filters and the iOS
+/// apple-app-site-association declare.
+const _shareHosts = {'kitabi.in', 'www.kitabi.in'};
+const _shareSections = {'b', 'a', 'p'};
+
+/// The route a shared kitabi.in link maps to, or null when it isn't one.
+/// Anything else on the domain (`/discover`, the marketing pages) is not ours
+/// to intercept and belongs in a browser.
+String? shareRouteFor(Uri uri) {
+  if (!uri.isScheme('https') || !_shareHosts.contains(uri.host)) return null;
+  final segments = uri.pathSegments;
+  if (segments.length < 2) return null;
+  final section = segments[0];
+  final id = segments[1];
+  if (!_shareSections.contains(section) || id.isEmpty) return null;
+  return '/$section/$id';
+}
+
+/// Every URI that can arrive from *outside* the app, mapped to an in-app
+/// route: the Live Activity's custom scheme and a shared https link.
+///
+/// One door on purpose. Flutter's engine hands an incoming deep link straight
+/// to the router as a whole URI, so the router's redirect has to recognise
+/// every such link — and the Live Activity one was recognised there while
+/// share links were only handled in [DeepLinkListener], which the engine's
+/// delivery path never touches. That asymmetry is why a shared link opened the
+/// right page when the app was already running (the listener saw it) and only
+/// raised the app on a cold start (the engine's copy hit the boot gate and was
+/// discarded) — owner report, 14 Aug 2026.
+String? externalRouteFor(Uri uri) => readingTimerRouteFor(uri) ?? shareRouteFor(uri);
+
 /// A navigation target that arrived before the router was usable — a
 /// notification tap or universal link on a cold start. Navigating immediately
 /// gets swallowed: the redirect below pins everything to splash until auth +
@@ -143,7 +176,14 @@ String? pendingExternalTarget;
 void navigateFromExternal(GoRouter router, String location) {
   final config = router.routerDelegate.currentConfiguration;
   final current = config.uri.path;
-  if (current == Routes.splash || current == Routes.signIn) {
+  // Every gate the redirect can hold the app on, not just the first two: a
+  // link that arrives while the welcome or language screen is up would
+  // otherwise be pushed and immediately redirected away by that same gate,
+  // which loses it silently.
+  if (current == Routes.splash ||
+      current == Routes.signIn ||
+      current == Routes.welcome ||
+      current == Routes.languages) {
     pendingExternalTarget = location;
     return;
   }
@@ -204,7 +244,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // about the real delivery path. Rewriting it here catches the link
       // whichever way it arrives, and parking it means a *cold-start* tap
       // survives the splash/bootstrap gates below instead of landing on Home.
-      final external = readingTimerRouteFor(state.uri);
+      final external = externalRouteFor(state.uri);
       if (external != null) {
         pendingExternalTarget = external;
         return external;

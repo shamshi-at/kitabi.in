@@ -564,6 +564,20 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   every exit needs `canPop() ? pop() : go(home)`; and any test for a deep link must
   drive the **router** with the raw URI, because a test against the listener never
   touches the path the OS actually uses.
+- **"Fixed the deep link" means fixed for every route the OS can reach, not the
+  one in the bug report.** The 26 Jul lesson above — engine delivery is a
+  *replace*, so `pop()` strands the reader and every exit needs
+  `canPop() ? pop() : go(home)` — was applied to the reading timer and the book
+  page, and the *other two share targets never got it*: a shared author or
+  publisher link opened correctly and then had no way out at all (owner report,
+  14 Aug 2026). The same report's second half was the mirror image: the router's
+  redirect rewrote the Live Activity's custom-scheme URI but not `https://kitabi.in/{b,a,p}/…`,
+  so a **cold-start** share link was swallowed by the boot gate while a warm one
+  worked (the listener saw that one). One rule now — `externalRouteFor` — is
+  consulted by both the redirect and `DeepLinkListener`, because two parsers for
+  "what is one of our links" is what let them disagree. When fixing a deep-link
+  bug, grep every route reachable from outside and check both halves: does it
+  *open*, and can the reader *leave*.
 - **An external navigation (notification tap, deep link) must never push a route
   that's already on top.** Tapping the live reading notification while the timer was
   open stacked a second copy; when the top one stopped the sitting, the *buried*
