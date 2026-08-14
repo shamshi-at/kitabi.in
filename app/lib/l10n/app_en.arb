@@ -3467,5 +3467,17 @@
   "revisionsDecideFailed": "Couldn't save that decision — try again.",
   "@revisionsDecideFailed": {"description": "Snackbar when approving/rejecting a revision fails"},
   "commonGoHome": "Go home",
-  "@commonGoHome": {"description": "Escape hatch under a full-screen error when there is nothing to pop back to"}
+  "@commonGoHome": {"description": "Escape hatch under a full-screen error when there is nothing to pop back to"},
+  "notesThisSittingLabel": "This sitting",
+  "@notesThisSittingLabel": {"description": "Label over the strip of notes written during the running sitting"},
+  "notesShowAll": "All {count} \u203a",
+  "@notesShowAll": {
+    "description": "Door to the full list when the sitting's note strip is capped",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "notesFromThisSitting": "Notes from this sitting · {count}",
+  "@notesFromThisSitting": {
+    "description": "Collapsed disclosure header on the note editor listing the sitting's other notes",
+    "placeholders": {"count": {"type": "int"}}
+  }
 }

@@ -6825,6 +6825,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go home'**
   String get commonGoHome;
+
+  /// Label over the strip of notes written during the running sitting
+  ///
+  /// In en, this message translates to:
+  /// **'This sitting'**
+  String get notesThisSittingLabel;
+
+  /// Door to the full list when the sitting's note strip is capped
+  ///
+  /// In en, this message translates to:
+  /// **'All {count} ›'**
+  String notesShowAll(int count);
+
+  /// Collapsed disclosure header on the note editor listing the sitting's other notes
+  ///
+  /// In en, this message translates to:
+  /// **'Notes from this sitting · {count}'**
+  String notesFromThisSitting(int count);
 }
 
 class _AppLocalizationsDelegate

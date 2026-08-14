@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/format_duration.dart';
+import '../providers/library_providers.dart';
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/db/database.dart';
@@ -295,6 +296,21 @@ class _NotePageState extends ConsumerState<NotePage> {
                     Text(
                       l10n.notePagesHelp,
                       style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.45),
+                    ),
+                    // What this sitting already holds, under the composer
+                    // (owner request, 14 Aug 2026). Collapsed by default so
+                    // the writing space is untouched — the scarce resource
+                    // while reading is room to write (N2) — but present, so
+                    // "did I already catch this thought?" is answerable
+                    // without leaving the page, and a note can be continued
+                    // rather than duplicated.
+                    if (widget.sessionId != null) _SittingNotes(
+                      sessionId: widget.sessionId!,
+                      libraryEntryId: widget.libraryEntryId,
+                      excludeId: widget.existing?.id,
+                      bookTitle: widget.bookTitle,
+                      sessionStartedAt: widget.sessionStartedAt,
+                      currentPage: widget.currentPage,
                     ),
                     if (_isEditing && !_reading) ...[
                       const SizedBox(height: 14),
@@ -614,6 +630,138 @@ class _PageBoxState extends State<_PageBox> {
             borderRadius: BorderRadius.circular(9),
             borderSide: BorderSide(color: AppColors.line),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// The sitting's other notes, collapsed under the composer.
+///
+/// Deliberately a disclosure rather than a list: on this page the keyboard is
+/// up and the reader is mid-thought, so earlier notes are context to reach
+/// for, never something to scroll past. Tapping one opens it in this same
+/// editor (N5) — editing never re-dates a note, or the journal stops being a
+/// record and becomes a draft.
+class _SittingNotes extends ConsumerStatefulWidget {
+  const _SittingNotes({
+    required this.sessionId,
+    required this.libraryEntryId,
+    required this.excludeId,
+    required this.bookTitle,
+    required this.sessionStartedAt,
+    required this.currentPage,
+  });
+
+  final String sessionId;
+  final String libraryEntryId;
+
+  /// The note being edited, if any — it is the page you are on, not something
+  /// to offer as a destination.
+  final String? excludeId;
+  final String? bookTitle;
+  final DateTime? sessionStartedAt;
+  final int? currentPage;
+
+  @override
+  ConsumerState<_SittingNotes> createState() => _SittingNotesState();
+}
+
+class _SittingNotesState extends ConsumerState<_SittingNotes> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final all = ref.watch(sessionNotesProvider(widget.sessionId)).valueOrNull ?? const [];
+    final notes = all.where((n) => n.id != widget.excludeId).toList();
+    if (notes.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            InkWell(
+              onTap: () => setState(() => _open = !_open),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.notesFromThisSitting(notes.length),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
+                    Icon(_open ? Icons.expand_more : Icons.chevron_right,
+                        size: 18, color: AppColors.inkSoft),
+                  ],
+                ),
+              ),
+            ),
+            if (_open)
+              for (final note in notes)
+                InkWell(
+                  onTap: () => Navigator.of(context).pushReplacement(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => NotePage(
+                        libraryEntryId: widget.libraryEntryId,
+                        existing: note,
+                        bookTitle: widget.bookTitle,
+                        sessionId: widget.sessionId,
+                        sessionStartedAt: widget.sessionStartedAt,
+                        currentPage: widget.currentPage,
+                        startReadOnly: true,
+                      ),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 11),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 48,
+                          child: Text(
+                            note.pageStart == null
+                                ? ''
+                                : (note.pageEnd == null || note.pageEnd == note.pageStart
+                                    ? l10n.bookProgressPage(note.pageStart!)
+                                    : 'p. ${note.pageStart}\u2013${note.pageEnd}'),
+                            style: TextStyle(fontSize: 10.5, color: AppColors.goldInk),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            note.body.trim(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.fraunces(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              color: AppColors.inkSoft,
+                              height: 1.45,
+                            ),
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, size: 15, color: AppColors.inkSoft),
+                      ],
+                    ),
+                  ),
+                ),
+          ],
         ),
       ),
     );

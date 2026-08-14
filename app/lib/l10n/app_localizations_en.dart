@@ -4212,4 +4212,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonGoHome => 'Go home';
+
+  @override
+  String get notesThisSittingLabel => 'This sitting';
+
+  @override
+  String notesShowAll(int count) {
+    return 'All $count ›';
+  }
+
+  @override
+  String notesFromThisSitting(int count) {
+    return 'Notes from this sitting · $count';
+  }
 }

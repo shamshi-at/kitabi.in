@@ -74,6 +74,11 @@ class PushService {
           onLendEvent?.call();
         } else if (type == 'reading_started' || type == 'reading_stopped') {
           onReadingEvent?.call();
+        } else if (type == 'notes_changed') {
+          // A note written on the reader's other device. Pull now rather than
+          // at the next 15-minute tick — both devices are mid-sitting, which
+          // is exactly when "immediately" is what the reader expects.
+          onLendEvent?.call();
         }
       });
     }

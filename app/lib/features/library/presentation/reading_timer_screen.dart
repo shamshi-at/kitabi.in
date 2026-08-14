@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -339,8 +340,10 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// N1 -> N2. Opens a fresh note page without touching the session: the clock
   /// keeps running, and this method deliberately has no stop/pause path. The
   /// pill's main tap always lands here — mid-thought, a list of old notes in
-  /// the way is friction; re-reading lives behind the count badge instead
-  /// ([_openNotesList]).
+  /// the way is friction. Re-reading is the *strip under the pill* now: the
+  /// notes themselves, one line each. A bare count in a chip read as a badge,
+  /// and badges are not usually buttons, so nobody found the list behind it
+  /// (owner report, 14 Aug 2026).
   Future<void> _openFreshNote(ActiveSession active) async {
     final count = ref.read(sessionNotesProvider(active.id)).valueOrNull?.length ?? 0;
     await Navigator.of(context).push(
@@ -352,6 +355,23 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
           sessionStartedAt: active.startedAt,
           currentPage: _currentPage,
           noteIndex: count + 1,
+        ),
+      ),
+    );
+  }
+
+  /// A row in the sitting's note strip — opens that note in the same editor it
+  /// was written in (N5), with the live clock still pinned at the top.
+  Future<void> _openExistingNote(ActiveSession active, ReadingNote note) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<bool>(
+        builder: (_) => NotePage(
+          libraryEntryId: active.libraryEntryId,
+          existing: note,
+          bookTitle: _title,
+          sessionId: active.id,
+          sessionStartedAt: active.startedAt,
+          currentPage: _currentPage,
         ),
       ),
     );
@@ -419,7 +439,10 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
                 onStop: _stop,
                 onNote: active == null ? null : () => _openFreshNote(active),
                 onShowNotes: active == null ? null : () => _openNotesList(active),
-                noteCount: sessionNotes.length,
+                notes: sessionNotes,
+                onOpenNote: active == null
+                    ? null
+                    : (note) => _openExistingNote(active, note),
               )
               : _LoggedFace(
                   title: _title,
@@ -454,7 +477,8 @@ class _RunningFace extends StatelessWidget {
     required this.onStop,
     required this.onNote,
     required this.onShowNotes,
-    required this.noteCount,
+    required this.notes,
+    required this.onOpenNote,
   });
 
   final String? title;
@@ -472,11 +496,18 @@ class _RunningFace extends StatelessWidget {
   /// Opens a fresh note page (N1 -> N2). Null hides the pill.
   final VoidCallback? onNote;
 
-  /// Opens the list of this sitting's notes — the count badge's own tap.
+  /// Opens the full list of this sitting's notes — the strip's "All N" door,
+  /// shown only once the strip is capped.
   final VoidCallback? onShowNotes;
 
-  /// How many notes this sitting already holds.
-  final int noteCount;
+  /// This sitting's notes, oldest first. Shown *as themselves* under the pill
+  /// rather than as a count: the count was the reason nobody knew there was
+  /// anything to open (owner pick, 14 Aug 2026 — docs/reading-notes-mockups.html
+  /// direction B).
+  final List<ReadingNote> notes;
+
+  /// Opens one of them in the same editor it was written in (N5).
+  final void Function(ReadingNote note)? onOpenNote;
 
   @override
   Widget build(BuildContext context) {
@@ -687,87 +718,55 @@ class _RunningFace extends StatelessWidget {
             ),
           ),
           // N1 — the way into a note, quiet and above Stop & log so it never
-          // competes with it. One pill, two hit regions: the main tap always
-          // opens a fresh page (mid-thought, a list in the way is friction),
-          // while the count badge opens this sitting's notes to re-read. The
-          // count is the only way to see the sitting already holds notes
-          // without opening anything, and it's what makes the stop sheet's
-          // "already saved" believable.
+          // competes with it. One pill, one destination: a fresh page.
+          //
+          // What used to sit inside this pill was a second hit region — a grey
+          // count chip that opened the sitting's notes. It read as a badge, and
+          // badges are not usually buttons, so the notes behind it were
+          // effectively undiscoverable (owner report, 14 Aug 2026). The strip
+          // below replaces it: the notes *are* the list, which also makes the
+          // stop sheet's "your 2 notes are already saved" self-evidently true.
           if (onNote != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: EdgeInsets.only(bottom: notes.isEmpty ? 14 : 10),
               child: Center(
                 child: Material(
                   color: _nightCard,
                   shape: const StadiumBorder(side: BorderSide(color: _nightLine)),
                   clipBehavior: Clip.antiAlias,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      InkWell(
-                        onTap: onNote,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(minHeight: 44),
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(
-                                16, 0, noteCount > 0 ? 10 : 16, 0),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.edit_outlined,
-                                    size: 16, color: AppColors.nightGold),
-                                const SizedBox(width: 8),
-                                Text(
-                                  AppLocalizations.of(context)!.noteAThought,
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.onDark,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (noteCount > 0)
-                        Semantics(
-                          button: true,
-                          label: AppLocalizations.of(context)!
-                              .notesSectionThisSitting(noteCount),
-                          child: InkWell(
-                            onTap: onShowNotes,
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                  minHeight: 44, minWidth: 44),
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(4, 0, 12, 0),
-                                child: Center(
-                                  widthFactor: 1,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: _nightLine,
-                                      borderRadius: BorderRadius.circular(99),
-                                    ),
-                                    child: Text(
-                                      '$noteCount',
-                                      style: const TextStyle(
-                                          fontSize: 10.5,
-                                          color: AppColors.onDarkSoft),
-                                    ),
-                                  ),
-                                ),
+                  child: InkWell(
+                    onTap: onNote,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.edit_outlined,
+                                size: 16, color: AppColors.nightGold),
+                            const SizedBox(width: 8),
+                            Text(
+                              AppLocalizations.of(context)!.noteAThought,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.onDark,
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                    ],
+                      ),
+                    ),
                   ),
                 ),
               ),
+            ),
+          if (notes.isNotEmpty)
+            _SessionNoteStrip(
+              notes: notes,
+              onOpenNote: onOpenNote,
+              onShowAll: onShowNotes,
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 22),
@@ -1289,5 +1288,121 @@ class _SessionNotesSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+
+/// The sitting's notes, under the pill — direction B of
+/// docs/reading-notes-mockups.html (owner pick, 14 Aug 2026).
+///
+/// One line each, page first, newest last, each row opening that note in the
+/// editor it was written in. Capped at three with an honest "All N" door, the
+/// same shape the Type and Genre chip rows use: this strip shares a screen
+/// with Stop & log, and nothing may push that around.
+class _SessionNoteStrip extends StatelessWidget {
+  const _SessionNoteStrip({
+    required this.notes,
+    required this.onOpenNote,
+    required this.onShowAll,
+  });
+
+  final List<ReadingNote> notes;
+  final void Function(ReadingNote note)? onOpenNote;
+  final VoidCallback? onShowAll;
+
+  static const _visible = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    // Newest last matches the journal on the book page, so a reader who scans
+    // down is reading forward in time in both places.
+    final shown = notes.length <= _visible ? notes : notes.sublist(notes.length - _visible);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Divider(height: 1, color: _nightLine),
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.notesThisSittingLabel.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: AppColors.onDarkSoft,
+                    ),
+                  ),
+                ),
+                if (notes.length > _visible && onShowAll != null)
+                  InkWell(
+                    onTap: onShowAll,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                      child: Text(
+                        l10n.notesShowAll(notes.length),
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.nightGold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          for (final note in shown)
+            InkWell(
+              onTap: onOpenNote == null ? null : () => onOpenNote!(note),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 44,
+                      child: Text(
+                        _pageLabel(note, l10n),
+                        style: const TextStyle(fontSize: 8.5, color: AppColors.nightGold),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        note.body.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.fraunces(
+                          fontSize: 10.5,
+                          fontStyle: FontStyle.italic,
+                          color: AppColors.onDarkSoft,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, size: 14, color: AppColors.onDarkSoft),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// "p. 84–86" for a range, "p. 76" for a point, blank when the reader gave
+  /// no page — the note is still worth showing (the 31 Jul lesson: render the
+  /// half you hold).
+  String _pageLabel(ReadingNote note, AppLocalizations l10n) {
+    final start = note.pageStart;
+    if (start == null) return '';
+    final end = note.pageEnd;
+    return end == null || end == start ? l10n.bookProgressPage(start) : 'p. $start–$end';
   }
 }

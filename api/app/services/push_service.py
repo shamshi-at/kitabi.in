@@ -194,3 +194,13 @@ async def notify_reading_stopped(
         },
         silent=True,
     )
+
+
+async def notify_notes_changed(user_id: uuid.UUID) -> None:
+    """Silent — "there is something new, pull now".
+
+    Deliberately carries no content: the sync engine is the only thing that
+    moves note bodies, and a push that tried to would be a second source of
+    truth for private text.
+    """
+    await _push(user_id, "", "", {"type": "notes_changed"}, silent=True)
