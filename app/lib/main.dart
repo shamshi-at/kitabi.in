@@ -16,6 +16,7 @@ import 'core/theme/app_theme.dart';
 import 'data/sync/background_sync.dart';
 import 'data/sync/connectivity_sync.dart';
 import 'data/sync/sync_providers.dart';
+import 'features/library/providers/active_session_sync.dart';
 import 'features/library/providers/reading_timer_providers.dart';
 import 'features/settings/theme_mode_provider.dart';
 import 'l10n/app_localizations.dart';
@@ -85,6 +86,10 @@ class _KitabiAppState extends ConsumerState<KitabiApp> with WidgetsBindingObserv
       // a sitting from a background isolate that can't reach the live-activity
       // channel. Coming back is the moment to make them agree again.
       unawaited(ref.read(activeSessionProvider.notifier).reconcile());
+      // …and with the account: a sitting started or stopped on the reader's
+      // other device may have happened while this one was asleep, and a push
+      // is never guaranteed (notifications denied, no signal, phone off).
+      unawaited(ref.read(activeSessionSyncProvider).pullAndApply());
     }
   }
 

@@ -9,6 +9,7 @@ import '../../data/api/api_client.dart';
 import '../../data/sync/sync_providers.dart';
 import '../auth/auth_providers.dart';
 import '../auth/auth_service.dart';
+import '../../features/library/providers/active_session_sync.dart';
 import '../router/app_router.dart';
 
 /// Handles a push that arrives while the app is backgrounded/terminated. Must be
@@ -32,6 +33,7 @@ class PushService {
   Future<void> start({
     void Function(RemoteMessage message)? onOpen,
     void Function()? onLendEvent,
+    void Function()? onReadingEvent,
   }) async {
     if (_started || !_available) return;
     _started = true;
@@ -62,11 +64,16 @@ class PushService {
 
     // A lending push arriving while the app is foregrounded → pull immediately so
     // a book just lent to me appears on the Borrowed shelf without waiting.
-    if (onLendEvent != null) {
+    // A reading push is the same idea for the running timer: the reader's other
+    // device started or stopped a sitting, and this one should agree at once
+    // rather than at the next 15-minute sync (owner request, 14 Aug 2026).
+    if (onLendEvent != null || onReadingEvent != null) {
       FirebaseMessaging.onMessage.listen((m) {
         final type = m.data['type'];
         if (type == 'lend_new' || type == 'lend_returned' || type == 'lend_reminder') {
-          onLendEvent();
+          onLendEvent?.call();
+        } else if (type == 'reading_started' || type == 'reading_stopped') {
+          onReadingEvent?.call();
         }
       });
     }
@@ -158,6 +165,10 @@ final pushLifecycleProvider = Provider<void>((ref) {
             }
           },
           onLendEvent: () => ref.read(syncTriggerProvider)(),
+          // The payload carries the sitting, but the *server* is the authority
+          // on what is running — so the push is only a nudge to re-read, which
+          // also makes a missed or duplicated push harmless.
+          onReadingEvent: () => ref.read(activeSessionSyncProvider).pullAndApply(),
         );
       } else if (now == null && was != null) {
         push.stop();

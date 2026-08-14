@@ -17,6 +17,7 @@ from app.api import (
     me,
     promotions,
     public,
+    reading,
     recommendations,
     sitemap,
     sync,
@@ -107,6 +108,7 @@ def create_app() -> FastAPI:
     app.include_router(recommendations.router)
     app.include_router(promotions.router)
     app.include_router(import_api.router)
+    app.include_router(reading.router)
     app.include_router(sync.router)
     return app
 

@@ -77,17 +77,49 @@ async def send(
     body: str,
     data: dict[str, str] | None = None,
     image: str | None = None,
+    silent: bool = False,
 ) -> str:
     """Send one message. Returns SENT / UNREGISTERED (prune it) / ERROR.
 
     `image` (e.g. a book cover URL) rides along as a rich-notification image:
     Android shows it big-picture automatically; iOS needs the app's Notification
     Service Extension, which `mutable-content` + `fcm_options.image` trigger.
+
+    `silent` sends **data only** — no notification block, `content-available`
+    on iOS — for events the app must act on without saying anything: a sitting
+    stopped on another device takes that device's ongoing notification *down*,
+    and a banner announcing it would be noise about something the reader just
+    did themselves.
     """
     creds = _load_creds()
     access = await _access_token(client)
     notification: dict[str, Any] = {"title": title, "body": body}
     apns: dict[str, Any] = {"headers": {"apns-priority": "10"}}
+    if silent:
+        # A data-only push: iOS needs content-available + the background
+        # push-type, or it is delivered as an alert with nothing to show.
+        apns = {
+            "headers": {"apns-priority": "5", "apns-push-type": "background"},
+            "payload": {"aps": {"content-available": 1}},
+        }
+        message = {
+            "token": token,
+            "android": {"priority": "high"},
+            "apns": apns,
+            "data": data or {},
+        }
+        resp = await client.post(
+            _FCM_URL.format(project_id=creds["project_id"]),
+            headers={"Authorization": f"Bearer {access}"},
+            json={"message": message},
+        )
+        if resp.status_code == 200:
+            return SENT
+        if resp.status_code in (400, 404):
+            detail = resp.text
+            if "UNREGISTERED" in detail or "INVALID_ARGUMENT" in detail:
+                return UNREGISTERED
+        return ERROR
     if image:
         notification["image"] = image
         apns["headers"]["apns-push-type"] = "alert"

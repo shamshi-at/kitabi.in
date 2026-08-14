@@ -32,6 +32,7 @@ async def _push(
     body: str,
     data: dict[str, str],
     image: str | None = None,
+    silent: bool = False,
 ) -> None:
     async with SessionLocal() as db:
         tokens = await device_service.tokens_for_user(db, target_id)
@@ -41,7 +42,9 @@ async def _push(
         async with httpx.AsyncClient(timeout=10) as client:
             for token in tokens:
                 try:
-                    result = await fcm_client.send(client, token, title, body, data, image)
+                    result = await fcm_client.send(
+                        client, token, title, body, data, image, silent=silent
+                    )
                 except Exception:  # noqa: BLE001 — a bad token must not sink the rest
                     result = fcm_client.ERROR
                 if result == fcm_client.UNREGISTERED:
@@ -125,4 +128,69 @@ async def notify_return_reminder(
         body_suffix=f"would like “{book_title}” back",
         data={"type": "lend_reminder"},
         image=book_cover,
+    )
+
+
+async def notify_reading_started(
+    user_id: uuid.UUID,
+    *,
+    session_id: str,
+    library_entry_id: str,
+    started_at: str,
+    device_id: str | None,
+    book_title: str | None = None,
+) -> None:
+    """Tell the reader's own devices that a sitting is running.
+
+    This is the one push that goes to *yourself* rather than to someone else,
+    so it carries no actor name. It is visible rather than silent: a second
+    phone that was asleep when the timer started should still be able to say
+    what is running and offer to stop it.
+
+    The originating install ignores its own event by comparing `device_id` —
+    which is why that field is echoed rather than the token filtered: one
+    install can hold several tokens over its life, so the device is the stable
+    identity, not the token.
+    """
+    title = "Reading in progress"
+    body = (
+        f"“{book_title}” is being timed on your other device"
+        if book_title
+        else ("A reading session is running on your other device")
+    )
+    await _push(
+        user_id,
+        title,
+        body,
+        {
+            "type": "reading_started",
+            "session_id": session_id,
+            "library_entry_id": library_entry_id,
+            "started_at": started_at,
+            "device_id": device_id or "",
+        },
+    )
+
+
+async def notify_reading_stopped(
+    user_id: uuid.UUID,
+    *,
+    session_id: str,
+    device_id: str | None,
+) -> None:
+    """Silent — the other device takes its ongoing notification down.
+
+    Announcing this would be a banner about something the reader just did on a
+    device in their hand.
+    """
+    await _push(
+        user_id,
+        "",
+        "",
+        {
+            "type": "reading_stopped",
+            "session_id": session_id,
+            "device_id": device_id or "",
+        },
+        silent=True,
     )

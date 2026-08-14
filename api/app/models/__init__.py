@@ -1,6 +1,7 @@
 """SQLAlchemy model package — re-exports every ORM model and the shared mixins
 so Alembic autogenerate and callers can import them from one place."""
 
+from app.models.active_reading_session import ActiveReadingSession
 from app.models.activity_log_entry import ActivityLogEntry
 from app.models.admin import (
     ADMIN_ROLES,
@@ -119,6 +120,7 @@ __all__ = [
     "LendingRecord",
     "Connection",
     "DeviceToken",
+    "ActiveReadingSession",
     "ActivityLogEntry",
     "SyncOp",
     "ConflictHistory",

@@ -240,6 +240,31 @@ class ApiClient {
   Future<void> unregisterDevice(String token) =>
       _dio.delete('/devices', data: {'token': token});
 
+  // --- The live reading sitting, shared across this reader's devices ---
+  //
+  // A running timer cannot be a synced Layer-2 row: two devices cannot both
+  // own it, and a last-write-wins merge of "stopped" against "still running"
+  // would lose a real sitting. So it is server-owned and online-only, and the
+  // *finished* sitting still travels the normal sync path.
+
+  /// What is running on this account, or null. Called on foreground as the
+  /// catch-all for a push that never arrived.
+  Future<Map<String, dynamic>?> getActiveSession() async {
+    final res = await _dio.get('/reading/active');
+    final data = res.data;
+    return data is Map<String, dynamic> ? data : null;
+  }
+
+  /// Start or refresh the live sitting (idempotent on the account).
+  Future<void> putActiveSession(Map<String, dynamic> payload) =>
+      _dio.put('/reading/active', data: payload);
+
+  /// End it — from whichever device the reader reached for.
+  Future<void> deleteActiveSession({String? deviceId}) => _dio.delete(
+        '/reading/active',
+        queryParameters: {'device_id': ?deviceId},
+      );
+
   // --- In-app promotions (docs/promotions-plan.md) ---
 
   /// Everything live and eligible for this reader, already resolved by the

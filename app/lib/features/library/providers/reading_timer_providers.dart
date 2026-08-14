@@ -9,6 +9,7 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repositories.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
+import 'active_session_sync.dart';
 import 'library_providers.dart';
 
 // Public (not file-private) because the background notification-action
@@ -34,6 +35,30 @@ const activeSessionConfirmedKey = 'active_session_confirmed_at';
 /// a note written mid-session has to reference a real session id, and the row
 /// only appears on stop (rule 4: UUIDs are client-side anyway).
 const activeSessionIdKey = 'active_session_id';
+
+/// Set to the session id of a sitting this device *adopted* from the account
+/// rather than started itself (owner request, 14 Aug 2026: the same account on
+/// two devices shares one running timer).
+///
+/// It exists to make one distinction the pull cannot make otherwise: when the
+/// server says nothing is running, that means "stopped on the other device"
+/// for a mirrored sitting, and "we simply haven't published ours yet" for one
+/// this device started while offline. Without it, a pull during a network
+/// hiccup would throw away the reader's own running timer.
+const activeSessionMirroredKey = 'active_session_mirrored_id';
+
+/// Drop the local sitting *without* logging it — the other device already did
+/// (or is about to). Deliberately separate from [stopAndLogActiveSession]:
+/// logging here is exactly the duplicate this feature has to avoid.
+Future<void> clearLocalActiveSession(AppDatabase db) async {
+  await db.keyValuesDao.deleteValue(activeSessionEntryKey);
+  await db.keyValuesDao.deleteValue(activeSessionStartedKey);
+  await db.keyValuesDao.deleteValue(activeSessionPageStartKey);
+  await db.keyValuesDao.deleteValue(activeSessionIdKey);
+  await db.keyValuesDao.deleteValue(activeSessionConfirmedKey);
+  await db.keyValuesDao.deleteValue(activeSessionMirroredKey);
+  await db.keyValuesDao.deleteValue(activeSessionMirroredKey);
+}
 
 /// A session left running this long gets a "still reading?" check-in.
 const readingCheckInDelay = Duration(minutes: 60);
@@ -199,6 +224,10 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
     return null;
   }
 
+  /// Re-read the sitting from local storage. Public because adopting one from
+  /// another device writes those rows and then needs this to catch up.
+  Future<void> hydrate() => _hydrate();
+
   Future<void> _hydrate() async {
     final db = ref.read(appDatabaseProvider);
     final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
@@ -303,6 +332,9 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
       pageStart: pageStart,
     );
     await _showLive(libraryEntryId, startedAt);
+    // Let the reader's other devices in on it. Best-effort by construction —
+    // see ActiveSessionSync.
+    await ref.read(activeSessionSyncProvider).publishStart(state!);
   }
 
   /// Stops the running session (if any), logs it via the repository, and
@@ -320,6 +352,9 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
         onMutation: ref.read(syncTriggerProvider),
       );
       state = null;
+      // Take the sitting off the account too, so the other device's ongoing
+      // notification comes down instead of counting a sitting that ended.
+      await ref.read(activeSessionSyncProvider).publishStop();
       return logged;
     } finally {
       _stopping = false;
