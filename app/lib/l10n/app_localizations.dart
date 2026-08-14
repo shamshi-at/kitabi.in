@@ -502,17 +502,11 @@ abstract class AppLocalizations {
   /// **'Point at the barcode on the back cover'**
   String get scanSubtitle;
 
-  /// Shown once a barcode has been decoded
+  /// Over the camera while a decoded barcode is being resolved through the catalogue
   ///
   /// In en, this message translates to:
-  /// **'ISBN detected — {isbn}'**
-  String scanDetected(String isbn);
-
-  /// Shown when the ISBN doesn't resolve to a book
-  ///
-  /// In en, this message translates to:
-  /// **'No book found for that ISBN.'**
-  String get scanNotFound;
+  /// **'Looking it up…'**
+  String get scanLookingUp;
 
   /// Shown in place of the camera preview when the camera can't start (e.g. permission denied) and the Search/Add fallback buttons are visible
   ///
@@ -526,11 +520,161 @@ abstract class AppLocalizations {
   /// **'Camera unavailable — check the app\'s camera permission.'**
   String get scanCameraUnavailableShort;
 
-  /// Confirms adding the detected book to the user's library
+  /// Stamp on the scan result when the barcode resolved to a book
   ///
   /// In en, this message translates to:
-  /// **'Add'**
-  String get scanConfirmAdd;
+  /// **'Got it'**
+  String get scanGotIt;
+
+  /// Scan-result stamp when the catalogue holds several printings of the scanned book
+  ///
+  /// In en, this message translates to:
+  /// **'Got it · {count, plural, =1{1 printing} other{{count} printings}}'**
+  String scanGotItPrintings(int count);
+
+  /// Scan-result stamp when the scanned printing is already in the reader's library
+  ///
+  /// In en, this message translates to:
+  /// **'Already on your shelf'**
+  String get scanAlreadyYours;
+
+  /// The scanned barcode's number under the book's details
+  ///
+  /// In en, this message translates to:
+  /// **'ISBN {isbn}'**
+  String scanIsbnLine(String isbn);
+
+  /// Label over the edition the barcode belongs to
+  ///
+  /// In en, this message translates to:
+  /// **'The printing you scanned'**
+  String get scanPrintingScanned;
+
+  /// Label over the edition once the reader has picked a different one than the barcode's
+  ///
+  /// In en, this message translates to:
+  /// **'The printing you chose'**
+  String get scanPrintingChosen;
+
+  /// Marks which row in the printing list is the scanned one
+  ///
+  /// In en, this message translates to:
+  /// **'the barcode you scanned'**
+  String get scanPrintingBarcodeNote;
+
+  /// Opens the list of the work's other printings from the scan result
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 other} other{{count} others}}'**
+  String scanOtherPrintings(int count);
+
+  /// Header over the printing chooser on the scan result
+  ///
+  /// In en, this message translates to:
+  /// **'Which one is in your hand?'**
+  String get scanWhichPrinting;
+
+  /// Explains why the scan result asks which printing the reader holds
+  ///
+  /// In en, this message translates to:
+  /// **'Page counts differ, so your progress does too — that\'s why we ask.'**
+  String get scanPageCountsDiffer;
+
+  /// Primary action while the printing chooser is open — it names the choice being made
+  ///
+  /// In en, this message translates to:
+  /// **'Add this printing'**
+  String get scanAddThisPrinting;
+
+  /// Scan result for a catalogue work that has no editions, so nothing can go on the shelf
+  ///
+  /// In en, this message translates to:
+  /// **'No printing of this book is catalogued yet — open it to add one.'**
+  String get scanNoPrinting;
+
+  /// Door from the scan result into the book's own page, without adding it
+  ///
+  /// In en, this message translates to:
+  /// **'Open the full book page'**
+  String get scanOpenBookPage;
+
+  /// Primary action when the scanned book is already on the reader's shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Open it'**
+  String get scanOpenIt;
+
+  /// Returns the scan result to the live camera
+  ///
+  /// In en, this message translates to:
+  /// **'Scan another book'**
+  String get scanAnother;
+
+  /// Names the other languages this work exists in, on the scan result
+  ///
+  /// In en, this message translates to:
+  /// **'Translated into {languages}'**
+  String scanTranslatedInto(String languages);
+
+  /// Stamp on the scan result when the ISBN matched nothing
+  ///
+  /// In en, this message translates to:
+  /// **'Not found'**
+  String get scanNotFoundStamp;
+
+  /// Headline when a scanned ISBN matched no book
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing catalogued for this barcode'**
+  String get scanNotFoundTitle;
+
+  /// Says why a scan found nothing and reframes the reader as the first contributor
+  ///
+  /// In en, this message translates to:
+  /// **'Not in Kitabi, and OpenLibrary doesn\'t have it either. Regional printings usually aren\'t listed — you\'d be the first to add it.'**
+  String get scanNotFoundBody;
+
+  /// Carries the scanned ISBN into the blank add-book form
+  ///
+  /// In en, this message translates to:
+  /// **'Add this book'**
+  String get scanNotFoundAdd;
+
+  /// Reassurance under the add action on a scan that found nothing
+  ///
+  /// In en, this message translates to:
+  /// **'The ISBN is already filled in — you won\'t retype it'**
+  String get scanIsbnCarried;
+
+  /// Falls back to catalog search from a scan that found nothing
+  ///
+  /// In en, this message translates to:
+  /// **'Search by title'**
+  String get scanSearchByTitle;
+
+  /// Headline when the ISBN lookup failed for network reasons — deliberately not the not-found state
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the catalogue'**
+  String get scanOfflineTitle;
+
+  /// Explains a failed lookup without inviting the duplicate a not-found message would
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline, so we can\'t tell whether this book is already catalogued. The barcode is safe — nothing is lost by waiting.'**
+  String get scanOfflineBody;
+
+  /// Retries the ISBN lookup after a network failure
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get scanTryAgain;
+
+  /// Offers the manual form after a failed lookup
+  ///
+  /// In en, this message translates to:
+  /// **'Or type it in now — we\'ll match it up when you\'re back online'**
+  String get scanTypeItIn;
 
   /// Falls back to catalog search from the scan screen
   ///
@@ -6621,18 +6765,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edition added'**
   String get addEditionAddedNoTitle;
-
-  /// Scanner message when the ISBN lookup failed for network reasons (distinct from a real not-found)
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t check the catalogue — try again when you\'re online.'**
-  String get scanLookupFailed;
-
-  /// Snackbar when a scanned book is already in the library, instead of claiming it was added
-  ///
-  /// In en, this message translates to:
-  /// **'Already on your shelf — opening it.'**
-  String get scanAlreadyOnShelf;
 
   /// Inline error row in the work/author/publisher pickers when a search request fails (never shown as the empty state)
   ///

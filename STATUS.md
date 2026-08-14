@@ -482,6 +482,46 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
   rounds to 2 exactly like `rating_summary` so page and card can never visibly disagree).
   578 API tests: create → 4.0, update → 2.0, delete-last → NULL, all asserted through the
   real `/sync/push`.
+- **14 Aug 2026** — **The scan result is a book page now, not a strip.** The scanner
+  worked and the moment after it didn't: on a hit, nothing on screen changed except a
+  56px card sliding in *below* a still-lit camera, under a grey line of digits. That card
+  was dead text — cover, title, author and printing all unreachable — behind a gold button
+  reading **"Add"**, which on a screen titled "Add a book", whose other button adds to the
+  shared *catalogue*, named neither its object nor its consequence. Three directions were
+  drawn ([docs/scan-result-mockups.html](docs/scan-result-mockups.html): the Slip over a
+  dimmed camera, the Bookplate, the Ledger for cataloguing a shelf) plus four ways to make
+  a result *land*, a rack of labels for the primary, and the four states that aren't
+  "found it". Owner picked **B, the Bookplate**: the camera has done its job, so it
+  leaves, and the result takes the whole screen in the scanner's own dark palette — cover
+  at a size worth looking at, title, author, type · language · year, the catalogue rating,
+  the blurb, genre chips, and the translations line the lookup payload already carried.
+  **The printing is named on the face of it**, with "N others ›" opening the list in
+  place, the scanned one marked and every page count visible: `editions.first` is what put
+  a 55-page first printing on a shelf while the reader held a 240-page reprint (13 Aug),
+  and a display pick and a pick the reader will *own* are different questions. The primary
+  is the book page's own leather plate, `Add to my library` — the plates moved to
+  `core/widgets/action_plates.dart` so the scanner and the book page cannot drift the way
+  the four progress surfaces did — with `Wishlist` beside it, which is what actually makes
+  the primary unambiguous (want vs. have), a full-width **Open the full book page** door
+  onto the page that already handles a book you don't own, and *Scan another book* under
+  both. **Four outcomes, one object**: found; already-yours (the shelf answers back with
+  status and page, and the offer becomes `Open it` instead of a snackbar claiming an add);
+  nothing catalogued (M3's copy — says *why* regional printings are thinly listed, and
+  carries the ISBN into the form); and couldn't-check, kept deliberately distinct because
+  only a real 404 means "no such book" and an offline moment that says "you'd be the first
+  to add it" invites the exact duplicate the catalogue exists to prevent — a test asserts
+  that screen never says it. Form mode is the same view with one label swapped, and now
+  carries the reader's printing choice back as `scanned_edition_id`, so the question is
+  asked once. Five orphaned strings deleted with the old card. **Round 2, same day
+  (owner request):** the result no longer wears the camera's dark palette — it renders in
+  the **app's own theme**, light or dark, because by then the camera has left and what
+  remains is a book page. `buildNightOverlayTheme` now wraps only the camera state; the
+  private `_night*` constants left the result widgets for `AppColors`; `StatusPill`, the
+  genre chips and the progress line are used as themselves rather than re-tinted copies;
+  and `PaperPlate.onNight` — added that morning — was deleted with its last caller. The
+  scanner had been the single screen that ignored the reader's light/dark setting. **387 app tests green (9
+  new), analyze clean.** Not device-verified: `mobile_scanner` can't build on an Apple
+  Silicon simulator, so the camera path still needs a real phone.
 - **8 Aug 2026** — **Every book page now sends buyers somewhere — and can pay the bills.**
   The first revenue line from [docs/revenue-plan.md](docs/revenue-plan.md) (§3.1): retailer
   buy links are **generated at read time from the ISBN** (`api/app/services/buy_links.py`) and

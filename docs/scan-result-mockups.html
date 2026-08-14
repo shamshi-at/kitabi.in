@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — The scan result</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Kitabi design tokens — see docs/screen-design.md */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+  /* the scanner's constant-dark palette (isbn_scan_screen.dart) */
+  --night:#1E1710; --n-card:#2E2318; --n-line:#4a3a28;
+  --n-text:#EFE6C8; --n-soft:#CBB897; --n-mute:#A08D6E; --n-hi:#F0E2C2;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink);padding-bottom:90px}
+
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:52px 32px 44px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:38px;font-weight:400;margin:0 0 8px;letter-spacing:.5px}
+.hero .tag{font-size:14.5px;color:#CBB897;max-width:760px;margin:0 auto;line-height:1.65}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+.toc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:900px;margin:22px auto 0}
+.toc a{font-size:12px;font-weight:600;color:#E9DCC2;text-decoration:none;
+  border:1px solid rgba(240,226,194,.28);padding:6px 13px;border-radius:999px}
+.toc a:hover{background:var(--gold);color:#241811;border-color:var(--gold)}
+
+.area{max-width:1520px;margin:52px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.an.gold{color:#7a5a16;background:#F3E7C8}
+.area h2{font-family:'Fraunces',serif;font-size:28px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:8px 0 26px;max-width:920px;font-size:14.5px;line-height:1.65}
+.row{display:flex;flex-wrap:wrap;gap:34px}
+.shot{display:flex;flex-direction:column;gap:12px}
+.cap{width:272px;font-size:12.5px;color:#6d5f4b;line-height:1.55}
+.cap b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:3px;font-weight:600}
+.cap .pro{color:var(--moss);display:block;margin-top:6px}
+.cap .con{color:var(--oxblood);display:block;margin-top:3px}
+
+/* ---------- phone frame ---------- */
+.phone{width:272px;height:588px;border-radius:34px;border:8px solid #241B12;
+  background:var(--paper);overflow:hidden;position:relative;
+  box-shadow:0 24px 50px rgba(43,33,24,.30),0 4px 12px rgba(43,33,24,.18)}
+.scr{height:100%;display:flex;flex-direction:column;background:var(--paper);position:relative}
+.scr.night{background:var(--night);color:var(--n-text)}
+.sbar{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px 5px;font-size:9.5px;font-weight:600;color:var(--ink)}
+.night .sbar{color:var(--n-text)}
+.body{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+
+/* ---------- night screen bits ---------- */
+.nback{width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:var(--n-text);margin:0 0 2px 8px}
+.ntitle{font-family:'Fraunces',serif;font-size:15px;font-weight:500;text-align:center}
+.nsub{font-size:8.5px;color:var(--n-mute);text-align:center;margin-top:2px}
+.cam{flex:1;margin:11px 16px;border-radius:14px;position:relative;overflow:hidden;
+  background:radial-gradient(150px 110px at 50% 42%,#4a3a28 0%,#2b2118 72%);
+  border:1.5px solid var(--gold)}
+.cam.idle{border-color:var(--gold)}
+.cam.dim::after{content:"";position:absolute;inset:0;background:rgba(18,12,7,.74);backdrop-filter:blur(2px)}
+/* the reticle and the ISBN stay legible through the dim — the camera goes
+   quiet, the two things the reader needs to read do not */
+.cam.dim .retic,.cam.dim .isbnpill{z-index:2}
+.cam.dim .isbnpill{top:13px;bottom:auto}
+.cam.short{flex:0 0 118px}
+.retic{position:absolute;inset:34px 24px auto 24px;height:104px;border:1.5px solid var(--gold);border-radius:10px}
+.retic.mute{border-color:#7a6244}
+.retic.moss{border-color:#7FA36F;box-shadow:0 0 0 4px rgba(72,102,63,.30)}
+.retic.warn{border:1.5px dashed #B5665C;box-shadow:0 0 0 4px rgba(157,90,82,.20)}
+.laser{position:absolute;top:46%;left:8px;right:8px;height:2px;background:#E84848;
+  box-shadow:0 0 8px rgba(232,72,72,.8)}
+.bars{position:absolute;bottom:9px;left:0;right:0;display:flex;justify-content:center;gap:2px}
+.bars i{display:inline-block;width:2px;height:22px;background:var(--n-text);font-style:normal}
+.bars i.w{width:4px} .bars i.x{width:6px} .bars i.m{width:3px}
+.corner{position:absolute;width:15px;height:15px;border:2px solid var(--gold)}
+.isbnpill{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:8.5px;color:var(--n-soft)}
+.isbnpill span{background:rgba(184,134,43,.18);border:1px solid rgba(184,134,43,.5);
+  color:var(--n-hi);padding:3px 9px;border-radius:999px;font-weight:600;letter-spacing:.4px}
+.ncard{background:var(--n-card);border:1px solid var(--n-line);border-radius:12px;padding:9px}
+.nfoot{display:flex;gap:8px;margin:0 16px 14px}
+.nfoot div{flex:1;text-align:center;font-size:9px;font-weight:600;color:var(--n-soft);
+  border:1px solid var(--n-line);border-radius:9px;padding:7px}
+
+/* covers */
+.cover{border-radius:3px 6px 6px 3px;position:relative;overflow:hidden;flex-shrink:0;
+  box-shadow:0 4px 10px rgba(0,0,0,.42);background:linear-gradient(150deg,#C33,#7d1f1f)}
+.cover::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(0,0,0,.28)}
+.cover .ct{font-family:'Fraunces',serif;padding:6px 5px 0 8px;line-height:1.15;color:#F6EDD5}
+.cover .ca{font-size:5.5px;letter-spacing:.5px;text-transform:uppercase;opacity:.85;padding:0 5px 6px 8px;color:#F6EDD5}
+.oig{background:linear-gradient(160deg,#F2C230 0%,#D9491F 48%,#7A1414 100%)}
+
+/* the paper slip (direction A) */
+.slip{position:absolute;left:12px;right:12px;bottom:12px;background:var(--card);
+  border-radius:15px;box-shadow:0 -8px 34px rgba(0,0,0,.55),0 0 0 1px rgba(184,134,43,.55);
+  padding:11px 12px 12px;color:var(--ink)}
+.slip .ey{font-size:7.5px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--moss);display:flex;align-items:center;gap:5px}
+.slip .ey s{flex:1;height:1px;background:var(--line);text-decoration:none}
+.slip .door{display:flex;gap:9px;align-items:center;margin-top:8px}
+.slip h4{font-family:'Fraunces',serif;font-size:13.5px;font-weight:550;line-height:1.2}
+.slip .by{font-size:9.5px;color:var(--oxblood);font-weight:500;margin-top:2px}
+.slip .ed{font-size:8.5px;color:var(--ink-soft);margin-top:3px}
+.slip .chev{font-size:15px;color:var(--stamp-grey)}
+.seeline{font-size:8.5px;color:var(--slate);font-weight:600;margin-top:7px;
+  border-top:1px dashed var(--line);padding-top:7px;display:flex;justify-content:space-between}
+
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:11px;
+  font-size:12px;font-weight:600}
+.btn.primary{background:var(--oxblood);color:#F6F0E3;box-shadow:0 4px 12px rgba(126,42,51,.28)}
+.btn.ghost{background:transparent;color:var(--slate);border:1.5px solid var(--slate)}
+.b-foil{flex:1;height:40px;border-radius:9px;background:linear-gradient(175deg,#7E2A33,#571E25);
+  box-shadow:0 5px 14px rgba(94,31,38,.34),inset 0 0 0 1px rgba(184,134,43,.55);
+  display:flex;align-items:center;justify-content:center;gap:7px}
+.b-foil span{font-family:'Fraunces',serif;font-size:12.5px;font-weight:550;color:#EFD9A4;
+  text-shadow:0 1px 0 rgba(0,0,0,.35);white-space:nowrap}
+.b-foil i{color:#C9A253;font-style:normal;font-size:11px}
+.b-foil-2{flex:0 0 74px;height:40px;border-radius:9px;background:var(--card);
+  box-shadow:inset 0 0 0 1px var(--gold);display:flex;align-items:center;justify-content:center}
+.b-foil-2 span{font-family:'Fraunces',serif;font-size:12.5px;font-weight:550;color:var(--oxblood)}
+.acts{display:flex;gap:8px;margin-top:10px}
+
+/* bookplate (direction B) */
+.plate{flex:1;display:flex;flex-direction:column;padding:0 14px;overflow:hidden}
+.plate .hero2{display:flex;gap:11px;align-items:flex-end;margin-top:6px}
+.plate h3{font-family:'Fraunces',serif;font-size:17px;font-weight:550;line-height:1.2;color:var(--n-hi)}
+.plate .by{font-size:10px;color:var(--gold);margin-top:3px;font-weight:500}
+.plate .meta{font-size:8.5px;color:var(--n-mute);margin-top:4px}
+.gotit{display:inline-flex;align-items:center;gap:5px;font-size:7.5px;font-weight:700;
+  letter-spacing:1.2px;text-transform:uppercase;color:#0F1A0C;background:#9DBE8C;
+  padding:3px 9px;border-radius:999px}
+.blurb{font-family:'Fraunces',serif;font-style:italic;font-size:10px;line-height:1.55;
+  color:var(--n-soft);margin-top:9px}
+.edpick{margin-top:9px;background:var(--n-card);border:1px solid var(--n-line);border-radius:10px;
+  padding:8px 9px;display:flex;gap:8px;align-items:center}
+.edpick .k{font-size:8px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--gold)}
+.edpick .v{font-size:9.5px;color:var(--n-text);margin-top:2px}
+.edpick .go{font-size:8.5px;color:var(--n-soft);border:1px solid var(--n-line);
+  border-radius:7px;padding:5px 7px;white-space:nowrap}
+
+/* ledger (direction C) */
+.lrow{display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--n-line)}
+.lrow:last-child{border-bottom:0}
+.lrow .t{font-size:10px;font-weight:600;color:var(--n-text);line-height:1.25}
+.lrow .s{font-size:8px;color:var(--n-mute);margin-top:2px}
+.tick{width:17px;height:17px;border-radius:50%;background:rgba(157,190,140,.16);
+  border:1px solid #7FA36F;color:#9DBE8C;font-size:9px;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.undo{font-size:8px;color:var(--n-mute);border:1px solid var(--n-line);border-radius:6px;padding:3px 6px}
+.lbar{margin:0 16px 14px;background:var(--gold);color:#241811;border-radius:10px;padding:9px;
+  text-align:center;font-size:10.5px;font-weight:700}
+
+/* state cards */
+.stamp{display:inline-block;font-size:7.5px;font-weight:700;letter-spacing:.9px;
+  text-transform:uppercase;padding:3px 8px;border-radius:999px;background:#EAE4D6;color:#7A6A55}
+.stamp.reading{background:#F2DEDA;color:var(--oxblood)}
+.stamp.moss{background:#E3EAD9;color:var(--moss)}
+
+/* ---------- off-device strips ---------- */
+.strip{display:flex;flex-wrap:wrap;gap:22px;margin-top:6px}
+.sw{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;width:330px}
+.sw.dark{background:#241B12;border-color:#4a3a28}
+.sw .lbl{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--ink-soft);margin-bottom:11px}
+.sw.dark .lbl{color:var(--n-mute)}
+.sw .why{font-size:11.5px;line-height:1.55;color:#6d5f4b;margin-top:11px}
+.sw.dark .why{color:var(--n-soft)}
+.sw .why em{font-style:normal;color:var(--oxblood);font-weight:600}
+.sw.dark .why em{color:var(--gold)}
+.big{height:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:8px}
+.big.dead{background:var(--gold);color:#241811;font-size:13px;font-weight:700}
+.big.plain{background:var(--oxblood);color:#F6F0E3;font-size:13.5px;font-weight:600}
+.big.foil{background:linear-gradient(175deg,#7E2A33,#571E25);box-shadow:inset 0 0 0 1px rgba(184,134,43,.55)}
+.big.foil span{font-family:'Fraunces',serif;font-size:15px;font-weight:550;color:#EFD9A4}
+.big.own{background:linear-gradient(180deg,#8B3039,#6B222B);position:relative;color:#F6F0E3}
+.big.own::after{content:"";position:absolute;inset:4px;border:1px solid rgba(240,226,194,.5);border-radius:7px}
+.big.own span{font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;position:relative}
+.big.gold2{background:var(--gold-soft);color:#5E4A16;font-size:13px;font-weight:700;
+  box-shadow:inset 0 0 0 1px var(--gold)}
+.pairnote{font-size:11px;color:var(--ink-soft);margin-top:9px}
+
+/* mini camera-window swatches for the "highlight" strip */
+.hsw{width:238px;background:#241B12;border:1px solid #4a3a28;border-radius:14px;padding:14px}
+.hsw .win{height:150px;border-radius:11px;position:relative;overflow:hidden;
+  background:radial-gradient(140px 100px at 50% 45%,#4a3a28 0%,#2b2118 72%);border:1.5px solid var(--gold)}
+.hsw .lbl{font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--n-mute);margin-bottom:10px}
+.hsw .why{font-size:11px;line-height:1.5;color:var(--n-soft);margin-top:10px}
+.hsw .why b{color:var(--n-hi)}
+.pulse{position:absolute;inset:26px 20px auto 20px;height:82px;border-radius:9px;
+  border:2px solid var(--gold);box-shadow:0 0 0 5px rgba(184,134,43,.22),0 0 22px rgba(184,134,43,.45)}
+.snap{position:absolute;inset:40px 44px auto 44px;height:54px;border:2px solid var(--gold);border-radius:6px}
+.dimwin::after{content:"";position:absolute;inset:0;background:rgba(18,12,7,.72)}
+.minislip{position:absolute;left:14px;right:14px;bottom:12px;background:var(--card);border-radius:10px;
+  padding:8px 9px;color:var(--ink);box-shadow:0 -6px 20px rgba(0,0,0,.5);z-index:2}
+.minislip .t{font-family:'Fraunces',serif;font-size:10.5px;font-weight:550}
+.minislip .s{font-size:8px;color:var(--ink-soft);margin-top:1px}
+.stampland{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-8deg);
+  border:2px solid #9DBE8C;color:#9DBE8C;border-radius:8px;padding:7px 13px;
+  font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  background:rgba(72,102,63,.18)}
+.fillcov{position:absolute;inset:20px;border-radius:8px;overflow:hidden;
+  box-shadow:0 10px 26px rgba(0,0,0,.55)}
+
+
+/* ============================================================
+   ROUND 2 — the result in the app's own theme (owner request,
+   14 Aug 2026). The camera has left the screen, so the result
+   stops being a camera surface and becomes what it actually is:
+   a book page. Tokens are per-phone so light and dark are the
+   same markup, exactly as the app resolves AppColors at runtime.
+   ============================================================ */
+.scr.app{background:var(--paper);color:var(--ink)}
+.scr.app .sbar{color:var(--ink)}
+.appdark{
+  --paper:#17120C; --paper-deep:#20180F; --card:#221A11;
+  --ink:#EDE3D0; --ink-soft:#A9997F; --line:#3A2F20;
+  --oxblood:#C06770; --gold:#D1A04A; --gold-soft:#3A2E17;
+  --moss:#83A876; --slate:#7A9CC0; --stamp-grey:#8A8070;
+}
+.aback{width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:var(--ink);margin-left:6px}
+.astamp{display:inline-flex;align-items:center;gap:5px;font-size:8px;font-weight:700;
+  letter-spacing:1.2px;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.astamp.got{background:#E3EAD9;color:#48663F}
+.astamp.yours{background:#F2E6C4;color:#8F681E}
+.astamp.miss{background:#F3DFDA;color:#7E2A33}
+.appdark .astamp.got{background:#2A3A24;color:#9DBE8C}
+.appdark .astamp.yours{background:#3A2E17;color:#DDB86B}
+.appdark .astamp.miss{background:#3A2126;color:#E0A0A6}
+.abody{flex:1;overflow:hidden;padding:0 14px}
+.ahero{display:flex;gap:12px;align-items:flex-start;margin-top:4px}
+.acov{width:74px;height:108px;border-radius:3px 6px 6px 3px;position:relative;overflow:hidden;
+  flex-shrink:0;box-shadow:0 6px 16px rgba(43,33,24,.35);
+  background:linear-gradient(160deg,#F2C230 0%,#D9491F 48%,#7A1414 100%)}
+.acov::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(0,0,0,.25)}
+.acov span{position:absolute;left:10px;right:6px;top:10px;font-family:'Fraunces',serif;
+  font-size:8.5px;line-height:1.25;color:#F6EDD5}
+.ahero h3{font-family:'Fraunces',serif;font-size:17.5px;font-weight:550;line-height:1.2;color:var(--ink)}
+.ahero .by{font-size:11.5px;color:var(--oxblood);margin-top:3px;font-weight:500}
+.ahero .meta{font-size:10.5px;color:var(--ink-soft);margin-top:4px}
+.ahero .rate{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;color:var(--ink-soft)}
+.ahero .isbn{font-size:9.5px;color:var(--stamp-grey);margin-top:6px}
+.ablurb{font-family:'Fraunces',serif;font-style:italic;font-size:11.5px;line-height:1.5;
+  color:var(--ink-soft);margin-top:10px}
+.aprint{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:9px 10px;display:flex;gap:8px;align-items:center}
+.aprint .k{font-size:8.5px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--gold)}
+.aprint .v{font-size:11px;color:var(--ink);margin-top:2px}
+.aprint .go{font-size:9.5px;font-weight:600;color:var(--slate);border:1px solid var(--line);
+  border-radius:8px;padding:6px 8px;white-space:nowrap}
+.achips{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.achips span{font-size:9.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);
+  color:var(--ink-soft);background:var(--card)}
+.atrans{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:10.5px;color:var(--ink-soft)}
+.aacts{padding:8px 14px 12px}
+.arow{display:flex;gap:9px}
+.a-foil{flex:1;height:44px;border-radius:9px;background:linear-gradient(175deg,#7E2A33,#571E25);
+  box-shadow:0 5px 14px rgba(94,31,38,.30),inset 0 0 0 1px rgba(184,134,43,.55);
+  display:flex;align-items:center;justify-content:center;gap:7px}
+.a-foil span{font-family:'Fraunces',serif;font-size:13.5px;font-weight:550;color:#EFD9A4;white-space:nowrap}
+.a-foil i{color:#C9A253;font-style:normal;font-size:11px}
+.a-paper{flex:0 0 78px;height:44px;border-radius:9px;background:var(--card);
+  box-shadow:inset 0 0 0 1px var(--gold);display:flex;align-items:center;justify-content:center}
+.a-paper span{font-family:'Fraunces',serif;font-size:13px;font-weight:550;color:var(--oxblood)}
+.appdark .a-paper span{color:var(--gold)}
+.aghost{margin-top:8px;height:40px;border:1px solid var(--line);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--slate)}
+.aquiet{text-align:center;font-size:11px;color:var(--ink-soft);margin-top:9px}
+.apill{display:inline-block;font-size:7.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;background:#F2DEDA;color:#7E2A33}
+.appdark .apill{background:#3A2126;color:#E0A0A6}
+.amiss{background:var(--card);border:1px solid var(--line);border-left:0;border-radius:10px;
+  margin-top:12px;padding:11px 12px;overflow:hidden}
+.amiss h4{font-family:'Fraunces',serif;font-size:15px;font-weight:550;line-height:1.25;color:var(--ink)}
+.amiss p{font-size:11px;line-height:1.55;color:var(--ink-soft);margin-top:8px}
+.amiss .num{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;color:var(--gold-ink,#8F681E);
+  background:var(--gold-soft);border:1px solid rgba(184,134,43,.45);border-radius:999px;padding:3px 9px}
+.appdark .amiss .num{color:#DDB86B}
+
+/* closing note */
+.note{max-width:940px;margin:44px auto 0;padding:0 36px;font-size:13.5px;line-height:1.7;color:#5d5140}
+.note h3{font-family:'Fraunces',serif;font-size:20px;font-weight:500;margin:26px 0 8px;color:var(--ink)}
+.note ul{margin:8px 0 0 18px}
+.note li{margin-bottom:6px}
+.note code{background:#E4DAC4;padding:1px 5px;border-radius:4px;font-size:12px}
+.note b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>The moment after the beep</h1>
+  <p class="tag">The scanner reads a barcode, finds a book — and then almost nothing happens. A quiet strip
+  slides in under a still-bright camera, naming a book you can’t open, behind a gold button that says
+  <b>Add</b> and nothing else. Three directions for the result, four ways to make it <b>land</b>,
+  a rack of labels for the button, and the four states that aren’t “found it”.</p>
+  <p class="tag" style="margin-top:16px;color:#F0E2C2;border-top:1px solid rgba(240,226,194,.25);padding-top:14px">
+  <b>Owner pick, 14 Aug 2026: Direction B — The Bookplate</b>, built in
+  <code style="color:#CBB897">isbn_scan_screen.dart</code>. Three deliberate divergences from these
+  drawings are marked <b>SHIPPED AS</b> below.</p>
+  <div class="toc">
+    <a href="#today">Today</a><a href="#a">A · The Slip</a><a href="#b">B · The Bookplate</a>
+    <a href="#c">C · The Ledger</a><a href="#land">The landing</a><a href="#label">The label</a>
+    <a href="#states">Other states</a><a href="#theme">Round 2 · app theme</a><a href="#pick">Recommendation</a>
+  </div>
+</div>
+
+<!-- ============================================================ TODAY -->
+<div class="area" id="today">
+  <div class="ah"><span class="an">The problem</span><h2>What the reader gets now</h2></div>
+  <p class="desc">Reproduced from the device. The scan worked — the barcode resolved, the catalogue had
+  the book, the right printing even. Everything after that is where it falls down.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="nback">←</div>
+          <div class="ntitle">Add a book</div>
+          <div class="nsub">Point at the barcode on the back cover</div>
+          <div class="cam" style="background:#241811"></div>
+          <div style="text-align:center;font-size:8.5px;color:var(--n-soft);margin-bottom:8px">
+            ISBN detected — 9788129142146</div>
+          <div class="ncard" style="margin:0 16px 10px;display:flex;gap:9px;align-items:center">
+            <div class="cover oig" style="width:26px;height:38px"><div class="ct" style="font-size:5px">One Indian Girl</div></div>
+            <div style="flex:1">
+              <div style="font-size:10px;font-weight:700;color:var(--n-text)">One Indian Girl</div>
+              <div style="font-size:8.5px;color:var(--n-mute)">Chetan Bhagat</div>
+              <div style="font-size:8px;color:var(--n-soft)">Rupa Publications · 2016 · 280 pp</div>
+            </div>
+            <span style="background:var(--gold);color:#241811;font-size:10px;font-weight:700;
+              border-radius:16px;padding:8px 14px">Add</span>
+          </div>
+          <div class="nfoot"><div>Search instead</div><div>Add manually</div></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Today — the strip</b> Nothing about the screen changed when the book was found:
+      the camera is still live and still the biggest, brightest thing on it. The result is a 56px strip
+      in the footer’s reading order, below a grey line of numbers.
+      <span class="con">✕ The card is not a door — the title, the cover and the printing are all dead text.</span>
+      <span class="con">✕ “Add” names no object and no consequence. Add to the catalogue? To a list? To my shelf?</span>
+      <span class="con">✕ Nothing distinguishes “found it” from “still looking” but the strip’s presence.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="nback">←</div>
+          <div class="ntitle">Add a book</div>
+          <div class="nsub">Point at the barcode on the back cover</div>
+          <div class="cam" style="background:#241811"></div>
+          <div style="text-align:center;font-size:8.5px;color:var(--n-soft);margin-bottom:8px">
+            ISBN detected — 9788129142146</div>
+          <div style="margin:0 16px 10px;text-align:center">
+            <div style="font-size:10px;color:var(--n-text)">No book found for that ISBN.</div>
+            <div style="font-size:10px;color:var(--gold);font-weight:600;margin-top:8px">Scan again</div>
+          </div>
+          <div class="nfoot"><div>Search instead</div><div>Add manually</div></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Today — nothing found</b> The same screen with a sentence where the book should be.
+      This is the state that decides whether the regional catalogue ever gets built, and it currently reads
+      as a dead end: one flat line, a text link, and two buttons that look identical to the two that were
+      already there.
+      <span class="con">✕ It never says <i>why</i> — a Malayalam or Tamil printing simply isn’t in OpenLibrary.</span>
+      <span class="con">✕ It never says the ISBN is already captured and won’t need retyping.</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ DIRECTION A -->
+<div class="area" id="a">
+  <div class="ah"><span class="an">Direction A</span><h2>The Slip — the lights go down, one page stays lit</h2></div>
+  <p class="desc">The camera dims to almost nothing and the found book rises over it as a paper slip —
+  the only lit surface on a dark screen, which is the whole highlight, done with light rather than a
+  border. The slip is a <b>door</b>: cover, title, author and printing are one big tap target with a
+  chevron, and a dashed line under them spells out both ways out. The camera is still there, dimmed,
+  so “that’s not my book” is a tap on the dark half.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="nback">←</div>
+          <div class="ntitle">Add a book</div>
+          <div class="nsub">Point at the barcode on the back cover</div>
+          <div class="cam dim">
+            <div class="retic mute"></div>
+            <div class="isbnpill"><span>9788129142146</span></div>
+          </div>
+          <div class="slip">
+            <div class="ey">❦ Found in the catalogue <s></s></div>
+            <div class="door">
+              <div class="cover oig" style="width:38px;height:55px"><div class="ct" style="font-size:6px">One Indian Girl</div><div class="ca">Bhagat</div></div>
+              <div style="flex:1">
+                <h4>One Indian Girl</h4>
+                <div class="by">Chetan Bhagat</div>
+                <div class="ed">Rupa · 2016 · 280 pp · Paperback</div>
+                <div style="font-size:8.5px;color:var(--gold);margin-top:3px">★★★★☆ 3.9 · 214 ratings</div>
+              </div>
+              <div class="chev">›</div>
+            </div>
+            <div class="seeline"><span>Read the blurb, reviews &amp; other printings</span><span>›</span></div>
+            <div class="acts">
+              <div class="b-foil"><i>❦</i><span>Add to my library</span></div>
+              <div class="b-foil-2"><span>Wishlist</span></div>
+            </div>
+            <div style="text-align:center;font-size:8.5px;color:var(--stamp-grey);margin-top:8px">
+              Not this book? Tap the camera to scan again</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>A · The Slip</b> Paper-on-night is the loudest signal the app owns, and it costs no
+      new colour. The whole book block is the door; the two actions are the book page’s own leather-and-foil
+      pair, so the button a reader learns here is the button they meet again on every unowned book.
+      <span class="pro">✓ The result is unmissable without a single animation.</span>
+      <span class="pro">✓ Camera stays warm underneath — scan again is one tap, no restart.</span>
+      <span class="con">✕ Tallest of the three: on a small phone the slip eats the frame.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="nback">←</div>
+          <div class="ntitle">Add a book</div>
+          <div class="nsub">Point at the barcode on the back cover</div>
+          <div class="cam dim">
+            <div class="retic mute"></div>
+            <div class="isbnpill"><span>9788129142146</span></div>
+          </div>
+          <div class="slip">
+            <div class="ey" style="color:var(--oxblood)">❦ Already on your shelf <s></s></div>
+            <div class="door">
+              <div class="cover oig" style="width:38px;height:55px"><div class="ct" style="font-size:6px">One Indian Girl</div><div class="ca">Bhagat</div></div>
+              <div style="flex:1">
+                <h4>One Indian Girl</h4>
+                <div class="by">Chetan Bhagat</div>
+                <div style="margin-top:5px;display:flex;gap:5px;align-items:center">
+                  <span class="stamp reading">Reading</span>
+                  <span style="font-size:8.5px;color:var(--ink-soft)">p. 88 of 280 · 31%</span>
+                </div>
+              </div>
+              <div class="chev">›</div>
+            </div>
+            <div class="acts">
+              <div class="b-foil"><i>❦</i><span>Open it</span></div>
+              <div class="b-foil-2"><span>↻ Next</span></div>
+            </div>
+            <div style="text-align:center;font-size:8.5px;color:var(--stamp-grey);margin-top:8px">
+              Added 4 Jun · you’re 31% through it</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>A · already yours</b> The same slip, one branch. Today this case silently adds
+      nothing and jumps to the book with a snackbar — correct, but the reader never sees <i>why</i> the
+      screen moved. Here the shelf answers back with the status and the page you’re on, and the primary
+      stops claiming to add anything.
+      <span class="pro">✓ Scanning your own shelf becomes a way to <i>find</i> a book, not just file one.</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ DIRECTION B -->
+<div class="area" id="b">
+  <div class="ah"><span class="an">Direction B</span><h2>The Bookplate — the result takes the screen</h2></div>
+  <p class="desc">The camera has done its job, so it leaves. The result becomes a small book page in the
+  scanner’s own dark palette: the cover at a size worth looking at, the blurb’s first lines, the printing
+  named out loud with a way to change it, and a full-width door to the real book page. Scanning again is a
+  deliberate act at the bottom — right for one book in hand, wrong for a shelf.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-right:14px">
+            <div class="nback">←</div>
+            <span class="gotit">✓ Got it</span>
+          </div>
+          <div class="plate">
+            <div class="hero2">
+              <div class="cover oig" style="width:74px;height:108px"><div class="ct" style="font-size:8px">One Indian Girl</div><div class="ca">Chetan Bhagat</div></div>
+              <div style="flex:1">
+                <h3>One Indian Girl</h3>
+                <div class="by">Chetan Bhagat</div>
+                <div class="meta">Novel · English · 2016</div>
+                <div style="font-size:9px;color:var(--gold);margin-top:6px">★★★★☆ 3.9 · 214 ratings</div>
+                <div style="font-size:8px;color:var(--n-mute);margin-top:4px">ISBN 978-81-291-4214-6</div>
+              </div>
+            </div>
+            <div class="blurb">“Hi, I’m Radhika Mehta and I’m getting married this week…” — a banker’s
+              wedding week, told against everything she has been told to want.</div>
+            <div class="edpick">
+              <div style="flex:1">
+                <div class="k">The printing you scanned</div>
+                <div class="v">Rupa · 2016 · 280 pp · Paperback</div>
+              </div>
+              <div class="go">3 others ›</div>
+            </div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:9px">
+              <span style="font-size:8px;padding:3.5px 8px;border-radius:999px;border:1px solid var(--n-line);color:var(--n-soft)">Fiction</span>
+              <span style="font-size:8px;padding:3.5px 8px;border-radius:999px;border:1px solid var(--n-line);color:var(--n-soft)">Contemporary</span>
+              <span style="font-size:8px;padding:3.5px 8px;border-radius:999px;border:1px solid var(--n-line);color:var(--n-soft)">Romance</span>
+            </div>
+            <div style="margin-top:10px;border-top:1px solid var(--n-line);padding-top:9px;display:flex;gap:8px">
+              <div style="width:20px;height:20px;border-radius:50%;background:rgba(184,134,43,.22);color:var(--gold);
+                font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">R</div>
+              <div style="flex:1">
+                <div style="font-size:8.5px;color:var(--n-soft)">Rahul · <span style="color:var(--gold)">★★★★☆</span></div>
+                <div style="font-family:'Fraunces',serif;font-style:italic;font-size:9.5px;color:var(--n-mute);
+                  line-height:1.45;margin-top:2px">“Reads fast, and the last forty pages earn it.”</div>
+              </div>
+              <div style="font-size:8.5px;color:var(--n-soft);align-self:center">2 ›</div>
+            </div>
+            <div style="margin-top:auto;padding-bottom:12px">
+              <div style="display:flex;gap:8px">
+                <div class="b-foil"><i>❦</i><span>Add to my library</span></div>
+                <div class="b-foil-2"><span>Wishlist</span></div>
+              </div>
+              <div style="margin-top:8px;text-align:center;font-size:9.5px;font-weight:600;
+                color:var(--n-soft);border:1px solid var(--n-line);border-radius:9px;padding:8px">
+                Open the full book page ›</div>
+              <div style="margin-top:8px;text-align:center;font-size:9px;color:var(--n-mute)">
+                ▥ Scan another book</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B · The Bookplate</b> <b style="color:var(--oxblood)">Built.</b> The most
+      information and the least ambiguity: you can tell it’s the right book without leaving, and
+      “which printing” is answered on the face of the screen instead of inside a sheet nobody opens.
+      <span style="display:block;margin-top:6px;color:#6d5f4b"><b>SHIPPED AS:</b> the rating is
+      stars + the average with no “214 ratings” — `WorkOut` carries no count, and a second API call
+      to print one is not worth it here. The review row became the <i>translations</i> line, which
+      the same payload already answers. Already-on-your-shelf is the same screen with the stamp,
+      status and page filled in and the offer replaced by <i>Open it</i>.</span>
+      <span class="pro">✓ Blurb + rating + cover = the reader can actually decide.</span>
+      <span class="pro">✓ The one place the edition question belongs — <code>editions[0]</code> is never an answer.</span>
+      <span class="con">✕ Killing the camera costs a tap and a restart per book — bad for a stack.</span>
+      <span class="con">✕ Nearly the book page. Two screens that must not drift apart.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-right:14px">
+            <div class="nback">←</div>
+            <span class="gotit" style="background:#D9B96A">✓ Got it · 3 printings</span>
+          </div>
+          <div class="plate">
+            <div class="hero2">
+              <div class="cover oig" style="width:74px;height:108px"><div class="ct" style="font-size:8px">One Indian Girl</div><div class="ca">Chetan Bhagat</div></div>
+              <div style="flex:1">
+                <h3>One Indian Girl</h3>
+                <div class="by">Chetan Bhagat</div>
+                <div class="meta">Novel · English · 2016</div>
+                <div style="font-size:9px;color:var(--gold);margin-top:6px">★★★★☆ 3.9 · 214 ratings</div>
+              </div>
+            </div>
+            <div style="font-size:8.5px;color:var(--n-mute);margin-top:10px;letter-spacing:1.1px;
+              text-transform:uppercase;font-weight:700">Which one is in your hand?</div>
+            <div style="margin-top:7px;background:var(--n-card);border:1px solid var(--gold);
+              border-radius:10px;padding:8px 9px;display:flex;gap:8px;align-items:center">
+              <div style="width:12px;height:12px;border-radius:50%;border:2px solid var(--gold);
+                background:radial-gradient(circle,var(--gold) 45%,transparent 46%)"></div>
+              <div style="flex:1"><div style="font-size:9.5px;color:var(--n-text);font-weight:600">Rupa · 2016 · 280 pp</div>
+                <div style="font-size:8px;color:var(--gold)">the barcode you scanned</div></div>
+            </div>
+            <div style="margin-top:6px;border:1px solid var(--n-line);border-radius:10px;padding:8px 9px;
+              display:flex;gap:8px;align-items:center">
+              <div style="width:12px;height:12px;border-radius:50%;border:1.5px solid var(--n-line)"></div>
+              <div style="flex:1"><div style="font-size:9.5px;color:var(--n-soft)">Rupa · 2018 · 264 pp</div></div>
+            </div>
+            <div style="margin-top:6px;border:1px solid var(--n-line);border-radius:10px;padding:8px 9px;
+              display:flex;gap:8px;align-items:center">
+              <div style="width:12px;height:12px;border-radius:50%;border:1.5px solid var(--n-line)"></div>
+              <div style="flex:1"><div style="font-size:9.5px;color:var(--n-soft)">Westland · 2021 · 296 pp</div></div>
+            </div>
+            <div style="font-size:8px;color:var(--n-mute);margin-top:8px;line-height:1.5">
+              Page counts differ, so your progress does too — that’s why we ask.</div>
+            <div style="margin-top:auto;padding-bottom:12px">
+              <div style="display:flex;gap:8px">
+                <div class="b-foil"><i>❦</i><span>Add this printing</span></div>
+                <div class="b-foil-2"><span>Wishlist</span></div>
+              </div>
+              <div style="margin-top:8px;text-align:center;font-size:9.5px;font-weight:600;
+                color:var(--n-soft);border:1px solid var(--n-line);border-radius:9px;padding:8px">
+                Open the full book page ›</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B · when the work has several printings</b> The 13 Aug lesson made visible: a
+      scan resolves an <i>edition</i>, so the screen names it and lets the reader correct it in place
+      rather than hiding the choice in a sheet after the fact. The scanned one is pre-selected and
+      labelled as such — one tap is still the fast path.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ DIRECTION C -->
+<div class="area" id="c">
+  <div class="ah"><span class="an">Direction C</span><h2>The Ledger — for the reader cataloguing a shelf</h2></div>
+  <p class="desc">The camera never stops. Each hit lands as a row in a ledger that grows under it, with the
+  cover, the printing, and an undo — the highlight is the row <i>arriving</i> plus a haptic. Nothing is
+  committed until the gold bar at the foot. This is the only direction that treats “I have forty books to
+  enter” as the normal case rather than the exception.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-right:14px">
+            <div class="nback">←</div>
+            <span style="font-size:9px;color:var(--n-mute)">Keep scanning — nothing saves until you say so</span>
+          </div>
+          <div class="cam short">
+            <div style="position:absolute;inset:16px 34px;border:1.5px solid var(--gold);border-radius:8px">
+              <div class="laser"></div>
+              <div class="bars"><i></i><i class="w"></i><i></i><i class="m"></i><i class="x"></i><i></i><i class="w"></i><i class="m"></i></div>
+            </div>
+          </div>
+          <div style="flex:1;overflow:hidden;padding:0 16px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;
+              font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+              color:var(--n-mute);margin:8px 0 2px">
+              <span>This session</span><span style="color:var(--gold)">4 books</span></div>
+            <div class="lrow">
+              <div class="tick">✓</div>
+              <div class="cover oig" style="width:18px;height:26px"></div>
+              <div style="flex:1"><div class="t">One Indian Girl</div>
+                <div class="s">Chetan Bhagat · Rupa 2016 · 280 pp</div></div>
+              <div class="undo">Undo</div>
+            </div>
+            <div class="lrow">
+              <div class="tick">✓</div>
+              <div class="cover" style="width:18px;height:26px;background:linear-gradient(150deg,#5d6b4a,#2f3a24)"></div>
+              <div style="flex:1"><div class="t">ഖസാക്കിന്റെ ഇതിഹാസം</div>
+                <div class="s">O.V. Vijayan · DC Books · 228 pp</div></div>
+              <div class="undo">Undo</div>
+            </div>
+            <div class="lrow">
+              <div class="tick" style="border-color:#9d7f52;color:#D9B96A;background:rgba(184,134,43,.14)">?</div>
+              <div style="width:18px;height:26px;border:1px dashed var(--n-line);border-radius:2px"></div>
+              <div style="flex:1"><div class="t" style="color:var(--n-soft)">978-93-5299-441-2</div>
+                <div class="s" style="color:#D9B96A">Not in the catalogue — add it later ›</div></div>
+              <div class="undo">✕</div>
+            </div>
+            <div class="lrow">
+              <div class="tick" style="border-color:var(--n-line);color:var(--n-mute);background:transparent">❦</div>
+              <div class="cover" style="width:18px;height:26px;background:linear-gradient(150deg,#7E2A33,#4A161C)"></div>
+              <div style="flex:1"><div class="t">രണ്ടാമൂഴം</div>
+                <div class="s" style="color:var(--n-mute)">Already on your shelf · reading</div></div>
+              <div class="undo">›</div>
+            </div>
+          </div>
+          <div class="lbar">Add 2 books to my library</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>C · The Ledger</b> The camera keeps its place, so the rhythm is scan–beep–scan.
+      Every outcome has a row: found, unknown, already yours — nothing is a dead end, and the misses are
+      collected instead of interrupting.
+      <span class="pro">✓ Forty books without leaving the screen once.</span>
+      <span class="pro">✓ Undo removes the fear that makes people scan slowly.</span>
+      <span class="con">✕ Batch state to hold (and to lose on a crash) — the only direction with real new plumbing.</span>
+      <span class="con">✕ Nothing is on the shelf until the last tap; a reader who backs out loses the lot.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-right:14px">
+            <div class="nback">←</div>
+            <span style="font-size:9px;color:var(--n-mute)">Keep scanning</span>
+          </div>
+          <div class="cam short">
+            <div style="position:absolute;inset:16px 34px;border:1.5px solid #7FA36F;border-radius:8px;
+              box-shadow:0 0 0 4px rgba(72,102,63,.28)"></div>
+          </div>
+          <div style="padding:0 16px">
+            <div style="margin-top:10px;background:var(--n-card);border:1px solid #7FA36F;border-radius:12px;
+              padding:10px;display:flex;gap:9px;align-items:center">
+              <div class="cover oig" style="width:30px;height:44px"><div class="ct" style="font-size:5px">One Indian Girl</div></div>
+              <div style="flex:1">
+                <div style="font-size:7.5px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#9DBE8C">Just added</div>
+                <div style="font-size:10.5px;font-weight:700;color:var(--n-text);margin-top:2px">One Indian Girl</div>
+                <div style="font-size:8.5px;color:var(--n-mute)">Rupa · 2016 · 280 pp</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:8.5px;color:var(--n-soft);border:1px solid var(--n-line);
+                  border-radius:7px;padding:5px 8px">Open ›</div>
+                <div style="font-size:8px;color:var(--n-mute);margin-top:5px">Undo</div>
+              </div>
+            </div>
+            <div style="font-size:8.5px;color:var(--n-mute);text-align:center;margin-top:9px;line-height:1.55">
+              Saved to your shelf. Keep pointing at barcodes —<br>this card is replaced by the next one.</div>
+          </div>
+          <div style="margin-top:auto;padding:0 16px 14px">
+            <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;
+              letter-spacing:1.1px;text-transform:uppercase;color:var(--n-mute);margin-bottom:6px">
+              <span>Added this session</span><span style="color:var(--gold)">6</span></div>
+            <div style="display:flex;gap:5px">
+              <div class="cover oig" style="width:22px;height:32px"></div>
+              <div class="cover" style="width:22px;height:32px;background:linear-gradient(150deg,#5d6b4a,#2f3a24)"></div>
+              <div class="cover" style="width:22px;height:32px;background:linear-gradient(150deg,#7E2A33,#4A161C)"></div>
+              <div class="cover" style="width:22px;height:32px;background:linear-gradient(150deg,#43617E,#22354a)"></div>
+              <div class="cover" style="width:22px;height:32px;background:linear-gradient(150deg,#8a6b2c,#5d461a)"></div>
+              <div style="width:22px;height:32px;border:1px dashed var(--n-line);border-radius:3px;
+                display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--n-mute)">+1</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>C′ · The Ledger, committed immediately</b> Same rhythm, no batch: each scan writes
+      straight to the shelf (which is what offline-first already does best) and the card is a receipt with
+      an Undo, not a pending item. The session strip along the bottom is the only memory it keeps.
+      <span class="pro">✓ No new state, no “lost the lot” failure — it’s today’s code, re-laid-out.</span>
+      <span class="con">✕ Mis-scans reach the shelf; Undo has to be genuinely reliable.</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ THE LANDING -->
+<div class="area" id="land">
+  <div class="ah"><span class="an gold">The landing</span><h2>Four ways to say “got it” — pick one, it’s orthogonal to the direction</h2></div>
+  <p class="desc">“It should highlight” is its own decision. Each of these works with any of A, B or C, and
+  each pairs with one selection haptic. Under <code>prefers-reduced-motion</code> every one of them still
+  has a static end state — the gold frame, the dim, the stamp, the filled cover — so nothing depends on the
+  animation being seen.</p>
+  <div class="strip">
+    <div class="hsw">
+      <div class="lbl">H1 · The gold snap</div>
+      <div class="win">
+        <div class="snap"></div>
+        <div class="pulse" style="opacity:.35"></div>
+        <div class="isbnpill"><span>9788129142146</span></div>
+      </div>
+      <p class="why"><b>The reticle contracts onto the barcode</b> and pulses gold once, and the ISBN turns
+      from grey text into a gold pill. Cheapest to build, reads as “the machine locked on” — the language
+      every scanner in the world already uses.</p>
+    </div>
+    <div class="hsw">
+      <div class="lbl">H2 · The lights go down</div>
+      <div class="win dimwin">
+        <div class="minislip">
+          <div class="t">One Indian Girl</div>
+          <div class="s">Rupa · 2016 · 280 pp</div>
+        </div>
+      </div>
+      <p class="why"><b>The camera dims and the result is the only lit surface.</b> Paper over night is
+      the strongest contrast the app owns and it needs no new colour. Direction A is built on this; it also
+      answers “where do I look now?” without an arrow.</p>
+    </div>
+    <div class="hsw">
+      <div class="lbl">H3 · The stamp lands</div>
+      <div class="win">
+        <div class="retic moss" style="inset:22px 18px auto 18px;height:96px"></div>
+        <div class="stampland">Got it</div>
+      </div>
+      <p class="why"><b>A moss stamp presses onto the frame</b> and the frame border turns moss. The
+      library-stamp idiom the app already uses for <i>Returned</i> and <i>Read</i> — and the miss state
+      gets its mirror: an oxblood dashed frame with <i>Not found</i>.</p>
+    </div>
+    <div class="hsw">
+      <div class="lbl">H4 · The cover fills the frame</div>
+      <div class="win">
+        <div class="fillcov cover oig" style="border-radius:8px">
+          <div class="ct" style="font-size:11px;padding:12px 10px 0 14px">One Indian Girl</div>
+          <div class="ca" style="padding:0 10px 10px 14px">Chetan Bhagat</div>
+        </div>
+      </div>
+      <p class="why"><b>The book’s cover animates into the scan window itself</b> — the rectangle you were
+      pointing at becomes the answer. The most delightful and the most literal: “this is the thing in your
+      hand”. Needs a graceful fallback for the typeset cover, which is most regional books.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ THE LABEL -->
+<div class="area" id="label">
+  <div class="ah"><span class="an gold">The label</span><h2>“Add” — to what?</h2></div>
+  <p class="desc">Shown at roughly device scale. The word has to survive being read by someone who has
+  never used the app, standing in a bookshop, holding a book. Two things it must not be confused with:
+  adding a book to the <i>shared catalogue</i> (a different, public act, one screen away) and adding it to
+  a wishlist.</p>
+  <div class="strip">
+    <div class="sw">
+      <div class="lbl">Today</div>
+      <div class="big dead">Add</div>
+      <p class="why">Names no object. In a flow whose title is literally <em>“Add a book”</em> it could
+      plausibly mean “add it to the catalogue”, which is the one thing it doesn’t do. It’s also the only
+      gold-filled button in the app that isn’t a catalogue contribution.</p>
+    </div>
+    <div class="sw">
+      <div class="lbl">Option 1 · the app’s existing words</div>
+      <div class="big foil"><span>❦ Add to my library</span></div>
+      <p class="why">Already the label on every unowned book page (<code>bookAddToLibrary</code>), already
+      translated, already the leather-and-foil plate readers meet there. <em>Consistency beats novelty</em>:
+      the scanner should not invent a second name for the app’s most common action.</p>
+    </div>
+    <div class="sw">
+      <div class="lbl">Option 2 · the physical claim</div>
+      <div class="big own"><span>Put it on my shelf</span></div>
+      <p class="why">The most concrete, and closest to the product’s wedge — Kitabi tracks
+      <em>ownership</em>, not just reading. Costs a new string and a small divergence from the book page,
+      unless that page changes too.</p>
+    </div>
+    <div class="sw">
+      <div class="lbl">Option 3 · the possessive</div>
+      <div class="big foil"><span>❦ This copy is mine</span></div>
+      <p class="why">Says the quiet part: a scan is proof you’re holding it. Reads beautifully next to
+      <em>Wishlist</em> (want vs. have), and it makes the printing question feel natural — <i>this</i>
+      copy. Weakest when a reader is scanning a friend’s shelf or a bookshop table.</p>
+    </div>
+    <div class="sw dark">
+      <div class="lbl">The pair, in place</div>
+      <div style="display:flex;gap:9px">
+        <div class="b-foil"><i>❦</i><span>Add to my library</span></div>
+        <div class="b-foil-2"><span>Wishlist</span></div>
+      </div>
+      <p class="why">Whatever the primary says, the <em>second</em> action is what removes the ambiguity:
+      with <i>Wishlist</i> beside it, the primary can only mean “I have this”. That contrast does more
+      work than any single wording.</p>
+      <p class="why" style="margin-top:8px">Beneath both, one line of consequence — <em>“Rupa 2016, 280 pp
+      — the printing you scanned”</em> — so the button never has to carry the whole meaning alone.</p>
+    </div>
+    <div class="sw dark">
+      <div class="lbl">And the door</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;font-size:11.5px;font-weight:600;color:var(--n-soft);
+          border:1px solid var(--n-line);border-radius:9px;padding:11px">Open the full book page ›</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--slate);
+          border-top:1px dashed var(--n-line);padding-top:9px">
+          <span style="color:#8FA9C4;font-weight:600">Read the blurb, reviews &amp; other printings</span><span style="color:#8FA9C4">›</span></div>
+      </div>
+      <p class="why">Two weights for “see the details”: a full button when the result owns the screen
+      (direction B), a dashed line inside the card when it doesn’t (direction A). Either way the
+      destination is the <em>existing</em> book page, which already handles a book you don’t own —
+      no new screen.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ OTHER STATES -->
+<div class="area" id="states">
+  <div class="ah"><span class="an">The other four</span><h2>Not-found, offline, already-yours, no-camera</h2></div>
+  <p class="desc">Drawn in Direction A’s slip, because whichever direction wins, these four have to be the
+  same object as the success state — a scanner that has one beautiful path and four grey ones is the
+  screen we already have. Each says what happened, why, and what the reader can do next; none is a dead end.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="nback">←</div>
+          <div class="ntitle">Add a book</div>
+          <div class="nsub">Point at the barcode on the back cover</div>
+          <div class="cam dim" style="border-color:#9d5a52">
+            <div class="retic warn"></div>
+            <div class="isbnpill"><span style="border-color:rgba(157,90,82,.6);background:rgba(157,90,82,.18)">9789352994412</span></div>
+          </div>
+          <div class="slip">
+            <div class="ey" style="color:var(--oxblood)">Nothing catalogued for this barcode <s></s></div>
+            <div style="font-size:10px;color:var(--ink-soft);line-height:1.55;margin-top:7px">
+              Not in Kitabi, and OpenLibrary doesn’t have it either. Regional printings usually aren’t
+              listed — <b style="color:var(--ink)">you’d be the first to add it.</b></div>
+            <div class="acts">
+              <div class="b-foil"><i>❦</i><span>Add this book</span></div>
+            </div>
+            <div style="text-align:center;font-size:8.5px;color:var(--ink-soft);margin-top:6px">
+              The ISBN is already filled in — you won’t retype it</div>
+            <div style="display:flex;gap:8px;margin-top:9px">
+              <div style="flex:1;text-align:center;font-size:9px;font-weight:600;color:var(--slate);
+                border:1px solid var(--line);border-radius:9px;padding:7px">⌕ Search by title</div>
+              <div style="flex:1;text-align:center;font-size:9px;font-weight:600;color:var(--slate);
+                border:1px solid var(--line);border-radius:9px;padding:7px">↻ Scan again</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Nothing found</b> M3’s copy, in the new object. The frame turns dashed oxblood so
+      the miss <i>highlights</i> too — a scan that found nothing must look as decided as one that found
+      something. The reader is reframed as the first contributor, not the victim of a miss.</p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="nback">←</div>
+          <div class="ntitle">Add a book</div>
+          <div class="nsub">Point at the barcode on the back cover</div>
+          <div class="cam dim">
+            <div class="retic mute"></div>
+            <div class="isbnpill"><span>9788129142146</span></div>
+          </div>
+          <div class="slip">
+            <div class="ey" style="color:var(--stamp-grey)">Couldn’t reach the catalogue <s></s></div>
+            <div style="font-size:10px;color:var(--ink-soft);line-height:1.55;margin-top:7px">
+              You’re offline, so we can’t tell whether this book is already catalogued.
+              <b style="color:var(--ink)">The barcode is safe</b> — nothing is lost by waiting.</div>
+            <div class="acts">
+              <div class="b-foil"><i>↻</i><span>Try again</span></div>
+              <div class="b-foil-2"><span>↻ Scan</span></div>
+            </div>
+            <div style="text-align:center;font-size:8.5px;color:var(--ink-soft);margin-top:8px">
+              Or type it in now — we’ll match it up when you’re back online</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Couldn’t check</b> Deliberately <i>not</i> the not-found state — the code already
+      separates a real 404 from a network failure, precisely so an offline moment can’t invite the duplicate
+      the catalogue exists to prevent. The wording has to keep that distinction visible: this one never says
+      “you’d be the first”.
+      <span style="display:block;margin-top:6px;color:#6d5f4b"><b>SHIPPED AS:</b> the secondary is
+      “Scan again”, not “Later” — a word naming no consequence is the fault this whole rebuild is
+      about. A test asserts this screen never says “first to add it”.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="nback">←</div>
+          <div class="ntitle">Add a book</div>
+          <div class="nsub">Point at the barcode on the back cover</div>
+          <div class="cam dim">
+            <div class="retic mute"></div>
+            <div class="isbnpill"><span>9788126415243</span></div>
+          </div>
+          <div class="slip">
+            <div class="ey">❦ In the catalogue — not on your shelf <s></s></div>
+            <div class="door">
+              <div class="cover" style="width:38px;height:55px;background:linear-gradient(150deg,#5d6b4a,#2f3a24)">
+                <div class="ct" style="font-size:6px">ഖസാക്കിന്റെ ഇതിഹാസം</div></div>
+              <div style="flex:1">
+                <h4>ഖസാക്കിന്റെ ഇതിഹാസം</h4>
+                <div class="by">O.V. Vijayan</div>
+                <div class="ed">DC Books · 2018 · 228 pp</div>
+                <div style="font-size:8.5px;color:var(--slate);margin-top:3px">Translated into English &amp; Tamil</div>
+              </div>
+              <div class="chev">›</div>
+            </div>
+            <div class="seeline"><span>Read the blurb, reviews &amp; other printings</span><span>›</span></div>
+            <div class="acts">
+              <div class="b-foil"><i>❦</i><span>Add to my library</span></div>
+              <div class="b-foil-2"><span>Wishlist</span></div>
+            </div>
+            <div style="text-align:center;font-size:8.5px;color:var(--stamp-grey);margin-top:8px">
+              Not this book? Tap the camera to scan again</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>A regional book, found</b> The success state carrying the case the catalogue is
+      actually being built for. The one extra line — <i>translated into…</i> — is the wedge showing up
+      where it costs nothing, and it’s already in the payload.</p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr night">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="nback">←</div>
+          <div class="ntitle">Add a book</div>
+          <div class="nsub">Point at the barcode on the back cover</div>
+          <div class="cam" style="border-color:var(--n-line);background:#241811">
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+              justify-content:center;text-align:center;padding:26px">
+              <div style="width:44px;height:30px;border:1.5px solid var(--n-line);border-radius:5px;
+                display:flex;align-items:center;justify-content:center;gap:2px;opacity:.75">
+                <span style="width:2px;height:14px;background:var(--n-line)"></span>
+                <span style="width:4px;height:14px;background:var(--n-line)"></span>
+                <span style="width:2px;height:14px;background:var(--n-line)"></span>
+                <span style="width:5px;height:14px;background:var(--n-line)"></span>
+                <span style="width:2px;height:14px;background:var(--n-line)"></span>
+              </div>
+              <div style="font-size:10px;color:var(--n-text);margin-top:9px;line-height:1.55">
+                The camera isn’t available</div>
+              <div style="font-size:8.5px;color:var(--n-mute);margin-top:5px;line-height:1.55">
+                Kitabi needs camera permission to read a barcode. You can still add this book — it just
+                takes a few more taps.</div>
+            </div>
+          </div>
+          <div class="nfoot" style="margin-top:6px"><div>⌕ Search by title</div><div>✎ Type it in</div></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>No camera</b> The FAB lands here directly, so a refused permission is a first-run
+      state, not an edge case. Today it prints a sentence inside the frame; here the frame <i>is</i> the
+      message, with the two routes around it.
+      <span style="display:block;margin-top:6px;color:#6d5f4b"><b>SHIPPED AS:</b> no “Open Settings”
+      button — that needs a permissions package, and rule 8 says a new dependency’s default answer
+      is no. The two fallbacks were already there and do the job.</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ RECOMMENDATION -->
+
+<div class="area" id="theme">
+  <div class="ah"><span class="an gold">Round 2 · 14 Aug 2026 · <b style="color:#7E2A33">BUILT</b></span><h2>The result in the app’s own theme</h2></div>
+  <p class="desc">Owner request, and it follows from Direction B’s own premise: <b>the camera has left the
+  screen</b>, so the result is no longer a camera surface — it is a book page, and every other book page in
+  Kitabi is paper. Same layout, same copy, same leather-and-foil pair; only the ground changes. It also stops
+  the scanner being the one screen that ignores the reader’s light/dark setting: these two phones are the
+  <i>same markup</i>, resolved through the app’s tokens the way <code>AppColors</code> resolves at runtime.
+  The camera screen itself stays <code>#1E1710</code> — that one really is a camera.</p>
+  <div class="row">
+    <div class="shot">
+      <div class="phone"><div class="scr app ">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="padding:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 14px 0 0">
+            <div class="aback">←</div><span class="astamp got">✓ Got it</span>
+          </div>
+          <div class="abody">
+            <div class="ahero">
+              <div class="acov"><span>One Indian Girl</span></div>
+              <div style="flex:1">
+                <h3>One Indian Girl</h3>
+                <div class="by">Chetan Bhagat</div>
+                <div class="meta">Novel · English · 2016</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 3.9</div>
+                <div class="isbn">ISBN 9788129142146</div>
+              </div>
+            </div>
+            <div class="ablurb">“A banker’s wedding week, told against everything she has been told to want.”</div>
+            <div class="aprint">
+              <div style="flex:1">
+                <div class="k">The printing you scanned</div>
+                <div class="v">Rupa · 2016 · 280 pp · Paperback</div>
+              </div>
+              <div class="go">1 other ›</div>
+            </div>
+            <div class="achips"><span>Fiction</span><span>Contemporary</span><span>Romance</span></div>
+            <div class="atrans"><span style="color:var(--slate)">⇄</span> Translated into Malayalam</div></div>
+          <div class="aacts">
+            <div class="arow">
+              <div class="a-foil"><i>❦</i><span>Add to my library</span></div>
+              <div class="a-paper"><span>Wishlist</span></div>
+            </div>
+            <div class="aghost">Open the full book page ›</div>
+            <div class="aquiet">▥ Scan another book</div></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Found — app theme, light</b> Paper, ink, oxblood byline, gold section label: the same
+      frontispiece grammar as the book page this card opens onto, so the handoff between them stops being a
+      change of world.
+      <span class="pro">✓ One theme to maintain instead of a private palette per screen.</span>
+      <span class="pro">✓ The “Got it” stamp becomes the app’s own moss status tint.</span></p>
+    </div>
+    <div class="shot">
+      <div class="phone"><div class="scr app appdark">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="padding:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 14px 0 0">
+            <div class="aback">←</div><span class="astamp got">✓ Got it</span>
+          </div>
+          <div class="abody">
+            <div class="ahero">
+              <div class="acov"><span>One Indian Girl</span></div>
+              <div style="flex:1">
+                <h3>One Indian Girl</h3>
+                <div class="by">Chetan Bhagat</div>
+                <div class="meta">Novel · English · 2016</div>
+                <div class="rate"><span class="stars">★★★★☆</span> 3.9</div>
+                <div class="isbn">ISBN 9788129142146</div>
+              </div>
+            </div>
+            <div class="ablurb">“A banker’s wedding week, told against everything she has been told to want.”</div>
+            <div class="aprint">
+              <div style="flex:1">
+                <div class="k">The printing you scanned</div>
+                <div class="v">Rupa · 2016 · 280 pp · Paperback</div>
+              </div>
+              <div class="go">1 other ›</div>
+            </div>
+            <div class="achips"><span>Fiction</span><span>Contemporary</span><span>Romance</span></div>
+            <div class="atrans"><span style="color:var(--slate)">⇄</span> Translated into Malayalam</div></div>
+          <div class="aacts">
+            <div class="arow">
+              <div class="a-foil"><i>❦</i><span>Add to my library</span></div>
+              <div class="a-paper"><span>Wishlist</span></div>
+            </div>
+            <div class="aghost">Open the full book page ›</div>
+            <div class="aquiet">▥ Scan another book</div></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Found — app theme, dark</b> Identical markup; the tokens resolve to the app’s night
+      palette (<code>#17120C</code> paper, <code>#EDE3D0</code> ink), <i>not</i> the scanner’s camera dark.
+      The leather plate keeps its light-mode colours in both — it is a physical object, and the themed
+      oxblood lightens to #C06770, where gold foil falls to 2.8:1.</p>
+    </div>
+    <div class="shot">
+      <div class="phone"><div class="scr app ">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="padding:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 14px 0 0">
+            <div class="aback">←</div><span class="astamp yours">❦ Already yours</span>
+          </div>
+          <div class="abody">
+            <div class="ahero">
+              <div class="acov"><span>One Indian Girl</span></div>
+              <div style="flex:1">
+                <h3>One Indian Girl</h3>
+                <div class="by">Chetan Bhagat</div>
+                <div style="margin-top:7px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                  <span class="apill">Reading</span>
+                  <span style="font-size:10.5px;color:var(--ink-soft)">p. 88 of 280 · 31%</span>
+                </div>
+                <div class="isbn">Added 4 Jun · Rupa 2016</div>
+              </div>
+            </div>
+            <div class="ablurb">“A banker’s wedding week, told against everything she has been told to want.”</div>
+            <div class="aprint">
+              <div style="flex:1">
+                <div class="k">The printing you scanned</div>
+                <div class="v">Rupa · 2016 · 280 pp · Paperback</div>
+              </div>
+            </div></div>
+          <div class="aacts">
+            <div class="arow">
+              <div class="a-foil"><i>❦</i><span>Open it</span></div>
+            </div>
+            <div class="aquiet">▥ Scan another book</div></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Already on your shelf</b> The reused pieces are the point: this is the real
+      <code>StatusPill</code> and the book page’s progress line, which on the dark scanner had to be
+      light-tinted chips floating on brown. Here they are simply themselves.</p>
+    </div>
+    <div class="shot">
+      <div class="phone"><div class="scr app ">
+        <div class="sbar"><span>11:48</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="padding:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 14px 0 0">
+            <div class="aback">←</div><span class="astamp miss">Not found</span>
+          </div>
+          <div class="abody">
+            <div class="amiss" style="display:flex;gap:0;padding:0">
+              <div style="width:3px;background:var(--oxblood);flex-shrink:0"></div>
+              <div style="padding:11px 12px">
+                <h4>Nothing catalogued for this barcode</h4>
+                <span class="num">9789352994412</span>
+                <p>Not in Kitabi, and OpenLibrary doesn’t have it either. Regional printings usually
+                aren’t listed — <b style="color:var(--ink)">you’d be the first to add it.</b></p>
+              </div>
+            </div></div>
+          <div class="aacts">
+            <div class="arow">
+              <div class="a-foil"><i>❦</i><span>Add this book</span></div>
+            </div>
+            <div class="aquiet" style="margin-top:6px">The ISBN is already filled in — you won’t retype it</div>
+            <div style="display:flex;gap:9px;margin-top:9px">
+              <div class="aghost" style="flex:1;margin:0">⌕ Search by title</div>
+              <div class="aghost" style="flex:1;margin:0">↻ Scan again</div>
+            </div></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Nothing catalogued</b> The miss gets the gold-ruled card the app already uses for
+      provenance banners, and the ISBN sits in a gold-soft pill rather than glowing on black. Same words,
+      same three exits.</p>
+    </div>
+  </div>
+  <div class="note" style="margin-top:26px;padding:0 4px">
+    <h3 style="margin-top:0">What changes in code</h3>
+    <ul>
+      <li><code>Theme(data: buildNightOverlayTheme())</code> stops wrapping the whole screen and wraps
+        <b>only the camera state</b>; the result states render under the app’s own theme.</li>
+      <li>The private <code>_night*</code> constants disappear from the result widgets, which switch to
+        <code>AppColors</code> — so they follow light/dark for free, and the palette lives in one place.</li>
+      <li><code>StatusPill</code>, the genre chips and the progress line are used as-is instead of
+        re-tinted copies; <code>PaperPlate</code> drops its <code>onNight</code> flag on this screen.</li>
+      <li>The tests barely move: they assert text and callbacks, not colour.</li>
+    </ul>
+    <h3>The one real question</h3>
+    <p>Going from a dark camera to a paper result is a bright flash in a dim room — the exact moment a
+    reader is standing in a bookshop at night. Worth trying on the device before committing; if it stings,
+    the fix is a short cross-fade rather than keeping the result dark, because the reader’s <i>next</i>
+    screen (the book page) is paper either way.</p>
+  </div>
+</div>
+
+<div class="note" id="pick">
+  <h3>What I’d build</h3>
+  <p><b>Direction A (The Slip) + landing H2, with the printing line from B.</b> It fixes all three
+  complaints without a new screen or new state: the result lands hard because the camera goes dark behind
+  a lit page; the whole card is a door onto the book page that already exists and already handles a book
+  you don’t own; and the button becomes the same leather-and-foil <i>Add to my library</i> the reader will
+  meet on every unowned book, with <i>Wishlist</i> beside it doing the work of disambiguating it.</p>
+  <p>Direction B is the better <i>screen</i> and the worse <i>flow</i> — I’d keep its printing block and
+  its “3 others ›” affordance, dropped into A’s slip, and leave the rest of B on the book page where it
+  already lives. Direction C is a different feature (bulk cataloguing) worth its own decision later; C′ is
+  the cheap half of it and could ride along as a “keep scanning” preference.</p>
+
+  <h3>What it touches</h3>
+  <ul>
+    <li><code>app/lib/features/catalog/presentation/isbn_scan_screen.dart</code> — <code>_ConfirmCard</code>
+      becomes the slip: a tappable body pushing <code>Routes.bookDetailPath(workId, editionId)</code>,
+      the dim over <code>MobileScanner</code>, and the found/miss/offline branches sharing one container.</li>
+    <li>The two plates already exist as <code>_LeatherPlate</code> / <code>_PaperPlate</code> in
+      <code>book_detail_screen.dart</code> — they should move to <code>core/widgets/</code> and be used by
+      both, or the scanner and the book page will drift the way the four progress surfaces did.</li>
+    <li>New strings only for the eyebrows, the consequence line and the offline copy;
+      <code>bookAddToLibrary</code>, <code>bookWishlistShort</code> and <code>editionPickTitle</code> are
+      reused as they are.</li>
+    <li><code>chooseEdition</code> stays the fallback for “3 others ›”; the scanned printing is already
+      resolved server-side via <code>scanned_edition_id</code>, so the slip can name it without a lookup.</li>
+    <li>The form-mode scanner (<code>returnResult == true</code>) keeps the same slip with one action
+      swapped to <i>Use these details</i> — one widget, two callers, so they can’t drift.</li>
+  </ul>
+
+  <h3>Open questions for you</h3>
+  <ul>
+    <li>Primary label: <b>Add to my library</b> (consistent) or <b>Put it on my shelf</b> / <b>This copy is
+      mine</b> (better voice, and then the book page should change too)?</li>
+    <li>Should the scanner offer <b>Wishlist</b> at all? It’s the thing that makes the primary unambiguous,
+      but you’re usually holding the book when you scan it.</li>
+    <li>Is bulk scanning (C) a real need for you now, or is C′’s “keep scanning” enough?</li>
+  </ul>
+  <p style="margin-top:22px;font-size:12.5px;color:#7a6d59">Preview:
+  <code>python3 -m http.server 4173 --directory docs</code> →
+  <code>http://localhost:4173/scan-result-mockups.html</code></p>
+</div>
+
+</body>
+</html>

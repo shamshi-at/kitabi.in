@@ -238,6 +238,36 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       Drift **v12** rebuilds ratings/reviews so `work_id` can be null — tested
       against a real file database seeded at the v11 shape, and that test confirmed
       to fail with the migration disabled before being trusted.
+- [x] Rebuild the **scan result** as *The Bookplate* (14 Aug 2026, owner request →
+      owner pick of direction **B** from [scan-result-mockups.html](scan-result-mockups.html)).
+      Three faults, all structural: a found book didn't announce itself (nothing changed
+      but a 56px strip appearing under a still-lit camera), the card was dead text with
+      no way into the book, and "Add" named neither its object nor its consequence — on
+      a screen titled "Add a book" whose neighbour adds to the shared *catalogue*. Now
+      the camera leaves once it has done its job and the result takes the screen: cover
+      at 74×108, title/author/type/language/year, the catalogue rating, the blurb, the
+      genre chips and the translations line the same payload already carried. The
+      printing the barcode resolved to is named on the face of the card and "N others ›"
+      opens the list **in place** (the scanned one marked, page counts visible), because
+      `editions.first` is what shelved the wrong printing on 13 Aug. `Add to my library`
+      is the book page's own leather plate — `_LeatherPlate`/`_PaperPlate` moved to
+      `core/widgets/action_plates.dart` so the two screens can't drift — with `Wishlist`
+      beside it doing the disambiguating, a full-width door to the book page, and
+      "Scan another book" under both. Four states, one object: found, already-yours
+      (the shelf answers with status + page, and the offer becomes `Open it`), nothing
+      catalogued (M3's copy, with the ISBN carried into the form), couldn't-check
+      (deliberately not the miss — it never says "you'd be the first"). Form mode
+      (`returnResult`) is the same view with one label swapped, and now carries the
+      reader's printing choice back as `scanned_edition_id` so the form doesn't ask
+      again. **Round 2, same day:** the result stopped wearing the camera's dark palette
+      and now renders in the **app's own theme**, light or dark — `buildNightOverlayTheme`
+      wraps only the camera state, the `_night*` constants left the result widgets for
+      `AppColors`, and `PaperPlate.onNight` was deleted with its last caller. The scanner
+      had been the one screen that ignored the reader's theme setting; a test pins it by
+      asserting the same token resolves differently in the two themes.
+      10 widget tests (`test/scan_result_test.dart`), 388 green, analyze clean.
+      **Not device-verified** — the camera path needs a real phone (`mobile_scanner`
+      can't build on an Apple Silicon simulator).
 
 ## Phase 3 — Personal library + sync engine (Layer 2)
 

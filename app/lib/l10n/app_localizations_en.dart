@@ -256,12 +256,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanSubtitle => 'Point at the barcode on the back cover';
 
   @override
-  String scanDetected(String isbn) {
-    return 'ISBN detected — $isbn';
-  }
-
-  @override
-  String get scanNotFound => 'No book found for that ISBN.';
+  String get scanLookingUp => 'Looking it up…';
 
   @override
   String get scanCameraUnavailable =>
@@ -272,7 +267,108 @@ class AppLocalizationsEn extends AppLocalizations {
       'Camera unavailable — check the app\'s camera permission.';
 
   @override
-  String get scanConfirmAdd => 'Add';
+  String get scanGotIt => 'Got it';
+
+  @override
+  String scanGotItPrintings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count printings',
+      one: '1 printing',
+    );
+    return 'Got it · $_temp0';
+  }
+
+  @override
+  String get scanAlreadyYours => 'Already on your shelf';
+
+  @override
+  String scanIsbnLine(String isbn) {
+    return 'ISBN $isbn';
+  }
+
+  @override
+  String get scanPrintingScanned => 'The printing you scanned';
+
+  @override
+  String get scanPrintingChosen => 'The printing you chose';
+
+  @override
+  String get scanPrintingBarcodeNote => 'the barcode you scanned';
+
+  @override
+  String scanOtherPrintings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count others',
+      one: '1 other',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scanWhichPrinting => 'Which one is in your hand?';
+
+  @override
+  String get scanPageCountsDiffer =>
+      'Page counts differ, so your progress does too — that\'s why we ask.';
+
+  @override
+  String get scanAddThisPrinting => 'Add this printing';
+
+  @override
+  String get scanNoPrinting =>
+      'No printing of this book is catalogued yet — open it to add one.';
+
+  @override
+  String get scanOpenBookPage => 'Open the full book page';
+
+  @override
+  String get scanOpenIt => 'Open it';
+
+  @override
+  String get scanAnother => 'Scan another book';
+
+  @override
+  String scanTranslatedInto(String languages) {
+    return 'Translated into $languages';
+  }
+
+  @override
+  String get scanNotFoundStamp => 'Not found';
+
+  @override
+  String get scanNotFoundTitle => 'Nothing catalogued for this barcode';
+
+  @override
+  String get scanNotFoundBody =>
+      'Not in Kitabi, and OpenLibrary doesn\'t have it either. Regional printings usually aren\'t listed — you\'d be the first to add it.';
+
+  @override
+  String get scanNotFoundAdd => 'Add this book';
+
+  @override
+  String get scanIsbnCarried =>
+      'The ISBN is already filled in — you won\'t retype it';
+
+  @override
+  String get scanSearchByTitle => 'Search by title';
+
+  @override
+  String get scanOfflineTitle => 'Couldn\'t reach the catalogue';
+
+  @override
+  String get scanOfflineBody =>
+      'You\'re offline, so we can\'t tell whether this book is already catalogued. The barcode is safe — nothing is lost by waiting.';
+
+  @override
+  String get scanTryAgain => 'Try again';
+
+  @override
+  String get scanTypeItIn =>
+      'Or type it in now — we\'ll match it up when you\'re back online';
 
   @override
   String get scanSearchInstead => 'Search instead';
@@ -4080,13 +4176,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addEditionAddedNoTitle => 'Edition added';
-
-  @override
-  String get scanLookupFailed =>
-      'Couldn\'t check the catalogue — try again when you\'re online.';
-
-  @override
-  String get scanAlreadyOnShelf => 'Already on your shelf — opening it.';
 
   @override
   String get pickerSearchFailed =>

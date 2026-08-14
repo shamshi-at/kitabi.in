@@ -12,6 +12,7 @@ import '../../../core/format_duration.dart';
 import '../../../core/haptics.dart';
 import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/action_plates.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/person_link.dart';
@@ -1673,17 +1674,15 @@ class _LibraryEntryMenu extends ConsumerWidget {
 /// themed surface — and the themed token can't carry it: `oxblood` lightens to
 /// #C06770 at night, where the foil drops to 2.8:1 and no label colour holds up
 /// across the gradient. Fixed leather keeps the foil at 6.7:1 in both themes.
+///
+/// The plates themselves live in `core/widgets/action_plates.dart` — the
+/// scanner's result screen makes this same offer and must make it in the same
+/// object, not a copy of it.
 class _UnownedActionsBar extends ConsumerWidget {
   const _UnownedActionsBar({required this.work, required this.edition});
 
   final Map<String, dynamic> work;
   final Map<String, dynamic> edition;
-
-  // Pressed leather + foil. Deliberately not AppColors — see the class doc.
-  static const _leather = Color(0xFF7E2A33);
-  static const _leatherDeep = Color(0xFF571E25);
-  static const _foil = Color(0xFFEFD9A4);
-  static const _foilDim = Color(0xFFC9A253);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1714,7 +1713,7 @@ class _UnownedActionsBar extends ConsumerWidget {
       child: Row(
         children: [
           Expanded(
-            child: _LeatherPlate(
+            child: LeatherPlate(
               label: l10n.bookAddToLibrary,
               onTap: () async {
                 Haptics.selection();
@@ -1723,7 +1722,7 @@ class _UnownedActionsBar extends ConsumerWidget {
             ),
           ),
           SizedBox(width: 9),
-          _PaperPlate(
+          PaperPlate(
             label: l10n.bookWishlistShort,
             onTap: () async {
               Haptics.selection();
@@ -1733,106 +1732,6 @@ class _UnownedActionsBar extends ConsumerWidget {
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// The primary: gold-foil Fraunces on pressed leather, with the ❦ the design
-/// doc asks for (already rendered as plain text elsewhere in the app).
-class _LeatherPlate extends StatelessWidget {
-  const _LeatherPlate({required this.label, required this.onTap});
-
-  final String label;
-  final Future<void> Function() onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
-        child: Ink(
-          height: 46,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [_UnownedActionsBar._leather, _UnownedActionsBar._leatherDeep],
-            ),
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.55)),
-            boxShadow: [
-              BoxShadow(
-                color: _UnownedActionsBar._leatherDeep.withValues(alpha: 0.34),
-                blurRadius: 14,
-                offset: Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('❦', style: TextStyle(color: _UnownedActionsBar._foilDim, fontSize: 13)),
-              SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.fraunces(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: _UnownedActionsBar._foil,
-                    height: 1.1,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The secondary: the paper counterpart to the leather plate — a gold hairline
-/// on card stock. Its label follows the theme (the foil does not), so it takes
-/// gold at night where oxblood would sit at 4.4:1 on the dark card.
-class _PaperPlate extends StatelessWidget {
-  const _PaperPlate({required this.label, required this.onTap});
-
-  final String label;
-  final Future<void> Function() onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
-        child: Ink(
-          height: 46,
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: AppColors.gold),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: GoogleFonts.fraunces(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.dark ? AppColors.gold : AppColors.oxblood,
-                height: 1.1,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

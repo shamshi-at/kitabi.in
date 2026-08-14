@@ -258,18 +258,9 @@
   "@scanSubtitle": {
     "description": "Subtitle on the ISBN scan screen"
   },
-  "scanDetected": "ISBN detected — {isbn}",
-  "@scanDetected": {
-    "description": "Shown once a barcode has been decoded",
-    "placeholders": {
-      "isbn": {
-        "type": "String"
-      }
-    }
-  },
-  "scanNotFound": "No book found for that ISBN.",
-  "@scanNotFound": {
-    "description": "Shown when the ISBN doesn't resolve to a book"
+  "scanLookingUp": "Looking it up…",
+  "@scanLookingUp": {
+    "description": "Over the camera while a decoded barcode is being resolved through the catalogue"
   },
   "scanCameraUnavailable": "Camera unavailable — you can search the catalogue or add the book manually below.",
   "@scanCameraUnavailable": {
@@ -279,9 +270,113 @@
   "@scanCameraUnavailableShort": {
     "description": "Camera-failure message when the scanner was opened from the add-book form (no fallback buttons on screen)"
   },
-  "scanConfirmAdd": "Add",
-  "@scanConfirmAdd": {
-    "description": "Confirms adding the detected book to the user's library"
+  "scanGotIt": "Got it",
+  "@scanGotIt": {
+    "description": "Stamp on the scan result when the barcode resolved to a book"
+  },
+  "scanGotItPrintings": "Got it · {count, plural, =1{1 printing} other{{count} printings}}",
+  "@scanGotItPrintings": {
+    "description": "Scan-result stamp when the catalogue holds several printings of the scanned book",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "scanAlreadyYours": "Already on your shelf",
+  "@scanAlreadyYours": {
+    "description": "Scan-result stamp when the scanned printing is already in the reader's library"
+  },
+  "scanIsbnLine": "ISBN {isbn}",
+  "@scanIsbnLine": {
+    "description": "The scanned barcode's number under the book's details",
+    "placeholders": {"isbn": {"type": "String"}}
+  },
+  "scanPrintingScanned": "The printing you scanned",
+  "@scanPrintingScanned": {
+    "description": "Label over the edition the barcode belongs to"
+  },
+  "scanPrintingChosen": "The printing you chose",
+  "@scanPrintingChosen": {
+    "description": "Label over the edition once the reader has picked a different one than the barcode's"
+  },
+  "scanPrintingBarcodeNote": "the barcode you scanned",
+  "@scanPrintingBarcodeNote": {
+    "description": "Marks which row in the printing list is the scanned one"
+  },
+  "scanOtherPrintings": "{count, plural, =1{1 other} other{{count} others}}",
+  "@scanOtherPrintings": {
+    "description": "Opens the list of the work's other printings from the scan result",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "scanWhichPrinting": "Which one is in your hand?",
+  "@scanWhichPrinting": {
+    "description": "Header over the printing chooser on the scan result"
+  },
+  "scanPageCountsDiffer": "Page counts differ, so your progress does too — that's why we ask.",
+  "@scanPageCountsDiffer": {
+    "description": "Explains why the scan result asks which printing the reader holds"
+  },
+  "scanAddThisPrinting": "Add this printing",
+  "@scanAddThisPrinting": {
+    "description": "Primary action while the printing chooser is open — it names the choice being made"
+  },
+  "scanNoPrinting": "No printing of this book is catalogued yet — open it to add one.",
+  "@scanNoPrinting": {
+    "description": "Scan result for a catalogue work that has no editions, so nothing can go on the shelf"
+  },
+  "scanOpenBookPage": "Open the full book page",
+  "@scanOpenBookPage": {
+    "description": "Door from the scan result into the book's own page, without adding it"
+  },
+  "scanOpenIt": "Open it",
+  "@scanOpenIt": {
+    "description": "Primary action when the scanned book is already on the reader's shelf"
+  },
+  "scanAnother": "Scan another book",
+  "@scanAnother": {
+    "description": "Returns the scan result to the live camera"
+  },
+  "scanTranslatedInto": "Translated into {languages}",
+  "@scanTranslatedInto": {
+    "description": "Names the other languages this work exists in, on the scan result",
+    "placeholders": {"languages": {"type": "String"}}
+  },
+  "scanNotFoundStamp": "Not found",
+  "@scanNotFoundStamp": {
+    "description": "Stamp on the scan result when the ISBN matched nothing"
+  },
+  "scanNotFoundTitle": "Nothing catalogued for this barcode",
+  "@scanNotFoundTitle": {
+    "description": "Headline when a scanned ISBN matched no book"
+  },
+  "scanNotFoundBody": "Not in Kitabi, and OpenLibrary doesn't have it either. Regional printings usually aren't listed — you'd be the first to add it.",
+  "@scanNotFoundBody": {
+    "description": "Says why a scan found nothing and reframes the reader as the first contributor"
+  },
+  "scanNotFoundAdd": "Add this book",
+  "@scanNotFoundAdd": {
+    "description": "Carries the scanned ISBN into the blank add-book form"
+  },
+  "scanIsbnCarried": "The ISBN is already filled in — you won't retype it",
+  "@scanIsbnCarried": {
+    "description": "Reassurance under the add action on a scan that found nothing"
+  },
+  "scanSearchByTitle": "Search by title",
+  "@scanSearchByTitle": {
+    "description": "Falls back to catalog search from a scan that found nothing"
+  },
+  "scanOfflineTitle": "Couldn't reach the catalogue",
+  "@scanOfflineTitle": {
+    "description": "Headline when the ISBN lookup failed for network reasons — deliberately not the not-found state"
+  },
+  "scanOfflineBody": "You're offline, so we can't tell whether this book is already catalogued. The barcode is safe — nothing is lost by waiting.",
+  "@scanOfflineBody": {
+    "description": "Explains a failed lookup without inviting the duplicate a not-found message would"
+  },
+  "scanTryAgain": "Try again",
+  "@scanTryAgain": {
+    "description": "Retries the ISBN lookup after a network failure"
+  },
+  "scanTypeItIn": "Or type it in now — we'll match it up when you're back online",
+  "@scanTypeItIn": {
+    "description": "Offers the manual form after a failed lookup"
   },
   "scanSearchInstead": "Search instead",
   "@scanSearchInstead": {
@@ -3350,10 +3445,6 @@
   },
   "addEditionAddedNoTitle": "Edition added",
   "@addEditionAddedNoTitle": {"description": "Confirmation snackbar after a new edition is saved when the book title is unknown"},
-  "scanLookupFailed": "Couldn't check the catalogue — try again when you're online.",
-  "@scanLookupFailed": {"description": "Scanner message when the ISBN lookup failed for network reasons (distinct from a real not-found)"},
-  "scanAlreadyOnShelf": "Already on your shelf — opening it.",
-  "@scanAlreadyOnShelf": {"description": "Snackbar when a scanned book is already in the library, instead of claiming it was added"},
   "pickerSearchFailed": "Couldn't search the catalogue — check your connection.",
   "@pickerSearchFailed": {"description": "Inline error row in the work/author/publisher pickers when a search request fails (never shown as the empty state)"},
   "pickerSaveAuthorFailed": "Couldn't save the author — try again.",

@@ -29,8 +29,10 @@ literary quotes), never animated gimmicks.
 | `stamp-grey` | `#9A8F7C` | "Stopped", disabled |
 | dark panel | `#3A2C1E` | The single dark accent card (AI pick, quote card) |
 
-Dark-of-night exceptions: the ISBN scanner screen is dark (`#1E1710`) because it is a
-camera; everything else stays paper.
+Dark-of-night exceptions: the ISBN scanner's **camera** is dark (`#1E1710`) because it
+is a camera; everything else stays paper — including the scanner's own *result*, which
+renders in the app theme (light or dark) since the camera has left the screen by then
+and what remains is a book page (owner request, 14 Aug 2026).
 
 ## Type
 
@@ -396,6 +398,22 @@ This is the Layer 1 catalog's existing "linkable" author/publisher entities gett
 an actual screen, distinct from the `[LATER]` full profile-page feature (bios,
 follows, aggregate author ratings) — feature-map.md's Layer 1, Layer 3, and Layer 4
 rows updated to spell out that distinction.
+
+Drawn, chosen and built (14 Aug 2026 — the scan result; owner picked **direction B,
+The Bookplate**): [scan-result-mockups.html](scan-result-mockups.html) redesigns the
+moment after the beep on **7 / M3**. Today's confirm strip is dead text behind a button that says only
+"Add", with nothing to distinguish "found it" from "still looking". Three directions
+(**A** the paper Slip over a dimmed camera, **B** the Bookplate that takes the screen,
+**C** the Ledger for cataloguing a shelf), four landing treatments that are orthogonal
+to the direction, a rack of labels for the primary, and the four non-success states
+(not found / couldn't check / already yours / no camera) drawn as the *same* object as
+the success state. Three rules the built version keeps: the result is a **door** onto
+the existing book page (which already handles a book you don't own), the primary names
+its object and sits beside Wishlist so it can only mean "I have this", and the scanned
+**printing** is named on the face of the card with the others one tap away —
+`editions[0]` is a representative, never an answer. The result *replacing* the camera
+is what makes it land, so no separate highlight treatment was needed; A and C stay
+drawn but unbuilt (C is really bulk cataloguing, its own decision).
 
 Preview locally: `python3 -m http.server 4173 --directory docs` →
 http://localhost:4173/kitabi_screens.html
