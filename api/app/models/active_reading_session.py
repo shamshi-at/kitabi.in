@@ -51,8 +51,10 @@ class ActiveReadingSession(Base):
     #: deadline for *every* mechanism).
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
-    #: Which install started it. Echoed in the push payload so the originating
-    #: device can ignore its own event rather than fighting its own state.
+    #: Which install started it — so the push that announces the sitting can be
+    #: sent to the reader's *other* devices and not back to this one (a visible
+    #: notification is drawn by the OS before any app code could ignore it).
+    #: Also echoed in the payload, for the foreground case where the app sees it.
     device_id: Mapped[str | None] = mapped_column(String, default=None)
 
     created_at: Mapped[datetime] = mapped_column(

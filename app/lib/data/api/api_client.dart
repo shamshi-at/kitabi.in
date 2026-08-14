@@ -232,9 +232,15 @@ class ApiClient {
 
   // --- Push notifications (FCM device tokens) ---
 
-  /// Register this install's FCM token for the signed-in user.
-  Future<void> registerDevice(String token, String platform) =>
-      _dio.post('/devices', data: {'token': token, 'platform': platform});
+  /// Register this install's FCM token for the signed-in user. [deviceId] is
+  /// what lets the server push to the reader's *other* devices only — without
+  /// it, a fan-out to the account comes back to the device that caused it.
+  Future<void> registerDevice(String token, String platform, {String? deviceId}) =>
+      _dio.post('/devices', data: {
+        'token': token,
+        'platform': platform,
+        'device_id': ?deviceId,
+      });
 
   /// Drop this token on sign-out.
   Future<void> unregisterDevice(String token) =>

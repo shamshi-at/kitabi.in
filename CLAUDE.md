@@ -672,6 +672,28 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   **closed vocabulary**" that pinned the regression in place. A test asserting an
   absence is only as good as the decision behind it — when a comment on one side
   says "open" and the code on the other says "closed", the code is not the spec.
+- **"The app ignores its own event" is not available to a *visible* push — the OS
+  draws it before any app code runs.** The cross-device reading sitting fanned its
+  "…is being timed on your other device" notification to every token on the account
+  and echoed `device_id` for the originating install to filter on; that install got
+  the banner anyway, about itself (owner report, 14 Aug 2026). Client-side filtering
+  only ever reaches the *foreground* `onMessage` path. Anything a self-fan-out must
+  not show has to be excluded server-side, which means the server has to know which
+  device each token belongs to (`device_tokens.device_id`, nullable → treated as
+  "some other device", and matched with `IS DISTINCT FROM` so a NULL row isn't
+  dropped from every fan-out by `!=`). Exclude by *device*, never by token: one
+  install holds several tokens over its life.
+- **A tap handler's `else` branch is a routing decision, and it will outlive the
+  two cases it was written for.** Notification taps sent lending pushes to the
+  ledger and *everything else* to the connections inbox — so tapping "your sitting
+  is running" opened a list of connection requests (owner report, 14 Aug 2026). Map
+  every type explicitly and default to Home; a type with no home of its own must not
+  inherit an unrelated feature's screen. The rule now lives in a pure `pushTapRoute`
+  (`push_service.dart`) for the same reason `readingTimerRouteFor` does: the whole
+  feature is the rule, and it can't be tested through the plugin. Related: a tap is
+  the one path where this device has *not* seen the event yet — a background push
+  runs no app code — so a screen that renders from local state needs the pull to
+  land before it opens, or it will bounce the reader straight back out.
 
 ## Open decisions
 

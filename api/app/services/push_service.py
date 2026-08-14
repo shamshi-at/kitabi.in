@@ -33,9 +33,19 @@ async def _push(
     data: dict[str, str],
     image: str | None = None,
     silent: bool = False,
+    exclude_device_id: str | None = None,
 ) -> None:
+    # Every entry point is supposed to be a no-op when push isn't configured
+    # (rule 8), but only the actor-named ones checked — the self-pushes
+    # (reading start/stop, notes) opened a DB session and looked up tokens on a
+    # deployment with no Firebase credential at all. Guarding here covers all of
+    # them, present and future.
+    if not get_settings().push_enabled:
+        return
     async with SessionLocal() as db:
-        tokens = await device_service.tokens_for_user(db, target_id)
+        tokens = await device_service.tokens_for_user(
+            db, target_id, exclude_device_id=exclude_device_id
+        )
         if not tokens:
             return
         dead: list[str] = []
@@ -140,17 +150,21 @@ async def notify_reading_started(
     device_id: str | None,
     book_title: str | None = None,
 ) -> None:
-    """Tell the reader's own devices that a sitting is running.
+    """Tell the reader's *other* devices that a sitting is running.
 
-    This is the one push that goes to *yourself* rather than to someone else,
-    so it carries no actor name. It is visible rather than silent: a second
-    phone that was asleep when the timer started should still be able to say
-    what is running and offer to stop it.
+    This is the one push that goes to your own account rather than to someone
+    else, so it carries no actor name. It is visible rather than silent: a
+    second phone that was asleep when the timer started should still be able to
+    say what is running and offer to stop it.
 
-    The originating install ignores its own event by comparing `device_id` —
-    which is why that field is echoed rather than the token filtered: one
-    install can hold several tokens over its life, so the device is the stable
-    identity, not the token.
+    Which is exactly why the originating install must be left out **here**. The
+    first cut sent to every token and echoed `device_id` for the app to ignore
+    its own event — but a visible notification is rendered by the OS before any
+    app code runs, so the device that started the sitting got a banner telling
+    it a sitting was running "on your other device" (owner report, 14 Aug 2026).
+    The exclusion is by device rather than by token because one install holds
+    several tokens over its life; `device_id` stays in the payload for the
+    foreground case, where the app does see it.
     """
     title = "Reading in progress"
     body = (
@@ -169,6 +183,7 @@ async def notify_reading_started(
             "started_at": started_at,
             "device_id": device_id or "",
         },
+        exclude_device_id=device_id,
     )
 
 
@@ -181,7 +196,8 @@ async def notify_reading_stopped(
     """Silent — the other device takes its ongoing notification down.
 
     Announcing this would be a banner about something the reader just did on a
-    device in their hand.
+    device in their hand. The device that stopped it is excluded anyway: it has
+    already taken its own notification down, so the push would be pure wake-up.
     """
     await _push(
         user_id,
@@ -193,6 +209,7 @@ async def notify_reading_stopped(
             "device_id": device_id or "",
         },
         silent=True,
+        exclude_device_id=device_id,
     )
 
 

@@ -15,7 +15,13 @@ router = APIRouter(prefix="/devices", tags=["devices"])
 @router.post("", status_code=status.HTTP_204_NO_CONTENT)
 async def register_device(payload: DeviceTokenIn, user: CurrentUser, db: DbSession) -> None:
     """Register this install's FCM token for the signed-in user (idempotent)."""
-    await device_service.register(db, uuid.UUID(user["id"]), payload.token, payload.platform)
+    await device_service.register(
+        db,
+        uuid.UUID(user["id"]),
+        payload.token,
+        payload.platform,
+        device_id=payload.device_id,
+    )
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/api/api_client.dart';
+import '../../data/sync/device_id.dart';
 import '../../data/sync/sync_providers.dart';
 import '../auth/auth_providers.dart';
 import '../auth/auth_service.dart';
@@ -22,9 +24,15 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
 /// keeps it fresh, and routes notification taps. All Firebase calls are guarded
 /// so the app is unaffected on web or when Firebase isn't initialised (tests).
 class PushService {
-  PushService(this._api);
+  PushService(this._api, this._deviceId);
 
   final ApiClient _api;
+
+  /// This install's id, sent with the token so the server can leave this device
+  /// out of a fan-out to the reader's own devices. Resolved lazily (it lives in
+  /// Drift) and never fatal — a null id just means the server can't exclude us.
+  final Future<String?> Function() _deviceId;
+
   String? _token;
   bool _started = false;
 
@@ -116,7 +124,17 @@ class PushService {
 
   Future<void> _register(String token) async {
     try {
-      await _api.registerDevice(token, Platform.isIOS ? 'ios' : 'android');
+      String? deviceId;
+      try {
+        deviceId = await _deviceId();
+      } catch (_) {
+        deviceId = null; // registering the token still matters more than the id
+      }
+      await _api.registerDevice(
+        token,
+        Platform.isIOS ? 'ios' : 'android',
+        deviceId: deviceId,
+      );
     } catch (_) {
       // Best-effort; a token refresh or the next launch retries.
     }
@@ -143,11 +161,44 @@ class PushService {
   }
 }
 
-final pushServiceProvider =
-    Provider<PushService>((ref) => PushService(ref.watch(apiClientProvider)));
+final pushServiceProvider = Provider<PushService>(
+  (ref) => PushService(
+    ref.watch(apiClientProvider),
+    // The install id, not the session's — this is device state and is wanted
+    // before (and regardless of) whoever is signed in.
+    () => getOrCreateDeviceId(ref.read(appDatabaseProvider)),
+  ),
+);
+
+/// Where a tap on a push notification should land, from its data payload.
+///
+/// Pure and top-level so the rule is testable without Firebase — same reason
+/// `readingTimerRouteFor` lives outside its listener. It exists at all because
+/// the first version routed only lending pushes and sent *everything else* to
+/// the connections inbox: tapping "『X』 is being timed on your other device"
+/// opened a list of connection requests (owner report, 14 Aug 2026). A tap
+/// belongs on the screen the notification is about, and a type with no obvious
+/// home belongs on Home — never on an unrelated screen by default.
+String pushTapRoute(Map<String, dynamic> data) {
+  switch (data['type']) {
+    case 'lend_new':
+    case 'lend_returned':
+    case 'lend_reminder':
+      return Routes.lendingLedger;
+    case 'connection_request':
+    case 'connection_accepted':
+      return Routes.connections;
+    case 'reading_started':
+      // The running sitting itself — the screen that can show and stop it.
+      final entryId = (data['library_entry_id'] as String?)?.trim() ?? '';
+      return entryId.isEmpty ? Routes.home : Routes.readingTimerPath(entryId);
+    default:
+      return Routes.home;
+  }
+}
 
 /// Registers the token when a user signs in and clears it on sign-out; taps on a
-/// notification open the connections inbox. Watch this once at the app root.
+/// notification open the screen the event is about. Watch this once at the app root.
 final pushLifecycleProvider = Provider<void>((ref) {
   final push = ref.watch(pushServiceProvider);
   ref.listen<AsyncValue<KitabiAuthUser?>>(
@@ -158,16 +209,28 @@ final pushLifecycleProvider = Provider<void>((ref) {
       if (now != null && was == null) {
         push.start(
           onOpen: (message) {
-            final router = ref.read(routerProvider);
-            final type = message.data['type'];
             // Route the tap to where the event lives — via the external-nav
             // helper, so a cold-start tap survives the splash/bootstrap
-            // redirect instead of being swallowed into home.
-            if (type == 'lend_new' || type == 'lend_returned' || type == 'lend_reminder') {
-              navigateFromExternal(router, Routes.lendingLedger);
-            } else {
-              navigateFromExternal(router, Routes.connections);
+            // redirect instead of being swallowed into home, and a tap on a
+            // screen already open doesn't stack a second copy of it.
+            final router = ref.read(routerProvider);
+            final route = pushTapRoute(message.data);
+            if (message.data['type'] == 'reading_started') {
+              // A tapped notification is the one case where this device has
+              // *not* seen the sitting yet: a background push does no work, so
+              // nothing has mirrored the server's row into local state. Arrive
+              // after the pull — the timer screen reads the session from local
+              // state, finds none, and reads that as "stopped elsewhere", which
+              // would bounce the reader straight back out of the screen they
+              // just asked for. Best-effort: navigate even if the pull fails,
+              // so a tap always goes somewhere.
+              unawaited(ref
+                  .read(activeSessionSyncProvider)
+                  .pullAndApply()
+                  .whenComplete(() => navigateFromExternal(router, route)));
+              return;
             }
+            navigateFromExternal(router, route);
           },
           onLendEvent: () => ref.read(syncTriggerProvider)(),
           // The payload carries the sitting, but the *server* is the authority
