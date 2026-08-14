@@ -65,7 +65,7 @@ Future<String?> rotateAndUploadCover(
   await tmp.writeAsBytes(rotated, flush: true);
   try {
     final cropped = await cropPickedImage(tmp.path, CropRatio.cover);
-    return _uploadCoverBytes(
+    return await _uploadCoverBytes(
       ref,
       editionId: editionId,
       bytes: cropped ?? rotated,

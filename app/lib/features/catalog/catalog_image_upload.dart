@@ -63,7 +63,9 @@ Future<String?> recropUploadImage({
   try {
     final bytes = await cropPickedImage(tmp.path, ratio);
     if (bytes == null) return null;
-    return _uploadJpeg(bytes, folder);
+    // Awaited so the finally below deletes the temp file *after* the upload,
+    // and a failed upload is caught here rather than escaping the try.
+    return await _uploadJpeg(bytes, folder);
   } finally {
     if (await tmp.exists()) await tmp.delete();
   }
@@ -99,7 +101,7 @@ Future<String?> rotateUploadImage({
   await tmp.writeAsBytes(rotated, flush: true);
   try {
     final cropped = await cropPickedImage(tmp.path, ratio);
-    return _uploadJpeg(cropped ?? rotated, folder);
+    return await _uploadJpeg(cropped ?? rotated, folder);
   } finally {
     if (await tmp.exists()) await tmp.delete();
   }

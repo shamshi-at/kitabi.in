@@ -27,7 +27,7 @@ Supabase). Proven there; reuse its patterns and lessons rather than re-deciding.
 
 | Part | Stack |
 |---|---|
-| `app/` | Flutter — Riverpod (codegen `@riverpod`), go_router, Drift (local DB, source of truth), Dio (+ interceptors: JWT attach, update-gate, retry/backoff), supabase_flutter (auth), flutter_secure_storage, connectivity_plus, workmanager (background sync drain), Firebase for FCM only |
+| `app/` | Flutter — Riverpod (hand-written providers; **no `@riverpod` codegen** — `riverpod_generator` was dropped 14 Aug 2026, see below), go_router, Drift (local DB, source of truth), Dio (+ interceptors: JWT attach, update-gate, retry/backoff), supabase_flutter (auth), flutter_secure_storage, connectivity_plus, workmanager (background sync drain), Firebase for FCM only |
 | `api/` | FastAPI — Python 3.12+, fully async (SQLAlchemy 2.0 async, asyncpg), Pydantic v2, Alembic migrations, APScheduler jobs, Docker (must always build), ruff + black line length 100 |
 | Database | Supabase Postgres — RLS deny-by-default, Data API disabled; only FastAPI (via Supavisor transaction pooler, port 6543, prepared-statement cache off) touches user data |
 | Auth | Supabase Auth (Google + Apple per feature map). API verifies JWT with **PyJWT against project JWKS** (ES256, cache JWKS, handle `kid` rotation, check `iss`/`aud`/`exp`). Never python-jose |
@@ -130,7 +130,7 @@ docker build -t kitabi-api .             # must always build
 # Flutter (SDK at ~/development/flutter — not on default PATH)
 cd app
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs   # Drift/Riverpod codegen
+dart run build_runner build --delete-conflicting-outputs   # Drift codegen (the only generator)
 flutter test
 flutter analyze
 cp dart_defines.env.example dart_defines.env   # once, then fill in real values (gitignored)
@@ -138,8 +138,20 @@ cp dart_defines.env.example dart_defines.env   # once, then fill in real values 
 ./scripts/build_ipa.sh                          # NOT `flutter build ipa` directly
 ```
 
-After changing any Drift table or Riverpod codegen-annotated file, **always run
-build_runner** before assuming compilation errors are real.
+After changing any Drift table, **always run build_runner** before assuming
+compilation errors are real.
+
+**The Flutter SDK and the codegen chain have to agree.** `build_runner` runs the
+`analyzer` package, not the SDK's own front end, so an SDK *newer* than the pinned
+analyzer dies on syntax it can't parse — `Missing implementation of
+visitDotShorthand…` on Dart 3.13, which looks like a broken repo and is really a
+version skew (the warning line above it names it: "SDK language version X is newer
+than `analyzer` language version Y"). What pinned it here was **`riverpod_generator`,
+which generated nothing at all** — there is not one `@riverpod` in `lib/`, and it
+alone held `analyzer` at 7.x. Dropped 14 Aug 2026 along with `riverpod_annotation`;
+`flutter_riverpod` (the runtime, hand-written providers) is untouched. If codegen
+breaks on a new SDK again, look for a *dev* dependency capping `analyzer` before
+reaching for a second SDK install.
 
 Always build/run through `scripts/run_dev.sh` and `scripts/build_ipa.sh`, never
 `flutter run`/`flutter build ipa` directly — every `--dart-define` the app reads
@@ -270,6 +282,29 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   ping job in the API's `jobs/`).
 
 ## Lessons learned in Kitabi
+
+- **A plugin that hasn't migrated to Flutter's built-in Kotlin fails one step
+  downstream, as generated Java.** Flutter 3.47 compiles plugin Kotlin itself and
+  warns about plugins still applying their own Kotlin Gradle Plugin
+  (`mobile_scanner`, `share_plus`, `sign_in_with_apple`, `workmanager_android` here).
+  For three of them the warning is only a warning; `workmanager_android` 0.9.3's
+  sources never reached the classpath, so the build died as
+  `GeneratedPluginRegistrant.java:114: cannot find symbol … WorkmanagerPlugin`
+  (14 Aug 2026) — which reads like a corrupt registrant and is really "that plugin
+  didn't compile". `workmanager ^0.10.0` fixed it with no call-site changes. When
+  generated registrant code can't find a plugin class, read *upwards* for the KGP
+  warning before touching the registrant. **`app/pubspec.lock` is gitignored**, so
+  plugin versions float per machine — this class of break appears on whichever
+  machine resolves first, not on whoever changed something.
+- **Real-time antivirus can eat Flutter's AOT compiler mid-release-build.** Three
+  times on 14 Aug 2026 (twice iOS, once Android), `gen_snapshot` was SIGKILLed
+  (`AOT snapshotter exited with code -9`) and then *deleted* from
+  `bin/cache/artifacts/engine/…`, so the next build failed differently with
+  `Failed to find …/gen_snapshot`. Recovery is `flutter precache --ios --force` /
+  `--android --force` and rebuild; the durable fix is an exclusion for
+  `~/flutter/flutter/bin/cache/` in the scanner (Intego on this machine). Two
+  symptoms, one cause — a `-9` and a missing-binary error in consecutive builds are
+  the same event, not two problems.
 
 - **A `_inFlight ??= run()` single-flight guard silently drops triggers that arrive
   mid-run.** Bit the sync engine (7 Jul 2026): a mutation enqueued while a sync pass was

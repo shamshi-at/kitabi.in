@@ -19,7 +19,8 @@ The repo is a monorepo with three independent parts — `api/` (FastAPI),
 |---|---|---|
 | Python | 3.12+ | Homebrew `python@3.12`. The API is 3.12-only (async SQLAlchemy 2.0). |
 | Docker | any recent | Local Postgres for dev + the throwaway test DB; and `docker build` (rule 9). |
-| Flutter SDK | matches `app/pubspec.yaml` `sdk: ^3.12.2` | Installed at `~/development/flutter` — **not on the default PATH**. |
+| Flutter SDK | matches `app/pubspec.yaml` `sdk: ^3.12.2` | At `~/flutter/flutter`, on PATH via `~/.zshenv`. **Newer SDKs are fine for building/testing but a *dev* dependency can cap `analyzer` and break `build_runner`** — see CLAUDE.md. |
+| Android SDK | platform-tools + `android-36` + build-tools | At `~/Library/Android/sdk` (`flutter config --android-sdk`). Homebrew's `android-commandlinetools` is owned by another macOS user here and is read-only — `sdkmanager` then exits 0 having installed nothing. JDK: Android Studio's JBR, set via `flutter config --jdk-dir`. |
 | Xcode | current | iOS builds; ships the JBR-independent toolchain. |
 | Android Studio / JDK | JBR bundled with Android Studio | `keytool`/Gradle need a JDK — use Android Studio's JBR at `/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin`. |
 | CocoaPods | current | iOS pods. |
@@ -157,8 +158,29 @@ cd app
 ```
 
 Upload via Apple Transporter or `xcrun altool --upload-app`. Notes:
+- **If a release build dies with `AOT snapshotter exited with code -9`**, real-time
+  antivirus killed `gen_snapshot` — and it usually *deletes* it too, so the next build
+  fails with `Failed to find …/gen_snapshot` instead. Fix:
+  `flutter precache --ios --force` (or `--android --force`) and rebuild; exclude
+  `~/flutter/flutter/bin/cache/` in the scanner to stop it recurring after every
+  `flutter upgrade`. Hit three times on 14 Aug 2026.
+- **Verify the artifact, don't assume it.** The `--dart-define`s live in the Dart
+  snapshot, not the runner binary, so grepping the wrong file "proves" a correct build
+  is broken and vice versa:
+  `strings Payload/Runner.app/Frameworks/App.framework/App | grep supabase.co` for the
+  IPA, `strings base/lib/arm64-v8a/libapp.so` (unzipped from the AAB) for Android.
+  Check `CFBundleVersion` / `versionCode` the same way — that is the check the three
+  silently-unconfigured IPAs of 6 Jul would have failed.
 - **Bump `version:` in `pubspec.yaml`** (the `+NN` build number) for every store
-  upload — App Store Connect rejects a duplicate build number. If a build number
+  upload — Play rejects a duplicate `versionCode` outright ("Version code 124 has
+  already been used"), and it is the *Android* number that pubspec really governs.
+  **iOS quietly manages its own**: Flutter's export options set
+  `manageAppVersionAndBuildNumber = true`, so at export time Xcode asks App Store
+  Connect what already exists and increments past it — app and both extensions
+  together. So a `+125` pubspec can (and did, 14 Aug 2026) produce an IPA reporting
+  `CFBundleVersion 126`, and the two platforms drift apart by design. Treat pubspec as
+  the Android source of truth and a floor for iOS; check the built artifact when the
+  exact number matters (`unzip -p kitabi.ipa Payload/Runner.app/Info.plist`). If a build number
   looks "stuck," wipe Xcode DerivedData and `flutter clean` (stale DerivedData once
   pinned CFBundleVersion to an old value and every IPA was rejected as a duplicate).
 - iOS deployment target is **15.5** (raised for `mobile_scanner`'s MLKit).
