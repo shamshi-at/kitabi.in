@@ -56,6 +56,7 @@ from app.core.db import _engine_kwargs, _normalize  # noqa: E402
 # convention. Everything here is reader-owned and goes entirely.
 USER_TABLES: tuple[str, ...] = (
     "library_entry_tags",  # → library_entries, personal_tags
+    "active_reading_sessions",  # the live sitting; one row per reader
     "reading_notes",  # → library_entries, reading_sessions
     "reading_sessions",  # → library_entries
     "lending_records",  # → library_entries, editions

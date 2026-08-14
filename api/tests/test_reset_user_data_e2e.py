@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 import pytest
 from sqlalchemy import text
 
+from app.models.active_reading_session import ActiveReadingSession
 from app.models.activity_log_entry import ActivityLogEntry
 from app.models.admin import ContentReport
 from app.models.author import Author
@@ -145,7 +146,14 @@ async def _seed(db, user_id: uuid.UUID) -> dict:
                 op_type="create",
                 status="applied",
             ),
-            DeviceToken(user_id=user_id, token="fcm-token-abc"),
+            DeviceToken(user_id=user_id, token="fcm-token-abc", device_id="phone-a"),
+            ActiveReadingSession(
+                user_id=user_id,
+                session_id=uuid.uuid4(),
+                library_entry_id=entry.id,
+                started_at=now,
+                device_id="phone-a",
+            ),
             Connection(requester_id=user_id, addressee_id=uuid.uuid4()),
             ContentReport(reporter_user_id=user_id, target_type="review", target_id=uuid.uuid4()),
             AuthorClaim(author_id=author.id, user_id=user_id),
