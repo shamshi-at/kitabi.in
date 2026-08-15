@@ -321,6 +321,58 @@ void main() {
     expect((await db.syncQueueDao.pending(limit: 10)).first.attempts, 1);
   });
 
+  /// The other half of the mid-sitting note deferral, and the half a unit test
+  /// didn't think to ask about (caught on an emulator, 15 Aug 2026).
+  ///
+  /// The note is pushed without its session id, because the sitting isn't a row
+  /// yet. The server applies it and the *same sync pass* pulls it straight back
+  /// — carrying the null. Written through, that severed the note from its
+  /// sitting on the device that wrote it: the timer's own "notes of this
+  /// sitting" list emptied while the reader watched, and `logSession` then
+  /// found nothing to link, making it permanent.
+  test('a pulled note never has its sitting cleared by a server that has not been told',
+      () async {
+    final entryId = await LibraryRepository(db, session).add(editionId: 'edition-1');
+    final noteId = await ReadingNotesRepository(db, session).add(
+      libraryEntryId: entryId,
+      sessionId: 'sitting-still-running',
+      body: 'The ferry chapter turns on one word.',
+    );
+
+    api.nextPull = {
+      'changes': [
+        {
+          'entity': 'reading_notes',
+          'data': {
+            'id': noteId,
+            'user_id': 'user-1',
+            'library_entry_id': entryId,
+            'session_id': null, // all the server was ever told
+            'body': 'The ferry chapter turns on one word.',
+            'page_start': null,
+            'page_end': null,
+            'created_at': '2026-08-15T20:00:00+00:00',
+            'updated_at': '2026-08-15T20:00:00+00:00',
+            'deleted_at': null,
+            'server_seq': 12,
+          },
+        },
+      ],
+      'next_cursor': 12,
+      'has_more': false,
+    };
+    // Drain first so the note is no longer a pending op — otherwise the pull's
+    // own pending-op guard would skip it and prove nothing.
+    api.autoApplyAll = true;
+    await engine.syncNow('user-1');
+
+    final note = await db.readingNotesDao.getById(noteId);
+    expect(note!.sessionId, 'sitting-still-running',
+        reason: 'the link is local knowledge the server simply lacks');
+    // …so the sitting can still find it when it finally becomes a row.
+    expect(await db.readingNotesDao.forSession('sitting-still-running'), hasLength(1));
+  });
+
   test('a deleted_wins rejection soft-deletes the row locally', () async {
     // While our update op sat in the queue, the pull carrying the server-side
     // delete was skipped (pending-op guard) and the cursor advanced past it.

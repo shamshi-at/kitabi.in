@@ -531,7 +531,22 @@ class SyncEngine {
                 lastSyncedAt: synced.lastSyncedAt,
                 serverSeq: synced.serverSeq,
                 libraryEntryId: Value(d['library_entry_id'] as String),
-                sessionId: Value(d['session_id'] as String?),
+                // A null from the server never *clears* a note's sitting — it
+                // only ever means "not told yet". A note written while the
+                // clock is still running is pushed without its session id (the
+                // row doesn't exist server-side until the sitting stops, see
+                // ReadingNotesRepository.add), so the very next pull carries
+                // that note back with a null here. Writing it through severed
+                // the note from its sitting on the device that wrote it —
+                // caught on the emulator, 15 Aug 2026, minutes after the
+                // deferral that made it possible. `logSession` then found no
+                // notes to link and the detachment became permanent.
+                //
+                // Nothing in the app clears this: `edit` doesn't touch it, and
+                // the link update only ever sets it. So absent, not null.
+                sessionId: d['session_id'] == null
+                    ? const Value.absent()
+                    : Value(d['session_id'] as String),
                 body: Value(d['body'] as String),
                 pageStart: Value(d['page_start'] as int?),
                 pageEnd: Value(d['page_end'] as int?),
