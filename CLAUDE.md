@@ -745,6 +745,18 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   behind it. `test_sync.py` had a passing test for the mid-sitting note that pushed
   the session op *first* — an order no client can produce; a fixture agreeing with
   the server instead of with the app (same shape as the 9 Aug review-body fixture).
+- **A field the client deliberately withholds comes back as a null that overwrites
+  the thing it was withholding.** The fix immediately above sends a mid-sitting note
+  without its `session_id`; the server applies it and the *same sync pass* pulls the
+  row back carrying that null, which `insertOnConflictUpdate` wrote straight through
+  — severing the note from its sitting on the device that wrote it, emptying the
+  timer's own "notes of this sitting" list while the reader watched, and leaving
+  `logSession` nothing to link. A green unit suite had already blessed the deferral;
+  **the emulator found this within ten minutes of the first real sitting**, which is
+  the whole argument for the on-device pass. Rule: whenever a push omits a field on
+  purpose, ask what the next *pull* does with it. If no code path can legitimately
+  clear a column, an incoming null means "not told yet" — `Value.absent()`, never
+  `Value(null)`.
 - **Three best-effort cleanups in one `try` is one cleanup with two decoys.**
   `stopAndLogActiveSession` cancelled the check-in, cancelled the enforcement task
   and ended the lock-screen clock inside a single `try {} catch (_) {}` — so the
