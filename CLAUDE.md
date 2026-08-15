@@ -794,6 +794,22 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   foreground-resume and on push, so coming back online with the app already open
   was neither — the connectivity listener drained the queue and nothing else.
   Anything that reconciles with the server needs a hook there too.
+- **One key answering two questions gives a wrong answer to the newer one.**
+  `active_session_mirrored_id` began as "this sitting came from another device";
+  the 15 Aug fix made a successful publish set it too, so it came to mean "the
+  account knows about this sitting". Both readings were right for the code that
+  existed. When two sittings could collide and the loser had to be *logged*
+  rather than dropped, "is this ours?" was asked of that same key — and a
+  sitting we started and published reads identically to one we adopted, so the
+  reader's own reading would have been discarded unlogged. Split into
+  `active_session_adopted_id`. When a flag's meaning widens, check every
+  existing reader of it before adding one more.
+- **A conflict rule is only finished when it converges.** "The older start wins"
+  is easy to implement on one device and easy to get wrong across two: a rule
+  that merely *prefers* the older sitting can have both devices trade it back
+  and forth forever. The test that matters runs both devices against one shared
+  server row and pulls repeatedly, asserting they settle on the same sitting and
+  that the loser is logged exactly once — not once per pull.
 - **Three best-effort cleanups in one `try` is one cleanup with two decoys.**
   `stopAndLogActiveSession` cancelled the check-in, cancelled the enforcement task
   and ended the lock-screen clock inside a single `try {} catch (_) {}` — so the

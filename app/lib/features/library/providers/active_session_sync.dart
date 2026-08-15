@@ -150,6 +150,52 @@ class ActiveSessionSync {
 
     if (remote['session_id'] == localId) return false; // already in step
 
+    // Two sittings, one account — each device started its own (the reader began
+    // on one phone while the other was offline, most likely). **The older start
+    // wins** (owner decision, 15 Aug 2026): whichever sitting has been running
+    // longer is the real one, and the rule is a pure comparison of start times,
+    // so both devices reach the same answer without negotiating.
+    //
+    // Until now the remote row simply overwrote whatever was here, and a
+    // sitting this device started was discarded unlogged — the reader's time
+    // gone with it. So the loser is *logged* before it is let go: it is real
+    // reading, and the only thing wrong with it is that a longer one exists.
+    if (localId != null) {
+      final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
+      final localStart = startedRaw == null ? null : DateTime.tryParse(startedRaw);
+      final remoteStart = DateTime.tryParse(remote['started_at'] as String);
+      final adopted = await db.keyValuesDao.getValue(activeSessionAdoptedKey);
+      final startedHere = adopted != localId;
+
+      if (startedHere && localStart != null && remoteStart != null) {
+        if (localStart.isBefore(remoteStart)) {
+          // Ours is older, so ours is the sitting. Put it back on the account,
+          // over the younger one; that device will find it on its next pull,
+          // log its own by this same rule, and fall in behind us.
+          final sitting = await readLocalActiveSession(db);
+          if (sitting != null) {
+            final confirmedRaw = await db.keyValuesDao.getValue(activeSessionConfirmedKey);
+            await publishStart(
+              sitting,
+              confirmedAt: confirmedRaw == null ? null : DateTime.tryParse(confirmedRaw),
+            );
+          }
+          return false;
+        }
+        // Theirs is older. Log ours on the way out rather than dropping it.
+        try {
+          await stopAndLogActiveSession(
+            db,
+            await _ref.read(sessionContextProvider.future),
+            onMutation: _ref.read(syncTriggerProvider),
+          );
+        } catch (_) {
+          // Nowhere to file it (signed out mid-flight) — adopting still beats
+          // leaving this device on a sitting the account has moved past.
+        }
+      }
+    }
+
     await db.keyValuesDao.setValue(activeSessionEntryKey, remote['library_entry_id'] as String);
     await db.keyValuesDao.setValue(activeSessionIdKey, remote['session_id'] as String);
     await db.keyValuesDao.setValue(activeSessionStartedKey, remote['started_at'] as String);
@@ -157,6 +203,10 @@ class ActiveSessionSync {
     // later pull whether a missing server row means "stopped over there" or
     // "we haven't published ours yet".
     await db.keyValuesDao.setValue(activeSessionMirroredKey, remote['session_id'] as String);
+    // …and *whose* it is, which the key above can no longer say now that a
+    // successful publish sets it too. Only an adopted sitting is another
+    // device's to log.
+    await db.keyValuesDao.setValue(activeSessionAdoptedKey, remote['session_id'] as String);
     final pageStart = remote['page_start'];
     if (pageStart == null) {
       await db.keyValuesDao.deleteValue(activeSessionPageStartKey);

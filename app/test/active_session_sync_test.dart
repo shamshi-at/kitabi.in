@@ -49,6 +49,13 @@ void main() {
     container = ProviderContainer(overrides: [
       appDatabaseProvider.overrideWithValue(db),
       apiClientProvider.overrideWithValue(api),
+      // Logging a sitting needs an identity to file it under. Without these the
+      // read throws and the whole write is swallowed by a best-effort catch —
+      // the tests below would pass over a rule that never ran.
+      sessionContextProvider.overrideWith(
+        (ref) async => const SessionContext(userId: 'u1', deviceId: 'd1'),
+      ),
+      syncTriggerProvider.overrideWithValue(() {}),
     ]);
   });
 
@@ -329,6 +336,175 @@ void main() {
     expect(api.lastPut!['confirmed_at'], startsWith('2026-08-14T11:00:00'));
   });
 
+  /// Two sittings, one account — the reader started on one phone while the
+  /// other was offline. **The older start wins** (owner decision, 15 Aug 2026):
+  /// a pure comparison, so both devices reach the same answer with nothing to
+  /// negotiate. The loser is real reading, so it is logged rather than dropped.
+  group('two sittings collide', () {
+    Map<String, dynamic> remoteStartedAt(DateTime when, {String id = 's-remote'}) => {
+          'session_id': id,
+          'library_entry_id': 'entry-1',
+          'started_at': when.toIso8601String(),
+          'page_start': null,
+          'confirmed_at': null,
+          'device_id': 'other-phone',
+        };
+
+    test('a younger local sitting yields — and is logged, not lost', () async {
+      await writeLocal(id: 's-mine'); // started 14 Aug 10:00
+      api.active = remoteStartedAt(DateTime.utc(2026, 8, 14, 9)); // an hour older
+
+      expect(await sync().pullAndApply(), isTrue);
+
+      expect(await db.keyValuesDao.getValue(activeSessionIdKey), 's-remote');
+      final logged = await db.readingSessionsDao.allSince(DateTime.utc(2020));
+      expect(logged, hasLength(1), reason: 'losing a race is not a reason to lose the time');
+      expect(logged.single.id, 's-mine');
+    });
+
+    test('an older local sitting stands, and is put back on the account', () async {
+      await writeLocal(id: 's-mine'); // started 14 Aug 10:00
+      api.active = remoteStartedAt(DateTime.utc(2026, 8, 14, 11)); // an hour younger
+
+      expect(await sync().pullAndApply(), isFalse, reason: 'ours is the sitting');
+
+      expect(await db.keyValuesDao.getValue(activeSessionIdKey), 's-mine');
+      expect(api.lastPut?['session_id'], 's-mine',
+          reason: 'the other device finds it on its next pull and falls in behind');
+      expect(await db.readingSessionsDao.allSince(DateTime.utc(2020)), isEmpty,
+          reason: 'nothing ended — it is still running');
+    });
+
+    test('a stale mirror is handed over without being logged here', () async {
+      // This sitting belongs to the other device; it will log it itself. A row
+      // written here too is the duplicate the shared-id design exists to avoid.
+      await writeLocal(id: 's-theirs', mirroredId: 's-theirs');
+      await db.keyValuesDao.setValue(activeSessionAdoptedKey, 's-theirs');
+      api.active = remoteStartedAt(DateTime.utc(2026, 8, 14, 12), id: 's-newer');
+
+      expect(await sync().pullAndApply(), isTrue);
+
+      expect(await db.keyValuesDao.getValue(activeSessionIdKey), 's-newer');
+      expect(await db.readingSessionsDao.allSince(DateTime.utc(2020)), isEmpty);
+    });
+
+    test('a published sitting is still ours to log when it loses', () async {
+      // A successful publish marks the sitting as known to the account, which
+      // is *not* the same as belonging to another device — reading the two off
+      // one key would have dropped this one unlogged.
+      await writeLocal(id: 's-mine', mirroredId: 's-mine');
+      api.active = remoteStartedAt(DateTime.utc(2026, 8, 14, 9));
+
+      expect(await sync().pullAndApply(), isTrue);
+
+      final logged = await db.readingSessionsDao.allSince(DateTime.utc(2020));
+      expect(logged.map((s) => s.id), ['s-mine']);
+    });
+  });
+
+  /// The rule's real claim is not "the older one wins on device A" — it is that
+  /// two devices land on the same sitting, from either side, without talking to
+  /// each other. A rule that merely *prefers* the older one could still have
+  /// both devices swap endlessly. So run both pulls and check where they stop.
+  group('two devices converge', () {
+    late _Server server;
+    late AppDatabase dbA, dbB;
+    late ProviderContainer a, b;
+
+    ProviderContainer deviceOn(AppDatabase db, String deviceId) {
+      final c = ProviderContainer(overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        apiClientProvider.overrideWithValue(_DeviceApi(server)),
+        sessionContextProvider.overrideWith(
+          (ref) async => SessionContext(userId: 'u1', deviceId: deviceId),
+        ),
+        syncTriggerProvider.overrideWithValue(() {}),
+      ]);
+      addTearDown(c.dispose);
+      return c;
+    }
+
+    /// A sitting running on [db], started here and never published.
+    Future<void> runningOn(AppDatabase db, String id, DateTime startedAt) async {
+      await db.libraryEntriesDao.insertOne(
+        LibraryEntriesCompanion.insert(id: 'entry-1', userId: 'u1', editionId: 'e1'),
+      );
+      await db.keyValuesDao.setValue(activeSessionEntryKey, 'entry-1');
+      await db.keyValuesDao.setValue(activeSessionIdKey, id);
+      await db.keyValuesDao.setValue(activeSessionStartedKey, startedAt.toIso8601String());
+    }
+
+    setUp(() {
+      server = _Server();
+      dbA = AppDatabase.forTesting(NativeDatabase.memory());
+      dbB = AppDatabase.forTesting(NativeDatabase.memory());
+      a = deviceOn(dbA, 'device-a');
+      b = deviceOn(dbB, 'device-b');
+    });
+
+    Future<String?> sittingOn(AppDatabase db) =>
+        db.keyValuesDao.getValue(activeSessionIdKey);
+
+    test('the younger device yields, whichever device notices first', () async {
+      await runningOn(dbA, 's-a', DateTime.utc(2026, 8, 15, 10)); // older
+      await runningOn(dbB, 's-b', DateTime.utc(2026, 8, 15, 10, 30));
+      await a.read(activeSessionSyncProvider).publishStart(
+            (await readLocalActiveSession(dbA))!,
+          );
+
+      // B comes back online and notices.
+      await b.read(activeSessionSyncProvider).pullAndApply();
+      await a.read(activeSessionSyncProvider).pullAndApply();
+
+      expect(await sittingOn(dbA), 's-a');
+      expect(await sittingOn(dbB), 's-a', reason: 'both devices on the older sitting');
+      expect(server.active!['session_id'], 's-a');
+      // B's own reading is not thrown away…
+      expect((await dbB.readingSessionsDao.allSince(DateTime.utc(2020))).map((s) => s.id),
+          ['s-b']);
+      // …and A, which won, logged nothing: it is still reading.
+      expect(await dbA.readingSessionsDao.allSince(DateTime.utc(2020)), isEmpty);
+    });
+
+    test('an older sitting reclaims the account from a younger one', () async {
+      // The mirror image: the device that was offline holds the *older* one.
+      await runningOn(dbA, 's-a', DateTime.utc(2026, 8, 15, 11)); // younger
+      await runningOn(dbB, 's-b', DateTime.utc(2026, 8, 15, 9)); // older, offline
+      await a.read(activeSessionSyncProvider).publishStart(
+            (await readLocalActiveSession(dbA))!,
+          );
+
+      await b.read(activeSessionSyncProvider).pullAndApply(); // B pushes back
+      await a.read(activeSessionSyncProvider).pullAndApply(); // A stands down
+
+      expect(await sittingOn(dbB), 's-b');
+      expect(await sittingOn(dbA), 's-b', reason: 'the older sitting took the account');
+      expect(server.active!['session_id'], 's-b');
+      expect((await dbA.readingSessionsDao.allSince(DateTime.utc(2020))).map((s) => s.id),
+          ['s-a']);
+    });
+
+    test('and it settles — further pulls change nothing', () async {
+      await runningOn(dbA, 's-a', DateTime.utc(2026, 8, 15, 10));
+      await runningOn(dbB, 's-b', DateTime.utc(2026, 8, 15, 10, 30));
+      await a.read(activeSessionSyncProvider).publishStart(
+            (await readLocalActiveSession(dbA))!,
+          );
+
+      // Five rounds of both devices pulling. A rule that only *prefers* the
+      // older sitting could still have the two trade it back and forth.
+      for (var i = 0; i < 5; i++) {
+        await b.read(activeSessionSyncProvider).pullAndApply();
+        await a.read(activeSessionSyncProvider).pullAndApply();
+      }
+
+      expect(await sittingOn(dbA), 's-a');
+      expect(await sittingOn(dbB), 's-a');
+      expect((await dbB.readingSessionsDao.allSince(DateTime.utc(2020))).length, 1,
+          reason: 'the loser is logged once, not once per pull');
+    });
+  });
+
   test('the same sitting twice is not re-applied', () async {
     await writeLocal(id: 's-remote', mirroredId: 's-remote');
     api.active = {
@@ -342,6 +518,30 @@ void main() {
 
     expect(await sync().pullAndApply(), isFalse, reason: 'already in step');
   });
+}
+
+/// One `active_reading_sessions` row, shared by two devices — the thing the
+/// real server is. [_DeviceApi] instances read and write *this*, so a pull on
+/// one device sees what the other actually published.
+class _Server {
+  Map<String, dynamic>? active;
+}
+
+class _DeviceApi extends ApiClient {
+  _DeviceApi(this.server);
+
+  final _Server server;
+
+  @override
+  Future<Map<String, dynamic>?> getActiveSession() async => server.active;
+
+  @override
+  Future<void> putActiveSession(Map<String, dynamic> payload) async {
+    server.active = Map<String, dynamic>.from(payload);
+  }
+
+  @override
+  Future<void> deleteActiveSession({String? deviceId}) async => server.active = null;
 }
 
 class _OfflineApi extends ApiClient {

@@ -58,6 +58,17 @@ const activeSessionIdKey = 'active_session_id';
 /// The key name is kept for continuity with installs that already have it.
 const activeSessionMirroredKey = 'active_session_mirrored_id';
 
+/// Set to the session id of a sitting that arrived from another device.
+///
+/// Distinct from [activeSessionMirroredKey], which reads as "the account knows
+/// about this sitting" — it is set both by adopting one and by successfully
+/// publishing our own, so it cannot answer *whose* sitting this is. That
+/// question only started mattering when two sittings could collide and the
+/// older one had to win: the loser is logged rather than dropped, and logging
+/// a sitting that belongs to another device would write the duplicate row this
+/// whole design exists to avoid — that device logs it itself.
+const activeSessionAdoptedKey = 'active_session_adopted_id';
+
 /// The id of a sitting this device has stopped and logged, but has not yet
 /// managed to take off the account.
 ///
@@ -83,6 +94,7 @@ Future<void> clearLocalActiveSession(AppDatabase db) async {
   await db.keyValuesDao.deleteValue(activeSessionIdKey);
   await db.keyValuesDao.deleteValue(activeSessionConfirmedKey);
   await db.keyValuesDao.deleteValue(activeSessionMirroredKey);
+  await db.keyValuesDao.deleteValue(activeSessionAdoptedKey);
 }
 
 /// A session left running this long gets a "still reading?" check-in.
@@ -219,6 +231,7 @@ Future<LoggedSession?> stopAndLogActiveSession(
   // Cleared with the rest of them. Left behind, it told a later pull that a
   // *new* sitting from another device was one this one had already adopted.
   await db.keyValuesDao.deleteValue(activeSessionMirroredKey);
+  await db.keyValuesDao.deleteValue(activeSessionAdoptedKey);
 
   // Every stop path — manual, quick-stop, "No", or auto-stop — goes through
   // here, so this is the one place that needs to cancel the check-in
@@ -400,6 +413,8 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
     await db.keyValuesDao.setValue(activeSessionStartedKey, startedAt.toIso8601String());
     await db.keyValuesDao.setValue(activeSessionIdKey, sessionId);
     await db.keyValuesDao.deleteValue(activeSessionConfirmedKey);
+    // Ours by construction — and the previous sitting's flag must not linger.
+    await db.keyValuesDao.deleteValue(activeSessionAdoptedKey);
     if (pageStart != null) {
       await db.keyValuesDao.setValue(activeSessionPageStartKey, '$pageStart');
     }
