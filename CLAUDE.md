@@ -757,6 +757,28 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   purpose, ask what the next *pull* does with it. If no code path can legitimately
   clear a column, an incoming null means "not told yet" — `Value.absent()`, never
   `Value(null)`.
+- **A guard that says "never throw away what we started" needs to know when the
+  account has heard of it — otherwise it only works in one direction.** The shared
+  timer marked a sitting with `active_session_mirrored_id` **only on adopt**, so the
+  device that *started* one never recorded that its publish had succeeded. When the
+  other device stopped it, the empty server read as "we haven't published ours yet"
+  and the starting device kept counting: clock running, lock-screen notification up,
+  over a sitting already logged — and already pulled back onto that very device,
+  which is the tell. `publishStart` now records the id on success (and only on
+  success: an offline start must stay unpublished, because that is exactly the
+  sitting the pull must never delete). **Found with two emulators on one account,
+  15 Aug 2026** — a second device is the only thing that can find this class of bug,
+  and the single-device pass had gone green over it an hour earlier.
+- **Which device performs an action is not the same as which device holds the data
+  the action needs.** Linking a mid-sitting note to its sitting was done where the
+  sitting is *logged* — but the reader's other device can be the one that stops it
+  (that is the point of a shared timer), and it runs the stop against its own
+  database, where the note had arrived carrying no link at all. So the note stayed
+  attached on the phone that wrote it and detached everywhere else, permanently.
+  The work now belongs to the device that *wrote* the note, driven by a remembered
+  `{noteId: sessionId}` map in `key_values` (`note_session_links.dart`) that the
+  pull can't clobber, replayed after every pull — so it lands whenever the sitting
+  reaches that device, no matter who ended it.
 - **Three best-effort cleanups in one `try` is one cleanup with two decoys.**
   `stopAndLogActiveSession` cancelled the check-in, cancelled the enforcement task
   and ended the lock-screen clock inside a single `try {} catch (_) {}` — so the
