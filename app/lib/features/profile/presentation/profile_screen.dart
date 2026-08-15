@@ -116,16 +116,8 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
   }
 
   Future<void> _editUsername() async {
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.paper,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _UsernameSheet(current: widget.profile['username'] as String?),
-    );
-    if (saved == true) ref.invalidate(meProvider);
+    final saved = await showUsernameSheet(context, current: widget.profile['username'] as String?);
+    if (saved) ref.invalidate(meProvider);
   }
 
   Future<void> _editLanguages() async {
@@ -762,6 +754,26 @@ class _StatPill extends StatelessWidget {
 }
 
 /// Set/change the optional unique username, with a live availability check.
+/// Open the set-a-username sheet. Returns true if a username was saved.
+///
+/// Public, and the only way in: the profile row was the sole entry point until
+/// Home grew one too, and this repo has watched a feature drift apart precisely
+/// by being reachable from two places with two implementations (CLAUDE.md, the
+/// four progress surfaces). The caller invalidates [meProvider] on a save — the
+/// sheet has no idea which screens are watching it.
+Future<bool> showUsernameSheet(BuildContext context, {String? current}) async {
+  final saved = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.paper,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => _UsernameSheet(current: current),
+  );
+  return saved == true;
+}
+
 class _UsernameSheet extends ConsumerStatefulWidget {
   const _UsernameSheet({required this.current});
 

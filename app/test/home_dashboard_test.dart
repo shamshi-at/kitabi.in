@@ -77,7 +77,7 @@ void main() {
           libraryEntriesProvider.overrideWith((ref) => Stream.value(entries!)),
           allLendingProvider.overrideWith((ref) => Stream.value(const <LendingWithBook>[])),
           recsOptInProvider.overrideWith((ref) async => false),
-          meProvider.overrideWith((ref) async => {'full_name': 'Shamshi K'}),
+          meProvider.overrideWith((ref) async => {'full_name': 'Asha Menon'}),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -89,7 +89,7 @@ void main() {
     await settle(tester);
 
     // The personal greeting carries the reader's first name.
-    expect(find.textContaining('Shamshi'), findsOneWidget);
+    expect(find.textContaining('Asha'), findsOneWidget);
     // Shelf counts — small-caps labels, matching the rest of Home's
     // section-label treatment (FRESH ON YOUR SHELF, READING GOAL).
     expect(find.text('OWNED'), findsOneWidget);
@@ -113,6 +113,125 @@ void main() {
     expect(find.textContaining('of 30 books'), findsOneWidget);
 
     // Flush drift stream-close timers before the pending-timer check.
+    await tester.pumpWidget(const SizedBox());
+    await settle(tester);
+    reportTestException = reportOriginal;
+  });
+
+  /// The claim-a-username nudge. A username is the one bit of setup nothing
+  /// else in the app forces — you can shelve, read and lend for months without
+  /// one, and then a friend cannot find you. Profile has always offered it;
+  /// a reader with no reason to open Profile never saw the offer.
+  ///
+  /// Three states, because the interesting one is the third: "we have not
+  /// asked yet" must not look like "no username". That conflation is what used
+  /// to flash the language picker at signed-in readers (CLAUDE.md, 15 Jul
+  /// 2026), and an invitation that appears on every cold start — or on a phone
+  /// with no signal — reads as a bug rather than a prompt.
+  Future<void> pumpHomeWithProfile(
+    WidgetTester tester,
+    AppDatabase db,
+    Override meOverride,
+  ) async {
+    // A book on the shelf, because an empty library renders the "add your
+    // first book" screen instead of the dashboard — and that reader is served
+    // by the dot on the profile icon, not by this card.
+    final entries = await tester.runAsync(() async {
+      await db.libraryEntriesDao.insertOne(
+        LibraryEntriesCompanion.insert(id: '1', userId: 'u1', editionId: 'e1'),
+      );
+      return db.libraryEntriesDao.watchActive().first;
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          sessionContextProvider.overrideWith(
+            (ref) async => const SessionContext(userId: 'u1', deviceId: 'd1'),
+          ),
+          syncTriggerProvider.overrideWithValue(() {}),
+          libraryEntriesProvider.overrideWith((ref) => Stream.value(entries!)),
+          allLendingProvider.overrideWith((ref) => Stream.value(const <LendingWithBook>[])),
+          recsOptInProvider.overrideWith((ref) async => false),
+          meOverride,
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HomeScreen(),
+        ),
+      ),
+    );
+    await settle(tester);
+  }
+
+  testWidgets('home invites a reader with no username to claim one', (tester) async {
+    final reportOriginal = reportTestException;
+    reportTestException = (details, testDescription) {
+      if (details.exception.toString().contains('GoogleFonts')) return;
+      reportOriginal(details, testDescription);
+    };
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+
+    await pumpHomeWithProfile(
+      tester,
+      db,
+      meProvider.overrideWith((ref) async => {'full_name': 'Asha Menon'}),
+    );
+
+    expect(find.text('YOUR HANDLE'), findsOneWidget);
+    expect(find.text('Claim your username'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await settle(tester);
+    reportTestException = reportOriginal;
+  });
+
+  testWidgets('the invitation is gone once a username exists', (tester) async {
+    final reportOriginal = reportTestException;
+    reportTestException = (details, testDescription) {
+      if (details.exception.toString().contains('GoogleFonts')) return;
+      reportOriginal(details, testDescription);
+    };
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+
+    await pumpHomeWithProfile(
+      tester,
+      db,
+      meProvider.overrideWith(
+        (ref) async => {'full_name': 'Asha Menon', 'username': 'midnight_reader'},
+      ),
+    );
+
+    expect(find.text('YOUR HANDLE'), findsNothing,
+        reason: 'acting on it is the only ending this card needs');
+
+    await tester.pumpWidget(const SizedBox());
+    await settle(tester);
+    reportTestException = reportOriginal;
+  });
+
+  testWidgets('a profile that never loaded shows no invitation at all', (tester) async {
+    final reportOriginal = reportTestException;
+    reportTestException = (details, testDescription) {
+      if (details.exception.toString().contains('GoogleFonts')) return;
+      reportOriginal(details, testDescription);
+    };
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+
+    // Offline at cold start: /me never answers. "We have not been told" is not
+    // "there is no username", and only an answer that arrived may put this on
+    // screen.
+    await pumpHomeWithProfile(
+      tester,
+      db,
+      meProvider.overrideWith((ref) async => throw Exception('offline')),
+    );
+
+    expect(find.text('YOUR HANDLE'), findsNothing,
+        reason: 'a prompt that appears whenever the network is down is a bug');
+
     await tester.pumpWidget(const SizedBox());
     await settle(tester);
     reportTestException = reportOriginal;

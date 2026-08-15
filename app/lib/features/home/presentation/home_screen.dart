@@ -23,6 +23,7 @@ import '../../library/providers/library_providers.dart';
 import '../../library/providers/reading_timer_providers.dart';
 import '../../library/reading_progress.dart';
 import '../../library/stop_session_flow.dart';
+import '../../profile/presentation/profile_screen.dart' show showUsernameSheet;
 import '../../profile/providers/profile_providers.dart';
 import '../../promotions/providers/promotions_providers.dart';
 import '../../promotions/widgets/promo_surfaces.dart';
@@ -234,6 +235,10 @@ class _Dashboard extends ConsumerWidget {
           SizedBox(height: 16),
         ],
         _GoalSlip(entries: entries, l10n: l10n),
+        // Sits with the goal slip because it is the same kind of thing: a
+        // one-off invitation to set something up, below what Home is actually
+        // for. It removes itself the moment a username exists.
+        const _ClaimUsernameCard(),
         SizedBox(height: 14),
         SectionLabel(l10n.homeYourShelves),
         _ShelfGrid(counts: counts, l10n: l10n),
@@ -320,6 +325,100 @@ class _ShelfCover extends ConsumerWidget {
         coverUrl: book?.coverUrl,
         width: 60,
         height: 90,
+      ),
+    );
+  }
+}
+
+/// The nudge to claim a username, shown on Home only while there isn't one.
+///
+/// A username is the one piece of setup nothing else in the app forces: you
+/// can shelve, read and lend for months without it, and then a friend can't
+/// find you. Profile has always offered it, but a reader with no reason to
+/// open Profile never saw the offer.
+///
+/// Deliberately quiet and deliberately *not* dismissible: it disappears the
+/// moment it is acted on, which is the only ending it needs. Nothing renders
+/// while `/me` is still loading or has failed — an invitation that flashes up
+/// on every cold start, or on a phone with no signal, reads as a bug.
+///
+/// Lives on the dashboard, so a reader with an empty library sees `_EmptyHome`
+/// and never meets it. That is on purpose: their first task is a first book,
+/// not a handle — and the pulsing dot on the profile icon above still carries
+/// the hint until they have one.
+class _ClaimUsernameCard extends ConsumerWidget {
+  const _ClaimUsernameCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final me = ref.watch(meProvider);
+    // `.valueOrNull` alone is null both for "no username" and for "we haven't
+    // asked yet" — the same conflation that used to flash the language picker
+    // at signed-in readers (CLAUDE.md, 15 Jul 2026). Only an answer that
+    // actually arrived gets to put this on screen.
+    if (!me.hasValue) return const SizedBox.shrink();
+    final username = me.value?['username'] as String?;
+    if (username != null && username.isNotEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: GestureDetector(
+        onTap: () async {
+          Haptics.selection();
+          if (await showUsernameSheet(context) && context.mounted) {
+            ref.invalidate(meProvider);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const PulsingDot(size: 7),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: SectionLabel(l10n.homeUsernameLabel, padding: EdgeInsets.zero),
+                  ),
+                  Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '@',
+                    style: GoogleFonts.fraunces(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gold,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.homeUsernameTitle,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              Text(
+                l10n.homeUsernameWhy,
+                style: TextStyle(fontSize: 12, height: 1.35, color: AppColors.inkSoft),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

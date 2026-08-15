@@ -1816,6 +1816,24 @@ abstract class AppLocalizations {
   /// **'Set a goal for {year} — even a small one.'**
   String homeGoalStart(int year);
 
+  /// Eyebrow on the home claim-a-username card
+  ///
+  /// In en, this message translates to:
+  /// **'Your handle'**
+  String get homeUsernameLabel;
+
+  /// Headline on the home claim-a-username card
+  ///
+  /// In en, this message translates to:
+  /// **'Claim your username'**
+  String get homeUsernameTitle;
+
+  /// Explains on Home why a username is worth setting
+  ///
+  /// In en, this message translates to:
+  /// **'It is how a friend finds you to lend a book — and the name your shelf carries if you ever make it public.'**
+  String get homeUsernameWhy;
+
   /// Empty-home step 1 title
   ///
   /// In en, this message translates to:
@@ -3697,7 +3715,7 @@ abstract class AppLocalizations {
   /// Placeholder in the username field
   ///
   /// In en, this message translates to:
-  /// **'e.g. shamshi_reads'**
+  /// **'e.g. midnight_reader'**
   String get usernameFieldHint;
 
   /// Username is free

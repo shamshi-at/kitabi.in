@@ -29,7 +29,7 @@ Map<String, dynamic> _work() => {
       'translation_group_id': null,
       'authors': [
         {'id': '11111111-1111-1111-1111-111111111111', 'name': 'M.T. Vasudevan Nair'},
-        {'id': '22222222-2222-2222-2222-222222222222', 'name': 'Shamsheer AT'},
+        {'id': '22222222-2222-2222-2222-222222222222', 'name': 'Nila Varma'},
       ],
       'genres': <Map<String, dynamic>>[],
       'translations': <Map<String, dynamic>>[],
@@ -120,7 +120,7 @@ void main() {
     await settle(tester);
 
     expect(find.text('by M.T. Vasudevan Nair'), findsOneWidget);
-    expect(find.text(', Shamsheer AT'), findsOneWidget);
+    expect(find.text(', Nila Varma'), findsOneWidget);
 
     await flushTree(tester);
   });

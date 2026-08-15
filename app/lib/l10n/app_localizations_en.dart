@@ -1089,6 +1089,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get homeUsernameLabel => 'Your handle';
+
+  @override
+  String get homeUsernameTitle => 'Claim your username';
+
+  @override
+  String get homeUsernameWhy =>
+      'It is how a friend finds you to lend a book — and the name your shelf carries if you ever make it public.';
+
+  @override
   String get homeStepScanTitle => 'Scan';
 
   @override
@@ -2207,7 +2217,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get usernameSheetTitle => 'Your username';
 
   @override
-  String get usernameFieldHint => 'e.g. shamshi_reads';
+  String get usernameFieldHint => 'e.g. midnight_reader';
 
   @override
   String get usernameAvailable => 'Available';

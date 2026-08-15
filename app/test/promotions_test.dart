@@ -109,7 +109,7 @@ void main() {
           libraryEntriesProvider.overrideWith((ref) => Stream.value(entries!)),
           allLendingProvider.overrideWith((ref) => Stream.value(const <LendingWithBook>[])),
           recsOptInProvider.overrideWith((ref) async => false),
-          meProvider.overrideWith((ref) async => {'full_name': 'Shamshi K'}),
+          meProvider.overrideWith((ref) async => {'full_name': 'Asha Menon'}),
           // No API in a widget test — the repository swallows the failure, so
           // the cached rows are what render. That IS the offline path.
         ],
