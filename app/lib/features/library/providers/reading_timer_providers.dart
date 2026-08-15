@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,6 +49,21 @@ const activeSessionIdKey = 'active_session_id';
 /// hiccup would throw away the reader's own running timer.
 const activeSessionMirroredKey = 'active_session_mirrored_id';
 
+/// The id of a sitting this device has stopped and logged, but has not yet
+/// managed to take off the account.
+///
+/// Stopping is a local fact the moment it happens; publishing it is a network
+/// call that can simply fail — offline, or from a background isolate that
+/// auto-stopped the sitting and never had an API client to hand. Until this
+/// device says otherwise, the server still has the row, and the pull below
+/// reads a row it doesn't recognise as "a sitting is running elsewhere" and
+/// adopts it: a sitting the reader stopped came back to life on the next
+/// foreground, clock running from the original start, lock-screen notification
+/// and all — and stopping it again logged it twice. This key is the memory the
+/// pull needs to tell "still running over there" from "already over here",
+/// and the note-to-self that makes the delete retry until it lands.
+const activeSessionPendingStopKey = 'active_session_pending_stop';
+
 /// Drop the local sitting *without* logging it — the other device already did
 /// (or is about to). Deliberately separate from [stopAndLogActiveSession]:
 /// logging here is exactly the duplicate this feature has to avoid.
@@ -56,7 +73,6 @@ Future<void> clearLocalActiveSession(AppDatabase db) async {
   await db.keyValuesDao.deleteValue(activeSessionPageStartKey);
   await db.keyValuesDao.deleteValue(activeSessionIdKey);
   await db.keyValuesDao.deleteValue(activeSessionConfirmedKey);
-  await db.keyValuesDao.deleteValue(activeSessionMirroredKey);
   await db.keyValuesDao.deleteValue(activeSessionMirroredKey);
 }
 
@@ -155,9 +171,17 @@ Future<LoggedSession?> stopAndLogActiveSession(
 }) async {
   final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
   final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
-  if (entryId == null || startedRaw == null) return null;
-  final startedAt = DateTime.tryParse(startedRaw);
-  if (startedAt == null) return null;
+  final startedAt = startedRaw == null ? null : DateTime.tryParse(startedRaw);
+  if (entryId == null || startedAt == null) {
+    // Nothing to log — but something may still be *showing*. Every one of
+    // these early exits means "the sitting is already gone from storage", and
+    // the surface that outlives it is precisely the lock-screen clock: a
+    // second stop arriving after a background isolate already logged the
+    // sitting used to return here in silence, leaving the notification
+    // counting a sitting that had ended. Ending it is idempotent and cheap.
+    await _endLiveSurface();
+    return null;
+  }
   final pageStartRaw = await db.keyValuesDao.getValue(activeSessionPageStartKey);
   final pageStart = int.tryParse(pageStartRaw ?? '');
 
@@ -174,11 +198,18 @@ Future<LoggedSession?> stopAndLogActiveSession(
     id: await db.keyValuesDao.getValue(activeSessionIdKey),
   );
 
+  // The sitting is over here; the account doesn't know yet. Recorded before
+  // anything that can fail so the note survives a stop that happens with no
+  // network at all — see [activeSessionPendingStopKey].
+  await db.keyValuesDao.setValue(activeSessionPendingStopKey, sessionId);
   await db.keyValuesDao.deleteValue(activeSessionEntryKey);
   await db.keyValuesDao.deleteValue(activeSessionStartedKey);
   await db.keyValuesDao.deleteValue(activeSessionPageStartKey);
   await db.keyValuesDao.deleteValue(activeSessionIdKey);
   await db.keyValuesDao.deleteValue(activeSessionConfirmedKey);
+  // Cleared with the rest of them. Left behind, it told a later pull that a
+  // *new* sitting from another device was one this one had already adopted.
+  await db.keyValuesDao.deleteValue(activeSessionMirroredKey);
 
   // Every stop path — manual, quick-stop, "No", or auto-stop — goes through
   // here, so this is the one place that needs to cancel the check-in
@@ -186,16 +217,20 @@ Future<LoggedSession?> stopAndLogActiveSession(
   // remembering to. Best-effort: a plugin channel that isn't ready (a
   // notification-less platform, a widget test with no platform channels
   // mocked) must never stop the session from being logged correctly.
+  //
+  // **Three separate try blocks, not one.** They were one, and "best-effort"
+  // then meant "the first of these that throws cancels the other two" — with
+  // the lock-screen clock last in the queue, so it was the one that stayed on
+  // screen counting a sitting the reader had just stopped. Independent
+  // cleanups get independent failures.
   try {
-    final notifications = NotificationService(FlutterLocalNotificationsPlugin());
-    await notifications.cancel(readingCheckInNotificationId(entryId));
-    await Workmanager().cancelByUniqueName(readingEnforcementTaskName(entryId));
-    // The lock-screen clock dies with the sitting, from whichever path stopped
-    // it. On iOS a background isolate has no method channel for this, so the
-    // call is a silent no-op there and `ActiveSessionController.reconcile`
-    // clears the leftover activity the next time the app is foregrounded.
-    await ReadingLiveActivity().end();
+    await NotificationService(FlutterLocalNotificationsPlugin())
+        .cancel(readingCheckInNotificationId(entryId));
   } catch (_) {}
+  try {
+    await Workmanager().cancelByUniqueName(readingEnforcementTaskName(entryId));
+  } catch (_) {}
+  await _endLiveSurface();
 
   return LoggedSession(
     sessionId: sessionId,
@@ -203,6 +238,19 @@ Future<LoggedSession?> stopAndLogActiveSession(
     durationSeconds: durationSeconds,
     pageStart: pageStart,
   );
+}
+
+/// Takes the lock-screen clock down: the iOS Live Activity, or the Android
+/// ongoing notification. Idempotent and silent — safe to call when nothing is
+/// showing, which is most of the time.
+///
+/// On iOS a background isolate has no method channel to reach ActivityKit
+/// with, so this is a no-op there and `ActiveSessionController.reconcile`
+/// clears the leftover activity the next time the app is foregrounded.
+Future<void> _endLiveSurface() async {
+  try {
+    await ReadingLiveActivity().end();
+  } catch (_) {}
 }
 
 /// Same load-on-build, write-through-on-change shape as
@@ -343,18 +391,53 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   Future<LoggedSession?> stop() async {
     if (state == null) return null;
     _stopping = true;
+    // Cleared synchronously, before the first await. The clock stops when the
+    // reader says it stops — everything after this is filing. Waiting until
+    // the writes came back meant every surface that only exists while a
+    // sitting is live (the mini-bar, Home's live card) stayed on screen for
+    // the length of a database round trip *plus* whatever the plugin channels
+    // took, and each new step added to the stop path pushed it out further.
+    // Nothing below reads it: the sitting is read from key_values, which is
+    // the point of storing it there.
+    state = null;
     try {
       final db = ref.read(appDatabaseProvider);
-      final session = await ref.read(sessionContextProvider.future);
-      final logged = await stopAndLogActiveSession(
-        db,
-        session,
-        onMutation: ref.read(syncTriggerProvider),
-      );
-      state = null;
+      // Resolving identity can fail (signed out from under a running sitting),
+      // and an exception here used to escape the Stop button: the sitting kept
+      // running, and the lock-screen clock kept counting it. There is nowhere
+      // correct to file a sitting for nobody, so drop it — but take the clock
+      // down with it rather than leaving a surface with nothing behind it.
+      final SessionContext session;
+      try {
+        session = await ref.read(sessionContextProvider.future);
+      } catch (_) {
+        await _endLiveSurface();
+        return null;
+      }
+      final LoggedSession? logged;
+      try {
+        logged = await stopAndLogActiveSession(
+          db,
+          session,
+          onMutation: ref.read(syncTriggerProvider),
+        );
+      } catch (_) {
+        // The write failed, so the sitting is still running in storage — and
+        // storage is the truth. Put in-memory state back in step with it
+        // rather than leaving a live sitting no surface will show.
+        await _hydrate();
+        return null;
+      }
       // Take the sitting off the account too, so the other device's ongoing
       // notification comes down instead of counting a sitting that ended.
-      await ref.read(activeSessionSyncProvider).publishStop();
+      //
+      // Deliberately *not* awaited. This is a network round trip on the path
+      // between "the reader tapped Stop" and "the page question appears", and
+      // on a network that has gone quiet without saying so it is measured in
+      // tens of seconds. The stop is already complete and durable at this
+      // point; publishing it is bookkeeping, it retries itself from the
+      // pending-stop note, and nothing on screen is waiting for its answer.
+      unawaited(ref.read(activeSessionSyncProvider).publishStop());
       return logged;
     } finally {
       _stopping = false;

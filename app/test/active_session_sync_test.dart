@@ -127,6 +127,77 @@ void main() {
     expect(await db.keyValuesDao.getValue(activeSessionIdKey), 's-local');
   });
 
+  /// The resurrection: a sitting stopped here while offline is still on the
+  /// account, and the pull that finds it there must not hand it back.
+  ///
+  /// This is what a stop in airplane mode looks like from the server's side —
+  /// the DELETE never went out, so the row it would have removed is exactly
+  /// the row this pull reads. Adopting it restarted the clock from the
+  /// original start time, put the lock-screen notification back up over a
+  /// sitting the reader had finished, and made the next stop write a second
+  /// row for one sitting.
+  test('a sitting stopped here but never published is retracted, not re-adopted',
+      () async {
+    await db.keyValuesDao.setValue(activeSessionPendingStopKey, 's-mine');
+    api.active = {
+      'session_id': 's-mine',
+      'library_entry_id': 'entry-1',
+      'started_at': DateTime.utc(2026, 8, 14, 10).toIso8601String(),
+      'page_start': null,
+      'confirmed_at': null,
+      'device_id': 'this-phone',
+    };
+
+    expect(await sync().pullAndApply(), isFalse, reason: 'nothing to adopt — it is over');
+    expect(await db.keyValuesDao.getValue(activeSessionEntryKey), isNull);
+    expect(api.deletes, 1, reason: 'the delay only delayed it');
+    expect(await db.keyValuesDao.getValue(activeSessionPendingStopKey), isNull,
+        reason: 'published — the note has done its job');
+  });
+
+  test('the note is dropped once the account has moved on', () async {
+    // The other device started a *new* sitting after ours ended. Our stop has
+    // nothing left to retract, and a note kept past its subject would block
+    // that new sitting from ever being adopted.
+    await db.keyValuesDao.setValue(activeSessionPendingStopKey, 's-mine');
+    api.active = {
+      'session_id': 's-newer',
+      'library_entry_id': 'entry-9',
+      'started_at': DateTime.utc(2026, 8, 14, 11).toIso8601String(),
+      'page_start': null,
+      'confirmed_at': null,
+      'device_id': 'other-phone',
+    };
+
+    expect(await sync().pullAndApply(), isTrue);
+    expect(await db.keyValuesDao.getValue(activeSessionIdKey), 's-newer');
+    expect(api.deletes, 0, reason: 'never delete a sitting that is genuinely running');
+    expect(await db.keyValuesDao.getValue(activeSessionPendingStopKey), isNull);
+  });
+
+  test('an offline retraction keeps its note for next time', () async {
+    await db.keyValuesDao.setValue(activeSessionPendingStopKey, 's-mine');
+    final flaky = _DeleteFailsApi()
+      ..active = {
+        'session_id': 's-mine',
+        'library_entry_id': 'entry-1',
+        'started_at': DateTime.utc(2026, 8, 14, 10).toIso8601String(),
+        'page_start': null,
+        'confirmed_at': null,
+        'device_id': 'this-phone',
+      };
+    final offlineContainer = ProviderContainer(overrides: [
+      appDatabaseProvider.overrideWithValue(db),
+      apiClientProvider.overrideWithValue(flaky),
+    ]);
+    addTearDown(offlineContainer.dispose);
+
+    expect(await offlineContainer.read(activeSessionSyncProvider).pullAndApply(), isFalse);
+    expect(await db.keyValuesDao.getValue(activeSessionPendingStopKey), 's-mine',
+        reason: 'still unpublished — the retry has to survive');
+    expect(await db.keyValuesDao.getValue(activeSessionEntryKey), isNull);
+  });
+
   test('the same sitting twice is not re-applied', () async {
     await writeLocal(id: 's-remote', mirroredId: 's-remote');
     api.active = {
@@ -145,4 +216,11 @@ void main() {
 class _OfflineApi extends ApiClient {
   @override
   Future<Map<String, dynamic>?> getActiveSession() async => throw Exception('offline');
+}
+
+/// Reachable enough to answer a read, not enough to accept a write — the shape
+/// of a stop published from a train.
+class _DeleteFailsApi extends _FakeApi {
+  @override
+  Future<void> deleteActiveSession({String? deviceId}) async => throw Exception('offline');
 }

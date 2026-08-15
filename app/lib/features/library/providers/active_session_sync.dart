@@ -58,12 +58,18 @@ class ActiveSessionSync {
   }
 
   /// The sitting ended here. The other device takes its notification down.
+  ///
+  /// Clears the pending-stop note on success. Until it succeeds the note
+  /// stands, and [pullAndApply] both refuses to re-adopt the finished sitting
+  /// and tries this again — which is what makes a stop performed in airplane
+  /// mode reach the account on landing instead of being undone by it.
   Future<void> publishStop() async {
+    final db = _ref.read(appDatabaseProvider);
     try {
       await _ref.read(apiClientProvider).deleteActiveSession(deviceId: await _deviceId());
+      await db.keyValuesDao.deleteValue(activeSessionPendingStopKey);
     } catch (_) {
-      // Same reasoning as publishStart — and the next foreground pull on the
-      // other device corrects it, because the server row will be gone by then.
+      // Offline, or the server is having a moment. The note keeps the retry.
     }
   }
 
@@ -81,6 +87,26 @@ class ActiveSessionSync {
 
     final db = _ref.read(appDatabaseProvider);
     final localId = await db.keyValuesDao.getValue(activeSessionIdKey);
+    final pendingStopId = await db.keyValuesDao.getValue(activeSessionPendingStopKey);
+
+    // The server is still showing a sitting this device already stopped and
+    // logged — the delete never landed (stopped offline, or auto-stopped by a
+    // background isolate that had no way to make the call). Adopting it here
+    // is how a finished sitting came back to life: the clock restarted from
+    // the original start time, the lock-screen notification returned, and
+    // stopping it a second time wrote a second row for one sitting. Finish the
+    // job instead.
+    if (pendingStopId != null) {
+      if (remote != null && remote['session_id'] == pendingStopId) {
+        await publishStop();
+        return false;
+      }
+      // The account has moved on without us — the row is gone, or it belongs
+      // to a newer sitting started somewhere else. Either way there is nothing
+      // left to retract, and a note that outlived its subject would block that
+      // newer sitting from ever being adopted.
+      await db.keyValuesDao.deleteValue(activeSessionPendingStopKey);
+    }
 
     if (remote == null) {
       // Nothing running on the account. Only clear a sitting this device is

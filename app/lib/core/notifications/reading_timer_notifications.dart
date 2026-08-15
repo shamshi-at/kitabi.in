@@ -175,11 +175,22 @@ Future<void> stopReadingSessionAndNotify({
   required String libraryEntryId,
 }) async {
   final deviceId = await getOrCreateDeviceId(db);
+  final api = ApiClient();
   final logged = await stopAndLogActiveSession(
     db,
     SessionContext(userId: userId, deviceId: deviceId),
   );
+  // Take the sitting off the account from here too. This isolate has an API
+  // client in hand for the sync drain below, and skipping the call left the
+  // server showing a sitting that had been auto-stopped — which the next
+  // foreground pull dutifully adopted back onto this very device. Best-effort:
+  // `stopAndLogActiveSession` leaves the pending-stop note behind, so a
+  // failure here is retried by `ActiveSessionSync.pullAndApply`.
   if (logged != null) {
+    try {
+      await api.deleteActiveSession(deviceId: deviceId);
+      await db.keyValuesDao.deleteValue(activeSessionPendingStopKey);
+    } catch (_) {}
     final l10n = lookupAppLocalizations(const Locale('en'));
     await NotificationService(FlutterLocalNotificationsPlugin()).notifyNow(
       id: readingAutoStoppedNotificationId(libraryEntryId),
@@ -189,5 +200,5 @@ Future<void> stopReadingSessionAndNotify({
       ),
     );
   }
-  await SyncEngine(db, ApiClient()).syncNow(userId);
+  await SyncEngine(db, api).syncNow(userId);
 }
