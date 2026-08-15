@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../db/database.dart';
+import '../sync/note_session_links.dart';
 
 /// Shared UUID generator for client-side ids (rule 4: the client assigns ids
 /// for offline-created rows).
@@ -360,6 +361,9 @@ class ReadingNotesRepository extends Repo {
     // only about what a server can be told and when.
     final sessionExists =
         sessionId != null && await db.readingSessionsDao.getById(sessionId) != null;
+    if (sessionId != null && !sessionExists) {
+      await rememberNoteSessionLink(db, noteId: id, sessionId: sessionId);
+    }
     await enqueue(
       entity: 'reading_notes',
       entityId: id,
@@ -492,14 +496,10 @@ class ReadingSessionsRepository extends Repo {
     // the long note in [ReadingNotesRepository.add]. Enqueued *after* the
     // create above, so the queue's own order (oldest first) delivers the
     // session before anything that points at it.
-    for (final note in await db.readingNotesDao.forSession(id)) {
-      await enqueue(
-        entity: 'reading_notes',
-        entityId: note.id,
-        opType: 'update',
-        data: {'session_id': id},
-      );
-    }
+    //
+    // The same call runs after every pull, because the device that stops a
+    // sitting need not be the one that wrote its notes.
+    await publishPendingNoteLinks(db, userId: session.userId, deviceId: session.deviceId);
     return id;
   }
 

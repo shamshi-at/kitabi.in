@@ -1,7 +1,9 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/data/db/database.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:kitabi/data/repositories/repositories.dart';
+import 'package:kitabi/data/sync/note_session_links.dart';
 
 /// Notes are a Layer-2 syncable entity, and the whole point of the feature is
 /// that they reach the reader's *other devices*. Offline-first means the write
@@ -115,6 +117,65 @@ void main() {
       expect(link.opType, 'update');
       expect(link.entityId, noteId);
       expect(link.payload, contains(sittingId));
+    });
+
+    /// The device that stops a shared sitting need not be the one that wrote
+    /// its notes — that is the entire point of the timer being shared.
+    ///
+    /// The other device logs the sitting and runs the linking against *its*
+    /// database, where this note arrived carrying no link at all. So the note
+    /// stayed attached on the phone that wrote it and detached everywhere
+    /// else, permanently (found with two emulators, 15 Aug 2026). Linking
+    /// belongs to the device that wrote the note, whenever the sitting reaches
+    /// it — which is what the pull guarantees.
+    test('is linked when the sitting arrives from the other device, not from a local stop',
+        () async {
+      final noteId = await notes.add(
+        libraryEntryId: entryId,
+        sessionId: sittingId,
+        body: 'The ferry chapter turns on one word.',
+      );
+      await db.delete(db.syncQueue).go(); // as if the note had already synced
+
+      // The sitting was stopped and logged elsewhere; it reaches us by pull.
+      await db.readingSessionsDao.insertOne(ReadingSessionsCompanion.insert(
+        id: sittingId,
+        userId: 'u1',
+        libraryEntryId: entryId,
+        startedAt: DateTime(2026, 8, 15, 20),
+        endedAt: DateTime(2026, 8, 15, 21),
+        durationSeconds: 3600,
+      ));
+      // …and the same pull cleared our local link on its way past.
+      await db.readingNotesDao.patch(
+        noteId,
+        const ReadingNotesCompanion(sessionId: Value(null)),
+      );
+
+      final sent = await publishPendingNoteLinks(db, userId: 'u1', deviceId: 'd1');
+
+      expect(sent, 1);
+      final ops = await outbox();
+      expect(ops.single.entity, 'reading_notes');
+      expect(ops.single.opType, 'update');
+      expect(ops.single.payload, contains(sittingId));
+      // Put back locally too — it is this sitting's note either way.
+      expect((await db.readingNotesDao.getById(noteId))!.sessionId, sittingId);
+    });
+
+    test('a link waits, without re-sending, until its sitting actually arrives',
+        () async {
+      await notes.add(
+        libraryEntryId: entryId,
+        sessionId: sittingId,
+        body: 'Still running elsewhere.',
+      );
+      await db.delete(db.syncQueue).go();
+
+      expect(await publishPendingNoteLinks(db, userId: 'u1', deviceId: 'd1'), 0);
+      expect(await outbox(), isEmpty, reason: 'nothing to point at yet');
+      // …and it is still remembered for next time.
+      expect(await db.keyValuesDao.getValue(pendingNoteLinksKey), contains(sittingId));
     });
 
     test('a note written *after* the sitting was logged carries it outright',

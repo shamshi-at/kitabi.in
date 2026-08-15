@@ -7,6 +7,7 @@ import '../db/catalog_cache.dart';
 import '../db/database.dart';
 import 'device_id.dart';
 import 'library_dedupe.dart';
+import 'note_session_links.dart';
 
 /// Outcome of one sync run — ops pushed and deltas pulled — surfaced to the UI.
 class SyncReport {
@@ -100,6 +101,12 @@ class SyncEngine {
       final deviceId = await getOrCreateDeviceId(db);
       final healed = await healDuplicateLibraryEntries(db, userId: userId, deviceId: deviceId);
       if (healed > 0) _runAgain = true;
+      // A note written mid-sitting can only be told which sitting it belongs
+      // to once that sitting is a row — and the device that *stops* a shared
+      // sitting need not be the one that wrote its notes, so the linking has
+      // to happen wherever the note lives, whenever the sitting arrives.
+      final linked = await publishPendingNoteLinks(db, userId: userId, deviceId: deviceId);
+      if (linked > 0) _runAgain = true;
     } catch (_) {
       // Best-effort — the next pass retries; reads no longer crash on
       // duplicates either way (getByEditionId picks the original).
