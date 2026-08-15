@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/data/api/api_client.dart';
@@ -13,12 +14,23 @@ class _FakeApiClient extends ApiClient {
   bool autoApplyAll = false; // answer every op with applied + a fake seq
   int _seq = 100;
   bool throwOnPush = false;
+
+  /// Airplane mode: the request never reaches a server, so there is no answer
+  /// to hold against the op. Distinct from [throwOnPush], which stands in for
+  /// "something went wrong" generally.
+  bool offline = false;
   Map<String, dynamic> nextPull = {'changes': [], 'next_cursor': 0, 'has_more': false};
   int pullCalls = 0;
   Future<void>? pullGate;
 
   @override
   Future<List<Map<String, dynamic>>> syncPush(List<Map<String, dynamic>> ops) async {
+    if (offline) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/sync/push'),
+        type: DioExceptionType.connectionError,
+      );
+    }
     if (throwOnPush) throw Exception('offline');
     pushedOps.addAll(ops);
     if (autoApplyAll) {
@@ -262,6 +274,51 @@ void main() {
     expect(api.pushedOps.length, lessThanOrEqualTo(5)); // maxAttempts rounds
     final entry = await db.libraryEntriesDao.getByEditionId('edition-1');
     expect(entry!.syncStatus, 'error'); // surfaced, not silent
+  });
+
+  /// A day of reading in airplane mode must land as a day of reading, not as
+  /// a red banner.
+  ///
+  /// Every mutation fires a sync trigger, so working offline produces one
+  /// failed push per thing the reader does. Counting those as attempts spent
+  /// an op's five retries within minutes and marked it `error` for good —
+  /// after which nothing but a tap on the sync bar would ever have pushed it.
+  /// The queue's job while there is no network is to wait.
+  test('an unreachable server costs an op none of its retries', () async {
+    final repo = LibraryRepository(db, session);
+    await repo.add(editionId: 'edition-1');
+    api.offline = true;
+
+    for (var i = 0; i < 8; i++) {
+      await engine.syncNow('user-1');
+    }
+
+    final queued = await db.syncQueueDao.pending(limit: 10);
+    expect(queued, hasLength(1), reason: 'still queued, nothing lost');
+    expect(queued.first.attempts, 0, reason: 'nothing was attempted — nothing answered');
+    final entry = await db.libraryEntriesDao.getByEditionId('edition-1');
+    expect(entry!.syncStatus, 'pending', reason: 'waiting is not failing');
+
+    // …and the moment there is a network again, it goes, with no prompting
+    // and nothing for the reader to notice.
+    api.offline = false;
+    api.autoApplyAll = true;
+    await engine.syncNow('user-1');
+
+    expect(await db.syncQueueDao.pending(limit: 10), isEmpty);
+    expect((await db.libraryEntriesDao.getByEditionId('edition-1'))!.syncStatus, 'synced');
+  });
+
+  test('a failure the server actually answered still costs an attempt', () async {
+    final repo = LibraryRepository(db, session);
+    await repo.add(editionId: 'edition-1');
+    // A 500 is the server having an opinion, however unhelpful — the op is
+    // being tried and failing, which is what the retry budget is for.
+    api.throwOnPush = true;
+
+    await engine.syncNow('user-1');
+
+    expect((await db.syncQueueDao.pending(limit: 10)).first.attempts, 1);
   });
 
   test('a deleted_wins rejection soft-deletes the row locally', () async {

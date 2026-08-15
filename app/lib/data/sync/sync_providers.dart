@@ -39,10 +39,21 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
 /// Fire-and-forget trigger used after a local mutation and on connectivity
 /// regain — errors are swallowed by SyncEngine.syncNow itself.
 final syncTriggerProvider = Provider<void Function()>((ref) {
-  return () {
-    final session = ref.read(sessionContextProvider).valueOrNull;
-    if (session == null) return;
-    ref.read(syncEngineProvider).syncNow(session.userId);
+  return () async {
+    // Awaited, not `valueOrNull`. The identity this needs (user + device id)
+    // is resolved asynchronously, and the triggers that matter most fire
+    // exactly when it may not be resolved yet: the connectivity listener
+    // firing as the radio comes up at launch, and the first mutation of a
+    // freshly-restored session. A `valueOrNull` read in that window is null,
+    // and the drain was silently skipped — the queue then waited on the
+    // 15-minute workmanager cadence for work the reader had just done.
+    final SessionContext session;
+    try {
+      session = await ref.read(sessionContextProvider.future);
+    } catch (_) {
+      return; // signed out — nothing to sync
+    }
+    await ref.read(syncEngineProvider).syncNow(session.userId);
   };
 });
 
@@ -51,8 +62,12 @@ final syncTriggerProvider = Provider<void Function()>((ref) {
 /// an actual round-trip, not just a provider invalidation.
 final syncNowProvider = Provider<Future<void> Function()>((ref) {
   return () async {
-    final session = ref.read(sessionContextProvider).valueOrNull;
-    if (session == null) return;
+    final SessionContext session;
+    try {
+      session = await ref.read(sessionContextProvider.future);
+    } catch (_) {
+      return;
+    }
     await ref.read(syncEngineProvider).syncNow(session.userId);
   };
 });

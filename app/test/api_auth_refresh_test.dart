@@ -164,6 +164,29 @@ void main() {
     expect(h.transport.seen, [null]);
   });
 
+  /// Losing the network is not losing the session.
+  ///
+  /// The refresh used to treat any thrown exception as "the refresh token is
+  /// dead" and sign the reader out. A phone that drops its connection between
+  /// the 401 and the refresh throws exactly that — so a tunnel could end a
+  /// session, taking the reader to the sign-in screen with a queue of unsynced
+  /// reading behind them.
+  test('a refresh that never reached the server does not sign anyone out', () async {
+    var signedOut = false;
+    final h = build(
+      statuses: [401],
+      readToken: () => 'stale',
+      refreshSession: () async => throw DioException(
+        requestOptions: RequestOptions(path: '/token'),
+        type: DioExceptionType.connectionError,
+      ),
+      onAuthLost: () async => signedOut = true,
+    );
+
+    await expectLater(h.client.getMe(), throwsA(isA<DioException>()));
+    expect(signedOut, isFalse, reason: 'nobody said the session was over');
+  });
+
   test('non-401 errors are untouched by the auth path', () async {
     var refreshes = 0;
     final h = build(

@@ -1,4 +1,4 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, SocketException;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -23,6 +23,34 @@ String? get kPlatformName {
   return null;
 }
 
+/// Endpoints whose work is an LLM call — they are legitimately slower than
+/// anything else the app asks for, so the default [Dio] receive ceiling would
+/// cut them off mid-thought.
+final _llmOptions = Options(receiveTimeout: const Duration(seconds: 90));
+
+/// Whether [error] means "we never got an answer from the server" — airplane
+/// mode, no route, a dead cell, a captive portal that swallows the request —
+/// as opposed to "the server answered, and the answer was no".
+///
+/// The distinction is the whole difference between a retry that is worth
+/// counting and one that isn't. The sync queue gives an op five attempts
+/// before it gives up on it for good; spending those on a phone that simply
+/// has no network means a reader who logs five things in airplane mode lands
+/// with five permanently-errored ops instead of a library that syncs itself
+/// the moment the signal comes back.
+bool isOfflineError(Object error) {
+  if (error is! DioException) return false;
+  // A real HTTP response — the server was reached and had an opinion.
+  if (error.response != null) return false;
+  return const {
+        DioExceptionType.connectionError,
+        DioExceptionType.connectionTimeout,
+        DioExceptionType.receiveTimeout,
+        DioExceptionType.sendTimeout,
+      }.contains(error.type) ||
+      error.error is SocketException;
+}
+
 /// Reads the current access token. Null means "no session" — the request goes
 /// out unauthenticated rather than waiting on one.
 typedef TokenReader = String? Function();
@@ -42,7 +70,21 @@ class ApiClient {
   })  : _readToken = readToken ?? _supabaseToken,
         _refreshSession = refreshSession ?? _supabaseRefresh,
         _onAuthLost = onAuthLost ?? _supabaseSignOut,
-        _dio = Dio(BaseOptions(baseUrl: _apiBaseUrl)) {
+        _dio = Dio(BaseOptions(
+          baseUrl: _apiBaseUrl,
+          // Airplane mode fails fast on its own (the OS answers "network
+          // unreachable" immediately). The case that needs a ceiling is the
+          // *other* offline: a network the phone is joined to that goes
+          // nowhere — hotel wifi, a captive portal, a dead mobile cell. With
+          // no timeout Dio inherits the OS socket default, which is minutes,
+          // and every awaited call on a user-action path (Stop & log among
+          // them) stalls behind it. `receiveTimeout` is generous because the
+          // slowest legitimate endpoints are LLM-backed and raise it further
+          // themselves ([_llmOptions]).
+          connectTimeout: const Duration(seconds: 15),
+          sendTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
+        )) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
@@ -77,9 +119,14 @@ class ApiClient {
             // No session at all: nothing to refresh, and signing out again
             // would be noise. Let the caller render its own error state.
             if (_readToken() == null) return handler.next(error);
-            final token = await _refreshOnce();
-            if (token == null) {
-              await _onAuthLost();
+            final refreshed = await _refreshOnce();
+            if (refreshed.token == null) {
+              // Only sign out on an answer. A refresh that failed because the
+              // phone lost the network says nothing about whether the session
+              // is still good, and treating it as a dead refresh token threw
+              // readers back to the sign-in screen for going through a tunnel
+              // — with a queue of unsynced work behind them.
+              if (refreshed.conclusive) await _onAuthLost();
               return handler.next(error);
             }
             // No need to set the header here — `fetch` re-runs onRequest, which
@@ -139,21 +186,25 @@ class ApiClient {
 
   static Future<void> _supabaseSignOut() => Supabase.instance.client.auth.signOut();
 
-  Future<String?>? _refreshing;
+  /// A refresh outcome. [conclusive] is false when the attempt never reached
+  /// Supabase — "we don't know", not "the session is gone".
+  Future<({String? token, bool conclusive})>? _refreshing;
 
   /// Coalesces concurrent refreshes: a sync drain fires several requests at
   /// once, so an expired token means N simultaneous 401s. Unlike the
   /// drain-the-queue guard (CLAUDE.md, 7 Jul 2026), plain coalescing is correct
   /// here — every caller wants the same thing, *a* fresh token now, so one that
   /// joins mid-flight gets exactly the token it would have fetched itself.
-  Future<String?> _refreshOnce() {
+  Future<({String? token, bool conclusive})> _refreshOnce() {
     final existing = _refreshing;
     if (existing != null) return existing;
     final started = () async {
       try {
-        return await _refreshSession();
-      } catch (_) {
-        return null; // Refresh token rejected/expired — caller signs out.
+        return (token: await _refreshSession(), conclusive: true);
+      } catch (err) {
+        // Rejected/expired refresh token — the caller signs out. Unless we
+        // never got to ask, in which case nobody has said anything about it.
+        return (token: null, conclusive: !_isUnreachable(err));
       }
     }();
     _refreshing = started;
@@ -162,6 +213,12 @@ class ApiClient {
     });
     return started;
   }
+
+  /// Whether [err] means the attempt never reached anyone. Supabase's own
+  /// client raises [AuthRetryableFetchException] for exactly this, which is
+  /// the name it gives the case: try again, don't conclude anything.
+  static bool _isUnreachable(Object err) =>
+      isOfflineError(err) || err is SocketException || err is AuthRetryableFetchException;
 
   /// Idempotent — safe to call on every sign-in, not just the first.
   Future<void> bootstrap() => _dio.post('/auth/bootstrap');
@@ -542,7 +599,7 @@ class ApiClient {
     final res = await _dio.post('/catalog/cover-extract', data: {
       'front_url': ?frontUrl,
       'back_url': ?backUrl,
-    });
+    }, options: _llmOptions);
     return res.data as Map<String, dynamic>;
   }
 
@@ -689,7 +746,7 @@ class ApiClient {
   /// Reasoned recommendations (S11). Returns `{enabled, picks}`; `enabled` is
   /// false when the server has no LLM key configured (feature dormant).
   Future<Map<String, dynamic>> getRecommendations() async {
-    final res = await _dio.get('/recommendations');
+    final res = await _dio.get('/recommendations', options: _llmOptions);
     return res.data as Map<String, dynamic>;
   }
 

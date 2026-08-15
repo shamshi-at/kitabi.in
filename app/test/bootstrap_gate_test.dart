@@ -1,8 +1,23 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kitabi/core/auth/auth_providers.dart';
+import 'package:kitabi/core/auth/auth_service.dart';
+import 'package:kitabi/data/api/api_client.dart';
+import 'package:kitabi/data/db/database.dart';
+import 'package:kitabi/data/sync/sync_providers.dart';
+
+class _FakeApi extends ApiClient {
+  @override
+  Future<void> bootstrap() async {}
+}
+
+class _UnreachableApi extends ApiClient {
+  @override
+  Future<void> bootstrap() async => throw Exception('no network');
+}
 
 /// The gate that decides whether a signed-in reader may leave the splash.
 ///
@@ -41,6 +56,68 @@ void main() {
       final refreshFailed = AsyncError<void>(Exception('tunnel'), StackTrace.empty)
           .copyWithPrevious(const AsyncData<void>(null));
       expect(holdsOnSplash(refreshFailed), isFalse);
+    });
+  });
+
+  /// …and the other half of the same door: the gate holds on an *unproven*
+  /// account, so the bootstrap must stop failing once the account is proven.
+  ///
+  /// A phone in airplane mode can never complete this call. With the gate
+  /// closed on it, a reader who opened Kitabi on a flight was held on the
+  /// splash screen — locked out of a library that was sitting on the device
+  /// the whole time, and the one place where offline-first is the entire
+  /// promise. Nothing about the network says the profile row is missing.
+  group('the bootstrap itself, offline', () {
+    late AppDatabase db;
+
+    setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
+    tearDown(() => db.close());
+
+    ProviderContainer containerFor(ApiClient api) {
+      final container = ProviderContainer(overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        apiClientProvider.overrideWithValue(api),
+        authStateProvider.overrideWith(
+          (ref) => Stream.value(KitabiAuthUser(id: 'u1', email: 'r@example.com')),
+        ),
+        syncTriggerProvider.overrideWithValue(() {}),
+      ]);
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('an account that has bootstrapped here before is let through', () async {
+      await db.keyValuesDao.setValue('bootstrapped_user_id', 'u1');
+
+      await expectLater(
+        containerFor(_UnreachableApi()).read(bootstrapProvider.future),
+        completes,
+      );
+    });
+
+    test('an account that has pulled here before is let through', () async {
+      // Upgraders from a build that kept no such record — but a sync cursor
+      // is proof enough that this account exists server-side.
+      await db.syncStateDao.saveCursor('u1', 91);
+
+      await expectLater(
+        containerFor(_UnreachableApi()).read(bootstrapProvider.future),
+        completes,
+      );
+    });
+
+    test('an account never seen here still holds the door', () async {
+      await expectLater(
+        containerFor(_UnreachableApi()).read(bootstrapProvider.future),
+        throwsA(anything),
+        reason: 'a profile row we have never seen may genuinely not exist',
+      );
+    });
+
+    test('a successful bootstrap records itself for next time', () async {
+      await containerFor(_FakeApi()).read(bootstrapProvider.future);
+
+      expect(await db.keyValuesDao.getValue('bootstrapped_user_id'), 'u1');
     });
   });
 

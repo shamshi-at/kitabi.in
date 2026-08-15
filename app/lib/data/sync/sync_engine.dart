@@ -131,14 +131,25 @@ class SyncEngine {
       List<Map<String, dynamic>> results;
       try {
         results = await api.syncPush(payloads);
-      } catch (_) {
-        for (final o in ops) {
-          await db.syncQueueDao.incrementAttempt(o.opId);
-          if (o.attempts + 1 >= maxAttempts) {
-            await _setStatus(o.entity, o.entityId, 'error');
+      } catch (err) {
+        // Being offline is not a failed attempt — nothing was attempted.
+        //
+        // Every mutation fires a sync trigger (repositories do it on enqueue),
+        // so a reader working in airplane mode racks up one "failure" per
+        // thing they do. Counting those spent all five retries within the
+        // first few minutes of a flight, flipped the ops to `error`, and left
+        // the reader on landing with a red "some changes haven't synced" bar
+        // over work that would have synced itself if the queue had simply
+        // waited. Only an answer *from the server* counts against an op.
+        if (!isOfflineError(err)) {
+          for (final o in ops) {
+            await db.syncQueueDao.incrementAttempt(o.opId);
+            if (o.attempts + 1 >= maxAttempts) {
+              await _setStatus(o.entity, o.entityId, 'error');
+            }
           }
         }
-        return processed; // stop draining on network error; retry next sync
+        return processed; // stop draining; the next trigger resumes here
       }
 
       final byId = {for (final r in results) r['op_id'] as String: r};
