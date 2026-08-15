@@ -710,6 +710,50 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   the one path where this device has *not* seen the event yet — a background push
   runs no app code — so a screen that renders from local state needs the pull to
   land before it opens, or it will bounce the reader straight back out.
+- **"Offline" has to be a *distinguishable* outcome, or every retry budget in the
+  app quietly spends itself on a phone with no signal.** Four separate failures,
+  one missing distinction (15 Aug 2026). The sync queue counted a push that never
+  left the device as a failed attempt, so five mutations in airplane mode burned an
+  op's five retries and marked it `error` for good — a day's reading arriving as a
+  red banner instead of a sync. `POST /auth/bootstrap` failing offline put a
+  signed-in reader on the splash screen *permanently*, locked out of a library
+  sitting on the device, because the gate that holds an unproven account (13 Aug)
+  cannot tell "the row may not exist" from "we couldn't ask". A token refresh that
+  failed on a dropped connection was read as a dead refresh token and **signed the
+  reader out**, unsynced queue and all. And `Dio` had no timeouts at all, so a
+  network that is joined but goes nowhere (hotel wifi, captive portal) stalled every
+  awaited call for the OS socket default — minutes — including ones on the Stop &
+  log path. `isOfflineError` (`api_client.dart`) is the one classifier now: no
+  response object and a connection/timeout error means *nobody has said anything*,
+  which is never grounds to conclude, punish or lock out. Corollary for gates: when
+  a check exists to prove a fact, record the proof (`bootstrapped_user_id`) so being
+  offline later can't unprove it.
+- **A running sitting is device-local by design — so anything the wire says about
+  it is a *claim*, and anything pointing at it is a reference to a row the server
+  doesn't have.** Both halves bit on the same day (15 Aug 2026). Stopping a sitting
+  while offline never reached `DELETE /active-session`, so the account still showed
+  it running and the next `pullAndApply` dutifully **adopted it back**: clock
+  restarted from the original start, lock-screen notification returned over a
+  sitting the reader had finished, and stopping it again wrote a second row for one
+  sitting (background auto-stops never published at all, so they did it every time).
+  A stop now leaves `active_session_pending_stop`, which the pull reads as "already
+  over here" and retries until the delete lands. The mirror image: a note written
+  *during* a sitting names a `reading_sessions` id that only becomes a row on stop,
+  so `/sync/push` rejected it `invalid_reference` and the client dropped it — every
+  note taken while a timer ran stayed on that phone forever. The link is now
+  withheld from the wire until `logSession` creates the row, then sent as an update
+  behind it. `test_sync.py` had a passing test for the mid-sitting note that pushed
+  the session op *first* — an order no client can produce; a fixture agreeing with
+  the server instead of with the app (same shape as the 9 Aug review-body fixture).
+- **Three best-effort cleanups in one `try` is one cleanup with two decoys.**
+  `stopAndLogActiveSession` cancelled the check-in, cancelled the enforcement task
+  and ended the lock-screen clock inside a single `try {} catch (_) {}` — so the
+  first that threw silently cancelled the two after it, and the clock (last in line,
+  and the only one the reader can see) was the one left counting a stopped sitting.
+  Its early `return null` skipped all three, which is exactly the path a second stop
+  takes after a background isolate already logged the sitting. Independent cleanups
+  get independent failures, and a teardown that a *later* code path may need must
+  not be last behind things that can throw.
 
 ## Open decisions
 
