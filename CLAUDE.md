@@ -779,6 +779,21 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   `{noteId: sessionId}` map in `key_values` (`note_session_links.dart`) that the
   pull can't clobber, replayed after every pull — so it lands whenever the sitting
   reaches that device, no matter who ended it.
+- **A publish that happens once, at the moment of the action, is a publish that
+  never happens offline.** The running sitting is announced to the account by a
+  single `PUT /active-session` inside `start()`; with no network it fails
+  silently and *nothing retried it*, so a sitting begun offline stayed local
+  for good. The reader's other device showed the book as "reading" — that rides
+  the sync queue, which does retry — with no timer beside it (owner report,
+  15 Aug 2026). The stop half had already been given a retry note; the start
+  half had none, and the asymmetry was invisible because both look like
+  fire-and-forget at the call site. `pullAndApply` now publishes an unpublished
+  local sitting when it finds the account reachable and empty, which is exactly
+  the moment that fact is known. Corollary, and the reason the fix alone was not
+  enough: **regaining signal is not a lifecycle event.** Reconciliation ran on
+  foreground-resume and on push, so coming back online with the app already open
+  was neither — the connectivity listener drained the queue and nothing else.
+  Anything that reconciles with the server needs a hook there too.
 - **Three best-effort cleanups in one `try` is one cleanup with two decoys.**
   `stopAndLogActiveSession` cancelled the check-in, cancelled the enforcement task
   and ended the lock-screen clock inside a single `try {} catch (_) {}` — so the

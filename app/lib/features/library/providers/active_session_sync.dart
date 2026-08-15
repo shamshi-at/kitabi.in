@@ -122,7 +122,26 @@ class ActiveSessionSync {
       // which would throw away the reader's own running timer.
       if (localId == null) return false;
       final mine = await db.keyValuesDao.getValue(activeSessionMirroredKey);
-      if (mine != localId) return false;
+      if (mine != localId) {
+        // Ours, and the account has never heard of it — the publish at `start`
+        // was made with no network and quietly failed. Nothing retried it, so
+        // the sitting stayed device-local for good: the reader's other device
+        // saw the book turn to "reading" (that rides the sync queue, which
+        // does retry) and no timer beside it (owner report, 15 Aug 2026).
+        //
+        // This is the moment we know the account is reachable *and* has
+        // nothing running, so it is exactly the moment to say so. Best-effort
+        // as ever; if it fails again the next pull tries again.
+        final sitting = await readLocalActiveSession(db);
+        if (sitting != null && sitting.id == localId) {
+          final confirmedRaw = await db.keyValuesDao.getValue(activeSessionConfirmedKey);
+          await publishStart(
+            sitting,
+            confirmedAt: confirmedRaw == null ? null : DateTime.tryParse(confirmedRaw),
+          );
+        }
+        return false;
+      }
       await clearLocalActiveSession(db);
       _ref.read(activeSessionProvider.notifier).clearStaleState();
       await _ref.read(activeSessionProvider.notifier).reconcile();

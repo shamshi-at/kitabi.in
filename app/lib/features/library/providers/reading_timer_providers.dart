@@ -249,6 +249,27 @@ Future<LoggedSession?> stopAndLogActiveSession(
   );
 }
 
+/// The sitting currently running on this device, read straight from storage.
+///
+/// From `key_values`, never from [activeSessionProvider]: the callers that
+/// need this are reconciling with the account, and may be running before any
+/// Notifier has hydrated (or in a background isolate that has none at all).
+/// The same reason [stopAndLogActiveSession] reads from here.
+Future<ActiveSession?> readLocalActiveSession(AppDatabase db) async {
+  final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
+  final id = await db.keyValuesDao.getValue(activeSessionIdKey);
+  final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
+  final startedAt = startedRaw == null ? null : DateTime.tryParse(startedRaw);
+  if (entryId == null || id == null || startedAt == null) return null;
+  final pageStartRaw = await db.keyValuesDao.getValue(activeSessionPageStartKey);
+  return ActiveSession(
+    libraryEntryId: entryId,
+    startedAt: startedAt,
+    id: id,
+    pageStart: int.tryParse(pageStartRaw ?? ''),
+  );
+}
+
 /// Takes the lock-screen clock down: the iOS Live Activity, or the Android
 /// ongoing notification. Idempotent and silent — safe to call when nothing is
 /// showing, which is most of the time.

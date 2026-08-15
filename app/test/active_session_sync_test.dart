@@ -57,6 +57,12 @@ void main() {
   ActiveSessionSync sync() => container.read(activeSessionSyncProvider);
 
   Future<void> writeLocal({required String id, String? mirroredId}) async {
+    // The shelf row the sitting hangs off. publishStart refuses to announce a
+    // sitting whose entry is gone, so a fixture without one silently tests
+    // nothing.
+    await db.libraryEntriesDao.insertOne(
+      LibraryEntriesCompanion.insert(id: 'entry-1', userId: 'u1', editionId: 'e1'),
+    );
     await db.keyValuesDao.setValue(activeSessionEntryKey, 'entry-1');
     await db.keyValuesDao.setValue(activeSessionIdKey, id);
     await db.keyValuesDao.setValue(
@@ -259,6 +265,70 @@ void main() {
     expect(await db.keyValuesDao.getValue(activeSessionEntryKey), isNull);
   });
 
+  /// Started offline, then the signal came back.
+  ///
+  /// Publishing happens once, at `start`, and with no network it fails
+  /// silently — by design, because a timer that refused to start because
+  /// another phone was unreachable would be the worse bug. But nothing ever
+  /// tried again, so the sitting stayed device-local for good. The reader saw
+  /// the book turn to "reading" on their other device (that rides the sync
+  /// queue, which does retry) with no timer beside it (owner report,
+  /// 15 Aug 2026).
+  ///
+  /// An empty server plus an unpublished local sitting is not a stalemate: it
+  /// is the one moment we know the account is reachable *and* has nothing
+  /// running, which is exactly when to say what we are doing.
+  test('a sitting started offline is published once the account is reachable',
+      () async {
+    await writeLocal(id: 's-local'); // no mirrored id — never published
+    api.active = null;
+
+    expect(await sync().pullAndApply(), isFalse, reason: 'nothing to adopt — it is ours');
+
+    expect(api.lastPut, isNotNull, reason: 'the other device has to be told eventually');
+    expect(api.lastPut!['session_id'], 's-local');
+    expect(api.lastPut!['library_entry_id'], 'entry-1');
+    // And it is now on the account, so a later empty server means the other
+    // device stopped it rather than "we never published".
+    expect(await db.keyValuesDao.getValue(activeSessionMirroredKey), 's-local');
+    // The reader's own running timer is untouched throughout.
+    expect(await db.keyValuesDao.getValue(activeSessionIdKey), 's-local');
+  });
+
+  test('a still-unreachable account leaves the sitting unpublished, to try again',
+      () async {
+    await writeLocal(id: 's-local');
+    final offline = _PutFailsApi();
+    final offlineContainer = ProviderContainer(overrides: [
+      appDatabaseProvider.overrideWithValue(db),
+      apiClientProvider.overrideWithValue(offline),
+    ]);
+    addTearDown(offlineContainer.dispose);
+
+    expect(await offlineContainer.read(activeSessionSyncProvider).pullAndApply(), isFalse);
+
+    expect(await db.keyValuesDao.getValue(activeSessionMirroredKey), isNull,
+        reason: 'unpublished is the state that makes the next pull try again');
+    expect(await db.keyValuesDao.getValue(activeSessionIdKey), 's-local',
+        reason: 'and it must never cost the reader their running timer');
+  });
+
+  test('the confirmation travels with a late publish', () async {
+    // "Yes, still reading" moves the deadline. Publishing without it would have
+    // the other device compute a deadline 90 minutes from the original start
+    // and stop a sitting the reader had just confirmed.
+    await writeLocal(id: 's-local');
+    await db.keyValuesDao.setValue(
+      activeSessionConfirmedKey,
+      DateTime.utc(2026, 8, 14, 11).toIso8601String(),
+    );
+    api.active = null;
+
+    await sync().pullAndApply();
+
+    expect(api.lastPut!['confirmed_at'], startsWith('2026-08-14T11:00:00'));
+  });
+
   test('the same sitting twice is not re-applied', () async {
     await writeLocal(id: 's-remote', mirroredId: 's-remote');
     api.active = {
@@ -286,6 +356,7 @@ class _DeleteFailsApi extends _FakeApi {
   Future<void> deleteActiveSession({String? deviceId}) async => throw Exception('offline');
 }
 
+/// The same, for the start half.
 class _PutFailsApi extends _FakeApi {
   @override
   Future<void> putActiveSession(Map<String, dynamic> payload) async =>
