@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/data/api/api_client.dart';
 import 'package:kitabi/data/db/database.dart';
+import 'package:kitabi/data/repositories/repositories.dart';
 import 'package:kitabi/data/sync/sync_providers.dart';
 import 'package:kitabi/features/library/providers/active_session_sync.dart';
 import 'package:kitabi/features/library/providers/reading_timer_providers.dart';
@@ -99,6 +100,66 @@ void main() {
     // The other device wrote the finished row; writing one here too is the
     // duplicate this whole design exists to avoid.
     expect(await db.readingSessionsDao.allSince(DateTime.utc(2020)), isEmpty);
+  });
+
+  /// The guard above, in the direction it was missing.
+  ///
+  /// The "never clear what we started" rule was keyed only on *adopting* a
+  /// sitting, so the device that started one never recorded that the account
+  /// knew about it. When the other device stopped it, the empty server read as
+  /// "not published yet" and this device kept counting — clock running,
+  /// lock-screen notification up, over a sitting already logged and already
+  /// pulled back onto this very device (found with two emulators, 15 Aug 2026).
+  test('a sitting started here and published IS cleared when the other device stops it',
+      () async {
+    await writeLocal(id: 's-mine');
+    // publishStart succeeded, so the account has heard of this sitting.
+    await db.keyValuesDao.setValue(activeSessionMirroredKey, 's-mine');
+    api.active = null; // …and now the other device has stopped it
+
+    expect(await sync().pullAndApply(), isTrue);
+    expect(await db.keyValuesDao.getValue(activeSessionEntryKey), isNull);
+    // The other device wrote the row; writing a second one here is the
+    // duplicate this whole design exists to avoid.
+    expect(await db.readingSessionsDao.allSince(DateTime.utc(2020)), isEmpty);
+  });
+
+  test('publishing a start is what records that the account knows', () async {
+    final entryId = await LibraryRepository(
+      db,
+      const SessionContext(userId: 'u1', deviceId: 'd1'),
+    ).add(editionId: '44444444-4444-4444-4444-444444444444');
+
+    await sync().publishStart(ActiveSession(
+      libraryEntryId: entryId,
+      startedAt: DateTime.utc(2026, 8, 15, 20),
+      id: 's-mine',
+    ));
+
+    expect(api.lastPut?['session_id'], 's-mine');
+    expect(await db.keyValuesDao.getValue(activeSessionMirroredKey), 's-mine',
+        reason: 'only a *successful* publish may record it');
+  });
+
+  test('a start that never reached the server records nothing', () async {
+    final entryId = await LibraryRepository(
+      db,
+      const SessionContext(userId: 'u1', deviceId: 'd1'),
+    ).add(editionId: '44444444-4444-4444-4444-444444444444');
+    final offlineContainer = ProviderContainer(overrides: [
+      appDatabaseProvider.overrideWithValue(db),
+      apiClientProvider.overrideWithValue(_PutFailsApi()),
+    ]);
+    addTearDown(offlineContainer.dispose);
+
+    await offlineContainer.read(activeSessionSyncProvider).publishStart(ActiveSession(
+          libraryEntryId: entryId,
+          startedAt: DateTime.utc(2026, 8, 15, 20),
+          id: 's-offline',
+        ));
+
+    expect(await db.keyValuesDao.getValue(activeSessionMirroredKey), isNull,
+        reason: 'an unpublished sitting is the one a pull must never throw away');
   });
 
   test('a sitting this device started is never cleared by an empty server',
@@ -223,4 +284,10 @@ class _OfflineApi extends ApiClient {
 class _DeleteFailsApi extends _FakeApi {
   @override
   Future<void> deleteActiveSession({String? deviceId}) async => throw Exception('offline');
+}
+
+class _PutFailsApi extends _FakeApi {
+  @override
+  Future<void> putActiveSession(Map<String, dynamic> payload) async =>
+      throw Exception('offline');
 }

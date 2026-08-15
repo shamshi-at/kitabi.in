@@ -51,6 +51,14 @@ class ActiveSessionSync {
         'confirmed_at': confirmedAt?.toUtc().toIso8601String(),
         'device_id': await _deviceId(),
       });
+      // The account has it now — so a later pull finding *nothing* running
+      // means the other device stopped it, not that we never published. Only
+      // recorded on success: an offline start must stay unpublished, because
+      // that is precisely the sitting the pull must never throw away.
+      await _ref
+          .read(appDatabaseProvider)
+          .keyValuesDao
+          .setValue(activeSessionMirroredKey, session.id);
     } catch (_) {
       // Offline, or the server is having a moment. The sitting is already
       // running locally and the finished row still syncs the usual way.

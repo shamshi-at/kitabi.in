@@ -38,15 +38,24 @@ const activeSessionConfirmedKey = 'active_session_confirmed_at';
 /// only appears on stop (rule 4: UUIDs are client-side anyway).
 const activeSessionIdKey = 'active_session_id';
 
-/// Set to the session id of a sitting this device *adopted* from the account
-/// rather than started itself (owner request, 14 Aug 2026: the same account on
-/// two devices shares one running timer).
+/// Set to the session id of a sitting **the account knows about** — one this
+/// device adopted from the server, or one it started here and successfully
+/// published (owner request, 14 Aug 2026: the same account on two devices
+/// shares one running timer).
 ///
 /// It exists to make one distinction the pull cannot make otherwise: when the
 /// server says nothing is running, that means "stopped on the other device"
-/// for a mirrored sitting, and "we simply haven't published ours yet" for one
-/// this device started while offline. Without it, a pull during a network
-/// hiccup would throw away the reader's own running timer.
+/// for a sitting the account has heard of, and "we simply haven't published
+/// ours yet" for one this device started while offline. Without it, a pull
+/// during a network hiccup would throw away the reader's own running timer.
+///
+/// It used to be set **only** on adopt, which quietly made the guard one-way:
+/// the device that *started* a sitting never recorded that the account knew,
+/// so when the other device stopped it, the empty server read as "not
+/// published yet" and the starting device kept counting — clock running,
+/// lock-screen notification up, over a sitting already logged and already
+/// pulled back onto that very device (found with two emulators, 15 Aug 2026).
+/// The key name is kept for continuity with installs that already have it.
 const activeSessionMirroredKey = 'active_session_mirrored_id';
 
 /// The id of a sitting this device has stopped and logged, but has not yet
