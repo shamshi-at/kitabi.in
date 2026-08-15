@@ -793,6 +793,86 @@ async def test_reading_note_without_a_sitting_or_pages_is_fine(client):
     assert note["data"]["page_start"] is None
 
 
+async def test_reading_note_citing_a_sitting_that_does_not_exist_yet_is_rejected(client):
+    """The ordering the app cannot avoid, and why the client defers the link.
+
+    A sitting only becomes a `reading_sessions` row when the clock *stops* —
+    until then it lives in the phone's key_values. So a note jotted mid-sitting
+    is enqueued (and pushed, immediately) naming a session id this server has
+    never seen. There is no way to accept that safely: proving the sitting
+    belongs to the pusher means reading a row that isn't there.
+
+    The test above this one pushes the session first, which no client could
+    have done — a fixture agreeing with the server rather than with the app.
+    This pins the real answer, so the client's deferral is not left resting on
+    an assumption.
+    """
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    entry_op = _op("library_entries", entry_id, "create", {"edition_id": edition_id})
+    note_op = _op(
+        "reading_notes",
+        str(uuid.uuid4()),
+        "create",
+        {
+            "library_entry_id": entry_id,
+            "session_id": str(uuid.uuid4()),  # a clock that is still running
+            "body": "The ferry chapter turns on one word.",
+        },
+    )
+    resp = await client.post("/sync/push", json={"ops": [entry_op, note_op]})
+    results = resp.json()["results"]
+    assert results[1]["status"] == "rejected"
+    assert results[1]["code"] == "invalid_reference"
+
+
+async def test_a_mid_sitting_note_round_trips_the_way_the_app_pushes_it(client):
+    """…and the sequence the client actually produces does work: the note goes
+    out unattached, the sitting follows when it stops, and an update hands the
+    note its sitting. Same end state, in an order a phone can reach."""
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    note_id = str(uuid.uuid4())
+    session_id = str(uuid.uuid4())
+
+    resp = await client.post(
+        "/sync/push",
+        json={
+            "ops": [
+                _op("library_entries", entry_id, "create", {"edition_id": edition_id}),
+                # Written while the clock ran — no sitting to name yet.
+                _op(
+                    "reading_notes",
+                    note_id,
+                    "create",
+                    {"library_entry_id": entry_id, "body": "The ferry chapter.", "page_start": 61},
+                ),
+                # Stop & log: the sitting becomes a row…
+                _op(
+                    "reading_sessions",
+                    session_id,
+                    "create",
+                    {
+                        "library_entry_id": entry_id,
+                        "started_at": "2026-08-15T20:00:00Z",
+                        "ended_at": "2026-08-15T20:42:00Z",
+                        "duration_seconds": 2520,
+                    },
+                ),
+                # …and the note is handed it.
+                _op("reading_notes", note_id, "update", {"session_id": session_id}),
+            ]
+        },
+    )
+    assert [r["status"] for r in resp.json()["results"]] == ["applied"] * 4
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    note = next(c for c in pulled.json()["changes"] if c["entity"] == "reading_notes")
+    assert note["data"]["session_id"] == session_id
+    assert note["data"]["body"] == "The ferry chapter."
+    assert note["data"]["page_start"] == 61  # the link did not overwrite the note
+
+
 async def test_reading_note_edit_and_delete_round_trip(client):
     """Editing must change the words without moving the note off its sitting,
     and a delete is a soft delete like every other Layer-2 row."""

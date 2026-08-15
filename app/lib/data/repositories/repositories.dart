@@ -345,6 +345,21 @@ class ReadingNotesRepository extends Repo {
         syncStatus: const Value('pending'),
       ),
     );
+    // The sitting a note was written during only becomes a *row* when the
+    // sitting stops — before that it lives in key_values, device-local by
+    // design. So a note jotted mid-sitting names a `reading_sessions` id the
+    // server has never heard of, and the server (rightly) refuses to hang a
+    // note off a session it can't prove belongs to this reader: rejected as
+    // `invalid_reference`, dropped from the queue, marked errored. Every note
+    // written while a timer ran — the ones the feature exists for — was
+    // therefore local to that phone forever.
+    //
+    // So the link is withheld from the wire until there is something to link
+    // to, and [ReadingSessionsRepository.logSession] sends it the moment the
+    // sitting is logged. Locally the note is attached the whole time; this is
+    // only about what a server can be told and when.
+    final sessionExists =
+        sessionId != null && await db.readingSessionsDao.getById(sessionId) != null;
     await enqueue(
       entity: 'reading_notes',
       entityId: id,
@@ -352,7 +367,7 @@ class ReadingNotesRepository extends Repo {
       data: {
         'library_entry_id': libraryEntryId,
         'body': body,
-        'session_id': ?sessionId,
+        if (sessionExists) 'session_id': sessionId,
         'page_start': ?pageStart,
         'page_end': ?pageEnd,
       },
@@ -472,6 +487,19 @@ class ReadingSessionsRepository extends Repo {
         'page_end': ?pageEnd,
       },
     );
+    // Now that the sitting is a row the server will accept, hand it the notes
+    // that were written against it while it was only a running clock — see
+    // the long note in [ReadingNotesRepository.add]. Enqueued *after* the
+    // create above, so the queue's own order (oldest first) delivers the
+    // session before anything that points at it.
+    for (final note in await db.readingNotesDao.forSession(id)) {
+      await enqueue(
+        entity: 'reading_notes',
+        entityId: note.id,
+        opType: 'update',
+        data: {'session_id': id},
+      );
+    }
     return id;
   }
 

@@ -169,6 +169,13 @@ class ReadingNotesDao extends DatabaseAccessor<AppDatabase> with _$ReadingNotesD
   Future<ReadingNote?> getById(String id) =>
       (select(readingNotes)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// The same set as [watchForSession], read once — the stop path needs them
+  /// in hand, not as a stream, to point each one at the sitting's now-real row.
+  Future<List<ReadingNote>> forSession(String sessionId) => (select(
+        readingNotes,
+      )..where((t) => t.sessionId.equals(sessionId) & t.deletedAt.isNull()))
+          .get();
+
   Future<void> insertOne(ReadingNotesCompanion row) => into(readingNotes).insert(row);
 
   Future<void> patch(String id, ReadingNotesCompanion row) =>
@@ -203,6 +210,9 @@ class ReadingSessionsDao extends DatabaseAccessor<AppDatabase> with _$ReadingSes
         readingSessions,
       )..where((t) => t.startedAt.isBiggerOrEqualValue(since) & t.deletedAt.isNull()))
           .watch();
+
+  Future<ReadingSession?> getById(String id) =>
+      (select(readingSessions)..where((t) => t.id.equals(id))).getSingleOrNull();
 
   Future<void> insertOne(ReadingSessionsCompanion row) => into(readingSessions).insert(row);
 

@@ -62,6 +62,78 @@ void main() {
     expect(row?.pageEnd, isNull);
   });
 
+  /// The sitting a note is written during isn't a row yet — it lives in
+  /// key_values until the clock stops. Sending its id to the server names a
+  /// `reading_sessions` row that doesn't exist, and the server refuses to hang
+  /// a note off a session it can't prove belongs to the reader: rejected as
+  /// `invalid_reference`, dropped from the queue, marked errored. Which meant
+  /// every note written while a timer was running — the ones this feature is
+  /// for — stayed on the phone that wrote them, forever, in silence.
+  group('a note written while the clock is still running', () {
+    const sittingId = '99999999-9999-9999-9999-999999999999';
+
+    Future<void> logTheSitting() => ReadingSessionsRepository(
+          db,
+          const SessionContext(userId: 'u1', deviceId: 'd1'),
+        ).logSession(
+          id: sittingId,
+          libraryEntryId: entryId,
+          startedAt: DateTime(2026, 8, 15, 20),
+          endedAt: DateTime(2026, 8, 15, 21),
+          durationSeconds: 3600,
+        );
+
+    test('goes out without the sitting the server has never heard of', () async {
+      await notes.add(
+        libraryEntryId: entryId,
+        sessionId: sittingId,
+        body: 'The ferry chapter turns on one word.',
+      );
+
+      final ops = await outbox();
+      expect(ops.single.payload, isNot(contains('session_id')),
+          reason: 'a reference the server cannot resolve is a rejected op');
+      // Locally it is attached the whole time — this is only about the wire.
+      final row = await db.readingNotesDao.getById(ops.single.entityId);
+      expect(row?.sessionId, sittingId);
+    });
+
+    test('is handed its sitting the moment the sitting becomes a row', () async {
+      final noteId = await notes.add(
+        libraryEntryId: entryId,
+        sessionId: sittingId,
+        body: 'The ferry chapter turns on one word.',
+      );
+      await db.delete(db.syncQueue).go(); // as if the note had already synced
+
+      await logTheSitting();
+
+      final ops = await outbox();
+      expect(ops.map((o) => o.entity).toList(), ['reading_sessions', 'reading_notes'],
+          reason: 'the session has to land before anything points at it');
+      final link = ops.last;
+      expect(link.opType, 'update');
+      expect(link.entityId, noteId);
+      expect(link.payload, contains(sittingId));
+    });
+
+    test('a note written *after* the sitting was logged carries it outright',
+        () async {
+      await logTheSitting();
+      await db.delete(db.syncQueue).go();
+
+      await notes.add(
+        libraryEntryId: entryId,
+        sessionId: sittingId,
+        body: 'Read it again on the platform.',
+      );
+
+      final ops = await outbox();
+      expect(ops, hasLength(1), reason: 'nothing to defer, nothing to repair');
+      expect(ops.single.payload, contains(sittingId));
+    });
+  });
+
   test('notes stream per book, newest first', () async {
     await notes.add(libraryEntryId: entryId, body: 'first');
     await Future<void>.delayed(const Duration(milliseconds: 5));
