@@ -87,10 +87,25 @@ void main() {
       return id;
     });
 
-    Future<void> settle() async {
-      for (var i = 0; i < 8; i++) {
+    // Waits for asynchronous work to land. [until], when given, is the outcome
+    // the next assertion is about: the loop stops as soon as it appears and
+    // gives up well past the point a healthy machine needs.
+    //
+    // It used to be a flat 8 rounds, which is a *time budget*, not a wait — so
+    // it encoded how fast this laptop happened to be. Stopping a sitting grew
+    // by a few database writes and a plugin teardown, and these tests went red
+    // on CI's slower runner while staying green locally (15 Aug 2026). A test
+    // that asserts an outcome should wait for the outcome.
+    Future<void> settle({Finder? until}) async {
+      var graceLeft = 8;
+      for (var i = 0; i < (until == null ? 8 : 120); i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump(const Duration(milliseconds: 30));
+        // The outcome appearing ends the *waiting*, not the settling: work the
+        // assertion depends on can still be in flight behind it (a sheet is on
+        // screen a beat before its fields are seeded). So keep going for a
+        // fixed grace, which is what the flat loop gave on a fast machine.
+        if (until != null && until.evaluate().isNotEmpty && --graceLeft <= 0) return;
       }
     }
 
@@ -116,7 +131,7 @@ void main() {
 
     // Stop → the mini-bar unmounts, the quick-stop sheet opens.
     await tester.tap(find.text('stop'));
-    await settle();
+    await settle(until: find.byType(TextField));
     expect(find.text('stop'), findsNothing); // the caller is gone
     expect(find.byType(TextField), findsWidgets); // the page sheet is up
 
@@ -170,10 +185,25 @@ void main() {
       return id;
     });
 
-    Future<void> settle() async {
-      for (var i = 0; i < 8; i++) {
+    // Waits for asynchronous work to land. [until], when given, is the outcome
+    // the next assertion is about: the loop stops as soon as it appears and
+    // gives up well past the point a healthy machine needs.
+    //
+    // It used to be a flat 8 rounds, which is a *time budget*, not a wait — so
+    // it encoded how fast this laptop happened to be. Stopping a sitting grew
+    // by a few database writes and a plugin teardown, and these tests went red
+    // on CI's slower runner while staying green locally (15 Aug 2026). A test
+    // that asserts an outcome should wait for the outcome.
+    Future<void> settle({Finder? until}) async {
+      var graceLeft = 8;
+      for (var i = 0; i < (until == null ? 8 : 120); i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump(const Duration(milliseconds: 30));
+        // The outcome appearing ends the *waiting*, not the settling: work the
+        // assertion depends on can still be in flight behind it (a sheet is on
+        // screen a beat before its fields are seeded). So keep going for a
+        // fixed grace, which is what the flat loop gave on a fast machine.
+        if (until != null && until.evaluate().isNotEmpty && --graceLeft <= 0) return;
       }
     }
 
@@ -199,7 +229,7 @@ void main() {
     await tester.tap(find.text('stop'));
     await tester.pump(); // ← the caller unmounts here, while the reads are open
     expect(find.text('stop'), findsNothing, reason: 'the caller is already gone');
-    await settle();
+    await settle(until: find.byType(TextField));
 
     expect(find.byType(TextField), findsWidgets,
         reason: 'the page question must survive the caller that asked for it');
@@ -241,10 +271,25 @@ void main() {
       return id;
     });
 
-    Future<void> settle() async {
-      for (var i = 0; i < 8; i++) {
+    // Waits for asynchronous work to land. [until], when given, is the outcome
+    // the next assertion is about: the loop stops as soon as it appears and
+    // gives up well past the point a healthy machine needs.
+    //
+    // It used to be a flat 8 rounds, which is a *time budget*, not a wait — so
+    // it encoded how fast this laptop happened to be. Stopping a sitting grew
+    // by a few database writes and a plugin teardown, and these tests went red
+    // on CI's slower runner while staying green locally (15 Aug 2026). A test
+    // that asserts an outcome should wait for the outcome.
+    Future<void> settle({Finder? until}) async {
+      var graceLeft = 8;
+      for (var i = 0; i < (until == null ? 8 : 120); i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump(const Duration(milliseconds: 30));
+        // The outcome appearing ends the *waiting*, not the settling: work the
+        // assertion depends on can still be in flight behind it (a sheet is on
+        // screen a beat before its fields are seeded). So keep going for a
+        // fixed grace, which is what the flat loop gave on a fast machine.
+        if (until != null && until.evaluate().isNotEmpty && --graceLeft <= 0) return;
       }
     }
 
@@ -266,7 +311,7 @@ void main() {
     await tester.tap(find.text('start'));
     await settle();
     await tester.tap(find.text('stop'));
-    await settle();
+    await settle(until: find.text('Save the page'));
 
     // Save without changing the number — it is already 42.
     await tester.tap(find.text('Save the page'));
@@ -309,10 +354,25 @@ void main() {
       return id;
     });
 
-    Future<void> settle() async {
-      for (var i = 0; i < 8; i++) {
+    // Waits for asynchronous work to land. [until], when given, is the outcome
+    // the next assertion is about: the loop stops as soon as it appears and
+    // gives up well past the point a healthy machine needs.
+    //
+    // It used to be a flat 8 rounds, which is a *time budget*, not a wait — so
+    // it encoded how fast this laptop happened to be. Stopping a sitting grew
+    // by a few database writes and a plugin teardown, and these tests went red
+    // on CI's slower runner while staying green locally (15 Aug 2026). A test
+    // that asserts an outcome should wait for the outcome.
+    Future<void> settle({Finder? until}) async {
+      var graceLeft = 8;
+      for (var i = 0; i < (until == null ? 8 : 120); i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump(const Duration(milliseconds: 30));
+        // The outcome appearing ends the *waiting*, not the settling: work the
+        // assertion depends on can still be in flight behind it (a sheet is on
+        // screen a beat before its fields are seeded). So keep going for a
+        // fixed grace, which is what the flat loop gave on a fast machine.
+        if (until != null && until.evaluate().isNotEmpty && --graceLeft <= 0) return;
       }
     }
 
@@ -339,7 +399,7 @@ void main() {
     await tester.runAsync(() => db.cachedBooksDao.updatePageCount(_editionId, 320));
 
     await tester.tap(find.text('stop'));
-    await settle();
+    await settle(until: find.textContaining('320'));
 
     expect(find.textContaining('How long is this book'), findsNothing,
         reason: 'the catalogue knows the length — stop asking');
@@ -386,10 +446,25 @@ void main() {
       return id;
     });
 
-    Future<void> settle() async {
-      for (var i = 0; i < 8; i++) {
+    // Waits for asynchronous work to land. [until], when given, is the outcome
+    // the next assertion is about: the loop stops as soon as it appears and
+    // gives up well past the point a healthy machine needs.
+    //
+    // It used to be a flat 8 rounds, which is a *time budget*, not a wait — so
+    // it encoded how fast this laptop happened to be. Stopping a sitting grew
+    // by a few database writes and a plugin teardown, and these tests went red
+    // on CI's slower runner while staying green locally (15 Aug 2026). A test
+    // that asserts an outcome should wait for the outcome.
+    Future<void> settle({Finder? until}) async {
+      var graceLeft = 8;
+      for (var i = 0; i < (until == null ? 8 : 120); i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump(const Duration(milliseconds: 30));
+        // The outcome appearing ends the *waiting*, not the settling: work the
+        // assertion depends on can still be in flight behind it (a sheet is on
+        // screen a beat before its fields are seeded). So keep going for a
+        // fixed grace, which is what the flat loop gave on a fast machine.
+        if (until != null && until.evaluate().isNotEmpty && --graceLeft <= 0) return;
       }
     }
 
@@ -411,7 +486,7 @@ void main() {
     await tester.tap(find.text('start'));
     await settle();
     await tester.tap(find.text('stop'));
-    await settle();
+    await settle(until: find.text('88'));
 
     expect(find.text('88'), findsWidgets,
         reason: 'the last noted page is a far better answer than a blank field');

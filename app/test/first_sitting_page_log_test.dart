@@ -204,10 +204,25 @@ void main() {
     ]);
     addTearDown(container.dispose);
 
-    Future<void> settle() async {
-      for (var i = 0; i < 8; i++) {
+    // Waits for asynchronous work to land. [until], when given, is the outcome
+    // the next assertion is about: the loop stops as soon as it appears and
+    // gives up well past the point a healthy machine needs.
+    //
+    // It used to be a flat 8 rounds, which is a *time budget*, not a wait — so
+    // it encoded how fast this laptop happened to be. Stopping a sitting grew
+    // by a few database writes and a plugin teardown, and these tests went red
+    // on CI's slower runner while staying green locally (15 Aug 2026). A test
+    // that asserts an outcome should wait for the outcome.
+    Future<void> settle({Finder? until}) async {
+      var graceLeft = 8;
+      for (var i = 0; i < (until == null ? 8 : 120); i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump(const Duration(milliseconds: 30));
+        // The outcome appearing ends the *waiting*, not the settling: work the
+        // assertion depends on can still be in flight behind it (a sheet is on
+        // screen a beat before its fields are seeded). So keep going for a
+        // fixed grace, which is what the flat loop gave on a fast machine.
+        if (until != null && until.evaluate().isNotEmpty && --graceLeft <= 0) return;
       }
     }
 
@@ -242,7 +257,7 @@ void main() {
     await settle();
 
     await tester.tap(find.text('Stop & log'));
-    await settle();
+    await settle(until: find.byType(TextField));
 
     // The page reached, and the book's length — the field only the untotalled
     // case shows.

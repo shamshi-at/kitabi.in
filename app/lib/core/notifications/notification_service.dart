@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +16,23 @@ class NotificationService {
   NotificationService(this._plugin);
 
   final FlutterLocalNotificationsPlugin _plugin;
-  bool _ready = false;
+
+  /// Static, not per-instance: what this guards — the tz database and the
+  /// plugin's `initialize` — is process-wide, and `FlutterLocalNotificationsPlugin`
+  /// is itself a singleton. Instances of this class are cheap and made freely
+  /// (every stop builds two: one to cancel the check-in, one inside
+  /// `ReadingLiveActivity`), so a per-instance flag meant re-loading the whole
+  /// timezone database and re-registering the notification callbacks on each
+  /// one. Harmless-looking, and it put real latency on the reading-timer stop
+  /// path — enough that the quick-stop widget tests, which allow a fixed number
+  /// of frames, went red on CI's slower runner while passing locally.
+  static bool _ready = false;
+  static bool _tzLoaded = false;
+
+  /// Lets a test start from a clean slate — the flag outlives a single test
+  /// otherwise, and a suite that asserts on `initialize` would see it skipped.
+  @visibleForTesting
+  static void resetReadyForTesting() => _ready = false;
 
   static const _channelId = 'lending_reminders';
   static const _checkInChannelId = 'reading_checkins';
@@ -28,7 +45,17 @@ class NotificationService {
     // which preserves the absolute instant (epoch) — so the reminder fires at
     // the right moment regardless of which zone `tz.local` resolves to. That
     // lets us skip a device-timezone plugin entirely.
-    tz.initializeTimeZones();
+    //
+    // Tracked separately from [_ready] because the two can't fail together:
+    // loading the database is pure Dart and always succeeds, while the plugin
+    // `initialize` below reaches a platform channel that may not be there at
+    // all. When it throws, `_ready` stays false and every later call used to
+    // re-load the entire timezone database on its way back to the same
+    // failure — the dominant cost on a stop path that now touches this twice.
+    if (!_tzLoaded) {
+      tz.initializeTimeZones();
+      _tzLoaded = true;
+    }
     // iOS notification-category action titles are fixed at registration time
     // (unlike Android, where actions are attached fresh on every schedule
     // call — see `scheduleCheckIn` below) — English-only for now, same as the
