@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/api/api_client.dart';
+import '../../../data/db/catalog_cache.dart';
 import '../../../data/sync/sync_providers.dart';
 
 /// Catalog-only search results (title / author / exact ISBN). The personal
@@ -57,6 +58,37 @@ final seriesWorksProvider =
 final workProvider =
     FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, workId) {
   return ref.watch(apiClientProvider).getWork(workId);
+});
+
+/// The book-detail page's data source — [workProvider]'s live call, with a
+/// fallback to the last-cached payload (`data/db/catalog_cache.dart`) on
+/// failure.
+///
+/// Deliberately a separate provider rather than adding this to
+/// [workProvider] itself: the book page was the *only* place tapping into an
+/// already-added book failed with a "network error" while offline — every
+/// other surface showing the same book (Home, the library grid, the
+/// mini-bar) reads it from Drift with no network involved (owner report,
+/// 19 Aug 2026, a flight in airplane mode) — but [workProvider] is also used
+/// by the add/edit form for an existing entry, which has no use for a
+/// cache and no reason to pull Drift into its dependency graph. A cache miss
+/// (a book never viewed/added while online) still surfaces the error —
+/// there's genuinely nothing to show.
+final bookDetailWorkProvider =
+    FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, workId) async {
+  final db = ref.watch(appDatabaseProvider);
+  try {
+    // Layered on workProvider's live call (not a second getWork call of its
+    // own) so anything that overrides workProvider — a test fixture, a
+    // future caller — still fully determines this provider's result too.
+    final body = await ref.watch(workProvider(workId).future);
+    await cacheWorkJson(db, body);
+    return body;
+  } catch (e) {
+    final cached = await cachedWorkJson(db, workId);
+    if (cached != null) return cached;
+    rethrow;
+  }
 });
 
 /// Public reviews for a book plus the community rating picture (average,

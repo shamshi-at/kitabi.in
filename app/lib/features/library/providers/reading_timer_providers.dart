@@ -309,9 +309,20 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   // dropping the wax-seal page-count screen on what looked like most stops.
   bool _stopping = false;
 
+  /// The in-flight (or already-completed) `_hydrate()` call from [build] —
+  /// awaited at the top of [start] and [stop] so a tap that lands before a
+  /// cold start's async KeyValues reads have landed doesn't read `state` as
+  /// null and silently no-op. This is exactly the scenario a Live Activity
+  /// tap forces (a fresh Notifier build on process relaunch): the tap that
+  /// opens the timer screen and the tap on its Stop button can both arrive
+  /// before three sequential `await`s finish, and without this the button
+  /// simply did nothing — no error, nothing to retry (owner report, 19 Aug
+  /// 2026, mid-flight).
+  Future<void>? _hydration;
+
   @override
   ActiveSession? build() {
-    _hydrate();
+    _hydration = _hydrate();
     return null;
   }
 
@@ -403,6 +414,7 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   /// localized copy from a `BuildContext`, which a `Notifier` doesn't have —
   /// see `_ReadingSessionCard._open` for the only call site).
   Future<void> start(String libraryEntryId, {int? pageStart}) async {
+    await _hydration;
     if (state?.libraryEntryId == libraryEntryId) return;
     if (state != null) await stop();
 
@@ -434,6 +446,7 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   /// clears local state. Returns what got logged for the wax-seal screen —
   /// null if nothing was running.
   Future<LoggedSession?> stop() async {
+    await _hydration;
     if (state == null) return null;
     _stopping = true;
     // Cleared synchronously, before the first await. The clock stops when the

@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../api/api_client.dart';
 import 'database.dart';
+
+String _workJsonKey(String workId) => 'catalog_work_json:$workId';
 
 /// Writes the catalog fields a library-grid card needs into the local
 /// read-only cache (CLAUDE.md rule 2: fetched/cached for offline reading).
@@ -39,6 +43,38 @@ Future<void> cacheBookForOffline(
       aggregateRating: Value((work['aggregate_rating'] as num?)?.toDouble()),
     ),
   );
+  // The grid mirror above only carries the fields a card needs; the book
+  // *page* needs the whole payload (editions, translations, description,
+  // series) to render at all. Mirroring it here — the moment it's freshly
+  // fetched — means a book already added, searched, or opened once while
+  // online still opens offline later (see `cacheWorkJson`/`cachedWorkJson`).
+  await cacheWorkJson(db, work);
+}
+
+/// Persists the raw `getWork` payload so [cachedWorkJson] can serve it back
+/// when the same call fails offline. Best-effort by design: a write failure
+/// here must never break the caller's actual data flow.
+Future<void> cacheWorkJson(AppDatabase db, Map<String, dynamic> work) async {
+  final workId = work['id'] as String?;
+  if (workId == null) return;
+  try {
+    await db.keyValuesDao.setValue(_workJsonKey(workId), jsonEncode(work));
+  } catch (_) {}
+}
+
+/// The last successfully fetched `getWork` payload for [workId], or null if
+/// it was never cached (a book the reader has never viewed or added while
+/// online). This is a snapshot, not a live value — it can lag edits made
+/// since it was last cached, which is the correct tradeoff for a fallback
+/// that only serves when the live call has already failed.
+Future<Map<String, dynamic>?> cachedWorkJson(AppDatabase db, String workId) async {
+  final raw = await db.keyValuesDao.getValue(_workJsonKey(workId));
+  if (raw == null) return null;
+  try {
+    return (jsonDecode(raw) as Map).cast<String, dynamic>();
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Refresh the offline mirror for a Work the reader just edited — for every

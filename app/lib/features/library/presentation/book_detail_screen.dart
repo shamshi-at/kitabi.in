@@ -59,7 +59,7 @@ class BookDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final work = ref.watch(workProvider(workId));
+    final work = ref.watch(bookDetailWorkProvider(workId));
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: SafeArea(
@@ -67,7 +67,7 @@ class BookDetailScreen extends ConsumerWidget {
           children: [
             work.when(
               loading: () => ListSkeleton(),
-              error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId))),
+              error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(bookDetailWorkProvider(workId))),
               data: (body) => _BookDetailBody(work: body, editionId: editionId),
             ),
             Positioned(top: 4, left: 8, child: _BackButton()),
@@ -684,7 +684,7 @@ class _AboutSection extends ConsumerWidget {
               ),
               onPressed: () async {
                 await context.push(Routes.catalogAdd, extra: workId);
-                if (context.mounted) ref.invalidate(workProvider(workId));
+                if (context.mounted) ref.invalidate(bookDetailWorkProvider(workId));
               },
               icon: Icon(Icons.edit_outlined, size: 14),
               label: Text(l10n.bookImproveEntry, style: TextStyle(fontSize: 11.5)),
@@ -777,7 +777,7 @@ class _EditionsSection extends ConsumerWidget {
               extra: {'workId': workId, 'title': work['title'] as String?},
             );
             if (added == null || !context.mounted) return;
-            ref.invalidate(workProvider(workId));
+            ref.invalidate(bookDetailWorkProvider(workId));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.bookEditionAdded)),
             );
@@ -878,7 +878,7 @@ class _TranslationsSection extends ConsumerWidget {
       final relation = work['original'] == null ? 'translation' : 'sibling';
       await ref.read(apiClientProvider).linkTranslation(workId, otherId, relation: relation);
       if (!context.mounted) return;
-      ref.invalidate(workProvider(workId));
+      ref.invalidate(bookDetailWorkProvider(workId));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.bookTranslationLinked)),
       );
@@ -904,7 +904,7 @@ class _TranslationsSection extends ConsumerWidget {
             ((work['editions'] as List?)?.cast<Map<String, dynamic>>() ?? const []).firstOrNull,
       },
     });
-    ref.invalidate(workProvider(workId));
+    ref.invalidate(bookDetailWorkProvider(workId));
   }
 
   @override
@@ -1210,7 +1210,7 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
           ),
       };
       if (url != null) {
-        ref.invalidate(workProvider(widget.workId));
+        ref.invalidate(bookDetailWorkProvider(widget.workId));
         ref.invalidate(cachedBookProvider(widget.editionId));
         messenger.showSnackBar(SnackBar(content: Text(l10n.coverUploaded)));
         // Both sides were empty and the camera just filled one — offer the
@@ -1226,7 +1226,7 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
               back: !widget.back,
             );
             if (otherUrl != null && mounted) {
-              ref.invalidate(workProvider(widget.workId));
+              ref.invalidate(bookDetailWorkProvider(widget.workId));
               ref.invalidate(cachedBookProvider(widget.editionId));
               messenger.showSnackBar(SnackBar(content: Text(l10n.coverUploaded)));
             }
