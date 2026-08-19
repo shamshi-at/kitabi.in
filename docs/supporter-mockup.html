@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — Supporter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Malayalam:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Kitabi Supporter — the seal, the ask, and the console that
+   manages both. Plan: docs/supporter-plan.md
+   Reading Room tokens throughout (docs/screen-design.md).
+   The governing rule of this whole document: a reader who never
+   pays should not be able to tell, from their own screens, that
+   this feature exists.
+   ============================================================ */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+  --panel:#332419; --panel-2:#241811; --danger:#A03A2B;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:#E7DFCC;color:var(--ink);padding-bottom:90px}
+code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.ml{font-family:'Noto Sans Malayalam','Inter',sans-serif}
+
+/* ---------- page chrome ---------- */
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:56px 32px 44px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:40px;font-weight:400;margin:0 0 10px;letter-spacing:.5px}
+.hero .tag{font-size:15px;color:#CBB897;max-width:820px;margin:0 auto;line-height:1.68}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+.hero .price{display:inline-flex;align-items:center;gap:10px;margin-top:20px;
+  background:rgba(184,134,43,.14);border:1px solid rgba(184,134,43,.5);border-radius:999px;
+  padding:8px 20px;font-size:13.5px;color:#F0E2C2;font-weight:600}
+.toc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:1100px;margin:24px auto 0}
+.toc a{font-size:12px;font-weight:600;color:#E9DCC2;text-decoration:none;
+  border:1px solid rgba(240,226,194,.28);padding:6px 13px;border-radius:999px;transition:.15s}
+.toc a:hover{background:var(--gold);color:#241811;border-color:var(--gold)}
+
+.area{max-width:1520px;margin:56px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.an.ph1{color:#48663F;background:#E3EAD9}
+.an.ph2{color:#43617E;background:#DEE7EF}
+.area h2{font-family:'Fraunces',serif;font-size:29px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:9px 0 26px;max-width:960px;font-size:14.5px;line-height:1.68}
+.area .desc b{color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}
+.shot{display:flex;flex-direction:column;gap:12px}
+.cap{width:272px;font-size:12.5px;color:#6d5f4b;line-height:1.58}
+.cap.w{width:auto;max-width:560px}
+/* Only the caption's LEADING label is a block. A bare `.cap b` (as in the
+   promotions mockup, where captions never bold mid-sentence) turns every inline
+   emphasis into its own line — and it leaks into any .note nested in a .cap.w,
+   because .note b only overrides the colour, not the display. */
+.cap > b:first-child{display:block;color:var(--ink);font-size:13.5px;margin-bottom:3px;font-weight:600}
+.cap b{color:var(--ink);font-weight:600}
+.cap .pro{color:var(--moss);display:block;margin-top:6px}
+.cap .con{color:var(--oxblood);display:block;margin-top:3px}
+.note{background:var(--card);border:1px solid var(--line);border-left:none;border-radius:12px;
+  overflow:hidden;display:flex;margin-top:26px;max-width:1180px}
+.note i{width:4px;background:var(--gold);flex-shrink:0}
+.note.red i{background:var(--oxblood)}
+.note.green i{background:var(--moss)}
+.note div{padding:14px 18px;font-size:13px;line-height:1.7;color:#6d5f4b}
+.note b{color:var(--ink)}
+
+/* ---------- phone frame ---------- */
+.phone{width:272px;height:588px;border-radius:34px;border:8px solid #241B12;
+  background:var(--paper);overflow:hidden;position:relative;
+  box-shadow:0 24px 50px rgba(43,33,24,.30),0 4px 12px rgba(43,33,24,.18)}
+.scr{height:100%;display:flex;flex-direction:column;background:var(--paper);position:relative}
+.sbar{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 15px 4px;font-size:9.5px;font-weight:600;color:var(--ink)}
+.pbody{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0 14px}
+
+/* home header */
+.hd{padding:4px 0 2px}
+.hd .t{display:flex;align-items:flex-start;justify-content:space-between}
+.hd h3{font-family:'Fraunces',serif;font-size:21px;font-weight:600;color:var(--oxblood);line-height:1.1}
+.hd .g{font-family:'Fraunces',serif;font-style:italic;font-size:10.5px;color:var(--ink);margin-top:1px}
+.hd .ic{display:flex;gap:11px;color:var(--oxblood);font-size:13px;padding-top:3px}
+/* a pushed screen's app bar */
+.abar{display:flex;align-items:center;gap:9px;padding:6px 0 4px}
+.abar .bk{color:var(--oxblood);font-size:14px}
+.abar h3{font-family:'Fraunces',serif;font-size:15px;font-weight:600;flex:1}
+.abar .rt{color:var(--oxblood);font-size:12px}
+
+.sl{font-size:7.5px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--ink-soft);margin:11px 0 5px;display:flex;align-items:center;gap:7px}
+.sl.gd{color:#8F681E}
+.crd{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;gap:8px}
+.cover{width:38px;height:55px;border-radius:2px 4px 4px 2px;flex-shrink:0;position:relative;overflow:hidden;
+  background:linear-gradient(150deg,#B9C6CC,#8FA3AC);box-shadow:0 3px 8px rgba(43,33,24,.28)}
+.cover::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(0,0,0,.22)}
+.cover span{position:absolute;left:5px;right:4px;top:6px;font-size:5.5px;line-height:1.25;
+  font-family:'Fraunces',serif;color:#2B2118}
+.cover.ox{background:linear-gradient(150deg,#7E2A33,#4A161C)}
+.cover.ox span{color:#F0E2C2}
+.cover.dk{background:linear-gradient(150deg,#5C3A24,#3A2114)}
+.cover.dk span{color:#EFE6C8}
+.cover.rd{background:linear-gradient(150deg,#A8342B,#6E1E1A)}
+.cover.rd span{color:#F5E3C4}
+.cover.ms{background:linear-gradient(150deg,#4E6B45,#2C3F27)}
+.cover.ms span{color:#E7EFD9}
+.crd .m{flex:1;display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0}
+.crd .ti{font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crd .au{font-size:8px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:3.5px;border-radius:99px;background:var(--paper-deep);margin-top:2px}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--oxblood)}
+.crd .pg{font-size:7.5px;color:var(--ink-soft)}
+.crd .act{align-self:center;display:flex;gap:8px;color:var(--oxblood);font-size:12px}
+
+.strip{display:flex;gap:7px;margin-top:2px}
+.strip .cover{width:44px;height:64px}
+.stats{display:flex;margin-top:10px}
+.stats div{flex:1}
+.stats .n{font-family:'Fraunces',serif;font-size:19px;font-weight:600;line-height:1}
+.stats .l{font-size:7px;letter-spacing:1.1px;color:var(--ink-soft);font-weight:600;margin-top:2px}
+.quote{background:#3A2C1E;border-radius:12px;padding:11px 12px;margin-top:10px;text-align:center}
+.quote .q{font-family:'Fraunces',serif;font-style:italic;font-size:9.5px;color:#EFE3C8;line-height:1.5}
+.quote .a{font-size:7px;letter-spacing:1px;color:#A99374;margin-top:5px;text-transform:uppercase}
+
+.nav{display:flex;justify-content:space-between;align-items:center;padding:7px 14px 9px;
+  border-top:1px solid var(--line);background:var(--card);margin-top:auto}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:6.5px;
+  color:var(--ink-soft);font-weight:600;flex:1}
+.nav div.on{color:var(--oxblood)}
+.nav div i{font-size:13px;font-style:normal}
+.nav .plus{width:30px;height:30px;border-radius:10px;background:var(--oxblood);color:#F6F0E3;
+  display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* ============================================================
+   THE SEAL — the whole visual claim of this document.
+   A small gold wax stamp carrying the app's own fleuron. It is
+   NOT a ribbon (favourite), NOT an avatar ring (linked reader),
+   NOT the 🔗 pill (identity), and NOT a checkmark (identity).
+   ============================================================ */
+.seal{display:inline-flex;align-items:center;justify-content:center;
+  width:13px;height:13px;border-radius:50%;flex-shrink:0;vertical-align:-2px;
+  background:radial-gradient(circle at 35% 28%,#E3BC6B 0%,#C3922F 46%,#9A6E1C 100%);
+  color:#3A2C1E;font-size:8px;line-height:1;font-style:normal;
+  box-shadow:0 1px 2px rgba(43,33,24,.35),inset 0 0 0 .5px rgba(255,244,214,.55)}
+.seal.md{width:17px;height:17px;font-size:10px}
+.seal.lg{width:26px;height:26px;font-size:15px}
+.seal.xl{width:46px;height:46px;font-size:26px;box-shadow:0 4px 12px rgba(43,33,24,.35),
+  inset 0 0 0 1px rgba(255,244,214,.55)}
+.seal.ghost{background:none;color:var(--stamp-grey);box-shadow:inset 0 0 0 1px var(--line)}
+/* the label form, used where the seal needs its noun */
+.sealpill{display:inline-flex;align-items:center;gap:5px;background:var(--gold-soft);
+  border:1px solid #E4CF9B;border-radius:999px;padding:2px 8px 2px 3px;
+  font-size:7.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:#8F681E}
+.sealpill .seal{width:12px;height:12px;font-size:7px;vertical-align:0}
+
+/* profile bits */
+.phead{display:flex;gap:11px;align-items:flex-start;padding:8px 0 2px}
+.pav{width:48px;height:48px;border-radius:50%;background:var(--oxblood);color:var(--paper);
+  display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;
+  font-size:20px;font-weight:600;flex-shrink:0;box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--gold)}
+.pav.sm{width:26px;height:26px;font-size:12px;box-shadow:0 0 0 1.5px var(--paper),0 0 0 3px var(--gold)}
+.pav.flat{background:var(--gold-soft);color:#8F681E;box-shadow:none}
+.pname{font-family:'Fraunces',serif;font-size:15px;font-weight:600;display:flex;align-items:center;gap:5px}
+.phandle{font-size:9.5px;color:var(--oxblood);font-weight:600;margin-top:1px}
+.pmeta{font-size:8.5px;color:var(--ink-soft);margin-top:2px}
+.pmeta.gd{color:#8F681E;font-weight:600}
+
+.setrow{display:flex;align-items:center;gap:9px;padding:9px 10px;background:var(--card);
+  border:1px solid var(--line);border-radius:10px;margin-top:7px}
+.setrow .ic{font-size:12px;color:var(--oxblood);width:15px;text-align:center;flex-shrink:0}
+.setrow .tx{flex:1;min-width:0}
+.setrow .tt{font-size:10px;font-weight:600}
+.setrow .ts{font-size:8px;color:var(--ink-soft);margin-top:1px;line-height:1.4}
+.setrow .ch{font-size:11px;color:var(--stamp-grey)}
+.setrow.gold{background:linear-gradient(150deg,#FDF7E7,#F7EDD4);border-color:#E4CF9B}
+.setrow.gold .ic{color:var(--gold)}
+.sw{width:24px;height:14px;border-radius:99px;background:var(--paper-deep);position:relative;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw.on{background:var(--oxblood)}
+.sw.on::after{left:12px}
+
+/* review card inside a phone */
+.rev{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 10px;margin-top:8px}
+.rev .rh{display:flex;align-items:center;gap:7px}
+.rev .rn{font-size:9.5px;font-weight:600;display:flex;align-items:center;gap:4px}
+.rev .rd{font-size:7.5px;color:var(--ink-soft)}
+.rev .st{margin-left:auto;font-size:9px;color:var(--gold);letter-spacing:1px}
+.rev .rt{font-family:'Fraunces',serif;font-style:italic;font-size:9.5px;line-height:1.55;
+  color:var(--ink);margin-top:6px}
+
+/* ---- the ask surfaces ---- */
+.ask{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
+.ask > i.rule{display:block;height:3px;background:var(--gold)}
+.ask .bd{padding:9px 11px 11px}
+.ask .lb{font-size:6.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#8F681E;
+  display:flex;align-items:center;gap:5px}
+.ask .lb .x{margin-left:auto;color:var(--stamp-grey);font-size:11px}
+.ask h4{font-family:'Fraunces',serif;font-size:13px;font-weight:550;line-height:1.3;margin-top:5px}
+.ask p{font-size:9px;color:var(--ink-soft);line-height:1.6;margin-top:5px}
+.ask .btns{display:flex;gap:7px;margin-top:10px;align-items:center}
+.pbtn{background:var(--oxblood);color:#F6F0E3;font-size:9px;font-weight:600;padding:6px 12px;
+  border-radius:9px;display:inline-flex;align-items:center;gap:4px}
+.pbtn.g{background:transparent;color:var(--oxblood);border:1.3px solid var(--oxblood)}
+.pbtn.gold{background:var(--gold);color:#241811}
+.pbtn.mute{background:none;color:var(--ink-soft);font-weight:500;padding:6px 2px}
+.pbtn.wide{width:100%;justify-content:center;padding:9px 12px;font-size:10px}
+.ask .fine{font-size:7.5px;color:var(--stamp-grey);margin-top:8px;line-height:1.5}
+
+/* quota empty state */
+.empty{text-align:center;padding:22px 8px 0}
+.empty .glyph{font-size:26px;color:var(--gold-soft)}
+.empty h4{font-family:'Fraunces',serif;font-size:14px;font-weight:550;margin-top:9px}
+.empty p{font-size:9px;color:var(--ink-soft);line-height:1.6;margin-top:6px}
+.meter{height:5px;border-radius:99px;background:var(--paper-deep);margin:11px 22px 0;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--oxblood)}
+.meter i.full{background:var(--stamp-grey)}
+.metl{font-size:7.5px;color:var(--ink-soft);margin-top:5px;letter-spacing:.3px}
+
+/* bottom sheet inside a phone */
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);
+  border-radius:16px 16px 0 0;border-top:1px solid var(--line);padding:12px 14px 16px;
+  box-shadow:0 -12px 34px rgba(43,33,24,.26)}
+.sheet .grab{width:32px;height:3px;border-radius:99px;background:var(--line);margin:0 auto 10px}
+.sheet h4{font-family:'Fraunces',serif;font-size:14px;font-weight:550;text-align:center}
+.sheet .sub{font-size:8.5px;color:var(--ink-soft);text-align:center;margin-top:4px;line-height:1.55}
+.scrim{position:absolute;inset:0;background:rgba(43,33,24,.42)}
+.optrow{display:flex;gap:9px;align-items:center;padding:8px 9px;border:1px solid var(--line);
+  border-radius:10px;background:var(--paper);margin-top:7px}
+.optrow .oi{width:24px;height:24px;border-radius:7px;background:var(--gold-soft);color:#8F681E;
+  display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.optrow .ot{flex:1;min-width:0}
+.optrow .on2{font-size:9.5px;font-weight:600}
+.optrow .os{font-size:7.5px;color:var(--ink-soft);margin-top:1px;line-height:1.4}
+.optrow .pts{font-size:8px;font-weight:700;color:var(--moss);flex-shrink:0}
+
+/* the "what stays free" list */
+.freelist{margin-top:9px}
+.freelist div{display:flex;gap:6px;font-size:8.5px;color:var(--ink-soft);padding:3px 0;line-height:1.45}
+.freelist b{color:var(--ink);font-weight:600}
+.freelist .tick{color:var(--moss);flex-shrink:0;font-size:9px}
+.freelist .cross{color:var(--stamp-grey);flex-shrink:0;font-size:9px}
+
+/* dismissed ghost */
+.gone{border:1.3px dashed var(--line);border-radius:11px;padding:10px;margin-top:10px;text-align:center;
+  font-size:8.5px;color:var(--stamp-grey);background:rgba(255,252,244,.5);line-height:1.5}
+.toast{position:absolute;left:14px;right:14px;bottom:54px;background:#3A2C1E;color:#F3E7CE;
+  border-radius:10px;padding:8px 11px;font-size:9px;display:flex;align-items:center;gap:8px;
+  box-shadow:0 8px 22px rgba(43,33,24,.4)}
+.toast b{margin-left:auto;color:var(--gold);font-weight:700;font-size:9px}
+.fade{position:absolute;left:0;right:0;bottom:44px;height:46px;
+  background:linear-gradient(180deg,rgba(246,240,227,0),var(--paper));pointer-events:none}
+.stamp{position:absolute;top:12px;right:12px;font-size:8px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;color:var(--oxblood);border:1.5px solid var(--oxblood);border-radius:5px;
+  padding:2px 7px;transform:rotate(-7deg);opacity:.75;background:rgba(246,240,227,.8)}
+
+/* the ask-budget timeline */
+.tl{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px 16px;max-width:1180px}
+.tlbar{position:relative;height:3px;background:var(--line);border-radius:99px;margin:30px 12px 0}
+.tlpt{position:absolute;top:-5px;width:13px;height:13px;border-radius:50%;background:var(--card);
+  border:3px solid var(--stamp-grey);transform:translateX(-50%)}
+.tlpt.ask{border-color:var(--gold);background:var(--gold)}
+.tlpt.no{border-color:var(--line)}
+.tlpt span{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;
+  font-size:10px;font-weight:600;color:var(--ink-soft);top:-26px}
+.tlpt.ask span{color:#8F681E}
+.tlpt em{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;
+  font-size:9.5px;color:var(--stamp-grey);top:19px;font-style:normal}
+.tllg{display:flex;gap:22px;flex-wrap:wrap;margin-top:52px;font-size:12px;color:#6d5f4b}
+.tllg span{display:flex;align-items:center;gap:7px}
+.tllg i{width:11px;height:11px;border-radius:50%;background:var(--gold);display:inline-block}
+.tllg i.g{background:var(--card);border:2.5px solid var(--stamp-grey)}
+.tllg i.n{background:var(--card);border:2.5px solid var(--line)}
+
+/* collision exhibit */
+.marks{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px;max-width:1180px}
+.mk{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px 14px}
+.mk .top{display:flex;align-items:center;gap:9px;margin-bottom:7px;padding:0;border:0;background:none}
+.mk .nm{font-size:12.5px;font-weight:600}
+.mk .ds{font-size:11.5px;color:var(--ink-soft);line-height:1.55}
+.mk.this{border-color:#E4CF9B;background:linear-gradient(150deg,#FDF7E7,#F8EFD9)}
+.ribbon{width:20px;height:26px;background:var(--gold);border-radius:2px;position:relative;flex-shrink:0}
+.ribbon::after{content:"";position:absolute;bottom:0;left:0;right:0;height:6px;
+  background:var(--card);clip-path:polygon(0 100%,50% 40%,100% 100%)}
+.linkpill{display:inline-flex;align-items:center;gap:4px;background:var(--gold-soft);border:1px solid #E4CF9B;
+  border-radius:999px;padding:2px 8px;font-size:9.5px;font-weight:600;color:#8F681E}
+
+/* ============================================================
+   PUBLIC WEB  (matches docs/web-mockups.html)
+   ============================================================ */
+.site{background:var(--paper);font-size:14px;color:var(--ink)}
+.shead{background:var(--card);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:22px;padding:13px 26px}
+.wmark{width:30px;height:30px;border-radius:7px;background:linear-gradient(150deg,#8B3038,#5E1F26);
+  position:relative;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(184,134,43,.55)}
+.wmark::before{content:"";position:absolute;left:50%;top:5px;width:2px;height:20px;background:var(--gold);opacity:.9}
+.wbrand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;line-height:1;display:flex;align-items:center;gap:9px}
+.snav{display:flex;gap:17px;font-size:12.5px;font-weight:500;color:var(--ink-soft)}
+.snav b{color:var(--oxblood);font-weight:600;border-bottom:2px solid var(--gold);padding-bottom:2px}
+.btn-app{background:var(--oxblood);color:#F6F0E3;font-size:11.5px;font-weight:600;
+  padding:8px 15px;border-radius:999px;white-space:nowrap;margin-left:auto}
+.wwrap{padding:26px 30px 30px;max-width:920px;margin:0 auto}
+.whero{text-align:center;padding:34px 20px 26px;
+  background:linear-gradient(170deg,#FBF5E6,var(--paper));border-bottom:1px solid var(--line)}
+.whero h1{font-family:'Fraunces',serif;font-size:32px;font-weight:400;line-height:1.2}
+.whero h1 em{font-style:italic;color:var(--oxblood)}
+.whero p{font-size:14px;color:var(--ink-soft);max-width:560px;margin:12px auto 0;line-height:1.7}
+.wcards{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;margin-top:24px}
+.wcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.wcard.gold{border-color:#E4CF9B;background:linear-gradient(155deg,#FDF7E7,#F7EDD4)}
+.wcard h3{font-family:'Fraunces',serif;font-size:19px;font-weight:500;display:flex;align-items:center;gap:8px}
+.wcard .p{font-family:'Fraunces',serif;font-size:38px;font-weight:600;color:var(--oxblood);line-height:1;margin-top:12px}
+.wcard .p small{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;color:var(--ink-soft)}
+.wcard ul{list-style:none;margin-top:14px}
+.wcard li{font-size:13px;color:#6d5f4b;padding:5px 0;display:flex;gap:9px;line-height:1.55}
+.wcard li b{color:var(--ink);font-weight:600}
+.wcard li .t{color:var(--moss)}
+.qr{width:124px;height:124px;background:#fff;border:1px solid var(--line);border-radius:8px;
+  padding:8px;flex-shrink:0;position:relative;
+  background-image:
+    repeating-linear-gradient(90deg,#2B2118 0 4px,transparent 4px 8px),
+    repeating-linear-gradient(0deg,#2B2118 0 4px,transparent 4px 12px);
+  background-size:8px 12px;background-position:8px 8px;background-repeat:repeat;
+  background-clip:content-box}
+.qr::before,.qr::after{content:"";position:absolute;width:30px;height:30px;border:5px solid #2B2118;background:#fff}
+.qr::before{top:8px;left:8px}
+.qr::after{top:8px;right:8px}
+.upi{display:flex;gap:18px;align-items:center;margin-top:14px}
+.upiid{font-family:'JetBrains Mono',monospace;font-size:14px;background:var(--paper-deep);
+  border:1px solid var(--line);border-radius:7px;padding:8px 12px;display:inline-block;margin-top:8px}
+.steps{counter-reset:s;margin-top:14px}
+.steps div{counter-increment:s;position:relative;padding-left:28px;font-size:12.5px;color:#6d5f4b;
+  line-height:1.6;margin-top:9px}
+.steps div::before{content:counter(s);position:absolute;left:0;top:0;width:19px;height:19px;border-radius:50%;
+  background:var(--oxblood);color:#F6F0E3;font-size:10.5px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.steps b{color:var(--ink)}
+.wfoot{font-size:12px;color:var(--stamp-grey);text-align:center;margin-top:22px;line-height:1.7}
+
+/* web reader profile */
+.wprof{display:flex;gap:18px;align-items:center;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:20px 22px}
+.wav{width:64px;height:64px;border-radius:50%;background:var(--oxblood);color:var(--paper);
+  display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:26px;
+  font-weight:600;flex-shrink:0;box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--gold)}
+.wprof h2{font-family:'Fraunces',serif;font-size:24px;font-weight:500;display:flex;align-items:center;gap:9px}
+.wprof .h{font-size:13px;color:var(--oxblood);font-weight:600;margin-top:3px}
+.wprof .m{font-size:12.5px;color:var(--ink-soft);margin-top:5px}
+
+/* ============================================================
+   ADMIN CONSOLE FRAME  (matches docs/admin_mockups.html)
+   ============================================================ */
+.win{width:1180px;background:var(--paper);border-radius:12px;overflow:hidden;
+  box-shadow:0 26px 60px rgba(60,42,25,.30);border:1px solid #cbbb9c;position:relative}
+.win.wide{width:1240px}
+.chrome{height:34px;background:#DED2B7;display:flex;align-items:center;gap:7px;padding:0 13px;
+  border-bottom:1px solid #cbbb9c}
+.dot{width:10px;height:10px;border-radius:50%;background:#bfae8e}
+.chrome .addr{margin-left:12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#6d5f4b;
+  background:#F3EBD9;border:1px solid #cbbb9c;border-radius:5px;padding:3px 12px}
+.wbody{display:flex;min-height:620px}
+.rail{width:206px;background:var(--panel);color:#E7DBC4;padding:15px 0;flex-shrink:0;display:flex;flex-direction:column}
+.rail .brand{display:flex;align-items:center;gap:9px;padding:0 15px 14px;border-bottom:1px solid rgba(240,226,194,.14)}
+.rail .brand i{width:27px;height:27px;border-radius:7px;background:var(--gold);color:#241811;
+  font-family:'Fraunces',serif;font-weight:600;font-size:16px;display:flex;align-items:center;
+  justify-content:center;font-style:normal}
+.rail .brand b{font-family:'Fraunces',serif;font-weight:500;font-size:15px}
+.rail .brand s{display:block;font-size:9px;letter-spacing:1.5px;color:#9d8b6c;text-decoration:none}
+.rail .grp{font-size:8.5px;letter-spacing:1.5px;color:#8d7c60;padding:13px 15px 6px;font-weight:700}
+.rail .grp.new{color:var(--gold)}
+.rail a{display:flex;align-items:center;gap:8px;padding:7px 15px;color:#D7C9AE;text-decoration:none;
+  font-size:12.5px;border-left:3px solid transparent}
+.rail a.on{background:rgba(184,134,43,.16);border-left-color:var(--gold);color:#F6F0E3;font-weight:600}
+.rail a .n{margin-left:auto;background:var(--oxblood);color:#fff;font-size:9.5px;font-weight:700;
+  border-radius:999px;padding:1px 7px}
+.rail a .gn{margin-left:auto;background:var(--gold);color:#241811;font-size:9.5px;font-weight:700;
+  border-radius:999px;padding:1px 7px}
+.rail .who{margin-top:auto;padding:13px 15px 0;border-top:1px solid rgba(240,226,194,.14);font-size:11px}
+.rail .who b{display:block;color:#F6F0E3;font-size:12px;font-weight:600}
+.rail .who s{text-decoration:none;color:#9d8b6c;font-size:10px}
+.rail .who .sa{display:inline-block;margin-top:5px;background:var(--gold);color:#241811;font-size:8.5px;
+  font-weight:700;letter-spacing:.6px;padding:1px 7px;border-radius:999px;text-transform:uppercase}
+.main{flex:1;background:var(--paper);min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card)}
+.top h3{font-family:'Fraunces',serif;font-size:18.5px;font-weight:500}
+.top .sub{font-size:11px;color:var(--ink-soft);margin-top:1px}
+.top .sp{margin-left:auto;display:flex;gap:8px;align-items:center}
+.content{padding:18px 20px;overflow:auto}
+
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:7px;
+  padding:6px 12px;font-size:12px;font-weight:600;display:inline-block}
+.btn.p{background:var(--oxblood);border-color:var(--oxblood);color:#fff}
+.btn.d{background:#fff;border-color:#E3C4BE;color:var(--danger)}
+.btn.g{background:var(--moss);border-color:var(--moss);color:#fff}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#241811}
+.btn.s{padding:4px 9px;font-size:11px}
+.btn.dis{color:var(--stamp-grey);background:var(--paper-deep);border-color:var(--line)}
+.pill{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  padding:2px 8px;border-radius:999px}
+.pill.live{background:#E3EAD9;color:var(--moss)}
+.pill.sch{background:#F2E6C4;color:#8F681E}
+.pill.dr{background:#EAE2D2;color:var(--stamp-grey)}
+.pill.pau{background:#F3DFDA;color:var(--oxblood)}
+.pill.gold{background:var(--gold-soft);color:#8F681E;border:1px solid #E4CF9B}
+.pill.slate{background:#DEE7EF;color:var(--slate)}
+
+.sect{font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);
+  margin:20px 0 9px;display:flex;align-items:center;gap:9px}
+.sect:first-child{margin-top:0}
+.sect::after{content:"";flex:1;height:1px;background:var(--line)}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft);
+  padding:0 10px 7px;font-weight:700}
+td{padding:10px;border-top:1px solid var(--line);vertical-align:middle}
+tr.hl td{background:rgba(184,134,43,.07)}
+.tt{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:5px}
+.ts{font-size:10.5px;color:var(--ink-soft);margin-top:2px}
+.num{font-family:'JetBrains Mono',monospace;font-size:12px}
+.num s{text-decoration:none;color:var(--ink-soft);font-size:10.5px}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 15px}
+.panel.gold{border-color:#E4CF9B;background:linear-gradient(155deg,#FDF7E7,#F9F1DE)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.lbl{font-size:9.5px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-soft);
+  margin-bottom:8px}
+.f{margin-bottom:11px}
+.f label{display:block;font-size:10.5px;font-weight:600;color:var(--ink-soft);margin-bottom:4px}
+.f .inp{background:var(--paper-deep);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:12.5px}
+.f .inp.ph{color:var(--stamp-grey)}
+/* Both forms: nested inside a field, and on the field element itself
+   (`class="f hint"`) — a bare `.f .hint` misses the second and the note
+   silently renders at body size. */
+.f .hint,.hint{font-size:10px;color:var(--stamp-grey);margin-top:4px;line-height:1.5}
+.f .req{color:var(--oxblood)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg span{font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:7px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink-soft)}
+.seg span.on{background:var(--oxblood);border-color:var(--oxblood);color:#fff}
+.seg.sm span{font-size:10.5px;padding:4px 9px}
+.kpi{display:flex;gap:10px}
+.kpi div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:11px 12px}
+.kpi .n{font-family:'Fraunces',serif;font-size:23px;font-weight:600;line-height:1}
+.kpi .l{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft);
+  font-weight:700;margin-top:4px}
+.kpi .gd .n{color:var(--gold)}
+.kpi .warn .n{color:var(--oxblood)}
+.kpi .ok .n{color:var(--moss)}
+.hist{border-left:2px solid var(--line);margin-left:5px;padding-left:14px}
+.hist .h{position:relative;padding:9px 0;font-size:12px;border-bottom:1px solid var(--line)}
+.hist .h:last-child{border-bottom:0}
+.hist .h::before{content:"";position:absolute;left:-20px;top:14px;width:9px;height:9px;border-radius:50%;
+  background:var(--gold);box-shadow:0 0 0 2px var(--card)}
+.hist .h.rev::before{background:var(--stamp-grey)}
+.hist .h b{font-weight:600}
+.hist .h .w{color:var(--ink-soft);font-size:11px;margin-top:2px}
+.hist .h .r{font-size:11px;color:#6d5f4b;font-style:italic;margin-top:3px}
+
+/* admin modal */
+.dlg{position:absolute;inset:0;background:rgba(43,33,24,.45);display:flex;align-items:center;justify-content:center}
+.dlgbox{width:470px;background:var(--card);border-radius:12px;box-shadow:0 24px 60px rgba(43,33,24,.4);
+  border:1px solid var(--line);overflow:hidden}
+.dlgbox .dh{padding:14px 18px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:9px}
+.dlgbox .dh h4{font-family:'Fraunces',serif;font-size:16px;font-weight:500}
+.dlgbox .db{padding:16px 18px}
+.dlgbox .df{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;
+  align-items:center;background:var(--paper)}
+.dlgbox .df .sp{margin-left:auto;display:flex;gap:8px}
+.warnbox{background:#F9EEEA;border:1px solid #E3C4BE;border-radius:8px;padding:10px 12px;
+  font-size:11.5px;color:#7c4a41;line-height:1.6;margin-top:10px}
+.warnbox b{color:var(--danger)}
+.okbox{background:#EAF0E3;border:1px solid #CFDCC2;border-radius:8px;padding:10px 12px;
+  font-size:11.5px;color:#47593d;line-height:1.6;margin-top:10px}
+
+/* data-model block */
+/* pre-wrap, not normal: the schema below is laid out with real newlines and
+   indentation. Without it the whole block collapses into one run-on line. */
+.model{background:var(--panel-2);color:#E7DBC4;border-radius:12px;padding:20px 24px;max-width:1180px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;overflow-x:auto;
+  white-space:pre-wrap}
+.model b{color:var(--gold);font-weight:500}
+.model s{text-decoration:none;color:#8d7c60}
+.model u{text-decoration:none;color:#E3B96C}
+.commit{max-width:1180px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:6px 22px 16px;margin-top:16px}
+.commit li{font-size:13.5px;color:#6d5f4b;line-height:1.7;margin-top:9px;margin-left:18px}
+.commit li b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Kitabi Supporter</h1>
+  <p class="tag">A membership, not a paywall. Supporters get <b>the Kitabi seal</b> — a small gold stamp
+  beside their name — and a bigger share of the AI budget. Everyone else gets <b>the app they already
+  have</b>, and is asked for help <b>at most three times a year</b>, never before day 14, never during a
+  reading session, and never twice if they said no. Design doc: <b>docs/supporter-plan.md</b>.</p>
+  <div class="price"><span class="seal md">❦</span> ₹149 / year · one plan · annual only</div>
+  <div class="toc">
+    <a href="#a1">1 · The default</a>
+    <a href="#a2">2 · The seal</a>
+    <a href="#a3">3 · What it means</a>
+    <a href="#a4">4 · Ask · the door</a>
+    <a href="#a5">5 · Ask · the quota</a>
+    <a href="#a6">6 · Ask · the moment</a>
+    <a href="#a7">7 · Help another way</a>
+    <a href="#a8">8 · The ask budget</a>
+    <a href="#a9">9 · Your membership</a>
+    <a href="#a10">10 · Public web</a>
+    <a href="#a11">11 · Console · supporters</a>
+    <a href="#a14">12 · Console · grant</a>
+    <a href="#a15">13 · Console · exceptions</a>
+    <a href="#a16">Notes &amp; data model</a>
+  </div>
+</div>
+
+<!-- ============================================================ 1 -->
+<div class="area" id="a1">
+  <div class="ah"><span class="an">1 · The default</span><h2>For a reader who never pays, nothing changes</h2></div>
+  <p class="desc">This is the state the feature lives in <b>99% of the time</b>, and the one it has to get
+  right first. There is no locked feature, no greyed-out seal where a seal would go, no "upgrade" chip in the
+  header, no red dot on the tab bar, no empty slot. <b>Absence is never marked.</b> The only permanent trace
+  of the whole programme in a free reader's app is <b>one row near the bottom of Profile</b> — below the
+  visibility switches, above sign-out — which never nags and is never counted as an ask.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="hd"><div class="t"><div>
+            <h3>Kitabi</h3><div class="g">Good afternoon</div>
+          </div><div class="ic">🔍 ⚙</div></div></div>
+          <div class="sl">Continue reading</div>
+          <div class="crd">
+            <div class="cover ox"><span>Aadujeevitham</span></div>
+            <div class="m"><div class="ti">Aadujeevitham</div><div class="au">Benyamin</div>
+              <div class="bar"><i style="width:44%"></i></div><div class="pg">p. 88 of 200 · 44%</div></div>
+            <div class="act">▶</div>
+          </div>
+          <div class="sl">Recently added</div>
+          <div class="strip">
+            <div class="cover dk"><span>Chemmeen</span></div>
+            <div class="cover rd"><span>Randamoozham</span></div>
+            <div class="cover ms"><span>Khasakkinte Ithihasam</span></div>
+            <div class="cover"><span>Balyakalasakhi</span></div>
+          </div>
+          <div class="stats">
+            <div><div class="n">128</div><div class="l">BOOKS</div></div>
+            <div><div class="n">41</div><div class="l">READ</div></div>
+            <div><div class="n">3</div><div class="l">LENT</div></div>
+            <div><div class="n">9</div><div class="l">REVIEWS</div></div>
+          </div>
+          <div class="quote"><div class="q">“A room without books is like a body without a soul.”</div>
+            <div class="a">CICERO</div></div>
+        </div>
+        <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>1a · Home, free reader.</b> Byte-for-byte today's Home. No banner, no card, no slot
+      held open. The supporter system is a server that answers "nothing for you" and an app that draws nothing.
+      <span class="pro">This screenshot is the acceptance test: if it ever differs, the feature is wrong.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Profile</h3></div>
+          <div class="phead">
+            <div class="pav">N</div>
+            <div><div class="pname">Nikhil Menon</div>
+              <div class="phandle">@nikhil ✎</div>
+              <div class="pmeta">Reading since 2026 · 128 books</div></div>
+          </div>
+          <div class="sl">Visibility</div>
+          <div class="setrow"><span class="ic">◉</span><div class="tx"><div class="tt">Public profile</div>
+            <div class="ts">Others can find you</div></div><span class="sw on"></span></div>
+          <div class="setrow"><span class="ic">▤</span><div class="tx"><div class="tt">Public library</div>
+            <div class="ts">Your shelf is private</div></div><span class="sw"></span></div>
+          <div class="sl">Kitabi</div>
+          <div class="setrow"><span class="ic">☾</span><div class="tx"><div class="tt">Dark mode</div></div>
+            <span class="sw"></span></div>
+          <div class="setrow"><span class="ic">◧</span><div class="tx"><div class="tt">Show promotions</div></div>
+            <span class="sw on"></span></div>
+          <div class="setrow gold"><span class="ic">❦</span><div class="tx"><div class="tt">Support Kitabi</div>
+            <div class="ts">₹149 a year · keeps it ad-free</div></div><span class="ch">›</span></div>
+          <div class="setrow"><span class="ic">⏻</span><div class="tx"><div class="tt">Sign out</div></div>
+            <span class="ch">›</span></div>
+        </div>
+        <div class="nav"><div><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>1b · Profile, free reader — the only permanent trace.</b> One row, in the settings
+      list where a reader goes looking, styled like every other row except for the gold.
+      <span class="pro">Because this door is always open, the three <em>interrupting</em> surfaces can be as
+      rare as §5 of the plan says — a reader who wants to support you never has to be caught by a card.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Lending</h3></div>
+          <div class="seg sm" style="margin-top:6px"><span class="on" style="font-size:8px;padding:4px 9px">Lent out</span>
+            <span style="font-size:8px;padding:4px 9px">Rejected</span>
+            <span style="font-size:8px;padding:4px 9px">Borrowed</span></div>
+          <div class="crd" style="margin-top:9px">
+            <div class="cover rd"><span>Randamoozham</span></div>
+            <div class="m"><div class="ti">Randamoozham</div><div class="au">M. T. Vasudevan Nair</div>
+              <div class="pg" style="margin-top:3px">With <b style="color:#7E2A33">Arundhati M.</b> · 14 days</div>
+              <div class="pg"><span class="linkpill" style="font-size:6.5px;padding:1px 6px">🔗 on Kitabi</span></div></div>
+          </div>
+          <div class="crd" style="margin-top:8px">
+            <div class="cover dk"><span>Chemmeen</span></div>
+            <div class="m"><div class="ti">Chemmeen</div><div class="au">Thakazhi</div>
+              <div class="pg" style="margin-top:3px">With <b style="color:#7E2A33">Sreekumar V.</b> · 3 days</div></div>
+          </div>
+          <div class="gone" style="border-style:solid;border-color:#E3C4BE;background:#FBF3F0;color:#8b5a52">
+            Both of these readers are supporters.<br>Neither card says so, and neither ever will — §3 rule 2.
+          </div>
+        </div>
+        <div class="nav"><div><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div class="on"><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>1c · The screen drawn deliberately without it.</b> Both borrowers here pay ₹149.
+      <span class="con">A gold mark in a lending row reads as "Kitabi checked this person" — and the thing at
+      stake is somebody's physical book. Money must never look like vetting.</span></p>
+    </div>
+
+  </div>
+  <div class="note"><i></i><div><b>The rule this area encodes.</b> A supporter programme fails the moment the
+  free app starts feeling like a demo. So: nothing is removed, nothing is locked, nothing is greyed, and the
+  free reader's screens in this document are <b>identical to the shipped app</b> — the only addition anywhere
+  is 1b's single row.</div></div>
+</div>
+
+<!-- ============================================================ 2 -->
+<div class="area" id="a2">
+  <div class="ah"><span class="an">2 · The mark</span><h2>The seal — a wax stamp, not a tick</h2></div>
+  <p class="desc">A small gold disc carrying the app's own fleuron <b>❦</b>. It reads at 13px, it belongs to
+  the Reading Room, and — the part that matters — <b>it does not collide with any mark already in use</b>.
+  Kitabi's visual language is already carrying four meanings in gold; a fifth had to be a shape none of them
+  use. A checkmark was the obvious choice and the wrong one: a tick means <em>verified identity</em>
+  everywhere on earth, and this mark means <em>paid</em>.</p>
+
+  <div class="marks" style="margin-bottom:26px">
+    <div class="mk"><div class="top"><span class="ribbon"></span><span class="nm">Gold ribbon</span></div>
+      <div class="ds">On a cover — <b>this book is a favourite</b>. Taken.</div></div>
+    <div class="mk"><div class="top"><span class="pav sm">A</span><span class="nm">Gold avatar ring</span></div>
+      <div class="ds">Around a face — <b>you, or a linked reader</b>. Taken.</div></div>
+    <div class="mk"><div class="top"><span class="linkpill">🔗 on Kitabi</span></div>
+      <div class="ds">Beside a name — <b>this person is a registered user</b>. Taken.</div></div>
+    <div class="mk"><div class="top"><span style="font-size:17px;color:var(--moss)">✓</span><span class="nm">A tick</span></div>
+      <div class="ds">Reserved — <b>this really is them</b> (author &amp; publisher claims). Never for sale.</div></div>
+    <div class="mk this"><div class="top"><span class="seal lg">❦</span><span class="nm">The Kitabi seal</span></div>
+      <div class="ds"><b>This reader supports Kitabi.</b> New shape, new meaning, no collision.</div></div>
+  </div>
+
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Profile</h3></div>
+          <div class="phead">
+            <div class="pav">N</div>
+            <div><div class="pname">Nikhil Menon <span class="seal">❦</span></div>
+              <div class="phandle">@nikhil ✎</div>
+              <div class="pmeta gd">Supporter since Aug 2026 · Founding</div>
+              <div class="pmeta">Reading since 2026 · 128 books</div></div>
+          </div>
+          <div class="ask" style="margin-top:12px"><i class="rule"></i>
+            <div class="bd" style="display:flex;gap:10px;align-items:center;padding:11px">
+              <span class="seal xl">❦</span>
+              <div style="flex:1">
+                <div class="lb">Founding supporter · no. 041</div>
+                <h4 style="font-size:11.5px;margin-top:3px">Thank you.</h4>
+                <p style="font-size:8px;margin-top:3px">Renews 12 Aug 2027 · ₹149/yr</p>
+              </div>
+            </div>
+          </div>
+          <div class="sl">Visibility</div>
+          <div class="setrow"><span class="ic">◉</span><div class="tx"><div class="tt">Public profile</div></div>
+            <span class="sw on"></span></div>
+          <div class="setrow"><span class="ic">❦</span><div class="tx"><div class="tt">Show my seal</div>
+            <div class="ts">Others see it beside your name</div></div><span class="sw on"></span></div>
+          <div class="sl">Contributions</div>
+          <div class="setrow"><span class="ic">✦</span><div class="tx"><div class="tt">Score 486</div>
+            <div class="ts">18 books · 9 reviews added</div></div><span class="ch">›</span></div>
+        </div>
+        <div class="nav"><div><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>2a · Your own profile, as a supporter.</b> The seal sits inline with the name; the card
+      below carries the state a paying member actually wants to check — <em>when does it renew, and did it go
+      through</em>. <span class="pro">"Show my seal" is a real switch: some people pay and want no mark. Taking
+      their money and branding them anyway isn't the deal.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Arundhati M.</h3></div>
+          <div class="phead">
+            <div class="pav">A</div>
+            <div><div class="pname">Arundhati M. <span class="seal">❦</span></div>
+              <div class="phandle">@arundhati</div>
+              <div class="pmeta">Reading since 2026 · 74 books public</div></div>
+          </div>
+          <div class="seg sm" style="margin-top:10px"><span class="on" style="font-size:8.5px;padding:4px 11px">Library</span>
+            <span style="font-size:8.5px;padding:4px 11px">Works</span></div>
+          <div class="strip" style="margin-top:10px;flex-wrap:wrap;gap:8px">
+            <div class="cover dk"><span>Chemmeen</span></div>
+            <div class="cover ox"><span>Aadujeevitham</span></div>
+            <div class="cover ms"><span>Khasakkinte Ithihasam</span></div>
+            <div class="cover rd"><span>Randamoozham</span></div>
+            <div class="cover"><span>Balyakalasakhi</span></div>
+            <div class="cover dk"><span>Ente Katha</span></div>
+          </div>
+          <div class="sl" style="margin-top:12px">Recent review</div>
+          <div class="rev">
+            <div class="rh"><span class="pav sm flat">A</span>
+              <div><div class="rn">Arundhati M. <span class="seal">❦</span></div>
+                <div class="rd">14 July · read in Malayalam</div></div>
+              <span class="st">★★★★☆</span></div>
+            <div class="rt">“Sixty years on and the sea in it is still louder than anything written since.”</div>
+          </div>
+        </div>
+        <div class="nav"><div><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>2b · Someone else's profile, and a review card.</b> The two places the seal is
+      <em>for</em>: a public profile and a signed opinion. It is the same 13px stamp in both — one asset, one
+      meaning, wherever a reader's name is printed.</p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Chemmeen</h3><span class="rt">⇲</span></div>
+          <div class="crd" style="margin-top:6px;border:0;background:none;padding:0">
+            <div class="cover dk" style="width:52px;height:76px"><span>Chemmeen</span></div>
+            <div class="m"><div class="ti" style="font-family:'Fraunces',serif;font-size:12px">Chemmeen</div>
+              <div class="au">Thakazhi Sivasankara Pillai</div>
+              <div class="pg">1956 · Malayalam · 224 pages</div>
+              <div class="pg" style="color:#B8862B">★★★★☆ 4.4 · 38 ratings</div></div>
+          </div>
+          <div class="sl" style="margin-top:12px">Reviews · 3</div>
+          <div class="rev">
+            <div class="rh"><span class="pav sm flat">A</span>
+              <div><div class="rn">Arundhati M. <span class="seal">❦</span></div>
+                <div class="rd">14 July · read in Malayalam</div></div>
+              <span class="st">★★★★☆</span></div>
+            <div class="rt">“Sixty years on and the sea in it is still louder than anything written since.”</div>
+          </div>
+          <div class="rev">
+            <div class="rh"><span class="pav sm flat">S</span>
+              <div><div class="rn">Sreekumar V.</div>
+                <div class="rd">2 July · read in English</div></div>
+              <span class="st">★★★★★</span></div>
+            <div class="rt">“I read the translation first and it still knocked the wind out of me.”</div>
+          </div>
+          <div class="rev">
+            <div class="rh"><span class="pav sm flat">R</span>
+              <div><div class="rn">Ramesh K. <span class="seal">❦</span></div>
+                <div class="rd">28 June</div></div>
+              <span class="st">★★★☆☆</span></div>
+            <div class="rt">“Great, but the ending has been oversold to me my whole life.”</div>
+          </div>
+        </div>
+        <div class="fade"></div>
+        <div class="nav"><div><i>⌂</i>Home</div><div class="on"><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>2c · Mixed reviews — the honest test.</b> Two supporters, one not, on the same book.
+      <span class="pro">Nothing about Sreekumar's card is diminished: same size, same order, same weight, no
+      gap where a seal isn't. Sorting reviews by seal, or dimming the unsealed, would turn a thank-you into a
+      caste mark.</span></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 3 -->
+<div class="area" id="a3">
+  <div class="ah"><span class="an">3 · Disclosure</span><h2>The seal is tappable, and says what it isn't</h2></div>
+  <p class="desc">A gold mark beside a stranger's name invites exactly one wrong guess: <em>Kitabi checked
+  this person.</em> One sentence prevents it, so the seal is a tap target <b>everywhere it appears</b> —
+  profile, review, search row — and what it opens leads with the meaning and states the limit plainly. This is
+  cheap insurance on the one risk in the whole feature.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Arundhati M.</h3></div>
+          <div class="phead"><div class="pav">A</div>
+            <div><div class="pname">Arundhati M. <span class="seal">❦</span></div>
+              <div class="phandle">@arundhati</div>
+              <div class="pmeta">Reading since 2026 · 74 books public</div></div></div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div style="text-align:center;margin-bottom:6px"><span class="seal xl">❦</span></div>
+          <h4>The Kitabi seal</h4>
+          <p class="sub">Arundhati supports Kitabi with a yearly membership. That's what this mark means —
+          it keeps the app independent, ad-free, and free for everyone else.</p>
+          <div class="freelist" style="margin-top:12px">
+            <div><span class="cross">✕</span><span>It is <b>not</b> an identity check. Kitabi has not verified
+              who this reader is.</span></div>
+            <div><span class="cross">✕</span><span>It says <b>nothing</b> about whether they're a safe person
+              to lend a book to.</span></div>
+            <div><span class="tick">✓</span><span>Authors and publishers who prove who they are get a
+              <b>different</b> mark.</span></div>
+          </div>
+          <div style="margin-top:12px"><span class="pbtn wide g">Read about Supporter</span></div>
+          <div style="text-align:center;margin-top:9px"><span class="pbtn mute">Close</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>3a · "What is this?"</b> Two lines of what it is, two lines of what it isn't. The
+      second pair is the load-bearing half.
+      <span class="pro">Written in the Reading Room's plain voice — no legalese, no shrug.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Lend this book</h3></div>
+          <div class="crd" style="margin-top:6px">
+            <div class="cover dk"><span>Chemmeen</span></div>
+            <div class="m"><div class="ti">Chemmeen</div><div class="au">Thakazhi</div></div>
+          </div>
+          <div class="sl">Lend to</div>
+          <div class="f" style="margin-top:2px"><div class="inp ph" style="font-size:9px;padding:7px 9px;
+            background:var(--paper-deep);border:1px solid var(--line);border-radius:8px">Type a name…</div></div>
+          <div class="sl">On Kitabi</div>
+          <div class="optrow"><span class="pav sm flat">A</span>
+            <div class="ot"><div class="on2">Arundhati M.</div>
+              <div class="os">@arundhati · 4 loans between you</div></div>
+            <span class="linkpill" style="font-size:6.5px;padding:1px 6px">🔗</span></div>
+          <div class="optrow"><span class="pav sm flat">S</span>
+            <div class="ot"><div class="on2">Sreekumar V.</div>
+              <div class="os">@sree · first loan</div></div>
+            <span class="linkpill" style="font-size:6.5px;padding:1px 6px">🔗</span></div>
+          <div class="optrow"><span class="pav sm flat">D</span>
+            <div class="ot"><div class="on2">Deepa (not on Kitabi)</div>
+              <div class="os">Typed by you · 2 loans</div></div></div>
+          <div class="gone" style="border-color:#E3C4BE;border-style:solid;background:#FBF3F0;color:#8b5a52;
+            text-align:left">Arundhati is a supporter. This screen will never say so.<br>
+            <b style="color:#A03A2B">The only mark here is 🔗 — "this is a real account" — which is a fact
+            about the account, not a recommendation of the person.</b></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>3b · The lend sheet, seal-free by design.</b> The single hardest rule in the plan,
+      drawn rather than described. Trust marks and trust <em>transactions</em> stay apart.</p>
+    </div>
+
+    <div class="cap w" style="align-self:center">
+      <div class="note" style="margin-top:0"><i></i><div><b>Why this document keeps saying "not verified".</b>
+      The brief called it a verified badge, and the word is worth ₹149 precisely because people read it as
+      <em>vetted</em>. But Kitabi's wedge is that readers hand each other physical books — and
+      <code>authors.linked_user_id</code> plus the <code>author_claims</code> queue already exist to mean
+      <em>this really is them</em>. One word, two meanings, one of them purchasable, is a collision that gets
+      more expensive every month it stands.<br><br>
+      <b>The recommendation is a two-word change, not a redesign:</b> the mark is gold, it's on the profile,
+      other readers see it, and people will want it — it's called <b>Supporter</b>, and "Verified" stays free,
+      earned, and reserved for identity. If the answer is still "Verified", then <b>3a</b> and <b>3b</b> stop
+      being belt-and-braces and become the two screens that hold the whole thing up.</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 4 -->
+<div class="area" id="a4">
+  <div class="ah"><span class="an">4 · The pitch</span><h2>Surface one — the door that never knocks</h2></div>
+  <p class="desc">Tapping <b>Support Kitabi</b> in Profile opens the pitch. This screen can be as long and as
+  warm as it likes, because <b>the reader came here</b> — that's the difference between a page and an
+  interruption. It leads with what Kitabi is, states the price once, and spends most of its height on the list
+  of things that stay free, because that list is the actual promise.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Support Kitabi</h3></div>
+          <div style="text-align:center;padding:14px 0 4px"><span class="seal xl">❦</span></div>
+          <h4 style="font-family:'Fraunces',serif;font-size:15px;font-weight:550;text-align:center;
+            line-height:1.35;padding:0 6px">Kitabi has no ads, no investors,<br>and nothing to sell but this.</h4>
+          <p style="font-size:9px;color:var(--ink-soft);line-height:1.65;text-align:center;margin-top:8px;padding:0 4px">
+            It's one person, a small server bill, and a catalogue built by readers. ₹149 a year covers a
+            supporter's share of it — and keeps the answer to "how does this make money?" boring.</p>
+          <div class="ask" style="margin-top:12px"><i class="rule"></i>
+            <div class="bd">
+              <div class="lb">What you get</div>
+              <div class="freelist">
+                <div><span class="tick">❦</span><span>The <b>Kitabi seal</b> beside your name</span></div>
+                <div><span class="tick">✓</span><span>A <b>gold app icon</b>, and two more papers to read on</span></div>
+                <div><span class="tick">✓</span><span>Your own <b>ex-libris bookplate</b> on share cards</span></div>
+                <div><span class="tick">✓</span><span><b>Your year in books</b>, as a poster</span></div>
+                <div><span class="tick">✓</span><span>A <b>vote</b> on what gets built next</span></div>
+                <div><span class="tick">✓</span><span><b>60</b> recommendations a day, not 20</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="sl" style="margin-top:11px">Free forever, for everyone</div>
+          <div class="freelist" style="margin-top:0">
+            <div><span class="tick">✓</span><span>Lending and borrowing, all of it</span></div>
+            <div><span class="tick">✓</span><span>Your library, shelves, notes, reviews, sync</span></div>
+            <div><span class="tick">✓</span><span>Import — and <b>export</b> of your own data</span></div>
+          </div>
+        </div>
+        <div class="sheet" style="padding:10px 14px 12px;box-shadow:0 -10px 24px rgba(43,33,24,.14)">
+          <span class="pbtn wide">Support · ₹149 / year</span>
+          <div style="text-align:center;margin-top:7px"><span class="pbtn mute" style="font-size:8.5px">
+            Help another way, for free</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4a · The Supporter page.</b> Reached only on purpose. The free-forever list is longer
+      than the perks list, which is the correct proportion and also just true.</p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Support Kitabi</h3></div>
+          <div style="text-align:center;padding:14px 0 4px"><span class="seal xl">❦</span></div>
+          <h4 style="font-family:'Fraunces',serif;font-size:15px;font-weight:550;text-align:center;
+            line-height:1.35;padding:0 6px">Kitabi has no ads, no investors,<br>and nothing to sell but this.</h4>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h4>Kitabi Supporter</h4>
+          <p class="sub">Yearly membership · renews automatically · cancel any time in the App Store</p>
+          <div class="ask" style="margin-top:12px;border-color:#E4CF9B;
+            background:linear-gradient(150deg,#FDF7E7,#F7EDD4)"><i class="rule"></i>
+            <div class="bd" style="text-align:center;padding:14px">
+              <div class="lb" style="justify-content:center">One plan · annual</div>
+              <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--oxblood);
+                line-height:1;margin-top:6px">₹149</div>
+              <p style="font-size:8.5px;margin-top:4px">a year — about ₹12 a month</p>
+            </div>
+          </div>
+          <div style="margin-top:12px"><span class="pbtn wide">Confirm with Apple</span></div>
+          <p style="font-size:7.5px;color:var(--stamp-grey);text-align:center;margin-top:9px;line-height:1.55">
+            Renews on 12 Aug each year unless cancelled 24 h before. Managed by the App Store — Kitabi never
+            sees your card.</p>
+          <div style="text-align:center;margin-top:7px"><span class="pbtn mute" style="font-size:8.5px">
+            Restore purchase</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4b · The purchase sheet (StoreKit 2 / Play Billing).</b> One SKU, one price, one
+      button. No decoy tiers, no "most popular", no strikethrough — a ₹149 product does not need a pricing
+      table. <span class="pro">Restore lives here, not three menus deep.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Support Kitabi</h3></div>
+          <div style="text-align:center;padding:36px 0 4px"><span class="seal xl">❦</span></div>
+          <h4 style="font-family:'Fraunces',serif;font-size:17px;font-weight:550;text-align:center;
+            margin-top:12px">Thank you.</h4>
+          <p style="font-size:9.5px;color:var(--ink-soft);line-height:1.65;text-align:center;margin-top:9px;
+            padding:0 10px">You're a <b style="color:#8F681E">founding supporter</b> — number 41 of the first
+            500. That mark stays yours whatever the price does later.</p>
+          <div class="ask" style="margin-top:16px"><i class="rule"></i>
+            <div class="bd">
+              <div class="lb">Now on your profile</div>
+              <div style="display:flex;align-items:center;gap:9px;margin-top:7px">
+                <span class="pav sm">N</span>
+                <div><div style="font-size:10px;font-weight:600;display:flex;align-items:center;gap:4px">
+                  Nikhil Menon <span class="seal">❦</span></div>
+                  <div style="font-size:7.5px;color:#8F681E;font-weight:600;margin-top:1px">
+                    Supporter since Aug 2026 · Founding</div></div>
+              </div>
+              <p style="font-size:8px;margin-top:8px">Renews 12 Aug 2027. You'll get one email 14 days before —
+                that's the only email this membership ever sends.</p>
+            </div>
+          </div>
+          <div style="margin-top:14px"><span class="pbtn wide g">See my profile</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4c · After paying.</b> Shows the mark they just bought, in situ, immediately — and
+      names the <em>only</em> email the membership will ever send, because "what did I just sign up to
+      receive?" is the next thought after any purchase.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 5 -->
+<div class="area" id="a5">
+  <div class="ah"><span class="an">5 · The ask</span><h2>Surface two — the only honest wall</h2></div>
+  <p class="desc">The reader asked for their <b>21st</b> recommendation today. The screen has to say something,
+  and "you've used today's picks" is that something whether or not Supporter exists. Adding one line to a
+  message that was always going to appear is <b>the least intrusive ask in the product</b> — and it's the only
+  one aimed at a reader who is demonstrably costing money. It carries the reset time first, so it stays useful
+  to someone who ignores the offer entirely. Capped: <b>once per 30 days</b>, however often they hit the wall.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>For you</h3></div>
+          <div class="empty">
+            <div class="glyph">❦</div>
+            <h4>That's today's 20 picks</h4>
+            <p>Recommendations are read by an AI, which costs Kitabi real money — so there's a daily cap for
+              everyone. Yours opens again at <b>5:30 am</b>.</p>
+          </div>
+          <div class="meter"><i class="full" style="width:100%"></i></div>
+          <div style="text-align:center" class="metl">20 of 20 today</div>
+          <div class="ask" style="margin-top:16px"><i class="rule"></i>
+            <div class="bd">
+              <div class="lb"><span class="seal" style="width:11px;height:11px;font-size:6.5px">❦</span>
+                Supporters get 60 <span class="x">✕</span></div>
+              <h4 style="font-size:12px">₹149 a year — and the cap stops being your problem.</h4>
+              <p>It also keeps Kitabi ad-free and independent. Everything else stays free either way.</p>
+              <div class="btns"><span class="pbtn">Support Kitabi</span>
+                <span class="pbtn mute">Not now</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>5a · Quota reached, free reader.</b> The reset time is bigger than the offer, and comes
+      first. <span class="pro">Honest because it's true: the cap exists for cost reasons, not to sell
+      anything — it was there before the membership was.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>For you</h3></div>
+          <div class="empty">
+            <div class="glyph">❦</div>
+            <h4>That's today's 60 picks</h4>
+            <p>Even a supporter's share is bounded — the daily ceiling is what keeps the bill knowable.
+              Yours opens again at <b>5:30 am</b>.</p>
+          </div>
+          <div class="meter"><i class="full" style="width:100%"></i></div>
+          <div style="text-align:center" class="metl">60 of 60 today · supporter</div>
+          <div class="gone" style="margin-top:18px">No ask here.<br>They already did the thing.</div>
+        </div>
+        <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>5b · Quota reached, supporter.</b> Same screen, higher number, no pitch.
+      <span class="con">Selling to someone who already bought is the fastest way to make a membership feel
+      like a subscription trap — and it's the single most common bug in programmes like this.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>For you</h3></div>
+          <div class="empty">
+            <div class="glyph">❦</div>
+            <h4>That's today's 20 picks</h4>
+            <p>Recommendations are read by an AI, which costs Kitabi real money — so there's a daily cap for
+              everyone. Yours opens again at <b>5:30 am</b>.</p>
+          </div>
+          <div class="meter"><i class="full" style="width:100%"></i></div>
+          <div style="text-align:center" class="metl">20 of 20 today</div>
+          <div class="gone" style="margin-top:18px">This reader tapped <b>“Don't ask again”</b> in March.<br>
+            The offer line is gone from this screen too — permanently, on the server, across reinstalls.</div>
+        </div>
+        <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>5c · Someone who said no.</b> "Don't ask again" means <em>every</em> surface, not just
+      the one they said it on. <span class="pro">It lives on the profile, not the device — so reinstalling
+      doesn't reset it, which is the difference between a promise and a trick.</span></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 6 -->
+<div class="area" id="a6">
+  <div class="ah"><span class="an">6 · The ask</span><h2>Surface three — asked once, after something good</h2></div>
+  <p class="desc">The only ask that <b>interrupts</b>. It rides in the Home stream after a genuinely good
+  moment — a book finished, a year in review, the fiftieth book shelved — never before <b>day 14</b>, never
+  more than <b>three times a year</b>, never twice inside <b>60 days</b>. It leads with what Kitabi is rather
+  than what it costs, and it has <b>two doors</b>: one costs ₹149, one costs ninety seconds.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="hd"><div class="t"><div><h3>Kitabi</h3>
+            <div class="g">42 books this year</div></div><div class="ic">🔍 ⚙</div></div></div>
+          <div class="ask" style="margin-top:10px"><i class="rule"></i>
+            <div class="bd">
+              <div class="lb"><span class="seal" style="width:11px;height:11px;font-size:6.5px">❦</span>
+                From Kitabi <span class="x">✕</span></div>
+              <h4>That's 42 books this year. Kitabi has been here for all of them.</h4>
+              <p>No ads, no investors, nothing sold about you — just a server bill and one person. If it's
+                been worth it, ₹149 a year keeps it that way.</p>
+              <div class="btns"><span class="pbtn">Support · ₹149/yr</span>
+                <span class="pbtn g">Help another way</span></div>
+              <div class="fine">Or tap ✕ — you won't see this again for six months.
+                <b style="color:#7A6A55">Don't ask again</b></div>
+            </div>
+          </div>
+          <div class="sl">Continue reading</div>
+          <div class="crd">
+            <div class="cover ox"><span>Aadujeevitham</span></div>
+            <div class="m"><div class="ti">Aadujeevitham</div><div class="au">Benyamin</div>
+              <div class="bar"><i style="width:44%"></i></div><div class="pg">p. 88 of 200 · 44%</div></div>
+            <div class="act">▶</div>
+          </div>
+          <div class="sl">Recently added</div>
+          <div class="strip">
+            <div class="cover dk"><span>Chemmeen</span></div>
+            <div class="cover rd"><span>Randamoozham</span></div>
+            <div class="cover ms"><span>Khasak</span></div>
+          </div>
+        </div>
+        <div class="fade"></div>
+        <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>6a · The earned moment.</b> Inline in the stream — it scrolls away like anything else.
+      <span class="pro">"Don't ask again" is <em>in the card</em>, in plain words, not buried in settings. If
+      leaving is easy, staying means something.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="hd"><div class="t"><div><h3>Kitabi</h3>
+            <div class="g">42 books this year</div></div><div class="ic">🔍 ⚙</div></div></div>
+          <div class="sl">Continue reading</div>
+          <div class="crd">
+            <div class="cover ox"><span>Aadujeevitham</span></div>
+            <div class="m"><div class="ti">Aadujeevitham</div><div class="au">Benyamin</div>
+              <div class="bar"><i style="width:44%"></i></div><div class="pg">p. 88 of 200 · 44%</div></div>
+            <div class="act">▶</div>
+          </div>
+          <div class="sl">Recently added</div>
+          <div class="strip">
+            <div class="cover dk"><span>Chemmeen</span></div>
+            <div class="cover rd"><span>Randamoozham</span></div>
+            <div class="cover ms"><span>Khasak</span></div>
+            <div class="cover"><span>Balyakalasakhi</span></div>
+          </div>
+          <div class="stats">
+            <div><div class="n">128</div><div class="l">BOOKS</div></div>
+            <div><div class="n">41</div><div class="l">READ</div></div>
+            <div><div class="n">3</div><div class="l">LENT</div></div>
+            <div><div class="n">9</div><div class="l">REVIEWS</div></div>
+          </div>
+          <div class="quote"><div class="q">“A room without books is like a body without a soul.”</div>
+            <div class="a">CICERO</div></div>
+        </div>
+        <div class="toast">Not for another six months.<b>UNDO</b></div>
+        <div class="nav"><div class="on"><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>6b · Dismissed.</b> Instant, offline, and the card is <em>gone</em> — not collapsed,
+      not replaced by a thinner version of itself. The toast states the consequence in the reader's units, not
+      ours. <span class="pro">Same dismissal machinery as promotions: one store, one set of rules.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="hd"><div class="t"><div><h3>Kitabi</h3>
+            <div class="g">Good afternoon</div></div><div class="ic">🔍 ⚙</div></div></div>
+          <div class="sl">Continue reading</div>
+          <div class="crd">
+            <div class="cover ox"><span>Aadujeevitham</span></div>
+            <div class="m"><div class="ti">Aadujeevitham</div><div class="au">Benyamin</div>
+              <div class="bar"><i style="width:44%"></i></div><div class="pg">p. 88 of 200 · 44%</div></div>
+            <div class="act">▶</div>
+          </div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h4>Never again?</h4>
+          <p class="sub">We'll stop asking you to support Kitabi — on Home, in Profile's card, and on the
+          recommendations screen. Nothing else changes, and the door in Profile stays open if you ever
+          change your mind.</p>
+          <div class="okbox" style="font-size:8.5px;padding:8px 10px;margin-top:11px">
+            This is stored on your account, not on this phone. Reinstalling won't bring the asks back.</div>
+          <div style="margin-top:12px"><span class="pbtn wide">Yes, never ask again</span></div>
+          <div style="text-align:center;margin-top:8px"><span class="pbtn mute">Just hide it for now</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>6c · "Don't ask again", confirmed once.</b> The confirmation exists to make the promise
+      <em>bigger</em>, not to talk anyone out of it — no "are you sure you'll miss out", no second offer, no
+      discount ambush. <span class="pro">It names where the flag lives, because that's the part people don't
+      believe.</span></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 7 -->
+<div class="area" id="a7">
+  <div class="ah"><span class="an">7 · The second door</span><h2>Helping without paying — and the seal you can earn</h2></div>
+  <p class="desc">Most readers will never pay, and a programme that treats them as unconverted revenue will
+  feel like one. But Kitabi needs things money can't buy right now: the catalogue has <b>0 works with a
+  genre</b>, most works have no description, and covers are missing everywhere. That's real help, gettable in
+  ninety seconds — and it runs on the reputation score that <b>already exists</b> on the profile
+  (<code>scoring_service.py</code>). Nothing new to build but the sheet.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="hd"><div class="t"><div><h3>Kitabi</h3>
+            <div class="g">42 books this year</div></div><div class="ic">🔍 ⚙</div></div></div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h4>Help another way</h4>
+          <p class="sub">Money is one way. These are the others, and honestly they're worth more to
+          Kitabi right now.</p>
+          <div class="optrow"><span class="oi">＋</span>
+            <div class="ot"><div class="on2">Add a book that isn't here</div>
+              <div class="os">The catalogue is built by readers. It shows.</div></div>
+            <span class="pts">+10</span></div>
+          <div class="optrow"><span class="oi">▣</span>
+            <div class="ot"><div class="on2">Fix a missing cover</div>
+              <div class="os">7 books on your shelf have none</div></div>
+            <span class="pts">+5</span></div>
+          <div class="optrow"><span class="oi">✎</span>
+            <div class="ot"><div class="on2">Review a book you finished</div>
+              <div class="os">You've finished 41 and reviewed 9</div></div>
+            <span class="pts">+10</span></div>
+          <div class="optrow"><span class="oi">⇲</span>
+            <div class="ot"><div class="on2">Tell one person</div>
+              <div class="os">Share a book card — it carries the app</div></div></div>
+          <div style="text-align:center;margin-top:11px"><span class="pbtn mute">Close</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>7a · Four doors, priced in seconds not rupees.</b> Each row is drawn from what
+      <em>this</em> reader can actually do next — "7 books on your shelf have none" is a query, not a slogan.
+      <span class="pro">The points are the score they already have; no new currency invented.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Profile</h3></div>
+          <div class="phead"><div class="pav">S</div>
+            <div><div class="pname">Sreekumar V. <span class="seal">❦</span></div>
+              <div class="phandle">@sree</div>
+              <div class="pmeta gd">Supporter · with thanks from Kitabi</div>
+              <div class="pmeta">Reading since 2026 · 63 books</div></div></div>
+          <div class="ask" style="margin-top:12px"><i class="rule"></i>
+            <div class="bd" style="display:flex;gap:10px;align-items:center;padding:11px">
+              <span class="seal xl">❦</span>
+              <div style="flex:1">
+                <div class="lb">Given, not bought</div>
+                <h4 style="font-size:11.5px;margin-top:3px">You added 214 books to the catalogue.</h4>
+                <p style="font-size:8px;margin-top:3px">A year of Supporter, on the house. Until 4 Sep 2027.</p>
+              </div>
+            </div>
+          </div>
+          <div class="sl">Contributions</div>
+          <div class="setrow"><span class="ic">✦</span><div class="tx"><div class="tt">Score 2,480</div>
+            <div class="ts">214 books · 31 authors · 44 reviews</div></div><span class="ch">›</span></div>
+          <div class="gone" style="text-align:left">The seal doesn't say <b>how</b> it was got, and it never
+            will — a granted seal and a bought one are the same gold. Only the console knows the difference.</div>
+        </div>
+        <div class="nav"><div><i>⌂</i>Home</div><div><i>▤</i>Library</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>7b · The seal, granted.</b> Exactly the mechanism the brief asked for — "allot the
+      badge without a subscription" — pointed at the people who've earned it hardest.
+      <span class="pro">This is what makes the mark mean <em>this person carries Kitabi</em> rather than
+      <em>this person paid</em>. A better badge, and one that survives being looked at closely.</span></p>
+    </div>
+
+    <div class="cap w" style="align-self:center">
+      <div class="note green" style="margin-top:0"><i></i><div><b>Why this door earns its place.</b> It changes
+      what the ask <em>is</em>. A card with one button is a sales pitch and the reader knows it; a card with
+      "₹149" beside "ninety seconds of your time" is a request for help, which is what it honestly is — and
+      the free option is the one that fixes the catalogue, which is the thing actually blocking the SEO work
+      the whole revenue plan sits on.<br><br>
+      It also closes the loop back to the console: the <b>Supporters</b> screen surfaces top contributors as a
+      grant suggestion list (<b>14b</b>), so "this person added 214 books, give them a year" is one click, not
+      a research project.</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 8 -->
+<div class="area" id="a8">
+  <div class="ah"><span class="an">8 · The contract</span><h2>The ask budget, drawn</h2></div>
+  <p class="desc">These are numbers, not intentions, and they're enforced <b>server-side</b> — an app-side cap
+  is one reinstall away from being no cap. Mechanically the ask is a <b>promotion</b>: the Phase-9 pipeline
+  already does targeting, frequency caps, offline dismissal and the reader opt-out, all of it tested. A
+  reserved <code>kind='supporter'</code> campaign inherits every guarantee below instead of re-implementing
+  it, and there is no second nag system to keep honest.</p>
+
+  <div class="tl">
+    <div class="tlbar">
+      <div class="tlpt no" style="left:0%"><span>Install</span><em>day 0</em></div>
+      <div class="tlpt no" style="left:11%"><span>Silence</span><em>days 1–14</em></div>
+      <div class="tlpt ask" style="left:26%"><span>Ask 1</span><em>after a book finished</em></div>
+      <div class="tlpt no" style="left:41%"><span>Dismissed ✕</span><em>+180 days quiet</em></div>
+      <div class="tlpt ask" style="left:62%"><span>Ask 2</span><em>year in review</em></div>
+      <div class="tlpt no" style="left:79%"><span>Dismissed ✕</span><em>twice in a row</em></div>
+      <div class="tlpt" style="left:97%;border-color:var(--oxblood)"><span style="color:#7E2A33">Never again</span><em>automatic</em></div>
+    </div>
+    <div class="tllg">
+      <span><i></i> An ask was shown</span>
+      <span><i class="g"></i> Auto-silenced</span>
+      <span><i class="n"></i> Nothing shown</span>
+      <span style="color:var(--oxblood);font-weight:600">Two dismissals in a row and it stops for good —
+        nobody has to find a setting to be left alone.</span>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:26px">
+    <div style="flex:1;min-width:340px">
+      <div class="sect" style="margin-top:0">Never</div>
+      <div class="panel">
+        <div class="freelist" style="margin-top:0">
+          <div><span class="cross">✕</span><span>In the first <b>14 days</b> — a reader who hasn't finished a
+            book has nothing to thank us for</span></div>
+          <div><span class="cross">✕</span><span>More than <b>3 times a year</b>, or twice inside <b>60 days</b></span></div>
+          <div><span class="cross">✕</span><span>During <b>onboarding</b>, a <b>reading session</b>, the timer's
+            stop sheet, the <b>lend or borrow</b> flow, add-book, CSV import, or a sync error</span></div>
+          <div><span class="cross">✕</span><span>As a <b>full-screen takeover</b>, a launch modal, or an
+            interstitial between screens</span></div>
+          <div><span class="cross">✕</span><span>As a <b>red dot</b> or badge on the tab bar</span></div>
+          <div><span class="cross">✕</span><span>With a <b>countdown</b>, "limited time", or any manufactured
+            scarcity</span></div>
+          <div><span class="cross">✕</span><span>As a <b>push notification</b>, ever</span></div>
+          <div><span class="cross">✕</span><span>As <b>email</b> — the only supporter email is transactional
+            ("expires in 14 days")</span></div>
+          <div><span class="cross">✕</span><span>To an existing <b>supporter</b></span></div>
+          <div><span class="cross">✕</span><span>To anyone who has <b>promotions turned off</b> — one switch,
+            one promise</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:340px">
+      <div class="sect" style="margin-top:0">Always</div>
+      <div class="panel">
+        <div class="freelist" style="margin-top:0">
+          <div><span class="tick">✓</span><span>Dismissible in <b>one tap</b>, offline, instantly</span></div>
+          <div><span class="tick">✓</span><span><b>"Don't ask again"</b> visible on the ask itself — not buried
+            in settings</span></div>
+          <div><span class="tick">✓</span><span>That flag lives on the <b>profile</b>, so a reinstall doesn't
+            reset it</span></div>
+          <div><span class="tick">✓</span><span>A <b>second door</b> that costs no money (Area 7)</span></div>
+          <div><span class="tick">✓</span><span>The <b>permanent door</b> in Profile, which is never counted as
+            an ask</span></div>
+          <div><span class="tick">✓</span><span>Every cap enforced <b>server-side</b>, on the profile row</span></div>
+        </div>
+        <div class="okbox" style="margin-top:14px">The three surfaces are <b>the whole inventory</b>. There is
+        no fourth place this feature is allowed to appear, and adding one is a design decision, not a growth
+        experiment.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 9 -->
+<div class="area" id="a9">
+  <div class="ah"><span class="an">9 · Settings</span><h2>Your membership, and the switch that turns it off</h2></div>
+  <p class="desc">A supporter needs four answers in one place — <b>am I one, until when, does it renew, and how
+  do I stop</b> — and cancelling must be as findable as buying. A free reader gets the same section with two
+  rows: the door, and the control over being asked.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Membership</h3></div>
+          <div class="ask" style="margin-top:8px"><i class="rule"></i>
+            <div class="bd" style="display:flex;gap:11px;align-items:center;padding:12px">
+              <span class="seal xl">❦</span>
+              <div style="flex:1"><div class="lb">Active</div>
+                <h4 style="font-size:12px;margin-top:2px">Kitabi Supporter</h4>
+                <p style="font-size:8px;margin-top:2px">₹149/yr · renews 12 Aug 2027</p></div>
+            </div>
+          </div>
+          <div class="sl">This membership</div>
+          <div class="setrow"><span class="ic">❦</span><div class="tx"><div class="tt">Show my seal</div>
+            <div class="ts">Beside your name on public pages</div></div><span class="sw on"></span></div>
+          <div class="setrow"><span class="ic">◫</span><div class="tx"><div class="tt">Bookplate on share cards</div>
+            <div class="ts">“From the library of Nikhil Menon”</div></div><span class="sw on"></span></div>
+          <div class="setrow"><span class="ic">▤</span><div class="tx"><div class="tt">List me on kitabi.in</div>
+            <div class="ts">Off — nobody is listed without asking</div></div><span class="sw"></span></div>
+          <div class="sl">Manage</div>
+          <div class="setrow"><span class="ic">↺</span><div class="tx"><div class="tt">Restore purchase</div></div>
+            <span class="ch">›</span></div>
+          <div class="setrow"><span class="ic">⊘</span><div class="tx"><div class="tt">Cancel renewal</div>
+            <div class="ts">Opens the App Store · you keep it till 12 Aug 2027</div></div><span class="ch">›</span></div>
+          <div class="gone" style="text-align:left">If it lapses you lose the seal and the raised daily caps.
+            <b>Nothing else changes</b> — no book, note, review, loan or export is ever behind this.</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>9a · Supporter.</b> Cancel is a labelled row, not a hidden one, and it says what you
+      keep. <span class="pro">The last line is §4 of the plan printed where the reader can hold us to it.</span></p>
+    </div>
+
+    <div class="shot">
+      <div class="phone"><div class="scr"><div class="sbar"><span>12:21</span><span>≋ ⌁ 80</span></div>
+        <div class="pbody">
+          <div class="abar"><span class="bk">←</span><h3>Profile</h3></div>
+          <div class="sl">Kitabi</div>
+          <div class="setrow"><span class="ic">☾</span><div class="tx"><div class="tt">Dark mode</div></div>
+            <span class="sw"></span></div>
+          <div class="setrow"><span class="ic">◧</span><div class="tx"><div class="tt">Show promotions</div>
+            <div class="ts">Includes anything about Supporter</div></div><span class="sw on"></span></div>
+          <div class="setrow gold"><span class="ic">❦</span><div class="tx"><div class="tt">Support Kitabi</div>
+            <div class="ts">₹149 a year · keeps it ad-free</div></div><span class="ch">›</span></div>
+          <div class="setrow"><span class="ic">🔕</span><div class="tx"><div class="tt">Don't ask me about this</div>
+            <div class="ts">On — you haven't been asked since March</div></div><span class="sw on"></span></div>
+          <div class="sl">Account</div>
+          <div class="setrow"><span class="ic">⤓</span><div class="tx"><div class="tt">Export my data</div>
+            <div class="ts">Everything, free, always</div></div><span class="ch">›</span></div>
+          <div class="setrow"><span class="ic">⏻</span><div class="tx"><div class="tt">Sign out</div></div>
+            <span class="ch">›</span></div>
+        </div>
+        <div class="nav"><div><i>▤</i>Library</div><div><i>⌂</i>Home</div>
+          <div class="plus">+</div><div><i>⇄</i>Lending</div><div><i>◔</i>Insights</div></div>
+      </div></div>
+      <p class="cap"><b>9b · Free reader.</b> The door and the mute switch sit next to each other, which is the
+      honest arrangement. <span class="pro">"Export my data — everything, free, always" stays two rows below
+      the price, on purpose: it's the promise the whole positioning rests on, and it belongs where the money
+      talk happens.</span></p>
+    </div>
+
+    <div class="cap w" style="align-self:center">
+      <div class="note red" style="margin-top:0"><i></i><div><b>The one line that must never be edited.</b>
+      "Export my data — everything, free, always." Every subscription app eventually meets an argument for
+      putting export behind the paywall: it's the highest-intent moment, it's what leavers want, it converts.
+      It's also hostage-taking, and in an app whose entire pitch is <em>we don't sell you</em>, it would cost
+      more trust than a hundred memberships are worth.<br><br>
+      <b>§4 of the plan</b> is the checkable version of this — eight claims a code review can be run against —
+      and export is number three.</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ 10 -->
+<div class="area" id="a10">
+  <div class="ah"><span class="an">10 · Public web</span><h2>The web page explains it; the app sells it</h2></div>
+  <p class="desc">The membership is an <b>in-app subscription on both stores</b> (owner decision, 9 Aug 2026)
+  — so it's bound to the Kitabi account, it renews itself, and it needs no admin to switch anything on. That
+  puts a hard constraint on this page: it may <b>describe</b> the membership, but it must not sell it or link
+  to a way of buying it. Anti-steering cuts both ways — an external purchase link inside the app is a 3.1.1
+  rejection, and a purchase path out here that undercut the stores' would be the same argument in reverse. So
+  the page ends where every Kitabi page ends: <b>get the app</b>. It still earns its place — this is what a
+  search result, a shared link, or somebody asking "what is that gold thing next to your name?" lands on.</p>
+
+  <div class="win" style="margin-bottom:22px">
+    <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="addr">kitabi.in/supporter</span></div>
+    <div class="site">
+      <div class="shead">
+        <div class="wbrand"><span class="wmark"></span>Kitabi</div>
+        <div class="snav"><a>Books</a><a>Authors</a><a>Publishers</a><a>Languages</a><a>Lists</a><b>Support</b></div>
+        <a class="btn-app">Get the app</a>
+      </div>
+      <div class="whero">
+        <div style="margin-bottom:14px"><span class="seal xl">❦</span></div>
+        <h1>Keep Kitabi <em>independent</em>.</h1>
+        <p>No ads. No investors. Nothing sold about the people who use it. Kitabi is one person, a small
+        server bill, and a catalogue built by readers — ₹149 a year covers a supporter's share of it.</p>
+      </div>
+      <div class="wwrap">
+        <div class="wcards">
+          <div class="wcard gold">
+            <h3><span class="seal md">❦</span> Kitabi Supporter</h3>
+            <div class="p">₹149 <small>/ year</small></div>
+            <ul>
+              <li><span class="t">❦</span><span>The <b>Kitabi seal</b> beside your name, on your profile and
+                every review you publish</span></li>
+              <li><span class="t">✓</span><span><b>Founding supporter</b> — the first 500 keep the mark
+                whatever the price does later</span></li>
+              <li><span class="t">✓</span><span>A <b>gold app icon</b> for your home screen</span></li>
+              <li><span class="t">✓</span><span>Your own <b>ex-libris bookplate</b> on share cards</span></li>
+              <li><span class="t">✓</span><span><b>Vellum</b> and <b>Night Library</b> — two more papers to
+                read on</span></li>
+              <li><span class="t">✓</span><span><b>Your year in books</b>, as a poster</span></li>
+              <li><span class="t">✓</span><span>A <b>vote</b> on what gets built next</span></li>
+              <li><span class="t">✓</span><span><b>60</b> AI recommendations a day instead of 20, and
+                <b>120</b> cover reads instead of 40</span></li>
+              <li><span class="t">✓</span><span>New features first</span></li>
+            </ul>
+          </div>
+          <div class="wcard">
+            <h3>How to join</h3>
+            <div class="steps">
+              <div>Get <b>Kitabi</b> — the App Store or Google Play.</div>
+              <div>Open <b>Profile → Support Kitabi</b>.</div>
+              <div>₹149 a year, through your usual store account. It renews itself, and you can cancel
+                it from the store any time.</div>
+            </div>
+            <div style="display:flex;gap:9px;margin-top:18px">
+              <a class="btn-app" style="margin-left:0">App Store</a>
+              <a class="btn-app" style="margin-left:0">Google Play</a>
+            </div>
+            <p style="font-size:12px;color:var(--stamp-grey);line-height:1.65;margin-top:16px">
+              Your membership belongs to your <b>Kitabi account</b>, not to the phone you bought it on —
+              buy it on an iPhone and the seal is there on your Android tablet the moment you sign in.</p>
+          </div>
+        </div>
+        <div class="wcard" style="margin-top:18px">
+          <h3>What stays free, for everyone, forever</h3>
+          <ul style="columns:2;column-gap:30px">
+            <li><span class="t">✓</span><span>Lending and borrowing — all of it, both directions</span></li>
+            <li><span class="t">✓</span><span>Your library, shelves, tags, notes and reviews</span></li>
+            <li><span class="t">✓</span><span>Reading sessions, progress and insights</span></li>
+            <li><span class="t">✓</span><span>Sync across your devices</span></li>
+            <li><span class="t">✓</span><span>Import from Goodreads or a spreadsheet</span></li>
+            <li><span class="t">✓</span><span><b>Export of everything you own</b></span></li>
+          </ul>
+        </div>
+        <p class="wfoot">Supporter is a way to fund Kitabi, not a way to get more of it.<br>
+        The seal means someone supports this project. It is not an identity check.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div style="flex:1;min-width:520px">
+      <div class="win mid" style="width:100%">
+        <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="addr">kitabi.in/reader/arundhati</span></div>
+        <div class="site"><div class="wwrap" style="padding:22px 26px 26px">
+          <div class="wprof">
+            <div class="wav">A</div>
+            <div><h2>Arundhati M. <span class="seal md">❦</span></h2>
+              <div class="h">@arundhati</div>
+              <div class="m">Reading since 2026 · 74 books · 12 reviews · Malayalam, English</div></div>
+          </div>
+          <div class="sect" style="margin-top:20px">Recent reviews</div>
+          <div class="wcard" style="padding:15px 17px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span class="pav sm flat" style="width:30px;height:30px;font-size:13px">A</span>
+              <div><div style="font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:5px">
+                Arundhati M. <span class="seal">❦</span></div>
+                <div style="font-size:11.5px;color:var(--ink-soft)">14 July 2026 · read in Malayalam</div></div>
+              <span style="margin-left:auto;color:var(--gold);font-size:13px">★★★★☆</span></div>
+            <p style="font-family:'Fraunces',serif;font-style:italic;font-size:13.5px;line-height:1.65;
+              margin-top:9px;color:#4a3b2c">“Sixty years on and the sea in it is still louder than anything
+              written since.”</p>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <p class="cap" style="width:300px"><b>10b · The seal on the public web.</b> Rendered server-side by the
+    same Pages Function that already draws this page — one extra field on the existing
+    <code>/public/</code> payload, no client JS, so a crawler sees it too.
+    <span class="pro">The footer line from 10a ("not an identity check") is the web's version of the tap
+    sheet in 3a: the disclosure follows the mark wherever it goes.</span></p>
+  </div>
+
+  <div class="note green"><i></i><div><b>Why the money moves through the stores, at a 15% cost.</b> ₹149 by
+  UPI would arrive whole — UPI has no MDR — but it can only be <em>linked</em> to a reader by hand: an
+  anonymous page, a payment with no callback, and somebody remembering to mail their handle. That's not a
+  membership, it's a donation with paperwork, and it can't renew. In-app subscriptions bind the purchase to
+  the Kitabi account three ways (<b>supporter-plan §10.4</b>), renew themselves, and let a reader cancel
+  without asking anyone. <b>~₹127 instead of ₹149 is the price of it being real</b>, and at 200 supporters
+  that difference is ₹4,400 a year — less than the cost of one wrong manual reconciliation.</div></div>
+</div>
+
+<!-- ============================================================ 11 -->
+<div class="area" id="a11">
+  <div class="ah"><span class="an">11 · Console</span><h2>Supporters — the list</h2></div>
+  <p class="desc">A new <b>SUPPORT</b> group in the rail, visible to editor and above; <b>granting, recording a
+  payment and revoking are super-admin only</b>, because those are the buttons that move money and hand out
+  status. The four numbers across the top are the whole business in one row — and the one worth watching is
+  the <b>paid / complimentary split</b>: a programme that's 80% complimentary is a recognition scheme, which
+  is fine, as long as you know that's what you built.</p>
+
+  <div class="win">
+    <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="addr">admin.kitabi.in/supporters</span></div>
+    <div class="wbody">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s>ADMIN</s></div></div>
+        <div class="grp">OVERVIEW</div>
+        <a href="#a11">◧ Dashboard</a>
+        <div class="grp">MODERATION</div>
+        <a href="#a11">✍ Author claims <span class="n">3</span></a>
+        <a href="#a11">✎ Suggested edits <span class="n">7</span></a>
+        <a href="#a11">⚑ Reported content <span class="n">2</span></a>
+        <div class="grp new">SUPPORT</div>
+        <a class="on" href="#a11">❦ Supporters <span class="gn">61</span></a>
+        <a href="#a15">₹ Record a payment</a>
+        <div class="grp">PROMOTIONS</div>
+        <a href="#a11">◨ Campaigns</a>
+        <div class="grp">CATALOG</div>
+        <a href="#a11">▤ Works &amp; editions</a><a href="#a11">✍ Authors</a>
+        <div class="grp">PEOPLE</div>
+        <a href="#a11">☺ Readers</a><a href="#a11">⚿ Admin users</a>
+        <div class="grp">TRUST</div><a href="#a11">◇ Audit log</a>
+        <div class="who"><b>shamshi</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>Supporters</h3><div class="sub">61 active · 8 expiring in 30 days</div></div>
+          <div class="sp"><span class="btn s">Export CSV</span>
+            <span class="btn p s">₹ Record a payment</span></div></div>
+        <div class="content">
+          <div class="kpi">
+            <div class="ok"><div class="n">61</div><div class="l">Active supporters</div></div>
+            <div><div class="n">9</div><div class="l">New this month</div></div>
+            <div class="warn"><div class="n">8</div><div class="l">Expiring in 30 days</div></div>
+            <div class="gd"><div class="n">₹6,847</div><div class="l">Annual run-rate, net</div></div>
+          </div>
+          <div class="sect">Filter</div>
+          <div class="seg sm"><span class="on">All 61</span><span>Paid 44</span><span>Complimentary 17</span>
+            <span>Expiring 8</span><span>Lapsed 5</span><span>Seal hidden 2</span></div>
+          <table style="margin-top:14px">
+            <tr><th>Reader</th><th>Source</th><th>Started</th><th>Expires</th><th>Paid</th><th>Seal</th><th></th></tr>
+            <tr>
+              <td><div class="tt">Nikhil Menon <span class="seal">❦</span></div>
+                <div class="ts">@nikhil · nikhil@…</div></td>
+              <td><span class="pill slate">iOS</span></td>
+              <td class="num">12 Aug 2026</td>
+              <td class="num">12 Aug 2027</td>
+              <td class="num">₹149 <s>net ₹127</s></td>
+              <td><span class="pill live">Shown</span></td>
+              <td style="text-align:right"><a class="btn s" href="#a14">Manage</a></td>
+            </tr>
+            <tr class="hl">
+              <td><div class="tt">Sreekumar V. <span class="seal">❦</span></div>
+                <div class="ts">@sree · sree@… · <b style="color:#48663F">score 2,480</b></div></td>
+              <td><span class="pill gold">Complimentary</span></td>
+              <td class="num">4 Sep 2026</td>
+              <td class="num">4 Sep 2027</td>
+              <td class="num" style="color:var(--stamp-grey)">—</td>
+              <td><span class="pill live">Shown</span></td>
+              <td style="text-align:right"><a class="btn s" href="#a14">Manage</a></td>
+            </tr>
+            <tr>
+              <td><div class="tt">Arundhati M. <span class="seal">❦</span></div>
+                <div class="ts">@arundhati · arundhati@…</div></td>
+              <td><span class="pill sch">UPI</span></td>
+              <td class="num">2 Jul 2026</td>
+              <td class="num" style="color:var(--oxblood)"><b>2 Sep 2026</b> · 24 d</td>
+              <td class="num">₹149</td>
+              <td><span class="pill live">Shown</span></td>
+              <td style="text-align:right"><a class="btn s" href="#a14">Manage</a></td>
+            </tr>
+            <tr>
+              <td><div class="tt">Ramesh K. <span class="seal">❦</span></div>
+                <div class="ts">@ramesh · ramesh@…</div></td>
+              <td><span class="pill slate">Android</span></td>
+              <td class="num">18 Jul 2026</td>
+              <td class="num">18 Jul 2027</td>
+              <td class="num">₹149 <s>net ₹127</s></td>
+              <td><span class="pill dr">Hidden by reader</span></td>
+              <td style="text-align:right"><a class="btn s" href="#a14">Manage</a></td>
+            </tr>
+            <tr>
+              <td><div class="tt">Deepa R.</div>
+                <div class="ts">@deepa · deepa@…</div></td>
+              <td><span class="pill sch">UPI</span></td>
+              <td class="num">9 Aug 2025</td>
+              <td class="num" style="color:var(--stamp-grey)">9 Aug 2026 · lapsed</td>
+              <td class="num">₹149</td>
+              <td><span class="pill dr">None</span></td>
+              <td style="text-align:right"><a class="btn s" href="#a14">Manage</a></td>
+            </tr>
+            <tr>
+              <td><div class="tt">Priya N. <span class="seal">❦</span></div>
+                <div class="ts">@priya · priya@… · <span style="color:#43617E">library pilot — Kanjirappally</span></div></td>
+              <td><span class="pill gold">Complimentary</span></td>
+              <td class="num">21 Jul 2026</td>
+              <td class="num" style="color:var(--moss)">No expiry</td>
+              <td class="num" style="color:var(--stamp-grey)">—</td>
+              <td><span class="pill live">Shown</span></td>
+              <td style="text-align:right"><a class="btn s" href="#a14">Manage</a></td>
+            </tr>
+          </table>
+          <div class="note" style="margin-top:16px;max-width:none"><i></i><div><b>Store subscriptions renew
+          themselves, so "Expiring" is a list of the ones that can't.</b> Complimentary grants with an end
+          date, the occasional direct payment — and the case worth watching, a store subscription in
+          <b>billing retry</b>, where the card failed and the reader hasn't noticed. That last one is the only
+          row here where doing nothing loses a supporter who <em>wanted</em> to stay, which is why it sits on
+          the front screen rather than in a report.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 12 -->
+<div class="area" id="a14">
+  <div class="ah"><span class="an">12 · Console</span><h2>A reader, and the seal given by hand</h2></div>
+  <p class="desc">The existing reader page grows <b>one card</b>. It answers the state question, shows the full
+  grant history as a ledger — who granted it, when, why — and carries the three actions. The reader's
+  contribution score sits on the same screen, which is what makes "this person added 214 books, give them a
+  year" a single decision instead of three tabs.</p>
+
+  <div class="win">
+    <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="addr">admin.kitabi.in/readers/9f3c…/</span></div>
+    <div class="wbody">
+      <div class="rail">
+        <div class="brand"><i>K</i><div><b>Kitabi</b><s>ADMIN</s></div></div>
+        <div class="grp">MODERATION</div>
+        <a href="#a14">✍ Author claims <span class="n">3</span></a>
+        <a href="#a14">✎ Suggested edits <span class="n">7</span></a>
+        <div class="grp new">SUPPORT</div>
+        <a href="#a11">❦ Supporters <span class="gn">61</span></a>
+        <a href="#a15">₹ Record a payment</a>
+        <div class="grp">CATALOG</div><a href="#a14">▤ Works &amp; editions</a>
+        <div class="grp">PEOPLE</div><a class="on" href="#a14">☺ Readers</a><a href="#a14">⚿ Admin users</a>
+        <div class="grp">TRUST</div><a href="#a14">◇ Audit log</a>
+        <div class="who"><b>shamshi</b><s>at.shamshi@gmail.com</s><br><span class="sa">SUPER ADMIN</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h3>Sreekumar V.</h3><div class="sub">@sree · sree@example.com</div></div>
+          <div class="sp"><span class="btn s">← All readers</span></div></div>
+        <div class="content">
+          <div class="grid2">
+            <div class="panel gold">
+              <div class="lbl">Supporter</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <span class="seal xl">❦</span>
+                <div><div style="font-family:'Fraunces',serif;font-size:17px;font-weight:550">
+                  Active · complimentary</div>
+                  <div style="font-size:12px;color:var(--ink-soft);margin-top:3px">
+                    4 Sep 2026 → 4 Sep 2027 · granted by <b>shamshi</b></div>
+                  <div style="margin-top:6px"><span class="pill live">Seal shown</span>
+                    <span class="pill gold">Founding · no. 007</span></div></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+                <span class="btn gold s">❦ Extend a year</span>
+                <span class="btn s">₹ Record a payment</span>
+                <span class="btn s">Hide seal</span>
+                <span class="btn d s">Revoke</span>
+              </div>
+              <div class="f hint" style="margin-top:11px">Grants are a ledger, never a flag: nothing here is
+              edited or deleted, only added to and revoked. <code>supporter_until</code> is recomputed from the
+              live rows every time.</div>
+            </div>
+            <div class="panel">
+              <div class="lbl">Contributions &amp; activity</div>
+              <table style="margin-top:2px">
+                <tr><td>Score</td><td style="text-align:right"><b style="font-size:15px;color:#48663F">2,480</b></td></tr>
+                <tr><td>Books added to catalog</td><td style="text-align:right"><b>214</b></td></tr>
+                <tr><td>Authors added</td><td style="text-align:right"><b>31</b></td></tr>
+                <tr><td>Reviews written</td><td style="text-align:right"><b>44</b></td></tr>
+                <tr><td>Books tracked</td><td style="text-align:right"><b>63</b></td></tr>
+                <tr><td>Lending records</td><td style="text-align:right"><b>19</b></td></tr>
+              </table>
+              <div class="okbox" style="margin-top:11px"><b>Top 1% contributor.</b> This is the suggestion that
+              made the grant — the console surfaces readers whose score is far above their peers on the
+              Supporters screen, so recognition doesn't depend on remembering names.</div>
+            </div>
+          </div>
+
+          <div class="sect">Membership history</div>
+          <div class="panel">
+            <div class="hist">
+              <div class="h"><b>Complimentary · 1 year</b> — 4 Sep 2026 → 4 Sep 2027
+                <div class="w">granted by shamshi · 4 Sep 2026, 11:04</div>
+                <div class="r">“214 books and 31 authors added in three months. This is the catalogue.”</div></div>
+              <div class="h rev"><b>Complimentary · 3 months</b> — 2 Jun 2026 → 2 Sep 2026 · <span class="pill dr">Expired</span>
+                <div class="w">granted by shamshi · 2 Jun 2026, 19:22</div>
+                <div class="r">“Beta tester — TestFlight group 1.”</div></div>
+            </div>
+          </div>
+
+          <div class="note" style="max-width:none"><i></i><div><b>Every row here is also an audit-log entry.</b>
+          Grant, extend, revoke and hide-seal all write to the existing trail with the acting admin, the
+          reason and the before/after — the same machinery author claims and suspensions already use. A
+          money-adjacent button with no trail is how a console becomes a liability.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:26px">
+    <div class="win mid" style="width:760px;min-height:0">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="addr">admin.kitabi.in/readers/9f3c…/supporter/grant</span></div>
+      <div style="height:440px;position:relative;background:var(--paper)">
+        <div style="padding:16px 20px;opacity:.35">
+          <div class="lbl">Supporter</div>
+          <div style="height:90px;background:var(--card);border:1px solid var(--line);border-radius:10px"></div>
+          <div class="lbl" style="margin-top:16px">Membership history</div>
+          <div style="height:120px;background:var(--card);border:1px solid var(--line);border-radius:10px"></div>
+        </div>
+        <div class="dlg">
+          <div class="dlgbox">
+            <div class="dh"><span class="seal md">❦</span><h4>Grant Supporter — Sreekumar V.</h4></div>
+            <div class="db">
+              <div class="f"><label>How long</label>
+                <div class="seg sm"><span>1 month</span><span>6 months</span><span class="on">1 year</span>
+                  <span>No expiry</span></div>
+                <div class="hint">Starts today, 9 Aug 2026 → expires <b>9 Aug 2027</b>. An existing membership
+                  is extended from its current end date, never overwritten.</div></div>
+              <div class="f"><label>Reason <span class="req">· required</span></label>
+                <div class="inp">Top contributor — 214 books, 31 authors added in three months.</div>
+                <div class="hint">Goes in the grant ledger and the audit log. Not shown to the reader.</div></div>
+              <div class="f" style="margin-bottom:4px"><label>Tell them?</label>
+                <div class="seg sm"><span class="on">Silent</span><span>Send a thank-you email</span></div>
+                <div class="hint">Silent is the default: the seal simply appears. A granted seal and a bought
+                  one look identical to everyone but this console.</div></div>
+              <div class="okbox">This does <b>not</b> take a payment and is not counted in the run-rate.
+                It shows in the Supporters list as <b>Complimentary</b>.</div>
+            </div>
+            <div class="df"><span style="font-size:11.5px;color:var(--stamp-grey)">Super admin only</span>
+              <div class="sp"><span class="btn s">Cancel</span><span class="btn gold s">❦ Grant a year</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap" style="width:300px"><b>12b · Grant complimentary — the brief's "badge without a
+    subscription".</b> Four durations, a <b>required reason</b>, and a default of <em>silent</em>.
+    <span class="pro">"Extended, never overwritten" is the rule that stops a well-meant grant from shortening
+    somebody's paid year — the arithmetic is in the dialog, not in the admin's head.</span>
+    <span class="con">No expiry exists for one honest case — library pilots and the invited writer circle —
+    and it's the option that shows up in an audit, which is why it's last and not default.</span></p>
+  </div>
+</div>
+
+<!-- ============================================================ 13 -->
+<div class="area" id="a15">
+  <div class="ah"><span class="an">13 · Console</span><h2>The two paths that don't go through a store</h2></div>
+  <p class="desc">Store subscriptions need no console at all — they verify, write their own ledger row, and
+  renew themselves. These two screens are for everything else. <b>Record a payment</b> is the escape hatch for
+  the case that will keep happening anyway: somebody hands you ₹149 directly, or a store purchase fails to
+  reconcile and a reader is out of pocket. <b>Revoke</b> is the other end. Neither is a growth feature; both
+  are what stops a support mail from becoming a database session.</p>
+  <div class="row">
+
+    <div class="win mid" style="width:760px;min-height:0">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="addr">admin.kitabi.in/supporters/record</span></div>
+      <div style="height:470px;position:relative;background:var(--paper)">
+        <div style="padding:16px 20px;opacity:.35">
+          <div class="lbl">Supporters</div>
+          <div style="height:70px;background:var(--card);border:1px solid var(--line);border-radius:10px"></div>
+          <div style="height:150px;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:14px"></div>
+        </div>
+        <div class="dlg">
+          <div class="dlgbox">
+            <div class="dh"><span style="font-size:15px;color:var(--oxblood)">₹</span><h4>Record a payment</h4></div>
+            <div class="db">
+              <div class="f"><label>Reader</label>
+                <div class="inp" style="display:flex;align-items:center;gap:8px">
+                  <span class="pav sm flat" style="width:20px;height:20px;font-size:10px;box-shadow:none">A</span>
+                  Arundhati M. · @arundhati</div>
+                <div class="hint">Search by name, @handle or email. One reader, always — a payment is never
+                  recorded against an email that has no account.</div></div>
+              <div class="grid2" style="gap:12px">
+                <div class="f"><label>Amount</label><div class="inp">₹149</div></div>
+                <div class="f"><label>Method</label>
+                  <div class="seg sm"><span class="on">UPI</span><span>Bank</span><span>Other</span></div></div>
+              </div>
+              <div class="grid2" style="gap:12px">
+                <div class="f"><label>Reference</label><div class="inp mono">4241 9930 7712</div>
+                  <div class="hint">The UPI reference from their mail.</div></div>
+                <div class="f"><label>Period</label>
+                  <div class="inp">9 Aug 2026 → 9 Aug 2027</div>
+                  <div class="hint">One year, from today.</div></div>
+              </div>
+              <div class="okbox">Counted in the run-rate at the <b>full ₹149</b> — no store cut on this path.
+                A reminder mail is queued for <b>26 Jul 2027</b>, 14 days before it lapses.</div>
+            </div>
+            <div class="df"><span style="font-size:11.5px;color:var(--stamp-grey)">Super admin only</span>
+              <div class="sp"><span class="btn s">Cancel</span><span class="btn p s">Record ₹149</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shot" style="width:300px">
+      <p class="cap" style="width:auto"><b>13a · Record a payment — the exception, not the path.</b> Reader
+      lookup, amount, reference, period. Because this one <em>can't</em> renew itself, the line that matters is
+      the last: <b>the expiry reminder is queued at the moment the money is recorded</b>, not left to
+      somebody's memory a year later.</p>
+      <div class="note" style="margin-top:6px;max-width:none"><i></i><div><b>Why there's still no payment
+      gateway.</b> A Razorpay/Cashfree integration for a ₹149 product is a new credential, a new monthly
+      relationship, webhook handling, refund flows and PCI-adjacent questions — rule 8 says no. With the
+      stores carrying every normal purchase, a gateway would exist purely to automate the handful of
+      exceptions this screen already covers in twenty seconds.</div></div>
+    </div>
+
+    <div class="win mid" style="width:600px;min-height:0">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="addr">admin.kitabi.in/readers/…/supporter/revoke</span></div>
+      <div style="height:470px;position:relative;background:var(--paper)">
+        <div style="padding:16px 20px;opacity:.35">
+          <div class="lbl">Supporter</div>
+          <div style="height:100px;background:var(--card);border:1px solid var(--line);border-radius:10px"></div>
+        </div>
+        <div class="dlg">
+          <div class="dlgbox" style="width:440px">
+            <div class="dh"><span style="font-size:14px;color:var(--danger)">⊘</span><h4>Revoke Supporter</h4></div>
+            <div class="db">
+              <div class="f"><label>Reason <span class="req">· required</span></label>
+                <div class="inp ph">Why is this being taken back?</div></div>
+              <div class="warnbox">
+                <b>What this does:</b> the seal disappears, and the daily AI caps drop back to 20 / 40.<br>
+                <b>What it doesn't:</b> nothing else. No book, note, review, loan, shelf or export is affected —
+                revoking a membership is not a suspension.<br>
+                <b>The reader is not notified.</b> If money was taken, refund it yourself first; this button
+                doesn't move money.
+              </div>
+              <div class="f hint" style="margin-top:10px">The grant row is kept and marked revoked — the
+                history stays readable, and the action is reversible by granting again.</div>
+            </div>
+            <div class="df"><span style="font-size:11.5px;color:var(--stamp-grey)">Super admin only</span>
+              <div class="sp"><span class="btn s">Cancel</span><span class="btn d s">Revoke</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="note red"><i></i><div><b>Two different buttons, deliberately far apart.</b> <b>Revoke</b> ends a
+  membership. <b>Hide seal</b> (on the reader card) removes the mark while the membership runs — the
+  moderation case where someone is using the seal badly, which is not the same as taking their year away. And
+  neither is <b>Suspend</b>, which already exists and locks the account. Three different severities, three
+  different buttons, each saying exactly what it does.</div></div>
+</div>
+
+<!-- ============================================================ 14 -->
+<div class="area" id="a16">
+  <div class="ah"><span class="an">Notes</span><h2>The data model, and what these mockups commit us to</h2></div>
+  <p class="desc">Small: <b>one column</b> does the entitlement, <b>one table</b> keeps the receipts. Nothing
+  here is syncable — <code>profiles</code> is the identity row, online-only — so the app caches
+  <code>supporter_until</code> in Drift purely so the seal and the caps survive a flight.</p>
+
+  <div class="model"><b>profiles</b>  <s>— the entitlement + the ask budget, enforced server-side</s>
+  + supporter_until          timestamptz null   <s>null = not a supporter</s>
+  + supporter_since          timestamptz null   <s>drives “Supporter since 2026” + Founding no.</s>
+  + supporter_badge_hidden   boolean  not null default false   <u>← the reader's own switch</u>
+  + supporter_asked_at       timestamptz null   <s>last ask shown — the 60-day gap</s>
+  + supporter_asks_count     int      not null default 0       <s>the 3-a-year cap</s>
+  + supporter_never_ask      boolean  not null default false   <u>← survives a reinstall</u>
+
+<b>supporter_grants</b>  <s>— append-only ledger. never edited, never deleted</s>
+  id            uuid pk
+  user_id       uuid → profiles
+  source        text        <s>'ios' | 'android' | 'upi' | 'admin'</s>
+  amount_inr    int  null   <s>null for a complimentary grant</s>
+  period_start  timestamptz
+  period_end    timestamptz null   <s>null = no expiry (a lifetime grant)</s>
+  reason        text null   <s>REQUIRED when source = 'admin'</s>
+  granted_by    uuid null → admins
+  revoked_at    timestamptz null
+  revoked_by    uuid null → admins
+  created_at    timestamptz
+  <s>— store-backed rows only:</s>
+  store_txn_id      text null   <u>← UNIQUE with source: a replayed receipt is a no-op</u>
+  store_original_id text null   <u>← UNIQUE across users: one sub can't light up two accounts</u>
+  auto_renewing     boolean not null default false
+  raw_status        text null   <s>last status seen from the store, for support</s>
+
+<s>supporter_until = max(period_end) over live grants — recomputed on every grant,
+renewal and revoke. Never hand-edited. RLS deny-by-default, zero policies, like
+every table. llm_quota.quota_for() takes one new argument: is_supporter.</s></div>
+
+  <div class="commit">
+    <div class="sect">What these mockups commit us to</div>
+    <ul>
+      <li>The seal is a <b>gold ❦ stamp</b>, it means <b>supports Kitabi</b>, and it is <b>tappable
+        everywhere it appears</b> — with a sheet that names what it is <em>and what it isn't</em>.</li>
+      <li><b>"Verified" stays reserved for identity</b> (author and publisher claims), is earned rather than
+        bought, and the two marks are never merged.</li>
+      <li><b>No seal on any lending or borrowing surface</b>, ever. Trust marks stay out of trust
+        transactions.</li>
+      <li><b>Absence is never marked.</b> A free reader's screens are identical to today's, apart from one
+        row in Profile.</li>
+      <li>The ask is a <b>promotion</b> — Phase 9's pipeline, Phase 9's dismissal store, Phase 9's opt-out —
+        with the harder caps in Area 8 <b>enforced server-side</b>.</li>
+      <li><b>"Don't ask again" is permanent</b>, lives on the profile, silences <em>every</em> surface, and
+        survives a reinstall.</li>
+      <li>Every ask carries a <b>second door that costs no money</b>, and that door feeds the catalogue.</li>
+      <li><b>Every free feature stays free</b> — lending, library, sync, import and <b>export</b> above all.
+        Supporter raises caps; it never lowers a floor.</li>
+      <li>Grants are a <b>ledger</b>: append-only, reasoned, audited, reversible. Complimentary seals look
+        identical to bought ones to everyone except this console.</li>
+      <li>The membership is <b>bought in the app on both stores</b> and bound to the Kitabi account three
+        ways — stamped store-side (<code>appAccountToken</code> / <code>obfuscatedAccountId</code>), verified
+        through an authenticated call, and made unfarmable by a unique <code>store_original_id</code>. The
+        client's purchase token is a <em>claim</em>; only the server writes an entitlement.</li>
+      <li><b>No Cloud Pub/Sub.</b> Apple's App Store Server Notifications are a plain HTTPS webhook; Google's
+        equivalent needs a Pub/Sub topic, so Google gets <b>polled</b> by the APScheduler job that already
+        exists. Symmetry is not worth a new service (rule 8).</li>
+      <li><b>The public web explains the membership and never sells it</b> — anti-steering cuts both ways, and
+        every page still ends at "get the app".</li>
+    </ul>
+  </div>
+
+  <div class="note"><i></i><div><b>Preview locally:</b>
+  <code>python3 -m http.server 4173 --directory docs</code> →
+  <code>http://localhost:4173/supporter-mockup.html</code>. Plan:
+  <b>docs/supporter-plan.md</b>. Revenue context: <b>docs/revenue-plan.md</b> §3.2.</div></div>
+</div>
+
+</body>
+</html>

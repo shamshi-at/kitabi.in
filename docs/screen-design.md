@@ -242,6 +242,22 @@ and what remains is a book page (owner request, 14 Aug 2026).
   author who isn't a Kitabi user) doesn't. Paired everywhere with the same small
   gold "🔗 on Kitabi" pill lending already uses for a linked lender/borrower — one
   badge, one meaning, reused across lending, search, and authorship.
+- **The Supporter seal is a gold ❦ wax stamp — the fifth gold mark, so it had to be
+  a shape none of the other four use** (designed 9 Aug 2026,
+  [supporter-plan.md](supporter-plan.md), mockups in
+  [supporter-mockup.html](supporter-mockup.html)). The vocabulary was already full: a
+  gold *ribbon* on a cover means favourite, a gold *ring* round an avatar means you or
+  a linked reader, the gold *🔗 pill* means the counterparty is a registered account,
+  and a *tick* stays reserved for identity (`authors.linked_user_id` / `author_claims`)
+  and is never for sale. So the paid mark is a small circular gold stamp carrying the
+  app's own fleuron, readable at 13px, used nowhere else. Three rules travel with it.
+  **It is tappable everywhere it appears**, onto a sheet that says what it means *and*
+  that it is not an identity check. **It never appears on a lending or borrowing
+  surface** — a mark inside a trust *transaction* reads as vetting, and what's at stake
+  there is somebody's physical book. And **absence is never marked**: no greyed seal,
+  no empty slot, no dimmed review card, so a free reader's screens are identical to
+  today's apart from one row in Profile. The reader can switch their own seal off
+  (`supporter_badge_hidden`) — paying is not consent to being branded.
 - **The library has two faces — All books and Shelves — and its controls float**
   (added 17 Jul 2026, owner picks: expanding button + S1 tiles). A segmented
   toggle under the title flips between the flat grid and a 2-up wall of shelf
@@ -399,6 +415,14 @@ an actual screen, distinct from the `[LATER]` full profile-page feature (bios,
 follows, aggregate author ratings) — feature-map.md's Layer 1, Layer 3, and Layer 4
 rows updated to spell out that distinction.
 
+Added (9 Aug 2026, owner request — the Supporter membership): the seal and the three
+ask surfaces live in their own file, [supporter-mockup.html](supporter-mockup.html)
+(13 areas covering the app, the public web page that takes ₹149 by UPI, and the admin
+console's SUPPORT section), rather than in `kitabi_screens.html` — same split as
+promotions and the web platform, because none of it is a v1 screen. Its first area is
+the free reader's Home and Profile drawn *unchanged*, which is the acceptance test for
+the whole feature.
+
 Drawn, chosen and built (14 Aug 2026 — the scan result; owner picked **direction B,
 The Bookplate**): [scan-result-mockups.html](scan-result-mockups.html) redesigns the
 moment after the beep on **7 / M3**. Today's confirm strip is dead text behind a button that says only
@@ -416,4 +440,4 @@ is what makes it land, so no separate highlight treatment was needed; A and C st
 drawn but unbuilt (C is really bulk cataloguing, its own decision).
 
 Preview locally: `python3 -m http.server 4173 --directory docs` →
-http://localhost:4173/kitabi_screens.html
+http://localhost:4173/kitabi_screens.html (or `/supporter-mockup.html`)

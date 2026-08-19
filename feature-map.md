@@ -32,7 +32,7 @@ not two copies — even while you're the only user filling it in.*
 | Translated-book linking (original ↔ translation) | `[V1]` | **Shipped 21 Jul 2026** (was `[WIRED]`). **Decided 5 Jul 2026: a translation is its own Work**, not a language variant of an Edition — its own authors/genres/editions, and its own independent rating/review pool once Phase 3 lands (a translation is its own literary object; a fresh translation shouldn't inherit the original's reviews). Linked Works share a `translation_group_id` for cross-navigation plus a directed `original_work_id` (which side is the original), and translator credits live on `work_translators`. UI: "Translated from" on the add form (pick the original or stub it in place), "Add a translation"/"Link existing" on the original's page — mockups T1–T6 |
 | Aggregate rating (avg across users) | `[WIRED]` | Computes for free *if* ratings attach here (see below). A **second**, separate aggregate — average *across every Work in a translation_group* — is computed at read time for display ("4.2 across all translations") without merging the underlying per-translation pools |
 | Report incorrect info | `[LATER]` | Needs other users to matter — no crowd yet |
-| Verification status / verified badge (data trust — `Work`/`Edition`/`Publisher`) | `[LATER]` | Nothing to moderate when solo/friends-only |
+| Verification status / verified badge (data trust — `Work`/`Edition`/`Publisher`) | `[LATER]` | Nothing to moderate when solo/friends-only. **"Verified" is reserved for identity and is never purchasable** — the paid *Supporter seal* is a deliberately different mark (see plumbing table + wiring rule 7) |
 | Author account linking ("This is me") | `[V1]` | **Decided & simplified 14 Jul 2026.** Scoped to an invited friend circle of writers, not open sign-up — so no claim/evidence/approval workflow. Just `authors.linked_user_id`, a "This is me" checkbox at author-creation time or a one-tap self-link on an existing unclaimed Author row, and a "Works by [name]" section on their profile (`GET /users/{id}/works`, mirrors the existing public-library endpoint). Full design + the shelved heavier claim/verified-badge version for if this ever opens beyond invited friends: [docs/author-identity-and-moderation-plan.md](docs/author-identity-and-moderation-plan.md) |
 | Author profile pages + author reviews | `[LATER]` | The *browse* page (works list) is `[V1]`; "Works by [name]" on a linked author's own profile ships with account linking above. A full standalone author profile (bio, follows, aggregate author rating, reviews of the author) is still the later, reviewed-entity version |
 | Publisher profile pages + publisher reviews | `[LATER]` | Same distinction as authors |
@@ -118,6 +118,8 @@ it on is mostly building **views** over data that was already shaped to be share
 | Lending-due reminder (local notification) | `[V1]` | Small, but a real spreadsheet-beater |
 | Mobile app | `[V1]` | The platform |
 | Web app | `[LATER]` | Mobile-first |
+| **Kitabi Supporter** — ₹149/yr membership + the gold **seal**, raised AI quotas, admin-granted complimentary memberships | `[LATER]` | **Designed 9 Aug 2026** — [docs/supporter-plan.md](docs/supporter-plan.md), mockups [docs/supporter-mockup.html](docs/supporter-mockup.html). Two phases: **Phase 1** (entitlement, seal, admin console, UPI on the web) is days of work and needs **no store credential** — it can ship before the app does; **Phase 2** (StoreKit 2 + Play Billing + receipt verification, and the three in-app ask surfaces) is post-launch v1.x. Never paywalls the wedge — lending, library, sync, import and **export** stay free forever |
+| Supporter *ask* surfaces (the three places Kitabi asks for help) | `[LATER]` | Ships with Phase 2. Mechanically a **promotion** (`kind='supporter'`) so it inherits Phase 9's targeting, frequency caps, offline dismissal and reader opt-out rather than growing a second nag system. Hard caps: never before day 14, ≤3/year, ≥60 days apart, two dismissals in a row = never again, all enforced server-side |
 
 ---
 
@@ -154,6 +156,16 @@ can be added incrementally; these are expensive to reverse.
 
 6. **Personal tags ≠ global genres.** Your shelves are yours (Layer 2); genres belong to
    the catalog (Layer 1). Don't let one pollute the other.
+
+7. **Money and identity are two different marks, and merging them is irreversible.**
+   The **Supporter seal** (gold ❦) means *this reader pays for Kitabi*. **Verified**
+   (the `authors.linked_user_id` / `author_claims` family) means *this really is them*
+   — earned, never sold. One word covering both would be worth more in the short run
+   and catastrophic in the long: Kitabi's wedge is readers handing each other physical
+   books, and a purchasable mark that reads as *vetted* helps a stranger walk off with
+   someone's copy. Hence the standing rules: **no seal on any lending surface**, the
+   seal is **tappable everywhere** onto a sheet that says what it isn't, and absence is
+   never marked. Design: [docs/supporter-plan.md](docs/supporter-plan.md) §3.
 
 ---
 

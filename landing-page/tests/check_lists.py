@@ -76,7 +76,9 @@ def resolve(slugs: list[str]) -> set[str]:
 def main() -> int:
     lists = parse_lists()
     if not lists:
-        sys.exit("Parsed no lists out of lists.js — the format changed; fix this script.")
+        sys.exit(
+            "Parsed no lists out of lists.js — the format changed; fix this script."
+        )
 
     every = sorted({s for _, entries in lists for s in entries})
     live = resolve(every)
@@ -87,7 +89,9 @@ def main() -> int:
         missing = [s for s in entries if s not in live]
         ok = len(found) >= MIN_ENTRIES
         mark = "ok  " if ok else "FAIL"
-        print(f"  {mark} /list/{list_slug}  —  {len(found)}/{len(entries)} books in the catalogue")
+        print(
+            f"  {mark} /list/{list_slug}  —  {len(found)}/{len(entries)} books in the catalogue"
+        )
         for slug in missing:
             print(f"         missing: {slug}")
         if not ok:

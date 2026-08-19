@@ -773,6 +773,137 @@ no advertising identifier, no new bill (CLAUDE.md rule 8).
 - [ ] End-to-end on a real phone against the deployed API — create a campaign in the
       console targeted at your own reader id, publish, confirm it appears, dismiss it
 
+## Phase M — Kitabi Supporter (membership)
+
+Design: [supporter-plan.md](supporter-plan.md) · mockups:
+[supporter-mockup.html](supporter-mockup.html) · revenue context:
+[revenue-plan.md](revenue-plan.md) §3.2. **₹149/year, annual-only, one SKU.**
+
+**Owner decision, 9 Aug 2026: the subscription is bought and managed in the app, on
+both stores**, so the membership is bound to the Kitabi account and renews itself.
+M0 is paperwork that blocks a release and takes days of waiting — start it first and
+run it alongside M1.
+
+### M0 — Store paperwork (owner; blocking, parallel)
+
+- [ ] Apple: Paid Applications Agreement, banking + Indian tax forms in App Store
+      Connect, and **Small Business Program** enrolment (15%, not 30%) *before* the
+      first sale
+- [ ] Apple: subscription **group** + one auto-renewable subscription
+      `in.kitabi.supporter.annual`, ₹149/yr India storefront, display name,
+      description, review screenshot
+- [ ] Google: Play merchant account; a **subscription** with one annual base plan
+      at ₹149
+- [ ] Decide **free trial or not** before the SKUs are created — it changes store
+      config *and* the purchase-sheet copy (recommendation: no trial)
+
+### M1 — Entitlement, seal, console
+
+- [ ] Migration: `profiles.supporter_until` / `supporter_since` /
+      `supporter_badge_hidden` / `supporter_asked_at` / `supporter_asks_count` /
+      `supporter_never_ask`, plus a `supporter_grants` ledger (RLS deny-by-default).
+      Grants are **append-only** — revoke sets `revoked_at`, nothing is edited or
+      deleted, and `supporter_until` is always recomputed from the live rows
+- [ ] `supporter_service`: grant / extend / revoke / recompute, with "extend from the
+      current end date, never overwrite" as a tested rule — a well-meant complimentary
+      grant must not be able to shorten somebody's paid year
+- [ ] `llm_quota.quota_for()` takes `is_supporter` (recs 20→60, cover-extract 40→120).
+      **The global circuit breaker is untouched** — a supporter gets a bigger share of
+      a bounded pot, never an unmetered path (CLAUDE.md metering convention)
+- [ ] Seal on the public payloads: `/users/{id}/profile`, the review shapes, reader
+      search. One boolean, honouring `supporter_badge_hidden`. **Never** on any
+      lending shape — that exclusion needs its own test, because it fails silently
+- [ ] App: cache the entitlement in Drift so the seal and the caps survive offline
+      (a cached-but-expired entitlement degrades to "not a supporter" and blocks
+      nothing); the seal widget; the "what is this?" sheet on tap **everywhere** it
+      appears; Membership section in Profile; "Show my seal" switch
+- [ ] Web: the seal on `/reader/…` and on review cards, server-rendered by the
+      existing Pages Function (one field on the payload, no client JS), plus the
+      "not an identity check" line in the footer
+- [ ] Web: `kitabi.in/supporter` — the pitch and what a membership is, ending in
+      "get the app". **No purchase path and no form** — the public web is read-only,
+      and buying happens in the app (M2)
+- [ ] Admin console **SUPPORT** group (editor+ to view; grant / record / revoke are
+      **super_admin**): Supporters list with the four KPIs and the
+      All/Paid/Complimentary/Expiring/Lapsed filters; the Supporter card on the
+      reader page with the full grant history; Grant complimentary (duration +
+      **required reason**, silent by default); Record a payment (UPI); Revoke; Hide
+      seal. Every one of them writes an audit row
+- [ ] Owner: the `supporter@kitabi.in` mailbox, and the Founding Supporter cutoff
+      (recommendation: first 500)
+
+### M2 — The purchase, in the app, on both stores
+
+- [ ] `in_app_purchase` (+ `_storekit` / `_android`) — **not RevenueCat**, which is
+      a new service and a new bill (rule 8). Check whether **StoreKit 2** is on by
+      default in the version pulled; it has been an opt-in flag, and StoreKit 2 is
+      what makes offline JWS verification possible
+- [ ] Purchase screen (mockup **4b**): one SKU, `queryProductDetails` → `buy`.
+      **The price is `ProductDetails.price`, never a hardcoded ₹149** — a hardcoded
+      string is a screen that disagrees with the store sheet next to it
+- [ ] `purchaseStream` handling: send the token to the API and call
+      **`completePurchase()` only after the server confirms**. Completing first
+      means a reader who loses the network mid-flow has paid and has nothing
+- [ ] `POST /supporter/purchase` — verify then write, never the other way round.
+      Apple: StoreKit 2's **signed JWS verified offline** against Apple's roots,
+      plus the **App Store Server API** (ES256 key, same shape as the Supabase JWKS
+      verification the API already does) for status. Google:
+      `purchases.subscriptionsv2.get` on the **Play Developer API** (service account)
+- [ ] **Idempotency**: unique `(source, store_txn_id)` so a replayed receipt is a
+      no-op, and unique `store_original_id` **across users** so one store
+      subscription can't light up two Kitabi accounts. Same reasoning as the sync
+      engine's op UUID; both need a test that replays
+- [ ] Bind the purchase to the reader three ways (supporter-plan §10.4):
+      `appAccountToken` / `obfuscatedAccountId` stamped store-side, an
+      authenticated verification call, and the unique-original-id constraint
+- [ ] Renewal/cancellation/refund handling. **Apple: a plain HTTPS webhook**
+      (App Store Server Notifications V2, signature-verified). **Google: poll** —
+      RTDN needs a Cloud Pub/Sub topic, which is a new service (rule 8), so use an
+      APScheduler job like the ones already in `api/app/jobs/`
+- [ ] Restore purchases on the Membership screen (mockup **9a**); lapse → seal and
+      caps drop and **nothing else changes**
+- [ ] Purchase-screen disclosures Apple checks for — title, length, price per
+      period, auto-renew terms, Terms + Privacy links. A missing one is a routine
+      rejection
+- [ ] Sandbox + licence testers on **real devices**; drive a full year of lifecycle
+      through Apple's compressed sandbox (renew, cancel, billing retry, expire)
+
+### M3 — The ask, and the perks
+
+- [ ] The three ask surfaces, and only these three: the permanent Profile door, the
+      quota-reached line, the earned-moment card. Built as a reserved
+      `kind='supporter'` promotion so it inherits Phase 9's targeting, caps,
+      offline dismissal and opt-out rather than growing a second nag system
+- [ ] The ask budget enforced **server-side**: never before day 14, ≤3/year, ≥60 days
+      apart, dismiss = +180 days, two dismissals in a row = never again, supporters
+      never asked, promotions-opt-out silences it. Tests for each cap in **both**
+      directions — a cap that never fires and a cap that never stops both look fine
+      in production
+- [ ] "Don't ask again" on the profile row (not the device), so a reinstall doesn't
+      resurrect it
+- [ ] "Help another way" sheet — add a book / fix a cover / write a review / share —
+      driven off the existing `scoring_service`, and the console's contributor
+      suggestion list that turns it into a grant
+- [ ] The perks that cost nothing to run, which are the ones that actually sell a
+      ₹149 membership (supporter-plan §2) — pick which ship in v1:
+  - [ ] **Ex-libris bookplate** on the share cards and the profile header
+  - [ ] **Gold app icon** — an alternate icon (iOS `CFBundleAlternateIcons`,
+        Android activity-alias). Highest perceived value per hour of work on the
+        whole list
+  - [ ] **Vellum / Night Library** — two extra paper themes beside the existing
+        light and dark
+  - [ ] **Your year in books** — the annual broadside, reusing the Insights share
+        card rasteriser at poster density
+  - [ ] **A vote on what gets built next** — a roadmap poll; costs nothing and is
+        the most on-message perk for "keep Kitabi independent"
+  - [ ] Early access: the TestFlight / Play internal track
+  - [ ] Opt-in listing on `kitabi.in/supporters` (default **off**)
+- [ ] When the `[LATER]` AI features land (mood search, shelf-scan, the reading
+      companion) they arrive **supporter-first** — they're the ones with a per-call
+      bill. Not promised in the store listing before they exist
+- [ ] A test asserting the **never list** (supporter-plan §4): lending, library, sync,
+      import and **export** are reachable with `supporter_until = NULL`
+
 ## Phase S — API hardening
 
 Plan: [web-platform-plan.md](web-platform-plan.md) §11. Ranked by what abuse

@@ -126,6 +126,16 @@ It's a compounding asset bolted onto the SEO work that's already live.
 
 ### 3.2 Premium membership — **yes, second; the metering is 80% of the build**
 
+> **Designed in full, 9 Aug 2026: [supporter-plan.md](supporter-plan.md)** (mockups:
+> [supporter-mockup.html](supporter-mockup.html)). Price confirmed at **₹149/yr,
+> annual-only, one SKU**. Two things the design changed from the sketch below: the
+> badge is a **Supporter seal**, not a "verified" tick — "Verified" stays reserved
+> for identity (author/publisher claims), because a purchasable vetting-shaped mark
+> on a *lending* app is a real harm, not a branding quibble; and **Phase 1 takes no
+> money through the stores at all** — UPI on kitabi.in, recorded by an admin — so
+> the entitlement, the seal and the console ship in days rather than waiting on
+> StoreKit, Play Billing and two store credentials.
+
 - **What's premium:** exactly the features with marginal cost — AI extraction and
   recommendations beyond the free daily quota. The free quota stays genuinely
   useful (the delight hook must remain reachable by everyone); premium raises or
@@ -266,6 +276,11 @@ traffic/audience numbers are worth showing.
   `kitabi0f-21`); note the 3-sales/180-days activation rule.
 - **Search Console** submission (Google account) — precondition for the
   affiliate line mattering.
-- Enroll the **Apple Small Business Program** before the Supporter tier ships.
-- Decide the Supporter price point (recommendation: ₹149/yr) when the time comes.
+- Enroll the **Apple Small Business Program** before the Supporter tier ships
+  (Phase 2 only — Phase 1 needs nothing from Apple).
+- ~~Decide the Supporter price point~~ — **decided 9 Aug 2026: ₹149/yr, annual-only,
+  one SKU** ([supporter-plan.md](supporter-plan.md) §0).
+- Supporter Phase 1 needs three things only the owner can supply: a **UPI id**,
+  the **supporter@kitabi.in** mailbox, and the **Founding Supporter** cutoff
+  (recommendation: first 500).
 - B2B prerequisites when pilots convert: invoicing/GST decision.

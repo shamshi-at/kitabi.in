@@ -60,7 +60,9 @@ EXTRA_MODULES = ["img/c.js", "[[path]].js"]
 # Handles the multi-line form too — `import {\n  a,\n  b,\n} from '...'` — which a
 # single-line pattern silently leaves behind as a syntax error 1,000 lines into
 # the generated program.
-IMPORT_RE = re.compile(r"^\s*import\s[\s\S]*?from\s*['\"][^'\"]*['\"]\s*;?[ \t]*$", re.MULTILINE)
+IMPORT_RE = re.compile(
+    r"^\s*import\s[\s\S]*?from\s*['\"][^'\"]*['\"]\s*;?[ \t]*$", re.MULTILINE
+)
 EXPORT_CONST_RE = re.compile(
     r"^\s*export\s+(?=(?:async\s+)?(?:const|function|class|let|var)\s)", re.MULTILINE
 )
@@ -230,7 +232,9 @@ def run_js(source: str) -> subprocess.CompletedProcess:
             os.unlink(path)
     if shutil.which("osascript"):
         return subprocess.run(
-            ["osascript", "-l", "JavaScript", "-e", source], capture_output=True, text=True
+            ["osascript", "-l", "JavaScript", "-e", source],
+            capture_output=True,
+            text=True,
         )
     raise SystemExit("No JavaScript runtime found (need node or macOS osascript).")
 
@@ -239,7 +243,10 @@ def main() -> int:
     source = build_source()
     proc = run_js(source)
     if proc.returncode != 0:
-        print("JavaScript failed to execute:\n" + (proc.stderr or proc.stdout), file=sys.stderr)
+        print(
+            "JavaScript failed to execute:\n" + (proc.stderr or proc.stdout),
+            file=sys.stderr,
+        )
         return 2
 
     try:
@@ -253,7 +260,9 @@ def main() -> int:
         print(f"  FAIL  {failure}")
     total = result["passes"] + len(failures)
     if failures:
-        print(f"\n{len(failures)} failed, {result['passes']} passed ({total} assertions)")
+        print(
+            f"\n{len(failures)} failed, {result['passes']} passed ({total} assertions)"
+        )
         return 1
     print(f"{result['passes']} assertions passed")
     return 0
