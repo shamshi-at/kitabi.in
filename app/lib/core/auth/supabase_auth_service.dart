@@ -1,8 +1,22 @@
+import 'dart:io' show SocketException;
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth_service.dart';
+
+/// Whether [error] is the GoTrue SDK's own "couldn't tell" signal — its
+/// session-refresh (recovering an expired cached session at cold start, or
+/// the periodic background auto-refresh) reports a network/retryable failure
+/// by pushing it as an *error* onto `onAuthStateChange` (see gotrue's
+/// `notifyException`), never as a data event. A genuine sign-out always
+/// arrives as a `signedOut` data event instead — so nothing that reaches here
+/// is ever "the session is actually gone", only "couldn't ask".
+// `dynamic`, not `Object`, so this matches `Stream.handleError`'s `test`
+// callback signature exactly (used both here and by the regression test).
+bool isRetryableAuthError(dynamic error) =>
+    error is AuthRetryableFetchException || error is SocketException;
 
 // Passed via --dart-define at build/run time; never hardcoded (CLAUDE.md
 // rule: no credential lands in source). Empty means "not configured".
@@ -66,6 +80,21 @@ class SupabaseAuthService implements AuthService {
   @override
   Stream<KitabiAuthUser?> get authStateChanges =>
       _client.auth.onAuthStateChange
+          // A retryable refresh failure must never reach `authStateProvider`
+          // as a stream error: every provider that does
+          // `await ref.watch(authStateProvider.future)` (sessionContextProvider,
+          // bootstrapProvider, meProvider, and everything chained off them —
+          // which is most of Home) reads the *current* AsyncValue's error
+          // state, not `valueOrNull` — so even though the router's own
+          // `valueOrNull` check correctly keeps an established reader signed
+          // in through this, every `.future` awaiter downstream throws the
+          // raw "offline" error anyway. That surfaced as Home's library list
+          // erroring into a "connection error" card mid-session, on a phone
+          // that had been sitting fine on Home until a background auto-refresh
+          // (or a cold start recovering an expired cached session) happened to
+          // tick while offline (owner report, 20 Aug 2026). Swallowing it here
+          // leaves this stream resting on its last known value instead.
+          .handleError((Object _, StackTrace _) {}, test: isRetryableAuthError)
           .map((state) => _toKitabiAuthUser(state.session?.user))
           // Supabase fires several events on a cold start — the restored
           // session, then a token refresh (and periodic refreshes after) — all

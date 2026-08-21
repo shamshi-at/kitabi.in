@@ -819,6 +819,43 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   takes after a background isolate already logged the sitting. Independent cleanups
   get independent failures, and a teardown that a *later* code path may need must
   not be last behind things that can throw.
+- **The GoTrue SDK's own session-refresh reports "couldn't tell" as a *stream
+  error*, not a data event — and every `await ref.watch(authStateProvider.future)`
+  downstream reads that literally.** Recovering an expired cached session at cold
+  start, or the periodic background auto-refresh, calls Supabase's own
+  `notifyException` on failure, which pushes the raw exception onto
+  `onAuthStateChange` — a real sign-out, by contrast, always arrives as a
+  `signedOut` *data* event. The router's own `valueOrNull` check (CLAUDE.md, the
+  bootstrap gate) tolerates this fine for an already-signed-in reader, but
+  `sessionContextProvider`, `bootstrapProvider`, `meProvider` and everything
+  chained off them — which is most of Home — all do
+  `await ref.watch(authStateProvider.future)`, and `.future` throws whenever the
+  *current* AsyncValue is sitting in error, previous value or not. A reader
+  already happily on Home whose phone lost signal right as a background token
+  refresh ticked watched the library list die into a "connection error" card
+  (owner report, 20 Aug 2026) — nothing about their library ever needed the
+  network; Drift had it the whole time, and only auth's own stream was the
+  problem. Fix: `SupabaseAuthService.authStateChanges` now swallows exactly this
+  class of error (`isRetryableAuthError` — `AuthRetryableFetchException` or
+  `SocketException`, the same two types `api_client.dart`'s `_isUnreachable`
+  already treats as "couldn't ask, not a real answer") before it reaches
+  `authStateProvider` at all, so every `.future` awaiter downstream keeps resting
+  on its last known value instead of throwing raw "offline" as its own frame.
+  This turned out to close the cold-start case too, not only "already on
+  Home" — no separate local-fallback code needed. Reading `supabase_flutter`'s
+  own `SupabaseAuth.initialize()` (awaited by `Supabase.initialize()`, so this
+  always finishes before the app's first widget subscribes to anything) shows
+  it *always* calls `setInitialSession` on the persisted session first —
+  synchronous, from local storage, no expiry check, no network — and only
+  *after* that completes does it separately (un-awaited) kick off
+  `recoverSession()`, which is what actually checks expiry and attempts the
+  network refresh. So a device that has ever signed in gets its
+  stale-but-real cached user as `authStateProvider`'s very first value
+  unconditionally, offline or not; the network-dependent refresh's possible
+  failure structurally can only land *after* that, as a second event — which
+  is exactly the "data, then a swallowed retryable error" sequence the fix
+  above already handles. Pinned by the "cold start" test in
+  `auth_stream_retryable_error_test.dart`, alongside the "mid-session" one.
 
 ## Open decisions
 
