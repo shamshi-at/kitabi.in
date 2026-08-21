@@ -53,3 +53,27 @@ Future<FinishedBookResult> markBookFinished({
   }
   return const FinishedBookResult();
 }
+
+/// Reaching the last page and tapping "Read" ought to mean the same thing.
+/// Call this right after any plain page-number write (timer, quick-stop,
+/// manual-log, pencil) — if progress now sits at or past the book's known
+/// total and the entry isn't already Read, this finishes it exactly the way
+/// [markBookFinished] does for an explicit "I finished this book" tap. A no-op
+/// when the total isn't known yet: silence, not a guess, is the only honest
+/// answer to "did they finish?" when the catalogue can't say how long the
+/// book is.
+Future<bool> autoFinishIfOnLastPage({
+  required AppDatabase db,
+  required LibraryRepository repo,
+  required String libraryEntryId,
+}) async {
+  final entry = await db.libraryEntriesDao.getById(libraryEntryId);
+  if (entry == null || entry.status == 'read') return false;
+  final page = entry.currentPage;
+  if (page == null) return false;
+  final book = await db.cachedBooksDao.getByEditionId(entry.editionId);
+  final total = book?.pageCount;
+  if (total == null || total <= 0 || page < total) return false;
+  await markBookFinished(db: db, repo: repo, libraryEntryId: libraryEntryId);
+  return true;
+}

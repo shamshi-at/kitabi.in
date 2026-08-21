@@ -134,5 +134,13 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
       repo: libraryRepo,
       libraryEntryId: logged.libraryEntryId,
     );
+  } else {
+    // Reaching the last page without tapping "I finished the book" still
+    // means the book is done.
+    await autoFinishIfOnLastPage(
+      db: db,
+      repo: libraryRepo,
+      libraryEntryId: logged.libraryEntryId,
+    );
   }
 }

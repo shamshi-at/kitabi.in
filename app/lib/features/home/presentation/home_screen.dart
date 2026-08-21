@@ -19,6 +19,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../insights/providers/insights_providers.dart';
+import '../../library/mark_finished.dart';
 import '../../library/providers/library_providers.dart';
 import '../../library/providers/reading_timer_providers.dart';
 import '../../library/reading_progress.dart';
@@ -771,6 +772,11 @@ class _CurrentlyReadingCard extends ConsumerWidget {
       entry.id,
       currentPage: newPage,
       startDate: entry.startDate == null ? DateTime.now() : null,
+    );
+    await autoFinishIfOnLastPage(
+      db: ref.read(appDatabaseProvider),
+      repo: repo,
+      libraryEntryId: entry.id,
     );
   }
 }

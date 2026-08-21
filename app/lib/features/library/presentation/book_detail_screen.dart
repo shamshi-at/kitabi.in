@@ -2239,6 +2239,11 @@ class _ReadingCard extends ConsumerWidget {
       currentPage: page,
       startDate: resolvedStart,
     );
+    await autoFinishIfOnLastPage(
+      db: ref.read(appDatabaseProvider),
+      repo: repo,
+      libraryEntryId: entry.id,
+    );
     ref.invalidate(libraryEntryProvider(entry.editionId));
   }
 
@@ -2278,6 +2283,11 @@ class _ReadingCard extends ConsumerWidget {
     if (pageEnd != null) {
       final libraryRepo = await ref.read(libraryRepositoryProvider.future);
       await libraryRepo.updateProgress(entry.id, currentPage: pageEnd);
+      await autoFinishIfOnLastPage(
+        db: ref.read(appDatabaseProvider),
+        repo: libraryRepo,
+        libraryEntryId: entry.id,
+      );
       ref.invalidate(libraryEntryProvider(entry.editionId));
     }
     ref.invalidate(weeklyReadingSecondsProvider);

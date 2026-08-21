@@ -98,4 +98,58 @@ void main() {
     final result = await markBookFinished(db: db, repo: repo, libraryEntryId: 'nope');
     expect(result.pagesFilledTo, isNull);
   });
+
+  group('autoFinishIfOnLastPage', () {
+    test('finishes the book once progress reaches the last page', () async {
+      await seed(id: 'a1', currentPage: 200, pageCount: 200);
+
+      final finished = await autoFinishIfOnLastPage(db: db, repo: repo, libraryEntryId: 'a1');
+
+      expect(finished, isTrue);
+      final entry = await db.libraryEntriesDao.getById('a1');
+      expect(entry!.status, 'read');
+      expect(entry.finishDate, isNotNull);
+    });
+
+    test('finishes it past the last page too (a total edited down after the fact)', () async {
+      await seed(id: 'a2', currentPage: 210, pageCount: 200);
+
+      expect(await autoFinishIfOnLastPage(db: db, repo: repo, libraryEntryId: 'a2'), isTrue);
+    });
+
+    test('does nothing short of the last page', () async {
+      await seed(id: 'a3', currentPage: 199, pageCount: 200);
+
+      final finished = await autoFinishIfOnLastPage(db: db, repo: repo, libraryEntryId: 'a3');
+
+      expect(finished, isFalse);
+      final entry = await db.libraryEntriesDao.getById('a3');
+      expect(entry!.status, 'reading');
+    });
+
+    test('never guesses when the book has no known total', () async {
+      await seed(id: 'a4', currentPage: 999);
+
+      expect(await autoFinishIfOnLastPage(db: db, repo: repo, libraryEntryId: 'a4'), isFalse);
+    });
+
+    test('a book with no page logged yet is not finished', () async {
+      await seed(id: 'a5', pageCount: 200);
+
+      expect(await autoFinishIfOnLastPage(db: db, repo: repo, libraryEntryId: 'a5'), isFalse);
+    });
+
+    test('an already-Read book is left alone (no re-stamp)', () async {
+      final original = DateTime(2026, 6, 1);
+      await seed(id: 'a6', status: 'read', currentPage: 200, pageCount: 200, finishDate: original);
+
+      expect(await autoFinishIfOnLastPage(db: db, repo: repo, libraryEntryId: 'a6'), isFalse);
+      final entry = await db.libraryEntriesDao.getById('a6');
+      expect(entry!.finishDate, original);
+    });
+
+    test('a missing entry is a no-op, not a crash', () async {
+      expect(await autoFinishIfOnLastPage(db: db, repo: repo, libraryEntryId: 'nope'), isFalse);
+    });
+  });
 }

@@ -298,6 +298,13 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     if (page == entry?.currentPage) return; // progress genuinely unchanged
     final libraryRepo = await ref.read(libraryRepositoryProvider.future);
     await libraryRepo.updateProgress(widget.libraryEntryId, currentPage: page);
+    // Ending a plain (non-"I finished the book") sitting on the last page
+    // finishes it too — _markFinished already handles its own explicit path.
+    await autoFinishIfOnLastPage(
+      db: ref.read(appDatabaseProvider),
+      repo: libraryRepo,
+      libraryEntryId: widget.libraryEntryId,
+    );
   }
 
   /// Leave the timer. Normally a pop, but this route can also be *arrived at*
