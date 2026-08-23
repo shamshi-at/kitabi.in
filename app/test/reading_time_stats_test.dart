@@ -23,6 +23,7 @@ ReadingSession _session(
     durationSeconds: durationSeconds,
     pageStart: pageStart,
     pageEnd: pageEnd,
+    autoStopped: false,
   );
 }
 
@@ -89,6 +90,7 @@ void main() {
         durationSeconds: deleted.durationSeconds,
         pageStart: deleted.pageStart,
         pageEnd: deleted.pageEnd,
+        autoStopped: deleted.autoStopped,
       ),
     ];
     final stats = computeReadingTimeStats(sessions, now: now);

@@ -1174,6 +1174,54 @@ abstract class AppLocalizations {
   /// **'Session removed'**
   String get bookLogDeleted;
 
+  /// Small pill on a reading-log row for a sitting the safety net closed rather than the reader tapping Stop
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-stopped'**
+  String get bookLogAutoStopped;
+
+  /// Icon button tooltip to correct a logged reading session's end time and page
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get bookLogEdit;
+
+  /// Title of the dialog for correcting a reading session's end time and page
+  ///
+  /// In en, this message translates to:
+  /// **'Correct this sitting'**
+  String get bookLogEditTitle;
+
+  /// Explanatory note shown in the edit dialog for an auto-stopped session
+  ///
+  /// In en, this message translates to:
+  /// **'This sitting was stopped automatically because the reading check-in went unanswered — the time and page below may not be where you actually left off.'**
+  String get bookLogAutoStoppedHint;
+
+  /// Row in the edit-sitting dialog showing the current end time, tappable to change it
+  ///
+  /// In en, this message translates to:
+  /// **'Ended {when}'**
+  String bookLogEditEndedAt(String when);
+
+  /// Text field label for the end page in the edit-sitting dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Page reached'**
+  String get bookLogEditPageLabel;
+
+  /// Validation message in the edit-sitting dialog when the chosen end time isn't after the start
+  ///
+  /// In en, this message translates to:
+  /// **'End time must be after this sitting started.'**
+  String get bookLogEditEndBeforeStart;
+
+  /// Validation message in the edit-sitting dialog when the chosen end time is later than now
+  ///
+  /// In en, this message translates to:
+  /// **'End time can\'t be in the future.'**
+  String get bookLogEditEndInFuture;
+
   /// Label above the reading-log week sparkline
   ///
   /// In en, this message translates to:

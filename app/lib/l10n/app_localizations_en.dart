@@ -675,6 +675,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookLogDeleted => 'Session removed';
 
   @override
+  String get bookLogAutoStopped => 'Auto-stopped';
+
+  @override
+  String get bookLogEdit => 'Edit';
+
+  @override
+  String get bookLogEditTitle => 'Correct this sitting';
+
+  @override
+  String get bookLogAutoStoppedHint =>
+      'This sitting was stopped automatically because the reading check-in went unanswered — the time and page below may not be where you actually left off.';
+
+  @override
+  String bookLogEditEndedAt(String when) {
+    return 'Ended $when';
+  }
+
+  @override
+  String get bookLogEditPageLabel => 'Page reached';
+
+  @override
+  String get bookLogEditEndBeforeStart =>
+      'End time must be after this sitting started.';
+
+  @override
+  String get bookLogEditEndInFuture => 'End time can\'t be in the future.';
+
+  @override
   String get bookLogWeek => 'Last 7 days';
 
   @override

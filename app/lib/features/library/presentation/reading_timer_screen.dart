@@ -928,6 +928,17 @@ class _LoggedFace extends ConsumerWidget {
             await repo.deleteSession(session.id);
             messenger.showSnackBar(SnackBar(content: Text(deleted)));
           },
+          onEdit: (session, endedAt, pageEnd) async {
+            Haptics.selection();
+            final repo =
+                await sheetRef.read(readingSessionsRepositoryProvider.future);
+            await repo.correctSessionEnd(
+              session.id,
+              startedAt: session.startedAt,
+              endedAt: endedAt,
+              pageEnd: pageEnd,
+            );
+          },
         ),
       ),
     );

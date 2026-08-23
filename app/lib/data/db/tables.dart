@@ -61,6 +61,11 @@ class ReadingSessions extends Table with SyncColumns {
   IntColumn get durationSeconds => integer()();
   IntColumn get pageStart => integer().nullable()();
   IntColumn get pageEnd => integer().nullable()();
+  /// True when the "still reading?" safety net closed this sitting rather
+  /// than the reader tapping Stop — its endedAt is when the system noticed,
+  /// not when the reader actually put the book down, so the reading log
+  /// flags it and offers a correction (owner report, 23 Aug 2026).
+  BoolColumn get autoStopped => boolean().withDefault(Constant(false))();
 }
 
 /// Text review — Work + user, own visibility flag (default private).

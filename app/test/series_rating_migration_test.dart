@@ -68,6 +68,11 @@ void main() {
       '(id, user_id, created_at, updated_at, sync_status, work_id, body, visible) '
       "VALUES ('v1', 'u1', 1, 1, 'synced', 'work-1', 'A fine book.', 1)",
     );
+    // v13 added reading_sessions.auto_stopped (23 Aug 2026) — createAll above
+    // built every other table at the *current* Dart shape regardless of the
+    // stamped version below, so without this the v13 onUpgrade step tries to
+    // add a column that's already there.
+    await db.customStatement('ALTER TABLE reading_sessions DROP COLUMN auto_stopped');
     await db.customStatement('PRAGMA user_version = 11');
   }
 

@@ -22,6 +22,7 @@ void main() {
       createdAt: at,
       updatedAt: at,
       syncStatus: 'synced',
+      autoStopped: false,
     );
   }
 

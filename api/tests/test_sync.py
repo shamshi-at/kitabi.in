@@ -627,6 +627,50 @@ async def test_reading_session_update_sets_page_end(client):
     assert session["data"]["page_end"] == 220
 
 
+async def test_reading_session_correct_auto_stopped(client):
+    """A sitting the enforcement task closed can have its end time and page
+    corrected — the client's fix for a reader who kept reading past the
+    silent auto-stop and only noticed when they tried to stop themselves."""
+    _, edition_id = await _seed_edition(client)
+    entry_id = str(uuid.uuid4())
+    session_id = str(uuid.uuid4())
+    await client.post(
+        "/sync/push",
+        json={
+            "ops": [
+                _op("library_entries", entry_id, "create", {"edition_id": edition_id}),
+                _op(
+                    "reading_sessions",
+                    session_id,
+                    "create",
+                    {
+                        "library_entry_id": entry_id,
+                        "started_at": "2026-07-10T20:00:00Z",
+                        "ended_at": "2026-07-10T21:30:00Z",
+                        "duration_seconds": 5400,
+                        "auto_stopped": True,
+                    },
+                ),
+            ]
+        },
+    )
+    update = _op(
+        "reading_sessions",
+        session_id,
+        "update",
+        {"ended_at": "2026-07-10T22:00:00Z", "duration_seconds": 7200, "page_end": 244},
+    )
+    resp = await client.post("/sync/push", json={"ops": [update]})
+    assert resp.json()["results"][0]["status"] == "applied"
+
+    pulled = await client.get("/sync/pull", params={"cursor": 0})
+    session = next(c for c in pulled.json()["changes"] if c["entity"] == "reading_sessions")
+    assert session["data"]["auto_stopped"] is True
+    assert session["data"]["ended_at"] == "2026-07-10T22:00:00+00:00"
+    assert session["data"]["duration_seconds"] == 7200
+    assert session["data"]["page_end"] == 244
+
+
 async def test_update_can_repoint_children_at_another_owned_entry(client):
     """The client's duplicate-entry heal merges two library entries for one
     edition and re-points the loser's reading sessions / lending records at

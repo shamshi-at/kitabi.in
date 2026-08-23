@@ -59,12 +59,21 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          if (from < 13) {
+            // Flags a sitting closed by the auto-stop safety net rather than
+            // the reader tapping Stop, so the reading log can offer a
+            // correction (owner report, 23 Aug 2026). Existing rows default
+            // to false — there's no way to tell after the fact which of them
+            // were auto-stopped, and treating them as ordinary stops is the
+            // safe direction.
+            await m.addColumn(readingSessions, readingSessions.autoStopped);
+          }
           if (from < 12) {
             // A rating or a review now names a book OR a series (13 Aug 2026),
             // so `work_id` has to be nullable. SQLite cannot relax NOT NULL in

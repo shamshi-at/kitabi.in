@@ -139,6 +139,17 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
     messenger.showSnackBar(SnackBar(content: Text(l10n.bookLogDeleted)));
   }
 
+  Future<void> _editSession(ReadingSession session, DateTime endedAt, int? pageEnd) async {
+    Haptics.selection();
+    final repo = await ref.read(readingSessionsRepositoryProvider.future);
+    await repo.correctSessionEnd(
+      session.id,
+      startedAt: session.startedAt,
+      endedAt: endedAt,
+      pageEnd: pageEnd,
+    );
+  }
+
   void _save() {
     Navigator.of(context).pop(
       StopSessionResult(
@@ -179,6 +190,7 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
         sessions: sessions,
         onBack: () => setState(() => _showingLog = false),
         onDelete: _deleteSession,
+        onEdit: _editSession,
       );
     }
 
@@ -379,6 +391,7 @@ class SessionsLog extends StatelessWidget {
     required this.sessions,
     required this.onBack,
     required this.onDelete,
+    required this.onEdit,
   });
 
   final String? title;
@@ -388,6 +401,10 @@ class SessionsLog extends StatelessWidget {
   /// Soft-deletes one sitting — the stray micro-sessions. Same affordance as
   /// the book page's reading log (they share [SessionLogRow]).
   final Future<void> Function(ReadingSession session) onDelete;
+
+  /// Corrects a sitting's end time and end page. Same affordance as the book
+  /// page's reading log (they share [SessionLogRow]).
+  final Future<void> Function(ReadingSession session, DateTime endedAt, int? pageEnd) onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -455,6 +472,7 @@ class SessionsLog extends StatelessWidget {
                     highlight: i == 0,
                     divider: i < sessions.length - 1,
                     onDelete: () => onDelete(sessions[i]),
+                    onEdit: (endedAt, pageEnd) => onEdit(sessions[i], endedAt, pageEnd),
                   ),
                 ),
               ),

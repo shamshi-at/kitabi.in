@@ -24,7 +24,7 @@ class _FakeApi extends ApiClient {
       String editionId, Map<String, dynamic> patch) async => {};
 }
 
-ReadingSession _session({int? pageStart, int? pageEnd}) {
+ReadingSession _session({int? pageStart, int? pageEnd, bool autoStopped = false}) {
   final at = DateTime(2026, 7, 31, 9);
   return ReadingSession(
     id: 's1',
@@ -38,6 +38,7 @@ ReadingSession _session({int? pageStart, int? pageEnd}) {
     createdAt: at,
     updatedAt: at,
     syncStatus: 'synced',
+    autoStopped: autoStopped,
   );
 }
 
@@ -45,6 +46,7 @@ Future<void> _pumpRow(
   WidgetTester tester,
   ReadingSession session, {
   Future<void> Function()? onDelete,
+  Future<void> Function(DateTime endedAt, int? pageEnd)? onEdit,
 }) async {
   await tester.pumpWidget(MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -54,6 +56,7 @@ Future<void> _pumpRow(
         session: session,
         primary: '9:00 – 9:40',
         onDelete: onDelete ?? () async {},
+        onEdit: onEdit ?? (_, _) async {},
       ),
     ),
   ));
@@ -101,6 +104,56 @@ void main() {
 
       expect(find.text('p. 42 → 96'), findsOneWidget);
       expect(find.text('+54'), findsOneWidget);
+    });
+  });
+
+  group('the auto-stopped indicator', () {
+    testWidgets('shows on a sitting the safety net closed', (tester) async {
+      await _pumpRow(tester, _session(pageEnd: 120, autoStopped: true));
+      expect(find.text('AUTO-STOPPED'), findsOneWidget);
+    });
+
+    testWidgets('is absent from an ordinary manual stop', (tester) async {
+      await _pumpRow(tester, _session(pageEnd: 120));
+      expect(find.text('AUTO-STOPPED'), findsNothing);
+    });
+
+    testWidgets('the edit icon opens a correction dialog naming the page field',
+        (tester) async {
+      await _pumpRow(tester, _session(pageEnd: 120, autoStopped: true));
+
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Correct this sitting'), findsOneWidget);
+      expect(find.text('Page reached'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.text('Correct this sitting'), findsNothing);
+    });
+
+    testWidgets('saving the corrected page calls onEdit', (tester) async {
+      DateTime? gotEndedAt;
+      int? gotPageEnd;
+      await _pumpRow(
+        tester,
+        _session(pageEnd: 120, autoStopped: true),
+        onEdit: (endedAt, pageEnd) async {
+          gotEndedAt = endedAt;
+          gotPageEnd = pageEnd;
+        },
+      );
+
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '244');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(gotEndedAt, isNotNull);
+      expect(gotPageEnd, 244);
     });
   });
 

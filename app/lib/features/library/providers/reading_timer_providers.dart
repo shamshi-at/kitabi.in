@@ -189,6 +189,7 @@ Future<LoggedSession?> stopAndLogActiveSession(
   AppDatabase db,
   SessionContext session, {
   void Function()? onMutation,
+  bool autoStopped = false,
 }) async {
   final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
   final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
@@ -217,6 +218,7 @@ Future<LoggedSession?> stopAndLogActiveSession(
     pageStart: pageStart,
     // Reuse the id notes were already written against, so they stay attached.
     id: await db.keyValuesDao.getValue(activeSessionIdKey),
+    autoStopped: autoStopped,
   );
 
   // The sitting is over here; the account doesn't know yet. Recorded before
@@ -444,8 +446,10 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
 
   /// Stops the running session (if any), logs it via the repository, and
   /// clears local state. Returns what got logged for the wax-seal screen —
-  /// null if nothing was running.
-  Future<LoggedSession?> stop() async {
+  /// null if nothing was running. [autoStopped] marks a stop the safety net
+  /// triggered rather than the reader tapping Stop — see
+  /// [checkReadingTimerSafetyNet], the only caller that passes true.
+  Future<LoggedSession?> stop({bool autoStopped = false}) async {
     await _hydration;
     if (state == null) return null;
     _stopping = true;
@@ -478,6 +482,7 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
           db,
           session,
           onMutation: ref.read(syncTriggerProvider),
+          autoStopped: autoStopped,
         );
       } catch (_) {
         // The write failed, so the sitting is still running in storage — and
@@ -568,7 +573,7 @@ Future<LoggedSession?> checkReadingTimerSafetyNet(WidgetRef ref) async {
     now: DateTime.now(),
   );
   if (!overdue) return null;
-  return notifier.stop();
+  return notifier.stop(autoStopped: true);
 }
 
 /// What the active session's book actually is — title/cover for the mini-bar,

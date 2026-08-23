@@ -524,6 +524,7 @@ class SyncEngine {
                 durationSeconds: Value(d['duration_seconds'] as int),
                 pageStart: Value(d['page_start'] as int?),
                 pageEnd: Value(d['page_end'] as int?),
+                autoStopped: Value(d['auto_stopped'] as bool? ?? false),
               ),
             );
       case 'reading_notes':

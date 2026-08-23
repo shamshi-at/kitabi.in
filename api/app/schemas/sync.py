@@ -125,6 +125,7 @@ class ReadingSessionCreate(BaseModel):
     duration_seconds: int = Field(ge=0)
     page_start: int | None = None
     page_end: int | None = None
+    auto_stopped: bool = False
 
 
 class ReadingSessionUpdate(BaseModel):
@@ -136,6 +137,9 @@ class ReadingSessionUpdate(BaseModel):
     duration_seconds: int | None = Field(default=None, ge=0)
     page_start: int | None = None
     page_end: int | None = None
+    # Sent by the reader's own correction of an auto-stopped sitting's ended_at
+    # / page_end — never re-set to true from the client.
+    auto_stopped: bool | None = None
 
 
 class ReadingNoteCreate(BaseModel):

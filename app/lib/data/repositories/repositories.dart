@@ -464,6 +464,7 @@ class ReadingSessionsRepository extends Repo {
     int? pageStart,
     int? pageEnd,
     String? id,
+    bool autoStopped = false,
   }) async {
     id ??= _uuid.v4();
     await db.readingSessionsDao.insertOne(
@@ -476,6 +477,7 @@ class ReadingSessionsRepository extends Repo {
         durationSeconds: durationSeconds,
         pageStart: Value(pageStart),
         pageEnd: Value(pageEnd),
+        autoStopped: Value(autoStopped),
       ),
     );
     await enqueue(
@@ -489,6 +491,7 @@ class ReadingSessionsRepository extends Repo {
         'duration_seconds': durationSeconds,
         'page_start': ?pageStart,
         'page_end': ?pageEnd,
+        'auto_stopped': autoStopped,
       },
     );
     // Now that the sitting is a row the server will accept, hand it the notes
@@ -520,6 +523,43 @@ class ReadingSessionsRepository extends Repo {
       entityId: sessionId,
       opType: 'update',
       data: {'page_end': pageEnd},
+    );
+  }
+
+  /// Corrects a sitting's end time (and the duration derived from it) and
+  /// optionally its end page — for a sitting the auto-stop safety net closed
+  /// while the reader kept reading unnoticed, so the recorded end no longer
+  /// matches when they actually put the book down (owner report, 23 Aug
+  /// 2026). [startedAt] is passed rather than re-read so the duration
+  /// recompute can't drift from what the editing screen already has on
+  /// screen. Leaves `autoStopped` as-is — it's the historical fact that this
+  /// sitting was closed by the safety net, not a review flag to clear.
+  Future<void> correctSessionEnd(
+    String sessionId, {
+    required DateTime startedAt,
+    required DateTime endedAt,
+    int? pageEnd,
+  }) async {
+    final durationSeconds = endedAt.difference(startedAt).inSeconds;
+    await db.readingSessionsDao.patch(
+      sessionId,
+      ReadingSessionsCompanion(
+        endedAt: Value(endedAt),
+        durationSeconds: Value(durationSeconds),
+        pageEnd: pageEnd == null ? const Value.absent() : Value(pageEnd),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'reading_sessions',
+      entityId: sessionId,
+      opType: 'update',
+      data: {
+        'ended_at': endedAt.toUtc().toIso8601String(),
+        'duration_seconds': durationSeconds,
+        'page_end': ?pageEnd,
+      },
     );
   }
 

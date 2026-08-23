@@ -6,7 +6,7 @@ local-only, never synced mid-session)."""
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, SyncableMixin
@@ -30,3 +30,8 @@ class ReadingSession(SyncableMixin, Base):
     duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
     page_start: Mapped[int | None] = mapped_column(Integer, default=None)
     page_end: Mapped[int | None] = mapped_column(Integer, default=None)
+    #: True when the "still reading?" safety net closed this sitting rather
+    #: than the reader tapping Stop — its ended_at is when the system noticed,
+    #: not when the reader actually put the book down, so the client offers a
+    #: correction affordance wherever this is set.
+    auto_stopped: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

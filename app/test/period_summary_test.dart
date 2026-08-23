@@ -27,6 +27,7 @@ ReadingSession _session(
     durationSeconds: durationSeconds,
     pageStart: pageStart,
     pageEnd: pageEnd,
+    autoStopped: false,
   );
 }
 

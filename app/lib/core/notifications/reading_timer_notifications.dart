@@ -179,6 +179,7 @@ Future<void> stopReadingSessionAndNotify({
   final logged = await stopAndLogActiveSession(
     db,
     SessionContext(userId: userId, deviceId: deviceId),
+    autoStopped: true,
   );
   // Take the sitting off the account from here too. This isolate has an API
   // client in hand for the sync drain below, and skipping the call left the

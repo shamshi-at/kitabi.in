@@ -2706,6 +2706,16 @@ class _ReadingLogSheet extends ConsumerWidget {
           await repo.deleteSession(s.id);
           messenger.showSnackBar(SnackBar(content: Text(l10n.bookLogDeleted)));
         },
+        onEdit: (endedAt, pageEnd) async {
+          Haptics.selection();
+          final repo = await ref.read(readingSessionsRepositoryProvider.future);
+          await repo.correctSessionEnd(
+            s.id,
+            startedAt: s.startedAt,
+            endedAt: endedAt,
+            pageEnd: pageEnd,
+          );
+        },
       ));
     }
     return out;
