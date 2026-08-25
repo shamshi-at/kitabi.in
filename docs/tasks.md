@@ -767,9 +767,10 @@ no advertising identifier, no new bill (CLAUDE.md rule 8).
       nightly backups, so no new service and no new bill) with upload from the console.
       Until then `image_url` is a pasted URL, and a card whose image fails renders as
       the text shape
-- [ ] Privacy-policy paragraph: that Kitabi shows its own promotions, chosen
+- [x] Privacy-policy paragraph: that Kitabi shows its own promotions, chosen
       server-side from language and library, and counts engagement. Ships with the
-      feature, not after it
+      feature, not after it — landed 25 Aug 2026 (`landing-page/privacy.html`,
+      "In-app promotions" section + Profile opt-out under "Your choices")
 - [ ] End-to-end on a real phone against the deployed API — create a campaign in the
       console targeted at your own reader id, publish, confirm it appears, dismiss it
 
