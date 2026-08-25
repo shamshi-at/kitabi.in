@@ -30,6 +30,16 @@ const paceWindowDays = 90;
 /// hours into "about 3 weeks".
 const weeklyHabitWeeks = 6;
 
+/// Below this many measurable sittings, no sitting is called an outlier —
+/// "unlike the others" needs enough others to mean anything.
+const paceOutlierMinSample = 5;
+
+/// A sitting whose own rate is this many times above — or below — the
+/// reader's median rate is set aside when measuring pace. Generous on
+/// purpose: a comic after a dense novel is a real reader, a typo'd page
+/// range or a timer left running overnight is not.
+const paceOutlierFactor = 4.0;
+
 /// A reading pace measured from the reader's own sittings.
 class ReadingPace {
   const ReadingPace({
@@ -204,35 +214,60 @@ FinishEstimate? estimateFinish({
   );
 }
 
+/// The sittings in [sessions] that can measure pace: a forward page range
+/// and real time on the clock. Everything else still counts toward reading
+/// time elsewhere — it just can't say how fast.
+List<ReadingSession> _paceSittings(Iterable<ReadingSession> sessions) => [
+      for (final s in sessions)
+        if (s.deletedAt == null &&
+            s.pageStart != null &&
+            s.pageEnd != null &&
+            s.pageEnd! > s.pageStart! &&
+            s.durationSeconds > 0)
+          s,
+    ];
+
+double _rateOf(ReadingSession s) =>
+    (s.pageEnd! - s.pageStart!) / (s.durationSeconds / 3600);
+
+/// Sets aside sittings whose own rate is wildly unlike this reader's others —
+/// a typo'd page range or a timer left running otherwise skews the pace for
+/// the whole window, and a per-language sample of three would present the
+/// corrupted figure confidently. The bounds come from the reader's own median,
+/// not a universal "plausible speed": a picture-book evening is fast for
+/// everyone and normal for a picture-book reader.
+List<ReadingSession> _trimOutliers(List<ReadingSession> rows) {
+  if (rows.length < paceOutlierMinSample) return rows;
+  final rates = rows.map(_rateOf).toList()..sort();
+  final median = rates[rates.length ~/ 2];
+  return [
+    for (final s in rows)
+      if (_rateOf(s) <= median * paceOutlierFactor &&
+          _rateOf(s) >= median / paceOutlierFactor)
+        s,
+  ];
+}
+
 /// Pages per hour across [sessions] that recorded a forward page range, or
 /// null when none did. Used both for the global pace and for one book's own.
+/// Time-weighted over the sittings [measurableSessions] counts, so the quoted
+/// sample size is exactly what the figure rests on.
 double? pagesPerHourOf(Iterable<ReadingSession> sessions) {
   var pages = 0;
   var seconds = 0;
-  for (final s in sessions) {
-    if (s.deletedAt != null) continue;
-    final start = s.pageStart;
-    final end = s.pageEnd;
-    // A sitting only measures pace if it says where it started *and* ended,
-    // and moved forward. Everything else still counts toward reading time.
-    if (start == null || end == null || end <= start) continue;
-    if (s.durationSeconds <= 0) continue;
-    pages += end - start;
+  for (final s in _trimOutliers(_paceSittings(sessions))) {
+    pages += s.pageEnd! - s.pageStart!;
     seconds += s.durationSeconds;
   }
   if (seconds <= 0 || pages <= 0) return null;
   return pages / (seconds / 3600);
 }
 
-/// Count of sittings in [sessions] that can measure pace.
-int measurableSessions(Iterable<ReadingSession> sessions) => sessions
-    .where((s) =>
-        s.deletedAt == null &&
-        s.pageStart != null &&
-        s.pageEnd != null &&
-        s.pageEnd! > s.pageStart! &&
-        s.durationSeconds > 0)
-    .length;
+/// Count of sittings in [sessions] that can measure pace — after the same
+/// outlier trim [pagesPerHourOf] applies, so the two never disagree about
+/// which sittings the pace rests on.
+int measurableSessions(Iterable<ReadingSession> sessions) =>
+    _trimOutliers(_paceSittings(sessions)).length;
 
 /// The reader's pace, from every sitting joined to the book it was on (the
 /// join is what makes the per-language split possible).

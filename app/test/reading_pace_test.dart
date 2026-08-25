@@ -100,6 +100,60 @@ void main() {
       );
     });
 
+    test('a typo\'d page range is set aside once there are enough sittings', () {
+      // Four honest sittings around 30 pp/h, one "10→310" typo (300 pp/h).
+      final honest = [
+        for (var i = 0; i < 4; i++)
+          _session(_now.subtract(Duration(days: i)), 3600,
+              pageStart: i * 30, pageEnd: i * 30 + 30),
+      ];
+      final typo = _session(_now, 3600, pageStart: 10, pageEnd: 310);
+
+      expect(pagesPerHourOf([...honest, typo]), 30);
+      expect(measurableSessions([...honest, typo]), 4);
+    });
+
+    test('a timer left running is set aside the same way', () {
+      // Four sittings at 40 pp/h, then 5 pages across 8 "hours" of reading.
+      final honest = [
+        for (var i = 0; i < 4; i++)
+          _session(_now.subtract(Duration(days: i)), 3600,
+              pageStart: i * 40, pageEnd: i * 40 + 40),
+      ];
+      final idle = _session(_now, 8 * 3600, pageStart: 160, pageEnd: 165);
+
+      expect(pagesPerHourOf([...honest, idle]), 40);
+      expect(measurableSessions([...honest, idle]), 4);
+    });
+
+    test('below the outlier minimum every sitting counts — no trim on thin evidence', () {
+      // Three sittings, one extreme: with so few, nobody can say which is
+      // "unlike the others", so all three stay in.
+      final rows = [
+        _session(_now, 3600, pageStart: 0, pageEnd: 30),
+        _session(_now, 3600, pageStart: 30, pageEnd: 60),
+        _session(_now, 3600, pageStart: 60, pageEnd: 360),
+      ];
+
+      expect(measurableSessions(rows), 3);
+      expect(pagesPerHourOf(rows), 120); // 360 pages / 3h — untrimmed
+    });
+
+    test('diverse but real paces are all kept — the bounds are generous', () {
+      // A dense novel at 18 pp/h next to comics at 60 pp/h: both within 4× of
+      // the median, both the same reader.
+      final rows = [
+        for (var i = 0; i < 3; i++)
+          _session(_now.subtract(Duration(days: i)), 3600,
+              pageStart: 0, pageEnd: 18),
+        for (var i = 3; i < 6; i++)
+          _session(_now.subtract(Duration(days: i)), 3600,
+              pageStart: 0, pageEnd: 60),
+      ];
+
+      expect(measurableSessions(rows), 6);
+    });
+
     test('weights by time, not by sitting count', () {
       // 10 pages in 6 min (100 pp/h) + 100 pages in 2h (50 pp/h)
       // → 110 pages / 2.1h ≈ 52.4, not the 75 a naive mean would give.
