@@ -30,15 +30,18 @@ lending events, opt-in), **CSV import/export**, **insights/stats**, **opt-in LLM
 recommendations**, **share cards**, and **launch plumbing** (version gate, backups,
 icons/splash, privacy/terms). The landing page is live and public.
 
-**Shipping state:** the mobile app now has release builds — an iOS **IPA (build 116)**
-and an Android **AAB (build 116)**, built 9 Aug 2026 with the catalogue doors bar (also
-re-hosted in the fab's Filter & sort sheet), the chained front→back cover capture, the
-on-cover community-rating chips, and the branded Amazon buy button, **not yet
-uploaded** — the stores still run
-build 111 (**Play Store internal testing**; a TestFlight build exists in App Store Connect). **Still worth a real device pass:** a
-literal airplane-mode Layer-2 check and on-device verification of FCM push + the ISBN
-scanner (the scanner can't build on an Apple Silicon iOS Simulator). The sync engine is
-thoroughly unit-tested (in-memory Drift + fake API client).
+**Shipping state:** the mobile app now has release builds — an iOS **IPA (build 132)**
+and an Android **AAB (build 132)**, built 19 Aug 2026 (pubspec has since been bumped to
++135 for the next cut), **not yet uploaded** — the stores still run build 111
+(**Play Store internal testing**; a TestFlight build exists in App Store Connect).
+Store-listing copy now exists for both stores (`docs/store/android/`,
+`docs/store/ios/`); the privacy policy discloses in-app promotions as of 25 Aug 2026.
+**Still worth a real device pass:** a literal airplane-mode Layer-2 check and on-device
+verification of FCM push + the ISBN scanner (the scanner can't build on an Apple
+Silicon iOS Simulator). The sync engine is thoroughly unit-tested (in-memory Drift +
+fake API client). **Backups are still inert** — the nightly workflow self-skips because
+`BACKUP_DATABASE_URL`/`BACKUP_PASSPHRASE`/`R2_*` repo secrets are unset (verified via
+`gh secret list`, 25 Aug 2026): owner action before first real user data.
 
 ---
 
