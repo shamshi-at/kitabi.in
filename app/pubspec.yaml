@@ -83,6 +83,10 @@ dev_dependencies:
   # pass while asserting nothing.
   flutter_local_notifications_platform_interface: ^8.0.0
   flutter_lints: ^6.0.0
+  # Test-only, already transitive via drift: migration tests configure the raw
+  # database (double-quoted string literals OFF) to match the sqlite compiled
+  # into devices, so device-only migration failures reproduce on the host.
+  sqlite3: ^2.4.0
   build_runner: ^2.4.13
   drift_dev: ^2.22.1
   flutter_launcher_icons: ^0.14.3

@@ -810,6 +810,25 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   and forth forever. The test that matters runs both devices against one shared
   server row and pulls repeatedly, asserting they settle on the same sitting and
   that the loser is logged exactly once — not once per pull.
+- **Drift's `TableMigration` copies every current-shape column it isn't told is
+  new — it never inspects what the old table actually has.** The v12
+  ratings/reviews rebuild shipped without `newColumns: [seriesId]`, emitting
+  `SELECT "series_id" FROM ratings` against pre-v12 tables. On macOS the system
+  sqlite that `flutter test` links has double-quoted-string literals enabled, so
+  the unknown identifier silently became the *string* `'series_id'` and every
+  host test passed; the sqlite compiled into devices has DQS off, so every real
+  upgrade from ≤v11 errored at open — and because migration steps were also not
+  idempotent (a re-run `addColumn` is fatal) and two engines (app + workmanager)
+  migrate the same file concurrently without serialization, the failure left the
+  on-device DB half-migrated with a stale `user_version` and the app permanently
+  wedged on the splash screen (caught on-emulator 25 Aug 2026, before any store
+  update shipped it). The rules now enforced in `database.dart` +
+  `migration_wedge_test.dart`: steps run oldest-first and every step is
+  guarded/idempotent, the step list re-runs after a backoff when a concurrent
+  migrator interferes, and migration tests set
+  `doubleQuotedStringLiterals = false` so the host harness matches device
+  sqlite. Corollary: green `flutter test` on a Mac is not evidence about the
+  sqlite your readers actually run.
 - **Three best-effort cleanups in one `try` is one cleanup with two decoys.**
   `stopAndLogActiveSession` cancelled the check-in, cancelled the enforcement task
   and ended the lock-screen clock inside a single `try {} catch (_) {}` — so the

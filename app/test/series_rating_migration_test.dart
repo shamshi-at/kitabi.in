@@ -2,9 +2,17 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/data/repositories/repositories.dart';
+
+/// See migration_wedge_test.dart: device sqlite has double-quoted string
+/// literals disabled, and testing against the permissive macOS build let a
+/// device-only migration failure through. Match the device.
+void _matchDeviceSqlite(Database db) {
+  db.config.doubleQuotedStringLiterals = false;
+}
 
 /// The v11 → v12 upgrade, run against a real file database.
 ///
@@ -72,24 +80,36 @@ void main() {
     // built every other table at the *current* Dart shape regardless of the
     // stamped version below, so without this the v13 onUpgrade step tries to
     // add a column that's already there.
-    await db.customStatement('ALTER TABLE reading_sessions DROP COLUMN auto_stopped');
+    await db.customStatement(
+      'ALTER TABLE reading_sessions DROP COLUMN auto_stopped',
+    );
     await db.customStatement('PRAGMA user_version = 11');
   }
 
   test('upgrading from v11 keeps existing ratings and reviews', () async {
-    final seed = AppDatabase.forTesting(NativeDatabase(file));
+    final seed = AppDatabase.forTesting(
+      NativeDatabase(file, setup: _matchDeviceSqlite),
+    );
     await downgradeToV11(seed);
     await seed.close();
 
     // Reopening runs onUpgrade(11 → 12).
-    final db = AppDatabase.forTesting(NativeDatabase(file));
+    final db = AppDatabase.forTesting(
+      NativeDatabase(file, setup: _matchDeviceSqlite),
+    );
     const session = SessionContext(userId: 'u1', deviceId: 'd1');
 
-    final rating = await RatingsRepository(db, session).watchForWork('work-1').first;
+    final rating = await RatingsRepository(
+      db,
+      session,
+    ).watchForWork('work-1').first;
     expect(rating?.value, 4, reason: 'the rating survived the table rebuild');
     expect(rating?.syncStatus, 'synced', reason: 'and so did its sync state');
 
-    final review = await ReviewsRepository(db, session).watchForWork('work-1').first;
+    final review = await ReviewsRepository(
+      db,
+      session,
+    ).watchForWork('work-1').first;
     expect(review?.body, 'A fine book.');
     expect(review?.visible, isTrue);
 
@@ -97,11 +117,15 @@ void main() {
   });
 
   test('after upgrading, a series rating can be written alongside', () async {
-    final seed = AppDatabase.forTesting(NativeDatabase(file));
+    final seed = AppDatabase.forTesting(
+      NativeDatabase(file, setup: _matchDeviceSqlite),
+    );
     await downgradeToV11(seed);
     await seed.close();
 
-    final db = AppDatabase.forTesting(NativeDatabase(file));
+    final db = AppDatabase.forTesting(
+      NativeDatabase(file, setup: _matchDeviceSqlite),
+    );
     const session = SessionContext(userId: 'u1', deviceId: 'd1');
     final ratings = RatingsRepository(db, session);
 
