@@ -23,8 +23,7 @@ android {
     namespace = "in.kitabi.kitabi"
     // Pinned to 36 (not flutter.compileSdkVersion, which lags at 33): the bundled
     // Flutter plugins (mobile_scanner, app_links, image_picker…) are compiled
-    // against API 36, so the app must compile against at least that. Backward-
-    // compatible; targetSdk stays at Play's required 35.
+    // against API 36, so the app must compile against at least that.
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -42,7 +41,11 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = 35
+        // Play requires targeting within one year of the latest Android release
+        // (API 36 from 31 Aug 2026 — the policy flag that blocked the first
+        // submission). The app already ran under 35's edge-to-edge enforcement,
+        // which is the only behaviour change of consequence here.
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
