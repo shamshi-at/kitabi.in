@@ -29,10 +29,13 @@ import 'sittings_sheet.dart';
 /// Single-letter month labels for the year's books-per-month bar chart axis.
 const _monthLetters = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 
-/// S10 — Insights as the almanac (Direction B, owner pick 26 Aug 2026,
-/// docs/insights-share-mockups.html). No card boxes: the page is one typeset
-/// sheet — ledger rows with dotted leaders, Fraunces numerals set right,
-/// small-caps section heads. Two verbs govern every row: tap navigates
+/// S10 — Insights as the almanac (Direction B, owner pick 26 Aug 2026;
+/// revised same day to R2, docs/insights-share-mockups.html "B, revised").
+/// No card boxes: the page is one typeset sheet — stat pairs (the figure
+/// with its name directly beneath it, two to a row, one downward glance
+/// each; the first ledger's label-left/figure-right rows made the eye walk
+/// a dotted bridge per line), tight name lines for In hand / Most read /
+/// Longest, small-caps section heads. Two verbs govern every row: tap navigates
 /// (every oxblood value is a door — the house rule), long-press shares (the
 /// row slip). The one control is the gold wax seal, which opens the share
 /// sheet with the window's graphical card — never a full-page capture — and
@@ -354,89 +357,77 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     return [
       AlmanacHead(left: window, right: l10n.insightsHeadIssueNo(dayOfYear)),
       _headline(empty ? l10n.insightsNoSessionToday : l10n.insightsPeriodTodayHeadline),
-      if (!empty) ...[
-        LedgerRow(
-          label: l10n.insightsRowTimeRead,
-          value: duration,
-          onTap: () => _openSittings(range, window),
-          onLongPress: () =>
-              _shareRow(l10n, window: window, label: l10n.insightsRowTimeRead, value: duration),
-        ),
-        LedgerRow(
-          label: l10n.insightsRowPagesTurned,
-          value: '${summary.pagesRead}',
-          valueSuffix: l10n.insightsUnitPages,
-          onTap: () => _openSittings(range, window),
-        ),
-        LedgerRow(
-          label: l10n.insightsRowSittings,
-          value: '${summary.sittingsCount}',
-          onTap: () => _openSittings(range, window),
-        ),
-      ],
-      if (streak > 0)
-        LedgerRow(
-          label: l10n.insightsRowStreak,
-          value: '$streak',
-          valueSuffix: l10n.insightsUnitDays,
-          // The heatmap is the streak's map — the door flips to Month.
-          onTap: () => setState(() => _period = InsightsPeriod.month),
-          onLongPress: () => _shareRow(
-            l10n,
-            window: window,
-            label: l10n.insightsRowStreak,
-            value: '$streak ${l10n.insightsUnitDays}',
-            lamps: summary.recentDays,
+      // R2 (owner pick, 26 Aug 2026): figures over their names, two to a row
+      // — one downward glance per stat, no left-right eye travel. Doors and
+      // long-press slips ride the cells unchanged.
+      StatPairsGrid(pairs: [
+        if (!empty) ...[
+          StatPair(
+            value: duration,
+            label: l10n.insightsRowTimeRead,
+            onTap: () => _openSittings(range, window),
+            onLongPress: () =>
+                _shareRow(l10n, window: window, label: l10n.insightsRowTimeRead, value: duration),
           ),
-        ),
+          StatPair(
+            value: '${summary.pagesRead}',
+            suffix: l10n.insightsUnitPages,
+            label: l10n.insightsRowPagesTurned,
+            onTap: () => _openSittings(range, window),
+          ),
+          StatPair(
+            value: '${summary.sittingsCount}',
+            label: l10n.insightsRowSittings,
+            onTap: () => _openSittings(range, window),
+          ),
+        ],
+        if (streak > 0)
+          StatPair(
+            value: '$streak',
+            suffix: l10n.insightsUnitDays,
+            label: l10n.insightsRowStreak,
+            // The heatmap is the streak's map — the door flips to Month.
+            onTap: () => setState(() => _period = InsightsPeriod.month),
+            onLongPress: () => _shareRow(
+              l10n,
+              window: window,
+              label: l10n.insightsRowStreak,
+              value: '$streak ${l10n.insightsUnitDays}',
+              lamps: summary.recentDays,
+            ),
+          ),
+      ]),
       if (!empty && books.isNotEmpty) ...[
         const SizedBox(height: 14),
-        if (books.length == 1) ...[
-          LedgerRow(
-            label: l10n.insightsRowInHand,
-            value: books.first.title,
-            italicValue: true,
-            onTap: () =>
-                context.push(Routes.bookDetailPath(books.first.workId, books.first.editionId)),
+        SectRule(l10n.insightsSectInHandCount(books.length)),
+        const SizedBox(height: 2),
+        // A name is read, not scanned — the title stays a sentence with its
+        // page snug after it. Three at most (B3); a crowded day overflows
+        // into the sittings sheet.
+        for (final book in books.take(3))
+          TightRow(
+            name: book.title,
+            trailing: book.currentPage != null
+                ? '${l10n.insightsPageN(book.currentPage!)}'
+                    "${book.pageCount != null ? ' ${l10n.insightsOfN('${book.pageCount}')}' : ''}"
+                : null,
+            onTap: () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
           ),
-          if (books.first.currentPage case final page?)
-            LedgerRow(
-              label: l10n.insightsRowLeftOffAt,
-              value: l10n.insightsPageN(page),
-              valueSuffix: books.first.pageCount != null
-                  ? l10n.insightsOfN('${books.first.pageCount}')
-                  : null,
-            ),
-        ] else ...[
-          SectRule(l10n.insightsSectInHandCount(books.length)),
-          const SizedBox(height: 2),
-          // Three named rows at most (B3) — a crowded day overflows into the
-          // sittings sheet rather than scrolling the ledger.
-          for (final book in books.take(3))
-            LedgerRow(
-              label: book.title,
-              italicLabel: true,
-              value: book.currentPage != null ? l10n.insightsPageN(book.currentPage!) : '',
-              valueSuffix:
-                  book.pageCount != null ? l10n.insightsOfN('${book.pageCount}') : null,
-              onTap: () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
-            ),
-          if (books.length > 3)
-            InkWell(
-              onTap: () => _openSittings(range, window),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  l10n.insightsAndMoreBooks(books.length - 3),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.oxblood,
-                  ),
+        if (books.length > 3)
+          InkWell(
+            onTap: () => _openSittings(range, window),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                l10n.insightsAndMoreBooks(books.length - 3),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.oxblood,
                 ),
               ),
             ),
-        ],
+          ),
       ],
       const SizedBox(height: 14),
       SectRule(l10n.insightsSectWeekSoFar),
@@ -470,24 +461,26 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     return [
       AlmanacHead(left: window),
       _headline(l10n.insightsPeriodWeekHeadline),
-      LedgerRow(
-        label: l10n.insightsRowTimeRead,
-        value: duration,
-        onTap: () => _openSittings(range, window),
-        onLongPress: () =>
-            _shareRow(l10n, window: window, label: l10n.insightsRowTimeRead, value: duration),
-      ),
-      LedgerRow(
-        label: l10n.insightsRowPagesTurned,
-        value: '${summary.pagesRead}',
-        valueSuffix: l10n.insightsUnitPages,
-        onTap: () => _openSittings(range, window),
-      ),
-      LedgerRow(
-        label: l10n.insightsRowSittings,
-        value: '${summary.sittingsCount}',
-        onTap: () => _openSittings(range, window),
-      ),
+      StatPairsGrid(pairs: [
+        StatPair(
+          value: duration,
+          label: l10n.insightsRowTimeRead,
+          onTap: () => _openSittings(range, window),
+          onLongPress: () =>
+              _shareRow(l10n, window: window, label: l10n.insightsRowTimeRead, value: duration),
+        ),
+        StatPair(
+          value: '${summary.pagesRead}',
+          suffix: l10n.insightsUnitPages,
+          label: l10n.insightsRowPagesTurned,
+          onTap: () => _openSittings(range, window),
+        ),
+        StatPair(
+          value: '${summary.sittingsCount}',
+          label: l10n.insightsRowSittings,
+          onTap: () => _openSittings(range, window),
+        ),
+      ]),
       const SizedBox(height: 14),
       SectRule(l10n.insightsSectPace),
       const SizedBox(height: 10),
@@ -508,26 +501,32 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
         right: isCurrent ? l10n.insightsHeadToDate(DateFormat('d MMM').format(now)) : null,
       ),
       _headline(l10n.insightsPeriodMonthHeadline),
-      LedgerRow(
-        label: l10n.insightsRowBooksFinished,
-        value: '${summary.booksFinishedCount}',
-        onTap: () => _openFinished(
-          range: range,
-          title: '${l10n.insightsRowBooksFinished} · ${DateFormat.MMMM().format(range.start)}',
+      StatPairsGrid(pairs: [
+        StatPair(
+          value: '${summary.booksFinishedCount}',
+          label: l10n.insightsRowBooksFinished,
+          onTap: () => _openFinished(
+            range: range,
+            title: '${l10n.insightsRowBooksFinished} · ${DateFormat.MMMM().format(range.start)}',
+          ),
         ),
-      ),
-      LedgerRow(
-        label: l10n.insightsRowPagesTurned,
-        value: '${summary.pagesRead}',
-        valueSuffix: l10n.insightsUnitPages,
-        onTap: () => _openSittings(range, window),
-      ),
-      LedgerRow(
-        label: l10n.insightsRowTimeRead,
-        value: duration,
-        onTap: () => _openSittings(range, window),
-      ),
-      LedgerRow(label: l10n.insightsRowDaysRead, value: '$read', valueSuffix: l10n.insightsOfN('$elapsed')),
+        StatPair(
+          value: '${summary.pagesRead}',
+          suffix: l10n.insightsUnitPages,
+          label: l10n.insightsRowPagesTurned,
+          onTap: () => _openSittings(range, window),
+        ),
+        StatPair(
+          value: duration,
+          label: l10n.insightsRowTimeRead,
+          onTap: () => _openSittings(range, window),
+        ),
+        StatPair(
+          value: '$read',
+          suffix: l10n.insightsOfN('$elapsed'),
+          label: l10n.insightsRowDaysRead,
+        ),
+      ]),
       const SizedBox(height: 14),
       SectRule(l10n.insightsSectCalendar),
       const SizedBox(height: 10),
@@ -550,31 +549,41 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     return [
       AlmanacHead(left: window),
       _headline(l10n.insightsPeriodMultiMonthHeadline),
-      LedgerRow(
-        label: l10n.insightsRowBooksFinished,
-        value: '${summary.booksFinishedCount}',
-        onTap: () => _openFinished(
-          range: range,
-          title: '${l10n.insightsRowBooksFinished} · $window',
+      StatPairsGrid(pairs: [
+        StatPair(
+          value: '${summary.booksFinishedCount}',
+          label: l10n.insightsRowBooksFinished,
+          onTap: () => _openFinished(
+            range: range,
+            title: '${l10n.insightsRowBooksFinished} · $window',
+          ),
         ),
-      ),
-      LedgerRow(
-        label: l10n.insightsRowPagesTurned,
-        value: '${summary.pagesRead}',
-        valueSuffix: l10n.insightsUnitPages,
-        onTap: () => _openSittings(range, window),
-      ),
-      LedgerRow(
-        label: l10n.insightsRowHours,
-        value: duration,
-        onTap: () => _openSittings(range, window),
-      ),
+        StatPair(
+          value: '${summary.pagesRead}',
+          suffix: l10n.insightsUnitPages,
+          label: l10n.insightsRowPagesTurned,
+          onTap: () => _openSittings(range, window),
+        ),
+        StatPair(
+          value: duration,
+          label: l10n.insightsRowHours,
+          onTap: () => _openSittings(range, window),
+        ),
+      ]),
       const SizedBox(height: 14),
       SectRule(l10n.insightsSectPace),
       const SizedBox(height: 10),
       TrendPlate(buckets: summary.trendBuckets ?? const [], start: range.start, end: range.end),
       ..._closing(l10n.insightsClosingStretch(summary.booksFinishedCount)),
     ];
+  }
+
+  /// The pace cell's two-word figure — "3 ahead" fits a stat pair where
+  /// "3 ahead of pace" would not; the label beneath says the rest.
+  String _paceShort(AppLocalizations l10n, int diff) {
+    if (diff > 0) return l10n.insightsPaceAheadShort(diff);
+    if (diff < 0) return l10n.insightsPaceBehindShort(-diff);
+    return l10n.insightsPaceOnTrackShort;
   }
 
   List<Widget> _yearLedger(
@@ -588,6 +597,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
     final isPaceable = _year == thisYear;
     final window = _year == null ? l10n.insightsAllTime : '$_year';
     final duration = formatDuration(Duration(seconds: summary.totalSeconds));
+    final pages = NumberFormat.decimalPattern().format(stats.pagesRead);
+    final paceDiff = _paceDiff(stats.booksRead, goal);
     final spines = [
       for (final book in summary.booksFinished.reversed)
         ShelfSpine(pages: book.pageCount, seed: ShelfSpine.seedOf(book.title), title: book.title),
@@ -598,35 +609,45 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
         right: isPaceable ? l10n.insightsHeadToDate(DateFormat('d MMM').format(DateTime.now())) : null,
       ),
       _headline(_yearHeadline(l10n, read: stats.booksRead, goal: goal, isPaceable: isPaceable)),
-      LedgerRow(
-        label: l10n.insightsRowBooksFinished,
-        value: '${stats.booksRead}',
-        valueSuffix: isPaceable ? l10n.insightsOfN('$goal') : null,
-        onTap: () => _openFinished(range: range, year: _year, showGoal: isPaceable),
-        onLongPress: () => _shareRow(
-          l10n,
-          window: window,
-          label: l10n.insightsRowBooksFinished,
+      StatPairsGrid(pairs: [
+        StatPair(
           value: '${stats.booksRead}',
-          footnote: isPaceable ? _paceNote(l10n, stats.booksRead, goal) : null,
+          suffix: isPaceable ? l10n.insightsOfN('$goal') : null,
+          label: l10n.insightsRowBooksFinished,
+          onTap: () => _openFinished(range: range, year: _year, showGoal: isPaceable),
+          onLongPress: () => _shareRow(
+            l10n,
+            window: window,
+            label: l10n.insightsRowBooksFinished,
+            value: '${stats.booksRead}',
+            footnote: isPaceable ? _paceNote(l10n, stats.booksRead, goal) : null,
+          ),
         ),
-      ),
-      LedgerRow(
-        label: l10n.insightsRowPagesTurned,
-        value: '${stats.pagesRead}',
-        valueSuffix: l10n.insightsUnitPages,
-      ),
-      LedgerRow(
-        label: l10n.insightsRowHours,
-        value: duration,
-        onTap: () => _openSittings(range, window),
-      ),
+        StatPair(
+          value: pages,
+          suffix: l10n.insightsUnitPages,
+          label: l10n.insightsRowPagesTurned,
+        ),
+        StatPair(
+          value: duration,
+          label: l10n.insightsRowHours,
+          onTap: () => _openSittings(range, window),
+        ),
+        if (isPaceable)
+          StatPair(
+            value: _paceShort(l10n, paceDiff),
+            label: l10n.insightsRowAgainstPace,
+            valueColor: paceDiff >= 0 ? AppColors.moss : AppColors.oxblood,
+            // The goal is edited where the "of 30" is explained — but the
+            // cell is also a door to the dialog for the reader mid-ledger.
+            onTap: () => _editGoal(goal),
+          ),
+      ]),
       if (stats.topAuthor case final author?)
-        LedgerRow(
+        TightRow(
           label: l10n.insightsRowMostRead,
-          value: author,
-          italicValue: true,
-          valueSuffix: '· ${stats.topAuthorCount}',
+          name: author,
+          trailing: '· ${stats.topAuthorCount}',
           onTap: () => _openAuthor(context, ref, author),
           onLongPress: () => _shareRow(
             l10n,
@@ -636,25 +657,15 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
           ),
         ),
       if (stats.longestBookPages > 0)
-        LedgerRow(
+        TightRow(
           label: l10n.insightsRowLongest,
-          value: stats.longestBookTitle ?? '',
-          italicValue: true,
-          valueSuffix: '· ${stats.longestBookPages} ${l10n.insightsUnitPages}',
+          name: stats.longestBookTitle ?? '',
+          trailing: '· ${stats.longestBookPages} ${l10n.insightsUnitPages}',
           onTap: stats.longestBookWorkId == null || stats.longestBookEditionId == null
               ? null
               : () => context.push(
                     Routes.bookDetailPath(stats.longestBookWorkId!, stats.longestBookEditionId!),
                   ),
-        ),
-      if (isPaceable)
-        LedgerRow(
-          label: l10n.insightsRowAgainstPace,
-          value: _paceNote(l10n, stats.booksRead, goal),
-          valueColor: _paceDiff(stats.booksRead, goal) >= 0 ? AppColors.moss : AppColors.oxblood,
-          // The goal is edited where the "of 30" is explained — but the row
-          // itself is also a door to the dialog for the reader mid-ledger.
-          onTap: () => _editGoal(goal),
         ),
       if (spines.isNotEmpty) ...[
         const SizedBox(height: 14),

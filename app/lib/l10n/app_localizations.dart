@@ -5968,6 +5968,24 @@ abstract class AppLocalizations {
   /// **'p. {page}'**
   String insightsPageN(int page);
 
+  /// The year grid's Against-pace cell, kept to two words so it fits a stat pair
+  ///
+  /// In en, this message translates to:
+  /// **'{count} ahead'**
+  String insightsPaceAheadShort(int count);
+
+  /// The year grid's Against-pace cell when behind
+  ///
+  /// In en, this message translates to:
+  /// **'{count} behind'**
+  String insightsPaceBehindShort(int count);
+
+  /// The year grid's Against-pace cell when exactly on pace
+  ///
+  /// In en, this message translates to:
+  /// **'on track'**
+  String get insightsPaceOnTrackShort;
+
   /// The Today almanac's issue number — the day of the year
   ///
   /// In en, this message translates to:

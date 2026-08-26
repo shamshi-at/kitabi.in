@@ -3657,6 +3657,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String insightsPaceAheadShort(int count) {
+    return '$count ahead';
+  }
+
+  @override
+  String insightsPaceBehindShort(int count) {
+    return '$count behind';
+  }
+
+  @override
+  String get insightsPaceOnTrackShort => 'on track';
+
+  @override
   String insightsHeadIssueNo(int n) {
     return '№ $n';
   }

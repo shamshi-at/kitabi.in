@@ -110,9 +110,9 @@ void main() {
     await settle(tester);
 
     // The ledger rows, with the day's totals.
-    expect(find.text('Time read'), findsOneWidget);
+    expect(find.text('TIME READ'), findsOneWidget);
     expect(find.text('40m'), findsOneWidget); // 1800s + 600s
-    expect(find.text('Sittings'), findsOneWidget);
+    expect(find.text('SITTINGS'), findsOneWidget);
 
     // Two books in hand → the section, one titled row per book, titles as
     // doors (rendered; navigation is the router's test, not this one's).
@@ -144,7 +144,7 @@ void main() {
     // The nudge headline, not a zero — and no send affordance at all.
     expect(find.textContaining('No sitting yet today'), findsOneWidget);
     expect(find.byType(WaxSeal), findsNothing);
-    expect(find.text('Time read'), findsNothing);
+    expect(find.text('TIME READ'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
     await settle(tester);

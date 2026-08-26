@@ -716,6 +716,12 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       `readingCheckInDelayOf`, so the three keep agreeing. The 30-minute answer window
       stays fixed. Applies from the next sitting; a running sitting keeps the deadline it
       was armed with
+- [x] **Almanac revised to R2, stat pairs** (26 Aug 2026, owner report from the device:
+      the ledger's label-left/figure-right rows forced left-right eye travel). Numbers
+      are now stacked pairs — the figure with its small-caps name beneath it, two to a
+      row, one downward glance each; In hand / Most read / Longest are tight name lines.
+      Doors, long-press slips, sections, plates, seal all unchanged. Drawn as R1/R2/R3 in
+      the mockups' "B, revised" area; R2 picked and built
 
 ## Phase 8 — Platform & launch plumbing
 

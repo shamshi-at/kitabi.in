@@ -74,108 +74,176 @@ class _SmallCaps extends StatelessWidget {
   }
 }
 
-/// One ledger line: label, dotted leader, Fraunces value in oxblood.
-/// The oxblood tint IS the tap affordance (the house doors rule — no
-/// chevrons; a ledger with eight chevrons is a menu). [onLongPress] lifts
-/// the row as a slip.
-class LedgerRow extends StatelessWidget {
-  const LedgerRow({
-    super.key,
-    required this.label,
+/// One stat pair — a figure with its name directly beneath it (R2, the
+/// owner's pick 26 Aug 2026). The built ledger's label-left / figure-right
+/// rows made the eye walk a ~200dp dotted bridge per line ("look left, then
+/// look right — uncomfortable"); a pair is read in one downward glance. The
+/// oxblood figure is still the door (house rule), long-press still lifts the
+/// slip.
+class StatPair {
+  const StatPair({
     required this.value,
-    this.valueSuffix,
-    this.italicLabel = false,
-    this.italicValue = false,
+    required this.label,
+    this.suffix,
     this.valueColor,
     this.onTap,
     this.onLongPress,
   });
 
-  final String label;
   final String value;
 
-  /// The small grey unit after the figure — "min", "of 30", "· 724 pp".
-  final String? valueSuffix;
+  /// The small grey unit after the figure — "pp", "of 30", "days".
+  final String? suffix;
 
-  /// The *label* is a book title (a multi-book day's per-book rows, B3) —
-  /// set in Fraunces italic, oxblood when the row is a door.
-  final bool italicLabel;
-
-  /// The *value* is a title or name ("In hand ... Naalukettu", "Most read
-  /// ... M.T. Vasudevan Nair") — Fraunces italic at a size names survive.
-  final bool italicValue;
+  /// Rendered as small caps under the figure.
+  final String label;
   final Color? valueColor;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+}
+
+/// The pairs, two to a row, each cell hairlined — an almanac's data table,
+/// not a wall of tiles: no boxes, type and rules only.
+class StatPairsGrid extends StatelessWidget {
+  const StatPairsGrid({super.key, required this.pairs});
+
+  final List<StatPair> pairs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < pairs.length; i += 2)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _StatCell(pair: pairs[i])),
+              const SizedBox(width: 18),
+              Expanded(
+                child: i + 1 < pairs.length
+                    ? _StatCell(pair: pairs[i + 1])
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  const _StatCell({required this.pair});
+
+  final StatPair pair;
+
+  @override
+  Widget build(BuildContext context) {
+    final cell = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              text: pair.value,
+              style: GoogleFonts.fraunces(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: pair.valueColor ?? AppColors.oxblood,
+                height: 1,
+              ),
+              children: [
+                if (pair.suffix case final suffix?)
+                  TextSpan(
+                    text: ' $suffix',
+                    // Explicit Inter — a nested span inherits Fraunces from
+                    // the figure otherwise, and the unit must read as UI.
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.inkSoft,
+                    ),
+                  ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            pair.label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 8.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.1,
+              color: AppColors.inkSoft,
+            ),
+          ),
+        ],
+      ),
+    );
+    if (pair.onTap == null && pair.onLongPress == null) return cell;
+    return InkWell(onTap: pair.onTap, onLongPress: pair.onLongPress, child: cell);
+  }
+}
+
+/// A name line — In hand, Most read, Longest. A name is read, not scanned,
+/// so it stays a left-clustered sentence: optional small label, the name in
+/// Fraunces italic (oxblood when it is a door), the detail snug after it.
+class TightRow extends StatelessWidget {
+  const TightRow({
+    super.key,
+    this.label,
+    required this.name,
+    this.trailing,
+    this.onTap,
+    this.onLongPress,
+  });
+
+  final String? label;
+  final String name;
+  final String? trailing;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final row = Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 9),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.line)),
       ),
       child: Row(
-        // Bottom-aligned, not baseline: a baseline row aligns the leader (a
-        // non-text child) by its bottom edge to the baseline in a way that
-        // floats the dots high — caught on the emulator, invisible to the
-        // widget tests.
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
-          // Label + leader live inside the one Expanded so the leader alone
-          // absorbs every spare pixel and the value sits flush right — with
-          // value and leader as sibling flex children the free space split
-          // between them, leaving each row's figure at a different, ragged x
-          // (caught on the emulator, second pass).
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: italicLabel
-                        ? GoogleFonts.fraunces(
-                            fontSize: 13,
-                            fontStyle: FontStyle.italic,
-                            color: onTap == null ? AppColors.ink : AppColors.oxblood,
-                          )
-                        : TextStyle(fontSize: 12, color: AppColors.ink),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 6, right: 6, bottom: 5),
-                    child: CustomPaint(
-                      size: const Size(double.infinity, 1),
-                      painter: _DottedLeaderPainter(color: AppColors.line),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Rigid, capped: a name-valued row ("Most read · M.T. Vasudevan
-          // Nair") must ellipsize rather than push the row wide.
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 190),
+          if (label case final l?) ...[
+            Text(l, style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft)),
+            const SizedBox(width: 7),
+          ],
+          Flexible(
             child: Text(
-              value,
+              name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.fraunces(
-                fontSize: italicValue ? 13.5 : 15,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
-                fontStyle: italicValue ? FontStyle.italic : FontStyle.normal,
-                color: valueColor ?? AppColors.oxblood,
+                fontStyle: FontStyle.italic,
+                color: onTap == null ? AppColors.ink : AppColors.oxblood,
               ),
             ),
           ),
-          if (valueSuffix case final suffix?) ...[
-            const SizedBox(width: 3),
-            Text(suffix, style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft)),
+          if (trailing case final t?) ...[
+            const SizedBox(width: 7),
+            Text(t, style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft)),
           ],
         ],
       ),
@@ -183,23 +251,6 @@ class LedgerRow extends StatelessWidget {
     if (onTap == null && onLongPress == null) return row;
     return InkWell(onTap: onTap, onLongPress: onLongPress, child: row);
   }
-}
-
-class _DottedLeaderPainter extends CustomPainter {
-  _DottedLeaderPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    for (var x = 0.0; x < size.width; x += 5) {
-      canvas.drawCircle(Offset(x, size.height - 1), 0.8, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DottedLeaderPainter old) => old.color != color;
 }
 
 /// The week's seven-bar plate — the page-side twin of the card's bars,
