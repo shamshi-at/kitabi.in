@@ -187,8 +187,10 @@ Upload via Apple Transporter or `xcrun altool --upload-app`. Notes:
 - **`mobile_scanner` cannot build on an Apple Silicon iOS Simulator** (MLKit ships
   no arm64 simulator slice). Verify the ISBN-scan screen on a **real iPhone** or an
   **Android emulator**, not the iOS Simulator.
-- TestFlight/production APNs push needs a **Production** APNs key uploaded to
-  Firebase and the `aps-environment` entitlement set to `production`.
+- TestFlight/production APNs push needs an APNs key in Firebase and the
+  `aps-environment` entitlement — both long since in place: the `.p8` auth key
+  (which serves sandbox and production alike) is uploaded, and production push
+  was confirmed on a real iPhone on 26 Aug 2026. Nothing to do per release.
 - The app embeds **two** app extensions: `NotificationService` (push) and
   `ReadingActivity` (the reading timer's Live Activity widget, iOS 16.2+). Both are
   in `Runner.xcodeproj` already; if a target ever has to be re-created, do it with
