@@ -693,6 +693,19 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       S13; the "Include my rating & note" toggle on S6c folds this into the same card
 - [x] Share sheet integration (WhatsApp / Instagram / copy link) — S6c/S13. Uses the OS
       share sheet (WhatsApp/Instagram appear there) + a Copy-link action
+- [x] **Insights almanac + graphical share cards** (26 Aug 2026 — Direction B of
+      docs/insights-share-mockups.html, owner pick): Insights rebuilt as a typeset ledger
+      (dotted leaders, Fraunces values, wax-seal send) where every oxblood value is a door —
+      Books finished → the finished list (B4, start → finish dates, goal ✎), numbers → the
+      cross-book sittings sheet (B5), Streak → Month, names → book/author pages — and
+      long-press lifts any row as a slip. Multi-book days render "In hand" as a section
+      (B3); the Month calendar prints its dates, read days open that day's sittings (B6).
+      `PeriodShareCard` rebuilt graphical: the window's own viz travels on the image
+      (lamps / bars / calendar / pace line / **the year as a shelf of spines, width ∝
+      pages**) in three layouts — Story · Square · **Slip** (chat-sized; default for Today) —
+      behind a rebuilt sheet (shape-true chips, "Name the book" toggle, printed privacy
+      promise). No shareable zeroes: an empty window draws no seal. Deferred, flagged in
+      the mockups: "Name the spines" vertical titles, the weekly-percentile closing line
 
 ## Phase 8 — Platform & launch plumbing
 

@@ -5734,6 +5734,408 @@ abstract class AppLocalizations {
   /// **'Books first, everything else after.'**
   String get insightsShareLine5;
 
+  /// Chat-sized landscape format chip on the period share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Slip'**
+  String get insightsShareFormatSlip;
+
+  /// Share-sheet toggle that includes/excludes book titles on the card
+  ///
+  /// In en, this message translates to:
+  /// **'Name the book'**
+  String get insightsShareNameBooks;
+
+  /// Sub-line under the name-the-book toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Off sends the numbers only'**
+  String get insightsShareNameBooksHint;
+
+  /// The privacy promise printed on every share sheet open
+  ///
+  /// In en, this message translates to:
+  /// **'Numbers, covers and titles only — never your notes or private reviews.'**
+  String get insightsSharePrivacyLine;
+
+  /// Eyebrow over the share caption field
+  ///
+  /// In en, this message translates to:
+  /// **'Caption · sent as text, not pixels'**
+  String get insightsShareCaptionAsText;
+
+  /// Title of the long-press row-slip share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Send this line'**
+  String get insightsShareRowSheetTitle;
+
+  /// Eyebrow on a row slip, followed by · and the window
+  ///
+  /// In en, this message translates to:
+  /// **'From the ledger'**
+  String get insightsRowSlipEyebrow;
+
+  /// Label inside the almanac page's wax-seal share button
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get insightsSealSend;
+
+  /// Almanac ledger row labels (Direction B, 26 Aug 2026) — this and the eleven rows after it
+  ///
+  /// In en, this message translates to:
+  /// **'Time read'**
+  String get insightsRowTimeRead;
+
+  /// No description provided for @insightsRowPagesTurned.
+  ///
+  /// In en, this message translates to:
+  /// **'Pages turned'**
+  String get insightsRowPagesTurned;
+
+  /// No description provided for @insightsRowSittings.
+  ///
+  /// In en, this message translates to:
+  /// **'Sittings'**
+  String get insightsRowSittings;
+
+  /// No description provided for @insightsRowStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get insightsRowStreak;
+
+  /// No description provided for @insightsRowBooksFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Books finished'**
+  String get insightsRowBooksFinished;
+
+  /// No description provided for @insightsRowDaysRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Days read'**
+  String get insightsRowDaysRead;
+
+  /// No description provided for @insightsRowHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Hours with a book'**
+  String get insightsRowHours;
+
+  /// No description provided for @insightsRowMostRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Most read'**
+  String get insightsRowMostRead;
+
+  /// No description provided for @insightsRowLongest.
+  ///
+  /// In en, this message translates to:
+  /// **'Longest'**
+  String get insightsRowLongest;
+
+  /// No description provided for @insightsRowAgainstPace.
+  ///
+  /// In en, this message translates to:
+  /// **'Against pace'**
+  String get insightsRowAgainstPace;
+
+  /// No description provided for @insightsRowLeftOffAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Left off at'**
+  String get insightsRowLeftOffAt;
+
+  /// No description provided for @insightsRowInHand.
+  ///
+  /// In en, this message translates to:
+  /// **'In hand'**
+  String get insightsRowInHand;
+
+  /// Section head over the per-book rows on a multi-book day
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{In hand} other{In hand · {count} books}}'**
+  String insightsSectInHandCount(int count);
+
+  /// Section head over the Today ledger's streak lamps
+  ///
+  /// In en, this message translates to:
+  /// **'The week so far'**
+  String get insightsSectWeekSoFar;
+
+  /// Section head over the month ledger's dated calendar
+  ///
+  /// In en, this message translates to:
+  /// **'The calendar'**
+  String get insightsSectCalendar;
+
+  /// Section head over the year ledger's spine shelf
+  ///
+  /// In en, this message translates to:
+  /// **'The shelf so far'**
+  String get insightsSectShelf;
+
+  /// Section head over the week/stretch ledger's chart plate
+  ///
+  /// In en, this message translates to:
+  /// **'The pace'**
+  String get insightsSectPace;
+
+  /// Overflow row when a day has more than three books in hand
+  ///
+  /// In en, this message translates to:
+  /// **'and {count} more'**
+  String insightsAndMoreBooks(int count);
+
+  /// Small grey suffix after a ledger figure — 'of 384', 'of 30'
+  ///
+  /// In en, this message translates to:
+  /// **'of {n}'**
+  String insightsOfN(String n);
+
+  /// Small grey unit suffix on the streak ledger row
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get insightsUnitDays;
+
+  /// Small grey unit suffix on the pages ledger row
+  ///
+  /// In en, this message translates to:
+  /// **'pp'**
+  String get insightsUnitPages;
+
+  /// A ledger page figure
+  ///
+  /// In en, this message translates to:
+  /// **'p. {page}'**
+  String insightsPageN(int page);
+
+  /// The Today almanac's issue number — the day of the year
+  ///
+  /// In en, this message translates to:
+  /// **'№ {n}'**
+  String insightsHeadIssueNo(int n);
+
+  /// The almanac head's right accent for a window still running
+  ///
+  /// In en, this message translates to:
+  /// **'to {date}'**
+  String insightsHeadToDate(String date);
+
+  /// Streak line on an empty Today — yesterday's streak is real, today's lamp is unlit, not dark
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day — today still open} other{{days} days — today still open}}'**
+  String insightsStreakStillOpen(int days);
+
+  /// Month share-card pill
+  ///
+  /// In en, this message translates to:
+  /// **'{read} of {elapsed} days read'**
+  String insightsPillDaysRead(int read, int elapsed);
+
+  /// 3/6-month share-card pill
+  ///
+  /// In en, this message translates to:
+  /// **'{delta} vs the stretch before'**
+  String insightsVsPrevStretch(String delta);
+
+  /// Share-card small-caps label under the Today hero
+  ///
+  /// In en, this message translates to:
+  /// **'read today'**
+  String get insightsCardReadToday;
+
+  /// Share-card small-caps label under the Week hero
+  ///
+  /// In en, this message translates to:
+  /// **'this week'**
+  String get insightsCardThisWeek;
+
+  /// Share-card label — 'books · august', 'books · jun – aug'
+  ///
+  /// In en, this message translates to:
+  /// **'books · {label}'**
+  String insightsCardBooksDot(String label);
+
+  /// Share-card label — 'books in 2026'
+  ///
+  /// In en, this message translates to:
+  /// **'books in {label}'**
+  String insightsCardBooksIn(String label);
+
+  /// Share-card label when a window finished no books and the hero falls back to time
+  ///
+  /// In en, this message translates to:
+  /// **'read in {label}'**
+  String insightsCardReadIn(String label);
+
+  /// Today card sub-line, single book
+  ///
+  /// In en, this message translates to:
+  /// **'+{pages} pages · p. {from} → {to}'**
+  String insightsCardPagesSpan(int pages, int from, int to);
+
+  /// Today card sub-line when no page span is known
+  ///
+  /// In en, this message translates to:
+  /// **'+{pages} pages'**
+  String insightsCardPagesOnly(int pages);
+
+  /// Today card sub-line on a multi-book day
+  ///
+  /// In en, this message translates to:
+  /// **'+{pages} pages · {count} books'**
+  String insightsCardPagesBooks(int pages, int count);
+
+  /// Per-window closing-line pools on the shareable cards (this and the eleven lines after it) — rotated by day, never generated
+  ///
+  /// In en, this message translates to:
+  /// **'Five evenings, one lamp.'**
+  String get insightsPoolToday1;
+
+  /// No description provided for @insightsPoolToday2.
+  ///
+  /// In en, this message translates to:
+  /// **'A day with a book in it.'**
+  String get insightsPoolToday2;
+
+  /// No description provided for @insightsPoolTodayMulti.
+  ///
+  /// In en, this message translates to:
+  /// **'Two lamps from one flame.'**
+  String get insightsPoolTodayMulti;
+
+  /// No description provided for @insightsPoolWeek1.
+  ///
+  /// In en, this message translates to:
+  /// **'A steady week.'**
+  String get insightsPoolWeek1;
+
+  /// No description provided for @insightsPoolWeek2.
+  ///
+  /// In en, this message translates to:
+  /// **'Seven days, well inked.'**
+  String get insightsPoolWeek2;
+
+  /// No description provided for @insightsPoolMonth1.
+  ///
+  /// In en, this message translates to:
+  /// **'A month with a book in hand.'**
+  String get insightsPoolMonth1;
+
+  /// No description provided for @insightsPoolMonth2.
+  ///
+  /// In en, this message translates to:
+  /// **'A quiet, steady month.'**
+  String get insightsPoolMonth2;
+
+  /// No description provided for @insightsPoolStretch1.
+  ///
+  /// In en, this message translates to:
+  /// **'A season with the lamp lit.'**
+  String get insightsPoolStretch1;
+
+  /// No description provided for @insightsPoolStretch2.
+  ///
+  /// In en, this message translates to:
+  /// **'Half a year, quietly stacked.'**
+  String get insightsPoolStretch2;
+
+  /// No description provided for @insightsPoolYear1.
+  ///
+  /// In en, this message translates to:
+  /// **'A year, mostly spent elsewhere.'**
+  String get insightsPoolYear1;
+
+  /// No description provided for @insightsPoolYear2.
+  ///
+  /// In en, this message translates to:
+  /// **'Many worlds, one armchair.'**
+  String get insightsPoolYear2;
+
+  /// No description provided for @insightsPoolYear3.
+  ///
+  /// In en, this message translates to:
+  /// **'The shelf grew this year.'**
+  String get insightsPoolYear3;
+
+  /// Title of the finished-books list for a year window
+  ///
+  /// In en, this message translates to:
+  /// **'Finished in {year}'**
+  String insightsFinishedInYear(int year);
+
+  /// Title of the finished-books list for the all-time window
+  ///
+  /// In en, this message translates to:
+  /// **'Finished · all time'**
+  String get insightsFinishedAllTime;
+
+  /// Section head over the finished-books list
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 book · newest first} other{{count} books · newest first}}'**
+  String insightsFinishedHeader(int count);
+
+  /// The goal figure + edit pencil in the finished list's header — the goal is edited where the 'of 30' is explained
+  ///
+  /// In en, this message translates to:
+  /// **'Goal · {goal}'**
+  String insightsGoalHeader(int goal);
+
+  /// Days between started and finished on a finished-list row
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day} other{{days} days}}'**
+  String insightsFinishedDays(int days);
+
+  /// Finished-list row whose entry has no start date — a CSV import or an old row; never invent a date
+  ///
+  /// In en, this message translates to:
+  /// **'start not recorded'**
+  String get insightsStartNotRecorded;
+
+  /// Finished-list date cell when only the finish date is known
+  ///
+  /// In en, this message translates to:
+  /// **'finished {date}'**
+  String insightsFinishedOnDate(String date);
+
+  /// Finished-list row with no star rating
+  ///
+  /// In en, this message translates to:
+  /// **'not rated'**
+  String get insightsNotRated;
+
+  /// Empty state of the finished-books list
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing finished in this window yet.'**
+  String get insightsFinishedEmpty;
+
+  /// Sub-line under the sittings sheet's title
+  ///
+  /// In en, this message translates to:
+  /// **'{sittings, plural, =1{1 sitting} other{{sittings} sittings}} · {books, plural, =1{1 book} other{{books} books}} · {duration}'**
+  String insightsSittingsSummary(int sittings, int books, String duration);
+
+  /// Footer hint on the cross-book sittings sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a title to open the book · long-press a row to remove a stray sitting'**
+  String get insightsSittingsHint;
+
+  /// Empty state of the cross-book sittings sheet
+  ///
+  /// In en, this message translates to:
+  /// **'No sittings in this window.'**
+  String get insightsSittingsEmpty;
+
   /// Title of the work picker used when linking a translation
   ///
   /// In en, this message translates to:

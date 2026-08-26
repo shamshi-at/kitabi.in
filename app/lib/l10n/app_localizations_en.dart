@@ -3509,6 +3509,287 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsShareLine5 => 'Books first, everything else after.';
 
   @override
+  String get insightsShareFormatSlip => 'Slip';
+
+  @override
+  String get insightsShareNameBooks => 'Name the book';
+
+  @override
+  String get insightsShareNameBooksHint => 'Off sends the numbers only';
+
+  @override
+  String get insightsSharePrivacyLine =>
+      'Numbers, covers and titles only — never your notes or private reviews.';
+
+  @override
+  String get insightsShareCaptionAsText => 'Caption · sent as text, not pixels';
+
+  @override
+  String get insightsShareRowSheetTitle => 'Send this line';
+
+  @override
+  String get insightsRowSlipEyebrow => 'From the ledger';
+
+  @override
+  String get insightsSealSend => 'Send';
+
+  @override
+  String get insightsRowTimeRead => 'Time read';
+
+  @override
+  String get insightsRowPagesTurned => 'Pages turned';
+
+  @override
+  String get insightsRowSittings => 'Sittings';
+
+  @override
+  String get insightsRowStreak => 'Streak';
+
+  @override
+  String get insightsRowBooksFinished => 'Books finished';
+
+  @override
+  String get insightsRowDaysRead => 'Days read';
+
+  @override
+  String get insightsRowHours => 'Hours with a book';
+
+  @override
+  String get insightsRowMostRead => 'Most read';
+
+  @override
+  String get insightsRowLongest => 'Longest';
+
+  @override
+  String get insightsRowAgainstPace => 'Against pace';
+
+  @override
+  String get insightsRowLeftOffAt => 'Left off at';
+
+  @override
+  String get insightsRowInHand => 'In hand';
+
+  @override
+  String insightsSectInHandCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'In hand · $count books',
+      one: 'In hand',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insightsSectWeekSoFar => 'The week so far';
+
+  @override
+  String get insightsSectCalendar => 'The calendar';
+
+  @override
+  String get insightsSectShelf => 'The shelf so far';
+
+  @override
+  String get insightsSectPace => 'The pace';
+
+  @override
+  String insightsAndMoreBooks(int count) {
+    return 'and $count more';
+  }
+
+  @override
+  String insightsOfN(String n) {
+    return 'of $n';
+  }
+
+  @override
+  String get insightsUnitDays => 'days';
+
+  @override
+  String get insightsUnitPages => 'pp';
+
+  @override
+  String insightsPageN(int page) {
+    return 'p. $page';
+  }
+
+  @override
+  String insightsHeadIssueNo(int n) {
+    return '№ $n';
+  }
+
+  @override
+  String insightsHeadToDate(String date) {
+    return 'to $date';
+  }
+
+  @override
+  String insightsStreakStillOpen(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days — today still open',
+      one: '1 day — today still open',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightsPillDaysRead(int read, int elapsed) {
+    return '$read of $elapsed days read';
+  }
+
+  @override
+  String insightsVsPrevStretch(String delta) {
+    return '$delta vs the stretch before';
+  }
+
+  @override
+  String get insightsCardReadToday => 'read today';
+
+  @override
+  String get insightsCardThisWeek => 'this week';
+
+  @override
+  String insightsCardBooksDot(String label) {
+    return 'books · $label';
+  }
+
+  @override
+  String insightsCardBooksIn(String label) {
+    return 'books in $label';
+  }
+
+  @override
+  String insightsCardReadIn(String label) {
+    return 'read in $label';
+  }
+
+  @override
+  String insightsCardPagesSpan(int pages, int from, int to) {
+    return '+$pages pages · p. $from → $to';
+  }
+
+  @override
+  String insightsCardPagesOnly(int pages) {
+    return '+$pages pages';
+  }
+
+  @override
+  String insightsCardPagesBooks(int pages, int count) {
+    return '+$pages pages · $count books';
+  }
+
+  @override
+  String get insightsPoolToday1 => 'Five evenings, one lamp.';
+
+  @override
+  String get insightsPoolToday2 => 'A day with a book in it.';
+
+  @override
+  String get insightsPoolTodayMulti => 'Two lamps from one flame.';
+
+  @override
+  String get insightsPoolWeek1 => 'A steady week.';
+
+  @override
+  String get insightsPoolWeek2 => 'Seven days, well inked.';
+
+  @override
+  String get insightsPoolMonth1 => 'A month with a book in hand.';
+
+  @override
+  String get insightsPoolMonth2 => 'A quiet, steady month.';
+
+  @override
+  String get insightsPoolStretch1 => 'A season with the lamp lit.';
+
+  @override
+  String get insightsPoolStretch2 => 'Half a year, quietly stacked.';
+
+  @override
+  String get insightsPoolYear1 => 'A year, mostly spent elsewhere.';
+
+  @override
+  String get insightsPoolYear2 => 'Many worlds, one armchair.';
+
+  @override
+  String get insightsPoolYear3 => 'The shelf grew this year.';
+
+  @override
+  String insightsFinishedInYear(int year) {
+    return 'Finished in $year';
+  }
+
+  @override
+  String get insightsFinishedAllTime => 'Finished · all time';
+
+  @override
+  String insightsFinishedHeader(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books · newest first',
+      one: '1 book · newest first',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightsGoalHeader(int goal) {
+    return 'Goal · $goal';
+  }
+
+  @override
+  String insightsFinishedDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insightsStartNotRecorded => 'start not recorded';
+
+  @override
+  String insightsFinishedOnDate(String date) {
+    return 'finished $date';
+  }
+
+  @override
+  String get insightsNotRated => 'not rated';
+
+  @override
+  String get insightsFinishedEmpty => 'Nothing finished in this window yet.';
+
+  @override
+  String insightsSittingsSummary(int sittings, int books, String duration) {
+    String _temp0 = intl.Intl.pluralLogic(
+      sittings,
+      locale: localeName,
+      other: '$sittings sittings',
+      one: '1 sitting',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      books,
+      locale: localeName,
+      other: '$books books',
+      one: '1 book',
+    );
+    return '$_temp0 · $_temp1 · $duration';
+  }
+
+  @override
+  String get insightsSittingsHint =>
+      'Tap a title to open the book · long-press a row to remove a stray sitting';
+
+  @override
+  String get insightsSittingsEmpty => 'No sittings in this window.';
+
+  @override
   String get workPickerTitle => 'Choose a book';
 
   @override

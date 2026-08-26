@@ -11,6 +11,7 @@ ReadingSession _session(
   int? pageStart,
   int? pageEnd,
   DateTime? deletedAt,
+  String libraryEntryId = 'le1',
 }) {
   return ReadingSession(
     id: 'id-${startedAt.microsecondsSinceEpoch}',
@@ -21,7 +22,7 @@ ReadingSession _session(
     syncStatus: 'synced',
     lastSyncedAt: null,
     serverSeq: null,
-    libraryEntryId: 'le1',
+    libraryEntryId: libraryEntryId,
     startedAt: startedAt,
     endedAt: startedAt.add(Duration(seconds: durationSeconds)),
     durationSeconds: durationSeconds,
@@ -258,5 +259,85 @@ void main() {
     );
     expect(summary.trendBuckets!.first, 300);
     expect(summary.trendBuckets!.last, 900);
+  });
+
+  test('calendar heavy days are the standout top quartile, never the whole month', () {
+    final range = rangeFor(InsightsPeriod.month, now: now);
+    // Four ordinary evenings and one long Sunday — only the Sunday is heavy.
+    final sessions = [
+      _session(DateTime(2026, 7, 2, 20), durationSeconds: 600),
+      _session(DateTime(2026, 7, 3, 20), durationSeconds: 600),
+      _session(DateTime(2026, 7, 4, 20), durationSeconds: 600),
+      _session(DateTime(2026, 7, 5, 20), durationSeconds: 600),
+      _session(DateTime(2026, 7, 12, 10), durationSeconds: 7200),
+    ];
+    final summary = computePeriodSummary(
+      period: InsightsPeriod.month,
+      range: range,
+      sessions: sessions,
+      hits: const [],
+      ratingsByWorkId: const {},
+      now: now,
+    );
+    final heavy = summary.calendarCells!.where((c) => c.isHeavy).toList();
+    expect(heavy, hasLength(1));
+    expect(heavy.single.date!.day, 12);
+
+    // A month of identical sittings has no heavy days — heavy means the day
+    // stands out, and a threshold tying the minimum must not paint the grid.
+    final flat = computePeriodSummary(
+      period: InsightsPeriod.month,
+      range: range,
+      sessions: [
+        for (final day in [2, 3, 4, 5, 6]) _session(DateTime(2026, 7, day, 20), durationSeconds: 600),
+      ],
+      hits: const [],
+      ratingsByWorkId: const {},
+      now: now,
+    );
+    expect(flat.calendarCells!.where((c) => c.isHeavy), isEmpty);
+  });
+
+  test('booksInHand joins today\'s sittings to books, most time first', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await _seedFinished(db, 'edA', finish: DateTime(2026, 7, 1), pages: 384);
+    await _seedFinished(db, 'edB', finish: DateTime(2026, 7, 2), pages: 180);
+    final hits = await db.libraryEntriesDao.allWithBooks();
+
+    final range = rangeFor(InsightsPeriod.today, now: now);
+    final sessions = [
+      _session(DateTime(2026, 7, 27, 8), durationSeconds: 600, libraryEntryId: 'le-edB'),
+      _session(DateTime(2026, 7, 27, 20), durationSeconds: 1800, libraryEntryId: 'le-edA'),
+      _session(DateTime(2026, 7, 27, 21), durationSeconds: 300, libraryEntryId: 'le-gone'),
+    ];
+    final summary = computePeriodSummary(
+      period: InsightsPeriod.today,
+      range: range,
+      sessions: sessions,
+      hits: hits,
+      ratingsByWorkId: const {},
+      now: now,
+    );
+
+    final books = summary.booksInHand!;
+    // The orphan sitting (deleted book) still counts in the totals but can't
+    // be named — the section only names what it can still name.
+    expect(summary.sittingsCount, 3);
+    expect(books, hasLength(2));
+    expect(books.first.title, 'T-edA'); // 1800s beats 600s
+    expect(books.first.pageCount, 384);
+    expect(books.last.title, 'T-edB');
+
+    // And only Today computes it at all.
+    final week = computePeriodSummary(
+      period: InsightsPeriod.week,
+      range: rangeFor(InsightsPeriod.week, now: now),
+      sessions: sessions,
+      hits: hits,
+      ratingsByWorkId: const {},
+      now: now,
+    );
+    expect(week.booksInHand, isNull);
   });
 }

@@ -20,6 +20,7 @@ import '../../features/catalog/presentation/revision_inbox_screen.dart';
 import '../../features/catalog/presentation/work_picker_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/import_books/presentation/import_screen.dart';
+import '../../features/insights/presentation/finished_books_screen.dart';
 import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/lending/presentation/lending_ledger_screen.dart';
 import '../../features/library/presentation/book_detail_screen.dart';
@@ -79,6 +80,8 @@ abstract final class Routes {
   static const connections = '/connections';
   static const connectionLoans = '/connections/loans';
   static const insights = '/insights';
+  // The list behind the almanac's "Books finished" row (B4); args via extra.
+  static const insightsFinished = '/insights/finished';
   static const recommendations = '/recommendations';
   static const importBooks = '/import';
   static const activity = '/activity';
@@ -407,6 +410,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: Routes.insights,
                 name: 'insights',
                 builder: (context, state) => InsightsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'finished',
+                    name: 'insightsFinished',
+                    builder: (context, state) =>
+                        FinishedBooksScreen(args: state.extra as FinishedBooksArgs?),
+                  ),
+                ],
               ),
             ],
           ),
