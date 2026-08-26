@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — The reading check-in setting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Kitabi design tokens — see docs/screen-design.md */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+  --dark-panel:#3A2C1E;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink);padding-bottom:90px}
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:44px 32px 38px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:32px;font-weight:400;margin:0 0 8px}
+.hero .tag{font-size:14px;color:#CBB897;max-width:760px;margin:0 auto;line-height:1.65}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+.area{max-width:1520px;margin:44px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.area h2{font-family:'Fraunces',serif;font-size:26px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:8px 0 26px;max-width:920px;font-size:14.5px;line-height:1.65}
+.area .desc b{color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:34px}
+.shot{display:flex;flex-direction:column;gap:12px}
+.cap{width:272px;font-size:12.5px;color:#6d5f4b;line-height:1.55}
+.cap b{color:var(--ink);font-weight:600}
+.cap > b:first-child{display:block;font-size:13.5px;margin-bottom:3px}
+.cap code{font-size:11px;background:#E6DCC6;padding:1px 4px;border-radius:4px}
+
+.phone{width:272px;height:588px;border-radius:34px;border:8px solid #241B12;
+  background:var(--paper);overflow:hidden;position:relative;
+  box-shadow:0 24px 50px rgba(43,33,24,.30),0 4px 12px rgba(43,33,24,.18)}
+.scr{height:100%;display:flex;flex-direction:column;background:var(--paper)}
+.sbar{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px 5px;font-size:9.5px;font-weight:600;color:var(--ink)}
+.body{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0 13px;position:relative}
+.body.flush{padding:0}
+.pgtitle{font-family:'Fraunces',serif;font-size:19px;font-weight:500;margin:10px 0 2px}
+.sub{font-size:9.5px;color:var(--ink-soft)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.swrow{display:flex;align-items:center;gap:9px;padding:5px 2px}
+.swrow .t{font-size:11px;font-weight:600}
+.swrow .s{font-size:8.5px;color:var(--ink-soft);margin-top:1px;line-height:1.35}
+.tgl{width:26px;height:15px;border-radius:99px;background:var(--moss);position:relative;flex-shrink:0}
+.tgl::after{content:"";position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;background:#fff}
+.chev{color:var(--stamp-grey);font-size:13px}
+.grab{width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px}
+.radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line);flex-shrink:0}
+.radio.on{border-color:var(--oxblood);position:relative}
+.radio.on::after{content:"";position:absolute;inset:2.5px;border-radius:50%;background:var(--oxblood)}
+.opt{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.opt:last-of-type{border-bottom:0}
+.opt .t{font-size:11.5px;font-weight:600}
+.opt .s{font-size:8.5px;color:var(--ink-soft);margin-top:1px}
+.pill{font-size:6.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--moss);background:#E3EAD9;padding:2px 7px;border-radius:999px}
+
+/* timing strip */
+.strip{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;max-width:760px}
+.tline{position:relative;height:64px;margin:12px 6px 0}
+.tline .rail{position:absolute;left:0;right:0;top:20px;height:2px;background:var(--line)}
+.tline .seg{position:absolute;top:20px;height:2px;background:var(--gold)}
+.tick{position:absolute;top:12px;width:2px;height:18px;background:var(--ink-soft)}
+.tick.warn{background:var(--gold)}
+.tick.stop{background:var(--oxblood)}
+.tlab{position:absolute;top:36px;font-size:10px;color:var(--ink-soft);transform:translateX(-50%);text-align:center;line-height:1.35}
+.tlab b{display:block;color:var(--ink);font-size:10.5px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>The reading check-in, on the reader's clock</h1>
+  <p class="tag">The "still reading?" nudge fires a fixed 60 minutes into every sitting — too
+  eager for a long Sunday read, and nobody's to change. The default moves to <b>2 hours</b> and the
+  interval becomes a per-reader setting on Profile, where Dark mode and Promotions already
+  live. The 30-minute answer window after the nudge stays fixed: it's the safety net's spring,
+  not a preference.</p>
+</div>
+
+<section class="area">
+  <div class="ah"><span class="an">The setting</span><h2>One card on Profile, one sheet</h2></div>
+  <p class="desc">Same grammar as every Profile setting: a card row stating the current value,
+  opening a bottom sheet of radio options — the single-select list the shelf picker and status
+  sheet already taught. Five intervals, <b>no "Off"</b>: the check-in exists so a timer forgotten
+  under a falling-asleep reader doesn't log a nine-hour sitting, and a safety net you can switch
+  off isn't one. The longest option (4 hours) is generous enough that nobody who means to be
+  reading ever meets the nudge. Stored device-local in <code>key_values</code> like the reading
+  goal and theme — the timer is device-local by design, so its policy is too.</p>
+  <div class="row">
+
+    <!-- P1: profile card -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Profile</div>
+          <div class="card" style="margin-top:8px">
+            <div class="swrow">
+              <div style="flex:1">
+                <div class="t">Dark mode</div>
+                <div class="s">Night-friendly paper and ink</div>
+              </div>
+              <div class="tgl" style="background:#CDBFA0"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:8px">
+            <div class="swrow">
+              <div style="flex:1">
+                <div class="t">Offers &amp; announcements</div>
+                <div class="s">Occasional book offers on Home</div>
+              </div>
+              <div class="tgl"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:8px;border-color:var(--gold)">
+            <div class="swrow" style="align-items:flex-start">
+              <div style="flex:1">
+                <div class="t">Reading check-in</div>
+                <div class="s">A long sitting gets one "still reading?" nudge —
+                unanswered, the timer stops on its own half an hour later.</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:10.5px;font-weight:700;color:var(--oxblood)">After 2 hours</div>
+                <div class="chev" style="text-align:right">›</div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:16px">
+            <div style="display:flex;align-items:center;gap:9px;padding:6px 2px">
+              <span style="font-size:12px">🕰</span>
+              <div style="flex:1;font-size:11px;font-weight:600">Activity</div>
+              <span class="chev">›</span>
+            </div>
+            <div style="height:1px;background:var(--line);margin-left:30px"></div>
+            <div style="display:flex;align-items:center;gap:9px;padding:6px 2px">
+              <span style="font-size:12px">✨</span>
+              <div style="flex:1;font-size:11px;font-weight:600">Recommendations</div>
+              <span class="chev">›</span>
+            </div>
+            <div style="height:1px;background:var(--line);margin-left:30px"></div>
+            <div style="display:flex;align-items:center;gap:9px;padding:6px 2px">
+              <span style="font-size:12px">⇪</span>
+              <div style="flex:1;font-size:11px;font-weight:600">Import books</div>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P1 · The card on Profile</b> Sits with Dark mode and Offers — the
+      device-behaviour settings — above the nav-rows card. The row states the live value
+      ("After 2 hours") in oxblood because it's a door; the sub-line explains the whole
+      mechanism in one sentence so the setting never needs a help page. Gold border here only
+      to point at what's new — it ships as a plain card.</p>
+    </div>
+
+    <!-- P2: the sheet -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.32)">
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:10px 16px 16px">
+            <div class="grab"></div>
+            <div style="font-family:'Fraunces',serif;font-size:14px;font-weight:500">Reading check-in</div>
+            <div class="sub" style="margin-top:3px;line-height:1.45">If a sitting runs this long, Kitabi asks
+            whether you're still reading. Unanswered, the sitting stops itself 30 minutes later —
+            answering "yes" starts the clock over.</div>
+            <div style="margin-top:10px">
+              <div class="opt"><span class="radio"></span><div style="flex:1"><div class="t">After 30 minutes</div></div></div>
+              <div class="opt"><span class="radio"></span><div style="flex:1"><div class="t">After 1 hour</div></div></div>
+              <div class="opt"><span class="radio on"></span><div style="flex:1"><div class="t">After 2 hours</div></div><span class="pill">Default</span></div>
+              <div class="opt"><span class="radio"></span><div style="flex:1"><div class="t">After 3 hours</div></div></div>
+              <div class="opt"><span class="radio"></span><div style="flex:1"><div class="t">After 4 hours</div><div class="s">For the readers the nudge only ever interrupts</div></div></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:6px;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)">
+              <span style="font-size:10px;color:var(--moss)">✓</span>
+              <div class="sub" style="line-height:1.4">There's no "off" — the check-in is what keeps a
+              forgotten timer from logging a nine-hour sitting.</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>P2 · The picker sheet</b> Single-select radios, the pattern the shelf
+      picker and status sheet already taught; a tap applies and closes. "Default" pinned on
+      2 hours so a reader who explores can find their way back. The no-off line is stated in
+      the sheet, not hidden in docs — the honest reason a safety net has no off switch.
+      Applies from the <i>next</i> sitting; a sitting already running keeps the deadline it
+      started with (changing the rules mid-game is how timers get lost).</p>
+    </div>
+
+  </div>
+
+  <div class="ah" style="margin-top:36px"><span class="an">The timing</span><h2 style="font-size:22px">What the number moves</h2></div>
+  <div class="strip">
+    <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft)">A sitting on the 2-hour default</div>
+    <div class="tline">
+      <div class="rail"></div>
+      <div class="seg" style="left:0;width:72%"></div>
+      <div class="tick" style="left:0"></div>
+      <div class="tick warn" style="left:72%"></div>
+      <div class="tick stop" style="left:90%"></div>
+      <div class="tlab" style="left:0;transform:none"><b>Start</b>the clock runs</div>
+      <div class="tlab" style="left:72%"><b>2h — check-in</b>"Still reading?"</div>
+      <div class="tlab" style="left:90%"><b>+30m — auto-stop</b>sitting logged</div>
+    </div>
+    <p style="font-size:12px;color:#6d5f4b;line-height:1.6;margin-top:14px">The setting moves the
+    <b style="color:var(--gold)">gold tick</b> only. The 30-minute answer window and the
+    auto-stop's behaviour (log the sitting, notify, end the Live Activity) are unchanged —
+    one number, one meaning. Confirming "yes" restarts the whole span from that moment, exactly
+    as today (<code>readingSessionDeadline</code> keeps its shape; the delay becomes a stored
+    per-reader value read by the notification scheduler, the in-app tick, and the background
+    task alike, so all three keep agreeing on one answer).</p>
+  </div>
+</section>
+
+</body>
+</html>
