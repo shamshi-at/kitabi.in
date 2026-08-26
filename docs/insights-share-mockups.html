@@ -238,6 +238,15 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
 
 /* mini kitabi logo (inline svg reused) */
 .klogo{width:11px;height:11px}
+
+/* catalogue group header */
+.pgroup{display:flex;align-items:center;gap:12px;margin:36px 0 16px;font-size:11px;font-weight:700;
+  letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft)}
+.pgroup::after{content:"";flex:1;height:1px;background:#CDBFA0}
+.pgroup em{font-style:normal;color:var(--oxblood)}
+/* data-spec caption rows */
+.spec{display:block;margin-top:6px;padding-left:10px;text-indent:-10px}
+.spec b{color:var(--ink);font-weight:700}
 </style>
 </head>
 <body>
@@ -261,8 +270,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
     <a href="#b">B · The almanac</a>
     <a href="#b2">B, chosen · doors</a>
     <a href="#c">C · The answer</a>
-    <a href="#cards">The card family</a>
-    <a href="#slip">The slip</a>
+    <a href="#cards">The card catalogue</a>
+    <a href="#slip">The slip, in chat</a>
     <a href="#sheet">The share sheet</a>
     <a href="#states">Honest states</a>
     <a href="#next">Choosing</a>
@@ -994,19 +1003,26 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   </div>
 </section>
 
-<!-- ================= THE CARD FAMILY ================= -->
+<!-- ================= THE CARD CATALOGUE ================= -->
 <section class="area" id="cards">
-  <div class="ah"><span class="an gold">The cards</span><h2>One family, four signatures — the chart travels</h2></div>
-  <p class="desc">The shared image, rebuilt. Frame, fleurons, vignette and wordmark stay one
-  family (they already read as Kitabi from across a room); what changes is that <b>each window
-  keeps its own visualization on the image</b> — the thing the current <code>PeriodShareCard</code>
-  strips. Today carries its lamps, the week its bars, the month its calendar leaf, the year its
-  shelf. Story (9:16) drawn here; every card also renders Square and Slip from the same pieces.
-  The closing italic line stays a rotating pool per period — never generated, never repeated
-  back-to-back.</p>
+  <div class="ah"><span class="an gold">The catalogue</span><h2>Every window, every format — the build spec</h2></div>
+  <p class="desc">The complete card set, drawn before a line of it is built. <b>One widget, three
+  layouts</b>: Story (9:16, the phone-native broadcast), Square (1:1, the feed), Slip (5:3, the
+  chat bubble) — each format is its own layout of the same parts, never a scaled-down story
+  (the 27 Jul square-overflow lesson made structural). Shared grammar across all eighteen:
+  the double gold frame, corner fleurons, soft vignette; <b>pill</b> (one extra fact, omitted
+  when nothing true), <b>hero</b> numeral, small-caps label, <b>the window's own
+  visualization</b>, subline, closing italic from a per-window rotating pool (same mechanism as
+  the daily reading-fact card), wordmark. The wordmark appears <b>on capture only</b> — the page's
+  own card doesn't sign itself to its owner. Captured through the existing
+  <code>captureAndShareCard</code> at 3×. Each group's spec caption is the implementation
+  contract: hero, pill, viz, subline, and the empty rule, all resolvable from
+  <code>PeriodSummary</code> / <code>InsightsStats</code>.</p>
+
+  <!-- ============ TODAY ============ -->
+  <div class="pgroup"><em>Today</em> — the lamplight</div>
   <div class="row">
 
-    <!-- Story: Today -->
     <div class="shot">
       <div class="story">
         <span class="flL">❦</span><span class="flR">❦</span>
@@ -1031,13 +1047,84 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <span class="tg">beyond the bookshelf</span>
         </div>
       </div>
-      <p class="cap"><b>Today — the lamplight</b> The streak dots become the card's whole middle:
-      seven days, lit or dark, today glowing. A recipient reads the streak without a caption. The
-      pill keeps the one extra fact (the current 10i mechanism, unchanged); the page range makes
-      the number concrete without naming more than one book.</p>
+      <p class="cap"><b>Story</b> The streak dots are the card's whole middle: seven days, lit or
+      dark, today glowing. A recipient reads the streak without a caption.</p>
     </div>
 
-    <!-- Story: Week -->
+    <div class="shot">
+      <div class="sq">
+        <span style="font-size:6.5px;background:var(--gold-soft);color:var(--oxblood);font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px">5-day streak</span>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:14px;width:100%;padding:0 8px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="num h-serif" style="font-size:38px;color:var(--oxblood);font-weight:600;line-height:.95">42<span style="font-size:18px">m</span></div>
+            <div style="font-size:6.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft);margin-top:3px">read today</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div class="lamps" style="justify-content:center;gap:4px">
+              <span class="lamp on" style="width:10px;height:10px"></span><span class="lamp" style="width:10px;height:10px"></span>
+              <span class="lamp" style="width:10px;height:10px"></span><span class="lamp on" style="width:10px;height:10px"></span>
+              <span class="lamp on" style="width:10px;height:10px"></span><span class="lamp on" style="width:10px;height:10px"></span>
+              <span class="lamp on today" style="width:10px;height:10px"></span>
+            </div>
+            <div style="font-size:6.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-top:6px">5 days running</div>
+          </div>
+        </div>
+        <div class="subl" style="font-size:8px;color:var(--ink-soft);margin-top:11px">+42 pages · p. 260 → 302</div>
+        <div class="quote" style="font-size:9.5px;margin-top:6px">Five evenings, one lamp.</div>
+        <div style="flex:1"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512" style="width:9px;height:9px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/></svg>
+            <b>kitabi.in</b>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>Square</b> Numeral beside the lamps — the landscape logic every sub-1:1
+      format uses. Same parts, third arrangement.</p>
+    </div>
+
+    <div class="shot">
+      <div class="slip">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="snum" style="font-size:26px">42<span style="font-size:13px">m</span></div>
+            <div class="sey" style="margin-top:2px">today</div>
+          </div>
+          <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+          <div style="flex:1">
+            <div style="font-size:9px;font-weight:700;color:var(--moss)">+42 pages · <span style="color:var(--ink);font-style:italic;font-family:'Fraunces',serif">Naalukettu</span></div>
+            <div class="lamps" style="margin-top:6px;gap:3.5px">
+              <span class="lamp on" style="width:9px;height:9px"></span><span class="lamp" style="width:9px;height:9px"></span>
+              <span class="lamp" style="width:9px;height:9px"></span><span class="lamp on" style="width:9px;height:9px"></span>
+              <span class="lamp on" style="width:9px;height:9px"></span><span class="lamp on" style="width:9px;height:9px"></span>
+              <span class="lamp on today" style="width:9px;height:9px"></span>
+            </div>
+            <div class="sey" style="margin-top:4px;color:var(--gold)">5 days running</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
+          <span class="quote" style="font-size:8px">Five evenings, one lamp.</span>
+          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap" style="margin-top:6px"><b>Slip</b> The chat reply. Number, hairline, lamps,
+      closing line — readable at bubble width without zooming.</p>
+    </div>
+
+    <p class="cap wide"><b>Today — data spec</b>
+      <span class="spec"><b>Hero:</b> <code>totalSeconds</code> via <code>formatDuration</code>.</span>
+      <span class="spec"><b>Pill:</b> "<code>N</code>-DAY STREAK" when <code>streakDays &gt; 0</code>; omitted otherwise.</span>
+      <span class="spec"><b>Viz:</b> <code>recentDays</code> → 7 lamps, oldest first, today ringed + glowing; an unlit today is open, not dark (empty-state rule).</span>
+      <span class="spec"><b>Subline:</b> one book → "+42 pages · p. 260 → 302 (· <i>Title</i> on Slip)"; several → "+58 pages · 2 books". "Name the book" off drops titles everywhere.</span>
+      <span class="spec"><b>Closing pool:</b> "Five evenings, one lamp." · "Two lamps from one flame." (multi-book) · "A day with a book in it." — rotates, never repeats back-to-back.</span>
+      <span class="spec"><b>Empty:</b> no sitting today → no card at all (Honest states); the sheet can't open on a zero.</span>
+    </p>
+  </div>
+
+  <!-- ============ WEEK ============ -->
+  <div class="pgroup"><em>Week</em> — the bars</div>
+  <div class="row">
+
     <div class="shot">
       <div class="story">
         <span class="flL">❦</span><span class="flR">❦</span>
@@ -1065,13 +1152,82 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <span class="tg">beyond the bookshelf</span>
         </div>
       </div>
-      <p class="cap"><b>Week — the bars</b> The seven bars from the page card, verbatim — gold
-      days, the best day in oxblood. The percentile line graduates from the dark encourage-panel
-      to the card's closing line, because "busier than 9 of your last 10 weeks" is precisely the
-      sentence someone sends when asked how it's going.</p>
+      <p class="cap"><b>Story</b> The page card's seven bars, verbatim — gold days, best day in
+      oxblood. The percentile sentence is the closing line.</p>
     </div>
 
-    <!-- Story: Month -->
+    <div class="shot">
+      <div class="sq">
+        <span style="font-size:6.5px;background:var(--gold-soft);color:var(--oxblood);font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px">▲ 48m vs last week</span>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:14px;width:100%;padding:0 8px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="num h-serif" style="font-size:32px;color:var(--oxblood);font-weight:600;line-height:.95">3<span style="font-size:16px">h</span> 40<span style="font-size:16px">m</span></div>
+            <div style="font-size:6.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft);margin-top:3px">this week</div>
+          </div>
+          <div style="flex:1">
+            <div class="wbars" style="height:40px">
+              <i style="height:22%"></i><i style="height:38%"></i><i style="height:8%"></i>
+              <i class="hi" style="height:55%"></i><i style="height:30%"></i><i style="height:8%"></i>
+              <i class="top" style="height:100%"></i>
+            </div>
+            <div class="wlbl" style="margin-top:3px;font-size:6px"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+          </div>
+        </div>
+        <div class="subl" style="font-size:8px;color:var(--ink-soft);margin-top:11px">214 pages · 3 sittings</div>
+        <div class="quote" style="font-size:9.5px;margin-top:6px">Busier than 9 of your last 10 weeks.</div>
+        <div style="flex:1"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512" style="width:9px;height:9px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/></svg>
+            <b>kitabi.in</b>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>Square</b> Duration beside the bars. The hour-minute numeral is set a
+      step smaller than Today's — two units cost more width than one.</p>
+    </div>
+
+    <div class="shot">
+      <div class="slip">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="snum" style="font-size:22px">3<span style="font-size:12px">h</span> 40<span style="font-size:12px">m</span></div>
+            <div class="sey" style="margin-top:2px">this week</div>
+          </div>
+          <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+          <div style="flex:1">
+            <div class="wbars" style="height:30px">
+              <i style="height:22%"></i><i style="height:38%"></i><i style="height:8%"></i>
+              <i class="hi" style="height:55%"></i><i style="height:30%"></i><i style="height:8%"></i>
+              <i class="top" style="height:100%"></i>
+            </div>
+            <div class="wlbl" style="margin-top:2px;font-size:6px"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            <div class="sey" style="margin-top:3px;color:var(--moss)">▲ 48m vs last week</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
+          <span class="quote" style="font-size:8px">Busier than 9 of your last 10 weeks.</span>
+          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap" style="margin-top:6px"><b>Slip</b> The delta moves from pill to the bars'
+      footer — a slip has no pill row, so the extra fact rides the viz.</p>
+    </div>
+
+    <p class="cap wide"><b>Week — data spec</b>
+      <span class="spec"><b>Hero:</b> <code>totalSeconds</code> as duration.</span>
+      <span class="spec"><b>Pill:</b> ▲/▼ <code>totalSeconds − previousTotalSeconds</code>; omitted when previous is null or 0 (first week rule — no delta against nothing).</span>
+      <span class="spec"><b>Viz:</b> <code>dailyBuckets</code> → 7 bars Monday-first; max day oxblood, others gold-soft with the runner-up gold; zero days render as 8% stubs, never gaps.</span>
+      <span class="spec"><b>Subline:</b> "<code>pagesRead</code> pages · <code>sittingsCount</code> sittings".</span>
+      <span class="spec"><b>Closing pool:</b> the percentile line ("Busier than 9 of your last 10 weeks", the flagged derived stat) when computable; else "A steady week." / "Seven days, well inked."</span>
+      <span class="spec"><b>Empty:</b> 0 seconds all week → no card; the page offers the year instead.</span>
+    </p>
+  </div>
+
+  <!-- ============ MONTH ============ -->
+  <div class="pgroup"><em>Month</em> — the calendar leaf</div>
+  <div class="row">
+
     <div class="shot">
       <div class="story">
         <span class="flL">❦</span><span class="flR">❦</span>
@@ -1097,14 +1253,191 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <span class="tg">beyond the bookshelf</span>
         </div>
       </div>
-      <p class="cap"><b>Month — the calendar leaf</b> The weekday-aligned heatmap, kept honest:
-      dashed future days, ringed today, deep-oxblood heavy days. This is the card that shows a
-      <i>habit</i> rather than a total — the one a reader sends when the honest answer is
-      "steadily". Trailing empty weeks are cropped so a card sent mid-month doesn't lead with
-      blank rows.</p>
+      <p class="cap"><b>Story</b> The habit card: the weekday-aligned heat, honest about the
+      future (dashed) and today (ringed).</p>
     </div>
 
-    <!-- Story: Year (shelf) -->
+    <div class="shot">
+      <div class="sq">
+        <span style="font-size:6.5px;background:var(--gold-soft);color:var(--oxblood);font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px">22 of 26 days read</span>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:12px;width:100%;padding:0 8px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="num h-serif" style="font-size:40px;color:var(--oxblood);font-weight:600;line-height:.95">4</div>
+            <div style="font-size:6.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft);margin-top:3px">books · august</div>
+          </div>
+          <div style="flex:1;display:flex;justify-content:center">
+            <div class="heat" style="width:104px">
+              <div class="hc void"></div><div class="hc void"></div><div class="hc on"></div><div class="hc on"></div><div class="hc deep"></div><div class="hc on"></div><div class="hc"></div>
+              <div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc deep"></div><div class="hc"></div><div class="hc on"></div><div class="hc on"></div>
+              <div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc"></div><div class="hc on"></div><div class="hc deep"></div>
+              <div class="hc on"></div><div class="hc on"></div><div class="hc"></div><div class="hc on"></div><div class="hc on today"></div><div class="hc fut"></div><div class="hc fut"></div>
+            </div>
+          </div>
+        </div>
+        <div class="subl" style="font-size:8px;color:var(--ink-soft);margin-top:11px">1,340 pages</div>
+        <div class="quote" style="font-size:9.5px;margin-top:6px">A month for Malayalam classics.</div>
+        <div style="flex:1"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512" style="width:9px;height:9px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/></svg>
+            <b>kitabi.in</b>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>Square</b> Count beside the calendar. The heat shrinks to 104px and still
+      reads — cells are silhouette, not text.</p>
+    </div>
+
+    <div class="shot">
+      <div class="slip">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="snum" style="font-size:26px">4</div>
+            <div class="sey" style="margin-top:2px">books · august</div>
+          </div>
+          <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+          <div style="flex:1">
+            <div class="heat" style="width:92px;gap:2px">
+              <div class="hc void"></div><div class="hc void"></div><div class="hc on"></div><div class="hc on"></div><div class="hc deep"></div><div class="hc on"></div><div class="hc"></div>
+              <div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc deep"></div><div class="hc"></div><div class="hc on"></div><div class="hc on"></div>
+              <div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc"></div><div class="hc on"></div><div class="hc deep"></div>
+              <div class="hc on"></div><div class="hc on"></div><div class="hc"></div><div class="hc on"></div><div class="hc on today"></div><div class="hc fut"></div><div class="hc fut"></div>
+            </div>
+            <div class="sey" style="margin-top:4px;color:var(--gold)">1,340 pages · 22 of 26 days</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
+          <span class="quote" style="font-size:8px">A month for Malayalam classics.</span>
+          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap" style="margin-top:6px"><b>Slip</b> The tiniest heat that still shows the
+      habit; pages and days-read merge onto one gold footer line.</p>
+    </div>
+
+    <p class="cap wide"><b>Month — data spec</b>
+      <span class="spec"><b>Hero:</b> <code>booksFinishedCount</code>; when 0, hero falls to the duration and the label swaps to "read in august" — a month of reading with nothing finished is still a month of reading.</span>
+      <span class="spec"><b>Pill:</b> "22 of 26 days read" — read-day count over elapsed (not total) days, from <code>calendarCells</code>.</span>
+      <span class="spec"><b>Viz:</b> <code>calendarCells</code>, Sunday-first: gold = read day, deep oxblood = top-quartile day by seconds (needs per-day seconds — the one small new derivation in the whole catalogue), dashed = future, ring = today, filler cells void; trailing all-empty weeks cropped.</span>
+      <span class="spec"><b>Subline:</b> "<code>pagesRead</code> pages".</span>
+      <span class="spec"><b>Closing pool:</b> the language/genre headline when the mix is decisive (the 10c rule), else "Twenty-two days with a book in hand." / "A quiet, steady month."</span>
+      <span class="spec"><b>Empty:</b> no sittings and no finishes → no card.</span>
+    </p>
+  </div>
+
+  <!-- ============ 3 & 6 MONTHS ============ -->
+  <div class="pgroup"><em>3 &amp; 6 months</em> — the pace line</div>
+  <div class="row">
+
+    <div class="shot">
+      <div class="story">
+        <span class="flL">❦</span><span class="flR">❦</span>
+        <span class="pill">▲ 6h vs the spring</span>
+        <div class="num" style="font-size:52px;margin-top:20px">9</div>
+        <div class="lbl" style="margin-top:4px">books · jun – aug</div>
+        <div class="subl" style="margin-top:9px">3,120 pages · 61 hours</div>
+        <div style="width:140px;margin-top:16px">
+          <svg viewBox="0 0 140 44" style="width:140px;height:44px" aria-hidden="true">
+            <line x1="0" y1="43" x2="140" y2="43" stroke="#E2D6BD" stroke-width="1"/>
+            <polyline points="4,36 15,33 26,34 37,27 48,29 59,20 70,22 81,14 92,16 103,9 114,11 125,7 136,4"
+              fill="none" stroke="#7E2A33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="136" cy="4" r="2.8" fill="#7E2A33"/>
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-size:6.5px;color:var(--ink-soft);margin-top:2px">
+            <span>JUN</span><span>JUL</span><span>AUG</span>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="quote" style="font-size:11px">Pace has climbed three months running.</div>
+        <div style="flex:1"></div>
+        <div class="rule" style="width:38px;margin:0 0 8px"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/><path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/></svg>
+            <b>kitabi.in</b>
+          </div>
+          <span class="tg">beyond the bookshelf</span>
+        </div>
+      </div>
+      <p class="cap"><b>Story · 3 months</b> Thirteen weekly points, end dot on now. A trailing
+      window ("jun – aug"), never a labelled quarter — same rule as the page (10d).</p>
+    </div>
+
+    <div class="shot">
+      <div class="sq">
+        <span style="font-size:6.5px;background:var(--gold-soft);color:var(--oxblood);font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px">your steadiest stretch</span>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:14px;width:100%;padding:0 8px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="num h-serif" style="font-size:40px;color:var(--oxblood);font-weight:600;line-height:.95">15</div>
+            <div style="font-size:6.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft);margin-top:3px">books · mar – aug</div>
+          </div>
+          <div style="flex:1">
+            <svg viewBox="0 0 120 40" style="width:100%;height:40px" aria-hidden="true">
+              <line x1="0" y1="39" x2="120" y2="39" stroke="#E2D6BD" stroke-width="1"/>
+              <polyline points="2,33 7,34 12,31 17,32 22,29 27,30 32,27 37,29 42,25 47,26 52,23 57,25 62,21 67,22 72,19 77,21 82,17 87,18 92,14 97,16 102,12 107,13 112,9 117,6"
+                fill="none" stroke="#7E2A33" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="117" cy="6" r="2.4" fill="#7E2A33"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-size:6px;color:var(--ink-soft);margin-top:2px">
+              <span>MAR</span><span>MAY</span><span>AUG</span>
+            </div>
+          </div>
+        </div>
+        <div class="subl" style="font-size:8px;color:var(--ink-soft);margin-top:11px">5,940 pages · 118 hours</div>
+        <div class="quote" style="font-size:9.5px;margin-top:6px">Half a year, quietly stacked.</div>
+        <div style="flex:1"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512" style="width:9px;height:9px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/></svg>
+            <b>kitabi.in</b>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>Square · 6 months</b> Same layout, 26 points — the two windows are one
+      design differing only in label and point count.</p>
+    </div>
+
+    <div class="shot">
+      <div class="slip">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="snum" style="font-size:26px">9</div>
+            <div class="sey" style="margin-top:2px">books · jun – aug</div>
+          </div>
+          <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+          <div style="flex:1">
+            <svg viewBox="0 0 120 30" style="width:100%;height:30px" aria-hidden="true">
+              <line x1="0" y1="29" x2="120" y2="29" stroke="#E2D6BD" stroke-width="1"/>
+              <polyline points="3,24 13,22 23,23 33,18 43,20 53,13 63,15 73,9 83,11 93,6 103,7 113,3"
+                fill="none" stroke="#7E2A33" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="113" cy="3" r="2.2" fill="#7E2A33"/>
+            </svg>
+            <div class="sey" style="margin-top:4px;color:var(--moss)">3,120 pages · ▲ vs the spring</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
+          <span class="quote" style="font-size:8px">Pace has climbed three months running.</span>
+          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap" style="margin-top:6px"><b>Slip · 3 months</b> The line alone carries the
+      story at bubble width — a rising slope needs no axis labels.</p>
+    </div>
+
+    <p class="cap wide"><b>3 &amp; 6 months — data spec</b>
+      <span class="spec"><b>Hero:</b> <code>booksFinishedCount</code>; 0-finished falls to duration, as Month.</span>
+      <span class="spec"><b>Pill:</b> ▲/▼ vs <code>previousTotalSeconds</code>, phrased by season ("vs the spring") from the previous window's midpoint month; omitted when previous is empty.</span>
+      <span class="spec"><b>Viz:</b> <code>trendBuckets</code> (weekly seconds, 13 / 26 points) as the oxblood polyline over a hairline baseline, end dot on the current week; y-scale from the window's own max.</span>
+      <span class="spec"><b>Subline:</b> "pages · hours".</span>
+      <span class="spec"><b>Label:</b> month-range ("jun – aug"), trailing window, never "Q3".</span>
+      <span class="spec"><b>Closing pool:</b> "Pace has climbed three months running." (only when the slope is truly up) · "A season with the lamp lit." · "Half a year, quietly stacked." (6mo).</span>
+    </p>
+  </div>
+
+  <!-- ============ YEAR ============ -->
+  <div class="pgroup"><em>Year</em> — the shelf</div>
+  <div class="row">
+
     <div class="shot">
       <div class="story">
         <span class="flL">❦</span><span class="flR">❦</span>
@@ -1141,17 +1474,13 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           <span class="tg">beyond the bookshelf</span>
         </div>
       </div>
-      <p class="cap"><b>Year — the shelf</b> One spine per finished book, width from its page
-      count, colour hashed from its title — so the card is <i>generated from the reader's actual
-      year</i> and no two are alike. Anonymous by default; the sheet's "Name the spines" toggle
-      adds tiny vertical titles to the tallest few for the reader who wants the flex to be
-      specific. This replaces the bare "24" as the flagship year artifact.</p>
+      <p class="cap"><b>Story</b> One spine per finished book, width from its page count —
+      generated from the reader's actual year; no two are alike.</p>
     </div>
 
-    <!-- Square variant -->
     <div class="shot">
       <div class="sq">
-        <span class="pill" style="font-size:6.5px;background:var(--gold-soft);color:var(--oxblood);font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px">3 ahead of pace</span>
+        <span style="font-size:6.5px;background:var(--gold-soft);color:var(--oxblood);font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px">3 ahead of pace</span>
         <div style="display:flex;align-items:center;gap:14px;margin-top:12px;width:100%;padding:0 6px">
           <div style="text-align:center;flex-shrink:0">
             <div class="num h-serif" style="font-size:40px;color:var(--oxblood);font-weight:600;line-height:.95">24</div>
@@ -1180,28 +1509,116 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
           </div>
         </div>
       </div>
-      <p class="cap"><b>Square — same pieces, landscape logic</b> Below 1:1 the numeral and the
-      visualization sit <i>beside</i> each other instead of stacking — the lesson the current
-      square already learned the hard way (the 27 Jul overflow) made structural: each format has
-      its own layout of the same parts, not a scaled-down story. Slip (next area) is the third
-      layout of the same parts.</p>
+      <p class="cap"><b>Square</b> Count beside the shelf. The feed post: everything a passer-by
+      needs in one glance.</p>
     </div>
 
-  </div>
-</section>
+    <div class="shot">
+      <div class="slip">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="snum" style="font-size:26px">24</div>
+            <div class="sey" style="margin-top:2px">books · 2026</div>
+          </div>
+          <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+          <div style="flex:1">
+            <div class="shelf" style="height:34px">
+              <i class="sp1" style="width:5px;height:28px"></i><i class="sp2" style="width:4px;height:24px"></i>
+              <i class="sp4" style="width:6px;height:31px"></i><i class="sp3" style="width:4px;height:22px"></i>
+              <i class="sp5" style="width:5px;height:26px"></i><i class="sp6" style="width:6px;height:30px"></i>
+              <i class="sp2" style="width:4px;height:23px"></i><i class="sp7" style="width:5px;height:25px"></i>
+              <i class="sp1" style="width:8px;height:34px"></i><i class="sp8" style="width:4px;height:24px"></i>
+              <i class="sp3" style="width:5px;height:27px"></i><i class="sp2" style="width:4px;height:25px"></i>
+              <i class="sp4" style="width:5px;height:28px"></i><i class="sp5" style="width:4px;height:23px"></i>
+              <i class="sp6" style="width:5px;height:26px"></i><i class="sp1" style="width:4px;height:24px"></i>
+            </div>
+            <div class="ledge"></div>
+            <div class="sey" style="margin-top:4px">8,412 pages · 214 hours</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
+          <span class="quote" style="font-size:8px">A year, mostly spent elsewhere.</span>
+          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap" style="margin-top:6px"><b>Slip</b> The shelf survives miniaturisation
+      because it's silhouette, not text — the test every slip visual must pass.</p>
+    </div>
 
-<!-- ================= THE SLIP ================= -->
-<section class="area" id="slip">
-  <div class="ah"><span class="an gold">The slip</span><h2>A card sized for the place the question is asked</h2></div>
-  <p class="desc">Story and Square are broadcast shapes. But "how's your reading going?" arrives as
-  a <b>message</b>, and a 9:16 story pasted into a chat thread is a poster taped over a
-  conversation. The slip is the third format: landscape, bubble-sized, one number, one visual,
-  the wordmark small — designed to sit <i>inside</i> a reply next to a line of your own words.
-  It's the default format when the sheet opens from "Reply with your reading", and the caption
-  travels as the message text, not baked into pixels.</p>
+    <p class="cap wide"><b>Year — data spec</b>
+      <span class="spec"><b>Hero:</b> <code>InsightsStats.booksRead</code> for the picked year (or all time).</span>
+      <span class="spec"><b>Pill:</b> pace — "3 AHEAD OF PACE" / "2 BEHIND" — current year only; a past year or all time has no pace left to keep, pill omitted.</span>
+      <span class="spec"><b>Viz:</b> the shelf — <code>booksFinished</code> in finish order, spine width ∝ edition <code>pageCount</code> (clamped ~min 4 / max 12 units; unknown page count = min width), height jittered from the title hash, colour hashed from title (the generated-cover trick). "Name the spines" toggle sets vertical titles on the few tallest. Past ~40 books, spines thin before the shelf wraps to a second row.</span>
+      <span class="spec"><b>Subline:</b> "pages · hours" (hours from the year's sessions).</span>
+      <span class="spec"><b>Empty-ish:</b> 0 finished but hours logged → hero falls to hours, no shelf, no ledge (an empty ledge is a reproach); 0 everything → no card.</span>
+      <span class="spec"><b>Closing pool:</b> "A year, mostly spent elsewhere." · "Twenty-four worlds, one armchair." · "The shelf grew this year."</span>
+    </p>
+  </div>
+
+  <!-- ============ ROW SLIPS ============ -->
+  <div class="pgroup"><em>The row slip</em> — long-press any ledger line</div>
   <div class="row">
 
-    <!-- chat mock -->
+    <div class="shot">
+      <div class="slip" style="width:210px">
+        <div class="sey">From the ledger · this week</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:7px">
+          <span style="font-size:10.5px;color:var(--ink)">Streak</span>
+          <span class="snum" style="font-size:24px">5<span style="font-size:12px"> days</span></span>
+        </div>
+        <div class="lamps" style="margin-top:7px;gap:3.5px;justify-content:flex-end">
+          <span class="lamp on" style="width:9px;height:9px"></span><span class="lamp" style="width:9px;height:9px"></span>
+          <span class="lamp" style="width:9px;height:9px"></span><span class="lamp on" style="width:9px;height:9px"></span>
+          <span class="lamp on" style="width:9px;height:9px"></span><span class="lamp on" style="width:9px;height:9px"></span>
+          <span class="lamp on today" style="width:9px;height:9px"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:9px;padding-top:6px">
+          <span class="quote" style="font-size:8px">Longest this year.</span>
+          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap" style="margin-top:6px"><b>A number row</b> Label left, value right — the
+      ledger line lifted as-is, with its micro-viz when it has one (the streak brings its lamps).</p>
+    </div>
+
+    <div class="shot">
+      <div class="slip" style="width:210px">
+        <div class="sey">From the ledger · 2026</div>
+        <div style="margin-top:7px">
+          <span style="font-size:10.5px;color:var(--ink)">Most read</span>
+          <div class="h-serif" style="font-size:16px;color:var(--oxblood);margin-top:3px">M.T. Vasudevan Nair</div>
+          <div class="sey" style="margin-top:3px;color:var(--gold)">6 books this year</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:9px;padding-top:6px">
+          <span class="quote" style="font-size:8px">An author worth returning to.</span>
+          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap" style="margin-top:6px"><b>A name row</b> Names set in Fraunces oxblood, the
+      count as the gold footer. Works for Most read, Longest, In hand — any titled line.</p>
+    </div>
+
+    <p class="cap wide"><b>Row slip — data spec</b>
+      <span class="spec"><b>Trigger:</b> long-press any ledger row (tap navigates — the two verbs never collide). Opens the same Area 7 sheet locked to Slip format: a single row has no story.</span>
+      <span class="spec"><b>Content:</b> eyebrow "From the ledger · window", then the row verbatim — label + value, plus its micro-viz where one exists (streak → lamps; In hand → the page bar). Nothing is recomputed; the slip is the row.</span>
+      <span class="spec"><b>Closing:</b> a one-line pool per row type; the caption field prefills with the row as a sentence ("Five days straight, as of tonight.").</span>
+      <span class="spec"><b>Privacy:</b> same contract — a row slip can name a book, an author, a number; never a note.</span>
+    </p>
+  </div>
+
+</section>
+
+<!-- ================= THE SLIP IN CHAT ================= -->
+<section class="area" id="slip">
+  <div class="ah"><span class="an gold">The slip, in chat</span><h2>Where the answer actually lands</h2></div>
+  <p class="desc">Why the third format exists: "how's your reading going?" arrives as a
+  <b>message</b>, and a 9:16 story pasted into a chat thread is a poster taped over a
+  conversation. The slip is bubble-sized, the wordmark you notice second — designed to sit
+  <i>inside</i> a reply next to a line of your own words. It's the default format when the sheet
+  opens from a Today or row share, and the caption travels as the message text, not baked into
+  pixels.</p>
+  <div class="row">
+
     <div class="shot">
       <div class="phone"><div class="scr">
         <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
@@ -1256,69 +1673,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       a wordmark you notice second. The reader's own words carry the message; the card is the
       receipt. This is the mockup the redesign should be judged against, because it is the actual
       moment in the goal.</p>
-    </div>
-
-    <!-- Slip: year -->
-    <div class="shot">
-      <div class="slip">
-        <div style="display:flex;align-items:center;gap:11px">
-          <div style="text-align:center;flex-shrink:0">
-            <div class="snum" style="font-size:26px">24</div>
-            <div class="sey" style="margin-top:2px">books · 2026</div>
-          </div>
-          <div style="width:1px;align-self:stretch;background:var(--line)"></div>
-          <div style="flex:1">
-            <div class="shelf" style="height:34px">
-              <i class="sp1" style="width:5px;height:28px"></i><i class="sp2" style="width:4px;height:24px"></i>
-              <i class="sp4" style="width:6px;height:31px"></i><i class="sp3" style="width:4px;height:22px"></i>
-              <i class="sp5" style="width:5px;height:26px"></i><i class="sp6" style="width:6px;height:30px"></i>
-              <i class="sp2" style="width:4px;height:23px"></i><i class="sp7" style="width:5px;height:25px"></i>
-              <i class="sp1" style="width:8px;height:34px"></i><i class="sp8" style="width:4px;height:24px"></i>
-              <i class="sp3" style="width:5px;height:27px"></i><i class="sp2" style="width:4px;height:25px"></i>
-              <i class="sp4" style="width:5px;height:28px"></i><i class="sp5" style="width:4px;height:23px"></i>
-              <i class="sp6" style="width:5px;height:26px"></i><i class="sp1" style="width:4px;height:24px"></i>
-            </div>
-            <div class="ledge"></div>
-            <div class="sey" style="margin-top:4px">8,412 pages · 214 hours</div>
-          </div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
-          <span class="quote" style="font-size:8px">A year, mostly spent elsewhere.</span>
-          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
-        </div>
-      </div>
-      <p class="cap" style="margin-top:6px"><b>Slip · Year</b> Numeral left, shelf right — the
-      Square's landscape logic at bubble scale. The shelf survives miniaturisation because it's
-      silhouette, not text; that's the test every slip visual must pass.</p>
-    </div>
-
-    <!-- Slip: week -->
-    <div class="shot">
-      <div class="slip">
-        <div style="display:flex;align-items:center;gap:11px">
-          <div style="text-align:center;flex-shrink:0">
-            <div class="snum" style="font-size:22px">3<span style="font-size:12px">h</span> 40<span style="font-size:12px">m</span></div>
-            <div class="sey" style="margin-top:2px">this week</div>
-          </div>
-          <div style="width:1px;align-self:stretch;background:var(--line)"></div>
-          <div style="flex:1">
-            <div class="wbars" style="height:30px">
-              <i style="height:22%"></i><i style="height:38%"></i><i style="height:8%"></i>
-              <i class="hi" style="height:55%"></i><i style="height:30%"></i><i style="height:8%"></i>
-              <i class="top" style="height:100%"></i>
-            </div>
-            <div class="wlbl" style="margin-top:2px;font-size:6px"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
-            <div class="sey" style="margin-top:3px;color:var(--moss)">▲ 48m vs last week</div>
-          </div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
-          <span class="quote" style="font-size:8px">Busier than 9 of your last 10 weeks.</span>
-          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
-        </div>
-      </div>
-      <p class="cap" style="margin-top:6px"><b>Slip · Week</b> Same skeleton: number, hairline,
-      visual, closing line. Three slips are drawn; all six windows get one, assembled from the
-      same parts table as Story and Square — one card widget, three layouts, no fourth codepath.</p>
     </div>
 
   </div>

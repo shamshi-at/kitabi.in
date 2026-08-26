@@ -470,7 +470,16 @@ section** — one row per book with its own left-off page, totals staying
 totals, "and N more" opening the sittings sheet, and the shared card saying
 "+58 pages · 2 books" rather than pretending the day belonged to one book.
 The seal opens the same share sheet as everything else (graphical card, not a
-full-page capture). This file supersedes `kitabi_screens.html` Area 5.
+full-page capture). The file's **card catalogue** area is the pre-build spec
+for the shared images: all five windows (Today lamps / Week bars / Month
+calendar leaf / 3–6-month pace line / Year shelf) drawn in all three formats
+(Story 9:16 · Square 1:1 · Slip 5:3 — each format its own layout of the same
+parts, never a scaled story), plus the long-press **row slip** (number-row and
+name-row variants), each group with a data-spec caption naming hero, pill,
+viz, subline, label, closing-line pool and empty rule in `PeriodSummary` /
+`InsightsStats` terms. One deliberate new derivation flagged: per-day seconds
+for the heatmap's deep-oxblood top-quartile days. This file supersedes
+`kitabi_screens.html` Area 5.
 
 Preview locally: `python3 -m http.server 4173 --directory docs` →
 http://localhost:4173/kitabi_screens.html (or `/supporter-mockup.html`)
