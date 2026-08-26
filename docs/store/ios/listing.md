@@ -54,25 +54,27 @@ counts are given where the copy is near one.
 
 ## Screenshots
 
-iPad is enabled in the target (`TARGETED_DEVICE_FAMILY = "1,2"`), so Connect
-requires **both** sets:
+Generated 26 Aug 2026, in this folder — upload as-is:
 
-| Connect slot | Size (portrait) | Source |
+| Connect slot | Size | Files |
 |---|---|---|
-| iPhone 6.9″ (required) | 1320×2868 or 1290×2796 | 5 shots, same order as Play: Library shelf → Home → Lending → Book page → Insights |
-| iPad 13″ (required while iPad is enabled) | 2064×2752 or 2048×2732 | 4 shots, same order as Play's 10″ tablet set |
+| iPhone 6.5″ | 1284×2778 | `iphone-6.5/iphone65_01…05.png` — Library → Home → Lending → Book page → Insights |
+| iPad 13″ (required while iPad is enabled: `TARGETED_DEVICE_FAMILY = "1,2"`) | 2048×2732 | `ipad-13/ipad13_01…04.png` — Home → Library → Lending → Insights |
 
-Smaller iPhone/iPad slots scale down from these automatically — only the two
-largest sizes need uploads.
+Smaller iPhone/iPad slots scale down from these automatically. If Connect
+shows 6.9″ slots instead of 6.5″, it accepts these 1284×2778 files there too.
 
-**How to produce them:** reuse the Android framing pipeline (HTML frame
-templates + headless Chrome at exact pixel sizes) with canvases at the Apple
-dimensions above, and drop in app captures. Capture from the real iPhone or
-the seeded `lib/main_uidemo.dart` demo build — remember `mobile_scanner`
-cannot build for an Apple Silicon iOS Simulator (CLAUDE.md), so simulator
-captures need the Rosetta x86_64 path or, simpler, capture on the real
-device. The scan screen is not one of the five shots, but the *build* still
-has to link MLKit, so the restriction applies to any simulator build.
+**How they were made** (to regenerate): the app signed into the test reader
+account against the production API on the Android emulator, seeded through
+the real flows (7 catalogue books, statuses, four logged sittings — so the
+book page shows a *measured* time-to-finish — one loan, a reading goal);
+SystemUI demo mode for a clean status bar; `adb exec-out screencap` at
+1080×2400, and at 2048×2732 via `adb shell wm size` for the iPad set; the
+status-bar strip cropped off (OS-neutral); then composed on the oxblood
+brand frame (gold hairline inset, gold eyebrow, Fraunces headline, dark
+device mock — same design as `../android/`) by an HTML template rendered
+with headless Chrome at exact pixel size. Captions match the Android
+listing's word for word.
 
 ## App Privacy (the nutrition label — answer once, keep in sync with privacy.html)
 
