@@ -439,7 +439,9 @@ its object and sits beside Wishlist so it can only mean "I have this", and the s
 is what makes it land, so no separate highlight treatment was needed; A and C stay
 drawn but unbuilt (C is really bulk cataloguing, its own decision).
 
-Drawn, awaiting a pick (26 Aug 2026 — Insights + share cards, full redesign):
+Drawn and chosen (26 Aug 2026 — Insights + share cards, full redesign; owner
+picked **Direction B, the almanac**, with the **graphical card family** as the
+shared image):
 [insights-share-mockups.html](insights-share-mockups.html) supersedes Area 5's
 27 Jul design *as a proposal* — the owner's brief was "if someone asks how your
 reading is going, the answer should be sendable from the app". Four faults it
@@ -455,9 +457,20 @@ a rebuilt card family where each window's own visualization travels on the image
 chat-sized **Slip** format for the WhatsApp reply the question actually arrives
 as (caption travels as message text, not pixels), the rebuilt WYSIWYG share
 sheet with shape-true format chips and a printed privacy promise, and the
-honest empty states (no shareable zeroes; "still worth sending"). File's own
-closing section recommends A with C's question-line grafted on. Area 5 in
-`kitabi_screens.html` stays authoritative until the pick lands.
+honest empty states (no shareable zeroes; "still worth sending"). The chosen
+design is specced in the file's **"B, chosen"** area (B3–B5), which adds the
+two rules the pick raised: **every value set in oxblood is a door** (Books
+finished → the finished list with start → finish dates per book, where the
+goal's ✎ now lives since B has no ring; titles → book page; Most read → author
+page; Time read / Pages turned / Sittings → a cross-book sittings sheet;
+Streak → flips to Month, the heatmap being the streak's map; Year's number
+rows scroll to their charts below) with **tap = navigate, long-press = share**
+so the row-slip never collides; and **a multi-book day renders "In hand" as a
+section** — one row per book with its own left-off page, totals staying
+totals, "and N more" opening the sittings sheet, and the shared card saying
+"+58 pages · 2 books" rather than pretending the day belonged to one book.
+The seal opens the same share sheet as everything else (graphical card, not a
+full-page capture). This file supersedes `kitabi_screens.html` Area 5.
 
 Preview locally: `python3 -m http.server 4173 --directory docs` →
 http://localhost:4173/kitabi_screens.html (or `/supporter-mockup.html`)
