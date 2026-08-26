@@ -30,18 +30,23 @@ lending events, opt-in), **CSV import/export**, **insights/stats**, **opt-in LLM
 recommendations**, **share cards**, and **launch plumbing** (version gate, backups,
 icons/splash, privacy/terms). The landing page is live and public.
 
-**Shipping state:** the mobile app now has release builds — an iOS **IPA (build 132)**
-and an Android **AAB (build 132)**, built 19 Aug 2026 (pubspec has since been bumped to
-+135 for the next cut), **not yet uploaded** — the stores still run build 111
-(**Play Store internal testing**; a TestFlight build exists in App Store Connect).
-Store-listing copy now exists for both stores (`docs/store/android/`,
-`docs/store/ios/`); the privacy policy discloses in-app promotions as of 25 Aug 2026.
-**Still worth a real device pass:** a literal airplane-mode Layer-2 check and on-device
-verification of FCM push + the ISBN scanner (the scanner can't build on an Apple
-Silicon iOS Simulator). The sync engine is thoroughly unit-tested (in-memory Drift +
-fake API client). **Backups are still inert** — the nightly workflow self-skips because
-`BACKUP_DATABASE_URL`/`BACKUP_PASSPHRASE`/`R2_*` repo secrets are unset (verified via
-`gh secret list`, 25 Aug 2026): owner action before first real user data.
+**Shipping state: SUBMITTED FOR REVIEW on both stores, 26 Aug 2026** — iOS build
+**136** (0.1.0) in App Store Review, Android **versionCode 137** in Play review, both
+cut from the `main` that carries the device-safe migration rework (`71a3b2e` — the
+v12 rebuild would have wedged every install upgrading from ≤v11; do not ship anything
+older). Complete listings live in `docs/store/{android,ios}/`: copy, keywords,
+App-Privacy answers, and framed screenshots (Play phone/tablet sets; App Store
+iPhone 6.5″ 1284×2778 + iPad 13″ 2048×2732, generated 26 Aug against the production
+API — regeneration recipe in `docs/store/ios/listing.md`). Privacy policy discloses
+in-app promotions as of 25 Aug 2026. Promotions verified end-to-end on-emulator
+(serve → render → click-navigation → dismiss → telemetry), pubspec at `0.1.0+137`
+(next cut: 138). **Open while review runs:** APNs production key upload; the nightly
+backup secrets (`BACKUP_DATABASE_URL`/`BACKUP_PASSPHRASE`/`R2_*` — still unset per
+`gh secret list`, 26 Aug: the workflow silently self-skips, owner action before first
+real user data); the real-device pass (airplane-mode Layer-2 check, FCM push, ISBN
+scanner — never yet run on real iOS hardware). **On approval:** swap the landing
+page's "Launching soon" for store badges (the last open P8 item), release both
+rollouts, bump pubspec.
 
 ---
 
