@@ -672,6 +672,7 @@ class _CurrentlyReadingCard extends ConsumerWidget {
     ref.read(activeSessionProvider.notifier).start(entry.id, pageStart: entry.currentPage);
     if (freshStart) {
       armReadingTimerSafetyNet(
+        db: ref.read(appDatabaseProvider),
         libraryEntryId: entry.id,
         from: startedAt,
         title: l10n.timerCheckInTitle,

@@ -706,6 +706,16 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       behind a rebuilt sheet (shape-true chips, "Name the book" toggle, printed privacy
       promise). No shareable zeroes: an empty window draws no seal. Deferred, flagged in
       the mockups: "Name the spines" vertical titles, the weekly-percentile closing line
+- [x] **Reading check-in on the reader's clock** (26 Aug 2026 — mockups in
+      docs/reading-checkin-setting-mockup.html): the "still reading?" interval moves from
+      a fixed 60 minutes to a **2-hour default**, per-reader via a Profile card + radio
+      sheet (30m/1h/2h/3h/4h — deliberately no "off": a safety net you can switch off
+      isn't one). Stored device-local in `key_values`; `readingSessionDeadline`/`Overdue`
+      take the delay as a required param and every mechanism — notification scheduler,
+      in-app tick, workmanager enforcement — fetches it through one
+      `readingCheckInDelayOf`, so the three keep agreeing. The 30-minute answer window
+      stays fixed. Applies from the next sitting; a running sitting keeps the deadline it
+      was armed with
 
 ## Phase 8 — Platform & launch plumbing
 

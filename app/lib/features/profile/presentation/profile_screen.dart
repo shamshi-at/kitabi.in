@@ -17,11 +17,14 @@ import '../../../core/widgets/language_chips.dart';
 import '../../../core/widgets/net_image.dart';
 import '../../../core/widgets/pulsing_dot.dart';
 import '../../../core/widgets/section_label.dart';
+import '../../../core/widgets/sheet_grabber.dart';
 import '../../../data/api/api_client.dart';
+import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../import_books/csv_export.dart';
 import '../../insights/providers/insights_providers.dart';
 import '../../library/providers/library_providers.dart';
+import '../../library/providers/reading_timer_providers.dart';
 import '../../promotions/providers/promotions_providers.dart';
 import '../../settings/theme_mode_provider.dart';
 import '../providers/profile_providers.dart';
@@ -118,6 +121,27 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
   Future<void> _editUsername() async {
     final saved = await showUsernameSheet(context, current: widget.profile['username'] as String?);
     if (saved) ref.invalidate(meProvider);
+  }
+
+  /// Opens the check-in interval picker (mockup P2). The choice applies from
+  /// the *next* sitting: a sitting already running keeps the deadline it was
+  /// armed with — changing the rules mid-game is how timers get lost.
+  Future<void> _editCheckIn() async {
+    Haptics.selection();
+    final db = ref.read(appDatabaseProvider);
+    final current = await readingCheckInDelayOf(db);
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _CheckInSheet(currentMinutes: current.inMinutes),
+    );
+    if (picked == null) return;
+    await db.keyValuesDao.setValue(readingCheckInDelayKey, '$picked');
+    ref.invalidate(readingCheckInDelayProvider);
   }
 
   Future<void> _editLanguages() async {
@@ -345,6 +369,59 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
               subtitle: l10n.settingsPromotionsHint,
               value: !_vis['promotions_opt_out']!,
               onChanged: (v) => _toggle('promotions_opt_out', !v),
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        // The reading check-in interval (mockup P1, reading-checkin-setting-
+        // mockup.html) — a value row, not a switch: the safety net has no off.
+        Card(
+          child: InkWell(
+            onTap: _editCheckIn,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.settingsCheckInTitle,
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          l10n.settingsCheckInDesc,
+                          style:
+                              TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.35),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        _checkInValueLabel(
+                          l10n,
+                          ref.watch(readingCheckInDelayProvider).valueOrNull ??
+                              defaultReadingCheckInDelay,
+                        ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.oxblood,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -641,6 +718,126 @@ class _SwitchRow extends StatelessWidget {
 
 /// StackOverflow-style reputation — the total the reader has earned, with a
 /// breakdown of where the points came from (contributions + activity).
+/// "After 2 hours" / "After 30 minutes" — the row's value and the sheet's
+/// option labels share this so they can't disagree.
+String _checkInValueLabel(AppLocalizations l10n, Duration d) => d.inMinutes < 60
+    ? l10n.settingsCheckInValueMinutes(d.inMinutes)
+    : l10n.settingsCheckInValueHours(d.inHours);
+
+/// The interval picker (mockup P2): single-select radios, the pattern the
+/// shelf picker and status sheet already taught — a tap applies and closes.
+/// Pops the chosen minutes; null means dismissed.
+class _CheckInSheet extends StatelessWidget {
+  const _CheckInSheet({required this.currentMinutes});
+
+  final int currentMinutes;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final longest = readingCheckInDelayChoicesMinutes.last;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SheetGrabber(),
+            Text(l10n.settingsCheckInTitle, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 4),
+            Text(
+              l10n.settingsCheckInSheetBody,
+              style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft, height: 1.45),
+            ),
+            const SizedBox(height: 8),
+            for (final minutes in readingCheckInDelayChoicesMinutes)
+              InkWell(
+                onTap: () {
+                  Haptics.selection();
+                  Navigator.pop(context, minutes);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: minutes == longest
+                      ? null
+                      : BoxDecoration(
+                          border: Border(bottom: BorderSide(color: AppColors.line)),
+                        ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        minutes == currentMinutes
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        size: 18,
+                        color: minutes == currentMinutes ? AppColors.oxblood : AppColors.line,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _checkInValueLabel(l10n, Duration(minutes: minutes)),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                            if (minutes == longest)
+                              Text(
+                                l10n.settingsCheckInLongestHint,
+                                style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (minutes == defaultReadingCheckInDelay.inMinutes)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE3EAD9),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            l10n.settingsCheckInDefaultBadge.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                              color: AppColors.moss,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.only(top: 9),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.line)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check, size: 12, color: AppColors.moss),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      l10n.settingsCheckInNoOff,
+                      style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ReputationCard extends ConsumerWidget {
   const _ReputationCard();
 

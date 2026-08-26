@@ -15,20 +15,25 @@ import 'package:kitabi/features/library/providers/reading_timer_providers.dart';
 /// enough to trigger it, which is exactly how it was found.
 void main() {
   final started = DateTime(2026, 7, 26, 9);
-  final deadline = started.add(readingCheckInDelay + readingCheckInGrace);
+  // The reader's interval is a parameter now (Profile setting, 26 Aug 2026);
+  // these policy tests pin the shape with an explicit 60m so the arithmetic
+  // stays readable, and the delay-of-record tests below cover the default.
+  const delay = Duration(minutes: 60);
+  final deadline = started.add(delay + readingCheckInGrace);
 
   group('the deadline', () {
-    test('is 90 minutes from the start when nothing was confirmed', () {
+    test('is delay + grace from the start when nothing was confirmed', () {
       expect(
-        readingSessionDeadline(startedAt: started),
+        readingSessionDeadline(startedAt: started, checkInDelay: delay),
         started.add(const Duration(minutes: 90)),
       );
     });
 
-    test('moves to 90 minutes after the reader said they were still reading', () {
+    test('moves to delay + grace after the reader said they were still reading', () {
       final confirmed = started.add(const Duration(minutes: 58));
       expect(
-        readingSessionDeadline(startedAt: started, confirmedAt: confirmed),
+        readingSessionDeadline(
+            startedAt: started, confirmedAt: confirmed, checkInDelay: delay),
         confirmed.add(const Duration(minutes: 90)),
       );
     });
@@ -36,8 +41,16 @@ void main() {
     test('never moves backwards on a stale confirmation from a past sitting', () {
       final stale = started.subtract(const Duration(hours: 5));
       expect(
-        readingSessionDeadline(startedAt: started, confirmedAt: stale),
+        readingSessionDeadline(startedAt: started, confirmedAt: stale, checkInDelay: delay),
         deadline,
+      );
+    });
+
+    test('a longer per-reader interval moves the deadline with it', () {
+      expect(
+        readingSessionDeadline(
+            startedAt: started, checkInDelay: const Duration(minutes: 240)),
+        started.add(const Duration(minutes: 270)),
       );
     });
   });
@@ -45,12 +58,14 @@ void main() {
   group('overdue', () {
     test('a sitting is overdue once the deadline passes', () {
       expect(
-        readingSessionOverdue(startedAt: started, now: deadline),
+        readingSessionOverdue(startedAt: started, now: deadline, checkInDelay: delay),
         isTrue,
       );
       expect(
         readingSessionOverdue(
-            startedAt: started, now: deadline.subtract(const Duration(minutes: 1))),
+            startedAt: started,
+            now: deadline.subtract(const Duration(minutes: 1)),
+            checkInDelay: delay),
         isFalse,
       );
     });
@@ -64,6 +79,7 @@ void main() {
           startedAt: started,
           confirmedAt: confirmed,
           now: deadline,
+          checkInDelay: delay,
         ),
         isFalse,
       );
@@ -73,9 +89,35 @@ void main() {
           startedAt: started,
           confirmedAt: confirmed,
           now: confirmed.add(const Duration(minutes: 91)),
+          checkInDelay: delay,
         ),
         isTrue,
       );
+    });
+  });
+
+  group('the delay of record', () {
+    late AppDatabase db;
+
+    setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
+    tearDown(() => db.close());
+
+    test('defaults to 2 hours when nothing is stored', () async {
+      expect(await readingCheckInDelayOf(db), const Duration(minutes: 120));
+    });
+
+    test('honours a stored choice', () async {
+      await db.keyValuesDao.setValue(readingCheckInDelayKey, '240');
+      expect(await readingCheckInDelayOf(db), const Duration(minutes: 240));
+    });
+
+    test('an unoffered or corrupt value falls back to the default', () async {
+      // A corrupt value silently meaning "never check in" is exactly the
+      // failure the fallback exists to prevent.
+      await db.keyValuesDao.setValue(readingCheckInDelayKey, '999999');
+      expect(await readingCheckInDelayOf(db), const Duration(minutes: 120));
+      await db.keyValuesDao.setValue(readingCheckInDelayKey, 'soon');
+      expect(await readingCheckInDelayOf(db), const Duration(minutes: 120));
     });
   });
 

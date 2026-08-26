@@ -1846,6 +1846,54 @@ abstract class AppLocalizations {
   /// **'Occasional news and offers on Home. Chosen from the languages you read — never from anything you\'ve written.'**
   String get settingsPromotionsHint;
 
+  /// Profile row for the reading timer's still-reading interval
+  ///
+  /// In en, this message translates to:
+  /// **'Reading check-in'**
+  String get settingsCheckInTitle;
+
+  /// Explanatory line under the reading check-in row
+  ///
+  /// In en, this message translates to:
+  /// **'A long sitting gets one \"still reading?\" nudge — unanswered, the timer stops on its own half an hour later.'**
+  String get settingsCheckInDesc;
+
+  /// The check-in row's value for sub-hour intervals
+  ///
+  /// In en, this message translates to:
+  /// **'After {minutes} minutes'**
+  String settingsCheckInValueMinutes(int minutes);
+
+  /// The check-in row's value for whole-hour intervals
+  ///
+  /// In en, this message translates to:
+  /// **'{hours, plural, =1{After 1 hour} other{After {hours} hours}}'**
+  String settingsCheckInValueHours(int hours);
+
+  /// Explanation at the top of the check-in interval picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'If a sitting runs this long, Kitabi asks whether you\'re still reading. Unanswered, the sitting stops itself 30 minutes later — answering \"yes\" starts the clock over.'**
+  String get settingsCheckInSheetBody;
+
+  /// Badge on the 2-hour option so an exploring reader can find their way back
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get settingsCheckInDefaultBadge;
+
+  /// Sub-line under the longest interval option
+  ///
+  /// In en, this message translates to:
+  /// **'For the readers the nudge only ever interrupts'**
+  String get settingsCheckInLongestHint;
+
+  /// Footer of the picker sheet explaining why the safety net has no off switch
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no \"off\" — the check-in is what keeps a forgotten timer from logging a nine-hour sitting.'**
+  String get settingsCheckInNoOff;
+
   /// Eyebrow on the home goal slip
   ///
   /// In en, this message translates to:

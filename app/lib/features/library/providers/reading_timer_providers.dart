@@ -97,12 +97,47 @@ Future<void> clearLocalActiveSession(AppDatabase db) async {
   await db.keyValuesDao.deleteValue(activeSessionAdoptedKey);
 }
 
-/// A session left running this long gets a "still reading?" check-in.
-const readingCheckInDelay = Duration(minutes: 60);
+/// Default wait before a running sitting gets its "still reading?" check-in
+/// (2 hours — raised from 60 minutes, owner decision 26 Aug 2026). Per-reader:
+/// Profile's Reading check-in setting stores an override in key_values
+/// ([readingCheckInDelayKey]), and every mechanism — the notification
+/// scheduler, the in-app tick, the background enforcement task — reads it
+/// through [readingCheckInDelayOf], so all three keep agreeing on one answer.
+const defaultReadingCheckInDelay = Duration(minutes: 120);
+
+/// The intervals the Profile sheet offers, in minutes. Deliberately no "off":
+/// the check-in is what keeps a forgotten timer from logging a nine-hour
+/// sitting, and a safety net you can switch off isn't one.
+const readingCheckInDelayChoicesMinutes = [30, 60, 120, 180, 240];
+
+/// Device-local, like the reading goal and theme — the running timer is
+/// device-local by design (see ActiveSession), so its policy is too.
+const readingCheckInDelayKey = 'reading_checkin_delay_minutes';
 
 /// If the check-in goes unanswered this much longer, the session is
-/// auto-stopped — 90 minutes total from the original start.
+/// auto-stopped. Fixed, not a preference — it's the safety net's spring, and
+/// the setting moves only the check-in.
 const readingCheckInGrace = Duration(minutes: 30);
+
+/// The reader's chosen check-in delay, defaulting when unset — and when the
+/// stored value isn't one of the offered choices, because a corrupt or
+/// future-version value silently becoming "never check in" is exactly the
+/// failure the fallback exists to prevent.
+Future<Duration> readingCheckInDelayOf(AppDatabase db) async {
+  final raw = await db.keyValuesDao.getValue(readingCheckInDelayKey);
+  final minutes = raw == null ? null : int.tryParse(raw);
+  if (minutes == null || !readingCheckInDelayChoicesMinutes.contains(minutes)) {
+    return defaultReadingCheckInDelay;
+  }
+  return Duration(minutes: minutes);
+}
+
+/// The Profile row's live value. Writers (the picker sheet) invalidate this
+/// after setValue; nothing else mutates the key.
+final readingCheckInDelayProvider = FutureProvider.autoDispose<Duration>((ref) async {
+  final db = ref.watch(appDatabaseProvider);
+  return readingCheckInDelayOf(db);
+});
 
 const readingCheckInYesActionId = 'reading_checkin_yes';
 const readingCheckInNoActionId = 'reading_checkin_no';
@@ -121,21 +156,32 @@ String readingEnforcementTaskName(String libraryEntryId) =>
     'kitabi.readingTimerAutoStop.$libraryEntryId';
 
 /// The instant a running sitting becomes overdue and may be auto-stopped:
-/// 90 minutes after it started, or after the reader last said they were still
-/// reading — whichever is later. Pure so every mechanism (the in-app tick, the
-/// workmanager task) can agree on one answer.
-DateTime readingSessionDeadline({required DateTime startedAt, DateTime? confirmedAt}) {
+/// [checkInDelay] + [readingCheckInGrace] after it started, or after the
+/// reader last said they were still reading — whichever is later. Pure so
+/// every mechanism (the in-app tick, the workmanager task) can agree on one
+/// answer; [checkInDelay] is required so no caller can silently fall back to
+/// a default the reader has changed — fetch it with [readingCheckInDelayOf].
+DateTime readingSessionDeadline({
+  required DateTime startedAt,
+  DateTime? confirmedAt,
+  required Duration checkInDelay,
+}) {
   final base =
       (confirmedAt != null && confirmedAt.isAfter(startedAt)) ? confirmedAt : startedAt;
-  return base.add(readingCheckInDelay + readingCheckInGrace);
+  return base.add(checkInDelay + readingCheckInGrace);
 }
 
 bool readingSessionOverdue({
   required DateTime startedAt,
   DateTime? confirmedAt,
   required DateTime now,
+  required Duration checkInDelay,
 }) =>
-    !now.isBefore(readingSessionDeadline(startedAt: startedAt, confirmedAt: confirmedAt));
+    !now.isBefore(readingSessionDeadline(
+      startedAt: startedAt,
+      confirmedAt: confirmedAt,
+      checkInDelay: checkInDelay,
+    ));
 
 /// The one reading session currently running, if any — device-local
 /// (KeyValues), never synced until it's stopped and logged as a
@@ -399,6 +445,7 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
         staleAt: readingSessionDeadline(
           startedAt: startedAt,
           confirmedAt: confirmedRaw == null ? null : DateTime.tryParse(confirmedRaw),
+          checkInDelay: await readingCheckInDelayOf(db),
         ),
       );
     } catch (_) {
@@ -571,6 +618,7 @@ Future<LoggedSession?> checkReadingTimerSafetyNet(WidgetRef ref) async {
     startedAt: active.startedAt,
     confirmedAt: confirmedRaw == null ? null : DateTime.tryParse(confirmedRaw),
     now: DateTime.now(),
+    checkInDelay: await readingCheckInDelayOf(db),
   );
   if (!overdue) return null;
   return notifier.stop(autoStopped: true);

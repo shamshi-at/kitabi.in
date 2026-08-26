@@ -2317,6 +2317,7 @@ class _ReadingCard extends ConsumerWidget {
     if (freshStart) {
       final l10n = AppLocalizations.of(context)!;
       armReadingTimerSafetyNet(
+        db: ref.read(appDatabaseProvider),
         libraryEntryId: entry.id,
         from: startedAt,
         title: l10n.timerCheckInTitle,

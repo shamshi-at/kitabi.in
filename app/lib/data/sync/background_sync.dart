@@ -84,6 +84,7 @@ Future<void> _runReadingTimerEnforcement(Map<String, dynamic>? inputData) async 
       startedAt: startedAt,
       confirmedAt: confirmedRaw == null ? null : DateTime.tryParse(confirmedRaw),
       now: DateTime.now(),
+      checkInDelay: await readingCheckInDelayOf(db),
     );
     if (!overdue) return;
   }

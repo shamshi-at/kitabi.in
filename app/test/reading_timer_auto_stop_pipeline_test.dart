@@ -20,7 +20,7 @@ class _FakeApi extends ApiClient {}
 /// that chain directly. This is the "reduce the wait and watch it auto-stop"
 /// check from the owner's report (23 Aug 2026), done by backdating the
 /// sitting's start past the real 90-minute deadline instead of shortening
-/// [readingCheckInDelay]/[readingCheckInGrace] themselves, which a widget
+/// [defaultReadingCheckInDelay]/[readingCheckInGrace] themselves, which a widget
 /// test can't safely do without racing every other test that reads those
 /// same top-level constants.
 void main() {
@@ -48,12 +48,12 @@ void main() {
     await tester.runAsync(
         () => container.read(activeSessionProvider.notifier).start(entryId!));
 
-    // The reader kept reading well past the 90-minute deadline without ever
-    // answering the check-in — exactly the reported scenario, compressed to
-    // an instant by backdating the start rather than waiting or shrinking
-    // the real constants.
+    // The reader kept reading well past the deadline (the 2-hour default
+    // check-in + grace) without ever answering — exactly the reported
+    // scenario, compressed to an instant by backdating the start rather than
+    // waiting or shrinking the real constants.
     final overdueStart = DateTime.now().subtract(
-      readingCheckInDelay + readingCheckInGrace + const Duration(minutes: 5),
+      defaultReadingCheckInDelay + readingCheckInGrace + const Duration(minutes: 5),
     );
     await tester.runAsync(() async {
       await db.keyValuesDao.setValue(activeSessionStartedKey, overdueStart.toIso8601String());

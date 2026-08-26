@@ -1104,6 +1104,44 @@ class AppLocalizationsEn extends AppLocalizations {
       'Occasional news and offers on Home. Chosen from the languages you read — never from anything you\'ve written.';
 
   @override
+  String get settingsCheckInTitle => 'Reading check-in';
+
+  @override
+  String get settingsCheckInDesc =>
+      'A long sitting gets one \"still reading?\" nudge — unanswered, the timer stops on its own half an hour later.';
+
+  @override
+  String settingsCheckInValueMinutes(int minutes) {
+    return 'After $minutes minutes';
+  }
+
+  @override
+  String settingsCheckInValueHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: 'After $hours hours',
+      one: 'After 1 hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsCheckInSheetBody =>
+      'If a sitting runs this long, Kitabi asks whether you\'re still reading. Unanswered, the sitting stops itself 30 minutes later — answering \"yes\" starts the clock over.';
+
+  @override
+  String get settingsCheckInDefaultBadge => 'Default';
+
+  @override
+  String get settingsCheckInLongestHint =>
+      'For the readers the nudge only ever interrupts';
+
+  @override
+  String get settingsCheckInNoOff =>
+      'There\'s no \"off\" — the check-in is what keeps a forgotten timer from logging a nine-hour sitting.';
+
+  @override
   String get homeGoalLabel => 'Reading goal';
 
   @override

@@ -20,7 +20,8 @@ import 'notification_service.dart';
 /// silent workmanager enforcement task that auto-stops the session if the
 /// check-in goes unanswered. [from] is normally "now" — the session's start
 /// time on the very first arm, or the moment "Yes, still reading" was tapped
-/// on every re-arm, since either way the next check-in is 60 minutes out.
+/// on every re-arm, since either way the next check-in is one full interval
+/// (the reader's Profile setting; 2 hours by default) out.
 ///
 /// Callable from a `BuildContext` (real `AppLocalizations`) or a background
 /// isolate (`lookupAppLocalizations`) — the caller resolves copy either way.
@@ -29,6 +30,7 @@ import 'notification_service.dart';
 /// widget test) must never be mistaken for the session itself failing to
 /// start — same defensive stance as `stopAndLogActiveSession`'s cleanup.
 Future<void> armReadingTimerSafetyNet({
+  required AppDatabase db,
   required String libraryEntryId,
   required DateTime from,
   required String title,
@@ -37,7 +39,10 @@ Future<void> armReadingTimerSafetyNet({
   required String noLabel,
 }) async {
   try {
-    final checkInAt = from.add(readingCheckInDelay);
+    // The reader's own interval (Profile → Reading check-in), read here so
+    // every arm site — session start, the "Yes, still reading" re-arm —
+    // schedules on the same clock without each fetching it.
+    final checkInAt = from.add(await readingCheckInDelayOf(db));
     await NotificationService(FlutterLocalNotificationsPlugin()).scheduleCheckIn(
       id: readingCheckInNotificationId(libraryEntryId),
       title: title,
@@ -131,6 +136,7 @@ Future<void> _handle(NotificationResponse response) async {
         confirmedAt.toIso8601String(),
       );
       await armReadingTimerSafetyNet(
+        db: db,
         libraryEntryId: entryId,
         from: confirmedAt,
         title: l10n.timerCheckInTitle,
