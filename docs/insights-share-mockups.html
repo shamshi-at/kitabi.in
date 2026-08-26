@@ -239,6 +239,17 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
 /* mini kitabi logo (inline svg reused) */
 .klogo{width:11px;height:11px}
 
+/* dated calendar cells — the page's month plate (share cards keep bare .hc) */
+.hcd{aspect-ratio:1;border-radius:5px;background:var(--paper-deep);display:flex;align-items:center;
+  justify-content:center;font-size:8.5px;color:var(--ink-soft)}
+.hcd.on{background:var(--gold);color:#2B2118;font-weight:600}
+.hcd.deep{background:var(--oxblood);color:#F6F0E3;font-weight:600}
+.hcd.fut{background:transparent;border:1px dashed var(--line);color:var(--stamp-grey)}
+.hcd.today{outline:1.5px solid var(--oxblood);outline-offset:1px;font-weight:700}
+.hcd.void{visibility:hidden}
+.wkhdr{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:6.5px;font-weight:700;
+  letter-spacing:.5px;color:var(--ink-soft);text-align:center}
+
 /* catalogue group header */
 .pgroup{display:flex;align-items:center;gap:12px;margin:36px 0 16px;font-size:11px;font-weight:700;
   letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft)}
@@ -681,7 +692,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   the goal's ✎ now lives, since B has no ring); <b>In hand / Longest / any title</b> → the book
   page; <b>Most read</b> → the author page (both exist); <b>Time read / Pages turned /
   Sittings</b> → the sittings sheet for that window (B5); <b>Streak</b> → flips the period to
-  Month, because the heatmap <i>is</i> the streak's map; and on Year, the number rows scroll to
+  Month, because the heatmap <i>is</i> the streak's map; <b>a read day on the Month
+  calendar</b> → that day's sittings (B6 → B5); and on Year, the number rows scroll to
   their own charts below the fold — a door to a place you're already on is a scroll. Second,
   <b>tap navigates, long-press shares</b> (the row-slip): two gestures, two verbs, no collisions.
   B3 answers the multi-book day; B5 is the same answer at sitting grain.</p>
@@ -912,6 +924,62 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       the same soft-delete the reading log has. Week opens the identical sheet grouped by day.
       Nothing here is a new record type — it's one query over <code>reading_sessions</code> the
       app already syncs.</p>
+    </div>
+
+    <!-- B6 · month, the dated calendar -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip">2026 ▾</span><span class="chip">Today</span><span class="chip">Week</span>
+            <span class="chip on">Month</span><span class="chip">3 months</span>
+          </div>
+          <div class="alm" style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span class="sect">August 2026</span>
+              <span class="sect" style="color:var(--gold)">to the 26th</span>
+            </div>
+            <div class="h-serif" style="font-size:16px;margin-top:7px">A month for Malayalam classics.</div>
+            <div style="margin-top:8px">
+              <div class="lrow"><span class="k">Books finished</span><span class="lead"></span><span class="v">4</span></div>
+              <div class="lrow"><span class="k">Pages turned</span><span class="lead"></span><span class="v">1,340</span></div>
+              <div class="lrow"><span class="k">Days read</span><span class="lead"></span><span class="v">22<small> of 26</small></span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:11px">
+              <span class="sect">The calendar</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="wkhdr" style="margin-top:7px"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:3px">
+              <div class="hcd void"></div><div class="hcd void"></div><div class="hcd void"></div><div class="hcd void"></div><div class="hcd void"></div><div class="hcd void"></div><div class="hcd on">1</div>
+              <div class="hcd on">2</div><div class="hcd on">3</div><div class="hcd">4</div><div class="hcd on">5</div><div class="hcd deep">6</div><div class="hcd on">7</div><div class="hcd on">8</div>
+              <div class="hcd on">9</div><div class="hcd">10</div><div class="hcd on">11</div><div class="hcd on">12</div><div class="hcd deep">13</div><div class="hcd on">14</div><div class="hcd on">15</div>
+              <div class="hcd deep">16</div><div class="hcd on">17</div><div class="hcd on">18</div><div class="hcd">19</div><div class="hcd on">20</div><div class="hcd on">21</div><div class="hcd on">22</div>
+              <div class="hcd on">23</div><div class="hcd">24</div><div class="hcd on">25</div><div class="hcd on today">26</div><div class="hcd fut">27</div><div class="hcd fut">28</div><div class="hcd fut">29</div>
+              <div class="hcd fut">30</div><div class="hcd fut">31</div><div class="hcd void"></div><div class="hcd void"></div><div class="hcd void"></div><div class="hcd void"></div><div class="hcd void"></div>
+            </div>
+          </div>
+          <div class="seal"><b>⇲</b><span>send</span></div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B6 · Month — the calendar prints its dates</b> Owner question, answered
+      (26 Aug): <b>dates on the page, silhouette on the card.</b> An almanac that doesn't print
+      its dates isn't an almanac — and a dated gap is <i>locatable</i> ("the 8th–10th, that
+      trip") where a bare cell only says you missed. Ink numerals on gold, paper numerals on the
+      deep-oxblood heavy days, grey on dashed future cells, today ringed and bold. The doors rule
+      reaches the grid: <b>a read day is a door to that day's sittings (B5)</b>, so the calendar
+      is the month's index, not decoration; empty days are inert — there's nothing behind them.
+      The share card's heat stays date-less: a recipient reads the shape, and at Slip scale a
+      numeral is smear. Real weekday alignment (Aug 2026 starts on a Saturday), same
+      <code>calendarCells</code> data.</p>
     </div>
 
   </div>
@@ -1320,6 +1388,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       <span class="spec"><b>Pill:</b> "22 of 26 days read" — read-day count over elapsed (not total) days, from <code>calendarCells</code>.</span>
       <span class="spec"><b>Viz:</b> <code>calendarCells</code>, Sunday-first: gold = read day, deep oxblood = top-quartile day by seconds (needs per-day seconds — the one small new derivation in the whole catalogue), dashed = future, ring = today, filler cells void; trailing all-empty weeks cropped.</span>
       <span class="spec"><b>Subline:</b> "<code>pagesRead</code> pages".</span>
+      <span class="spec"><b>Dates:</b> card cells stay bare — the recipient reads shape, and at Slip scale a numeral is smear. The page's own calendar prints its dates and doors (B6).</span>
       <span class="spec"><b>Closing pool:</b> the language/genre headline when the mix is decisive (the 10c rule), else "Twenty-two days with a book in hand." / "A quiet, steady month."</span>
       <span class="spec"><b>Empty:</b> no sittings and no finishes → no card.</span>
     </p>

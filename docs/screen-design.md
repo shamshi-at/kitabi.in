@@ -478,7 +478,12 @@ parts, never a scaled story), plus the long-press **row slip** (number-row and
 name-row variants), each group with a data-spec caption naming hero, pill,
 viz, subline, label, closing-line pool and empty rule in `PeriodSummary` /
 `InsightsStats` terms. One deliberate new derivation flagged: per-day seconds
-for the heatmap's deep-oxblood top-quartile days. This file supersedes
+for the heatmap's deep-oxblood top-quartile days. Calendar-dates decision
+(owner question, 26 Aug): **dates on the page, silhouette on the card** — the
+Month almanac (B6) prints real weekday-aligned dates (ink on gold, paper on
+heavy oxblood days, grey dashed future, today ringed) and a read day is a door
+to that day's sittings; share-card heat cells stay bare, since a recipient
+reads the shape and a numeral at Slip scale is smear. This file supersedes
 `kitabi_screens.html` Area 5.
 
 Preview locally: `python3 -m http.server 4173 --directory docs` →
