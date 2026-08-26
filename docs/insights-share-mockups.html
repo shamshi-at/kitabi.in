@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — Insights &amp; share cards, redesigned</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Kitabi design tokens — see docs/screen-design.md */
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --oxblood-deep:#5E1F26;
+  --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+  --dark-panel:#3A2C1E;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink);padding-bottom:90px}
+
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:52px 32px 44px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:38px;font-weight:400;margin:0 0 8px;letter-spacing:.5px}
+.hero .tag{font-size:14.5px;color:#CBB897;max-width:780px;margin:0 auto;line-height:1.65}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+.hero .tag i{font-family:'Fraunces',serif}
+.toc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:960px;margin:22px auto 0}
+.toc a{font-size:12px;font-weight:600;color:#E9DCC2;text-decoration:none;
+  border:1px solid rgba(240,226,194,.28);padding:6px 13px;border-radius:999px}
+.toc a:hover{background:var(--gold);color:#241811;border-color:var(--gold)}
+
+.area{max-width:1520px;margin:52px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.an.gold{color:#7a5a16;background:#F3E7C8}
+.area h2{font-family:'Fraunces',serif;font-size:28px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:8px 0 26px;max-width:920px;font-size:14.5px;line-height:1.65}
+.area .desc b{color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:34px}
+.shot{display:flex;flex-direction:column;gap:12px}
+.cap{width:272px;font-size:12.5px;color:#6d5f4b;line-height:1.55}
+.cap.wide{width:340px}
+.cap b{color:var(--ink);font-weight:600}
+.cap > b:first-child{display:block;font-size:13.5px;margin-bottom:3px}
+.cap .pro{color:var(--moss);display:block;margin-top:6px}
+.cap .con{color:var(--oxblood);display:block;margin-top:3px}
+.cap code{font-size:11px;background:#E6DCC6;padding:1px 4px;border-radius:4px}
+
+/* ---------- phone frame ---------- */
+.phone{width:272px;height:588px;border-radius:34px;border:8px solid #241B12;
+  background:var(--paper);overflow:hidden;position:relative;
+  box-shadow:0 24px 50px rgba(43,33,24,.30),0 4px 12px rgba(43,33,24,.18)}
+.scr{height:100%;display:flex;flex-direction:column;background:var(--paper)}
+.sbar{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px 5px;font-size:9.5px;font-weight:600;color:var(--ink)}
+.body{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0 13px;position:relative}
+.body.flush{padding:0}
+.nav{display:flex;align-items:flex-end;justify-content:space-around;
+  padding:7px 8px 12px;background:var(--card);border-top:1px solid var(--line)}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-size:8px;font-weight:600;color:var(--ink-soft);width:44px}
+.nav div.on{color:var(--oxblood)}
+.nav .ic{font-size:15px;line-height:1}
+.nav .fab{width:40px;height:40px;border-radius:14px;background:var(--oxblood);color:#F6F0E3;
+  display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:400;
+  margin-bottom:2px;box-shadow:0 6px 14px rgba(126,42,51,.4)}
+
+/* ---------- shared bits ---------- */
+.h-serif{font-family:'Fraunces',serif;font-weight:500}
+.pgtitle{font-family:'Fraunces',serif;font-size:19px;font-weight:500;margin:10px 0 2px}
+.sub{font-size:9.5px;color:var(--ink-soft)}
+.rule{height:1px;background:var(--line);margin:10px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.quote{font-family:'Fraunces',serif;font-style:italic;color:var(--ink-soft);line-height:1.5}
+.orn{text-align:center;color:var(--gold);font-size:11px;letter-spacing:6px;margin:6px 0}
+.eyebrow{font-size:7.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--oxblood)}
+.periodrow{display:flex;gap:5px;overflow:hidden}
+.chip{font-size:8.5px;font-weight:600;padding:4.5px 9px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink-soft);white-space:nowrap}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* ---------- the poster (direction A) ---------- */
+.poster{position:relative;background:var(--card);border:1.5px solid var(--gold);border-radius:14px;
+  padding:14px 13px 12px;overflow:hidden;
+  box-shadow:0 10px 26px rgba(43,33,24,.16)}
+.poster::before{content:"";position:absolute;inset:5px;border:1px solid rgba(184,134,43,.45);
+  border-radius:9px;pointer-events:none}
+.poster::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(150px 130px at 50% 30%,rgba(184,134,43,.13),transparent 70%)}
+.poster>*{position:relative;z-index:1}
+.poster .flr{position:absolute;top:9px;font-size:8px;color:rgba(184,134,43,.7);z-index:1}
+.poster .num{font-family:'Fraunces',serif;font-weight:600;color:var(--oxblood);line-height:.95}
+.poster .headline{font-family:'Fraunces',serif;font-size:14.5px;font-weight:550;line-height:1.25}
+.closing{font-family:'Fraunces',serif;font-style:italic;font-size:9.5px;color:var(--ink-soft);line-height:1.45}
+
+/* gold-foil send button — same object as the scan result's Bookplate primary */
+.b-foil{height:38px;border-radius:10px;background:linear-gradient(175deg,#7E2A33,#571E25);
+  box-shadow:0 5px 14px rgba(94,31,38,.30),inset 0 0 0 1px rgba(184,134,43,.55);
+  display:flex;align-items:center;justify-content:center;gap:7px}
+.b-foil span{font-family:'Fraunces',serif;font-size:12px;font-weight:550;color:#EFD9A4;
+  text-shadow:0 1px 0 rgba(0,0,0,.35);white-space:nowrap}
+.b-foil i{color:#C9A253;font-style:normal;font-size:11px}
+
+/* the also-worth-sending rack */
+.racklbl{font-size:7.5px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-soft)}
+.rack{display:flex;gap:7px;overflow:hidden}
+.mini{flex:0 0 96px;background:var(--card);border:1px solid var(--gold);border-radius:9px;
+  padding:8px 8px 7px;position:relative;overflow:hidden}
+.mini .mey{font-size:5.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft)}
+.mini .mv{font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--oxblood);margin-top:2px;line-height:1.05}
+.mini .ms{font-size:6.5px;color:var(--ink-soft);margin-top:2px;line-height:1.3}
+
+/* streak lamps */
+.lamps{display:flex;gap:5px;align-items:center}
+.lamp{width:11px;height:11px;border-radius:50%;background:var(--paper-deep);border:1px solid var(--line)}
+.lamp.on{background:radial-gradient(circle at 38% 32%,#F0DCA0,#B8862B 72%);border-color:#A87B24;
+  box-shadow:0 0 6px rgba(184,134,43,.55)}
+.lamp.today{box-shadow:0 0 8px rgba(184,134,43,.8),0 0 0 2px rgba(126,42,51,.35)}
+
+/* week bars */
+.wbars{display:flex;align-items:flex-end;gap:4px}
+.wbars i{flex:1;font-style:normal;background:var(--gold-soft);border-radius:3px 3px 0 0;display:block}
+.wbars i.hi{background:var(--gold)}
+.wbars i.top{background:var(--oxblood)}
+.wlbl{display:flex;gap:4px;font-size:7px;color:var(--ink-soft)}
+.wlbl span{flex:1;text-align:center}
+
+/* month heat */
+.heat{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.hc{aspect-ratio:1;border-radius:3px;background:var(--paper-deep)}
+.hc.on{background:var(--gold)}
+.hc.deep{background:var(--oxblood)}
+.hc.today{outline:1.5px solid var(--oxblood);outline-offset:1px}
+.hc.fut{background:transparent;border:1px dashed var(--line)}
+.hc.void{visibility:hidden}
+
+/* the year shelf — spines, widths ∝ pages */
+.shelf{display:flex;align-items:flex-end;justify-content:center;gap:2px}
+.shelf i{font-style:normal;border-radius:2px 2px 0 0;display:block;position:relative}
+.shelf i::after{content:"";position:absolute;left:1.5px;top:0;bottom:0;width:1px;background:rgba(255,252,244,.28)}
+.ledge{height:4px;border-radius:2px;background:linear-gradient(180deg,#C9973B,#8F681E);
+  box-shadow:0 2px 4px rgba(43,33,24,.3)}
+.sp1{background:#7E2A33}.sp2{background:#43617E}.sp3{background:#48663F}.sp4{background:#B8862B}
+.sp5{background:#5E1F26}.sp6{background:#2B2118}.sp7{background:#9A8F7C}.sp8{background:#8F681E}
+
+/* ---------- the almanac page (direction B) ---------- */
+.alm{border-top:2px solid var(--ink);padding-top:8px}
+.alm .sect{font-size:7.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft)}
+.lrow{display:flex;align-items:baseline;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}
+.lrow .k{font-size:9.5px;color:var(--ink)}
+.lrow .lead{flex:1;border-bottom:1px dotted #CDBFA0;transform:translateY(-3px)}
+.lrow .v{font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:var(--oxblood)}
+.lrow .v small{font-family:'Inter';font-size:8px;color:var(--ink-soft);font-weight:500}
+.seal{position:absolute;right:13px;bottom:14px;width:46px;height:46px;border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,#D2A94F,#B8862B 60%,#8F681E);
+  box-shadow:0 6px 14px rgba(143,104,30,.45),inset 0 0 0 2px rgba(94,31,38,.25);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3d2c07;z-index:3}
+.seal b{font-size:12px;line-height:1}
+.seal span{font-size:5.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+
+/* ---------- the answer (direction C) ---------- */
+.askhdr{font-family:'Fraunces',serif;font-style:italic;font-size:17px;line-height:1.3;color:var(--ink)}
+.askmark{font-family:'Fraunces',serif;font-size:30px;color:var(--gold);line-height:.6}
+
+/* ---------- share cards, off-device ---------- */
+.story{width:190px;height:338px;border-radius:16px;background:var(--paper);border:1.5px solid var(--gold);
+  box-shadow:0 22px 46px rgba(43,33,24,.38),0 4px 10px rgba(43,33,24,.22);
+  padding:20px 16px 16px;display:flex;flex-direction:column;align-items:center;text-align:center;
+  position:relative;overflow:hidden}
+.story::before{content:"";position:absolute;inset:7px;border:1px solid rgba(184,134,43,.5);
+  border-radius:10px;pointer-events:none}
+.story::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(150px 150px at 50% 34%,rgba(184,134,43,.15),transparent 70%)}
+.story>*{position:relative;z-index:1}
+.story .flL{position:absolute;top:13px;left:15px;font-size:8px;color:rgba(184,134,43,.7);z-index:1}
+.story .flR{position:absolute;top:13px;right:15px;font-size:8px;color:rgba(184,134,43,.7);z-index:1}
+.story .pill{font-size:7px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--oxblood);background:var(--gold-soft);padding:3px 9px;border-radius:999px}
+.story .num{font-family:'Fraunces',serif;font-weight:600;color:var(--oxblood);line-height:.95}
+.story .lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ink-soft)}
+.story .subl{font-size:8.5px;color:var(--ink-soft)}
+.wordmark{display:flex;flex-direction:column;align-items:center;gap:2px}
+.wordmark .kk{display:flex;align-items:center;gap:4px}
+.wordmark .kk b{font-size:8.5px;font-weight:700;color:var(--oxblood)}
+.wordmark .tg{font-size:6.5px;color:var(--ink-soft)}
+.sq{width:220px;height:220px;border-radius:16px;background:var(--paper);border:1.5px solid var(--gold);
+  box-shadow:0 18px 38px rgba(43,33,24,.32),0 4px 10px rgba(43,33,24,.2);
+  padding:14px;display:flex;flex-direction:column;align-items:center;text-align:center;
+  position:relative;overflow:hidden}
+.sq::before{content:"";position:absolute;inset:6px;border:1px solid rgba(184,134,43,.5);
+  border-radius:11px;pointer-events:none}
+.sq>*{position:relative;z-index:1}
+
+/* the slip — chat-sized landscape card */
+.slip{width:236px;border-radius:12px;background:var(--paper);border:1.5px solid var(--gold);
+  padding:11px 12px 9px;position:relative;overflow:hidden;
+  box-shadow:0 12px 26px rgba(43,33,24,.28)}
+.slip::before{content:"";position:absolute;inset:4px;border:1px solid rgba(184,134,43,.45);
+  border-radius:8px;pointer-events:none}
+.slip>*{position:relative;z-index:1}
+.slip .sey{font-size:6px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft)}
+.slip .snum{font-family:'Fraunces',serif;font-weight:600;color:var(--oxblood);line-height:.95}
+
+/* chat mock */
+.chathdr{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);
+  border-bottom:1px solid var(--line)}
+.avatar{width:26px;height:26px;border-radius:50%;background:var(--slate);color:#F6F0E3;
+  display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+.bub{max-width:200px;border-radius:11px;padding:7px 9px;font-size:9.5px;line-height:1.45;position:relative}
+.bub.them{background:var(--card);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:3px}
+.bub.me{background:#E3EAD9;align-self:flex-end;border-bottom-right-radius:3px}
+.bub .tme{font-size:6.5px;color:var(--ink-soft);text-align:right;margin-top:3px}
+.chatbody{flex:1;display:flex;flex-direction:column;gap:8px;padding:12px 10px;overflow:hidden;
+  background:linear-gradient(180deg,#F1E9D6,#EDE3CC)}
+.composer{display:flex;gap:7px;padding:8px 10px 12px;background:var(--card);border-top:1px solid var(--line)}
+.composer .field{flex:1;border:1px solid var(--line);border-radius:999px;background:var(--paper);
+  font-size:9px;color:var(--ink-soft);padding:7px 11px}
+
+/* share sheet bits */
+.grab{width:32px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 10px}
+.fchip{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  border:1px solid var(--line);border-radius:10px;padding:7px 4px 6px;background:var(--card)}
+.fchip.on{border-color:var(--ink);background:var(--paper-deep)}
+.fchip .shape{border:1.5px solid var(--ink-soft);border-radius:2px}
+.fchip.on .shape{border-color:var(--ink)}
+.fchip span{font-size:7.5px;font-weight:600;color:var(--ink-soft)}
+.fchip.on span{color:var(--ink)}
+.togglerow{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.tgl{width:26px;height:15px;border-radius:99px;background:var(--moss);position:relative;flex-shrink:0}
+.tgl::after{content:"";position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;background:#fff}
+.tgl.off{background:#CDBFA0}
+.tgl.off::after{right:auto;left:2px}
+
+/* mini kitabi logo (inline svg reused) */
+.klogo{width:11px;height:11px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>The answer, ready to send</h1>
+  <p class="tag"><i>"How's your reading going?"</i> is a question that arrives in person and on
+  WhatsApp — never inside the app. Today the answer sits behind four taps and a 16-pixel glyph,
+  and the image that finally goes out <b>drops the chart</b> — the streak, the bars, the heatmap
+  stay home while a bare numeral travels. This redesign makes Insights <b>a stack of finished,
+  share-shaped cards</b>: what you see is the pixel-for-pixel image you send, every period's own
+  visualization rides on it, and sending is one labelled tap. Three directions for the page,
+  one redesigned card family, and a new chat-sized format for the place the question is
+  actually asked.</p>
+  <div class="toc">
+    <a href="#brief">The brief</a>
+    <a href="#a">A · The postcard</a>
+    <a href="#b">B · The almanac</a>
+    <a href="#c">C · The answer</a>
+    <a href="#cards">The card family</a>
+    <a href="#slip">The slip</a>
+    <a href="#sheet">The share sheet</a>
+    <a href="#states">Honest states</a>
+    <a href="#next">Choosing</a>
+  </div>
+</div>
+
+<!-- ================= THE BRIEF ================= -->
+<section class="area" id="brief">
+  <div class="ah"><span class="an">The brief</span><h2>What today's design gets wrong — and right</h2></div>
+  <p class="desc">
+  The 27 Jul flagship-card redesign (10a–10j) got the <b>data</b> right: one card per window,
+  a sentence before a number, quiet literary register. What it under-built is the <b>door out</b>.
+  Four faults, each visible in the shipped app:
+  <b>1 · The share affordance is furniture.</b> A 16px ⇲ glyph in the card corner — tertiary
+  chrome for what the owner now names as the page's whole job.
+  <b>2 · The chart never travels.</b> <code>PeriodShareCard</code> is typography-only: the streak
+  dots, the week's bars, the month's heatmap — the part of the answer that makes someone say
+  "oh nice" — are all stripped at the moment of sharing.
+  <b>3 · Preview ≠ page.</b> The sheet re-lays-out the data into a different card, so the thing
+  the reader admired on screen is not the thing that goes out.
+  <b>4 · The year shares as a numeral.</b> The most shareable window a reader has is a shelf of
+  actual books, and it leaves the app as "24".
+  Five rules govern everything below: <b>the page is the answer</b> (every card is drawn
+  share-shaped; the wordmark appears only on capture); <b>the chart travels</b>;
+  <b>send is a labelled button</b>, never a glyph; <b>chat first, story second</b> — the question
+  arrives in a message thread, so a compact slip joins Story/Square; and <b>nothing private
+  leaks</b> — numbers, covers, titles only, never notes or private reviews, and the sheet says so.
+  </p>
+</section>
+
+<!-- ================= DIRECTION A ================= -->
+<section class="area" id="a">
+  <div class="ah"><span class="an">Direction A</span><h2>The postcard — the card is the artifact</h2></div>
+  <p class="desc">The period chips stay (they earned their keep), but the flagship card becomes a
+  <b>poster</b>: the double gold frame, corner fleurons and vignette of the share-card family,
+  drawn at full width on the page itself. Under it, one gold-foil <b>Send this card</b> — the same
+  foil object the scan result's Bookplate uses for its primary, so "the important door" already
+  has a house look. Below, a rack of smaller cards — the streak alone, the finished books as a
+  shelf, the superlative — because the best answer to "how's it going" is sometimes a detail,
+  not the summary. Everything in the rack is itself a card: same frame, same one-tap send.</p>
+  <div class="row">
+
+    <!-- A1 · Today -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip">2026 ▾</span><span class="chip on">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
+          </div>
+          <div class="poster" style="margin-top:10px">
+            <span class="flr" style="left:11px">❦</span><span class="flr" style="right:11px">❦</span>
+            <div style="text-align:center">
+              <div class="eyebrow" style="color:var(--ink-soft)">WED · 26 AUG</div>
+              <div class="headline" style="margin-top:6px">An hour well spent.</div>
+              <div class="num" style="font-size:44px;margin-top:8px">42<span style="font-size:20px">m</span></div>
+              <div style="font-size:7px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink-soft);margin-top:3px">read today</div>
+              <div class="sub" style="font-size:8.5px;margin-top:7px">+42 pages · p. 260 → 302 · <i>Naalukettu</i></div>
+              <div class="lamps" style="justify-content:center;margin-top:12px">
+                <span class="lamp on"></span><span class="lamp"></span><span class="lamp"></span>
+                <span class="lamp on"></span><span class="lamp on"></span><span class="lamp on"></span>
+                <span class="lamp on today"></span>
+              </div>
+              <div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-top:5px">5 days running</div>
+              <div class="closing" style="margin-top:10px">Five evenings, one lamp.</div>
+            </div>
+          </div>
+          <div class="b-foil" style="margin-top:9px"><span>Send this card</span><i>⇲</i></div>
+          <div class="racklbl" style="margin:11px 0 6px">Also worth sending</div>
+          <div class="rack">
+            <div class="mini">
+              <div class="mey">Streak</div>
+              <div class="mv">5 days</div>
+              <div class="lamps" style="margin-top:5px;gap:3px">
+                <span class="lamp on" style="width:8px;height:8px"></span><span class="lamp on" style="width:8px;height:8px"></span>
+                <span class="lamp on" style="width:8px;height:8px"></span><span class="lamp on" style="width:8px;height:8px"></span>
+                <span class="lamp on today" style="width:8px;height:8px"></span>
+              </div>
+              <div class="ms" style="margin-top:4px">longest this year</div>
+            </div>
+            <div class="mini">
+              <div class="mey">This week</div>
+              <div class="mv">3h 40m</div>
+              <div class="wbars" style="height:22px;margin-top:5px">
+                <i style="height:22%"></i><i style="height:38%"></i><i style="height:8%"></i>
+                <i class="hi" style="height:55%"></i><i style="height:30%"></i><i style="height:8%"></i>
+                <i class="top" style="height:100%"></i>
+              </div>
+            </div>
+            <div class="mini">
+              <div class="mey">Just finished</div>
+              <div class="mv" style="font-size:11px;line-height:1.2">Aadu&shy;jeevitham</div>
+              <div class="ms">★★★★★ · finished Sun</div>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>A1 · Today</b> The card on screen <i>is</i> the shared image — same frame,
+      same fleurons, same vignette; capture adds only the wordmark. The streak dots ride on it now
+      instead of being stripped. The foil <b>Send this card</b> sits outside the frame (it's a
+      control, not content) and opens the sheet of Area 7. The rack underneath answers the reader
+      whose best line today isn't the summary: the streak alone, the week, the just-finished book —
+      each a complete card, horizontally scrollable, one tap to send.
+      <span class="pro">Pro: zero relearning — same page structure, the card just got promoted.</span>
+      <span class="con">Con: poster + button + rack is tall; the rack lives below the fold on small phones.</span></p>
+    </div>
+
+    <!-- A2 · Month -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip">2026 ▾</span><span class="chip">Today</span><span class="chip">Week</span>
+            <span class="chip on">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
+          </div>
+          <div class="poster" style="margin-top:10px">
+            <span class="flr" style="left:11px">❦</span><span class="flr" style="right:11px">❦</span>
+            <div style="text-align:center">
+              <div class="eyebrow" style="color:var(--ink-soft)">AUGUST 2026</div>
+              <div class="headline" style="margin-top:6px">A month for Malayalam classics.</div>
+              <div style="display:flex;align-items:flex-end;justify-content:center;gap:14px;margin-top:8px">
+                <div>
+                  <div class="num" style="font-size:38px">4</div>
+                  <div style="font-size:6.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-soft);margin-top:2px">books finished</div>
+                </div>
+                <div style="text-align:left;padding-bottom:4px">
+                  <div style="font-size:10px;font-weight:700;color:var(--ink)">1,340 pages</div>
+                  <div class="sub" style="font-size:8px">22 of 26 days read</div>
+                </div>
+              </div>
+              <div class="heat" style="margin-top:11px;max-width:172px;margin-left:auto;margin-right:auto">
+                <div class="hc void"></div><div class="hc void"></div><div class="hc on"></div><div class="hc on"></div><div class="hc deep"></div><div class="hc on"></div><div class="hc"></div>
+                <div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc deep"></div><div class="hc"></div><div class="hc on"></div><div class="hc on"></div>
+                <div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc"></div><div class="hc on"></div><div class="hc deep"></div>
+                <div class="hc on"></div><div class="hc on"></div><div class="hc"></div><div class="hc on"></div><div class="hc on today"></div><div class="hc fut"></div><div class="hc fut"></div>
+                <div class="hc fut"></div><div class="hc fut"></div><div class="hc fut"></div><div class="hc void"></div><div class="hc void"></div><div class="hc void"></div><div class="hc void"></div>
+              </div>
+              <div class="closing" style="margin-top:10px">Twenty-two days with a book in hand.</div>
+            </div>
+          </div>
+          <div class="b-foil" style="margin-top:9px"><span>Send this card</span><i>⇲</i></div>
+          <div class="racklbl" style="margin:11px 0 6px">Also worth sending</div>
+          <div class="rack">
+            <div class="mini">
+              <div class="mey">The four</div>
+              <div class="shelf" style="height:34px;margin-top:6px;justify-content:flex-start">
+                <i class="sp1" style="width:11px;height:32px"></i><i class="sp3" style="width:8px;height:26px"></i>
+                <i class="sp2" style="width:13px;height:34px"></i><i class="sp4" style="width:9px;height:28px"></i>
+              </div>
+              <div class="ledge" style="margin-top:1px"></div>
+              <div class="ms" style="margin-top:4px">finished in August</div>
+            </div>
+            <div class="mini">
+              <div class="mey">Best day</div>
+              <div class="mv">1h 52m</div>
+              <div class="ms" style="margin-top:3px">Sun 16 Aug ·<br>two sittings</div>
+            </div>
+            <div class="mini">
+              <div class="mey">Pages</div>
+              <div class="mv">1,340</div>
+              <div class="ms" style="margin-top:3px">your 2nd-best month</div>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>A2 · Month</b> The heatmap finally travels — gold for a read day, oxblood
+      for the heavy ones (a second tone the current binary grid doesn't have; it comes free from
+      <code>dailyBuckets</code>-style seconds already computed), dashed for the future, ringed for
+      today. The rack goes month-specific: the four finished books as anonymous spines, the best
+      single day, the pages figure with its own bragging right.
+      <span class="pro">Pro: every element on the poster already exists in <code>PeriodSummary</code> — this is layout, not new stats.</span></p>
+    </div>
+
+    <!-- A3 · Year -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip on">2026 ▾</span><span class="chip">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
+          </div>
+          <div class="poster" style="margin-top:10px">
+            <span class="flr" style="left:11px">❦</span><span class="flr" style="right:11px">❦</span>
+            <div style="text-align:center">
+              <div class="eyebrow" style="color:var(--ink-soft)">2026 · A YEAR IN SPINES</div>
+              <div class="headline" style="margin-top:6px">Ahead of your own pace.</div>
+              <div class="num" style="font-size:44px;margin-top:7px">24</div>
+              <div style="font-size:7px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink-soft);margin-top:2px">of 30 books</div>
+              <div class="shelf" style="height:64px;margin-top:12px;padding:0 6px">
+                <i class="sp1" style="width:9px;height:52px"></i><i class="sp2" style="width:7px;height:44px"></i>
+                <i class="sp4" style="width:11px;height:58px"></i><i class="sp3" style="width:6px;height:40px"></i>
+                <i class="sp5" style="width:8px;height:48px"></i><i class="sp6" style="width:10px;height:55px"></i>
+                <i class="sp2" style="width:6px;height:42px"></i><i class="sp7" style="width:8px;height:46px"></i>
+                <i class="sp1" style="width:14px;height:64px"></i><i class="sp8" style="width:7px;height:44px"></i>
+                <i class="sp3" style="width:9px;height:50px"></i><i class="sp2" style="width:8px;height:47px"></i>
+                <i class="sp5" style="width:6px;height:41px"></i><i class="sp4" style="width:9px;height:52px"></i>
+                <i class="sp6" style="width:7px;height:45px"></i><i class="sp1" style="width:8px;height:49px"></i>
+                <i class="sp7" style="width:6px;height:40px"></i><i class="sp3" style="width:10px;height:54px"></i>
+                <i class="sp8" style="width:8px;height:46px"></i><i class="sp2" style="width:7px;height:43px"></i>
+                <i class="sp5" style="width:9px;height:51px"></i><i class="sp4" style="width:6px;height:42px"></i>
+                <i class="sp1" style="width:8px;height:47px"></i><i class="sp6" style="width:7px;height:44px"></i>
+              </div>
+              <div class="ledge" style="margin:0 6px"></div>
+              <div class="sub" style="font-size:8.5px;margin-top:8px">8,412 pages · 214 hours · 3 ahead of pace</div>
+              <div class="closing" style="margin-top:8px">A year, mostly spent elsewhere.</div>
+            </div>
+          </div>
+          <div class="b-foil" style="margin-top:9px"><span>Send your shelf</span><i>⇲</i></div>
+          <div class="racklbl" style="margin:11px 0 6px">Also worth sending</div>
+          <div class="rack">
+            <div class="mini">
+              <div class="mey">Most read</div>
+              <div class="mv" style="font-size:11px;line-height:1.2">M.T. Vasudevan Nair</div>
+              <div class="ms">6 books this year</div>
+            </div>
+            <div class="mini">
+              <div class="mey">Longest</div>
+              <div class="mv">724 pp</div>
+              <div class="ms" style="margin-top:3px"><i>Aarachar</i></div>
+            </div>
+            <div class="mini">
+              <div class="mey">Goal</div>
+              <div class="mv">80%</div>
+              <div class="ms" style="margin-top:3px">24 of 30 · 3 ahead</div>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>A3 · Year — the shelf</b> The redesign's centrepiece. Twenty-four books
+      drawn as twenty-four spines, <b>width proportional to pages</b>, standing on the gold ledge
+      the Shelves wall already uses — a real bookshelf's worth of year, not a numeral. Spines are
+      anonymous colour by default (tints hashed from each title, the generated-cover trick);
+      the sheet's toggle can name them. The goal ring isn't gone — it moves to the rack, because
+      "80% of a target" is a private pace fact and "24 spines" is the public brag. The detail
+      charts (bars, donut, superlatives) keep living below the fold, unchanged.
+      <span class="pro">Pro: an ownable, screenshot-proof visual — nobody else's year looks like yours.</span></p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= DIRECTION B ================= -->
+<section class="area" id="b">
+  <div class="ah"><span class="an">Direction B</span><h2>The almanac — the page itself is the print</h2></div>
+  <p class="desc">No boxes at all. The screen becomes a printed almanac page: a heavy top rule,
+  small-caps section heads, ledger rows with dotted leaders, Fraunces numerals set right — the
+  whole page reads as one typeset sheet, and <b>the whole page is what you share</b> (captured as
+  a single tall image, the format stories are made for). The one control is a gold wax seal —
+  the house's fifth gold mark, borrowed with care — pressed bottom-right: <b>⇲ SEND</b>.
+  Long-press any single row to lift just that line out as a slip.</p>
+  <div class="row">
+
+    <!-- B1 · Today as a ledger -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip">2026 ▾</span><span class="chip on">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
+          </div>
+          <div class="alm" style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span class="sect">Wednesday · 26 August</span>
+              <span class="sect" style="color:var(--gold)">№ 238</span>
+            </div>
+            <div class="h-serif" style="font-size:16px;margin-top:7px">An hour well spent.</div>
+            <div style="margin-top:8px">
+              <div class="lrow"><span class="k">Time read</span><span class="lead"></span><span class="v">42<small> min</small></span></div>
+              <div class="lrow"><span class="k">Pages turned</span><span class="lead"></span><span class="v">42<small> pp</small></span></div>
+              <div class="lrow"><span class="k">In hand</span><span class="lead"></span><span class="v" style="font-size:10.5px;font-style:italic">Naalukettu</span></div>
+              <div class="lrow"><span class="k">Left off at</span><span class="lead"></span><span class="v">p. 302<small> of 384</small></span></div>
+              <div class="lrow"><span class="k">Streak</span><span class="lead"></span><span class="v">5<small> days</small></span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+              <span class="sect">The week so far</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="lamps" style="margin-top:8px">
+              <span class="lamp on"></span><span class="lamp"></span><span class="lamp"></span>
+              <span class="lamp on"></span><span class="lamp on"></span><span class="lamp on"></span>
+              <span class="lamp on today"></span>
+            </div>
+            <div class="orn" style="margin-top:14px">❦</div>
+            <div class="quote" style="font-size:10px;text-align:center">Five evenings, one lamp.</div>
+            <div class="sub" style="font-size:7.5px;text-align:center;margin-top:14px">the week's ledger follows below</div>
+          </div>
+          <div class="seal"><b>⇲</b><span>send</span></div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B1 · Today as a ledger</b> The day's facts set as almanac entries — label,
+      dotted leader, oxblood numeral — under an issue number (day of year: the almanac conceit
+      taken seriously). No card borders anywhere; hairlines and type do all the work, which is the
+      most "Reading Room" this page can get. The seal captures the whole page above the nav as one
+      tall image; long-pressing the streak row lifts a streak slip.
+      <span class="pro">Pro: the most distinctive of the three — no other app's stats page looks like this.</span>
+      <span class="con">Con: shares as a full page or a row — there's no middle "just the card" object,
+      and the seal is still an unlabelled-ish control (the word helps, the position hides).</span></p>
+    </div>
+
+    <!-- B2 · Year as a ledger -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip on">2026 ▾</span><span class="chip">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
+          </div>
+          <div class="alm" style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span class="sect">The year 2026</span>
+              <span class="sect" style="color:var(--gold)">to 26 Aug</span>
+            </div>
+            <div class="h-serif" style="font-size:16px;margin-top:7px">Ahead of your own pace.</div>
+            <div style="margin-top:8px">
+              <div class="lrow"><span class="k">Books finished</span><span class="lead"></span><span class="v">24<small> of 30</small></span></div>
+              <div class="lrow"><span class="k">Pages</span><span class="lead"></span><span class="v">8,412</span></div>
+              <div class="lrow"><span class="k">Hours with a book</span><span class="lead"></span><span class="v">214</span></div>
+              <div class="lrow"><span class="k">Most read</span><span class="lead"></span><span class="v" style="font-size:10.5px">M.T. Vasudevan Nair</span></div>
+              <div class="lrow"><span class="k">Longest</span><span class="lead"></span><span class="v" style="font-size:10.5px;font-style:italic">Aarachar<small> · 724 pp</small></span></div>
+              <div class="lrow"><span class="k">Against pace</span><span class="lead"></span><span class="v" style="color:var(--moss)">3 ahead</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+              <span class="sect">The shelf so far</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="shelf" style="height:44px;margin-top:9px;justify-content:flex-start;gap:2px">
+              <i class="sp1" style="width:7px;height:38px"></i><i class="sp2" style="width:6px;height:32px"></i>
+              <i class="sp4" style="width:9px;height:42px"></i><i class="sp3" style="width:5px;height:29px"></i>
+              <i class="sp5" style="width:7px;height:35px"></i><i class="sp6" style="width:8px;height:40px"></i>
+              <i class="sp2" style="width:5px;height:30px"></i><i class="sp7" style="width:7px;height:33px"></i>
+              <i class="sp1" style="width:11px;height:44px"></i><i class="sp8" style="width:6px;height:32px"></i>
+              <i class="sp3" style="width:7px;height:36px"></i><i class="sp2" style="width:6px;height:34px"></i>
+              <i class="sp5" style="width:5px;height:30px"></i><i class="sp4" style="width:7px;height:38px"></i>
+              <i class="sp6" style="width:6px;height:33px"></i><i class="sp1" style="width:7px;height:35px"></i>
+              <i class="sp7" style="width:5px;height:29px"></i><i class="sp3" style="width:8px;height:39px"></i>
+            </div>
+            <div class="ledge" style="margin-top:1px"></div>
+            <div class="sub" style="font-size:7.5px;text-align:center;margin-top:14px">bars · languages · superlatives follow below</div>
+          </div>
+          <div class="seal"><b>⇲</b><span>send</span></div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>B2 · Year as a ledger</b> The same rows the year card holds today, but set
+      as print — and the shelf appears here too, as a closing plate under its own rule. The
+      superlatives stop being tiles and become entries, which is honester about what they are:
+      lines readers quote. Detail charts still follow below the fold. Shared, this page is
+      exactly the "year in review" image people post — it just never stopped being the app screen.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= DIRECTION C ================= -->
+<section class="area" id="c">
+  <div class="ah"><span class="an">Direction C</span><h2>The answer — lead with the question</h2></div>
+  <p class="desc">The most literal reading of the goal: the page opens with the question itself,
+  set in Fraunces italic like the literary quotes the app already rotates — and everything under
+  it is the reply. The primary action is <b>Reply with your reading</b>, which opens the sheet
+  already in slip format with the caption ready, because the question this page answers arrives
+  in a chat thread. The period chips become "which answer": today's, this week's, the year's.</p>
+  <div class="row">
+
+    <!-- C1 -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <span class="askmark">“</span>
+            <div>
+              <div class="askhdr">How's your reading going?</div>
+              <div class="sub" style="font-size:9px;margin-top:4px">Someone asked? This page is your reply.</div>
+            </div>
+          </div>
+          <div class="periodrow" style="margin-top:12px">
+            <span class="chip on">Today</span><span class="chip">This week</span><span class="chip">This month</span><span class="chip">2026</span>
+          </div>
+          <div style="display:flex;justify-content:center;margin-top:12px">
+            <div class="slip" style="width:100%">
+              <div style="display:flex;align-items:center;gap:11px">
+                <div style="text-align:center;flex-shrink:0">
+                  <div class="snum" style="font-size:26px">42<span style="font-size:13px">m</span></div>
+                  <div class="sey" style="margin-top:2px">today</div>
+                </div>
+                <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+                <div style="flex:1">
+                  <div style="font-size:9px;font-weight:700;color:var(--moss)">+42 pages · <span style="color:var(--ink);font-style:italic;font-family:'Fraunces',serif">Naalukettu</span></div>
+                  <div class="lamps" style="margin-top:6px;gap:3.5px">
+                    <span class="lamp on" style="width:9px;height:9px"></span><span class="lamp" style="width:9px;height:9px"></span>
+                    <span class="lamp" style="width:9px;height:9px"></span><span class="lamp on" style="width:9px;height:9px"></span>
+                    <span class="lamp on" style="width:9px;height:9px"></span><span class="lamp on" style="width:9px;height:9px"></span>
+                    <span class="lamp on today" style="width:9px;height:9px"></span>
+                  </div>
+                  <div class="sey" style="margin-top:4px;color:var(--gold)">5 days running</div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
+                <span class="quote" style="font-size:8px">Five evenings, one lamp.</span>
+                <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+              </div>
+            </div>
+          </div>
+          <div class="b-foil" style="margin-top:10px"><span>Reply with your reading</span><i>⇲</i></div>
+          <div class="rule" style="margin:12px 0 8px"></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span class="racklbl">The longer answer</span>
+          </div>
+          <div class="card" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;padding:9px 11px">
+            <div style="font-size:9.5px"><b>This week</b><div class="sub" style="font-size:8px">3h 40m · ▲ 48m vs last week</div></div>
+            <span style="color:var(--stamp-grey);font-size:13px">›</span>
+          </div>
+          <div class="card" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;padding:9px 11px">
+            <div style="font-size:9.5px"><b>2026 so far</b><div class="sub" style="font-size:8px">24 books · 8,412 pages · 3 ahead of pace</div></div>
+            <span style="color:var(--stamp-grey);font-size:13px">›</span>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>C1 · The answer</b> The question is the header — the same register as the
+      rotating literary quotes, so it reads as voice, not gimmick. What's previewed is the <b>slip</b>
+      (Area 6) at real proportions: the exact object that lands in a chat bubble. Deeper windows
+      collapse to tappable rows that open their own slip-first view.
+      <span class="pro">Pro: nothing on this screen competes with the one thing it's for; the fastest
+      ask-to-answer path of the three.</span>
+      <span class="con">Con: it demotes Insights-as-almanac — the reader browsing their own year now
+      lives one tap deeper. Likely best as the page's <i>top</i>, grafted onto A, rather than the whole page.</span></p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= THE CARD FAMILY ================= -->
+<section class="area" id="cards">
+  <div class="ah"><span class="an gold">The cards</span><h2>One family, four signatures — the chart travels</h2></div>
+  <p class="desc">The shared image, rebuilt. Frame, fleurons, vignette and wordmark stay one
+  family (they already read as Kitabi from across a room); what changes is that <b>each window
+  keeps its own visualization on the image</b> — the thing the current <code>PeriodShareCard</code>
+  strips. Today carries its lamps, the week its bars, the month its calendar leaf, the year its
+  shelf. Story (9:16) drawn here; every card also renders Square and Slip from the same pieces.
+  The closing italic line stays a rotating pool per period — never generated, never repeated
+  back-to-back.</p>
+  <div class="row">
+
+    <!-- Story: Today -->
+    <div class="shot">
+      <div class="story">
+        <span class="flL">❦</span><span class="flR">❦</span>
+        <span class="pill">5-day streak</span>
+        <div class="num" style="font-size:52px;margin-top:22px">42<span style="font-size:24px">m</span></div>
+        <div class="lbl" style="margin-top:5px">read today</div>
+        <div class="subl" style="margin-top:10px">+42 pages · p. 260 → 302</div>
+        <div class="lamps" style="margin-top:18px">
+          <span class="lamp on"></span><span class="lamp"></span><span class="lamp"></span>
+          <span class="lamp on"></span><span class="lamp on"></span><span class="lamp on"></span>
+          <span class="lamp on today"></span>
+        </div>
+        <div style="flex:1"></div>
+        <div class="quote" style="font-size:11px">Five evenings, one lamp.</div>
+        <div style="flex:1"></div>
+        <div class="rule" style="width:38px;margin:0 0 8px"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/><path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/></svg>
+            <b>kitabi.in</b>
+          </div>
+          <span class="tg">beyond the bookshelf</span>
+        </div>
+      </div>
+      <p class="cap"><b>Today — the lamplight</b> The streak dots become the card's whole middle:
+      seven days, lit or dark, today glowing. A recipient reads the streak without a caption. The
+      pill keeps the one extra fact (the current 10i mechanism, unchanged); the page range makes
+      the number concrete without naming more than one book.</p>
+    </div>
+
+    <!-- Story: Week -->
+    <div class="shot">
+      <div class="story">
+        <span class="flL">❦</span><span class="flR">❦</span>
+        <span class="pill">▲ 48m vs last week</span>
+        <div class="num" style="font-size:44px;margin-top:20px">3<span style="font-size:22px">h</span> 40<span style="font-size:22px">m</span></div>
+        <div class="lbl" style="margin-top:5px">this week</div>
+        <div class="subl" style="margin-top:9px">214 pages · 3 sittings</div>
+        <div style="width:126px;margin-top:16px">
+          <div class="wbars" style="height:44px">
+            <i style="height:22%"></i><i style="height:38%"></i><i style="height:8%"></i>
+            <i class="hi" style="height:55%"></i><i style="height:30%"></i><i style="height:8%"></i>
+            <i class="top" style="height:100%"></i>
+          </div>
+          <div class="wlbl" style="margin-top:3px"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="quote" style="font-size:11px">Busier than 9 of your last 10 weeks.</div>
+        <div style="flex:1"></div>
+        <div class="rule" style="width:38px;margin:0 0 8px"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/><path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/></svg>
+            <b>kitabi.in</b>
+          </div>
+          <span class="tg">beyond the bookshelf</span>
+        </div>
+      </div>
+      <p class="cap"><b>Week — the bars</b> The seven bars from the page card, verbatim — gold
+      days, the best day in oxblood. The percentile line graduates from the dark encourage-panel
+      to the card's closing line, because "busier than 9 of your last 10 weeks" is precisely the
+      sentence someone sends when asked how it's going.</p>
+    </div>
+
+    <!-- Story: Month -->
+    <div class="shot">
+      <div class="story">
+        <span class="flL">❦</span><span class="flR">❦</span>
+        <span class="pill">22 of 26 days read</span>
+        <div class="num" style="font-size:52px;margin-top:20px">4</div>
+        <div class="lbl" style="margin-top:4px">books in august</div>
+        <div class="subl" style="margin-top:9px">1,340 pages</div>
+        <div class="heat" style="width:132px;margin-top:15px">
+          <div class="hc void"></div><div class="hc void"></div><div class="hc on"></div><div class="hc on"></div><div class="hc deep"></div><div class="hc on"></div><div class="hc"></div>
+          <div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc deep"></div><div class="hc"></div><div class="hc on"></div><div class="hc on"></div>
+          <div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc on"></div><div class="hc"></div><div class="hc on"></div><div class="hc deep"></div>
+          <div class="hc on"></div><div class="hc on"></div><div class="hc"></div><div class="hc on"></div><div class="hc on today"></div><div class="hc fut"></div><div class="hc fut"></div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="quote" style="font-size:11px">A month for Malayalam classics.</div>
+        <div style="flex:1"></div>
+        <div class="rule" style="width:38px;margin:0 0 8px"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/><path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/></svg>
+            <b>kitabi.in</b>
+          </div>
+          <span class="tg">beyond the bookshelf</span>
+        </div>
+      </div>
+      <p class="cap"><b>Month — the calendar leaf</b> The weekday-aligned heatmap, kept honest:
+      dashed future days, ringed today, deep-oxblood heavy days. This is the card that shows a
+      <i>habit</i> rather than a total — the one a reader sends when the honest answer is
+      "steadily". Trailing empty weeks are cropped so a card sent mid-month doesn't lead with
+      blank rows.</p>
+    </div>
+
+    <!-- Story: Year (shelf) -->
+    <div class="shot">
+      <div class="story">
+        <span class="flL">❦</span><span class="flR">❦</span>
+        <span class="pill">3 ahead of pace</span>
+        <div class="num" style="font-size:52px;margin-top:18px">24</div>
+        <div class="lbl" style="margin-top:4px">books in 2026</div>
+        <div class="subl" style="margin-top:9px">8,412 pages · 214 hours</div>
+        <div style="width:100%;padding:0 4px;margin-top:17px">
+          <div class="shelf" style="height:58px">
+            <i class="sp1" style="width:7px;height:46px"></i><i class="sp2" style="width:6px;height:40px"></i>
+            <i class="sp4" style="width:9px;height:52px"></i><i class="sp3" style="width:5px;height:36px"></i>
+            <i class="sp5" style="width:7px;height:43px"></i><i class="sp6" style="width:8px;height:49px"></i>
+            <i class="sp2" style="width:5px;height:38px"></i><i class="sp7" style="width:7px;height:41px"></i>
+            <i class="sp1" style="width:11px;height:58px"></i><i class="sp8" style="width:6px;height:39px"></i>
+            <i class="sp3" style="width:7px;height:45px"></i><i class="sp2" style="width:6px;height:42px"></i>
+            <i class="sp5" style="width:5px;height:37px"></i><i class="sp4" style="width:7px;height:47px"></i>
+            <i class="sp6" style="width:6px;height:40px"></i><i class="sp1" style="width:7px;height:44px"></i>
+            <i class="sp7" style="width:5px;height:36px"></i><i class="sp3" style="width:8px;height:48px"></i>
+            <i class="sp8" style="width:6px;height:41px"></i><i class="sp2" style="width:6px;height:39px"></i>
+            <i class="sp5" style="width:7px;height:46px"></i><i class="sp4" style="width:5px;height:38px"></i>
+            <i class="sp1" style="width:7px;height:42px"></i><i class="sp6" style="width:6px;height:40px"></i>
+          </div>
+          <div class="ledge"></div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="quote" style="font-size:11px">A year, mostly spent elsewhere.</div>
+        <div style="flex:1"></div>
+        <div class="rule" style="width:38px;margin:0 0 8px"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/><path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/></svg>
+            <b>kitabi.in</b>
+          </div>
+          <span class="tg">beyond the bookshelf</span>
+        </div>
+      </div>
+      <p class="cap"><b>Year — the shelf</b> One spine per finished book, width from its page
+      count, colour hashed from its title — so the card is <i>generated from the reader's actual
+      year</i> and no two are alike. Anonymous by default; the sheet's "Name the spines" toggle
+      adds tiny vertical titles to the tallest few for the reader who wants the flex to be
+      specific. This replaces the bare "24" as the flagship year artifact.</p>
+    </div>
+
+    <!-- Square variant -->
+    <div class="shot">
+      <div class="sq">
+        <span class="pill" style="font-size:6.5px;background:var(--gold-soft);color:var(--oxblood);font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px">3 ahead of pace</span>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:12px;width:100%;padding:0 6px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="num h-serif" style="font-size:40px;color:var(--oxblood);font-weight:600;line-height:.95">24</div>
+            <div style="font-size:6.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft);margin-top:3px">books · 2026</div>
+          </div>
+          <div style="flex:1">
+            <div class="shelf" style="height:46px">
+              <i class="sp1" style="width:6px;height:38px"></i><i class="sp2" style="width:5px;height:32px"></i>
+              <i class="sp4" style="width:7px;height:42px"></i><i class="sp3" style="width:4px;height:29px"></i>
+              <i class="sp5" style="width:6px;height:35px"></i><i class="sp6" style="width:7px;height:40px"></i>
+              <i class="sp2" style="width:4px;height:30px"></i><i class="sp7" style="width:6px;height:33px"></i>
+              <i class="sp1" style="width:9px;height:46px"></i><i class="sp8" style="width:5px;height:31px"></i>
+              <i class="sp3" style="width:6px;height:36px"></i><i class="sp2" style="width:5px;height:34px"></i>
+              <i class="sp4" style="width:6px;height:38px"></i><i class="sp5" style="width:4px;height:30px"></i>
+            </div>
+            <div class="ledge"></div>
+          </div>
+        </div>
+        <div class="subl" style="font-size:8px;color:var(--ink-soft);margin-top:10px">8,412 pages · 214 hours</div>
+        <div class="quote" style="font-size:9.5px;margin-top:6px">A year, mostly spent elsewhere.</div>
+        <div style="flex:1"></div>
+        <div class="wordmark">
+          <div class="kk">
+            <svg class="klogo" viewBox="0 0 512 512" style="width:9px;height:9px"><rect x="16" y="16" width="480" height="480" rx="112" fill="#7E2A33"/><path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/><path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/><rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/><path d="M298 252 H362" stroke="#B8862B" stroke-width="16" stroke-linecap="round"/></svg>
+            <b>kitabi.in</b>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>Square — same pieces, landscape logic</b> Below 1:1 the numeral and the
+      visualization sit <i>beside</i> each other instead of stacking — the lesson the current
+      square already learned the hard way (the 27 Jul overflow) made structural: each format has
+      its own layout of the same parts, not a scaled-down story. Slip (next area) is the third
+      layout of the same parts.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= THE SLIP ================= -->
+<section class="area" id="slip">
+  <div class="ah"><span class="an gold">The slip</span><h2>A card sized for the place the question is asked</h2></div>
+  <p class="desc">Story and Square are broadcast shapes. But "how's your reading going?" arrives as
+  a <b>message</b>, and a 9:16 story pasted into a chat thread is a poster taped over a
+  conversation. The slip is the third format: landscape, bubble-sized, one number, one visual,
+  the wordmark small — designed to sit <i>inside</i> a reply next to a line of your own words.
+  It's the default format when the sheet opens from "Reply with your reading", and the caption
+  travels as the message text, not baked into pixels.</p>
+  <div class="row">
+
+    <!-- chat mock -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush">
+          <div class="chathdr">
+            <span style="font-size:13px;color:var(--ink-soft)">‹</span>
+            <div class="avatar">AR</div>
+            <div>
+              <div style="font-size:10.5px;font-weight:700">Anu</div>
+              <div style="font-size:7.5px;color:var(--moss)">online</div>
+            </div>
+          </div>
+          <div class="chatbody">
+            <div class="bub them">saw you with a book at lunch again 😄 how's the reading going these days?<div class="tme">6:42 pm</div></div>
+            <div class="bub me" style="padding:5px">
+              <div class="slip" style="width:188px;box-shadow:none">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="text-align:center;flex-shrink:0">
+                    <div class="snum" style="font-size:21px">42<span style="font-size:11px">m</span></div>
+                    <div class="sey" style="margin-top:1px">today</div>
+                  </div>
+                  <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+                  <div style="flex:1">
+                    <div style="font-size:7.5px;font-weight:700;color:var(--moss)">+42 pages · <span style="color:var(--ink);font-family:'Fraunces',serif;font-style:italic">Naalukettu</span></div>
+                    <div class="lamps" style="margin-top:5px;gap:3px">
+                      <span class="lamp on" style="width:7px;height:7px"></span><span class="lamp" style="width:7px;height:7px"></span>
+                      <span class="lamp" style="width:7px;height:7px"></span><span class="lamp on" style="width:7px;height:7px"></span>
+                      <span class="lamp on" style="width:7px;height:7px"></span><span class="lamp on" style="width:7px;height:7px"></span>
+                      <span class="lamp on today" style="width:7px;height:7px"></span>
+                    </div>
+                    <div class="sey" style="margin-top:3px;color:var(--gold)">5 days running</div>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:6px;padding-top:5px">
+                  <span class="quote" style="font-size:6.5px">Five evenings, one lamp.</span>
+                  <span style="font-size:6px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+                </div>
+              </div>
+              <div style="font-size:9px;margin-top:5px;padding:0 3px">going well! 42 minutes tonight, five days straight 📖</div>
+              <div class="tme">6:44 pm ✓✓</div>
+            </div>
+            <div class="bub them">five days!! okay teach me your ways</div>
+          </div>
+          <div class="composer">
+            <div class="field">Message…</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--moss);color:#F6F0E3;display:flex;align-items:center;justify-content:center;font-size:11px">➤</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>The slip, where it lives</b> The whole feature, seen from the recipient's
+      side: a compact card that reads at bubble width without zooming — one numeral, seven lamps,
+      a wordmark you notice second. The reader's own words carry the message; the card is the
+      receipt. This is the mockup the redesign should be judged against, because it is the actual
+      moment in the goal.</p>
+    </div>
+
+    <!-- Slip: year -->
+    <div class="shot">
+      <div class="slip">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="snum" style="font-size:26px">24</div>
+            <div class="sey" style="margin-top:2px">books · 2026</div>
+          </div>
+          <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+          <div style="flex:1">
+            <div class="shelf" style="height:34px">
+              <i class="sp1" style="width:5px;height:28px"></i><i class="sp2" style="width:4px;height:24px"></i>
+              <i class="sp4" style="width:6px;height:31px"></i><i class="sp3" style="width:4px;height:22px"></i>
+              <i class="sp5" style="width:5px;height:26px"></i><i class="sp6" style="width:6px;height:30px"></i>
+              <i class="sp2" style="width:4px;height:23px"></i><i class="sp7" style="width:5px;height:25px"></i>
+              <i class="sp1" style="width:8px;height:34px"></i><i class="sp8" style="width:4px;height:24px"></i>
+              <i class="sp3" style="width:5px;height:27px"></i><i class="sp2" style="width:4px;height:25px"></i>
+              <i class="sp4" style="width:5px;height:28px"></i><i class="sp5" style="width:4px;height:23px"></i>
+              <i class="sp6" style="width:5px;height:26px"></i><i class="sp1" style="width:4px;height:24px"></i>
+            </div>
+            <div class="ledge"></div>
+            <div class="sey" style="margin-top:4px">8,412 pages · 214 hours</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
+          <span class="quote" style="font-size:8px">A year, mostly spent elsewhere.</span>
+          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap" style="margin-top:6px"><b>Slip · Year</b> Numeral left, shelf right — the
+      Square's landscape logic at bubble scale. The shelf survives miniaturisation because it's
+      silhouette, not text; that's the test every slip visual must pass.</p>
+    </div>
+
+    <!-- Slip: week -->
+    <div class="shot">
+      <div class="slip">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="text-align:center;flex-shrink:0">
+            <div class="snum" style="font-size:22px">3<span style="font-size:12px">h</span> 40<span style="font-size:12px">m</span></div>
+            <div class="sey" style="margin-top:2px">this week</div>
+          </div>
+          <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+          <div style="flex:1">
+            <div class="wbars" style="height:30px">
+              <i style="height:22%"></i><i style="height:38%"></i><i style="height:8%"></i>
+              <i class="hi" style="height:55%"></i><i style="height:30%"></i><i style="height:8%"></i>
+              <i class="top" style="height:100%"></i>
+            </div>
+            <div class="wlbl" style="margin-top:2px;font-size:6px"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            <div class="sey" style="margin-top:3px;color:var(--moss)">▲ 48m vs last week</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:8px;padding-top:6px">
+          <span class="quote" style="font-size:8px">Busier than 9 of your last 10 weeks.</span>
+          <span style="font-size:7px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+        </div>
+      </div>
+      <p class="cap" style="margin-top:6px"><b>Slip · Week</b> Same skeleton: number, hairline,
+      visual, closing line. Three slips are drawn; all six windows get one, assembled from the
+      same parts table as Story and Square — one card widget, three layouts, no fourth codepath.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= THE SHARE SHEET ================= -->
+<section class="area" id="sheet">
+  <div class="ah"><span class="an">The sheet</span><h2>The share sheet — what you saw is what you send</h2></div>
+  <p class="desc">The sheet stops re-laying-out the data into a different card. It shows <b>the
+  same card the page showed</b>, adds the wordmark, and offers exactly three decisions: format
+  (Story · Square · Slip, as shape-true chips), whether to name names ("Name the spines" /
+  "Show covers" where the card has books), and the caption. One privacy sentence, always
+  present, states the contract. Copy caption and Send stay the two-button footer the whole
+  share family already uses — <code>captureAndShareCard</code> at 3× is untouched underneath.</p>
+  <div class="row">
+
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body flush" style="position:relative;background:rgba(43,33,24,.32)">
+          <div style="position:absolute;left:0;right:0;bottom:0;top:118px;background:var(--card);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:10px 15px 14px;display:flex;flex-direction:column">
+            <div class="grab"></div>
+            <div class="h-serif" style="font-size:14px">Send today's card</div>
+            <div style="display:flex;gap:7px;margin:9px 0 10px">
+              <div class="fchip"><div class="shape" style="width:10px;height:17px"></div><span>Story</span></div>
+              <div class="fchip"><div class="shape" style="width:14px;height:14px"></div><span>Square</span></div>
+              <div class="fchip on"><div class="shape" style="width:19px;height:11px"></div><span>Slip</span></div>
+            </div>
+            <div style="display:flex;justify-content:center">
+              <div class="slip" style="width:196px;box-shadow:0 8px 20px rgba(43,33,24,.22)">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="text-align:center;flex-shrink:0">
+                    <div class="snum" style="font-size:22px">42<span style="font-size:11px">m</span></div>
+                    <div class="sey" style="margin-top:1px">today</div>
+                  </div>
+                  <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+                  <div style="flex:1">
+                    <div style="font-size:7.5px;font-weight:700;color:var(--moss)">+42 pages · <span style="color:var(--ink);font-family:'Fraunces',serif;font-style:italic">Naalukettu</span></div>
+                    <div class="lamps" style="margin-top:5px;gap:3px">
+                      <span class="lamp on" style="width:7px;height:7px"></span><span class="lamp" style="width:7px;height:7px"></span>
+                      <span class="lamp" style="width:7px;height:7px"></span><span class="lamp on" style="width:7px;height:7px"></span>
+                      <span class="lamp on" style="width:7px;height:7px"></span><span class="lamp on" style="width:7px;height:7px"></span>
+                      <span class="lamp on today" style="width:7px;height:7px"></span>
+                    </div>
+                    <div class="sey" style="margin-top:3px;color:var(--gold)">5 days running</div>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:6px;padding-top:5px">
+                  <span class="quote" style="font-size:6.5px">Five evenings, one lamp.</span>
+                  <span style="font-size:6px;font-weight:700;color:var(--oxblood)">kitabi.in</span>
+                </div>
+              </div>
+            </div>
+            <div class="togglerow" style="margin-top:10px">
+              <div>
+                <div style="font-size:9px;font-weight:600">Name the book</div>
+                <div class="sub" style="font-size:7.5px">Off sends the numbers only</div>
+              </div>
+              <div class="tgl"></div>
+            </div>
+            <div style="margin-top:9px">
+              <div class="sub" style="font-size:7.5px;letter-spacing:1px;font-weight:700">CAPTION · SENT AS TEXT, NOT PIXELS</div>
+              <div style="background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:8px 9px;font-size:9px;line-height:1.5;display:flex;gap:6px;margin-top:4px">
+                <span style="flex:1">Going well — 42 minutes tonight, five days straight. 📖</span>
+                <span style="color:var(--ink-soft)">✎</span>
+              </div>
+            </div>
+            <div class="sub" style="font-size:7.5px;margin-top:8px;display:flex;align-items:center;gap:5px">
+              <span style="color:var(--moss)">🔒</span> Numbers, covers and titles only — never your notes or private reviews.
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <div class="btn ghost" style="flex:1;padding:9px;font-size:9.5px;border:1.5px solid var(--ink);border-radius:10px;background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:600">Copy caption</div>
+              <div class="b-foil" style="flex:1;height:auto;padding:9px"><span style="font-size:10.5px">Send</span><i>⇲</i></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>The sheet, rebuilt</b> Format chips are drawn as their true shapes — a
+      tall, a square, a wide — so the choice needs no words. The preview is byte-identical to the
+      page's card (one widget, one <code>RepaintBoundary</code>): fixing fault №3 by construction.
+      "Name the book" is the only content decision, defaulting on for a single book, and to
+      anonymous spines for the year shelf. The privacy line is not a setting — it's a promise,
+      printed where the reader can see it every time.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= HONEST STATES ================= -->
+<section class="area" id="states">
+  <div class="ah"><span class="an">States</span><h2>The days there's nothing to brag about</h2></div>
+  <p class="desc">A share-first Insights must not become a guilt machine. Two rules: an empty
+  window <b>never renders a shareable zero</b> (there is no "0m today" card to accidentally send),
+  and the page always offers <b>the nearest true thing</b> instead — the week, the year, the
+  streak that's still alive from yesterday.</p>
+  <div class="row">
+
+    <!-- no sitting today -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip">2026 ▾</span><span class="chip on">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span><span class="chip">6 months</span>
+          </div>
+          <div class="card" style="margin-top:10px;padding:14px;text-align:center;border-style:dashed;background:var(--paper)">
+            <div class="eyebrow" style="color:var(--ink-soft)">WED · 26 AUG</div>
+            <div class="h-serif" style="font-size:14px;margin-top:6px">No sitting yet today.</div>
+            <div class="sub" style="font-size:9px;margin-top:4px">Even a few pages count — the lamp's still lit from yesterday.</div>
+            <div class="lamps" style="justify-content:center;margin-top:10px">
+              <span class="lamp"></span><span class="lamp on"></span><span class="lamp on"></span>
+              <span class="lamp on"></span><span class="lamp on"></span><span class="lamp on"></span>
+              <span class="lamp today"></span>
+            </div>
+            <div style="font-size:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-top:5px">5 days — today still open</div>
+            <div class="btn" style="margin-top:11px;padding:8px;font-size:10px;background:var(--oxblood);color:#F8F1E2;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600">▶ Start a sitting</div>
+          </div>
+          <div class="racklbl" style="margin:12px 0 6px">Still worth sending</div>
+          <div class="rack">
+            <div class="mini">
+              <div class="mey">This week</div>
+              <div class="mv">3h 40m</div>
+              <div class="wbars" style="height:20px;margin-top:5px">
+                <i style="height:22%"></i><i style="height:38%"></i><i style="height:8%"></i>
+                <i class="hi" style="height:55%"></i><i style="height:30%"></i><i class="top" style="height:100%"></i>
+                <i style="height:0"></i>
+              </div>
+            </div>
+            <div class="mini">
+              <div class="mey">Streak</div>
+              <div class="mv">5 days</div>
+              <div class="ms" style="margin-top:3px">still open —<br>read to keep it</div>
+            </div>
+            <div class="mini">
+              <div class="mey">2026</div>
+              <div class="mv">24</div>
+              <div class="ms" style="margin-top:3px">books · 3 ahead of pace</div>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>An empty Today</b> Dashed slip-paper, no numeral, no foil button — the
+      send affordance simply isn't drawn, because there's nothing true to send yet. The lamps stay
+      (yesterday's five are real; today's is unlit, not dark), the primary becomes <b>Start a
+      sitting</b>, and the rack retitles itself <i>Still worth sending</i> with the windows that
+      do hold something. Nobody is ever told their day is a zero.</p>
+    </div>
+
+    <!-- fresh reader -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="h-serif" style="font-size:17px;margin-top:8px">Your first card is one sitting away.</div>
+          <div class="sub" style="font-size:9.5px;margin-top:4px;line-height:1.5">Insights fills itself from your reading — start a sitting or finish a book and this page becomes a stack of cards worth sending.</div>
+          <div class="poster" style="margin-top:12px;opacity:.55">
+            <div style="text-align:center">
+              <div class="eyebrow" style="color:var(--ink-soft)">SOME EVENING SOON</div>
+              <div class="num" style="font-size:38px;margin-top:8px;color:var(--stamp-grey)">—</div>
+              <div style="font-size:7px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink-soft);margin-top:3px">read today</div>
+              <div class="lamps" style="justify-content:center;margin-top:12px">
+                <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
+                <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
+                <span class="lamp"></span>
+              </div>
+              <div class="closing" style="margin-top:10px">The lamps light one evening at a time.</div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;padding:11px;display:flex;gap:10px;align-items:center">
+            <div style="width:44px;height:44px;border-radius:50%;background:conic-gradient(var(--gold) 0 0%,var(--paper-deep) 0 100%);position:relative;flex-shrink:0">
+              <span style="position:absolute;inset:6px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--oxblood)">0</span>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600">Reading goal: 30 books in 2026</div>
+              <div class="sub" style="font-size:8px;margin-top:2px">The one stat you can set before your first page · tap to change</div>
+            </div>
+            <span style="margin-left:auto;color:var(--oxblood);font-size:11px">✎</span>
+          </div>
+          <div class="btn" style="margin-top:10px;padding:10px;font-size:10.5px;background:var(--oxblood);color:#F8F1E2;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600">＋ Add your first book</div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>Day one</b> The empty state sells the destination: a ghosted poster at
+      55% with unlit lamps — this is what the page becomes — over the settable goal ring
+      (unchanged from today: the one stat that exists before any book). No fake data, no sample
+      numbers that could be mistaken for the reader's own.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= CHOOSING ================= -->
+<section class="area" id="next">
+  <div class="ah"><span class="an gold">Choosing</span><h2>What to pick, and what ships regardless</h2></div>
+  <p class="desc">
+  <b>Four pieces are direction-independent</b> and worth building whichever page wins:
+  the labelled foil <b>Send</b> replacing the ⇲ glyph; <b>visualizations on the shared image</b>
+  (one card widget with Story/Square/Slip layouts, so page and sheet render the same object and
+  fault №3 dies by construction); the <b>slip format</b> plus its "caption as message text"
+  behaviour; and the <b>year shelf</b>, which is new derived data only in the narrowest sense
+  (finished books × page counts — both already in <code>PeriodSummary.booksFinished</code> via
+  the edition). The honest-state rules (no shareable zeroes, "still worth sending") also travel.
+  <br><br>
+  <b>The page direction is the real decision.</b> A recommendation, held loosely: <b>A with C's
+  top line grafted on</b> — the postcard page, opened by the question set small above the chips —
+  keeps today's information architecture (chips, flagship, detail below the fold on Year),
+  which means the redesign lands as one screen rebuilt rather than a navigation change; B stays
+  in the drawer as the most beautiful version of a page that shares whole, worth revisiting if
+  the poster ever feels boxed-in. Whatever is picked: mockups here are the spec, and
+  <code>kitabi_screens.html</code> Area 5 gets superseded by this file the day the pick lands.
+  </p>
+</section>
+
+</body>
+</html>

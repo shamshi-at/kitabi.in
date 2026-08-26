@@ -439,5 +439,25 @@ its object and sits beside Wishlist so it can only mean "I have this", and the s
 is what makes it land, so no separate highlight treatment was needed; A and C stay
 drawn but unbuilt (C is really bulk cataloguing, its own decision).
 
+Drawn, awaiting a pick (26 Aug 2026 — Insights + share cards, full redesign):
+[insights-share-mockups.html](insights-share-mockups.html) supersedes Area 5's
+27 Jul design *as a proposal* — the owner's brief was "if someone asks how your
+reading is going, the answer should be sendable from the app". Four faults it
+fixes in the shipped design: the ⇲ share glyph is 16px of tertiary chrome, the
+shared image strips every visualization (`PeriodShareCard` is typography-only),
+the sheet re-lays-out the card so preview ≠ page, and the year shares as a bare
+numeral. Three page directions (A "the postcard" — the flagship card drawn
+share-shaped with a labelled gold-foil Send and an "also worth sending" rack;
+B "the almanac" — the whole page as one typeset ledger sheet with a wax-seal
+send; C "the answer" — the page opens with the question and replies in one tap),
+a rebuilt card family where each window's own visualization travels on the image
+(lamps/bars/heatmap/**the year as a shelf of spines, width ∝ pages**), a new
+chat-sized **Slip** format for the WhatsApp reply the question actually arrives
+as (caption travels as message text, not pixels), the rebuilt WYSIWYG share
+sheet with shape-true format chips and a printed privacy promise, and the
+honest empty states (no shareable zeroes; "still worth sending"). File's own
+closing section recommends A with C's question-line grafted on. Area 5 in
+`kitabi_screens.html` stays authoritative until the pick lands.
+
 Preview locally: `python3 -m http.server 4173 --directory docs` →
 http://localhost:4173/kitabi_screens.html (or `/supporter-mockup.html`)
