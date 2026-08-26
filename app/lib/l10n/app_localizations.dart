@@ -5698,6 +5698,12 @@ abstract class AppLocalizations {
   /// **'{name} on Kitabi\n{url}'**
   String sharePublisherLinkText(String name, String url);
 
+  /// Snackbar when sharing a card: the image goes to the share sheet, the caption/link rides the clipboard (WhatsApp drops one of the two when handed both)
+  ///
+  /// In en, this message translates to:
+  /// **'Caption copied — paste it alongside the card.'**
+  String get shareTextOnClipboard;
+
   /// Snackbar when the OS share sheet fails to open
   ///
   /// In en, this message translates to:
@@ -5806,10 +5812,10 @@ abstract class AppLocalizations {
   /// **'Numbers, covers and titles only — never your notes or private reviews.'**
   String get insightsSharePrivacyLine;
 
-  /// Eyebrow over the share caption field
+  /// Eyebrow over the share caption field — the caption rides the clipboard because share targets (WhatsApp) drop either the image or the text when handed both
   ///
   /// In en, this message translates to:
-  /// **'Caption · sent as text, not pixels'**
+  /// **'Caption · copied when you send, paste it alongside'**
   String get insightsShareCaptionAsText;
 
   /// Title of the long-press row-slip share sheet

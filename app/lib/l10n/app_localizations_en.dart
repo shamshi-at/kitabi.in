@@ -3505,6 +3505,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get shareTextOnClipboard =>
+      'Caption copied — paste it alongside the card.';
+
+  @override
   String get shareFailed => 'Couldn\'t open the share sheet. Try again.';
 
   @override
@@ -3560,7 +3564,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Numbers, covers and titles only — never your notes or private reviews.';
 
   @override
-  String get insightsShareCaptionAsText => 'Caption · sent as text, not pixels';
+  String get insightsShareCaptionAsText =>
+      'Caption · copied when you send, paste it alongside';
 
   @override
   String get insightsShareRowSheetTitle => 'Send this line';

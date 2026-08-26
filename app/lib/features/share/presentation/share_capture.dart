@@ -3,17 +3,25 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../core/widgets/net_image.dart';
 
-/// Rasterise the widget behind [cardKey] (a `RepaintBoundary`) to a PNG and hand
-/// it to the OS share sheet together with [text] (which always carries the real
-/// link, so a recipient who can't render the image still gets a tappable URL).
-/// Falls back to sharing [text] alone if the capture fails, and surfaces
-/// [onFailed] only if even that fails. Shared by the book and author/publisher
-/// share sheets so the image-or-text-fallback behaviour stays identical.
+/// Rasterise the widget behind [cardKey] (a `RepaintBoundary`) to a PNG and
+/// hand it to the OS share sheet — **image only**. [text] (the caption, or
+/// the link on the book/entity cards) is put on the clipboard instead, with a
+/// snackbar saying so, because handing the share sheet both an image and text
+/// makes WhatsApp pick one and drop the other: iOS's extension keeps the text
+/// and discards the image (owner report, 26 Aug 2026 — "just the text is
+/// getting shared"), Android's keeps the image and discards the caption. An
+/// image the reader watched being composed must be the thing that arrives;
+/// the words ride the clipboard, one paste away.
+///
+/// Falls back to sharing [text] alone if the capture fails. Shared by all
+/// three card sheets (period / book / entity) so the behaviour stays
+/// identical.
 Future<void> captureAndShareCard({
   required BuildContext context,
   required GlobalKey cardKey,
@@ -47,7 +55,16 @@ Future<void> captureAndShareCard({
       name: 'kitabi.png',
       mimeType: 'image/png',
     );
-    await Share.shareXFiles([file], text: text, sharePositionOrigin: origin);
+    // Clipboard first, share second — copying after the share sheet opens is
+    // exactly when iOS may suspend us. Best-effort: a clipboard hiccup must
+    // not cost the reader the share itself.
+    if (text.trim().isNotEmpty) {
+      try {
+        await Clipboard.setData(ClipboardData(text: text));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.shareTextOnClipboard)));
+      } catch (_) {}
+    }
+    await Share.shareXFiles([file], sharePositionOrigin: origin);
   } catch (_) {
     // If the image capture/share fails for any reason, still share the link.
     try {

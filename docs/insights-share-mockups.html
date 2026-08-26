@@ -1684,8 +1684,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   <b>message</b>, and a 9:16 story pasted into a chat thread is a poster taped over a
   conversation. The slip is bubble-sized, the wordmark you notice second — designed to sit
   <i>inside</i> a reply next to a line of your own words. It's the default format when the sheet
-  opens from a Today or row share, and the caption travels as the message text, not baked into
-  pixels.</p>
+  opens from a Today or row share, and the caption travels beside the image, never baked into
+  pixels. <i>(Amended in build, 26 Aug 2026: share targets — WhatsApp on iOS above all — drop
+  either the image or the text when handed both, so the caption rides the clipboard with a
+  "copied, paste it alongside" notice instead of the share intent. The words still travel;
+  the image always arrives.)</i></p>
   <div class="row">
 
     <div class="shot">
@@ -1803,7 +1806,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
               <div class="tgl"></div>
             </div>
             <div style="margin-top:9px">
-              <div class="sub" style="font-size:7.5px;letter-spacing:1px;font-weight:700">CAPTION · SENT AS TEXT, NOT PIXELS</div>
+              <div class="sub" style="font-size:7.5px;letter-spacing:1px;font-weight:700">CAPTION · COPIED WHEN YOU SEND, PASTE IT ALONGSIDE</div>
               <div style="background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:8px 9px;font-size:9px;line-height:1.5;display:flex;gap:6px;margin-top:4px">
                 <span style="flex:1">Going well — 42 minutes tonight, five days straight. 📖</span>
                 <span style="color:var(--ink-soft)">✎</span>
@@ -1956,7 +1959,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
   <b>Four pieces are direction-independent</b> and worth building whichever page wins:
   the labelled foil <b>Send</b> replacing the ⇲ glyph; <b>visualizations on the shared image</b>
   (one card widget with Story/Square/Slip layouts, so page and sheet render the same object and
-  fault №3 dies by construction); the <b>slip format</b> plus its "caption as message text"
+  fault №3 dies by construction); the <b>slip format</b> plus its caption-on-the-clipboard
   behaviour; and the <b>year shelf</b>, which is new derived data only in the narrowest sense
   (finished books × page counts — both already in <code>PeriodSummary.booksFinished</code> via
   the edition). The honest-state rules (no shareable zeroes, "still worth sending") also travel.
