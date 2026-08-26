@@ -250,6 +250,21 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
 .wkhdr{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:6.5px;font-weight:700;
   letter-spacing:.5px;color:var(--ink-soft);text-align:center}
 
+/* B-revised: close-set rows and stat pairs */
+.tightrow{display:flex;align-items:baseline;gap:7px;padding:8px 0;border-bottom:1px solid var(--line)}
+.tightrow .k{font-size:10.5px;color:var(--ink-soft)}
+.tightrow .v{font-family:'Fraunces',serif;font-size:14px;font-weight:600;color:var(--oxblood)}
+.tightrow .vs{font-size:8.5px;color:var(--ink-soft)}
+.tightrow .trail{flex:1;border-bottom:1px dotted #CDBFA0;transform:translateY(-3px);opacity:.6}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;column-gap:18px}
+.statcell{padding:9px 0;border-bottom:1px solid var(--line)}
+.statcell .v{font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:var(--oxblood);line-height:1}
+.statcell .v small{font-family:'Inter';font-size:9px;color:var(--ink-soft);font-weight:500}
+.statcell .k{font-size:7.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin-top:4px}
+.vled{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.vled .v{font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--oxblood);width:74px;text-align:right;flex-shrink:0}
+.vled .k{font-size:11px;color:var(--ink)}
+
 /* catalogue group header */
 .pgroup{display:flex;align-items:center;gap:12px;margin:36px 0 16px;font-size:11px;font-weight:700;
   letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft)}
@@ -980,6 +995,243 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       The share card's heat stays date-less: a recipient reads the shape, and at Slip scale a
       numeral is smear. Real weekday alignment (Aug 2026 starts on a Saturday), same
       <code>calendarCells</code> data.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= B REVISED ================= -->
+<section class="area" id="b3">
+  <div class="ah"><span class="an gold">B, revised</span><h2>Closing the gap — the eye reads in one fixation</h2></div>
+  <p class="desc"><b>Owner report from the device (26 Aug): the built ledger makes you look left,
+  then travel right — uncomfortable.</b> The diagnosis is proximity: label at one edge, figure at
+  the other, and ~200dp of dots as a bridge the eye must walk, row after row. Print almanacs get
+  away with leaders because a book column is narrow; a phone row isn't. Three revisions, all
+  keeping the almanac's identity (top rule, small caps, Fraunces numerals, sections, plates,
+  seal, doors, long-press) and differing only in where the number sits relative to its name.</p>
+  <div class="row">
+
+    <!-- R1 · close-set line -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip">2026 ▾</span><span class="chip on">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span>
+          </div>
+          <div class="alm" style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span class="sect">Wednesday · 26 August</span>
+              <span class="sect" style="color:var(--gold)">№ 238</span>
+            </div>
+            <div class="h-serif" style="font-size:16px;margin-top:7px">Today's sitting.</div>
+            <div style="margin-top:6px">
+              <div class="tightrow"><span class="k">Time read</span><span class="v">1h 10m</span><span class="trail"></span></div>
+              <div class="tightrow"><span class="k">Pages turned</span><span class="v">55</span><span class="vs">pp</span><span class="trail"></span></div>
+              <div class="tightrow"><span class="k">Sittings</span><span class="v">3</span><span class="trail"></span></div>
+              <div class="tightrow"><span class="k">Streak</span><span class="v">5</span><span class="vs">days</span><span class="trail"></span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+              <span class="sect">In hand · 2 books</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="tightrow"><span class="v" style="font-style:italic;font-size:13px">Naalukettu</span><span class="vs">p. 302 of 384</span><span class="trail"></span></div>
+            <div class="tightrow"><span class="v" style="font-style:italic;font-size:13px">Pathummayude Aadu</span><span class="vs">p. 44 of 180</span><span class="trail"></span></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+              <span class="sect">The week so far</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="lamps" style="margin-top:9px">
+              <span class="lamp on"></span><span class="lamp"></span><span class="lamp"></span>
+              <span class="lamp on"></span><span class="lamp on"></span><span class="lamp on"></span>
+              <span class="lamp on today"></span>
+            </div>
+          </div>
+          <div class="seal"><b>⇲</b><span>send</span></div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>R1 · The close-set line</b> Minimal change: the figure moves to sit right
+      after its label — one fixation reads both — and the dots become a <i>trailing</i> flourish,
+      texture instead of a bridge. The ledger look survives almost intact.
+      <span class="pro">Pro: smallest diff; rows stay rows, doors and long-press untouched.</span>
+      <span class="con">Con: a ragged left column of figures — scanning *values only* down the
+      page is slower than today, and the trailing dots now decorate nothing.</span></p>
+    </div>
+
+    <!-- R2 · stat pairs -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip">2026 ▾</span><span class="chip on">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span>
+          </div>
+          <div class="alm" style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span class="sect">Wednesday · 26 August</span>
+              <span class="sect" style="color:var(--gold)">№ 238</span>
+            </div>
+            <div class="h-serif" style="font-size:16px;margin-top:7px">Today's sitting.</div>
+            <div class="statgrid" style="margin-top:4px">
+              <div class="statcell"><div class="v">1h 10m</div><div class="k">Time read</div></div>
+              <div class="statcell"><div class="v">55 <small>pp</small></div><div class="k">Pages turned</div></div>
+              <div class="statcell"><div class="v">3</div><div class="k">Sittings</div></div>
+              <div class="statcell"><div class="v">5 <small>days</small></div><div class="k">Streak</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+              <span class="sect">In hand · 2 books</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="tightrow"><span class="v" style="font-style:italic;font-size:13px;font-family:'Fraunces',serif;font-weight:600;color:var(--oxblood)">Naalukettu</span><span class="vs">p. 302 of 384</span></div>
+            <div class="tightrow"><span class="v" style="font-style:italic;font-size:13px;font-family:'Fraunces',serif;font-weight:600;color:var(--oxblood)">Pathummayude Aadu</span><span class="vs">p. 44 of 180</span></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+              <span class="sect">The week so far</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="lamps" style="margin-top:9px">
+              <span class="lamp on"></span><span class="lamp"></span><span class="lamp"></span>
+              <span class="lamp on"></span><span class="lamp on"></span><span class="lamp on"></span>
+              <span class="lamp on today"></span>
+            </div>
+            <div class="orn" style="margin-top:12px">❦</div>
+            <div class="quote" style="font-size:10px;text-align:center">5 days running</div>
+          </div>
+          <div class="seal"><b>⇲</b><span>send</span></div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>R2 · The stat pairs — recommended</b> Numbers become stacked pairs: the
+      figure with its name directly <i>beneath</i> it, two to a row. Each cell is one downward
+      glance — no horizontal travel at all — and the page gets shorter, not taller. Name rows
+      (In hand, Most read, Longest) stay lines, value snug after the name, because a name is
+      what you read, not scan. Hairlines and small caps keep it typeset, not tiled: this is an
+      almanac's data table, not Direction A's boxes.
+      <span class="pro">Pro: the most glanceable layout there is for label+value; scales to Year's
+      six stats (three rows of pairs).</span>
+      <span class="con">Con: the leader dots go — the signature softens (top rule, sections,
+      fleuron and seal carry the identity instead).</span></p>
+    </div>
+
+    <!-- R3 · value-led -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip">2026 ▾</span><span class="chip on">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span>
+          </div>
+          <div class="alm" style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span class="sect">Wednesday · 26 August</span>
+              <span class="sect" style="color:var(--gold)">№ 238</span>
+            </div>
+            <div class="h-serif" style="font-size:16px;margin-top:7px">Today's sitting.</div>
+            <div style="margin-top:6px">
+              <div class="vled"><span class="v">1h 10m</span><span class="k">time read</span></div>
+              <div class="vled"><span class="v">55 pp</span><span class="k">pages turned</span></div>
+              <div class="vled"><span class="v">3</span><span class="k">sittings</span></div>
+              <div class="vled"><span class="v">5 days</span><span class="k">streak — longest this year</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+              <span class="sect">In hand · 2 books</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="vled"><span class="v" style="font-size:12px">p. 302</span><span class="k" style="font-style:italic;font-family:'Fraunces',serif;color:var(--oxblood)">Naalukettu <span style="font-style:normal;font-family:'Inter';font-size:8.5px;color:var(--ink-soft)">of 384</span></span></div>
+            <div class="vled"><span class="v" style="font-size:12px">p. 44</span><span class="k" style="font-style:italic;font-family:'Fraunces',serif;color:var(--oxblood)">Pathummayude Aadu <span style="font-style:normal;font-family:'Inter';font-size:8.5px;color:var(--ink-soft)">of 180</span></span></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+              <span class="sect">The week so far</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="lamps" style="margin-top:9px">
+              <span class="lamp on"></span><span class="lamp"></span><span class="lamp"></span>
+              <span class="lamp on"></span><span class="lamp on"></span><span class="lamp on"></span>
+              <span class="lamp on today"></span>
+            </div>
+          </div>
+          <div class="seal"><b>⇲</b><span>send</span></div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>R3 · The value-led ledger</b> Numbers first: a fixed right-aligned numeral
+      column, the label reading on from it — a recipe's ingredient list. One left-to-right read
+      per row, and values align vertically so scanning the column is instant.
+      <span class="pro">Pro: best pure-scan layout; keeps rows and their doors exactly.</span>
+      <span class="con">Con: leads with the number before you know what it names — backwards for
+      first reading; and the fixed numeral column wastes width on short values.</span></p>
+    </div>
+
+    <!-- R2 at Year -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle">Insights</div>
+          <div class="periodrow" style="margin-top:5px">
+            <span class="chip on">2026 ▾</span><span class="chip">Today</span><span class="chip">Week</span>
+            <span class="chip">Month</span><span class="chip">3 months</span>
+          </div>
+          <div class="alm" style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span class="sect">2026</span>
+              <span class="sect" style="color:var(--gold)">to 26 Aug</span>
+            </div>
+            <div class="h-serif" style="font-size:16px;margin-top:7px">Ahead of your own pace.</div>
+            <div class="statgrid" style="margin-top:4px">
+              <div class="statcell"><div class="v">24 <small>of 30</small></div><div class="k">Books finished</div></div>
+              <div class="statcell"><div class="v">8,412 <small>pp</small></div><div class="k">Pages turned</div></div>
+              <div class="statcell"><div class="v">214<small>h</small></div><div class="k">Hours with a book</div></div>
+              <div class="statcell"><div class="v" style="color:var(--moss);font-size:15px">3 ahead</div><div class="k">Against pace</div></div>
+            </div>
+            <div class="tightrow" style="margin-top:4px"><span class="k">Most read</span><span class="v" style="font-style:italic;font-size:13px">M.T. Vasudevan Nair</span><span class="vs">· 6</span></div>
+            <div class="tightrow"><span class="k">Longest</span><span class="v" style="font-style:italic;font-size:13px">Aarachar</span><span class="vs">· 724 pp</span></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+              <span class="sect">The shelf so far</span><span style="flex:1;height:1px;background:var(--line)"></span>
+            </div>
+            <div class="shelf" style="height:42px;margin-top:9px;justify-content:flex-start;gap:2px">
+              <i class="sp1" style="width:7px;height:36px"></i><i class="sp2" style="width:6px;height:30px"></i>
+              <i class="sp4" style="width:9px;height:40px"></i><i class="sp3" style="width:5px;height:27px"></i>
+              <i class="sp5" style="width:7px;height:33px"></i><i class="sp6" style="width:8px;height:38px"></i>
+              <i class="sp2" style="width:5px;height:28px"></i><i class="sp7" style="width:7px;height:31px"></i>
+              <i class="sp1" style="width:11px;height:42px"></i><i class="sp8" style="width:6px;height:30px"></i>
+              <i class="sp3" style="width:7px;height:34px"></i><i class="sp2" style="width:6px;height:32px"></i>
+              <i class="sp5" style="width:5px;height:28px"></i><i class="sp4" style="width:7px;height:36px"></i>
+            </div>
+            <div class="ledge" style="margin-top:1px"></div>
+          </div>
+          <div class="seal"><b>⇲</b><span>send</span></div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div>
+          <div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">+</span></div>
+          <div><span class="ic">⇄</span>Lending</div>
+          <div class="on"><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>R2 at Year</b> How the recommendation scales: six numbers become a tidy
+      2×2 grid plus two name lines; superlatives read as sentences ("Most read · <i>M.T.
+      Vasudevan Nair</i> · 6") instead of two-ended rows. Everything below — shelf, appendix
+      charts, seal — unchanged. Doors keep their tint, long-press keeps the slip; only the
+      geometry of label-and-number changed.</p>
     </div>
 
   </div>
