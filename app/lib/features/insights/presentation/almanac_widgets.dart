@@ -122,30 +122,45 @@ class LedgerRow extends StatelessWidget {
         // widget tests.
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: italicLabel
-                  ? GoogleFonts.fraunces(
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
-                      color: onTap == null ? AppColors.ink : AppColors.oxblood,
-                    )
-                  : TextStyle(fontSize: 12, color: AppColors.ink),
-            ),
-          ),
+          // Label + leader live inside the one Expanded so the leader alone
+          // absorbs every spare pixel and the value sits flush right — with
+          // value and leader as sibling flex children the free space split
+          // between them, leaving each row's figure at a different, ragged x
+          // (caught on the emulator, second pass).
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 6, right: 6, bottom: 5),
-              child: CustomPaint(
-                size: const Size(double.infinity, 1),
-                painter: _DottedLeaderPainter(color: AppColors.line),
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: italicLabel
+                        ? GoogleFonts.fraunces(
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                            color: onTap == null ? AppColors.ink : AppColors.oxblood,
+                          )
+                        : TextStyle(fontSize: 12, color: AppColors.ink),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 6, right: 6, bottom: 5),
+                    child: CustomPaint(
+                      size: const Size(double.infinity, 1),
+                      painter: _DottedLeaderPainter(color: AppColors.line),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          Flexible(
+          // Rigid, capped: a name-valued row ("Most read · M.T. Vasudevan
+          // Nair") must ellipsize rather than push the row wide.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 190),
             child: Text(
               value,
               maxLines: 1,
