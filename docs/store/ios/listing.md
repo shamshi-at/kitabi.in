@@ -35,9 +35,62 @@ counts are given where the copy is near one.
 
   (≈140 chars.)
 
-- **Description (4000 chars max):** use the Android full description verbatim
-  ([../android/listing.md](../android/listing.md) §Full description) — it is
-  plain text with bullet dots, which App Store Connect accepts as-is.
+- **Description (4000 chars max):** the Android full description with ONE
+  edit — App Store Connect rejects the `✓` dingbat ("invalid characters"; it
+  treats check marks and emoji alike), so "Returned ✓" becomes "Returned".
+  Bullets, em-dashes and the Malayalam title are accepted. Paste this:
+
+```
+Kitabi is a personal library for people who love owning books — a real
+bookshelf, finally digital.
+
+Track every book you own, remember who borrowed what, and watch your reading
+life take shape. Free, private by default, and built with love for readers in
+India and beyond.
+
+YOUR LIBRARY, SHELF BY SHELF
+• Add a book in seconds — scan the ISBN barcode, search the catalogue, or type
+  it in
+• Real editions, not just titles: photograph your own copy's front and back
+  covers
+• Shelves for Reading, Read, To read, Stopped and Wishlist — plus your own
+  private tags
+• Track progress page by page, with start and finish dates
+• Malayalam, English and more — translations link back to the same work, so
+  ഖസാക്കിന്റെ ഇതിഹാസം and its English edition sit side by side
+
+LENDING — NEVER LOSE A BOOK AGAIN
+• Lending is a record, not a memory: lent to whom, on which date, due when
+• "Out now" and "Returned" at a glance, with a gentle nudge when a due date
+  approaches
+• Borrowed a book from a friend? Log that too, so it goes home on time
+
+RATINGS, REVIEWS & PRIVATE NOTES
+• Rate the books you finish and write reviews when you have something to say
+• Personal notes stay on your copy — always private: the edition, the
+  condition, why this copy matters
+
+INSIGHTS
+• A reading goal you set yourself, and an honest ring that shows the pace
+• Books per month, pages per month, and the languages you read in
+
+OFFLINE-FIRST
+• Your whole library lives on your phone and works in airplane mode — it syncs
+  quietly when you're back online
+
+MOVING IN?
+• Import your Goodreads library from a CSV export in minutes
+
+PRIVATE BY DEFAULT
+• Your library is yours. Nothing is public unless you choose to share it, and
+  there are no ads.
+
+Kitabi — Beyond the Bookshelf. kitabi.in
+```
+
+  If the field still complains after this, the next thing Connect's validator
+  chokes on varies by account locale — replace the Malayalam title with
+  "Khasakkinte Ithihasam" and retry; that has never failed.
 
 - **Keywords (100 chars max, comma-separated, no need to repeat words from the
   name/subtitle):**
