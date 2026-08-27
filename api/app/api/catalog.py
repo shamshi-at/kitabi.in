@@ -30,6 +30,8 @@ from app.schemas.catalog import (
     PublisherCreate,
     PublisherOut,
     PublisherWorksOut,
+    ReviewReportIn,
+    ReviewReportOut,
     SeriesCreate,
     SeriesOut,
     SeriesWithCountOut,
@@ -470,6 +472,21 @@ async def work_reviews(
         rating_count=summary["count"],
         rating_distribution=summary["distribution"],
     )
+
+
+@router.post("/reviews/{review_id}/report", response_model=ReviewReportOut)
+async def report_review(
+    review_id: uuid.UUID, payload: ReviewReportIn, user: CurrentUser, db: DbSession
+) -> ReviewReportOut:
+    """Report someone else's public review (a Work's or a Series') into the
+    admin moderation queue. Idempotent per reporter while their report is
+    open; reporting your own review is a 400 — deleting it is the tool for
+    that. Signed-in only: an anonymous report queue is a spam vector, and
+    every surface that shows public reviews already sits behind sign-in."""
+    outcome = await review_service.report_review(
+        db, review_id, uuid.UUID(user["id"]), payload.reason
+    )
+    return ReviewReportOut(status=outcome)
 
 
 @router.patch("/works/{work_id}", response_model=WorkPatchResult)

@@ -6,6 +6,7 @@ import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/api/api_client.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../core/widgets/report_review.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
@@ -263,6 +264,10 @@ class _SeriesRatingCard extends ConsumerWidget {
                             '★ ${r['rating']}',
                             style: TextStyle(color: AppColors.gold, fontSize: 11.5),
                           ),
+                        ReportReviewButton(
+                          reviewId: r['id'] as String,
+                          reviewerId: (r['reviewer'] as Map?)?['id'] as String?,
+                        ),
                       ],
                     ),
                     if ((r['body'] as String?)?.isNotEmpty ?? false)

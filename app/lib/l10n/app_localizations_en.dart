@@ -786,6 +786,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookNoRatingLabel => 'no rating';
 
   @override
+  String get reportReviewTooltip => 'Report this review';
+
+  @override
+  String get reportReviewTitle => 'Report this review';
+
+  @override
+  String get reportReviewSubtitle =>
+      'Tell us what\'s wrong. A moderator will take a look and hide the review if it breaks the rules.';
+
+  @override
+  String get reportReasonSpam => 'Spam or advertising';
+
+  @override
+  String get reportReasonOffensive => 'Hateful or offensive';
+
+  @override
+  String get reportReasonSpoilers => 'Spoilers without warning';
+
+  @override
+  String get reportReasonOffTopic => 'Not about this book';
+
+  @override
+  String get reportReasonOther => 'Something else';
+
+  @override
+  String get reportReviewThanks => 'Thanks — a moderator will take a look.';
+
+  @override
+  String get reportReviewOffline =>
+      'You\'re offline — try reporting again once you\'re connected.';
+
+  @override
+  String get reportReviewFailed =>
+      'Couldn\'t send the report. Please try again.';
+
+  @override
   String get reviewPageTitle => 'Rate & review';
 
   @override

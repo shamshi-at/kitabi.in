@@ -1,8 +1,9 @@
 """Reported content — reader reports of public reviews (the only reader-written
 text other readers see). Upholding a report *hides* the review: its `visible`
 flag flips off (soft, reversible) and its server_seq bumps so the change syncs
-to devices. The row is never destroyed. [WIRED]: quiet until the in-app report
-button ships, but fully functional against the content_reports table now.
+to devices. The row is never destroyed. Live end to end since 27 Aug 2026: the
+app files reports from the flag beside any public review
+(POST /catalog/reviews/{id}/report).
 """
 
 import uuid

@@ -756,6 +756,32 @@
   "@bookNoRatingLabel": {
     "description": "Shown instead of stars when a public reviewer left text but no star rating"
   },
+  "reportReviewTooltip": "Report this review",
+  "@reportReviewTooltip": {
+    "description": "Tooltip/semantics label on the small flag button beside another reader's public review"
+  },
+  "reportReviewTitle": "Report this review",
+  "@reportReviewTitle": {"description": "Heading of the report-review bottom sheet"},
+  "reportReviewSubtitle": "Tell us what's wrong. A moderator will take a look and hide the review if it breaks the rules.",
+  "@reportReviewSubtitle": {"description": "One-line explanation under the report sheet heading"},
+  "reportReasonSpam": "Spam or advertising",
+  "@reportReasonSpam": {"description": "Report reason choice"},
+  "reportReasonOffensive": "Hateful or offensive",
+  "@reportReasonOffensive": {"description": "Report reason choice"},
+  "reportReasonSpoilers": "Spoilers without warning",
+  "@reportReasonSpoilers": {"description": "Report reason choice"},
+  "reportReasonOffTopic": "Not about this book",
+  "@reportReasonOffTopic": {"description": "Report reason choice"},
+  "reportReasonOther": "Something else",
+  "@reportReasonOther": {"description": "Report reason choice"},
+  "reportReviewThanks": "Thanks — a moderator will take a look.",
+  "@reportReviewThanks": {"description": "Snackbar after a report is filed (or was already filed)"},
+  "reportReviewOffline": "You're offline — try reporting again once you're connected.",
+  "@reportReviewOffline": {
+    "description": "Snackbar when the report couldn't be sent because the device is offline"
+  },
+  "reportReviewFailed": "Couldn't send the report. Please try again.",
+  "@reportReviewFailed": {"description": "Snackbar when the report request failed for any other reason"},
   "reviewPageTitle": "Rate & review",
   "@reviewPageTitle": {"description": "App bar title of the dedicated review/rating editor page"},
   "reviewRatingLabel": "YOUR RATING",

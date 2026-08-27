@@ -1348,6 +1348,72 @@ abstract class AppLocalizations {
   /// **'no rating'**
   String get bookNoRatingLabel;
 
+  /// Tooltip/semantics label on the small flag button beside another reader's public review
+  ///
+  /// In en, this message translates to:
+  /// **'Report this review'**
+  String get reportReviewTooltip;
+
+  /// Heading of the report-review bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Report this review'**
+  String get reportReviewTitle;
+
+  /// One-line explanation under the report sheet heading
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us what\'s wrong. A moderator will take a look and hide the review if it breaks the rules.'**
+  String get reportReviewSubtitle;
+
+  /// Report reason choice
+  ///
+  /// In en, this message translates to:
+  /// **'Spam or advertising'**
+  String get reportReasonSpam;
+
+  /// Report reason choice
+  ///
+  /// In en, this message translates to:
+  /// **'Hateful or offensive'**
+  String get reportReasonOffensive;
+
+  /// Report reason choice
+  ///
+  /// In en, this message translates to:
+  /// **'Spoilers without warning'**
+  String get reportReasonSpoilers;
+
+  /// Report reason choice
+  ///
+  /// In en, this message translates to:
+  /// **'Not about this book'**
+  String get reportReasonOffTopic;
+
+  /// Report reason choice
+  ///
+  /// In en, this message translates to:
+  /// **'Something else'**
+  String get reportReasonOther;
+
+  /// Snackbar after a report is filed (or was already filed)
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks — a moderator will take a look.'**
+  String get reportReviewThanks;
+
+  /// Snackbar when the report couldn't be sent because the device is offline
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline — try reporting again once you\'re connected.'**
+  String get reportReviewOffline;
+
+  /// Snackbar when the report request failed for any other reason
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the report. Please try again.'**
+  String get reportReviewFailed;
+
   /// App bar title of the dedicated review/rating editor page
   ///
   /// In en, this message translates to:

@@ -633,6 +633,12 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Report someone else's public review into the moderation queue. Online-only
+  /// and idempotent server-side — re-reporting while a report is open, or
+  /// reporting a review a moderator already hid, both succeed quietly.
+  Future<void> reportReview(String reviewId, {String? reason}) =>
+      _dio.post('/catalog/reviews/$reviewId/report', data: {'reason': reason});
+
   /// Wiki-style edit — the response wrapper says whether the change applied
   /// live (`applied: true`, contributor or unowned work) or was queued as a
   /// pending revision for the contributor to approve.

@@ -10,6 +10,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/net_image.dart';
+import '../../../core/widgets/report_review.dart';
 import '../../../core/widgets/seg_tab_bar.dart';
 import '../../../core/widgets/shelf_cover.dart';
 import '../../../core/widgets/sticky_header_delegate.dart';
@@ -963,7 +964,12 @@ class _PublicReviewsTab extends ConsumerWidget {
       error: (_, _) => ErrorRetry(onRetry: () => ref.invalidate(_publicReviewsProvider(userId))),
       data: (items) => items.isEmpty
           ? _MutedNote(AppLocalizations.of(context)!.publicProfileReviewsEmpty)
-          : Column(children: [for (final review in items) _ReaderReviewRow(review: review)]),
+          : Column(
+              children: [
+                for (final review in items)
+                  _ReaderReviewRow(review: review, reviewerId: userId),
+              ],
+            ),
     );
   }
 }
@@ -972,9 +978,12 @@ class _PublicReviewsTab extends ConsumerWidget {
 /// and what they wrote. Opens the book — the only thing a reader could want
 /// next from here.
 class _ReaderReviewRow extends StatelessWidget {
-  const _ReaderReviewRow({required this.review});
+  const _ReaderReviewRow({required this.review, required this.reviewerId});
 
   final Map<String, dynamic> review;
+
+  /// The profile's owner — every review on this page is theirs.
+  final String reviewerId;
 
   @override
   Widget build(BuildContext context) {
@@ -1045,6 +1054,10 @@ class _ReaderReviewRow extends StatelessWidget {
                             l10n.bookNoRatingLabel,
                             style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
                           ),
+                        ReportReviewButton(
+                          reviewId: review['id'] as String,
+                          reviewerId: reviewerId,
+                        ),
                       ],
                     ),
                     if ((review['author_names'] as String?)?.isNotEmpty ?? false)

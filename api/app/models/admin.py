@@ -149,10 +149,11 @@ REPORT_DISMISSED = "dismissed"
 
 
 class ContentReport(Base):
-    """[WIRED] A reader's report of a public review (the only reader-written
-    text other readers see today). The report button ships now; the queue stays
-    quiet until there's traffic. Hiding sets the review's visibility flag —
-    soft, reversible, logged — it never destroys the row."""
+    """A reader's report of a public review (the only reader-written text
+    other readers see today). Filed from the flag beside any public review in
+    the app (POST /catalog/reviews/{id}/report, 27 Aug 2026); the admin
+    console's /moderation/reports decides it. Hiding sets the review's
+    visibility flag — soft, reversible, logged — it never destroys the row."""
 
     __tablename__ = "content_reports"
 

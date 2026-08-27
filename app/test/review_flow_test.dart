@@ -538,7 +538,16 @@ void main() {
         publicReviewsProvider(_workId).overrideWith((ref) async => {
               'reviews': <Map<String, dynamic>>[
                 {
-                  'reviewer': {'is_public': true, 'display_name': 'Reader One', 'avatar_url': null},
+                  // Written from PublicReviewOut/PublicReviewerOut — `id` on
+                  // both is required in the schema, and the report flag casts
+                  // it (a fixture copied from the renderer is the 9 Aug bug).
+                  'id': '99999999-9999-9999-9999-999999999999',
+                  'reviewer': {
+                    'id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                    'is_public': true,
+                    'display_name': 'Reader One',
+                    'avatar_url': null,
+                  },
                   'rating': 5,
                   'body': 'Loved it.',
                 },

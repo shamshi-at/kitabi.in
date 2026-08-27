@@ -560,3 +560,30 @@ class PublicReviewsPageOut(BaseModel):
     rating_average: float | None
     rating_count: int
     rating_distribution: dict[int, int]
+
+
+class ReviewReportIn(BaseModel):
+    """A reader reporting someone else's public review. The reason is a short
+    free string, not an enum — the app sends one of its fixed labels today, but
+    the queue must not reject a client that learns a new word before the server
+    does (the same open-vocabulary rule as WORK_FORMS)."""
+
+    reason: str | None = None
+
+    @field_validator("reason")
+    @classmethod
+    def _trim_reason(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        if len(v) > 200:
+            raise ValueError("reason must be 200 characters or fewer")
+        return v or None
+
+
+class ReviewReportOut(BaseModel):
+    """What became of the report: `filed`, or the quiet idempotent outcomes
+    `already_reported` / `already_hidden` — all of which the app renders as
+    the same thank-you."""
+
+    status: str

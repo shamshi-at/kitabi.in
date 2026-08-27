@@ -11,11 +11,12 @@ public — never an anonymous rating with no accompanying text.
 
 import uuid
 
+from fastapi import HTTPException, status
 from sqlalchemy import Float, Numeric, and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Profile, Rating, Review, Series, Work
+from app.models import REPORT_OPEN, ContentReport, Profile, Rating, Review, Series, Work
 
 
 def _subject(model: type, work_id: uuid.UUID | None, series_id: uuid.UUID | None):  # noqa: ANN201
@@ -261,3 +262,53 @@ async def rating_summary(
     total = sum(distribution.values())
     average = sum(v * c for v, c in distribution.items()) / total if total else None
     return {"average": average, "count": total, "distribution": distribution}
+
+
+async def report_review(
+    db: AsyncSession, review_id: uuid.UUID, reporter_id: uuid.UUID, reason: str | None
+) -> str:
+    """File a reader's report of a public review into the moderation queue
+    (`content_reports` — the admin console's /moderation/reports reads it and
+    hides the review if the report is upheld).
+
+    Idempotent per reader: a second tap while their first report is still open
+    adds nothing, and a review a moderator already hid (or its author withdrew)
+    between fetch and tap reads as "already handled" — both return quietly,
+    because the reader's goal ("this shouldn't be shown") is met either way.
+    The one hard error besides not-found: reporting your own review — the
+    delete/visibility toggle is the tool for that, and self-reports would only
+    put noise in the queue.
+    """
+    review = await db.get(Review, review_id)
+    if review is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "That review does not exist."},
+        )
+    if review.user_id == reporter_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "own_review", "message": "You can edit or delete your own review."},
+        )
+    if review.deleted_at is not None or not review.visible:
+        return "already_hidden"
+    existing = await db.scalar(
+        select(ContentReport.id).where(
+            ContentReport.reporter_user_id == reporter_id,
+            ContentReport.target_type == "review",
+            ContentReport.target_id == review_id,
+            ContentReport.status == REPORT_OPEN,
+        )
+    )
+    if existing is not None:
+        return "already_reported"
+    db.add(
+        ContentReport(
+            reporter_user_id=reporter_id,
+            target_type="review",
+            target_id=review_id,
+            reason=reason,
+        )
+    )
+    await db.commit()
+    return "filed"

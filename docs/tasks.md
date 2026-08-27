@@ -238,6 +238,21 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       Drift **v12** rebuilds ratings/reviews so `work_id` can be null — tested
       against a real file database seeded at the v11 shape, and that test confirmed
       to fail with the migration disabled before being trusted.
+- [x] **Report a public review** (27 Aug 2026, prompted by Apple's 2.1 review
+      checklist naming "content reporting and blocking mechanisms" — blocking
+      existed, reporting didn't). The `content_reports` table and the admin
+      moderation queue had been `[WIRED]` since 24 Jul; this ships the missing
+      reader half: `POST /catalog/reviews/{id}/report` (signed-in only; idempotent
+      per open report; own review refused — deleting it is the tool there; an
+      already-hidden review is a quiet success), and one shared `ReportReviewButton`
+      + reason sheet (`core/widgets/report_review.dart`) on **all three** surfaces
+      that show another reader's review — book page, series card, public profile —
+      because a feature added to one entry point must be added to all of them.
+      Reasons go on the wire as fixed English tokens whatever the locale, so the
+      queue reads one vocabulary. Online-only best-effort with offline told apart
+      from failure (`isOfflineError`). The book-page test fixture had to gain the
+      `id` fields the schema always sent — written from the renderer, the 9 Aug
+      fixture bug shape, caught by the new cast.
 - [x] Rebuild the **scan result** as *The Bookplate* (14 Aug 2026, owner request →
       owner pick of direction **B** from [scan-result-mockups.html](scan-result-mockups.html)).
       Three faults, all structural: a found book didn't announce itself (nothing changed

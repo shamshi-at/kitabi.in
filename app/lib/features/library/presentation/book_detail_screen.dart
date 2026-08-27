@@ -25,6 +25,7 @@ import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/notifications/reading_timer_notifications.dart';
+import '../../../core/widgets/report_review.dart';
 import '../../catalog/providers/catalog_providers.dart';
 import '../../lending/lending_format.dart';
 import '../../lending/presentation/lend_sheet.dart';
@@ -3612,6 +3613,10 @@ class _PublicReviewRow extends StatelessWidget {
                           l10n.bookNoRatingLabel,
                           style: TextStyle(fontSize: 10, color: AppColors.inkSoft),
                         ),
+                      ReportReviewButton(
+                        reviewId: review['id'] as String,
+                        reviewerId: reviewer['id'] as String?,
+                      ),
                     ],
                   ),
                   SizedBox(height: 4),

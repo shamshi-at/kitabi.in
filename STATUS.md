@@ -369,6 +369,18 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **27 Aug 2026** — **Reporting a public review is live end to end.** Apple's 2.1
+  "Information Needed" reply on the iOS submission asks the review recording to show
+  UGC "content reporting and blocking mechanisms" — blocking existed (connections),
+  reporting was the half still `[WIRED]`: the `content_reports` table and the admin
+  console's uphold/dismiss queue had waited since 24 Jul with no way for a reader to
+  file into them. Now: `POST /catalog/reviews/{id}/report` (signed-in only, idempotent
+  per reporter while a report is open, own-review refused, already-hidden review a
+  quiet success), and a shared `ReportReviewButton` + reason sheet on all three
+  surfaces that show another reader's review — book page, series card, public
+  profile. Reasons cross the wire as fixed English tokens so the moderation queue
+  reads one vocabulary regardless of the reporter's locale. No migration — the table
+  shipped in `000031`.
 - **13 Aug 2026** — **Series became a real entity, and can be rated in its own right.**
   It was a free-text box that wrote a number onto the *Edition*, which had two
   consequences: a work with two printings had two answers to "which book in the series
