@@ -875,6 +875,107 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   is exactly the "data, then a swallowed retryable error" sequence the fix
   above already handles. Pinned by the "cold start" test in
   `auth_stream_retryable_error_test.dart`, alongside the "mid-session" one.
+- **A reconciliation wired only to `didChangeAppLifecycleState` never runs at
+  launch** — that callback is not called for the state the app *starts* in. The
+  lock-screen reading clock had two takedown paths: every stop calls
+  `end()` (best-effort, and an iOS background isolate has no channel to call it
+  on at all), and `reconcile()` on foreground resume. On a cold start neither
+  fires: `ActiveSessionController._hydrate()` found no sitting and simply
+  `return`ed, so a clock left behind by a stop that couldn't reach the channel
+  survived every relaunch (owner report, 29 Aug 2026 — the notification stayed
+  after finishing a book from the timer). Hydration now reads storage as the
+  truth in *both* directions: nothing stored means state null and the surface
+  ends. Corollary for anything else built this way — resume is not launch, and
+  a surface only ever taken down by an event needs a takedown on the read that
+  discovers it shouldn't be there.
+- **A guard that gives up on a screen has to leave the same way the screen's own
+  exit does.** The timer's "no sitting for this book — nothing to show here"
+  check popped via `if (context.canPop()) context.pop()`, so on the one entry
+  point that matters most it did *nothing*: a notification tap on a cold start
+  is delivered as a replace, `canPop()` is false, and the reader sat on the
+  running face with no session behind it — a sweeping hand over a clock frozen
+  at 0:00, with no way off the screen. Same report; same rule as 14 Aug
+  (`canPop() ? pop() : go(home)`), which `_leave()` had and this guard hadn't.
+  Two things that fell out of fixing it: the guard was only *safe* before
+  because `canPop()` was false — it fires on frame one, when `state == null`
+  still means "storage hasn't answered yet", so giving it real teeth also meant
+  giving it `ActiveSessionController.hydrated` to wait on; and a screen reached
+  from a stale surface should take that surface down on its way out, since
+  arriving at a sitting that doesn't exist is proof the thing that invited you
+  is wrong. Pinned by `reading_timer_dead_session_test.dart`, whose second case
+  makes the timer route the *whole* stack — with anything beneath it the bug
+  cannot appear.
+- **Read your own note before the network call it is being compared against.**
+  `pullAndApply` fetched the account's running sitting and only *then* read
+  `active_session_pending_stop`. A stop fires its DELETE unawaited and clears
+  that note the moment it lands, so a GET issued just before the DELETE and
+  answered just after came back holding the stopped sitting with no note left
+  to recognise it by — and it was adopted straight back onto the device that
+  had already logged it, lock-screen clock and all. State read after an await
+  is state from a different moment than the answer it is judging.
+- **A bottom-nav tab cannot be `push`ed — it is a `StatefulShellRoute` branch,
+  and pushing one moves the page without moving the shell.** go_router renders
+  the branch's screen, but `currentConfiguration.uri` and
+  `navigationShell.currentIndex` both stay where they were, so the nav bar goes
+  on highlighting the old tab and every later resolution — the duplicate guard
+  in `navigateFromExternal`, the redirect, `goBranch` — reasons from a location
+  the reader has left. `pushTapRoute` returns `/lending` for all three lending
+  pushes, the one tab root an external tap can reach, so "A lent you a book"
+  landed the borrower under a nav bar that said Home at a URL that said `/home`
+  (owner report, 29 Aug 2026). `navigateFromExternal` now `go`es to anything in
+  `shellTabRoutes` and pushes everything else — push stays right for the
+  top-level routes, which have to be poppable. A probe settles which kind of
+  route you are looking at faster than reading the route table: print `uri`,
+  `matches.last.matchedLocation` and `currentIndex` after the navigation, and a
+  branch root shows all three disagreeing with the screen on display.
+- **Read the notification that launched the app before doing anything that can
+  block.** `PushService.start` awaited permission, then the token — which on
+  iOS polls up to twenty seconds for APNs and then makes a network call to
+  register — and only then called `getInitialMessage()`. So the message that
+  *opened the app* was read long after the router had booted, the splash gate
+  had already given up on `pendingExternalTarget` and sent the reader to Home,
+  and the notification's own screen arrived seconds later or not at all. The
+  park-and-honour design was sound; nothing ever reached it in time.
+  `getInitialMessage()` and `onMessageOpenedApp` need neither permission nor a
+  token — the notification has already been delivered and tapped — so they go
+  first, and registration follows behind them.
+- **An optional payload is a payload nobody passes.** A local notification
+  carries one opaque `payload` string, and it was an *unqualified* library
+  entry id — so the tap handler had exactly one destination it could name, the
+  reading timer, and any other family of notification had nothing to say. Both
+  lending due-date reminders were therefore scheduled with no payload at all,
+  and `scheduleReminder` simply had no parameter for one: tapping a reminder
+  read null, returned, and left the app wherever it had been (owner report,
+  29 Aug 2026). The scheme is now `<target>:<id>`
+  (`core/notifications/notification_payload.dart`, with `localNotificationRoute`
+  as the one route rule — pure and top-level for the same reason `pushTapRoute`
+  and `readingTimerRouteFor` are), and `payload` is **required** on
+  `scheduleReminder` so a new caller has to decide rather than default to
+  silence. Two things it forces you to get right: an unqualified payload must
+  still parse as the reading timer, because check-ins scheduled before the
+  change are sitting in the OS's own queue on real devices and may be delivered
+  days later; and a notification that genuinely can't name a screen (the
+  auto-stop notice when the book isn't cached) must return null and stay put,
+  never fall back to an unrelated one — the same rule `pushTapRoute` learned on
+  14 Aug. Note which screen each family wants: the "stopped while you were
+  away" notice is *about* a sitting that has ended, so the timer is the one
+  place it must not open.
+- **A `flutter run` debug build cannot test a cold start on a physical iPhone —
+  and the failure mimics a wedge in our own boot gate.** Killing the app kills
+  the tool, and reopening the debug build from the home screen sticks on the
+  splash forever: iOS 26 won't let Dart JIT without a debugger attached, so not
+  one line of app code runs. Every cold-start check begins "fully kill the app",
+  so on-device verification of the launch path needs `--release`, which survives
+  the tooling being killed and relaunches from the home screen and from
+  notification taps (no VM Service then, so those results are observational —
+  say so rather than dressing them up). Two things that cost a session on
+  29 Aug 2026: **`flutter run` will not attach while Xcode is open** (it
+  installs and launches, then never discovers the Dart VM Service — quitting
+  Xcode fixed it outright), and **"stuck on the splash" is visually ambiguous
+  by design**, because `flutter_native_splash` is deliberately configured to
+  match what `SplashScreen` renders. A *static* logo means Dart never started;
+  the in-app one animates (logo scales in, the name rises, the gold line draws
+  across, ~1.6s). Ask which one before debugging the boot gate.
 
 ## Open decisions
 
