@@ -486,5 +486,40 @@ to that day's sittings; share-card heat cells stay bare, since a recipient
 reads the shape and a numeral at Slip scale is smear. This file supersedes
 `kitabi_screens.html` Area 5.
 
+Drawn and chosen (29 Aug 2026 — reading a book again; owner request "some
+people might read same book again … timer and logs required for each read";
+owner picked **Direction A** for the status collision):
+[reread-mockups.html](reread-mockups.html), 11 screens over four areas. Its
+first area is not a design proposal but the *obstacle*: the app believes **one
+book, one read**, and that belief is load-bearing in three places —
+`LibraryEntries` has a singular `startDate`/`finishDate`/`currentPage`,
+`markBookFinished` deliberately refuses to re-stamp a finish date ("the
+original date is the true one"), and `ReadingSessions` hang off the entry, so a
+second pass's sittings merge into the first's log while
+`autoFinishIfOnLastPage` returns early on a book already marked read and never
+closes the re-read at all. The answer is **rule 14 applied a second time**: a
+read becomes a record, not a counter — one `Reads` row per pass, with
+`ReadingSessions.readId` and `ReadingNotes.readId` naming the pass they belong
+to, the count always *derived* from the rows so it can never disagree with the
+history beneath it, and the entry's existing columns kept as a mirror of the
+current read so all four progress surfaces keep working untouched.
+
+The one real design question is the **status collision** — a book being re-read
+is genuinely Read and genuinely Reading, and the shelf can only file it once.
+**Chosen: A** — one Reading pill with a gold "third read · read twice before"
+eyebrow. No new pill, and the shelf keeps answering "what am I in the middle
+of", which the app asks hourly; the read count is a fact about history and
+lives on the book page. **B** (both pills, both shelves) stays drawn and
+unbuilt: more honest, but shelf counts stop summing to the library total and
+every filter needs a rule for the double-counted book. Also drawn: the gold `×3` cover tally as the third member of the
+existing overlay family (ribbon = favourite, band = lent, absent at ×1), the
+carries/resets sheet with a back-datable start, the reads list with per-read
+sittings and notes, the timer's own "third read" eyebrow with a pace line
+against the previous pass, and two consequence surfaces (an Insights flagship
+card, a ratings-and-dates "worth another look" nudge that needs no model). A
+back-filled first read renders honestly as "no timings kept" rather than
+looking broken. Nothing is built; the tag in [feature-map.md](../feature-map.md)
+is still to be set.
+
 Preview locally: `python3 -m http.server 4173 --directory docs` →
 http://localhost:4173/kitabi_screens.html (or `/supporter-mockup.html`)

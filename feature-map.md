@@ -57,6 +57,7 @@ not two copies — even while you're the only user filling it in.*
 | Borrowed-books shelf (books you borrowed from friends) | `[V1]` | Same ledger, other side — self-logged, or linked when the lender is also a Kitabi user |
 | Reading progress updates (% or page) | `[V1]` | Lightweight |
 | Reading sessions (timed logs) | `[V1]` | Pulled forward from `[LATER]` (10 Jul 2026, owner request): a live start/stop timer per book, weekly/monthly hours surfaced on Home + Insights. Only one session runs app-wide at a time — starting a new one auto-stops any other |
+| Re-reading the same book (a read per pass) | `[WIRED]` | Owner request, 29 Aug 2026 — "some people might read same book again … timer and logs required for each read". **A read is a record, not a counter** (rule 14 applied a second time): one `Reads` row per pass, with `ReadingSessions.read_id` and `ReadingNotes.read_id` naming the pass they belong to, and the count always *derived* from the rows. `[WIRED]` rather than `[V1]` because the migration is the whole expense: every sitting written against the entry today is more to backfill later, while the UI can stay dormant. Design drawn and chosen in [docs/reread-mockups.html](docs/reread-mockups.html) (owner picked **Direction A** for the status collision: one Reading pill plus a gold "third read" eyebrow, so a book being re-read sits on the Reading shelf alone) |
 | Quote / highlight capture (OCR a page) | `[LATER]` | Great "futuristic" add for v1.5 |
 | Per-item visibility toggles (library / review) | `[WIRED]` | The dormant community switch |
 
@@ -141,23 +142,36 @@ can be added incrementally; these are expensive to reverse.
    *other* person's Borrowed shelf automatically, without waiting for full peer-to-peer
    community features. Same one record either way; only the reference is optional.
 
-3. **Your personal activity log *is* the future feed.** Logging "you finished X, rated Y,
+3. **A read is a record, not a counter.** Rule 2's shape, applied to reading itself. A
+   book read three times has three beginnings, three endings, three paces and three sets
+   of thoughts, and `LibraryEntries` has exactly one `start_date`, one `finish_date` and
+   one `current_page` to hold them. Give each pass its own `Reads` row now and stamp
+   every sitting and note with the pass it belongs to; keep the entry's columns as a
+   mirror of the *current* read so every existing reader of `current_page` — the four
+   progress surfaces, the timer, the Live Activity, the public web pages — keeps working
+   untouched. Retrofitting this later means backfilling every sitting ever logged and
+   guessing which pass each one belonged to, which is exactly the guess nobody can make.
+   Two existing behaviours change with it: `markBookFinished` stamps the *read* rather
+   than refusing to re-stamp the entry, and `autoFinishIfOnLastPage` must test the
+   current read rather than returning early on a book already marked read.
+
+4. **Your personal activity log *is* the future feed.** Logging "you finished X, rated Y,
    added Z" for your own stats is structurally identical to a community activity feed.
    Build it for yourself; flip it public later.
 
-4. **Visibility toggles everywhere.** Profile, library, and per-review public/private —
+5. **Visibility toggles everywhere.** Profile, library, and per-review public/private —
    build the toggles now even though nothing is visible to anyone yet. Switching on
    community is then mostly building views, not reshaping data.
 
-5. **Work vs. Edition.** Decide whether the core unit is the abstract *Work* or a specific
+6. **Work vs. Edition.** Decide whether the core unit is the abstract *Work* or a specific
    *Edition* (ISBN/printing). Usual answer: ratings/reviews → Work; ownership, page count,
    cover → Edition; translations link Works. Cheap to design now, costly to retrofit once
    reviews and translations are attached.
 
-6. **Personal tags ≠ global genres.** Your shelves are yours (Layer 2); genres belong to
+7. **Personal tags ≠ global genres.** Your shelves are yours (Layer 2); genres belong to
    the catalog (Layer 1). Don't let one pollute the other.
 
-7. **Money and identity are two different marks, and merging them is irreversible.**
+8. **Money and identity are two different marks, and merging them is irreversible.**
    The **Supporter seal** (gold ❦) means *this reader pays for Kitabi*. **Verified**
    (the `authors.linked_user_id` / `author_claims` family) means *this really is them*
    — earned, never sold. One word covering both would be worth more in the short run

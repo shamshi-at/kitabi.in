@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — Reading it again</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+  --night:#1E1710; --n-card:#2E2318; --n-line:#4A3A28;
+  --n-text:#EFE6C8; --n-soft:#CBB897; --n-mute:#A08D6E; --n-gold:#D9B96A;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink);padding-bottom:90px}
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:52px 32px 44px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:38px;font-weight:400;margin:0 0 8px}
+.hero .tag{font-size:14.5px;color:#CBB897;max-width:820px;margin:0 auto;line-height:1.65}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+.area{max-width:1520px;margin:52px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.an.gold{color:#7a5a16;background:#F3E7C8}
+.area h2{font-family:'Fraunces',serif;font-size:28px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:8px 0 26px;max-width:960px;font-size:14.5px;line-height:1.65}
+.area .desc b{color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:34px}
+.shot{display:flex;flex-direction:column;gap:12px}
+.cap{width:272px;font-size:12.5px;color:#6d5f4b;line-height:1.55}
+.cap b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:3px;font-weight:600}
+.cap .pro{color:var(--moss);display:block;margin-top:6px}
+.cap .con{color:var(--oxblood);display:block;margin-top:3px}
+.phone{width:272px;height:588px;border-radius:34px;border:8px solid #241B12;background:var(--paper);
+  overflow:hidden;position:relative;box-shadow:0 24px 50px rgba(43,33,24,.30)}
+.phone.night{background:var(--night)}
+.scr{height:100%;display:flex;flex-direction:column;background:var(--paper)}
+.scr.night{background:var(--night);color:var(--n-text)}
+.sbar{display:flex;justify-content:space-between;padding:9px 16px 5px;font-size:9.5px;font-weight:600}
+.body{flex:1;display:flex;flex-direction:column;padding:0 14px;overflow:hidden}
+.pgtitle{font-family:'Fraunces',serif;font-size:16px}
+.sub{font-size:9px;color:var(--ink-soft)}
+.lbl{font-size:7px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft)}
+.cover{border-radius:3px;box-shadow:0 3px 8px rgba(43,33,24,.30);position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;text-align:center}
+.cover:after{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:linear-gradient(90deg,rgba(0,0,0,.28),transparent)}
+.ct{font-family:'Fraunces',serif;font-size:6px;color:#F6EDD5;padding:0 3px;line-height:1.2}
+.pill{display:inline-block;font-size:7px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  padding:3px 7px;border-radius:99px}
+.p-read{color:var(--moss);background:#E3EAD9}
+.p-reading{color:var(--oxblood);background:#F2DEDA}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.rule{height:1px;background:var(--line);margin:9px 0}
+.gline{height:1px;background:var(--gold);opacity:.55}
+.btn{height:38px;border-radius:9px;background:linear-gradient(175deg,#7E2A33,#571E25);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 0 0 1px rgba(184,134,43,.55)}
+.btn span{font-family:'Fraunces',serif;font-size:12px;color:#EFD9A4}
+.btn.ghost{background:none;box-shadow:none;border:1px solid var(--line)}
+.btn.ghost span{color:var(--ink-soft);font-family:'Inter',sans-serif;font-size:11px;font-weight:600}
+/* the re-read mark: a gold tally that rides the same overlay slot as the favourite ribbon */
+.tally{position:absolute;right:3px;bottom:3px;background:rgba(184,134,43,.94);color:#2B2118;
+  font-size:7px;font-weight:800;letter-spacing:.3px;border-radius:99px;padding:1px 5px}
+.readrow{display:flex;gap:9px;align-items:flex-start;padding:9px 0}
+.ord{font-family:'Fraunces',serif;font-size:10.5px;color:var(--oxblood);min-width:52px}
+.ord.done{color:var(--moss)}
+.meta{flex:1;font-size:8.5px;color:var(--ink-soft);line-height:1.5}
+.meta b{display:block;color:var(--ink);font-size:9.5px;font-weight:600;margin-bottom:2px}
+.chev{color:var(--ink-soft);font-size:10px;align-self:center}
+.dark{background:#3A2C1E;border-radius:12px;padding:11px;color:#EFE6C8}
+.dark .q{font-family:'Fraunces',serif;font-style:italic;font-size:10.5px;line-height:1.5;color:#E9DCC0}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);
+  border-radius:16px 16px 0 0;border-top:1px solid var(--line);padding:12px 14px 14px;
+  box-shadow:0 -12px 30px rgba(43,33,24,.22)}
+.grab{width:32px;height:3px;border-radius:99px;background:var(--line);margin:0 auto 10px}
+.kv{display:flex;justify-content:space-between;font-size:9px;padding:5px 0}
+.kv .k{color:var(--ink-soft)}
+.kv .v{font-weight:600}
+.keep{color:var(--moss)} .reset{color:var(--oxblood)}
+.clock{font-family:'Fraunces',serif;font-size:46px;font-weight:300;color:var(--n-text);
+  font-variant-numeric:tabular-nums;text-align:center;margin:12px 0 2px}
+.eyebrow{font-size:8px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--n-gold);text-align:center}
+.note{max-width:940px;margin:52px auto 0;padding:0 36px;font-size:13.5px;line-height:1.7;color:#5d5140}
+.note h3{font-family:'Fraunces',serif;font-size:20px;font-weight:500;margin:26px 0 8px;color:var(--ink)}
+.note ul{margin:8px 0 0 18px}.note li{margin-bottom:7px}
+.note code{background:#E4DAC4;padding:1px 5px;border-radius:4px;font-size:12px}
+.note b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Reading it again</h1>
+  <p class="tag">Some books get read twice, or every year. Kitabi currently believes in
+  <b>one book, one read</b> — and that belief is load-bearing in three places, so the feature is not a
+  counter bolted on the side. It is the same move lending already made: <b>a read becomes a record.</b></p>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">Area 1</span><h2>What breaks today</h2></div>
+  <p class="desc">Not a design question — a statement of the three things that make “just increment a
+  number” impossible. <b>1.</b> <code>LibraryEntries</code> has a singular <code>startDate</code>,
+  <code>finishDate</code> and <code>currentPage</code>; a second pass has nowhere to put its own.
+  <b>2.</b> <code>markBookFinished</code> deliberately refuses to re-stamp a finish date — <i>“the original
+  date is the true one”</i> — which is right for one read and wrong for many. <b>3.</b>
+  <code>ReadingSessions</code> hang off the entry, so a second pass’s sittings would merge into the first’s
+  log with nothing to tell them apart, and <code>autoFinishIfOnLastPage</code> returns early on a book
+  already marked read, so a re-read would never close itself. The fix for all three is one row.</p>
+  <div class="row">
+
+    <!-- 1a. the book page, read once -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;padding:4px 0 8px">
+            <span style="font-size:12px">←</span>
+            <span style="font-size:13px;color:var(--gold)">★</span>
+          </div>
+          <div style="display:flex;gap:10px">
+            <div class="cover" style="width:52px;height:78px;background:linear-gradient(150deg,#5C3A24,#3A2114)">
+              <div class="ct">Aadu<br>jeevitham</div></div>
+            <div style="flex:1;align-self:center">
+              <div style="font-family:'Fraunces',serif;font-size:13px;line-height:1.25">Aadujeevitham</div>
+              <div class="sub" style="margin-top:2px">Benyamin</div>
+              <div style="margin-top:7px"><span class="pill p-read">✓ Read</span></div>
+            </div>
+          </div>
+          <div class="rule"></div>
+          <div class="lbl">Your reading</div>
+          <div class="card" style="margin-top:7px">
+            <div style="display:flex;justify-content:space-between;font-size:9.5px">
+              <span style="color:var(--ink-soft)">Finished</span><span style="font-weight:600">3 Apr 2026</span>
+            </div>
+            <div class="rule" style="margin:7px 0"></div>
+            <div style="display:flex;justify-content:space-between;font-size:9.5px">
+              <span style="color:var(--ink-soft)">Time spent</span><span style="font-weight:600">9h 14m</span>
+            </div>
+            <div class="rule" style="margin:7px 0"></div>
+            <div style="display:flex;justify-content:space-between;font-size:9.5px">
+              <span style="color:var(--ink-soft)">Sittings</span><span style="font-weight:600">14</span>
+            </div>
+          </div>
+          <div style="margin-top:9px" class="lbl">Where it stands</div>
+          <div class="card" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:10px">Read</span>
+            <span style="font-size:9px;color:var(--oxblood)">Change ›</span>
+          </div>
+          <div style="margin-top:auto;padding-bottom:12px">
+            <div style="border:1px dashed var(--oxblood);border-radius:9px;padding:9px;text-align:center">
+              <div style="font-size:9px;color:var(--oxblood);font-weight:600">Nowhere to say “I read it again”</div>
+              <div class="sub" style="font-size:8px;margin-top:3px;line-height:1.45">Change › offers Reading,
+                which silently overwrites the finish date and pours new sittings into the old log.</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>1a · Today</b> The book page of a finished book. Everything here — the date, the
+      hours, the sitting count — is <i>the</i> read, singular. Setting it back to Reading is the only path
+      available, and it quietly destroys the record it walks over.
+      <span class="con">The loss is invisible: no warning, no undo, and the log looks merely longer.</span></p>
+    </div>
+
+    <!-- 1b. the same page, with reads as records -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;padding:4px 0 8px">
+            <span style="font-size:12px">←</span>
+            <span style="font-size:13px;color:var(--gold)">★</span>
+          </div>
+          <div style="display:flex;gap:10px">
+            <div class="cover" style="width:52px;height:78px;background:linear-gradient(150deg,#5C3A24,#3A2114)">
+              <div class="ct">Aadu<br>jeevitham</div><span class="tally">×3</span></div>
+            <div style="flex:1;align-self:center">
+              <div style="font-family:'Fraunces',serif;font-size:13px;line-height:1.25">Aadujeevitham</div>
+              <div class="sub" style="margin-top:2px">Benyamin</div>
+              <div style="margin-top:7px;display:flex;align-items:center;gap:6px">
+                <span class="pill p-read">✓ Read ×3</span>
+              </div>
+            </div>
+          </div>
+          <div class="rule"></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span class="lbl">Your reads</span>
+            <span style="font-size:8.5px;color:var(--oxblood)">All 3 ›</span>
+          </div>
+          <div class="card" style="margin-top:7px;padding:2px 10px">
+            <div class="readrow">
+              <div class="ord done">Third</div>
+              <div class="meta"><b>12 Mar – 3 Apr 2026</b>22 days · 9h 14m · 14 sittings</div>
+              <span class="chev">›</span>
+            </div>
+            <div class="gline"></div>
+            <div class="readrow">
+              <div class="ord done">Second</div>
+              <div class="meta"><b>Aug 2024</b>9 days · 7h 02m · 11 sittings</div>
+              <span class="chev">›</span>
+            </div>
+            <div class="gline"></div>
+            <div class="readrow">
+              <div class="ord done">First</div>
+              <div class="meta"><b>Jan 2021</b>No timings kept</div>
+              <span class="chev">›</span>
+            </div>
+          </div>
+          <div class="dark" style="margin-top:10px">
+            <div class="q">“Faster every time — the third read took less than half the days of the first.”</div>
+          </div>
+          <div style="margin-top:auto;padding-bottom:12px">
+            <div class="btn"><span>Read it again</span></div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>1b · A read is a record</b> The same page once each pass is its own row. The count
+      is <i>derived</i> from the rows, never stored — so it can never disagree with the history under it.
+      <span class="pro">The first read predates the app and simply says “no timings kept”: honest, and it
+      keeps imported or back-filled reads from looking broken.</span>
+      <span class="pro">One primary action, in the app’s own oxblood, where “Change ›” used to be the only door.</span></p>
+    </div>
+
+    <!-- 1c. library grid -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle" style="margin-top:8px">My Library</div>
+          <div class="sub">52 books</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px">
+            <div>
+              <div class="cover" style="height:104px;background:linear-gradient(150deg,#5C3A24,#3A2114)">
+                <div class="ct">Aadujeevitham</div><span class="tally">×3</span></div>
+              <div style="font-size:7.5px;margin-top:3px;line-height:1.25">Aadujeevitham</div>
+            </div>
+            <div>
+              <div class="cover" style="height:104px;background:linear-gradient(150deg,#3b5064,#22303d)">
+                <div class="ct">The Covenant of Water</div></div>
+              <div style="font-size:7.5px;margin-top:3px;line-height:1.25">The Covenant…</div>
+            </div>
+            <div>
+              <div class="cover" style="height:104px;background:linear-gradient(150deg,#4a5a3a,#28331e)">
+                <div class="ct">Ithihasathinte Ithihasam</div><span class="tally">×2</span></div>
+              <div style="font-size:7.5px;margin-top:3px;line-height:1.25">Ithihasathinte…</div>
+            </div>
+            <div>
+              <div class="cover" style="height:104px;background:linear-gradient(150deg,#6d3a4a,#3d1f2a)">
+                <div class="ct">Randamoozham</div>
+                <div style="position:absolute;top:0;right:6px;width:9px;height:20px;background:var(--gold)"></div></div>
+              <div style="font-size:7.5px;margin-top:3px;line-height:1.25">Randamoozham</div>
+            </div>
+            <div>
+              <div class="cover" style="height:104px;background:linear-gradient(150deg,#8a6b2c,#5d461a)">
+                <div class="ct">Pathummayude Aadu</div><span class="tally">×5</span></div>
+              <div style="font-size:7.5px;margin-top:3px;line-height:1.25">Pathummayude…</div>
+            </div>
+            <div>
+              <div class="cover" style="height:104px;background:linear-gradient(150deg,#44506b,#252d40)">
+                <div class="ct">Khasakkinte Ithihasam</div></div>
+              <div style="font-size:7.5px;margin-top:3px;line-height:1.25">Khasakkinte…</div>
+            </div>
+          </div>
+          <div class="sub" style="font-size:7.5px;margin-top:10px;line-height:1.5">The tally rides the same
+            overlay slot as the gold favourite ribbon and the lending band — so it renders identically over a
+            generated cover and an uploaded photo, and a mixed shelf still reads as one bookshelf.</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>1c · The tally on the shelf</b> A gold <i>×3</i> in the cover’s bottom-right. It is
+      the third member of an existing family (ribbon = favourite, band = lent), not a new visual language,
+      and it answers “which of these have I been back to?” without opening anything.
+      <span class="pro">Absent at ×1 — a mark every book carries stops being a mark.</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah"><span class="an">Area 2</span><h2>Starting again — and the status collision</h2>
+  <span class="an gold">Owner picked A · 29 Aug 2026</span></div>
+  <p class="desc">The hard question isn’t the button, it’s <b>what a book <i>is</i> while you re-read it.</b>
+  It has genuinely been read, and it is genuinely being read. The shelf can only put it in one place, and
+  the app asks that question hourly (“what am I in the middle of?”) while “have I read this?” is asked
+  rarely and answered on the book page. Two directions, and a sheet that says out loud what carries over.</p>
+  <div class="row">
+
+    <!-- 2a. the confirm sheet -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="opacity:.45">
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <div class="cover" style="width:52px;height:78px;background:linear-gradient(150deg,#5C3A24,#3A2114)">
+              <div class="ct">Aadu<br>jeevitham</div><span class="tally">×2</span></div>
+            <div style="flex:1;align-self:center">
+              <div style="font-family:'Fraunces',serif;font-size:13px">Aadujeevitham</div>
+              <div class="sub" style="margin-top:2px">Benyamin</div>
+              <div style="margin-top:7px"><span class="pill p-read">✓ Read ×2</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div style="font-family:'Fraunces',serif;font-size:14px">Start your third read</div>
+          <div class="sub" style="margin-top:4px;line-height:1.5">Your first two reads stay exactly as
+            they are — this begins a new one beside them.</div>
+          <div class="rule" style="margin:10px 0 4px"></div>
+          <div class="kv"><span class="k">Previous reads, logs &amp; notes</span><span class="v keep">Kept</span></div>
+          <div class="kv"><span class="k">Your rating &amp; review</span><span class="v keep">Kept</span></div>
+          <div class="kv"><span class="k">Shelves, favourite, ownership</span><span class="v keep">Kept</span></div>
+          <div class="kv"><span class="k">Progress</span><span class="v reset">Back to page 1</span></div>
+          <div class="rule" style="margin:4px 0 10px"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+            <span class="sub" style="font-size:8.5px">Started on</span>
+            <span style="font-size:9px;font-weight:600;border:1px solid var(--line);border-radius:7px;padding:4px 9px">Today</span>
+            <span class="sub" style="font-size:8.5px;color:var(--oxblood)">Change</span>
+          </div>
+          <div class="btn"><span>Start third read</span></div>
+          <div class="btn ghost" style="margin-top:7px"><span>Cancel</span></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>2a · What carries, what resets</b> Four lines, and only one of them is a reset. The
+      sheet exists because the destructive-looking half — progress going back to page 1 — is the half a
+      reader will hesitate over, and the honest answer is that nothing else moves.
+      <span class="pro">“Started on · Today · Change” lets someone log a re-read they began last month,
+      which is how this feature will mostly be used at first.</span></p>
+    </div>
+
+    <!-- 2b. direction A -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;padding:4px 0 8px">
+            <span style="font-size:12px">←</span><span style="font-size:13px;color:var(--gold)">★</span>
+          </div>
+          <div style="display:flex;gap:10px">
+            <div class="cover" style="width:52px;height:78px;background:linear-gradient(150deg,#5C3A24,#3A2114)">
+              <div class="ct">Aadu<br>jeevitham</div><span class="tally">×2</span></div>
+            <div style="flex:1;align-self:center">
+              <div style="font-family:'Fraunces',serif;font-size:13px">Aadujeevitham</div>
+              <div class="sub" style="margin-top:2px">Benyamin</div>
+              <div style="margin-top:7px"><span class="pill p-reading">▶ Reading</span></div>
+              <div style="font-size:7.5px;color:var(--gold);font-weight:700;letter-spacing:.9px;
+                text-transform:uppercase;margin-top:5px">Third read · read twice before</div>
+            </div>
+          </div>
+          <div class="rule"></div>
+          <div class="lbl">This read</div>
+          <div class="card" style="margin-top:7px">
+            <div style="display:flex;justify-content:space-between;font-size:9.5px">
+              <span style="color:var(--ink-soft)">Progress</span><span style="font-weight:600">p. 88 of 212 · 42%</span>
+            </div>
+            <div style="height:4px;background:var(--paper-deep);border-radius:99px;margin-top:6px">
+              <div style="width:42%;height:100%;background:var(--oxblood);border-radius:99px"></div></div>
+            <div class="rule" style="margin:8px 0"></div>
+            <div style="display:flex;justify-content:space-between;font-size:9.5px">
+              <span style="color:var(--ink-soft)">Started</span><span style="font-weight:600">12 Mar</span>
+            </div>
+          </div>
+          <div style="margin-top:9px;display:flex;justify-content:space-between;align-items:baseline">
+            <span class="lbl">Earlier reads</span><span style="font-size:8.5px;color:var(--oxblood)">Both ›</span>
+          </div>
+          <div class="card" style="margin-top:6px;padding:2px 10px">
+            <div class="readrow"><div class="ord done">Second</div>
+              <div class="meta"><b>Aug 2024</b>9 days · 7h 02m</div><span class="chev">›</span></div>
+            <div class="gline"></div>
+            <div class="readrow"><div class="ord done">First</div>
+              <div class="meta"><b>Jan 2021</b>No timings kept</div><span class="chev">›</span></div>
+          </div>
+          <div style="margin-top:auto;padding-bottom:12px"><div class="btn"><span>▶  Start a sitting</span></div></div>
+        </div>
+      </div></div>
+      <p class="cap"><b>2b · Direction A — Reading wins, history is an eyebrow ✓ chosen</b> One pill, the existing
+      Reading tint, with a gold line under it carrying the fact. The book sits on the Reading shelf, because
+      that shelf answers “what am I in the middle of”.
+      <span class="pro">No new pill, no two-pill rows — tints keep carrying the meaning, exactly as the
+      design system says.</span>
+      <span class="pro">“This read” and “Earlier reads” separate cleanly, so the live progress bar can never
+      be mistaken for the finished ones.</span></p>
+    </div>
+
+    <!-- 2c. direction B -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;padding:4px 0 8px">
+            <span style="font-size:12px">←</span><span style="font-size:13px;color:var(--gold)">★</span>
+          </div>
+          <div style="display:flex;gap:10px">
+            <div class="cover" style="width:52px;height:78px;background:linear-gradient(150deg,#5C3A24,#3A2114)">
+              <div class="ct">Aadu<br>jeevitham</div><span class="tally">×2</span></div>
+            <div style="flex:1;align-self:center">
+              <div style="font-family:'Fraunces',serif;font-size:13px">Aadujeevitham</div>
+              <div class="sub" style="margin-top:2px">Benyamin</div>
+              <div style="margin-top:7px;display:flex;gap:5px;flex-wrap:wrap">
+                <span class="pill p-reading">▶ Reading</span>
+                <span class="pill p-read">✓ ×2</span>
+              </div>
+            </div>
+          </div>
+          <div class="rule"></div>
+          <div class="lbl">Where it sits</div>
+          <div style="display:flex;gap:8px;margin-top:7px">
+            <div style="flex:1;background:var(--paper-deep);border-radius:10px;padding:8px;text-align:center">
+              <div style="font-size:9px;font-weight:700;color:var(--oxblood)">Reading</div>
+              <div class="sub" style="font-size:7.5px;margin-top:2px">shows here</div></div>
+            <div style="flex:1;background:var(--paper-deep);border-radius:10px;padding:8px;text-align:center">
+              <div style="font-size:9px;font-weight:700;color:var(--moss)">Read</div>
+              <div class="sub" style="font-size:7.5px;margin-top:2px">shows here too</div></div>
+          </div>
+          <div style="border:1px dashed var(--oxblood);border-radius:9px;padding:9px;margin-top:10px">
+            <div style="font-size:9px;color:var(--oxblood);font-weight:600">The cost of being in both</div>
+            <div class="sub" style="font-size:8px;margin-top:3px;line-height:1.45">Shelf counts stop summing
+              to 52. “3 Reading · 7 Read” now double-counts a book, and every filter has to decide whether
+              this one is in or out.</div>
+          </div>
+          <div class="sub" style="font-size:8px;margin-top:10px;line-height:1.5">Honest about the fact, and
+            it never hides that you’ve read it. But it turns one clean question — <i>where does this book
+            stand?</i> — into two answers, in the one place the app answers it fastest.</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>2c · Direction B — both, stacked (drawn, not taken)</b> Two pills, and the book appears on both shelves.
+      <span class="pro">Never loses the fact that you’ve read it, even mid-re-read.</span>
+      <span class="con">Breaks the shelf arithmetic and forces a rule into every filter. I’d take A: the
+      count is a fact about history, and history belongs on the book page, not the shelf.</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah gold"><span class="an gold">Area 3</span><h2>The reads themselves</h2></div>
+  <p class="desc">Each pass owns its sittings and its notes. That is the whole reason to make a read a row:
+  a note you wrote at twenty about a book you re-read at forty is <b>not</b> a note about this read — and
+  merging the two logs loses the only interesting thing about re-reading, which is the difference.</p>
+  <div class="row">
+
+    <!-- 3a. all reads -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;gap:8px;align-items:center;padding:6px 0 8px">
+            <span style="font-size:12px">←</span>
+            <div><div class="pgtitle" style="font-size:14px">Your reads</div>
+              <div class="sub">Aadujeevitham · Benyamin</div></div>
+          </div>
+          <div class="dark">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <div><div style="font-size:7px;letter-spacing:1.3px;text-transform:uppercase;color:#A08D6E">Altogether</div>
+                <div style="font-family:'Fraunces',serif;font-size:22px;margin-top:3px">3 reads</div></div>
+              <div style="text-align:right;font-size:8.5px;color:#CBB897;line-height:1.6">
+                16h 16m<br>25 sittings<br>Since Jan 2021</div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;padding:2px 10px">
+            <div class="readrow">
+              <div class="ord done">Third</div>
+              <div class="meta"><b>12 Mar – 3 Apr 2026</b>22 days · 9h 14m · 14 sittings<br>
+                <span style="color:var(--moss)">★★★★★ after this read</span></div>
+              <span class="chev">›</span>
+            </div>
+            <div class="gline"></div>
+            <div class="readrow">
+              <div class="ord done">Second</div>
+              <div class="meta"><b>4 – 13 Aug 2024</b>9 days · 7h 02m · 11 sittings</div>
+              <span class="chev">›</span>
+            </div>
+            <div class="gline"></div>
+            <div class="readrow">
+              <div class="ord done">First</div>
+              <div class="meta"><b>Jan 2021</b>No timings kept<br>
+                <span style="color:var(--ink-soft)">Added before you used the timer</span></div>
+              <span class="chev">›</span>
+            </div>
+          </div>
+          <div style="margin-top:10px" class="lbl">Across the three</div>
+          <div class="card" style="margin-top:6px">
+            <div style="display:flex;align-items:flex-end;gap:10px;height:52px">
+              <div style="flex:1;text-align:center">
+                <div style="height:20px;background:var(--gold-soft);border-radius:3px 3px 0 0"></div>
+                <div class="sub" style="font-size:7px;margin-top:3px">1st<br>—</div></div>
+              <div style="flex:1;text-align:center">
+                <div style="height:38px;background:var(--gold-soft);border-radius:3px 3px 0 0"></div>
+                <div class="sub" style="font-size:7px;margin-top:3px">2nd<br>9d</div></div>
+              <div style="flex:1;text-align:center">
+                <div style="height:52px;background:var(--oxblood);border-radius:3px 3px 0 0"></div>
+                <div class="sub" style="font-size:7px;margin-top:3px">3rd<br>22d</div></div>
+            </div>
+            <div class="sub" style="font-size:8px;margin-top:6px;line-height:1.45">Days taken. The third read
+              was the slowest — which is its own kind of compliment.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>3a · All of them, and the shape they make</b> The dark panel is the same tile Insights
+      and the AI pick already use, so the totals read as a summary rather than another card.
+      <span class="pro">“★★★★★ after this read” only appears where a rating actually changed — the one
+      genuinely new fact re-reading produces, and it needs nothing but a timestamp on the existing rating.</span></p>
+    </div>
+
+    <!-- 3b. one read expanded -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;gap:8px;align-items:center;padding:6px 0 8px">
+            <span style="font-size:12px">←</span>
+            <div><div class="pgtitle" style="font-size:14px">Second read</div>
+              <div class="sub">4 – 13 Aug 2024 · 7h 02m</div></div>
+          </div>
+          <div class="lbl">Sittings · 11</div>
+          <div class="card" style="margin-top:6px;padding:2px 10px">
+            <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:9px">
+              <span>13 Aug · 48m</span><span style="color:var(--ink-soft)">p. 180 → 212</span></div>
+            <div class="gline"></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:9px">
+              <span>12 Aug · 1h 10m</span><span style="color:var(--ink-soft)">p. 121 → 180</span></div>
+            <div class="gline"></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:9px">
+              <span>10 Aug · 35m</span><span style="color:var(--ink-soft)">p. 98 → 121</span></div>
+          </div>
+          <div style="font-size:8.5px;color:var(--oxblood);margin-top:6px">All 11 sittings ›</div>
+          <div class="lbl" style="margin-top:12px">Notes from this read · 2</div>
+          <div style="border:1px dashed var(--line);background:#FDFAF0;border-radius:9px;padding:9px;margin-top:6px">
+            <div style="font-family:'Fraunces',serif;font-style:italic;font-size:10px;line-height:1.5;color:#4a3f31">
+              “The desert chapters land completely differently now that I’ve been away from home myself.”</div>
+            <div class="sub" style="font-size:7.5px;margin-top:5px">p. 140 · 11 Aug 2024</div>
+          </div>
+          <div style="border:1px dashed var(--line);background:#FDFAF0;border-radius:9px;padding:9px;margin-top:7px">
+            <div style="font-family:'Fraunces',serif;font-style:italic;font-size:10px;line-height:1.5;color:#4a3f31">
+              “Reading it in one week this time. Couldn’t do that at nineteen.”</div>
+            <div class="sub" style="font-size:7.5px;margin-top:5px">13 Aug 2024</div>
+          </div>
+          <div class="dark" style="margin-top:11px">
+            <div class="q">Notes stay with the read they were written in — so the twenty-year-old’s reading
+              and the forty-year-old’s never overwrite each other.</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>3b · One pass, whole</b> Its sittings and its notes, nothing from the others. This is
+      the screen the feature exists for: the same slip-paper notes the app already uses, scoped.
+      <span class="pro">Reuses the reading-log row and the dashed note card unchanged — the only new thing on
+      this screen is which rows it chooses.</span></p>
+    </div>
+
+    <!-- 3c. the timer -->
+    <div class="shot">
+      <div class="phone night"><div class="scr night">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="text-align:center">
+          <div style="display:flex;justify-content:flex-start;padding:4px 0">
+            <span style="font-size:13px;color:#CBB897">⌄</span></div>
+          <div class="eyebrow" style="margin-top:6px">Reading now · third read</div>
+          <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:10px">
+            <div class="cover" style="width:30px;height:44px;background:linear-gradient(150deg,#5C3A24,#3A2114)">
+              <div class="ct" style="font-size:5px">Aadu<br>jeevitham</div></div>
+            <div style="font-family:'Fraunces',serif;font-size:12px;color:var(--n-text)">Aadujeevitham</div>
+          </div>
+          <div class="clock">0:41:12</div>
+          <div style="font-size:9px;color:var(--n-mute)">since 8:59 pm</div>
+          <div style="margin-top:14px;font-size:9.5px;color:var(--n-soft)">p. 88 of 212 · 42%</div>
+          <div style="margin:10px 14px 0;height:1px;background:var(--n-line)"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:8.5px;color:var(--n-mute)">
+            <span>Second read reached here on day 4</span><span style="color:var(--n-gold)">day 6</span></div>
+          <div style="margin-top:auto;padding-bottom:12px">
+            <div style="border:1px solid var(--n-line);border-radius:99px;padding:9px;font-size:11px;
+              color:var(--n-text);margin-bottom:9px">✎  Add a note</div>
+            <div class="btn"><span>Stop &amp; log</span></div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>3c · The timer knows which read it is</b> One eyebrow line, and the sitting is filed
+      against the third read rather than the book. Everything else about this screen is untouched.
+      <span class="pro">The comparison line is the quiet delight — your own past pace as the only thing worth
+      racing, computed from rows that already exist.</span>
+      <span class="con">Only shown when the earlier read actually has timings; a back-filled first read has
+      nothing to compare and the line is simply absent.</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="area">
+  <div class="ah gold"><span class="an gold">Area 4</span><h2>Where else it shows</h2></div>
+  <p class="desc">Two surfaces get a re-read fact for free, and both already have the shape to hold it.</p>
+  <div class="row">
+
+    <!-- 4a. insights -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle" style="margin-top:8px">Insights</div>
+          <div style="display:flex;background:var(--card);border:1px solid var(--line);border-radius:99px;
+            padding:3px;margin-top:10px;font-size:8px">
+            <div style="flex:1;text-align:center;padding:5px;color:var(--ink-soft)">Month</div>
+            <div style="flex:1;text-align:center;padding:5px;color:var(--ink-soft)">6 mo</div>
+            <div style="flex:1;text-align:center;padding:5px;background:var(--oxblood);color:var(--paper);
+              border-radius:99px;font-weight:600">Year</div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <div class="lbl">2026 so far</div>
+            <div style="font-family:'Fraunces',serif;font-size:15px;line-height:1.35;margin-top:6px">
+              You went back to four books you’d already finished.</div>
+            <div style="font-family:'Fraunces',serif;font-size:34px;color:var(--oxblood);margin-top:8px">4</div>
+            <div class="sub" style="margin-top:2px">re-reads · 12% of your reading time</div>
+            <div class="rule" style="margin:10px 0"></div>
+            <div style="display:flex;gap:6px;align-items:flex-end">
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#8a6b2c,#5d461a)">
+                <span class="tally" style="font-size:6px">×5</span></div>
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#5C3A24,#3A2114)">
+                <span class="tally" style="font-size:6px">×3</span></div>
+              <div class="cover" style="width:26px;height:38px;background:linear-gradient(150deg,#4a5a3a,#28331e)">
+                <span class="tally" style="font-size:6px">×2</span></div>
+              <div style="flex:1;padding-left:4px">
+                <div class="sub" style="font-size:8px;line-height:1.45">Most returned to:<br>
+                  <b style="color:var(--ink)">Pathummayude Aadu</b>, five times</div></div>
+            </div>
+          </div>
+          <div class="dark" style="margin-top:10px">
+            <div class="q">“A book you return to five times is the truest five stars you have.”</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4a · Insights, unchanged in shape</b> The flagship card’s existing anatomy — eyebrow,
+      a headline written as a sentence, hero stat, a visualization, a closing line on the dark panel — with
+      re-reads as the content.
+      <span class="pro">Nothing new to design: the period selector, the card and the dark tile all already
+      exist, and the stat is a count of read rows.</span></p>
+    </div>
+
+    <!-- 4b. home -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="margin-top:10px;font-family:'Fraunces',serif;font-size:15px">Good evening</div>
+          <div class="sub">Tuesday, 12 March</div>
+          <div class="lbl" style="margin-top:14px">Currently reading</div>
+          <div class="card" style="margin-top:6px;display:flex;gap:9px">
+            <div class="cover" style="width:38px;height:56px;background:linear-gradient(150deg,#5C3A24,#3A2114)">
+              <div class="ct" style="font-size:5px">Aadu<br>jeevitham</div><span class="tally" style="font-size:6px">×2</span></div>
+            <div style="flex:1;align-self:center">
+              <div style="font-size:10px;font-weight:600">Aadujeevitham</div>
+              <div style="font-size:7.5px;color:var(--gold);font-weight:700;letter-spacing:.8px;
+                text-transform:uppercase;margin-top:3px">Third read · day 6</div>
+              <div style="height:3px;background:var(--paper-deep);border-radius:99px;margin-top:6px">
+                <div style="width:42%;height:100%;background:var(--oxblood);border-radius:99px"></div></div>
+              <div class="sub" style="font-size:7.5px;margin-top:4px">p. 88 of 212</div>
+            </div>
+          </div>
+          <div class="lbl" style="margin-top:14px">Worth another look</div>
+          <div class="card" style="margin-top:6px;display:flex;gap:9px">
+            <div class="cover" style="width:38px;height:56px;background:linear-gradient(150deg,#6d3a4a,#3d1f2a)">
+              <div class="ct" style="font-size:5px">Randa<br>moozham</div></div>
+            <div style="flex:1;align-self:center">
+              <div style="font-size:10px;font-weight:600">Randamoozham</div>
+              <div class="sub" style="font-size:8px;margin-top:3px;line-height:1.45">You gave it five stars
+                in 2019 and haven’t opened it since.</div>
+              <div style="font-size:8.5px;color:var(--oxblood);margin-top:5px;font-weight:600">Read it again ›</div>
+            </div>
+          </div>
+          <div class="sub" style="font-size:7.5px;margin-top:9px;line-height:1.5">Drawn from your own
+            five-star ratings and the years since — no model, nothing to opt into.</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>4b · Home, and the one new card</b> The live card carries the pass it belongs to.
+      Under it, an optional nudge built only from ratings and dates.
+      <span class="pro">Deliberately not an AI surface — it is arithmetic on the reader’s own stars, so it
+      sidesteps the recommendation opt-in entirely and can ship with the feature.</span>
+      <span class="con">Needs a frequency cap or it becomes a nag; one card, and never the same book twice
+      in a season.</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h3>The data shape</h3>
+  <p>One new syncable table, and two foreign keys. <code>Reads</code> — <code>libraryEntryId</code>,
+  <code>ordinal</code>, <code>startDate</code>, <code>finishDate</code>, <code>currentPage</code>,
+  <code>status</code> — plus the usual <code>id / user_id / created_at / updated_at / deleted_at</code>
+  (rule 10). Then <code>ReadingSessions.readId</code> and <code>ReadingNotes.readId</code>, so a sitting and
+  a note each name the pass they belong to.</p>
+  <p>This is <b>rule 14 applied a second time</b>. Lending is a record, not a flag, because “lent to X, on
+  this date, returned ✓” is a fact with a shape. A read is the same: it has a beginning, an end, a pace and
+  a set of thoughts, and squeezing it into three columns on the entry is exactly what makes the second one
+  impossible.</p>
+  <h3>What it costs elsewhere</h3>
+  <ul>
+    <li><b><code>markBookFinished</code> stops being idempotent-by-refusal.</b> Today it declines to
+      re-stamp <code>finishDate</code> because “the original date is the true one”. That comment stays
+      correct — it just belongs to the <i>read</i> now, not the entry. Finishing stamps the current read.</li>
+    <li><b><code>autoFinishIfOnLastPage</code> returns early when <code>status == 'read'</code></b>, so a
+      re-read would never close itself on the last page. It must test the current read, not the book.</li>
+    <li><b>The entry keeps its columns as a mirror of the current read</b> rather than losing them. Every
+      existing reader of <code>currentPage</code> — the four progress surfaces, the timer, the Live
+      Activity, the web pages — keeps working untouched, which is the difference between a migration and a
+      rewrite.</li>
+    <li><b>Backfill is one row per finished entry.</b> Ordinal 1, dates copied across, existing sittings and
+      notes adopted into it. A book with a finish date but no sittings becomes the honest “no timings kept”
+      row in <b>1b</b> — which is why that state is drawn rather than hidden.</li>
+    <li><b>Ratings stay on the Work</b> (rule 13, rule 17) — one number, not one per read. The
+      “★★★★★ after this read” line in <b>3a</b> needs only a timestamp on the rating, matched against the
+      read that was open at the time. Cheap, and skippable in v1.</li>
+    <li><b>Sync:</b> nothing new. A read is an ordinary syncable row under the existing engine, and the
+      conflict rules already cover it. The one thing to get right is that <code>ordinal</code> must be
+      derived on read, never stored as a bare counter, or two devices starting a re-read offline both write
+      “third”.</li>
+  </ul>
+  <h3>What I'd build</h3>
+  <ul>
+    <li><b>Direction A</b> for the status collision — one pill, gold eyebrow. <b>Chosen, 29 Aug 2026.</b>
+      B is more honest and costs the shelf arithmetic, which the app relies on far more often than it
+      states the read count. The consequence to accept with A: while a re-read is open the book is only on
+      the Reading shelf, so a reader filtering Read mid-re-read will not find it. The count itself never
+      vanishes — it is on the cover tally and the book page the whole time.</li>
+    <li>The tally (<b>1c</b>), the reads list (<b>3a</b>) and per-read logs and notes (<b>3b</b>) are the
+      feature. Everything in Area 4 is a consequence, and can follow.</li>
+    <li>The pace comparison in <b>3c</b> and the “worth another look” card in <b>4b</b> are the delight, and
+      both are arithmetic on rows that already exist — no model, no new bill (rule 8).</li>
+  </ul>
+</div>
+
+</body>
+</html>

@@ -101,6 +101,21 @@ Kitabi's own wiring rules (from the feature map — expensive to reverse):
 17. **Work vs. Edition:** ratings/reviews/translations attach to the *Work*;
     ownership, cover, page count attach to the *Edition*.
 18. **Personal tags ≠ global genres** — user shelves never pollute the catalog.
+19. **A read is a record, not a counter** — rule 14's shape applied to reading
+    itself. A book read three times has three beginnings, endings, paces and sets of
+    notes; `LibraryEntries` has one `start_date`, one `finish_date`, one
+    `current_page`. Each pass gets a `Reads` row, and every sitting and note is
+    stamped with the pass it belongs to (`read_id`); the count is always *derived*
+    from those rows, never stored. The entry's own columns stay as a mirror of the
+    **current** read, so every existing reader of `current_page` — the four progress
+    surfaces, the timer, the Live Activity, the public web pages — is untouched.
+    Retrofitting means backfilling every sitting ever logged and guessing which pass
+    it belonged to, which is the one guess nobody can make. Two behaviours move with
+    it: `markBookFinished` stamps the read instead of refusing to re-stamp the entry,
+    and `autoFinishIfOnLastPage` tests the current read instead of returning early on
+    a book already marked read. `[WIRED]` — design in
+    [docs/reread-mockups.html](docs/reread-mockups.html) (owner picked Direction A,
+    29 Aug 2026).
 
 ## Commands
 

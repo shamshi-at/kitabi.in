@@ -1293,13 +1293,77 @@ say nothing at all (§2.3). Where we know nothing, the block disappears — no
 - [ ] Commons portraits carry per-file licences, a few of which are non-commercial.
       Filter at import, or store the licence and decide at render?
 
+## Phase R — Reading a book again (`[WIRED]`)
+
+Owner request, 29 Aug 2026. Design drawn and chosen in
+[reread-mockups.html](reread-mockups.html) (**Direction A** for the status collision).
+`[WIRED]`, not `[V1]`: **R1 is the whole point and should land next**, because every
+sitting logged against a library entry between now and then is one more row to backfill
+and guess a pass for. R2–R4 are the dormant UI and can follow whenever.
+
+### R1 — Schema (do this early; it is the expensive half)
+
+- [ ] `reads` — `library_entry_id`, `ordinal`, `start_date`, `finish_date`,
+      `current_page`, `status`, plus the syncable columns (rule 10). RLS enabled, zero
+      policies (rule 11)
+- [ ] `reading_sessions.read_id` and `reading_notes.read_id`, nullable at first so the
+      backfill has somewhere to land
+- [ ] **Backfill, one read per existing entry**: ordinal 1, dates copied across, its
+      sittings and notes adopted. An entry with a finish date but no sittings becomes
+      the honest "no timings kept" row drawn in 1b — that state exists precisely so
+      back-filled history doesn't look broken
+- [ ] `ordinal` is **derived on read, never stored as a bare counter** — two devices
+      starting a re-read offline would both write "third"
+- [ ] Drift migration + the matching Alembic migration in the same commit; guarded and
+      idempotent, oldest-first, and tested with `doubleQuotedStringLiterals = false`
+      (the 25 Aug wedge — a green `flutter test` on a Mac is not evidence about device
+      sqlite)
+- [ ] The entry keeps `start_date`/`finish_date`/`current_page` as a **mirror of the
+      current read**, so the four progress surfaces, the timer, the Live Activity and
+      the public web pages are untouched (rule 19)
+
+### R2 — The two behaviours that change with it
+
+- [ ] `markBookFinished` stamps the *current read* rather than refusing to re-stamp the
+      entry — its "the original date is the true one" comment stays true, it just
+      belongs to the read now
+- [ ] `autoFinishIfOnLastPage` tests the current read, not `status == 'read'`, or a
+      re-read never closes itself on the last page
+- [ ] Sittings and notes are written with the open read's `read_id`. Note the 15 Aug
+      shape: a note written mid-sitting already defers its `session_id`, so check what
+      the next *pull* does with a withheld `read_id` (`Value.absent()`, never
+      `Value(null)`)
+
+### R3 — The dormant UI (Direction A)
+
+- [ ] "Read it again" on a finished book, and the carries/resets sheet with a
+      back-datable start (2a) — everything is Kept except progress
+- [ ] Status: one Reading pill + the gold "third read · read twice before" eyebrow (2b).
+      A book being re-read sits on the **Reading shelf alone** — a reader filtering Read
+      mid-re-read will not find it, and that is the chosen answer, not a bug
+- [ ] The gold `×3` cover tally, in the same overlay slot as the favourite ribbon and
+      the lending band, absent at ×1 (1c)
+- [ ] The reads list (3a) and one read's own sittings + notes (3b) — both reuse the
+      existing reading-log row and dashed slip-paper note card unchanged
+- [ ] The timer's "third read" eyebrow (3c), and its pace line against the previous
+      pass — shown only when that pass actually has timings
+
+### R4 — Consequences, once R3 is real
+
+- [ ] Insights flagship card: re-reads in the period, most-returned-to book (4a) — the
+      existing card anatomy, new content
+- [ ] Home's "worth another look" nudge from your own five-star ratings and the years
+      since (4b) — arithmetic, not a model, so it needs no recommendation opt-in.
+      Needs a frequency cap or it is a nag
+- [ ] `[LATER]` — "★★★★★ after this read" needs a timestamp on the existing rating
+      matched to the read that was open; skippable in v1
+
 ## Parking lot — v1.5 (designed or deliberately deferred)
 
 - [ ] Quote capture with OCR (regional scripts) — S14 designed
 - [ ] Embedding similarity ("books like this")
 - [ ] Semantic / mood search
 - [ ] Shelf-scan-to-library (camera reads spines)
-- [ ] Reading sessions (timed logs)
 - [ ] Reading challenges; spoiler-aware companion; AI book insights
 - [ ] Web *app* — the signed-in Flutter experience in a browser. Distinct from Phase W,
       which is the public read-only reference site and needs no accounts
