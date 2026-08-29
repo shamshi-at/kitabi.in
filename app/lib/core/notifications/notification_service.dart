@@ -108,11 +108,16 @@ class NotificationService {
   }
 
   /// Schedule a one-off reminder. Past times are ignored (nothing to remind).
+  ///
+  /// [payload] is required rather than optional because it was optional, and
+  /// so both call sites simply never passed one — which made tapping a
+  /// due-date reminder land nowhere at all (see [notificationPayload]).
   Future<void> scheduleReminder({
     required int id,
     required String title,
     required String body,
     required DateTime when,
+    required String payload,
   }) async {
     await _ensureReady();
     if (!when.isAfter(DateTime.now())) return;
@@ -134,6 +139,7 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
     );
   }
 
@@ -239,7 +245,12 @@ class NotificationService {
 
   /// Fires immediately — used for "reading timer stopped while you were
   /// away" once an auto-stop actually happens, so it isn't silent.
-  Future<void> notifyNow({required int id, required String title, required String body}) async {
+  Future<void> notifyNow({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
     await _ensureReady();
     await _plugin.show(
       id,
@@ -255,6 +266,7 @@ class NotificationService {
         ),
         iOS: const DarwinNotificationDetails(),
       ),
+      payload: payload,
     );
   }
 }

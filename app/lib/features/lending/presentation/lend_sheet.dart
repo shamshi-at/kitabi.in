@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/notifications/notification_payload.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/quiet_error.dart';
 import '../../../core/theme/app_theme.dart';
@@ -110,6 +111,10 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
               title: l10n.reminderLentTitle,
               body: l10n.reminderLentBody(widget.bookTitle, borrower),
               when: reminderTimeFor(due),
+              // So tapping it opens the ledger. Without a payload the tap
+              // handler had nothing to route on and the app just opened
+              // wherever it had been.
+              payload: notificationPayload(NotificationTarget.lending, id),
             );
       }
       if (mounted) Navigator.of(context).pop();

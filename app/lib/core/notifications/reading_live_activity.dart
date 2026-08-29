@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../l10n/app_localizations.dart';
+import 'notification_payload.dart';
 import 'notification_service.dart';
 
 /// The running sitting, shown *outside* the app — on the lock screen, so a
@@ -152,8 +153,8 @@ class ReadingLiveActivity {
         body: _progressLine(l10n, currentPage, pageCount),
         startedAt: startedAt,
         // Same payload convention as the check-in, so a tap on the body lands
-        // on this book's running timer (`_openReadingTimer`).
-        payload: libraryEntryId,
+        // on this book's running timer (`_openFromNotification`).
+        payload: notificationPayload(NotificationTarget.readingTimer, libraryEntryId),
       );
     } catch (_) {}
   }

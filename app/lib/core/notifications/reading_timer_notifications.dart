@@ -13,6 +13,7 @@ import '../../l10n/app_localizations.dart';
 import '../auth/supabase_auth_service.dart';
 import '../format_duration.dart';
 import '../router/app_router.dart';
+import 'notification_payload.dart';
 import 'notification_service.dart';
 
 /// Schedules (or re-schedules) both halves of the "still reading?" safety
@@ -50,7 +51,7 @@ Future<void> armReadingTimerSafetyNet({
       when: checkInAt,
       yesLabel: yesLabel,
       noLabel: noLabel,
-      payload: libraryEntryId,
+      payload: notificationPayload(NotificationTarget.readingTimer, libraryEntryId),
     );
     final enforceDelay = checkInAt.add(readingCheckInGrace).difference(DateTime.now());
     if (enforceDelay.isNegative) return;
@@ -94,14 +95,12 @@ Future<void> handleColdStartReadingTimerResponse() async {
 Future<void> _handle(NotificationResponse response) async {
   final actionId = response.actionId;
   // A plain tap on the notification body (not a Yes/No action button) — the
-  // OS already brings the app forward for this; the missing piece was where
-  // it lands. Surface the running timer instead of whatever the app's
-  // default route is. `payload` is only ever set on the check-in
-  // notification (see `armReadingTimerSafetyNet`), so a tap on an unrelated
-  // notification (a lending reminder, the "stopped while you were away"
-  // notice) safely no-ops here.
+  // OS already brings the app forward for this; the missing piece is where it
+  // lands. Every local notification now says what it is about
+  // ([NotificationTarget]); before that only the reading timer could, so a
+  // lending reminder tapped through to nothing at all.
   if (actionId == null) {
-    _openReadingTimer(response.payload);
+    _openFromNotification(response.payload);
     return;
   }
   if (actionId != readingCheckInYesActionId && actionId != readingCheckInNoActionId) {
@@ -118,8 +117,15 @@ Future<void> _handle(NotificationResponse response) async {
     final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
     // The notification's payload pins it to the entry it was scheduled for —
     // if the active session has since changed (stopped, or a different book
-    // started), this response is stale and does nothing.
-    if (entryId == null || entryId != response.payload) return;
+    // started), this response is stale and does nothing. Read through the
+    // parser so a check-in scheduled before the payload was qualified (it is
+    // in the OS's queue on real devices, and days out) still matches.
+    final about = parseNotificationPayload(response.payload);
+    if (entryId == null ||
+        about?.target != NotificationTarget.readingTimer ||
+        about?.id != entryId) {
+      return;
+    }
 
     if (actionId == readingCheckInNoActionId) {
       await stopReadingSessionAndNotify(db: db, userId: userId, libraryEntryId: entryId);
@@ -150,15 +156,16 @@ Future<void> _handle(NotificationResponse response) async {
   }
 }
 
-/// Routes a plain notification-body tap to the running timer. [globalRouter]
-/// is only null before the app's first frame (a genuine cold start) — that
-/// case, and a tap that arrives while the router is still holding on splash/
-/// sign-in, both fall through to [pendingExternalTarget], the same hand-off
-/// `navigateFromExternal` already uses for cold-start deep links.
-void _openReadingTimer(String? libraryEntryId) {
-  if (libraryEntryId == null) return;
+/// Routes a plain notification-body tap to whatever the notification is about.
+/// [globalRouter] is only null before the app's first frame (a genuine cold
+/// start) — that case, and a tap that arrives while the router is still
+/// holding on splash/sign-in, both fall through to [pendingExternalTarget],
+/// the same hand-off `navigateFromExternal` already uses for cold-start deep
+/// links.
+void _openFromNotification(String? payload) {
   try {
-    final location = Routes.readingTimerPath(libraryEntryId);
+    final location = localNotificationRoute(payload);
+    if (location == null) return;
     final router = globalRouter;
     if (router == null) {
       pendingExternalTarget = location;
@@ -205,7 +212,32 @@ Future<void> stopReadingSessionAndNotify({
       body: l10n.timerAutoStoppedBody(
         formatDuration(Duration(seconds: logged.durationSeconds)),
       ),
+      // The sitting is over, so the timer is the one screen this must *not*
+      // open — the book it was about is where the reader can see what was
+      // logged and note where they got to. Null when the pair can't be
+      // resolved, which the route rule reads as "nothing to open" rather than
+      // sending them somewhere unrelated.
+      payload: await _autoStoppedPayload(db, libraryEntryId),
     );
   }
   await SyncEngine(db, api).syncNow(userId);
+}
+
+/// `book:<workId>/<editionId>` for the entry that was auto-stopped, or null if
+/// the book isn't cached locally. Best-effort by construction: a notification
+/// that can't say where to go must still be posted, because the *message* —
+/// "your sitting was stopped" — is the part that matters.
+Future<String?> _autoStoppedPayload(AppDatabase db, String libraryEntryId) async {
+  try {
+    final entry = await db.libraryEntriesDao.getById(libraryEntryId);
+    if (entry == null) return null;
+    final book = await db.cachedBooksDao.getByEditionId(entry.editionId);
+    if (book == null) return null;
+    return notificationPayload(
+      NotificationTarget.book,
+      '${book.workId}/${entry.editionId}',
+    );
+  } catch (_) {
+    return null;
+  }
 }

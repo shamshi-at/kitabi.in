@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kitabi/core/notifications/notification_payload.dart';
 import 'package:kitabi/core/notifications/reading_live_activity.dart';
+import 'package:kitabi/core/router/app_router.dart';
 
 /// The channel flutter_local_notifications itself talks over — asserting on it
 /// is how we know an *ongoing chronometer* notification was posted rather than
@@ -130,8 +132,12 @@ void main() {
       expect(args['title'], 'The Covenant of Water');
       expect(args['body'], 'p. 302 of 724');
       // Tapping the body lands on this book's timer — same payload convention
-      // as the check-in notification.
-      expect(args['payload'], 'le1');
+      // as the check-in notification, now qualified by what it is *about* so
+      // the other families of local notification can name a screen too.
+      expect(args['payload'],
+          notificationPayload(NotificationTarget.readingTimer, 'le1'));
+      expect(localNotificationRoute(args['payload'] as String),
+          Routes.readingTimerPath('le1'));
 
       final android = args['platformSpecifics'] as Map;
       // The three flags that make it a live clock rather than a dead label.
