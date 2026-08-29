@@ -368,6 +368,14 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   /// 2026, mid-flight).
   Future<void>? _hydration;
 
+  /// Resolves once this controller has read storage and [state] means
+  /// something. Before it completes, `state == null` is "we haven't looked
+  /// yet", not "nothing is running" — a distinction any screen that acts on
+  /// an empty session has to make, since a cold start into the timer route
+  /// (tapping the lock-screen clock) builds this Notifier and the screen in
+  /// the same frame.
+  Future<void> get hydrated => _hydration ?? Future<void>.value();
+
   @override
   ActiveSession? build() {
     _hydration = _hydrate();
@@ -376,15 +384,32 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
 
   /// Re-read the sitting from local storage. Public because adopting one from
   /// another device writes those rows and then needs this to catch up.
-  Future<void> hydrate() => _hydrate();
+  ///
+  /// Recorded as the current [hydrated] future too, so a caller waiting for
+  /// "has storage answered yet" waits for the *latest* read rather than only
+  /// the one `build()` started.
+  Future<void> hydrate() => _hydration = _hydrate();
 
   Future<void> _hydrate() async {
     final db = ref.read(appDatabaseProvider);
     final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
     final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
-    if (entryId == null || startedRaw == null) return;
-    final startedAt = DateTime.tryParse(startedRaw);
-    if (startedAt == null) return;
+    final startedAt = startedRaw == null ? null : DateTime.tryParse(startedRaw);
+    if (entryId == null || startedAt == null) {
+      // Nothing is running — and this is the only reconciliation a *cold
+      // start* gets. [reconcile] is wired to `didChangeAppLifecycleState`,
+      // which is never called for the state the app launches in, so on a cold
+      // start nothing else ever takes down a lock-screen clock left behind by
+      // a stop that couldn't reach the channel (an iOS background isolate's
+      // auto-stop, a plugin hiccup, the app being killed mid-stop). It
+      // survived every relaunch, and tapping it opened the timer on a sitting
+      // that no longer existed — a sweeping hand over a clock frozen at 0:00
+      // (owner report, 29 Aug 2026). Storage is the truth in both directions,
+      // so read it that way here.
+      state = null;
+      await _endLiveSurface();
+      return;
+    }
     final pageStartRaw = await db.keyValuesDao.getValue(activeSessionPageStartKey);
     // A session restored from disk predating this key has no id; mint one now
     // so notes taken after the restore still have something to attach to.

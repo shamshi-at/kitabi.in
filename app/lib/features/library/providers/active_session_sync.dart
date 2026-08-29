@@ -86,6 +86,16 @@ class ActiveSessionSync {
   ///
   /// Returns true when something changed, so callers can refresh.
   Future<bool> pullAndApply() async {
+    final db = _ref.read(appDatabaseProvider);
+    // Read *before* the network call, not after. A stop fires its DELETE
+    // unawaited and clears this note the moment it lands, so a GET issued
+    // just before the DELETE and answered just after it would come back
+    // holding the stopped sitting with no note left to recognise it by — and
+    // the sitting was adopted straight back onto the device that had already
+    // logged it, lock-screen clock and all. The note has to be as old as the
+    // answer it is being compared against.
+    final pendingStopId = await db.keyValuesDao.getValue(activeSessionPendingStopKey);
+
     final Map<String, dynamic>? remote;
     try {
       remote = await _ref.read(apiClientProvider).getActiveSession();
@@ -93,9 +103,7 @@ class ActiveSessionSync {
       return false; // offline: leave local state alone, it is still the truth here
     }
 
-    final db = _ref.read(appDatabaseProvider);
     final localId = await db.keyValuesDao.getValue(activeSessionIdKey);
-    final pendingStopId = await db.keyValuesDao.getValue(activeSessionPendingStopKey);
 
     // The server is still showing a sitting this device already stopped and
     // logged — the delete never landed (stopped offline, or auto-stopped by a

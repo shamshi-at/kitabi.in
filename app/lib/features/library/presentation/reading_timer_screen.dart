@@ -84,6 +84,24 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// "stopped elsewhere" guard has to know.
   bool _stopping = false;
 
+  /// Whether [activeSessionProvider] has actually read storage yet.
+  ///
+  /// Until it has, an empty session means "nobody has looked", not "there is
+  /// nothing running" — and this screen is reachable in exactly that window:
+  /// a tap on the lock-screen clock cold-starts the process, so the Notifier's
+  /// `build()` and this screen's first frame happen together. The give-up
+  /// guard below used to fire on that frame and was saved only by an accident
+  /// — `canPop()` is false on a cold start, so its `pop()` did nothing. Now
+  /// that the guard can genuinely leave, it has to wait for the answer first
+  /// or it would throw a reader out of a sitting that is running fine.
+  bool _sessionResolved = false;
+
+  /// The give-up guard has already fired. It lives in `build`, and this screen
+  /// keeps rebuilding for as long as the pop transition plays (the clock ticks
+  /// once a second until dispose), so without a latch a second frame would
+  /// leave a *second* time — popping the book page out from under the reader.
+  bool _leaving = false;
+
   /// Null while the typed page is savable. A backwards page must not be
   /// written by Done *or* by the back gesture, which also saves.
   PageEntryError? _pageError;
@@ -155,6 +173,19 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
     _seedHandIfReady();
     unawaited(_resolveBook());
+    unawaited(_awaitSession());
+  }
+
+  /// Arms the give-up guard once — and only once — storage has answered.
+  Future<void> _awaitSession() async {
+    try {
+      await ref.read(activeSessionProvider.notifier).hydrated;
+    } catch (_) {
+      // A hydrate that blew up still counts as an answer: staying here on a
+      // frozen clock is the one outcome worse than leaving.
+    }
+    if (!mounted) return;
+    setState(() => _sessionResolved = true);
   }
 
   // Same deterministic forgot-to-stop safety net as the mini-bar
@@ -445,9 +476,28 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     // show here. Never while *this* screen's stop is in flight: that window
     // looks identical from here and is the one case where the session ending
     // is precisely the reason to stay.
-    if (_logged == null && !_stopping && active?.libraryEntryId != widget.libraryEntryId) {
+    if (_sessionResolved &&
+        !_leaving &&
+        _logged == null &&
+        !_stopping &&
+        active?.libraryEntryId != widget.libraryEntryId) {
+      _leaving = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && context.canPop()) context.pop();
+        if (!mounted) return;
+        // Whatever brought the reader to a sitting that does not exist was
+        // itself stale — and the usual suspect is the lock-screen clock,
+        // whose whole purpose is to be tappable. Take it down on the way out
+        // rather than leaving it to invite the reader back to the same dead
+        // screen (owner report, 29 Aug 2026).
+        unawaited(ref.read(activeSessionProvider.notifier).reconcile());
+        // `_leave()`, not a bare `pop()`. This route is *arrived at* as often
+        // as it is pushed — a notification tap on a cold start replaces the
+        // stack, so `canPop()` is false and the pop this guard used to make
+        // silently did nothing. The reader was left on a running face with no
+        // session behind it: a sweeping hand over a clock stuck at 0:00, and
+        // no way off the screen (CLAUDE.md, 14 Aug 2026 — every exit needs
+        // `canPop() ? pop() : go(home)`; this one never got it).
+        _leave();
       });
     }
 
