@@ -173,6 +173,22 @@ String? externalRouteFor(Uri uri) => readingTimerRouteFor(uri) ?? shareRouteFor(
 /// redirect consumes this instead of returning home once the session is ready.
 String? pendingExternalTarget;
 
+/// The four bottom-nav tabs — branches of the `StatefulShellRoute` below.
+///
+/// A branch root cannot be *pushed*. go_router renders the branch's page but
+/// leaves the shell where it was: the nav bar still highlights the old tab and
+/// `currentConfiguration.uri` still reads the old location, so every later
+/// resolution — the duplicate guard here, the redirect, `goBranch` — carries on
+/// as if the reader never moved. A tap on "X lent you a book" put the ledger on
+/// screen under a nav bar that said Home, at a URL that said `/home` (owner
+/// report, 29 Aug 2026). Tabs are switched with `go`, never pushed.
+const shellTabRoutes = <String>{
+  Routes.home,
+  Routes.library,
+  Routes.lendingLedger,
+  Routes.insights,
+};
+
 /// Route an externally-triggered navigation (push tap, app link): straight
 /// away when the app is up, or parked in [pendingExternalTarget] for the
 /// redirect to consume when the session is still booting.
@@ -190,6 +206,14 @@ void navigateFromExternal(GoRouter router, String location) {
     pendingExternalTarget = location;
     return;
   }
+  // A tab is a `go`, not a push — see [shellTabRoutes]. Idempotent, so it
+  // needs no duplicate guard of its own: going where you already are moves
+  // nothing.
+  if (shellTabRoutes.contains(location)) {
+    router.go(location);
+    return;
+  }
+
   // Already there — the OS has done the only thing left to do by bringing the
   // app forward. Pushing again stacks a second copy of the same screen, and
   // for the reading timer that is actively destructive: the buried copy's

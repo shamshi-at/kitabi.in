@@ -46,28 +46,26 @@ class PushService {
     if (_started || !_available) return;
     _started = true;
     final messaging = FirebaseMessaging.instance;
-    await messaging.requestPermission();
-    // Let notifications show while the app is foregrounded (iOS default hides them).
-    await messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
 
-    await _acquireAndRegister(messaging);
-
-    // Belt-and-braces: also catch the token if it only becomes available later
-    // (e.g. APNs was slow past the poll window, or it rotates).
-    messaging.onTokenRefresh.listen((t) {
-      _token = t;
-      _register(t);
-    });
-
+    // **The tap comes first, before any of the token work below.**
+    //
+    // Registering this install's token needs a network round trip, and on iOS
+    // it waits up to twenty seconds for the APNs token before that. All of it
+    // used to run ahead of `getInitialMessage()`, so the message that *opened
+    // the app* wasn't read until long after the router had finished booting —
+    // by which time the redirect had already sent the reader to Home, and the
+    // notification's own screen arrived seconds later or, if the poll timed
+    // out on a cold network, felt like it never came at all (owner report,
+    // 29 Aug 2026: "clicking it just opens the home page"). Reading it now,
+    // synchronously with the boot, is what lets `navigateFromExternal` park it
+    // in `pendingExternalTarget` for the splash gate to honour — which is the
+    // whole design. None of this needs permission or a token: the notification
+    // has already been delivered and tapped.
     if (onOpen != null) {
+      FirebaseMessaging.onMessageOpenedApp.listen(onOpen);
       // App launched from a notification while terminated:
       final initial = await messaging.getInitialMessage();
       if (initial != null) onOpen(initial);
-      FirebaseMessaging.onMessageOpenedApp.listen(onOpen);
     }
 
     // A lending push arriving while the app is foregrounded → pull immediately so
@@ -90,6 +88,23 @@ class PushService {
         }
       });
     }
+
+    await messaging.requestPermission();
+    // Let notifications show while the app is foregrounded (iOS default hides them).
+    await messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    await _acquireAndRegister(messaging);
+
+    // Belt-and-braces: also catch the token if it only becomes available later
+    // (e.g. APNs was slow past the poll window, or it rotates).
+    messaging.onTokenRefresh.listen((t) {
+      _token = t;
+      _register(t);
+    });
   }
 
   Future<void> _acquireAndRegister(FirebaseMessaging messaging) async {
