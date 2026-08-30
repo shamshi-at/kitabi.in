@@ -92,6 +92,20 @@ Decide between exactly these answers:
 
 - "unknown": you do not know this book. Say so.
 
+HOW TO CHOOSE between "native" and "english" — look at the WORDS, not at
+where the book came from. Being a translation from English decides nothing;
+plenty of translations were given a real title in their own language.
+
+  Are the words of this title English words, however they are spelled?
+     "Āī ema oke, yū āra oke"  decodes to "I am OK, you are OK" -> ENGLISH.
+     "50 śeḍsa ôpha gre"       decodes to "Fifty Shades of Grey" -> ENGLISH.
+  Are they words of the book's own language?
+     "Ākāśa, tomara, āmāra, sabāra" is Bengali for "the sky is yours, mine,
+     everyone's" — Bengali words, so NATIVE (আকাশ তোমার, আমার, সবার), even
+     though the book is a translation of "Nobody Owns the Sky".
+     "Agni kī uṛāna" is Hindi words -> NATIVE (अग्नि की उड़ान), even though the
+     book is a translation of "Wings of Fire".
+
 Rules, all of them load-bearing:
 - A "native" title MUST be written in that language's own script. Never return
   a romanization for "native" — that is the thing we are trying to remove.
@@ -99,8 +113,13 @@ Rules, all of them load-bearing:
 - NEVER invent or guess a title. If you cannot identify the book with
   confidence, answer "unknown". These become public pages: an honest blank is
   worth more than a plausible wrong title.
-- Do not translate. A native title is what the book is CALLED, not a rendering
-  of the romanized words.
+- TRANSLITERATE, never translate — not even within the same language. Write the
+  SAME words in their own script; do not reach for a better or more literary
+  synonym. "Ākhira dekhā" (Odia) is ଆଖିର ଦେଖା, NOT ଶେଷ ଦେଖା — ଶେଷ means the same
+  thing and is the wrong title. "Agan-pankh" (Punjabi) is ਅਗਨ ਪੰਖ, NOT ਅਗਨ ਖੰਭ.
+  If you cannot render the words themselves, answer "unknown".
+- Spell it the way the book does. Match the edition's own grammar and inflection
+  rather than correcting it.
 - Keep the author's own title. Do not add a subtitle, series name or edition note.
 
 Reply with ONLY a JSON array, one object per row:
