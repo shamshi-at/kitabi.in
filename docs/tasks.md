@@ -1195,7 +1195,28 @@ out of the sitemap until a work actually carries a genre.
         exact ones, which is the class it can auto-merge. Basheer is three rows
         across two scripts right now (`Vaikom Muhammad Basheer`,
         `Vokom M. Basheer`, `വൈക്കം മുഹമ്മദ് ബഷീർ`)
-  - [ ] **Romanization → native script for the other 11 Brahmic languages.**
+  - [ ] **Give each romanized work the title people actually read** — tool built
+        31 Aug 2026, not yet run. **Owner decision: the native title where the
+        edition really has one, the English title where the edition only
+        transliterated it.** The catalogue holds three states, not two:
+        `Ardhi rate azadi` is a real Gujarati title romanized (→ આઝાદી અડધી રાતે);
+        `3 misṭeka ôpha māya lāipha` is Chetan Bhagat's *The 3 Mistakes of My
+        Life*, an English title printed in Gujarati letters and then romanized
+        back out — `ôpha` is "of", since Indic scripts have no /f/ — so it is
+        neither language and converting it to Gujarati script would only spell
+        English words in Gujarati; and `The Secret` [Gujarati] is already right.
+        Telling them apart is a per-book judgement, so
+        `api/app/services/title_restore.py` + `etl/10_title_restore.py` follow the
+        08 shape (plan → human review → apply → revert, production guard,
+        confidence gate defaulting to `high`, receipts, stale-plan guard).
+        **The two parser guards are the point**: a `native` answer must be IN
+        that language's script and an `english` answer must carry no non-Latin
+        character — mechanical checks that catch a wrong-script or
+        still-romanized answer, which is exactly what a reviewer who doesn't
+        read the script cannot spot. 1,198 candidates. Needs `ANTHROPIC_API_KEY`
+        in `api/.env` to run `plan`
+  - [ ] ~~**Romanization → native script by mechanical transliteration.**~~
+        **Ruled out 31 Aug 2026 —** superseded by the entry above.
         **Measured 31 Aug 2026: the naive generalization does not work, and the
         obvious safety check does not catch that.** Pointing `sanscript` at each
         language's target script round-trips (`fold(native) == fold(romanized)`)
