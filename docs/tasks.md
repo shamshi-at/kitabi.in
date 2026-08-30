@@ -1155,7 +1155,68 @@ out of the sitemap until a work actually carries a genre.
 - [ ] **Merge duplicate authors** — `Basheer, Vaikom Muhammad` and `Vokom M. Basheer` are
       live right now as two rows for one person. Two rows = two thin pages competing.
       **Prerequisite for indexing author pages at all**
-- [ ] Fix imported titles — ~30% carry OpenLibrary transliteration noise
+- [ ] Fix imported titles — the seed is Library of Congress MARC, not a bookshop feed.
+      Audited 31 Aug 2026 over all 1,428 works: **1,198 (83%) are in an Indic language
+      with a Latin-script title**, 85% of author names and 77% of publisher names are
+      ALA-LC romanized, and 36% of the descriptions that exist are cataloguers' notes
+      rather than blurbs. Malayalam is the only language that reads right (69% native
+      script) — because `services/malayalam_script` converts it and is Malayalam-only
+      by design (the `language != "Malayalam"` gate in `03_transform.py`); every other
+      Indic language is 0–10%. Three separable pieces:
+  - [x] **Punctuation, Unicode and filing order** — **Done, 31 Aug 2026.**
+        `api/app/services/marc_cleanup.py` (pure, 27 tests against real production
+        strings) + `etl/09_marc_cleanup.py` (plan → human review → apply → revert,
+        production guard, receipts, stale-plan guard, idempotent).
+        **1,043 rows applied to production 31 Aug 2026 (1,012 `safe` + 31
+        `review`), 0 skipped; re-planning afterwards reports 0 changes, so the
+        catalogue has converged.** — 291
+        terminal MARC periods on titles + 47 on author names + 8 on publishers,
+        633 NFD→NFC, 29 dangling `=`/`/`, 13 double-spaces, 4 ISBD subtitle splits,
+        3 quote-wrapped titles, 1 statement of responsibility. Artifacts in
+        `etl/runs/2026-08-31-marc/` (plan + receipt = the revert key); `ANALYZE`
+        run after, and cross-script search verified live on a rewritten row.
+        The plan itself found a bug the tests had missed — `Ti. Vai.` (a Tamil
+        initial three letters long) was losing its period to a length-two guard;
+        an initials run is now recognised by the token before it ending in a
+        period. Re-planning after the first apply then found a second: MARC puts
+        its terminal period *after* the dates (`Govt. Central Press, 1974.`), and
+        the `$`-anchored date pattern ignored it, so that row needed two passes
+        to converge — a cleanup that only settles on the second run is one nobody
+        can tell is finished. Both fixes carry regression tests naming the row. Judgement calls are flagged, never fixed: the bracketed `[…]`
+        rows are supplied headings for things that are not books (including two
+        publishers literally named `[s.n.]` — MARC for "no publisher named") and
+        want deleting rather than tidying
+  - [x] **The 30 `review` rows** — **Done, 31 Aug 2026.** Card-catalogue name
+        inversions. A trailing honorific now moves to the FRONT rather than
+        wherever the flip leaves it (`Sarkar, Jadunath Sir` → `Sir Jadunath
+        Sarkar`, not `Jadunath Sir Sarkar`); a nobiliary particle is not an
+        honorific, so `Montaigne, Michel de` still flips whole.
+        **Next: run merge_service** — un-inverting turned word-order matches into
+        exact ones, which is the class it can auto-merge. Basheer is three rows
+        across two scripts right now (`Vaikom Muhammad Basheer`,
+        `Vokom M. Basheer`, `വൈക്കം മുഹമ്മദ് ബഷീർ`)
+  - [ ] **Romanization → native script for the other 11 Brahmic languages.**
+        **Measured 31 Aug 2026: the naive generalization does not work, and the
+        obvious safety check does not catch that.** Pointing `sanscript` at each
+        language's target script round-trips (`fold(native) == fold(romanized)`)
+        on only 64% of the 655 candidates — but the *passing* rows are wrong too,
+        because `fold` is lossy enough to absorb the errors: Gujarati and Odia
+        output carries **Devanagari** ऎ/ऒ/ॆ for the short vowels those maps lack,
+        Hindi gets Devanagari digits (`५०`), Punjabi leaves raw Latin (`ਭਾwe`),
+        and Assamese renders `sh` as স্হ instead of শ. So a round-trip check is
+        necessary and nowhere near sufficient. `malayalam_script.py` works
+        because someone did per-script work — anusvara, the COMBINING LOW LINE,
+        chillu, the positional underlined-r̲, the digit fix, the English-words
+        guard — verified against real rows; the 29 Jul `language != "Malayalam"`
+        gate in `03_transform.py` was right, and now there is evidence for why.
+        Each script needs that same treatment plus a reader of it. 593 titles
+        carry the diacritics that make this mechanical at all; the other 605 are
+        plain-ASCII romanizations and are not reversible by any means
+  - [ ] **Re-seed the 12 weak languages** — the deeper problem is that these are the
+        wrong *books*, not just badly spelled ones: LC acquisitions, pamphlet
+        collections, grammars and dictionaries, because `07_language_seed.py` ranks by
+        OL reading-log count and that signal is ~zero outside Malayalam. Curate ~100
+        real books per language the way `kerala_seed.py` did for Kerala
 - [x] **Attach genres** — **Done, 9 Aug 2026.** Closed 33-genre vocabulary in
       `api/app/services/genre_vocab.py` (slug-unique, deliberately orthogonal to
       `WORK_FORMS`; ≤40 by design), classified by `etl/08_genre_classify.py`

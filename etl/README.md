@@ -222,6 +222,96 @@ The guard-rails, because genre hubs are **indexed public pages**:
   set (only if still unchanged) — so a bad batch is one command from gone.
 - `plan` is resumable: works already in the plan file are skipped.
 
+## MARC punctuation cleanup (`09_marc_cleanup.py`)
+
+Most of the seed did not come from a bookshop feed. For every Indic language
+except Malayalam, OpenLibrary's records for Indic-script books originate in US
+research-library MARC — the Library of Congress South Asia Cooperative
+Acquisitions Program — and those fields are transcribed under cataloguing
+rules, not written for a reader. Measured on the 1,428-work live catalogue:
+
+| | count |
+|---|---:|
+| Title carries MARC's terminal period (`Gandhiji.`) | 272 |
+| Title stored NFD-decomposed while the rest are NFC | 354 |
+| Title ends in a dangling `=` / `/` (a field never imported) | 29 |
+| Title wrapped in MARC's quotes (`"Mukajjiya kanasugaḷu"`) | 3 |
+| Author filed in card-catalogue order (`Basheer, Vaikom Muhammad`) | 30 |
+| Author name ends in a MARC period (`Balakumaran.`) | 48 |
+
+Same three stages as `08_genre_classify.py`, and for the same reason — these
+are indexed public pages, so a human sits between the rules and the database:
+
+```bash
+cd etl
+../api/.venv/bin/python 09_marc_cleanup.py plan --out marc_plan.jsonl   # DB read-only
+jq -c 'select(.rules == [])'      marc_plan.jsonl   # flagged, never fixed
+jq -c 'select(.risk == "review")' marc_plan.jsonl   # the name un-inversions
+jq -c 'select(.rules != ["nfc"])' marc_plan.jsonl   # the visible changes
+../api/.venv/bin/python 09_marc_cleanup.py apply  --plan marc_plan.jsonl --production
+../api/.venv/bin/python 09_marc_cleanup.py apply  --plan marc_plan.jsonl --risk review --production
+../api/.venv/bin/python 09_marc_cleanup.py revert --receipt marc_receipt.jsonl --production
+```
+
+The rules live in `api/app/services/marc_cleanup.py` (pure, no DB) and are
+unit-tested by `api/tests/test_marc_cleanup.py` against real production
+strings — including, deliberately, the ones that must come back **unchanged**.
+That half is the point: a `4:50` departure time is not an ISBD subtitle,
+`Bill Martin Jr.` does not end in MARC punctuation, and
+`United States Information Service (Bombay, India)` is one body in one city,
+not an inverted name.
+
+The guard-rails:
+
+- **`apply` refuses a non-local `DATABASE_URL` without `--production`** (the
+  alembic/env.py rule), and refuses a non-pooler Supabase host outright — the
+  direct host is IPv6-only and *hangs* rather than failing.
+- **Risk-gated.** Everything mechanical is `safe`; only name un-inversion is
+  `review`, and `apply` defaults to `safe` alone.
+- **Judgement is a flag, never a fix.** A bracketed `[South Asia pamphlet
+  collection.` is a supplied heading for something that is not a book —
+  un-bracketing it would make it *look* more legitimate without making it more
+  true. Those rows appear in the plan with `rules: []` and are never applied.
+- **A plan is a snapshot.** Every write is guarded on the column still holding
+  what the plan saw, so a row edited through the admin console or "Improve
+  this entry" in between is skipped, not overwritten. Same rule in `revert`.
+- **Idempotent**, so re-running converges: applying a plan twice writes once.
+  Verify it by re-planning after an apply — it should report **0 changes**. Doing
+  exactly that on 31 Aug 2026 is what caught `Govt. Central Press, 1974.`, where
+  MARC's terminal period sits *after* the dates and the `$`-anchored date pattern
+  ignored it, so the row took two passes. A cleanup that only settles on the
+  second run is one nobody can tell is finished.
+
+What it deliberately does **not** do:
+
+- **No romanization → native script.** `Mukajjiya kanasugaḷu` stays romanized.
+  That is `services/malayalam_script`'s job and it is Malayalam-only by design
+  (the `language != "Malayalam"` gate in `03_transform.py`) — which is why
+  Malayalam is 69% native script and every other Indic language is 0–10%.
+  **Don't assume that gate is just missing work.** Measured 31 Aug 2026: simply
+  pointing `sanscript` at each language's script round-trips on 64% of
+  candidates, and the *passing* rows are wrong anyway — `fold` is lossy enough
+  to absorb Devanagari ऎ/ऒ/ॆ bleeding into Gujarati and Odia output, Devanagari
+  digits in Hindi (`५०`), raw Latin left in Punjabi (`ਭਾwe`), and Assamese `sh`
+  rendered স্হ rather than শ. A round-trip check is necessary and nowhere near
+  sufficient; each script needs the per-script work `malayalam_script` had, plus
+  someone who reads it.
+- **Never touches `slug`.** A slug is a published URL, assigned once and never
+  recomputed, so cleaning a title does not move the page.
+- **Never edits `description`.** Half the seeded blurbs are cataloguers' notes
+  ("On Assamese philology."), but whether a note should be *shown* as a blurb
+  is a presentation judgement, not a punctuation rule.
+- **Never merges rows.** `services/merge_service` already proposes those with a
+  review UI in the admin console. Worth running **after** this: un-inverting
+  `Basheer, Vaikom Muhammad` turns a word-order match into an exact one, which
+  is the class merge_service can apply automatically.
+
+Because these are raw asyncpg UPDATEs, the `before_update` hooks in
+`app/models/translit_hooks.py` never fire — so the script recomputes
+`title_translit`/`title_fold`/`name_translit`/`name_fold` itself on every row
+it writes, the same trap `06_backfill_script.py` documents. It does not sweep
+*unchanged* rows for stale search keys; that is what `06` is for.
+
 ## Sizing before you commit to a tier
 
 `sample_stats.py` estimates row counts, field coverage, language mix, and the
