@@ -139,3 +139,112 @@ def test_in_script_knows_the_scripts_apart():
     # "right script at all", not "which of two languages that share one".
     assert tr.in_script("आझादी", "Marathi") and tr.in_script("आझादी", "Hindi")
     assert not tr.in_script("anything", "Klingon")
+
+
+# --------------------------------------------------------------------------
+# self-consistency
+# --------------------------------------------------------------------------
+
+
+def _run(*pairs):
+    """One run's parsed rows, from (id, kind, title, confidence) tuples."""
+    return [{"id": i, "kind": k, "title": t, "confidence": c} for i, k, t, c in pairs]
+
+
+def test_the_majority_answer_wins():
+    """The Akhet case, exactly. Two runs said આખેટ, one said અખેત, and the
+    single-vote pipeline shipped the odd one out to production at `high`."""
+    rows = tr.tally_votes(
+        [
+            _run(("w1", "native", "આખેટ", "high")),
+            _run(("w1", "native", "આખેટ", "high")),
+            _run(("w1", "native", "અખેત", "high")),
+        ],
+        {"w1": "Gujarati"},
+    )
+    assert rows[0]["title"] == "આખેટ"
+    assert rows[0]["votes"] == 2 and rows[0]["runs"] == 3
+
+
+def test_three_different_answers_is_not_an_answer():
+    rows = tr.tally_votes(
+        [
+            _run(("w1", "native", "અ", "high")),
+            _run(("w1", "native", "આ", "high")),
+            _run(("w1", "native", "ઇ", "high")),
+        ],
+        {"w1": "Gujarati"},
+    )
+    assert rows[0]["kind"] == "unknown"
+    assert rows[0]["title"] is None
+    assert rows[0]["votes"] == 1
+
+
+def test_a_tie_is_not_agreement():
+    """Two runs, two answers. `most_common` would hand one of them the win."""
+    rows = tr.tally_votes(
+        [_run(("w1", "native", "અ", "high")), _run(("w1", "native", "આ", "high"))],
+        {"w1": "Gujarati"},
+    )
+    assert rows[0]["kind"] == "unknown"
+
+
+def test_runs_must_agree_on_the_kind_too():
+    """Same book, one run calls it native and one english — that is a
+    disagreement about what the title IS, not a spelling difference."""
+    rows = tr.tally_votes(
+        [
+            _run(("w1", "native", "આઈ એમ ઓકે", "high")),
+            _run(("w1", "english", "I'm OK, You're OK", "high")),
+            _run(("w1", "english", "I'm OK, You're OK", "high")),
+        ],
+        {"w1": "Gujarati"},
+    )
+    assert rows[0]["kind"] == "english"
+    assert rows[0]["votes"] == 2
+
+
+def test_unicode_normalisation_is_not_a_disagreement():
+    import unicodedata
+
+    composed = "आधी रात की संतानें"
+    rows = tr.tally_votes(
+        [
+            _run(("w1", "native", composed, "high")),
+            _run(("w1", "native", unicodedata.normalize("NFD", composed), "high")),
+        ],
+        {"w1": "Hindi"},
+    )
+    assert rows[0]["votes"] == 2
+
+
+def test_reports_the_least_confident_winner():
+    """A title is only as trustworthy as the least sure run that produced it."""
+    rows = tr.tally_votes(
+        [
+            _run(("w1", "native", "આખેટ", "high")),
+            _run(("w1", "native", "આખેટ", "low")),
+        ],
+        {"w1": "Gujarati"},
+    )
+    assert rows[0]["confidence"] == "low"
+
+
+def test_a_run_that_dropped_the_row_did_not_vote():
+    rows = tr.tally_votes(
+        [_run(("w1", "native", "આખેટ", "high")), _run(), _run()], {"w1": "Gujarati"}
+    )
+    assert rows[0]["kind"] == "unknown"  # one vote is not agreement
+    assert rows[0]["runs"] == 1
+
+
+def test_a_work_no_run_answered_is_unknown_not_missing():
+    rows = tr.tally_votes([_run(), _run()], {"w1": "Gujarati"})
+    assert rows[0] == {
+        "id": "w1",
+        "kind": "unknown",
+        "title": None,
+        "confidence": "unknown",
+        "votes": 0,
+        "runs": 0,
+    }

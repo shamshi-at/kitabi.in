@@ -35,8 +35,10 @@ reviewed by eye.
 
 from __future__ import annotations
 
+import collections
 import json
 import re
+import unicodedata
 
 # Where each language's script lives. Assamese and Bengali share a block, as do
 # Hindi/Marathi/Sanskrit — the point of the check is "is this the right script
@@ -231,3 +233,98 @@ def parse_restoration(raw: str, expected: dict[str, str | None]) -> tuple[list[d
     if missing:
         problems.append(f"{len(missing)} row(s) absent from the reply")
     return rows, problems
+
+
+# --------------------------------------------------------------------------
+# self-consistency
+# --------------------------------------------------------------------------
+
+
+def _answer_key(row: dict) -> tuple[str, str]:
+    """What counts as "the same answer" across runs.
+
+    NFC-normalised, because two runs can spell the same Devanagari string with
+    composed and decomposed vowel signs and mean it identically — that is a
+    Unicode difference, not a disagreement about the title.
+    """
+    title = row.get("title") or ""
+    return row.get("kind", UNKNOWN), unicodedata.normalize("NFC", " ".join(title.split()))
+
+
+def tally_votes(runs: list[list[dict]], expected: dict[str, str | None]) -> list[dict]:
+    """Reduce N independent answers per work to one, by agreement.
+
+    The model's own `confidence` turned out not to be a reliability signal: on
+    a 60-row re-ask of titles it had marked `high`, 9% came back different, and
+    one of those (`Akhet` → અખેત, where the cover reads આખેટ) was applied to
+    production on the strength of a `high` it could not reproduce. Independent
+    samples catch exactly that — two runs had it right and the unlucky third
+    was the one that shipped.
+
+    So the vote count, not the self-report, is what an apply should gate on.
+    A row that no two runs agree on becomes `unknown`: not wrong, just not
+    something anybody can stand behind.
+
+    Each returned row carries `votes` (how many runs gave the winning answer)
+    and `runs` (how many answered at all — a model that drops a row from its
+    reply has not voted). `confidence` is the LOWEST the winners reported,
+    because a title is only as trustworthy as the least sure run that produced
+    it.
+    """
+    per_work: dict[str, list[dict]] = collections.defaultdict(list)
+    for run in runs:
+        for row in run:
+            if row["id"] in expected:
+                per_work[row["id"]].append(row)
+
+    out: list[dict] = []
+    for work_id in expected:
+        answers = per_work.get(work_id, [])
+        if not answers:
+            out.append(
+                {
+                    "id": work_id,
+                    "kind": UNKNOWN,
+                    "title": None,
+                    "confidence": UNKNOWN,
+                    "votes": 0,
+                    "runs": 0,
+                }
+            )
+            continue
+        counts = collections.Counter(_answer_key(a) for a in answers)
+        (kind, title), votes = counts.most_common(1)[0]
+        # A tie is not agreement. `most_common` picks one arbitrarily, so an
+        # answer that only ties for first must not inherit its votes.
+        tied = sum(1 for _, n in counts.items() if n == votes) > 1
+        winners = [a for a in answers if _answer_key(a) == (kind, title)]
+        # CONFIDENCES runs high -> unknown, so the LEAST confident winner is
+        # the one with the largest index. `min` here would report the most
+        # confident run and throw away the doubt, which is backwards.
+        confidence = max(
+            (w.get("confidence", "low") for w in winners),
+            key=lambda c: CONFIDENCES.index(c) if c in CONFIDENCES else len(CONFIDENCES),
+        )
+        if votes < 2 or tied:
+            out.append(
+                {
+                    "id": work_id,
+                    "kind": UNKNOWN,
+                    "title": None,
+                    "confidence": UNKNOWN,
+                    "votes": votes,
+                    "runs": len(answers),
+                }
+            )
+            continue
+        out.append(
+            {
+                "id": work_id,
+                "kind": kind,
+                "title": title or None,
+                "confidence": confidence,
+                "votes": votes,
+                "runs": len(answers),
+            }
+        )
+    return out

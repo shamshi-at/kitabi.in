@@ -70,6 +70,7 @@ try:
         SCRIPT_RANGES,
         parse_restoration,
         restoration_prompt,
+        tally_votes,
     )
     from app.services.translit import fold, transliterate
 except ImportError as exc:  # pragma: no cover
@@ -198,6 +199,22 @@ async def ask_claude(client: httpx.AsyncClient, key: str, works: list[dict]) -> 
     return reply_text(resp.json())
 
 
+async def _one_vote(
+    client: httpx.AsyncClient, key: str, batch: list[dict], expected: dict[str, str | None]
+) -> tuple[list[dict], list[str]]:
+    """One independent sample of one batch, retried once on a transport error."""
+    for attempt in (1, 2):
+        try:
+            raw = await ask_claude(client, key, batch)
+        except httpx.HTTPError as exc:
+            if attempt == 2:
+                return [], [f"http error: {exc}"]
+            await asyncio.sleep(3 * attempt)
+            continue
+        return parse_restoration(raw, expected)
+    return [], []
+
+
 async def cmd_plan(args: argparse.Namespace) -> None:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -226,23 +243,24 @@ async def cmd_plan(args: argparse.Namespace) -> None:
             for i in range(0, len(works), BATCH):
                 batch = works[i : i + BATCH]
                 expected = {w["id"]: w["language"] for w in batch}
-                rows: list[dict] = []
-                problems: list[str] = []
-                for attempt in (1, 2):
-                    try:
-                        raw = await ask_claude(client, key, batch)
-                    except httpx.HTTPError as exc:
-                        problems = [f"http error: {exc}"]
-                        await asyncio.sleep(3 * attempt)
-                        continue
-                    rows, problems = parse_restoration(raw, expected)
-                    if rows:
-                        break
+                # Ask the same batch N times INDEPENDENTLY and keep only what
+                # the runs agree on. The model's own `confidence` is not a
+                # reliability signal — a 60-row re-ask of titles it called
+                # `high` disagreed with itself 9% of the time, and one of those
+                # reached production (`Akhet` -> અખેત, cover reads આખેટ).
+                # Concurrent because they are independent; the wall clock is
+                # then the same as a single-vote run.
+                results = await asyncio.gather(
+                    *(_one_vote(client, key, batch, expected) for _ in range(args.votes))
+                )
+                runs = [r for r, _ in results if r]
+                problems = [p for _, ps in results for p in ps]
+                rows = tally_votes(runs, expected) if runs else []
                 by_id = {r["id"]: r for r in rows}
                 for w in batch:
                     row = by_id.get(
                         w["id"], {"id": w["id"], "kind": "unknown", "title": None,
-                                  "confidence": "unknown"}
+                                  "confidence": "unknown", "votes": 0, "runs": 0}
                     )
                     row |= {
                         "before": w["title"],
@@ -256,8 +274,10 @@ async def cmd_plan(args: argparse.Namespace) -> None:
                 for p in problems:
                     print(f"  ! {p}", file=sys.stderr)
                 kept = sum(1 for r in rows if r["kind"] in (NATIVE, ENGLISH))
+                unan = sum(1 for r in rows
+                           if r["kind"] in (NATIVE, ENGLISH) and r["votes"] == args.votes)
                 print(f"  batch {i // BATCH + 1}/{(len(works) - 1) // BATCH + 1}: "
-                      f"{kept}/{len(batch)} identified")
+                      f"{kept}/{len(batch)} agreed ({unan} unanimously)")
 
     print(f"wrote {written} rows to {out} ({failures} problems — see stderr)")
 
@@ -267,7 +287,7 @@ async def cmd_plan(args: argparse.Namespace) -> None:
 # --------------------------------------------------------------------------
 
 
-def read_plan(path: Path, confidences: set[str]) -> list[dict]:
+def read_plan(path: Path, confidences: set[str], min_votes: int) -> list[dict]:
     rows = []
     for n, line in enumerate(path.read_text().splitlines(), 1):
         if not line.strip():
@@ -280,6 +300,9 @@ def read_plan(path: Path, confidences: set[str]) -> list[dict]:
             row.get("kind") in (NATIVE, ENGLISH)
             and row.get("title")
             and row.get("confidence") in confidences
+            # A plan written before voting existed has no `votes` key; treating
+            # that as 0 makes it fail the gate rather than sail past it.
+            and row.get("votes", 0) >= min_votes
             and row["title"] != row.get("before")
         ):
             rows.append(row)
@@ -301,8 +324,9 @@ async def cmd_apply(args: argparse.Namespace) -> None:
     url = database_url()
     guard_production(url, args.production)
     confidences = {c.strip() for c in args.confidence.split(",")} & set(CONFIDENCES)
-    rows = read_plan(Path(args.plan), confidences)
-    print(f"{len(rows)} titles to restore at confidence {sorted(confidences)}")
+    rows = read_plan(Path(args.plan), confidences, args.min_votes)
+    print(f"{len(rows)} titles to restore at confidence {sorted(confidences)}, "
+          f"min {args.min_votes} agreeing votes")
     if not rows:
         return
 
@@ -314,6 +338,7 @@ async def cmd_apply(args: argparse.Namespace) -> None:
             for row in rows:
                 if await _retitle(conn, row["id"], row["title"], row["before"]):
                     done.append({"id": row["id"], "kind": row["kind"],
+                                 "votes": f'{row.get("votes")}/{row.get("runs")}',
                                  "before": row["before"], "after": row["title"]})
                 else:
                     skipped += 1
@@ -356,11 +381,15 @@ def main() -> None:
     p = sub.add_parser("plan", help="identify romanized titles into a reviewable JSONL")
     p.add_argument("--out", default="title_plan.jsonl")
     p.add_argument("--limit", type=int, default=0, help="smoke-test on the first N works")
+    p.add_argument("--votes", type=int, default=3,
+                   help="independent samples per batch; a title is kept only where they agree")
 
     a = sub.add_parser("apply", help="write a reviewed plan to the database")
     a.add_argument("--plan", default="title_plan.jsonl")
     a.add_argument("--receipt", default="title_receipt.jsonl")
     a.add_argument("--confidence", default="high")
+    a.add_argument("--min-votes", type=int, default=2,
+                   help="how many independent runs must have agreed (3 = unanimous)")
     a.add_argument("--production", action="store_true")
 
     r = sub.add_parser("revert", help="undo exactly what one receipt recorded")
