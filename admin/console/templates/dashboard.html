@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Dashboard · Kitabi Admin{% endblock %}
 {% block heading %}Dashboard{% endblock %}
-{% block subheading %}Live counts · nothing cached{% endblock %}
+{% block subheading %}Live counts · cached up to 45s{% endblock %}
 {% block content %}
 <div class="kpis">
   <a class="kpi" href="/readers"><div class="v">{{ "{:,}".format(stats.readers) }}</div><div class="k">Readers</div></a>
