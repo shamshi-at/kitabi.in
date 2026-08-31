@@ -1195,13 +1195,25 @@ out of the sitemap until a work actually carries a genre.
         exact ones, which is the class it can auto-merge. Basheer is three rows
         across two scripts right now (`Vaikom Muhammad Basheer`,
         `Vokom M. Basheer`, `വൈക്കം മുഹമ്മദ് ബഷീർ`)
-  - [x] **Give each romanized work the title people actually read** — **Done,
-        31 Aug 2026: 465 of 1,198 restored at high confidence, 0 skipped.
-        Native-script titles across the Indic catalogue went 8% → 42%
-        (115 → 553 works); every language moved, Odia/Kannada/Punjabi/Assamese
-        from a literal 0%.** 438 native + 27 English; 174 already correct,
-        63 honest `unknown`, 480 held back at medium/low. Artifacts in
-        `etl/runs/2026-08-31-titles/` (plan + receipt = the revert key). **Owner decision: the native title where the
+  - [ ] **Give each romanized work the title people actually read** — in
+        progress. **65 of 1,198 applied 31 Aug 2026** (native script 8% → 13%);
+        **928 works still unasked** because the Anthropic key hit its usage
+        limit at batch 19 of 80. `plan` is resumable — re-run the same command
+        after the limit resets and it picks up the 928.
+        **A first pass of 465 was applied and then reverted**, on the owner's
+        call, after a re-ask of 60 of them disagreed with itself 9% of the
+        time: `Akhet` had shipped as અખેત where the cover reads આખેટ, on a
+        `high` confidence the model could not reproduce. The model's
+        self-reported confidence is not a reliability signal. The gate is now
+        agreement across 3 independent runs (`plan --votes 3`,
+        `apply --min-votes 3`); `Akhet` comes back 2/3 every time — the model
+        flip-flops on it — and is correctly excluded. 64 of the 65 applied
+        match what the single-vote run had said, so voting filters rather than
+        changes answers, which is the point. Artifacts and the revert key in
+        `etl/runs/2026-08-31-titles/`.
+        **Known limit, worth holding on to:** agreement raises precision, it
+        does not prove correctness — a model wrong the same way three times
+        passes any vote, and on `Akhet` every run got the first vowel wrong. **Owner decision: the native title where the
         edition really has one, the English title where the edition only
         transliterated it.** The catalogue holds three states, not two:
         `Ardhi rate azadi` is a real Gujarati title romanized (→ આઝાદી અડધી રાતે);
