@@ -170,6 +170,18 @@ async def fetch_candidates(url: str) -> list[dict]:
     return out
 
 
+class FatalApiError(RuntimeError):
+    """An error no retry can fix — a spend limit, a bad key, a dead model.
+
+    Worth its own type because the alternative is what happened on 31 Aug
+    2026: the key hit its usage limit at batch 19, every remaining call
+    returned the same 400, and the run churned politely through 62 more
+    batches writing 928 rows of `unknown` — which then look exactly like
+    "the model didn't know these books". A run that cannot succeed should
+    stop and say why, leaving a resumable plan behind it.
+    """
+
+
 async def ask_claude(client: httpx.AsyncClient, key: str, works: list[dict]) -> str:
     resp = await client.post(
         ANTHROPIC_URL,
@@ -195,6 +207,14 @@ async def ask_claude(client: httpx.AsyncClient, key: str, works: list[dict]) -> 
             "messages": [{"role": "user", "content": restoration_prompt(works)}],
         },
     )
+    if resp.status_code in (400, 401, 403, 404):
+        # 429 and 5xx are transient and belong to the retry path; these are not.
+        detail = ""
+        try:
+            detail = resp.json().get("error", {}).get("message", "")
+        except ValueError:
+            detail = resp.text[:200]
+        raise FatalApiError(f"HTTP {resp.status_code}: {detail}")
     resp.raise_for_status()
     return reply_text(resp.json())
 
@@ -206,6 +226,8 @@ async def _one_vote(
     for attempt in (1, 2):
         try:
             raw = await ask_claude(client, key, batch)
+        except FatalApiError:
+            raise  # nothing to retry — let cmd_plan stop the run
         except httpx.HTTPError as exc:
             if attempt == 2:
                 return [], [f"http error: {exc}"]
@@ -218,13 +240,28 @@ async def _one_vote(
 async def cmd_plan(args: argparse.Namespace) -> None:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
+    # Resume skips only rows that actually got an answer. A row written with
+    # `runs == 0` is one nobody voted on — usually because the run died
+    # mid-way — and skipping it would bake a transport failure into the plan
+    # as if it were the model's considered "unknown".
     done: set[str] = set()
     if out.exists():
-        for line in out.read_text().splitlines():
+        lines = out.read_text().splitlines()
+        keep: list[str] = []
+        for line in lines:
             try:
-                done.add(json.loads(line)["id"])
-            except (json.JSONDecodeError, KeyError):
-                pass
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("runs", 0) > 0:
+                done.add(row["id"])
+                keep.append(line)
+        if len(keep) != len(lines):
+            # Rewrite without the unanswered rows, so the resumed run appends
+            # their real answers instead of writing a second row for the same id.
+            out.write_text("\n".join(keep) + ("\n" if keep else ""), encoding="utf-8")
+            print(f"  {len(lines) - len(keep)} unanswered rows dropped from {out}"
+                  " — they will be re-asked")
 
     works = [w for w in await fetch_candidates(database_url()) if w["id"] not in done]
     if args.limit:
@@ -250,9 +287,16 @@ async def cmd_plan(args: argparse.Namespace) -> None:
                 # reached production (`Akhet` -> અખેત, cover reads આખેટ).
                 # Concurrent because they are independent; the wall clock is
                 # then the same as a single-vote run.
-                results = await asyncio.gather(
-                    *(_one_vote(client, key, batch, expected) for _ in range(args.votes))
-                )
+                try:
+                    results = await asyncio.gather(
+                        *(_one_vote(client, key, batch, expected) for _ in range(args.votes))
+                    )
+                except FatalApiError as exc:
+                    sink.flush()
+                    print(f"\nSTOPPED at batch {i // BATCH + 1}: {exc}", file=sys.stderr)
+                    print(f"{written} rows written to {out} — re-run to resume "
+                          "from here once the cause is cleared.")
+                    return
                 runs = [r for r, _ in results if r]
                 problems = [p for _, ps in results for p in ps]
                 rows = tally_votes(runs, expected) if runs else []
