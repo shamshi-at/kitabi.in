@@ -279,3 +279,13 @@
     });
   });
 })();
+
+// Register the service worker (see /sw.js, main.py). Its only job is to make
+// the console installable; it caches static assets and nothing dynamic. Failure
+// is silent — the console works identically without it, so a browser that
+// blocks workers (or a hard-refresh with the worker disabled) loses nothing.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

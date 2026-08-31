@@ -424,6 +424,25 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **31 Aug 2026** — **The admin console is an installable PWA.** A manifest, a
+  minimal service worker (served from `/sw.js` at the root so its scope is the
+  whole origin) and full-bleed maskable icons (`admin/scripts/gen_pwa_icons.sh`,
+  from `icon-maskable.svg` — oxblood to every edge, so `qlmanage`'s flatten-to-
+  white can't bite and every OS mask shape is clean), wired into both `base.html`
+  and the sign-in `auth_base.html`. **Installable only — deliberately not offline.**
+  The console is server-authoritative: every page is a live DB query and every
+  action a POST, so the worker caches *only* `/static/` assets and passes every
+  page, POST and cross-origin fetch straight to the network. A cached moderation
+  queue is a wrong one, and you can't act offline anyway — offline is meant to
+  fail here, loudly. Verified locally: manifest parses (standalone, scope `/`,
+  maskable icon), `/sw.js` serves `text/javascript` root-scoped, icons are opaque
+  oxblood at 192/512/180, both templates carry the head tags, admin tests + lint
+  green, Docker image ships the assets. SW *activation* is unverifiable in the
+  embedded preview browser (it refuses registration pre-fetch) — needs a real
+  Chrome/Android check on `admin.kitabi.in`. iOS note: an installed PWA there may
+  keep its own cookie store, so the admin may need to sign in again inside the
+  installed app.
+
 - **27 Aug 2026** — **Reporting a public review is live end to end.** Apple's 2.1
   "Information Needed" reply on the iOS submission asks the review recording to show
   UGC "content reporting and blocking mechanisms" — blocking existed (connections),

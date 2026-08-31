@@ -9,7 +9,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/logo.svg?v=2" type="image/svg+xml">
 <link rel="stylesheet" href="/static/admin.css?v=4">
-<script src="/static/admin.js?v=2" defer></script>
+<script src="/static/admin.js?v=7" defer></script>
+<!-- Installable PWA — the sign-in screen must carry these too, since it is the
+     page an admin installs from (see base.html for the same block). -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F6F0E3">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Kitabi Admin">
+<meta name="application-name" content="Kitabi Admin">
 </head>
 <body>
 <div class="auth-wrap">

@@ -9,7 +9,7 @@ token ever lives in JavaScript. Reader identity (Supabase) and admin identity
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .deps import RedirectException
@@ -40,6 +40,27 @@ app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 # routers so it wraps every response, static files and error pages included.
 app.add_middleware(NoIndexMiddleware)
 app.add_route("/robots.txt", robots, methods=["GET"])
+
+
+# --- PWA: make the console installable (see static/sw.js, manifest.webmanifest).
+# Both are served from the ROOT, not /static, and unauthenticated: the browser
+# fetches them outside any signed-in request, and neither carries a secret. The
+# service worker in particular MUST be at /sw.js — a worker's scope can reach no
+# higher than its own URL, so one under /static/ could never control the app.
+@app.get("/sw.js", include_in_schema=False)
+async def service_worker() -> FileResponse:
+    return FileResponse(
+        _STATIC / "sw.js",
+        media_type="text/javascript",
+        # The worker script must revalidate on every load, or a stale worker
+        # outlives its own fix. (Browsers also cap SW script caching at 24h.)
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+async def manifest() -> FileResponse:
+    return FileResponse(_STATIC / "manifest.webmanifest", media_type="application/manifest+json")
 
 
 @app.exception_handler(RedirectException)

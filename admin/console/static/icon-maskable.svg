@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Maskable / full-bleed PWA icon source. Unlike logo.svg (a rounded tile on
+       transparency), the oxblood fills the ENTIRE square edge to edge and the
+       book mark is scaled into the maskable safe zone (inner ~80%), so any OS
+       mask — circle, squircle, rounded square — shows solid oxblood with the
+       book centred, never a clipped corner. Full-bleed also means no alpha, so
+       qlmanage's flatten-to-white (CLAUDE.md app-icon lesson) can't bite: every
+       pixel is opaque oxblood or artwork. Rasters regenerate via
+       scripts/gen_pwa_icons.sh. -->
+  <rect width="512" height="512" fill="#7E2A33"/>
+
+  <!-- The book mark from logo.svg, scaled 0.82 about the centre so its bounding
+       box stays inside the maskable safe circle. -->
+  <g transform="translate(256 256) scale(0.82) translate(-256 -256)">
+    <!-- pages -->
+    <path d="M114 160 C164 136 218 136 250 156 L250 366 C218 348 164 348 114 370 Z" fill="#F6F0E3"/>
+    <path d="M398 160 C348 136 294 136 262 156 L262 366 C294 348 348 348 398 370 Z" fill="#F6F0E3"/>
+    <rect x="250" y="148" width="12" height="222" rx="6" fill="#5E1F26"/>
+
+    <!-- text lines; one gold on the recto -->
+    <g stroke="#D9CBAA" stroke-width="9" stroke-linecap="round">
+      <path d="M150 214 H214"/><path d="M150 252 H214"/><path d="M150 290 H196"/>
+      <path d="M298 214 H362"/><path d="M316 290 H362"/>
+    </g>
+    <path d="M298 252 H362" stroke="#B8862B" stroke-width="10" stroke-linecap="round"/>
+
+    <!-- ribbon bookmark -->
+    <path d="M240 356 L272 356 L272 428 L256 410 L240 428 Z" fill="#C9973B"/>
+  </g>
+</svg>
