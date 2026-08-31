@@ -9,7 +9,7 @@
     {% for r in rows %}
     <tr>
       <td class="m mono">{{ r.created_at.strftime('%d %b %H:%M:%S') }}</td>
-      <td class="m">{{ r.admin_id and (r.admin_id | string)[:8] or '—' }}</td>
+      <td class="m">{% if r.admin_id %}{% set em = admins.get(r.admin_id) %}{% if em %}<span title="{{ em }}">{{ em.split('@')[0] }}</span>{% else %}<span class="mono" title="account removed">{{ (r.admin_id | string)[:8] }}</span>{% endif %}{% else %}—{% endif %}</td>
       <td>
         {% set cls = 'ok' if r.action.startswith('claim.approve') or r.action == 'auth.success'
           else ('no' if 'fail' in r.action or 'reject' in r.action or 'revoke' in r.action or 'hide' in r.action

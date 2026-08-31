@@ -424,6 +424,25 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **31 Aug 2026** — **Console: admin names in the audit log, and language/advanced
+  filters on the book lists.** The audit log showed an admin *id* fragment
+  (`f9947d9f`); it now resolves `admin_id → email` in one batched query and shows
+  the local part (`shamshi`, full email on hover), falling back to the id fragment
+  only when the account has been removed — the row never vanishes because the actor
+  is gone. The catalog worklist (`/catalog`) gains a **Language · Type · Sort**
+  filter bar that composes with search, the quality-gap worklists and `added_by`:
+  a pure filter (no text query) browses via `catalog_service.browse_works` (SQL,
+  300-cap applied to the right rows); a filtered search/gap list is narrowed and
+  sorted in Python (bounded lists, one filter vocabulary across every mode). The
+  per-entity work lists on **author and publisher detail** get a **language
+  filter** (shared `_lang_filter.html`, only shown when the entity spans >1
+  language) — series is deliberately left out (a single-language reading-order list
+  with inline position editing, where a filter fights the page). Dropdowns
+  auto-submit (`requestSubmit`, `data-no-loader` so the nav loader doesn't flash).
+  Verified: filter logic against the dev DB (browse language/form, sort, the
+  language post-filter), all pages render, 20 admin tests + lint green, Docker
+  builds.
+
 - **31 Aug 2026** — **Delete a work in the console — single and bulk, soft, guarded.**
   Catalog cleanup for the junk a bulk seed leaves (malformed rows, wrong-language
   dupes, test entries): a **Delete this work** button on the work page and

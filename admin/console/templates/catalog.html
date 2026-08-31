@@ -33,6 +33,37 @@
   </div>
 </div>
 
+{# Filter bar — language, Type and sort, composed with the search/worklist mode
+   already in effect (the mode's own param rides along as a hidden field). Auto-
+   submits on change; degrades to an Apply button with no JS. #}
+{% set base = '/catalog' %}
+{% if q %}{% set base = '/catalog?q=' ~ q %}{% elif gap %}{% set base = '/catalog?filter=' ~ gap %}{% elif added_by %}{% set base = '/catalog?added_by=' ~ (added_by|string) %}{% endif %}
+<form method="get" action="/catalog" class="filterbar" data-no-loader>
+  {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+  {% if gap %}<input type="hidden" name="filter" value="{{ gap }}">{% endif %}
+  {% if added_by %}<input type="hidden" name="added_by" value="{{ added_by }}">{% endif %}
+  <label>Language
+    <select name="lang" onchange="this.form.requestSubmit()">
+      <option value="">All languages</option>
+      {% for L in languages %}<option value="{{ L }}"{% if L == lang %} selected{% endif %}>{{ L }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Type
+    <select name="form" onchange="this.form.requestSubmit()">
+      <option value="">All types</option>
+      {% for F in forms %}<option value="{{ F }}"{% if F == form %} selected{% endif %}>{{ F }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Sort
+    <select name="sort" onchange="this.form.requestSubmit()">
+      <option value="">{{ 'Relevance' if q else 'Default' }}</option>
+      {% for key, lbl in sort_options.items() %}<option value="{{ key }}"{% if key == sort %} selected{% endif %}>{{ lbl }}</option>{% endfor %}
+    </select>
+  </label>
+  <noscript><button class="btn s">Apply</button></noscript>
+  {% if lang or form or sort %}<a class="btn s ghost" href="{{ base }}">Clear filters</a>{% endif %}
+</form>
+
 {% if filter_label %}
 <div class="worklist-head">
   <div><span class="lbl">Worklist</span>
@@ -80,6 +111,6 @@
 <b>delete</b> junk in bulk, or tap <b>Keep</b> and <b>Absorb</b> on two rows to <b>merge</b>
 duplicates. Merge keeps readers; delete is for rows nobody has.</p>
 {% else %}
-<div class="note">Type a title or author above to search the catalog, or open a quality-gap worklist above.</div>
+<div class="note">Search a title or author above, pick a <b>language</b> or <b>Type</b> to browse, or open a quality-gap worklist.</div>
 {% endif %}
 {% endblock %}

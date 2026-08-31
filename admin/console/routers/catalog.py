@@ -396,6 +396,46 @@ async def _adder_name(db: DbSession, user_id: uuid.UUID) -> str:
     return (p.full_name or p.email) if p else str(user_id)[:8]
 
 
+SORT_LABELS = {
+    "title": "Title A–Z",
+    "year_desc": "Newest first",
+    "year_asc": "Oldest first",
+    "added": "Recently added",
+}
+
+
+def _filter_by_language(works: list, lang: str) -> tuple[list, list[str]]:
+    """(works narrowed to `lang`, the sorted distinct languages actually present).
+    Powers the language filter on the per-entity work lists (an author's or
+    publisher's books span languages). The dropdown offers only what the entity
+    has, and a blank or absent `lang` is a no-op."""
+    present = sorted({w.language for w in works if w.language})
+    if lang and lang in present:
+        works = [w for w in works if w.language == lang]
+    return works, present
+
+
+def _sort_works(works: list, sort: str) -> list:
+    """Order a already-fetched work list by the same keys browse_works uses at
+    the SQL level — so a filtered search/gap/added_by list sorts the same way a
+    pure browse does. Nulls sort last on the year keys."""
+    if sort == "year_desc":
+        return sorted(
+            works,
+            key=lambda w: (w.first_publish_year is not None, w.first_publish_year or 0),
+            reverse=True,
+        )
+    if sort == "year_asc":
+        return sorted(
+            works, key=lambda w: (w.first_publish_year is None, w.first_publish_year or 0)
+        )
+    if sort == "added":
+        return sorted(
+            works, key=lambda w: w.created_at or datetime.min.replace(tzinfo=UTC), reverse=True
+        )
+    return sorted(works, key=lambda w: (w.title or "").lower())
+
+
 @router.get("")
 async def catalog(
     request: Request,
@@ -405,9 +445,17 @@ async def catalog(
     gap: str = Query(default="", alias="filter"),
     added_by: Annotated[uuid.UUID | None, Query()] = None,
     keep: Annotated[uuid.UUID | None, Query()] = None,
+    lang: str = Query(default=""),
+    form: str = Query(default=""),
+    sort: str = Query(default=""),
 ) -> HTMLResponse:
     q = q.strip()
+    lang = lang.strip()
+    form = form.strip()
+    sort = sort if sort in SORT_LABELS else ""
     filter_label = None
+    browsed = False  # True when browse_works already applied lang/form/sort in SQL
+
     if added_by is not None:
         works = list(
             (
@@ -428,8 +476,37 @@ async def catalog(
             (await db.execute(_gap_stmt(gap).order_by(Work.title.asc()).limit(300))).scalars().all()
         )
         filter_label = GAP_LABELS[gap]
+    elif q:
+        works = await catalog_service.search_local(db, q)
+    elif lang or form or sort:
+        # Pure browse — no text query, but the reader has picked a filter. Push
+        # language / Type / sort into SQL so the 300 cap is applied to the right
+        # rows, not the first 300 alphabetically.
+        works = await catalog_service.browse_works(
+            db,
+            300,
+            0,
+            languages=[lang] if lang else None,
+            form=form or None,
+            sort=sort or "title",
+        )
+        browsed = True
+        picked = " · ".join(p for p in (lang, form, SORT_LABELS.get(sort)) if p)
+        filter_label = f"Browsing catalog — {picked}" if picked else "Browsing catalog"
     else:
-        works = await catalog_service.search_local(db, q) if q else []
+        works = []
+
+    # Language / Type as post-filters for the search / gap / added_by lists
+    # (browse already applied them in SQL). Lists here are capped at 300, so a
+    # Python pass is cheap and keeps one filter vocabulary across every mode.
+    if not browsed:
+        if lang:
+            works = [w for w in works if w.language == lang]
+        if form:
+            works = [w for w in works if w.form == form]
+        if sort:
+            works = _sort_works(works, sort)
+
     rows = await _work_rows(db, works)
 
     # Quality gaps — the columns a bulk seed leaves thin.
@@ -464,6 +541,14 @@ async def catalog(
             "keep": keep,
             "filter_label": filter_label,
             "flash": flash,
+            # Filter bar: the languages and Types actually present, plus the
+            # current selection so the controls keep their state across a submit.
+            "languages": await catalog_service.catalog_languages(db),
+            "forms": await catalog_service.catalog_forms(db),
+            "sort_options": SORT_LABELS,
+            "lang": lang,
+            "form": form,
+            "sort": sort,
         },
     )
     if flash:
@@ -945,6 +1030,7 @@ async def author_detail(
     db: DbSession,
     author_id: uuid.UUID,
     merge_q: str = Query(default=""),
+    lang: str = Query(default=""),
 ) -> HTMLResponse:
     author = await db.get(Author, author_id)
     if author is None:
@@ -952,6 +1038,8 @@ async def author_detail(
         set_flash(resp, "err", "Author not found.")
         return resp
     works = await catalog_service.author_works(db, author_id)
+    works_total = len(works)
+    works, work_langs = _filter_by_language(works, lang.strip())
     linked = None
     if author.linked_user_id is not None:
         linked = await db.get(Profile, author.linked_user_id)
@@ -975,6 +1063,9 @@ async def author_detail(
             "badges": badges,
             "a": author,
             "works": works,
+            "works_total": works_total,
+            "work_langs": work_langs,
+            "lang": lang.strip(),
             "linked": linked,
             "pending_claims": pending_claims,
             "kind": "authors",
@@ -1168,6 +1259,7 @@ async def publisher_detail(
     db: DbSession,
     publisher_id: uuid.UUID,
     merge_q: str = Query(default=""),
+    lang: str = Query(default=""),
 ) -> HTMLResponse:
     publisher = await db.get(Publisher, publisher_id)
     if publisher is None:
@@ -1175,6 +1267,8 @@ async def publisher_detail(
         set_flash(resp, "err", "Publisher not found.")
         return resp
     works = await catalog_service.publisher_works(db, publisher_id)
+    works_total = len(works)
+    works, work_langs = _filter_by_language(works, lang.strip())
     merge_q = merge_q.strip()
     badges = await queries.nav_badges(db)
     flash = pop_flash(request)
@@ -1187,6 +1281,9 @@ async def publisher_detail(
             "badges": badges,
             "p": publisher,
             "works": works,
+            "works_total": works_total,
+            "work_langs": work_langs,
+            "lang": lang.strip(),
             "uploads_on": assets.configured(),
             "uploads_why": assets.why_not_configured(),
             "kind": "publishers",

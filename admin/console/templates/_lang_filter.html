@@ -1,0 +1,16 @@
+{# Language filter for a per-entity work list (author / publisher detail). Only
+   appears when the entity actually spans more than one language. Expects in
+   context: work_langs (sorted distinct languages present), lang (selected),
+   works_total (count before filtering), and merge_q to preserve. Auto-submits;
+   data-no-loader keeps the navigation loader from flashing on a quick filter. #}
+{% if work_langs and work_langs | length > 1 %}
+<form method="get" class="filterbar" data-no-loader style="margin:2px 0 10px">
+  {% if merge_q %}<input type="hidden" name="merge_q" value="{{ merge_q }}">{% endif %}
+  <label>Language
+    <select name="lang" onchange="this.form.requestSubmit()">
+      <option value="">All languages ({{ works_total }})</option>
+      {% for L in work_langs %}<option value="{{ L }}"{% if L == lang %} selected{% endif %}>{{ L }}</option>{% endfor %}
+    </select>
+  </label>
+</form>
+{% endif %}
