@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/logo.svg?v=2" type="image/svg+xml">
-<link rel="stylesheet" href="/static/admin.css?v=23">
-<script src="/static/admin.js?v=8" defer></script>
+<link rel="stylesheet" href="/static/admin.css?v=24">
+<script src="/static/admin.js?v=9" defer></script>
 <!-- Installable PWA (see main.py, static/sw.js). theme-color matches the top
      bar so the mobile status bar has no seam. -->
 <link rel="manifest" href="/manifest.webmanifest">
@@ -22,6 +22,16 @@
 <meta name="application-name" content="Kitabi Admin">
 </head>
 <body>
+{# Navigation loader (see admin.css .navload, admin.js). Sits in the initial
+   HTML so it can appear the instant a link or form is clicked, before the next
+   page has loaded. #}
+<div class="navload" id="navload" role="status" aria-live="polite" aria-hidden="true">
+  <div class="navload-in">
+    <img class="navload-mark" src="/static/logo.svg?v=2" alt="" width="70" height="70">
+    <div class="navload-bar"><span></span></div>
+  </div>
+  <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Loading…</span>
+</div>
 {% macro navlink(href, label, key, badge=0) %}
 <a class="nav {% if active == key %}on{% endif %}" href="{{ href }}">{{ label }}
   {% if badge %}<span class="n">{{ badge }}</span>{% endif %}</a>

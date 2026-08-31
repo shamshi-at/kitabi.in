@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/logo.svg?v=2" type="image/svg+xml">
-<link rel="stylesheet" href="/static/admin.css?v=4">
-<script src="/static/admin.js?v=8" defer></script>
+<link rel="stylesheet" href="/static/admin.css?v=5">
+<script src="/static/admin.js?v=9" defer></script>
 <!-- Installable PWA — the sign-in screen must carry these too, since it is the
      page an admin installs from (see base.html for the same block). -->
 <link rel="manifest" href="/manifest.webmanifest">
@@ -22,6 +22,15 @@
 <meta name="application-name" content="Kitabi Admin">
 </head>
 <body>
+{# Navigation loader — the sign-in flow is POST-and-redirect too, so the same
+   feedback applies here (see base.html for the full note). #}
+<div class="navload" id="navload" role="status" aria-live="polite" aria-hidden="true">
+  <div class="navload-in">
+    <img class="navload-mark" src="/static/logo.svg?v=2" alt="" width="70" height="70">
+    <div class="navload-bar"><span></span></div>
+  </div>
+  <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Loading…</span>
+</div>
 <div class="auth-wrap">
   <div class="auth">
     <img class="m2" src="/static/logo.svg" alt="Kitabi">

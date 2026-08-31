@@ -295,3 +295,67 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => {});
   });
 }
+
+// Navigation loader (see .navload in admin.css, the markup in base.html).
+//
+// The console is server-rendered: a link is a full page load and a form is a
+// POST-and-redirect. Installed as a PWA there is no browser tab spinner, so a
+// click looks like nothing happened until the next page paints. This shows the
+// Kitabi mark over the page the moment a navigation starts, and lets the new
+// document (a fresh DOM, no overlay) simply replace it.
+(function () {
+  const el = document.getElementById("navload");
+  if (!el) return;
+  let safety = null;
+
+  function show() {
+    el.classList.add("on");
+    el.setAttribute("aria-hidden", "false");
+    // If a navigation somehow never happens (a download, a handler that bailed
+    // after we showed), don't strand the reader under the overlay forever.
+    clearTimeout(safety);
+    safety = setTimeout(hide, 12000);
+  }
+  function hide() {
+    el.classList.remove("on");
+    el.setAttribute("aria-hidden", "true");
+    clearTimeout(safety);
+  }
+
+  // A left-click on a link that will actually navigate this tab away.
+  document.addEventListener("click", (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest("a[href]");
+    if (!a) return;
+    if (a.target && a.target !== "_self") return; // opens elsewhere
+    if (a.hasAttribute("download") || a.dataset.noLoader !== undefined || a.hasAttribute("data-peek")) return;
+    const href = a.getAttribute("href");
+    if (!href || href.startsWith("#") || /^(javascript|mailto|tel):/i.test(href)) return;
+    // Same-origin only — an external link leaves for the system browser and this
+    // page stays put, so a loader here would hang.
+    let url;
+    try {
+      url = new URL(a.href, location.href);
+    } catch (_) {
+      return;
+    }
+    if (url.origin !== location.origin) return;
+    if (url.pathname === location.pathname && url.search === location.search && url.hash) return; // in-page anchor
+    show();
+  });
+
+  // A form that will submit and navigate. Runs in the bubble phase after every
+  // other submit handler, so `defaultPrevented` already reflects a cancelling
+  // confirm() ("return confirm(...)") or a data-inline fetch save — either way
+  // there is no navigation, so skip.
+  document.addEventListener("submit", (e) => {
+    if (e.defaultPrevented) return;
+    const form = e.target;
+    if (form.dataset.noLoader !== undefined || form.hasAttribute("data-inline")) return;
+    show();
+  });
+
+  // Hide on every page display — a normal load, and crucially a bfcache restore
+  // (Back button), where the old page can come back with the overlay still up.
+  window.addEventListener("pageshow", hide);
+})();
