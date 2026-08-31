@@ -2,7 +2,7 @@
 {% block title %}{{ s.name }} · Kitabi Admin{% endblock %}
 {% block heading %}{{ s.name }}{% endblock %}
 {% block subheading %}{{ s.name_translit or '' }}{% endblock %}
-{% block topactions %}<a class="btn s" href="/catalog/series">← Series</a>{% endblock %}
+{% block topactions %}<a class="btn s" href="/catalog/series" data-back>← Series</a>{% endblock %}
 {% block content %}
 <div class="split">
   <div class="card">

@@ -2,7 +2,7 @@
 {% block title %}{{ p.full_name or p.email }} · Kitabi Admin{% endblock %}
 {% block heading %}{{ p.full_name or 'Unnamed reader' }}{% endblock %}
 {% block subheading %}{% if p.username %}@{{ p.username }} · {% endif %}{{ p.email }}{% endblock %}
-{% block topactions %}<a class="btn s" href="/readers">← All readers</a>{% endblock %}
+{% block topactions %}<a class="btn s" href="/readers" data-back>← All readers</a>{% endblock %}
 {% block content %}
 {% if p.suspended_at %}
 <div class="flash err" style="margin-bottom:14px">Suspended {{ p.suspended_at.strftime('%d %b %Y') }} —

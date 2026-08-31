@@ -2,7 +2,7 @@
 {% block title %}{{ a.name }} · Kitabi Admin{% endblock %}
 {% block heading %}{{ a.name }}{% endblock %}
 {% block subheading %}{{ a.name_translit or '' }}{% if a.pen_name %} · writes as “{{ a.pen_name }}”{% endif %}{% endblock %}
-{% block topactions %}<a class="btn s" href="/catalog/authors">← Authors</a>{% endblock %}
+{% block topactions %}<a class="btn s" href="/catalog/authors" data-back>← Authors</a>{% endblock %}
 {% block content %}
 <div class="split">
   <div class="card">

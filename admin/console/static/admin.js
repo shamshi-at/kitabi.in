@@ -328,7 +328,13 @@ if ("serviceWorker" in navigator) {
     const a = e.target.closest("a[href]");
     if (!a) return;
     if (a.target && a.target !== "_self") return; // opens elsewhere
-    if (a.hasAttribute("download") || a.dataset.noLoader !== undefined || a.hasAttribute("data-peek")) return;
+    if (
+      a.hasAttribute("download") ||
+      a.dataset.noLoader !== undefined ||
+      a.hasAttribute("data-peek") ||
+      a.hasAttribute("data-back") // handled by the smart-back handler, no loader
+    )
+      return;
     const href = a.getAttribute("href");
     if (!href || href.startsWith("#") || /^(javascript|mailto|tel):/i.test(href)) return;
     // Same-origin only — an external link leaves for the system browser and this
@@ -405,4 +411,26 @@ if ("serviceWorker" in navigator) {
   });
 
   sync();
+})();
+
+// Smart back — the "← Section" link on a detail page. If you arrived here from
+// somewhere on this site (a filtered list, a search), go back to it EXACTLY as
+// you left it — filters, sort, scroll, all of it — via the browser's own
+// history, which the server-rendered filter state in the URL restores for free.
+// With no in-app history (a fresh tab, a pasted link) it falls through to the
+// link's href, which points at the section's list. Progressive enhancement:
+// with JS off, the href just works.
+(function () {
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a[data-back]");
+    if (!a || e.defaultPrevented) return;
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    // history.length > 1 means there's a previous entry to return to. This
+    // mirrors the browser's own Back button, which already lands on the filtered
+    // list (verified) because the filter lives in the query string.
+    if (history.length > 1) {
+      e.preventDefault();
+      history.back();
+    }
+  });
 })();
