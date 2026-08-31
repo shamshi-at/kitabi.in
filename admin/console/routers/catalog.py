@@ -334,30 +334,48 @@ async def rename(
 
 
 async def _work_rows(db: DbSession, works: list) -> list[dict]:
-    rows = []
-    for w in works:
-        editions = int(
-            await db.scalar(
-                select(func.count())
-                .select_from(Edition)
-                .where(Edition.work_id == w.id, Edition.deleted_at.is_(None))
+    """Edition + shelved counts for a list of works, in TWO grouped queries for
+    the whole list rather than two per work.
+
+    The per-work version was an N+1: a 300-row worklist meant ~600 sequential
+    COUNTs against the Singapore DB, which measured at ~6s a page (owner report,
+    1 Sep 2026 — "Editions with no cover takes time to load"). Grouping collapses
+    that to two round trips. Authors are already batch-loaded (selectinload), so
+    they cost nothing here."""
+    if not works:
+        return []
+    ids = [w.id for w in works]
+    edition_counts = dict(
+        (
+            await db.execute(
+                select(Edition.work_id, func.count())
+                .where(Edition.work_id.in_(ids), Edition.deleted_at.is_(None))
+                .group_by(Edition.work_id)
             )
-            or 0
-        )
-        shelved = int(
-            await db.scalar(
-                select(func.count())
+        ).all()
+    )
+    # Shelved: library entries on any edition of the work (deleted editions
+    # included, matching the old query) whose entry is live. One join, grouped.
+    shelved_counts = dict(
+        (
+            await db.execute(
+                select(Edition.work_id, func.count(LibraryEntry.id))
                 .select_from(LibraryEntry)
-                .where(
-                    LibraryEntry.edition_id.in_(select(Edition.id).where(Edition.work_id == w.id)),
-                    LibraryEntry.deleted_at.is_(None),
-                )
+                .join(Edition, Edition.id == LibraryEntry.edition_id)
+                .where(Edition.work_id.in_(ids), LibraryEntry.deleted_at.is_(None))
+                .group_by(Edition.work_id)
             )
-            or 0
-        )
-        author = ", ".join(a.name for a in w.authors) if w.authors else "—"
-        rows.append({"w": w, "author": author, "editions": editions, "shelved": shelved})
-    return rows
+        ).all()
+    )
+    return [
+        {
+            "w": w,
+            "author": ", ".join(a.name for a in w.authors) if w.authors else "—",
+            "editions": int(edition_counts.get(w.id, 0)),
+            "shelved": int(shelved_counts.get(w.id, 0)),
+        }
+        for w in works
+    ]
 
 
 # The quality-gap worklists the dashboard health bars and the catalog gap card
