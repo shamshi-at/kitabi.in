@@ -284,8 +284,14 @@
 // the console installable; it caches static assets and nothing dynamic. Failure
 // is silent — the console works identically without it, so a browser that
 // blocks workers (or a hard-refresh with the worker disabled) loses nothing.
+//
+// updateViaCache:'none' — Cloudflare edge-caches /sw.js for 4h (a zone rule by
+// file type, overriding the origin's no-cache), so the browser must be told to
+// bypass its OWN http cache when checking the worker for updates. Without this
+// a fixed worker could be shadowed by a stale cached copy; with it, every
+// update check hits the network and a new sw.js ships on the next visit.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => {});
   });
 }
