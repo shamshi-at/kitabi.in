@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from sqlalchemy import Text, cast, func, or_, select, update
 from sqlalchemy.orm import joinedload, selectinload
 
-from .. import assets, queries, security
+from .. import assets, cache, queries, security
 from ..deps import CurrentAdmin, DbSession, RequireEditor, client_ip
 from ..flash import pop_flash, set_flash
 from ..models_ref import (
@@ -422,6 +422,30 @@ SORT_LABELS = {
 }
 
 
+async def _gap_counts(db: DbSession) -> dict:
+    """The five quality-gap counts shown on every catalog page. Cached (45s TTL,
+    invalidated on catalog writes) because they're recomputed on every load and
+    one — `no_amazon` — is a JSONB text scan, not an indexed count."""
+    return await cache.get_or_compute(cache.CATALOG_GAPS, 45, lambda: _compute_gap_counts(db))
+
+
+async def _compute_gap_counts(db: DbSession) -> dict:
+    async def count(model, *cond) -> int:  # noqa: ANN002
+        return int(await db.scalar(select(func.count()).select_from(model).where(*cond)) or 0)
+
+    return {
+        "no_cover": await count(Edition, Edition.deleted_at.is_(None), Edition.cover_url.is_(None)),
+        "no_desc": await count(Work, Work.deleted_at.is_(None), Work.description.is_(None)),
+        "no_isbn": await count(Edition, Edition.deleted_at.is_(None), Edition.isbn.is_(None)),
+        "no_amazon": await count(Edition, Edition.deleted_at.is_(None), _no_stored_amazon()),
+        "no_works_author": await count(
+            Author,
+            Author.deleted_at.is_(None),
+            ~Author.id.in_(select(func.distinct(catalog_service.work_authors.c.author_id))),
+        ),
+    }
+
+
 def _filter_by_language(works: list, lang: str) -> tuple[list, list[str]]:
     """(works narrowed to `lang`, the sorted distinct languages actually present).
     Powers the language filter on the per-entity work lists (an author's or
@@ -526,22 +550,7 @@ async def catalog(
             works = _sort_works(works, sort)
 
     rows = await _work_rows(db, works)
-
-    # Quality gaps — the columns a bulk seed leaves thin.
-    async def count(model, *cond):  # noqa: ANN001
-        return int(await db.scalar(select(func.count()).select_from(model).where(*cond)) or 0)
-
-    gaps = {
-        "no_cover": await count(Edition, Edition.deleted_at.is_(None), Edition.cover_url.is_(None)),
-        "no_desc": await count(Work, Work.deleted_at.is_(None), Work.description.is_(None)),
-        "no_isbn": await count(Edition, Edition.deleted_at.is_(None), Edition.isbn.is_(None)),
-        "no_amazon": await count(Edition, Edition.deleted_at.is_(None), _no_stored_amazon()),
-        "no_works_author": await count(
-            Author,
-            Author.deleted_at.is_(None),
-            ~Author.id.in_(select(func.distinct(catalog_service.work_authors.c.author_id))),
-        ),
-    }
+    gaps = await _gap_counts(db)
     badges = await queries.nav_badges(db)
     flash = pop_flash(request)
     resp = templates.TemplateResponse(
@@ -1453,6 +1462,7 @@ async def merge_execute(
     except Exception as exc:  # noqa: BLE001
         set_flash(resp, "err", (getattr(exc, "detail", {}) or {}).get("message", "Merge failed."))
         return resp
+    cache.invalidate_catalog()  # a work was absorbed (soft-deleted)
     await security.audit(
         db,
         "work.merge",
@@ -1551,6 +1561,7 @@ async def delete_work(
         )
         return resp
     await db.commit()
+    cache.invalidate_catalog()  # fewer works/editions -> gap counts changed
     await security.audit(
         db,
         "work.delete",
@@ -1596,6 +1607,8 @@ async def delete_works(
         else:
             skipped += 1
     await db.commit()
+    if deleted:
+        cache.invalidate_catalog()
     for wid, title in deleted:
         await security.audit(
             db,

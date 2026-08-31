@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from . import cache
 from .models_ref import (
     CLAIM_PENDING,
     REPORT_OPEN,
@@ -92,6 +93,12 @@ async def pending_merges(db: AsyncSession) -> int:
 
 
 async def nav_badges(db: AsyncSession) -> dict:
+    # On every page (the nav shell). Cached briefly so a burst of page loads
+    # doesn't re-run four COUNTs each time; ≤20s stale is invisible on a badge.
+    return await cache.get_or_compute(cache.NAV_BADGES, 20, lambda: _nav_badges(db))
+
+
+async def _nav_badges(db: AsyncSession) -> dict:
     claims = await pending_claims(db)
     revisions = await pending_revisions(db)
     reports = await open_reports(db)
@@ -107,6 +114,13 @@ async def nav_badges(db: AsyncSession) -> dict:
 
 
 async def dashboard_stats(db: AsyncSession) -> dict:
+    # ~10 COUNTs for the KPI row + health bars; cached (invalidated on any
+    # catalog write via cache.invalidate_catalog) so the dashboard is one cache
+    # read on a repeat visit.
+    return await cache.get_or_compute(cache.DASHBOARD_STATS, 45, lambda: _dashboard_stats(db))
+
+
+async def _dashboard_stats(db: AsyncSession) -> dict:
     """The KPI row and the health panel. Counts are cheap COUNTs over indexed
     columns; a personal-scale catalog makes them instant."""
     active = LibraryEntry.deleted_at.is_(None)
