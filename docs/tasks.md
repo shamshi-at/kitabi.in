@@ -1195,11 +1195,12 @@ out of the sitemap until a work actually carries a genre.
         exact ones, which is the class it can auto-merge. Basheer is three rows
         across two scripts right now (`Vaikom Muhammad Basheer`,
         `Vokom M. Basheer`, `വൈക്കം മുഹമ്മദ് ബഷീർ`)
-  - [ ] **Give each romanized work the title people actually read** — in
-        progress. **65 of 1,198 applied 31 Aug 2026** (native script 8% → 13%);
-        **928 works still unasked** because the Anthropic key hit its usage
-        limit at batch 19 of 80. `plan` is resumable — re-run the same command
-        after the limit resets and it picks up the 928.
+  - [x] **Give each romanized work the title people actually read** — **Done,
+        31 Aug 2026: 306 of 1,198 restored at high confidence + unanimous
+        3-of-3 agreement, 0 skipped. Native-script titles across the Indic
+        catalogue went 8% → 30% (115 → 403 works)**; Kannada, Punjabi and Odia
+        came off a literal 0%. 892 rows deliberately left alone — 171 already
+        correct, 94 honest `unknown`, and the rest short of the gate.
         **A first pass of 465 was applied and then reverted**, on the owner's
         call, after a re-ask of 60 of them disagreed with itself 9% of the
         time: `Akhet` had shipped as અખેત where the cover reads આખેટ, on a
@@ -1211,9 +1212,16 @@ out of the sitemap until a work actually carries a genre.
         match what the single-vote run had said, so voting filters rather than
         changes answers, which is the point. Artifacts and the revert key in
         `etl/runs/2026-08-31-titles/`.
+        The gate rejected every row that had gone wrong in the reverted pass:
+        `Akhet` (2/3), `Amen`, `An autobiography`, `Navvite navvaṇḍi` (2/3),
+        `Bihu` (3/3 but medium) — and the added-subtitle violation went from 4
+        rows to **zero**.
         **Known limit, worth holding on to:** agreement raises precision, it
         does not prove correctness — a model wrong the same way three times
-        passes any vote, and on `Akhet` every run got the first vowel wrong. **Owner decision: the native title where the
+        passes any vote. `Cittarkaḷ purinta ar̲putaṅkaḷ` was applied at 3/3
+        high as சித்திரங்கள்… (pictures) where the romanization says
+        சித்தர்கள் (siddhars). One known-suspect row in 306; a reader of each
+        script is still the only real check. **Owner decision: the native title where the
         edition really has one, the English title where the edition only
         transliterated it.** The catalogue holds three states, not two:
         `Ardhi rate azadi` is a real Gujarati title romanized (→ આઝાદી અડધી રાતે);
