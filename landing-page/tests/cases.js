@@ -888,6 +888,12 @@ assert(!isAsset('/.well-known'), 'nor is the bare well-known directory');
 // only the .html form sends the redirect to a path it doesn't recognise. That
 // took the privacy policy offline once; both spellings are required.
 assert(isAsset('/privacy') && isAsset('/privacy.html'), 'privacy is reachable both ways');
+
+// The app pitch. Every page's header and footer links to /app, and it 404'd
+// from the day the reference site took "/" over until app.html existed — the
+// page was still deployed, just unreachable, which is the version of this bug
+// nobody notices because nothing errors.
+assert(isAsset('/app') && isAsset('/app.html'), 'the app page is reachable both ways');
 assert(isAsset('/terms') && isAsset('/terms.html'), 'terms is reachable both ways');
 var footerDoc = String(page({ title: 't', body: html`x` }).text());
 assertIncludes(footerDoc, 'href="/privacy"', 'the footer links the clean URL, avoiding the hop');
@@ -959,3 +965,46 @@ assert(
   canonicalHostUrl('https://www.kitabi.in/browse?a=1#frag') === 'https://kitabi.in/browse?a=1#frag',
   'the fragment survives too',
 );
+
+// --------------------------------------------------------------------------
+// The app band — the one call to action on every public page
+//
+// A store badge that goes nowhere is worse than one that admits it isn't there
+// yet: a reader only learns the difference by tapping it. So the rule this
+// pins is not "there are two badges", it is "a badge is a link if and only if
+// that store is live". Android shipped 31 Aug 2026; iOS was still in review.
+// --------------------------------------------------------------------------
+
+var band = String(appBand());
+
+assertIncludes(band, PLAY_STORE_URL, 'the app band carries the real Play Store URL');
+assertIncludes(
+  band,
+  '<a class="b" href="' + PLAY_STORE_URL + '"',
+  'Google Play is a real link, not a dead badge',
+);
+assertExcludes(band, 'href="#"', 'no badge links to nowhere');
+
+// The App Store half, while APP_STORE_URL is null.
+assert(APP_STORE_URL === null, 'iOS is still in review — nothing to link to yet');
+assertIncludes(band, 'class="b off">App Store', 'the App Store badge is inert while in review');
+assertIncludes(band, '<small>soon</small>', 'and says so, rather than looking clickable');
+
+// The band must never invent a second <a> for a store that has no URL: exactly
+// one anchor while exactly one store is live.
+assert(
+  (band.match(/<a class="b"/g) || []).length === 1,
+  'one live store, one link',
+);
+
+// A URL typo here is invisible in review and fatal in production — the badge
+// still renders, it just lands on a Play Store error page.
+assert(
+  PLAY_STORE_URL === 'https://play.google.com/store/apps/details?id=in.kitabi.kitabi',
+  'the Play listing id matches the app applicationId',
+);
+
+// html`` escapes interpolations, so the query string's "=" and "?" must survive
+// intact — an entity-escaped href is the 9 Aug aria-current bug wearing a
+// different hat, and it would look perfectly fine on screen.
+assertExcludes(band, '&amp;', 'the store URL is not entity-mangled');

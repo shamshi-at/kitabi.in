@@ -9,9 +9,12 @@
 <link rel="icon" href="/logo.svg?v=3" type="image/svg+xml">
 <!--
   Cloudflare Pages serves this, with a real 404 status, for any path no Function
-  and no asset matches. Without it Pages falls through to index.html at HTTP 200
-  — a soft 404 on every mistyped URL, showing stale launching-soon copy. That is
-  one near-identical thin page per broken link as far as a crawler is concerned.
+  and no asset matches. Without it Pages falls through to the site's index at
+  HTTP 200 — a soft 404 on every mistyped URL, which back when the index was the
+  launching-soon marketing page meant one near-identical thin page per broken
+  link as far as a crawler is concerned. (That page is app.html at /app now, and
+  functions/[[path]].js is what actually enforces the 404; this document is the
+  body it serves.)
 
   Deliberately standalone rather than rendered by the layout: this has to work
   when the API is unreachable and when no Function ran at all.

@@ -82,6 +82,15 @@
   <url><loc>https://kitabi.in/language/sanskrit</loc><lastmod>2026-08-04</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://kitabi.in/language/english</loc><lastmod>2026-08-04</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
 
+  <!-- The app pitch. It lives at /app, not "/" — the root is the reference
+       site's front door, and the two are different pages with different jobs. -->
+  <url>
+    <loc>https://kitabi.in/app</loc>
+    <lastmod>2026-08-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
   <!-- Store-required pages. Extensionless: the .html forms 308 here. -->
   <url>
     <loc>https://kitabi.in/privacy</loc>

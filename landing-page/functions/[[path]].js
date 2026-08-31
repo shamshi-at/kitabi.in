@@ -26,7 +26,13 @@ import { renderHome } from './_lib/pages/home.js';
 const ASSET_FILES = new Set([
   '/404.html',
   '/404',
-  '/index.html',
+  // The app pitch. It used to be index.html at "/", and when the reference site
+  // took the root over (web-platform-plan W1) it was left deployed but
+  // unreachable — Pages 308s /index.html to "/", which a Function renders. So
+  // the "Get the app" link in every page's header and footer 404'd. It is
+  // app.html now, served at the /app the layout has always pointed at.
+  '/app.html',
+  '/app',
   '/privacy.html',
   '/privacy',
   '/terms.html',

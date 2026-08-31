@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Kitabi — Beyond the Bookshelf | Book and Library Tracker</title>
-<meta name="description" content="Catalogue every book you own with a barcode scan, track lending, log reading sessions, and search Malayalam, Tamil & English shelves in any script. Free & private.">
+<title>Get Kitabi — Beyond the Bookshelf | Book and Library Tracker</title>
+<meta name="description" content="Catalogue every book you own with a barcode scan, track lending, log reading sessions, and search Malayalam, Tamil &amp; English shelves in any script. Free &amp; private — download on Google Play.">
 <meta name="keywords" content="book tracker app, home library app, personal library, book lending tracker, reading tracker, reading timer app, book barcode scanner, Goodreads import, Goodreads alternative, book catalogue app, book collection manager, Malayalam books, Tamil books, Indian languages reading app, library app India, Kitabi">
 <meta name="author" content="Kitabi">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<link rel="canonical" href="https://kitabi.in/">
+<link rel="canonical" href="https://kitabi.in/app">
 <meta name="theme-color" content="#241811">
-<link rel="icon" href="logo.svg?v=3" type="image/svg+xml">
-<link rel="icon" href="ico.png?v=3" type="image/png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
+<link rel="icon" href="/logo.svg?v=3" type="image/svg+xml">
+<link rel="icon" href="/ico.png?v=3" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kitabi">
 <meta property="og:locale" content="en_IN">
 <meta property="og:title" content="Kitabi — Beyond the Bookshelf">
-<meta property="og:description" content="Every book you own, who borrowed what, what to read next — free, private. Launching soon.">
-<meta property="og:url" content="https://kitabi.in/">
+<meta property="og:description" content="Every book you own, who borrowed what, what to read next — free, private. Out now on Google Play.">
+<meta property="og:url" content="https://kitabi.in/app">
 <meta property="og:image" content="https://kitabi.in/og-image.png">
 <meta property="og:image:secure_url" content="https://kitabi.in/og-image.png">
 <meta property="og:image:type" content="image/png">
@@ -41,15 +41,6 @@
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "WebSite",
-      "@id": "https://kitabi.in/#website",
-      "url": "https://kitabi.in/",
-      "name": "Kitabi",
-      "description": "A private home-library app: every book you own, who borrowed what, and what to read next.",
-      "inLanguage": "en",
-      "publisher": {"@id": "https://kitabi.in/#org"}
-    },
-    {
       "@type": "Organization",
       "@id": "https://kitabi.in/#org",
       "name": "Kitabi",
@@ -66,7 +57,7 @@
       "@type": "MobileApplication",
       "name": "Kitabi",
       "description": "Catalogue every book you own, keep a lending ledger with due-date reminders, track your reading in pages, import from Goodreads or a spreadsheet, and get recommendations that explain themselves. Private by default.",
-      "operatingSystem": "ANDROID, IOS",
+      "operatingSystem": "ANDROID",
       "applicationCategory": "LifestyleApplication",
       "featureList": [
         "ISBN barcode scanning",
@@ -83,18 +74,16 @@
         "Opt-in book recommendations that explain themselves",
         "Shareable book cards and public book pages"
       ],
-      "releasedEvent": {
-        "@type": "PublicationEvent",
-        "name": "Launching soon"
-      },
+      "installUrl": "https://play.google.com/store/apps/details?id=in.kitabi.kitabi",
+      "downloadUrl": "https://play.google.com/store/apps/details?id=in.kitabi.kitabi",
       "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"},
       "publisher": {"@id": "https://kitabi.in/#org"},
       "image": "https://kitabi.in/kitabi-logo.png",
-      "url": "https://kitabi.in/"
+      "url": "https://kitabi.in/app"
     },
     {
       "@type": "FAQPage",
-      "@id": "https://kitabi.in/#faq",
+      "@id": "https://kitabi.in/app#faq",
       "mainEntity": [
         {
           "@type": "Question",
@@ -128,8 +117,8 @@
         },
         {
           "@type": "Question",
-          "name": "When does Kitabi launch?",
-          "acceptedAnswer": {"@type": "Answer", "text": "Kitabi is launching soon on Android and iOS. The app will be announced right here at kitabi.in."}
+          "name": "Is Kitabi available yet?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Kitabi is out now on Android — download it free from Google Play. The iPhone and iPad version is in App Store review and will be announced right here at kitabi.in."}
         }
       ]
     }
@@ -231,6 +220,9 @@ body{
 .store span{font-size:15.5px;font-weight:700}
 .store.ghost{background:transparent;color:var(--paper);border:1.5px solid rgba(246,240,227,.45)}
 .store.ghost small{color:var(--gold)}
+/* The App Store side, while it is in review. Not an <a> — a badge that goes
+   nowhere teaches a reader to distrust the one beside it that does. */
+.store.off{cursor:default;opacity:.75}
 .trust{margin-top:22px;font-size:12.5px;color:#A08D6E}
 .trust b{color:#CBB897;font-weight:600}
 .cue{margin:30px auto 0;width:26px;height:42px;border:2px solid rgba(239,227,200,.4);border-radius:14px;position:relative}
@@ -542,8 +534,8 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 <div id="ribbon" aria-hidden="true"></div>
 
 <nav class="nav" id="nav" aria-label="Kitabi">
-  <a class="brand" href="#top"><img src="logo.svg" alt=""><b>Kitabi</b></a>
-  <a class="go" href="#notify">Get notified</a>
+  <a class="brand" href="/"><img src="/logo.svg" alt=""><b>Kitabi</b></a>
+  <a class="go" href="https://play.google.com/store/apps/details?id=in.kitabi.kitabi" rel="noopener">Download</a>
 </nav>
 
 <header class="cine" id="top">
@@ -585,14 +577,14 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
   <p class="pitch fx" style="--a:.7;--b:.16">Every book you <b>own</b>, who <b>borrowed</b> what, and what to
   <b>read next</b> — a private library in your pocket, not another feed.</p>
   <div class="ctas fx" style="--a:.76;--b:.16">
-    <a class="store" href="#notify" aria-label="App Store — launching soon">
-      <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
-      <span><small>Launching soon</small><span>App Store</span></span>
-    </a>
-    <a class="store ghost" href="#notify" aria-label="Google Play — launching soon">
+    <a class="store" href="https://play.google.com/store/apps/details?id=in.kitabi.kitabi" rel="noopener" aria-label="Get Kitabi on Google Play">
       <svg class="ic" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M4 2.3v19.4c0 .4.45.65.79.42l14.4-9.7a.5.5 0 0 0 0-.84L4.79 1.88A.5.5 0 0 0 4 2.3z"/></svg>
-      <span><small>Launching soon</small><span>Google Play</span></span>
+      <span><small>Get it on</small><span>Google Play</span></span>
     </a>
+    <span class="store ghost off" role="note">
+      <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
+      <span><small>In review</small><span>App Store</span></span>
+    </span>
   </div>
   <p class="trust fx" style="--a:.82;--b:.15"><b>Free</b> · <b>Your library stays private</b> · Your Goodreads list moves in, in minutes</p>
   <div class="fx" style="--a:.88;--b:.12">
@@ -1023,9 +1015,11 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
       You choose what to share: a single review, your shelf, or nothing at all.</p>
     </details>
     <details>
-      <summary>When does Kitabi launch?</summary>
-      <p class="fa">Kitabi is <b>launching soon on Android and iOS</b>. The app will be announced
-      right here at kitabi.in.</p>
+      <summary>Is Kitabi available yet?</summary>
+      <p class="fa">Yes — Kitabi is <b>out now on Android</b>, free on
+      <a href="https://play.google.com/store/apps/details?id=in.kitabi.kitabi" rel="noopener">Google Play</a>.
+      The iPhone and iPad version is <b>in App Store review</b>; it will be announced right here
+      at kitabi.in.</p>
     </details>
   </div>
 </section>
@@ -1034,15 +1028,16 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
   <div class="reveal">
     <div class="orn">❦</div>
     <h2>Your shelf is waiting</h2>
-    <p>Kitabi arrives soon on Android and iOS — because your books deserve better than
-    a spreadsheet. The door opens right here at <b>kitabi.in</b>.</p>
+    <p>Kitabi is <b>out now on Android</b> — because your books deserve better than a
+    spreadsheet. The iPhone version is in App Store review, and lands right here at
+    <b>kitabi.in</b>.</p>
     <div class="ctas dark">
-      <a class="store" href="#" aria-disabled="true">
-        <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
-        <span><small>Launching soon</small><span>App Store</span></span></a>
-      <a class="store" href="#" aria-disabled="true">
+      <a class="store" href="https://play.google.com/store/apps/details?id=in.kitabi.kitabi" rel="noopener" aria-label="Get Kitabi on Google Play">
         <svg class="ic" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M4 2.3v19.4c0 .4.45.65.79.42l14.4-9.7a.5.5 0 0 0 0-.84L4.79 1.88A.5.5 0 0 0 4 2.3z"/></svg>
-        <span><small>Launching soon</small><span>Google Play</span></span></a>
+        <span><small>Get it on</small><span>Google Play</span></span></a>
+      <span class="store off" role="note">
+        <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
+        <span><small>In review</small><span>App Store</span></span></span>
     </div>
   </div>
 </section>
@@ -1050,9 +1045,9 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 <footer>
   <p class="fm">Kitabi <span style="color:var(--gold)">·</span> beyond the bookshelf</p>
   <p style="margin-top:8px">
-    <a href="/privacy.html" style="color:var(--oxblood);text-decoration:none">Privacy</a>
+    <a href="/privacy" style="color:var(--oxblood);text-decoration:none">Privacy</a>
     <span style="color:var(--line)">·</span>
-    <a href="/terms.html" style="color:var(--oxblood);text-decoration:none">Terms</a>
+    <a href="/terms" style="color:var(--oxblood);text-decoration:none">Terms</a>
   </p>
   <p style="margin-top:8px">© <span id="y">2026</span> Kitabi. All rights reserved.</p>
 </footer>

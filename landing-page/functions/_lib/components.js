@@ -192,6 +192,21 @@ export function byline(authors) {
   )}`;
 }
 
+/** Where the app can actually be got. Live stores are the ONLY thing that may
+ *  render as a link — a store badge that goes nowhere is worse than one that
+ *  says it isn't there yet, because a reader only learns the difference by
+ *  tapping it. iOS is in App Store review as of 31 Aug 2026; when it is
+ *  approved, fill in APP_STORE_URL and the badge becomes a link on its own. */
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=in.kitabi.kitabi';
+export const APP_STORE_URL = null;
+
+/** One store badge — a link when the store is live, plain text when it isn't. */
+function storeBadge(name, url) {
+  return url
+    ? html`<a class="b" href="${url}" rel="noopener">${name}</a>`
+    : html`<span class="b off">${name} <small>soon</small></span>`;
+}
+
 /** The one honest call to action. A door into the app, never a wall — the
  *  public web is strictly read-only, so every write lives on the other side. */
 export function appBand() {
@@ -205,7 +220,7 @@ export function appBand() {
         </p>
       </div>
       <div>
-        <span class="b">App Store</span><span class="b">Google Play</span>
+        ${storeBadge('Google Play', PLAY_STORE_URL)}${storeBadge('App Store', APP_STORE_URL)}
       </div>
     </div>
   </section>`;

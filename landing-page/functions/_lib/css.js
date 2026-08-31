@@ -342,7 +342,12 @@ img{max-width:100%;display:block}
 .appband h2{font-family:var(--serif);font-size:21px;font-weight:600;color:#F6F0E3}
 .appband p{font-size:13px;color:#CBB897;margin-top:7px;line-height:1.65;max-width:520px}
 .appband .b{background:rgba(246,240,227,.1);border:1px solid rgba(240,226,194,.3);
-  border-radius:9px;padding:9px 16px;font-size:12px;font-weight:600;color:#F0E2C2;display:inline-block;margin-right:8px}
+  border-radius:9px;padding:9px 16px;font-size:12px;font-weight:600;color:#F0E2C2;display:inline-block;
+  margin:0 8px 8px 0;text-decoration:none}
+.appband a.b{background:rgba(240,226,194,.22);border-color:rgba(240,226,194,.6);color:#FBF3DF}
+.appband a.b:hover{background:rgba(246,240,227,.32)}
+.appband .b.off{opacity:.62}
+.appband .b.off small{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#CBB897}
 
 /* ---------- hubs ---------- */
 .hubhead{background:linear-gradient(170deg,var(--paper-deep),var(--paper));

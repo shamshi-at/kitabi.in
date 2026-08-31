@@ -33,7 +33,7 @@ jobs:
           # those were the client-rendered shells, replaced by server-rendered
           # Pages Functions. Everything the public site serves now comes from
           # ./functions except these static assets and the legal pages.
-          cp landing-page/index.html landing-page/404.html landing-page/privacy.html landing-page/terms.html landing-page/logo.svg landing-page/kitabi-logo.png landing-page/ico.png landing-page/apple-touch-icon.png landing-page/og-image.png landing-page/robots.txt landing-page/sitemap.xml public/
+          cp landing-page/app.html landing-page/404.html landing-page/privacy.html landing-page/terms.html landing-page/logo.svg landing-page/kitabi-logo.png landing-page/ico.png landing-page/apple-touch-icon.png landing-page/og-image.png landing-page/robots.txt landing-page/sitemap.xml public/
           # IndexNow ownership proof — must be served for submissions to be
           # accepted at all (a 403 back from IndexNow means this is missing).
           cp landing-page/*.txt public/
