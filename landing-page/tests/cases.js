@@ -980,22 +980,26 @@ var band = String(appBand());
 assertIncludes(band, PLAY_STORE_URL, 'the app band carries the real Play Store URL');
 assertIncludes(
   band,
-  '<a class="b" href="' + PLAY_STORE_URL + '"',
+  '<a class="store" href="' + PLAY_STORE_URL + '"',
   'Google Play is a real link, not a dead badge',
 );
 assertExcludes(band, 'href="#"', 'no badge links to nowhere');
 
-// The App Store half, while APP_STORE_URL is null.
+// The App Store half, while APP_STORE_URL is null. An inert <span>, not an <a>:
+// the reader must not learn which button works by tapping it.
 assert(APP_STORE_URL === null, 'iOS is still in review — nothing to link to yet');
-assertIncludes(band, 'class="b off">App Store', 'the App Store badge is inert while in review');
-assertIncludes(band, '<small>soon</small>', 'and says so, rather than looking clickable');
+assertIncludes(band, '<span class="store ghost off"', 'the App Store button is inert while in review');
+assertIncludes(band, '<small>In review</small>', 'and says so, rather than looking clickable');
 
 // The band must never invent a second <a> for a store that has no URL: exactly
 // one anchor while exactly one store is live.
-assert(
-  (band.match(/<a class="b"/g) || []).length === 1,
-  'one live store, one link',
-);
+assert((band.match(/<a class="store"/g) || []).length === 1, 'one live store, one link');
+
+// Both halves are the same object — same icon, same two-line label — so the row
+// reads as one row of buttons. Only the kicker line differs.
+assert((band.match(/class="store[" ]/g) || []).length === 2, 'two buttons, always');
+assert((band.match(/class="ic"/g) || []).length === 2, 'each button carries its store mark');
+assertIncludes(band, '<small>Get it on</small><span>Google Play</span>', 'the live half reads "Get it on"');
 
 // A URL typo here is invisible in review and fatal in production — the badge
 // still renders, it just lands on a Play Store error page.

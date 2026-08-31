@@ -341,13 +341,26 @@ img{max-width:100%;display:block}
   border-radius:14px;padding:24px 26px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
 .appband h2{font-family:var(--serif);font-size:21px;font-weight:600;color:#F6F0E3}
 .appband p{font-size:13px;color:#CBB897;margin-top:7px;line-height:1.65;max-width:520px}
-.appband .b{background:rgba(246,240,227,.1);border:1px solid rgba(240,226,194,.3);
-  border-radius:9px;padding:9px 16px;font-size:12px;font-weight:600;color:#F0E2C2;display:inline-block;
-  margin:0 8px 8px 0;text-decoration:none}
-.appband a.b{background:rgba(240,226,194,.22);border-color:rgba(240,226,194,.6);color:#FBF3DF}
-.appband a.b:hover{background:rgba(246,240,227,.32)}
-.appband .b.off{opacity:.62}
-.appband .b.off small{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#CBB897}
+/* The store buttons. Deliberately the same object as the pair on /app
+   (landing-page/app.html) — same two-line label, same inline marks, same
+   paper-on-night treatment — because a reader who meets one and then the other
+   should be meeting the same button, not a family resemblance. Keep the two in
+   step when either changes. */
+.appband .stores{display:flex;gap:12px;flex-wrap:wrap}
+.appband .store{display:flex;align-items:center;gap:11px;text-align:left;
+  background:var(--paper);color:var(--ink);border:1px solid var(--paper);border-radius:14px;
+  padding:11px 18px;min-width:186px;text-decoration:none}
+.appband .store .ic{flex-shrink:0}
+.appband .store small{display:block;font-size:9.5px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--oxblood)}
+.appband .store span span{font-size:15.5px;font-weight:700}
+.appband a.store:hover{background:#FFFCF4;border-color:#FFFCF4}
+/* The half that has no store yet. An outline instead of a fill, and not an <a>:
+   a badge that goes nowhere teaches a reader to distrust the one beside it. */
+.appband .store.ghost{background:transparent;color:var(--paper);
+  border:1.5px solid rgba(246,240,227,.45)}
+.appband .store.ghost small{color:var(--gold)}
+.appband .store.off{cursor:default}
 
 /* ---------- hubs ---------- */
 .hubhead{background:linear-gradient(170deg,var(--paper-deep),var(--paper));
