@@ -28,7 +28,8 @@
   </div>
 
   <div class="card">
-    <div class="lbl">Reading order ({{ works | length }})</div>
+    <div class="lbl">Reading order ({{ works|length }}{% if lang %} of {{ works_total }}{% endif %})</div>
+    {% include "_lang_filter.html" %}
     <div class="tbl" style="margin-top:8px;border:none">
       <table>
         <tr><th style="width:96px">№</th><th>Book</th><th></th></tr>

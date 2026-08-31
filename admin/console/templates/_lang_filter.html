@@ -6,6 +6,9 @@
 {% if work_langs and work_langs | length > 1 %}
 <form method="get" class="filterbar" data-no-loader style="margin:2px 0 10px">
   {% if merge_q %}<input type="hidden" name="merge_q" value="{{ merge_q }}">{% endif %}
+  {# add_q only exists on the series page; `is defined` keeps this a no-op on
+     author/publisher, which share this partial. #}
+  {% if add_q is defined and add_q %}<input type="hidden" name="add_q" value="{{ add_q }}">{% endif %}
   <label>Language
     <select name="lang" onchange="this.form.requestSubmit()">
       <option value="">All languages ({{ works_total }})</option>

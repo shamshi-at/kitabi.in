@@ -1122,6 +1122,7 @@ async def series_detail(
     series_id: uuid.UUID,
     merge_q: str = Query(default=""),
     add_q: str = Query(default=""),
+    lang: str = Query(default=""),
 ) -> HTMLResponse:
     series = await db.get(Series, series_id)
     if series is None:
@@ -1131,7 +1132,12 @@ async def series_detail(
     works = await catalog_service.series_works(db, series_id)
     # Candidates to add: a title search, minus what is already in the series.
     add_q = add_q.strip()
+    # `in_series` is computed from the FULL set, before the language filter — a
+    # book already in the series must stay excluded from the add search even
+    # when the reading-order view is narrowed to another language.
     in_series = {w.id for w in works}
+    works_total = len(works)
+    works, work_langs = _filter_by_language(works, lang.strip())
     candidates = [
         w
         for w in (await catalog_service.search_local(db, add_q) if add_q else [])
@@ -1149,6 +1155,9 @@ async def series_detail(
             "badges": badges,
             "s": series,
             "works": works,
+            "works_total": works_total,
+            "work_langs": work_langs,
+            "lang": lang.strip(),
             "add_q": add_q,
             "candidates": candidates,
             "kind": "series",
