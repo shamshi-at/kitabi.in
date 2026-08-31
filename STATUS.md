@@ -424,6 +424,24 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **31 Aug 2026** — **Delete a work in the console — single and bulk, soft, guarded.**
+  Catalog cleanup for the junk a bulk seed leaves (malformed rows, wrong-language
+  dupes, test entries): a **Delete this work** button on the work page and
+  **checkbox + bulk-delete** on the search/worklist (`catalog.html`, a sticky bar
+  that admin.js reveals when rows are ticked). Soft delete only (rule 3 —
+  `deleted_at` on the work *and* its editions, so it drops out of search, the API
+  catalog and the public site; never a hard `DELETE`). The guard is the point:
+  a work anyone has **shelved, rated or reviewed is refused** (`_work_footprint`
+  → `_delete_work` in `routers/catalog.py`) and pointed at **merge** instead,
+  which folds it into the correct row and carries those readers across — so delete
+  can never yank a book out from under a reader. Editor+ only, every deletion
+  audited (`work.delete`), bulk capped at 200/submit. Verified against the dev DB
+  (junk deletes work+editions; shelved and rated works refused, left live) and the
+  bulk UI in-browser (select-all/indeterminate, count, empty-submit blocked);
+  routes gated (303 to sign-in unauthenticated); 20 admin tests + lint green,
+  Docker builds. Follow-up left open: a restore/undo surface (soft delete makes it
+  recoverable by an operator today, but there's no UI for it yet).
+
 - **31 Aug 2026** — **The admin console is an installable PWA.** A manifest, a
   minimal service worker (served from `/sw.js` at the root so its scope is the
   whole origin) and full-bleed maskable icons (`admin/scripts/gen_pwa_icons.sh`,

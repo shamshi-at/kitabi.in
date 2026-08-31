@@ -92,6 +92,22 @@
     </form>
     <div style="margin-top:14px"><a class="btn s"
       href="/catalog?q={{ w.title_translit or w.title }}&keep={{ w.id }}">Find a duplicate to merge</a></div>
+
+    <div class="lbl" style="margin-top:16px">Delete</div>
+    {% if shelved or ratings or reviews %}
+    <p class="hint" style="margin-top:6px">Can’t delete — readers depend on this
+      ({{ shelved }} shelved · {{ ratings }} rated · {{ reviews }} reviewed). To remove a duplicate
+      without stranding them, <b>merge</b> it into the correct work instead.</p>
+    {% else %}
+    <form method="post" action="/catalog/works/{{ w.id }}/delete" style="margin-top:6px"
+          onsubmit="return confirm('Delete “{{ w.title|replace('\'','\\\'') }}”? It is removed from the catalog and the public site. Nobody has it shelved.')">
+      <input type="hidden" name="confirm" value="DELETE">
+      <button class="btn s d">Delete this work</button>
+      <span class="hint">No reader has this shelved, rated or reviewed, so it is safe to remove.
+        Soft delete — recoverable by an operator.</span>
+    </form>
+    {% endif %}
+
     <div class="note" style="margin-top:10px">Work id <span class="mono">{{ w.id }}</span></div>
   </div>
   <div class="card">

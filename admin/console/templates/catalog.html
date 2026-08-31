@@ -41,29 +41,44 @@
 </div>
 {% endif %}
 {% if q or filter_label %}
-<div class="tbl">
-  <table>
-    <tr><th style="width:38%">Title</th><th>Author</th><th>Editions</th><th>Shelved</th><th>Merge</th></tr>
-    {% for r in rows %}
-    <tr>
-      <td><button type="button" class="peek t" data-peek="/catalog/peek/works/{{ r.w.id }}">{{ r.w.title }}</button>
-        <div class="m mono">{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}
-          · <a href="/catalog/works/{{ r.w.id }}">open ↗</a></div></td>
-      <td class="m">{{ r.author }}</td>
-      <td>{{ r.editions }}</td>
-      <td>{{ r.shelved }}</td>
-      <td><div style="display:flex;gap:4px">
-        <button type="button" class="btn s" data-mergepick="keep" data-id="{{ r.w.id }}">Keep</button>
-        <button type="button" class="btn s" data-mergepick="absorb" data-id="{{ r.w.id }}">Absorb</button>
-      </div></td>
-    </tr>
-    {% endfor %}
-    {% if not rows %}<tr><td colspan="5" class="m" style="text-align:center;padding:24px">
-      {% if q %}No matches for “{{ q }}”.{% else %}Nothing here — this gap is clear.{% endif %}</td></tr>{% endif %}
-  </table>
-</div>
-<p class="cap" style="margin-top:8px;font-size:11.5px;color:var(--ink-soft)">Tap <b>Keep</b> and
-<b>Absorb</b> on two rows, then <b>Preview</b> in the merge card above.</p>
+<form id="bulkform" method="post" action="/catalog/works/delete">
+  <input type="hidden" name="confirm" value="DELETE">
+  <input type="hidden" name="back" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
+  {# Bulk action bar — hidden by admin.js until at least one row is checked. #}
+  <div class="bulkbar" data-bulkbar hidden>
+    <span><b data-bulkcount>0</b> selected</span>
+    <button class="btn s d" type="submit">Delete selected</button>
+    <span class="hint">Works that readers have shelved, rated or reviewed are skipped — merge those.</span>
+  </div>
+  <div class="tbl">
+    <table>
+      <tr>
+        <th style="width:34px"><input type="checkbox" data-selall aria-label="Select all"></th>
+        <th style="width:36%">Title</th><th>Author</th><th>Editions</th><th>Shelved</th><th>Merge</th></tr>
+      {% for r in rows %}
+      <tr>
+        <td><input type="checkbox" class="rowchk" name="ids" value="{{ r.w.id }}"
+          aria-label="Select {{ r.w.title }}"></td>
+        <td><button type="button" class="peek t" data-peek="/catalog/peek/works/{{ r.w.id }}">{{ r.w.title }}</button>
+          <div class="m mono">{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}
+            · <a href="/catalog/works/{{ r.w.id }}">open ↗</a></div></td>
+        <td class="m">{{ r.author }}</td>
+        <td>{{ r.editions }}</td>
+        <td>{{ r.shelved }}</td>
+        <td><div style="display:flex;gap:4px">
+          <button type="button" class="btn s" data-mergepick="keep" data-id="{{ r.w.id }}">Keep</button>
+          <button type="button" class="btn s" data-mergepick="absorb" data-id="{{ r.w.id }}">Absorb</button>
+        </div></td>
+      </tr>
+      {% endfor %}
+      {% if not rows %}<tr><td colspan="6" class="m" style="text-align:center;padding:24px">
+        {% if q %}No matches for “{{ q }}”.{% else %}Nothing here — this gap is clear.{% endif %}</td></tr>{% endif %}
+    </table>
+  </div>
+</form>
+<p class="cap" style="margin-top:8px;font-size:11.5px;color:var(--ink-soft)">Tick rows to
+<b>delete</b> junk in bulk, or tap <b>Keep</b> and <b>Absorb</b> on two rows to <b>merge</b>
+duplicates. Merge keeps readers; delete is for rows nobody has.</p>
 {% else %}
 <div class="note">Type a title or author above to search the catalog, or open a quality-gap worklist above.</div>
 {% endif %}

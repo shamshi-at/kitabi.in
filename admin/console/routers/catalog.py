@@ -6,6 +6,7 @@ is editor+ only, and is audited. It reuses the API's merge_preview / merge_works
 """
 
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from app.services import buy_links as buy_links_service  # noqa: E402
@@ -15,7 +16,7 @@ from app.services import (
 )
 from fastapi import APIRouter, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
-from sqlalchemy import Text, cast, func, or_, select
+from sqlalchemy import Text, cast, func, or_, select, update
 from sqlalchemy.orm import joinedload, selectinload
 
 from .. import assets, queries, security
@@ -1338,4 +1339,164 @@ async def merge_execute(
         ip=client_ip(request),
     )
     set_flash(resp, "ok", f"Merged “{result['absorbed_title']}” into “{result['keep_title']}”.")
+    return resp
+
+
+# ---------------------------------------------------------------------------
+# Delete a work (soft, rule 3) — catalog cleanup for junk a bulk seed leaves:
+# malformed rows, wrong-language dupes, test entries. NEVER a hard DELETE, and
+# NEVER a way to yank a book out from under a reader: a work anyone has shelved,
+# rated or reviewed is refused here and pointed at merge instead, which folds it
+# into the correct row and carries those readers across. Editor+ only, audited.
+# ---------------------------------------------------------------------------
+
+
+async def _work_footprint(db: DbSession, work_id: uuid.UUID) -> dict:
+    """The reader engagement that makes a work unsafe to delete. Active rows
+    only — a soft-deleted rating (a reader who un-rated) doesn't count."""
+    shelved = await db.scalar(
+        select(func.count())
+        .select_from(LibraryEntry)
+        .where(
+            LibraryEntry.edition_id.in_(select(Edition.id).where(Edition.work_id == work_id)),
+            LibraryEntry.deleted_at.is_(None),
+        )
+    )
+    ratings = await db.scalar(
+        select(func.count())
+        .select_from(Rating)
+        .where(Rating.work_id == work_id, Rating.deleted_at.is_(None))
+    )
+    reviews = await db.scalar(
+        select(func.count())
+        .select_from(Review)
+        .where(Review.work_id == work_id, Review.deleted_at.is_(None))
+    )
+    return {
+        "shelved": int(shelved or 0),
+        "ratings": int(ratings or 0),
+        "reviews": int(reviews or 0),
+    }
+
+
+async def _delete_work(db: DbSession, work: Work) -> bool:
+    """Soft-delete a work and its editions if no reader depends on it. Returns
+    True if deleted, False if the footprint blocked it. Does NOT commit — the
+    caller batches the commit so a bulk delete is one transaction."""
+    fp = await _work_footprint(db, work.id)
+    if fp["shelved"] or fp["ratings"] or fp["reviews"]:
+        return False
+    now = datetime.now(UTC)
+    work.deleted_at = now
+    # The editions go too, so the printing rows also drop out of search and the
+    # public site. Anything filtering deleted_at (search_local, the API catalog,
+    # public_service) then stops surfacing the book entirely.
+    await db.execute(
+        update(Edition)
+        .where(Edition.work_id == work.id, Edition.deleted_at.is_(None))
+        .values(deleted_at=now)
+    )
+    return True
+
+
+@router.post("/works/{work_id}/delete")
+async def delete_work(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    work_id: uuid.UUID,
+    confirm: Annotated[str, Form()] = "",
+) -> RedirectResponse:
+    resp = RedirectResponse("/catalog", status_code=303)
+    if confirm != "DELETE":
+        set_flash(resp, "err", "Delete not confirmed.")
+        return resp
+    work = await db.get(Work, work_id)
+    if work is None or work.deleted_at is not None:
+        set_flash(resp, "err", "Work not found.")
+        return resp
+    title = work.title  # captured before commit expires the row
+    if not await _delete_work(db, work):
+        fp = await _work_footprint(db, work_id)
+        await db.rollback()
+        set_flash(
+            resp,
+            "err",
+            f"“{title}” has readers ({fp['shelved']} shelved · {fp['ratings']} rated · "
+            f"{fp['reviews']} reviewed) — merge it into the correct work instead of deleting.",
+        )
+        return resp
+    await db.commit()
+    await security.audit(
+        db,
+        "work.delete",
+        admin_id=admin.id,
+        target_type="work",
+        target_id=str(work_id),
+        summary=title,
+        ip=client_ip(request),
+    )
+    set_flash(resp, "ok", f"Deleted “{title}”.")
+    return resp
+
+
+_BULK_DELETE_CAP = 200
+
+
+@router.post("/works/delete")
+async def delete_works(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    ids: Annotated[list[uuid.UUID] | None, Form()] = None,
+    confirm: Annotated[str, Form()] = "",
+    back: Annotated[str, Form()] = "/catalog",
+) -> RedirectResponse:
+    dest = back if back.startswith("/catalog") else "/catalog"
+    resp = RedirectResponse(dest, status_code=303)
+    if confirm != "DELETE":
+        set_flash(resp, "err", "Delete not confirmed.")
+        return resp
+    # Cap the batch so one submit can't sweep the catalogue; a real cleanup is
+    # tens of rows, and the checkbox list can only offer what a page showed.
+    wanted = list(dict.fromkeys(ids or []))[:_BULK_DELETE_CAP]  # de-dupe, keep order
+    deleted: list[tuple[str, str]] = []  # (id, title), captured before commit
+    skipped = 0
+    for wid in wanted:
+        work = await db.get(Work, wid)
+        if work is None or work.deleted_at is not None:
+            continue
+        title = work.title
+        if await _delete_work(db, work):
+            deleted.append((str(wid), title))
+        else:
+            skipped += 1
+    await db.commit()
+    for wid, title in deleted:
+        await security.audit(
+            db,
+            "work.delete",
+            admin_id=admin.id,
+            target_type="work",
+            target_id=wid,
+            summary=title,
+            ip=client_ip(request),
+        )
+    if deleted and skipped:
+        msg = (
+            f"Deleted {len(deleted)} work{'' if len(deleted) == 1 else 's'} · "
+            f"skipped {skipped} that readers have shelved, rated or reviewed — merge those instead."
+        )
+        set_flash(resp, "ok", msg)
+    elif deleted:
+        set_flash(resp, "ok", f"Deleted {len(deleted)} work{'' if len(deleted) == 1 else 's'}.")
+    elif skipped:
+        set_flash(
+            resp,
+            "err",
+            f"Nothing deleted — all {skipped} have readers (shelved/rated/reviewed). "
+            "Merge those into the correct work instead.",
+        )
+    else:
+        set_flash(resp, "err", "Nothing selected.")
     return resp

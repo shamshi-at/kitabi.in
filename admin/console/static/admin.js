@@ -359,3 +359,50 @@ if ("serviceWorker" in navigator) {
   // (Back button), where the old page can come back with the overlay still up.
   window.addEventListener("pageshow", hide);
 })();
+
+// Bulk selection on the catalog worklist — tick rows, delete the junk in one
+// confirmed submit. The form (#bulkform) posts checked ids to
+// /catalog/works/delete; the server skips anything a reader depends on.
+(function () {
+  const form = document.getElementById("bulkform");
+  if (!form) return;
+  const selall = form.querySelector("[data-selall]");
+  const bar = form.querySelector("[data-bulkbar]");
+  const count = form.querySelector("[data-bulkcount]");
+  const boxes = () => Array.from(form.querySelectorAll(".rowchk"));
+
+  function sync() {
+    const all = boxes();
+    const on = all.filter((b) => b.checked);
+    if (count) count.textContent = on.length;
+    if (bar) bar.hidden = on.length === 0;
+    if (selall) {
+      selall.checked = all.length > 0 && on.length === all.length;
+      selall.indeterminate = on.length > 0 && on.length < all.length;
+    }
+  }
+
+  form.addEventListener("change", (e) => {
+    if (e.target === selall) boxes().forEach((b) => (b.checked = selall.checked));
+    sync();
+  });
+
+  // The confirm is on the form element, so it runs before the document-level
+  // navigation loader — a cancelled delete never flashes the loader.
+  form.addEventListener("submit", (e) => {
+    const n = boxes().filter((b) => b.checked).length;
+    if (n === 0) {
+      e.preventDefault();
+      return;
+    }
+    const msg =
+      "Delete " +
+      n +
+      " selected work" +
+      (n === 1 ? "" : "s") +
+      "? Any that readers have shelved, rated or reviewed are skipped. Soft delete — recoverable.";
+    if (!confirm(msg)) e.preventDefault();
+  });
+
+  sync();
+})();
