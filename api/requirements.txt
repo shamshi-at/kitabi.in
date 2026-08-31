@@ -7,7 +7,7 @@ asyncpg==0.30.0
 alembic==1.14.0
 pydantic==2.10.4
 pydantic-settings==2.7.0
-PyJWT[crypto]==2.10.1
+PyJWT[crypto]==2.13.0  # >=2.13.0: clears 7 CVEs on the auth path (key-confusion, alg allow-list bypass, jku SSRF, kid refetch) — none exploitable in our config (HS* not in the allow-list; JWKS is Supabase-fixed), but this is the auth library, kept current deliberately (post-launch audit, 31 Aug 2026)
 httpx==0.28.1
 APScheduler==3.11.0
 # Cross-script search romanization (app/services/translit.py) — pure Python

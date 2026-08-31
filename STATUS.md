@@ -338,7 +338,8 @@ Secrets live in exactly two places, never in the repo:
 Mirrors rupee-diary's pattern exactly (see that project's own CI for comparison):
 
 - **`api-ci.yml`** (paths: `api/**`) — ruff, black, pytest against a real `postgres:17-alpine`
-  service container, pip-audit (advisory, `continue-on-error`), `docker build`.
+  service container, **pip-audit (blocking as of 31 Aug 2026** — see Security posture below),
+  `docker build`.
 - **`app-ci.yml`** (paths: `app/**`) — `flutter pub get`, `build_runner` (now generates real
   Drift + Riverpod code — the full personal-library schema and DAOs), `flutter analyze`, `flutter test`.
 - **`deploy.yml`** (paths: `landing-page/**`) — the only workflow that actually deploys anything;
@@ -349,6 +350,49 @@ Mirrors rupee-diary's pattern exactly (see that project's own CI for comparison)
 - No backup workflow yet (rupee-diary's `backup.yml` — nightly encrypted `pg_dump` → R2 —
   is the reference; tracked in [docs/tasks.md](docs/tasks.md) Phase 8, not built since
   there's no real user data yet).
+
+### Security posture
+
+Post-launch audit, 31 Aug 2026 (Android live, iOS in review). What was checked
+and what it found:
+
+- **SQL injection — not possible.** Every query is SQLAlchemy expression API or
+  a `text()` with bound parameters; the only f-strings in raw SQL interpolate
+  hardcoded association-table objects (`merge_works`), never input. Filter and
+  sort params are `Literal`/regex allowlists (`^(title|year_desc|…)$`). Verified
+  live against the deployed API: classic, UNION, stacked, and **time-based blind**
+  (`pg_sleep`) payloads on `/catalog/search`, `/public/search`, `/public/suggest`
+  all return literal-text results with no timing signal.
+- **Auth — sound.** Supabase JWT verified with PyJWT against the project JWKS,
+  asymmetric algorithms only (`["ES256","RS256"]` — HS\* is deliberately absent,
+  which defeats the key-confusion class outright), `iss`/`aud`/`exp`/`sub`
+  required. Verified live: no-token, garbage-token, and a forged **`alg=none`**
+  token all 401. Every mutation route requires `CurrentUser`; unauthenticated
+  routes are read-only GETs.
+- **Tenancy — enforced.** `/sync/push` validates `entity` against a `Literal`,
+  binds `user_id` server-side (never from the payload), and checks ownership of
+  both the row and its FK references (`_refs_owned`). Public/cross-user reads gate
+  on `profile_visible` / `library_visible` with defense in depth at each read.
+- **SSRF — closed.** Cover extraction only accepts URLs under our own public
+  `covers` bucket (`allowed_image_url`); the paid call is metered
+  (`llm_quota.consume`) after every cheap rejection.
+- **Rate/cost abuse** — the API is behind Cloudflare (verified `server: cloudflare`
+  on `api.kitabi.in`); LLM endpoints are metered per-reader with a global breaker.
+  CORS is `GET`-only, no credentials, `Accept` only.
+- **Dependency CVEs.** PyJWT bumped 2.10.1 → **2.13.0** (clears 7 auth-path CVEs;
+  none were exploitable in our config, but it is the auth library — kept current).
+  **pip-audit in CI is now blocking** (was `continue-on-error`), with a documented
+  ignore-list for 7 Starlette advisories that survive only because
+  `fastapi==0.115.12` pins `starlette<0.47.0` while every fix is `≥0.47.2`. All 7
+  are unreachable or low-severity here (no `HTTPEndpoint`, `StaticFiles` only in
+  the admin app behind Cloudflare, tiny authenticated form bodies, no host-header
+  auth). **Tracked follow-up: bump FastAPI (0.115 → current) to clear the Starlette
+  line, then drop those ignores.** Not done autonomously — it is a broad framework
+  bump on production and wants its own tested change.
+- **Minor / accepted.** `/openapi.json` is public (`/docs` is 404 in prod) — it
+  describes shape, not secrets, and every route is already access-controlled;
+  worth gating behind admin-only later but not a live risk. No stack traces leak
+  (validation errors only, no debug mode).
 
 ---
 
