@@ -81,6 +81,18 @@ export function num(n) {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
+/**
+ * A count with its noun — "1 edition", "12 editions".
+ *
+ * Every page on this site prints counts, and they were all written as
+ * `${num(n)} things`, so a catalogue with one of anything said "1 editions ·
+ * 1 works · 1 authors" (owner report, 1 Sep 2026). A new catalogue is FULL of
+ * ones: that is the state most publisher and author pages are in today.
+ */
+export function plural(n, one, many = `${one}s`) {
+  return `${num(n)} ${Number(n) === 1 ? one : many}`;
+}
+
 /** Percent-encode a path segment, leaving an already-clean slug untouched. */
 export function seg(value) {
   return encodeURIComponent(String(value == null ? '' : value));

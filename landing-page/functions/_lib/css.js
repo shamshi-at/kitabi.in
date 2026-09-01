@@ -341,7 +341,7 @@ img{max-width:100%;display:block}
 .hbar .lb{width:32px;color:var(--ink-soft);font-weight:600;text-align:right}
 .hbar .tr{flex:1;height:9px;background:var(--paper-deep);border-radius:999px;overflow:hidden}
 .hbar .fl{height:100%;background:var(--gold);border-radius:999px}
-.hbar .ct{width:40px;font-size:11.5px;color:var(--ink-soft);text-align:right}
+.hbar>.ct{width:40px;font-size:11.5px;color:var(--ink-soft);text-align:right}
 .rev{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:13px}
 .rev .rhd{display:flex;align-items:center;gap:11px}
 .rev .av{width:34px;height:34px;border-radius:50%;background:var(--paper-deep);
@@ -350,7 +350,7 @@ img{max-width:100%;display:block}
 .rev .who{font-weight:600;font-size:13.5px}
 .rev .when{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
 .rev .rs{margin-left:auto;font-size:14px;color:var(--gold);letter-spacing:1px}
-.rev .rt{font-family:var(--serif);font-size:14.5px;line-height:1.75;color:#4a3d2e;margin-top:11px;font-style:italic}
+.rev>.rt{font-family:var(--serif);font-size:14.5px;line-height:1.75;color:#4a3d2e;margin-top:11px;font-style:italic}
 
 /* ---------- facts table ---------- */
 .ftab{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);

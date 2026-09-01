@@ -512,6 +512,49 @@ assertIncludes(pubDoc, '214', 'the edition count is shown');
 assertIncludes(pubDoc, 'href="/author/thakazhi"', 'the publisher page links to its authors');
 assertIncludes(pubDoc, '"@type":"Organization"', 'Organization JSON-LD is emitted');
 
+// Counts read as English. A new catalogue is full of ones — most publisher and
+// author pages have exactly one of something today — and every count on the
+// site was written `${num(n)} things`, so those pages said "1 editions · 1
+// works · 1 authors in this catalogue" (owner report, 1 Sep 2026).
+var onePub = String(
+  renderPublisher({
+    id: 'p2', slug: 'lone', name: 'Lone House',
+    works: [{ id: 'w', slug: 'one', title: 'One', authors: [] }], total: 1,
+    authors: [{ id: 'a1', name: 'Someone', slug: 'someone' }], languages: ['Malayalam'],
+    edition_count: 1, earliest_year: 2013, decades: { '2010s': 1 }, indexable: true,
+  }).text(),
+);
+assertIncludes(onePub, '1 edition ', 'one edition is an edition');
+assertExcludes(onePub, '1 editions', '…never "1 editions"');
+assertExcludes(onePub, '1 works', '…nor "1 works"');
+assertExcludes(onePub, '1 authors', '…nor "1 authors"');
+var oneAuthor = String(
+  renderAuthor({
+    id: 'a2', slug: 'one-book', name: 'One Book', works: [], translated_works: [],
+    publishers: [], languages: ['Malayalam'], work_count: 1, edition_count: 1,
+    decades: {}, indexable: true,
+  }).text(),
+);
+assertIncludes(oneAuthor, '>1 work<', 'an author with one book has one work');
+assertExcludes(oneAuthor, '1 works', '…not "1 works"');
+// Portraits and logos are the LCP image on these pages and were the only
+// images on the site fetched straight from a third-party origin — every other
+// image goes through /img/c so the edge serves it.
+var portraitDoc = String(
+  renderAuthor({
+    id: 'a3', slug: 'p', name: 'Portrait', works: [], translated_works: [], publishers: [],
+    image_url: 'https://covers.openlibrary.org/a/id/5539485-L.jpg', decades: {}, indexable: true,
+  }).text(),
+);
+assertIncludes(portraitDoc, 'src="/img/c?u=', 'an author portrait is served through the proxy');
+var logoDoc = String(
+  renderPublisher({
+    id: 'p3', slug: 'l', name: 'Logo House', works: [], authors: [], total: 0, edition_count: 0,
+    logo_url: 'https://ref.supabase.co/publishers/l.png', decades: {}, indexable: true,
+  }).text(),
+);
+assertIncludes(logoDoc, 'src="/img/c?u=', '…and so is a publisher logo');
+
 // --------------------------------------------------------------------------
 // Home, search, browse, hubs
 // --------------------------------------------------------------------------

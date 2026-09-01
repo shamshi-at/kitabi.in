@@ -4,7 +4,7 @@
 // "covers first, one frame for all" rule is a promise that only holds if every
 // grid on the site is fed through the same function (docs/screen-design.md).
 
-import { authorPath, bookPath, html, joinDot, num, raw, seg } from './html.js';
+import { authorPath, bookPath, html, joinDot, num, plural, raw, seg } from './html.js';
 
 // Hosts the cover proxy will serve. Kept in step with functions/img/c.js — a
 // URL the renderer proxies but the proxy refuses renders as a broken image, and
@@ -103,7 +103,7 @@ export function stars(rating, count) {
     <span class="s" aria-hidden="true"
       >${raw('★'.repeat(full))}<span class="off">${raw('★'.repeat(5 - full))}</span></span
     >
-    <span class="n">${rating.toFixed(1)}${count ? ` · ${num(count)} ratings` : ''}</span>
+    <span class="n">${rating.toFixed(1)}${count ? ` · ${plural(count, 'rating')}` : ''}</span>
     <span class="sr">Rated ${rating.toFixed(1)} out of 5</span>
   </span>`;
 }
@@ -180,7 +180,7 @@ export function pager(page, total, perPage, hrefFor) {
 export function avatar(ref, { className = 'ppl' } = {}) {
   const initial = (ref?.name || '?').trim().charAt(0);
   return ref?.image_url
-    ? html`<span class="${className}"><img src="${ref.image_url}" alt="" loading="lazy" /></span>`
+    ? html`<span class="${className}"><img src="${coverSrc(ref.image_url)}" alt="" loading="lazy" /></span>`
     : html`<span class="${className}" aria-hidden="true">${initial}</span>`;
 }
 

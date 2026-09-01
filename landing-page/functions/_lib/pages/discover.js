@@ -11,7 +11,18 @@
 
 import * as ld from '../jsonld.js';
 import { appBand, avatar, bookStrip, breadcrumb, cover, pager, section } from '../components.js';
-import { authorPath, bookPath, clamp, html, joinDot, num, publisherPath, raw, seg } from '../html.js';
+import {
+  authorPath,
+  bookPath,
+  clamp,
+  html,
+  joinDot,
+  num,
+  plural,
+  publisherPath,
+  raw,
+  seg,
+} from '../html.js';
 import { page } from '../layout.js';
 
 /** The active chip's attribute. raw() is load-bearing: interpolated as a
@@ -398,7 +409,7 @@ export function renderHub(data) {
     <div class="hubhead">
       <div class="wrap hubhead-in">
         <div>
-          <p class="eyebrow">${isLanguage ? 'Language' : 'Genre'} · ${num(data.total)} books</p>
+          <p class="eyebrow">${isLanguage ? 'Language' : 'Genre'} · ${plural(data.total, 'book')}</p>
           <h1>${heading}${isLanguage && !data.form ? ' literature' : ''}</h1>
           ${intro ? html`<p class="intro">${intro}</p>` : ''}
           ${isLanguage && data.forms?.length
@@ -443,9 +454,9 @@ export function renderHub(data) {
 
   const pageSuffix = data.page > 1 ? ` — page ${data.page}` : '';
   return page({
-    title: `${heading}${isLanguage && !data.form ? ' literature' : ''} — ${num(data.total)} books${pageSuffix} — Kitabi`,
+    title: `${heading}${isLanguage && !data.form ? ' literature' : ''} — ${plural(data.total, 'book')}${pageSuffix} — Kitabi`,
     description: clamp(
-      intro || `Every ${heading} book in the Kitabi catalogue — ${num(data.total)} works.`,
+      intro || `Every ${heading} book in the Kitabi catalogue — ${plural(data.total, 'work')}.`,
       160,
     ),
     // Each page self-canonicals. NEVER canonicalise page 2 back to page 1 —
@@ -477,7 +488,7 @@ export function renderIndex({ title, description, kind, items, hrefFor, canonica
               ${items.map(
                 (i) => html`<a class="lang" href="${hrefFor(i)}">
                   <span class="n">${i.name}</span>
-                  <span class="c">${num(i.count)} books</span>
+                  <span class="c">${plural(i.count, 'book')}</span>
                 </a>`,
               )}
             </div>`

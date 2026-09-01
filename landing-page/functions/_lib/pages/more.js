@@ -4,7 +4,17 @@
 
 import * as ld from '../jsonld.js';
 import { appBand, avatar, bookStrip, breadcrumb, cover, pager, section, stars } from '../components.js';
-import { authorPath, bookPath, clamp, html, joinDot, num, seg, seriesPath } from '../html.js';
+import {
+  authorPath,
+  bookPath,
+  clamp,
+  html,
+  joinDot,
+  num,
+  plural,
+  seg,
+  seriesPath,
+} from '../html.js';
 import { page } from '../layout.js';
 
 // --------------------------------------------------------------------------
@@ -154,8 +164,8 @@ export function renderTranslations(data) {
           ? html`<div class="rating-row">
               <span class="big">${data.group_rating.toFixed(1)}<span> / 5</span></span>
               <span class="n" style="font-size:12.5px;color:#7A6A55;font-weight:600"
-                >across all ${all.length} translations${data.group_rating_count
-                  ? ` · ${num(data.group_rating_count)} ratings`
+                >across all ${plural(all.length, 'translation')}${data.group_rating_count
+                  ? ` · ${plural(data.group_rating_count, 'rating')}`
                   : ''}</span
               >
             </div>`
@@ -239,7 +249,7 @@ export function renderList(list, works) {
         <p style="font-size:14.5px;color:#CBB897;line-height:1.75;margin-top:12px;max-width:700px">
           ${list.intro}
         </p>
-        <p style="margin-top:14px;font-size:12px;color:#9d8b6e">${list.entries.length} books</p>
+        <p style="margin-top:14px;font-size:12px;color:#9d8b6e">${plural(list.entries.length, 'book')}</p>
       </div>
     </div>
 
@@ -303,7 +313,7 @@ export function renderListIndex(lists) {
           ${lists.map(
             (l) => html`<a href="/list/${seg(l.slug)}"
               style="display:block;background:linear-gradient(135deg,#33241A,#241811);border-radius:11px;padding:19px;min-height:120px">
-              <span class="eyebrow" style="color:#B8862B">Editors' list · ${l.entries.length} books</span>
+              <span class="eyebrow" style="color:#B8862B">Editors' list · ${plural(l.entries.length, 'book')}</span>
               <span class="serif" style="display:block;color:#F6F0E3;font-size:17px;font-weight:600;line-height:1.28;margin-top:10px">${l.title}</span>
             </a>`,
           )}
@@ -351,7 +361,7 @@ export function renderReviews(data) {
             <div class="score">
               <div class="n">${data.rating.average ? data.rating.average.toFixed(1) : '—'}</div>
               <div>${stars(data.rating.average, 0)}</div>
-              <div class="of">${num(data.rating.count)} ratings</div>
+              <div class="of">${plural(data.rating.count, 'rating')}</div>
             </div>
             <div class="hist">
               ${[5, 4, 3, 2, 1].map((n) => {
@@ -401,7 +411,7 @@ export function renderReviews(data) {
   return page({
     title: `Reviews of ${work.title} — Kitabi`,
     description: `What readers said about ${work.title}${
-      data.rating?.count ? ` — ${num(data.rating.count)} ratings` : ''
+      data.rating?.count ? ` — ${plural(data.rating.count, 'rating')}` : ''
     }.`,
     canonical: hrefFor(data.page),
     body,

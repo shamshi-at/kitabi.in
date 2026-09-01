@@ -29,6 +29,7 @@ import {
   html,
   joinDot,
   num,
+  plural,
   publisherPath,
   raw,
   seg,
@@ -129,7 +130,7 @@ function ratingsBlock(rating) {
     <div class="score">
       <div class="n">${rating.average ? rating.average.toFixed(1) : '—'}</div>
       <div>${stars(rating.average, 0)}</div>
-      <div class="of">${num(rating.count)} ratings</div>
+      <div class="of">${plural(rating.count, 'rating')}</div>
     </div>
     <div class="hist">
       ${[5, 4, 3, 2, 1].map((n) => {

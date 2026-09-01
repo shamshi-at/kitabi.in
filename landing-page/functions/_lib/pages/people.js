@@ -8,8 +8,8 @@
 // to things that credit them.
 
 import * as ld from '../jsonld.js';
-import { appBand, avatar, bookStrip, breadcrumb, section } from '../components.js';
-import { authorPath, clamp, html, joinDot, num, publisherPath, seg } from '../html.js';
+import { appBand, avatar, bookStrip, breadcrumb, coverSrc, section } from '../components.js';
+import { authorPath, clamp, html, joinDot, num, plural, publisherPath, seg } from '../html.js';
 import { page } from '../layout.js';
 
 function decadeChart(decades) {
@@ -50,7 +50,7 @@ export function renderAuthor(data) {
     joinDot([
       displayName,
       data.primary_language ? `${data.primary_language} author` : null,
-      data.work_count ? `${data.work_count} books in the Kitabi catalogue` : null,
+      data.work_count ? `${plural(data.work_count, 'book')} in the Kitabi catalogue` : null,
     ]);
 
   const body = html`
@@ -59,7 +59,7 @@ export function renderAuthor(data) {
       <div class="ahero">
         <div class="portrait">
           ${data.image_url
-            ? html`<img src="${data.image_url}" alt="${displayName}" width="168" height="168" fetchpriority="high" />`
+            ? html`<img src="${coverSrc(data.image_url)}" alt="${displayName}" width="168" height="168" fetchpriority="high" />`
             : html`${displayName.trim().charAt(0)}`}
         </div>
 
@@ -74,7 +74,7 @@ export function renderAuthor(data) {
                   >${data.primary_language}</a
                 >`
               : ''}
-            ${data.work_count ? html`<span class="chip">${data.work_count} works</span>` : ''}
+            ${data.work_count ? html`<span class="chip">${plural(data.work_count, 'work')}</span>` : ''}
             ${data.on_kitabi ? html`<span class="badge-kit">🔗 on Kitabi</span>` : ''}
           </p>
           ${data.bio ? html`<p class="intro">${data.bio}</p>` : ''}
@@ -138,7 +138,9 @@ export function renderPublisher(data) {
   const description = joinDot([
     data.name,
     data.primary_language ? `${data.primary_language} publisher` : null,
-    data.edition_count ? `${num(data.edition_count)} editions in the Kitabi catalogue` : null,
+    data.edition_count
+      ? `${plural(data.edition_count, 'edition')} in the Kitabi catalogue`
+      : null,
   ]);
 
   const body = html`
@@ -147,7 +149,7 @@ export function renderPublisher(data) {
       <div class="ahero">
         <div class="portrait">
           ${data.logo_url
-            ? html`<img src="${data.logo_url}" alt="${data.name}" width="168" height="168" fetchpriority="high" />`
+            ? html`<img src="${coverSrc(data.logo_url)}" alt="${data.name}" width="168" height="168" fetchpriority="high" />`
             : html`${data.name.trim().charAt(0)}`}
         </div>
         <div>
@@ -162,9 +164,9 @@ export function renderPublisher(data) {
           </p>
           <p class="intro">
             ${joinDot([
-              `${num(data.edition_count)} editions`,
-              `${num(data.total)} works`,
-              data.authors?.length ? `${num(data.authors.length)} authors` : null,
+              plural(data.edition_count, 'edition'),
+              plural(data.total, 'work'),
+              data.authors?.length ? plural(data.authors.length, 'author') : null,
             ])}
             in this catalogue.
           </p>

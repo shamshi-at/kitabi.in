@@ -8,7 +8,7 @@
 
 import * as ld from '../jsonld.js';
 import { appBand, bookStrip, cover, section } from '../components.js';
-import { bookPath, clamp, html, joinDot, num, seg } from '../html.js';
+import { bookPath, clamp, html, joinDot, num, plural, seg } from '../html.js';
 import { page } from '../layout.js';
 
 function languageGrid(languages) {
@@ -17,7 +17,7 @@ function languageGrid(languages) {
     ${languages.slice(0, 14).map(
       (l) => html`<a class="lang" href="/language/${seg(l.slug)}">
         <span class="n">${l.name}</span>
-        <span class="c">${num(l.count)} books</span>
+        <span class="c">${plural(l.count, 'book')}</span>
       </a>`,
     )}
   </div>`;
@@ -56,8 +56,8 @@ export function renderHome(data) {
         <div class="hh-l">
           <h1>Every book you've read,<br />and <em>every language</em> it lives in.</h1>
           <p>
-            A reference library for Indian literature — ${num(data.work_count)} works,
-            ${num(data.author_count)} authors, in ${data.languages?.length || 0} languages, with the
+            A reference library for Indian literature — ${plural(data.work_count, 'work')},
+            ${plural(data.author_count, 'author')}, in ${data.languages?.length || 0} languages, with the
             translations traced both ways.
           </p>
           <form class="bigsearch" action="/search" method="get" role="search">
@@ -138,7 +138,7 @@ export function renderHome(data) {
   return page({
     title: 'Kitabi — a reference library for Indian literature',
     description: clamp(
-      `${num(data.work_count)} works and ${num(data.author_count)} authors across ${
+      `${plural(data.work_count, 'work')} and ${plural(data.author_count, 'author')} across ${
         data.languages?.length || 0
       } Indian languages, with translations traced in both directions. Search a book, an author or a publisher.`,
       160,
