@@ -975,6 +975,21 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   14 Aug. Note which screen each family wants: the "stopped while you were
   away" notice is *about* a sitting that has ended, so the timer is the one
   place it must not open.
+- **A short CSS class name on a site with one global stylesheet is a land grab.**
+  The cover viewer's overlay was written as `.lb` (lightbox) with a bare
+  `.lb{display:none}` — and `lb` was already the ratings histogram's row label
+  (`<span class="lb">5 ★</span>` in `book.js` and `more.js`), so that one rule
+  would have hidden every "5 ★ / 4 ★ / …" label on every book page and every
+  reviews page (1 Sep 2026). The stylesheet is inlined into every page, so
+  *every* selector here is global; the tell was a renderer test asserting that
+  a typeset-cover page carries no viewer, which failed by finding the
+  histogram's own markup. Prefix a component's classes (`cvv/cvt/cvs/cvx/cvn`)
+  and grep the two-letter name before taking it. Same session, same file, a
+  second CSS trap worth remembering: **`scroll-behavior:smooth` and
+  `scroll-snap-type: … mandatory` fight each other** — a fragment jump to a
+  slide animates and is then snapped straight back where it started, so the
+  arrows silently did nothing while the URL changed correctly. Drop the smooth
+  scroll; the snap does the animation.
 - **The association files and the app's own link rule are one decision written
   in two places — and only one of them was updated when the site's URLs
   changed.** `.well-known/apple-app-site-association` claims `/book/*`,

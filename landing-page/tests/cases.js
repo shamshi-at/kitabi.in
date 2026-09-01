@@ -356,8 +356,8 @@ var noAffiliate = String(
 assertIncludes(noAffiliate, 'rel="nofollow noopener"', 'an unpaid link is still nofollow');
 assertExcludes(noAffiliate, 'may earn a commission', 'no disclosure when no link pays');
 assertExcludes(noAffiliate, 'rel="sponsored', 'no sponsored rel when no link pays');
-// The back cover (owner report, 1 Sep 2026): the site had no way to show one
-// at all. Field name is `back_cover_url`, from PublicEdition in
+// The covers viewer (owner report, 1 Sep 2026): the site had no way to show a
+// back cover at all. Field name is `back_cover_url`, from PublicEdition in
 // api/app/schemas/public.py — written from the schema, never from the
 // renderer, which is how the review-body bug shipped green (9 Aug 2026).
 var backDoc = String(
@@ -366,23 +366,45 @@ var backDoc = String(
       { back_cover_url: 'https://ref.supabase.co/covers/back.jpg' })],
   })).text(),
 );
-assertIncludes(backDoc, 'Back cover', 'a back cover is offered under the front one');
-assertIncludes(backDoc, 'id="back-cover"', 'and opens in the :target overlay — no JavaScript');
+assertIncludes(backDoc, 'id="cover-back"', 'the back cover is a slide in the viewer');
+assertIncludes(backDoc, 'id="cover-front"', '…alongside the front');
+assertIncludes(backDoc, 'class="cvz" href="#cover-front"', 'the hero cover opens the viewer');
+assertIncludes(backDoc, 'class="cvt"', 'the two sides sit in one scroll-snap track — swipe is native');
+assertIncludes(backDoc, 'class="cvn n" href="#cover-back"', 'and the arrows are plain fragment links');
 assertIncludes(backDoc, 'Back cover of Chemmeen', 'the full-size image has a real alt');
 // Supabase-hosted covers go through our own proxy, same as the front.
 assertIncludes(backDoc, '/img/c?u=', 'the back cover is served through the cover proxy');
 // …once. These are reader photographs of real printings — half a megabyte each,
-// passed through at full size by a proxy with no resizer — so the page links to
-// the photograph and draws its own mark, rather than shipping a second
-// full-resolution image to render a 34px thumbnail nobody can read.
+// passed through by a proxy with no resizer — so the viewer's images are lazy
+// inside a hidden container and nothing is fetched until it is opened.
 assert(
   backDoc.split('back.jpg').length - 1 === 1,
-  'the back cover photograph is fetched when opened, not on every page view',
+  'the back cover photograph is referenced once, and lazily',
 );
-// It belongs to the SAME printing as the front cover on display — a back cover
-// borrowed from another edition would be a different book's blurb.
-assertExcludes(bookDoc, 'id="back-cover"', 'an edition with no back cover offers nothing');
-assertExcludes(bookDoc, 'Back cover', '…and says nothing about one');
+assert(
+  /<img src="[^"]*back\.jpg"[^>]*loading="lazy"/.test(backDoc.replace(/&[a-z]+;/g, '')) ||
+    backDoc.indexOf('loading="lazy"') > -1,
+  'the viewer\'s images are lazy',
+);
+
+// A book whose displayed edition has only a front cover still opens it, but has
+// nothing to page through — no chips, no arrows, no empty second slide.
+assertIncludes(bookDoc, 'class="cvz" href="#cover-front"', 'a lone front cover is still viewable');
+assertExcludes(bookDoc, 'id="cover-back"', 'an edition with no back cover offers no second slide');
+assertExcludes(bookDoc, 'class="cvn', '…and no arrows to nowhere');
+assertExcludes(bookDoc, 'class="cvpg"', '…and no Front/Back chips');
+
+// A typeset cover is drawn from the title. There is nothing to enlarge, and a
+// viewer over a generated image would be a promise the page cannot keep.
+var typesetDoc = String(
+  renderBook(Object.assign({}, BOOK, { editions: [{ id: 'e1', page_count: 218 }] })).text(),
+);
+assertExcludes(typesetDoc, 'class="cvz"', 'a generated cover is not clickable');
+assertExcludes(typesetDoc, 'class="cvv"', '…and carries no viewer');
+// The viewer must never claim a class the rest of the site already uses: `lb`
+// is the ratings histogram's row label, and a bare `.lb{display:none}` hid
+// every one of them.
+assertIncludes(bookDoc, 'class="lb">5 ★', 'the histogram labels are untouched');
 
 assertIncludes(bookDoc, 'What readers said', 'reviews are on the page');
 assertIncludes(bookDoc, 'I read it first at fifteen', 'the review text is in the HTML');

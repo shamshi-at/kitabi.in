@@ -238,11 +238,9 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 .sfoot .fb{font-family:'Fraunces',serif;font-size:17px;color:#F6F0E3;margin-bottom:6px}
 
 /* ---------- W3 book page ---------- */
-.bkc{display:flex;align-items:center;gap:11px;padding:8px 11px;border:1px solid var(--line);
-  border-radius:11px;background:var(--card)}
-.bkc .l{font-size:12.5px;font-weight:600;line-height:1.3}
-.bkc .s{display:block;font-size:11px;font-weight:400;color:var(--ink-soft);margin-top:2px}
-.bkc .go{margin-left:auto;color:var(--oxblood);font-weight:700}
+.cvpg{display:flex;gap:8px}
+.cvpg a{flex:1;text-align:center;padding:5px 0;border:1px solid var(--line);border-radius:999px;
+  background:var(--card);font-size:11.5px;font-weight:600;color:var(--ink-soft)}
 .bhero{display:grid;grid-template-columns:232px 1fr 232px;gap:32px;margin-top:20px;align-items:start}
 .bhero .cover-col{display:flex;flex-direction:column;gap:12px}
 .bhero .cover-col .cv{width:100%}
@@ -838,24 +836,16 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
         <div class="bhero">
           <div class="cover-col">
             <div class="cv c1"><span class="rib"></span><div class="ct"><div class="t ml" style="font-size:19px">ചെമ്മീൻ</div><div class="a">Thakazhi Sivasankara Pillai</div></div></div>
-            <!-- The back cover, when the edition has one (built 1 Sep 2026). Drawn
-                 as a link rather than the Front/Back chip pair this mockup used to
-                 show: on an Indian-language printing the back is where the blurb,
-                 the translator's note and the price live, and swapping it into a
-                 212px slot leaves it unreadable. It opens full-size in a :target
-                 overlay instead — no JavaScript — and the photograph (half a
-                 megabyte, passed through a proxy with no resizer) is fetched only
-                 when the reader asks for it, which is why the row wears a drawn
-                 mark and not a thumbnail. -->
-            <a class="bkc">
-              <svg viewBox="0 0 24 34" width="24" height="34" aria-hidden="true" style="color:var(--oxblood);flex-shrink:0">
-                <rect x="1.6" y="1" width="20.8" height="32" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M6 8h12M6 12h12M6 16h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>
-                <path d="M13 23v6M15 23v6M17 23v6M19 23v6" stroke="#B8862B" stroke-width="1.3" stroke-linecap="round"/>
-              </svg>
-              <span class="l">Back cover<span class="s">The blurb, as printed</span></span>
-              <span class="go">→</span>
-            </a>
+            <!-- Front/Back, as this mockup always had them — built 1 Sep 2026,
+                 with a viewer behind them. Tapping the cover (or a chip) opens both
+                 sides full-screen: one scroll-snap track, so swiping is the
+                 browser's own behaviour, with arrows on a desktop and Front/Back
+                 links under the photograph. All CSS, no script — the overlay is open
+                 while one of its slides is the :target. Swapping the back cover into
+                 this 212px slot instead was the first attempt and the wrong one: on
+                 an Indian-language printing the back is where the blurb lives, and
+                 at that size nobody can read it. -->
+            <div class="cvpg"><a>Front</a><a>Back</a></div>
           </div>
 
           <div>

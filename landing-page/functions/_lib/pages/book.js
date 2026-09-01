@@ -177,48 +177,73 @@ function factsTable(data) {
   return html`<div class="ftab">${rows}</div>`;
 }
 
-/** The link's mark: the back of a book — blurb lines and a barcode. Drawn
- *  rather than photographed on purpose. These are reader photographs of real
- *  printings and run to half a megabyte; the proxy passes them through at full
- *  size (it has no resizer), so a thumbnail here would make every book page
- *  carry a second full-resolution image to render a 34px speck. The photograph
- *  loads when the reader asks for it, and not before. */
-const BACK_MARK = raw(
-  '<svg class="m" viewBox="0 0 24 34" aria-hidden="true" width="24" height="34">' +
-    '<rect x="1.6" y="1" width="20.8" height="32" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
-    '<path d="M6 8h12M6 12h12M6 16h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>' +
-    '<path d="M13 23v6M15 23v6M17 23v6M19 23v6" stroke="#B8862B" stroke-width="1.3" stroke-linecap="round"/>' +
-    '</svg>',
-);
-
 /**
- * The hero cover, plus the back cover when the edition has one.
+ * The hero cover — clickable — plus the back cover when the edition has one.
  *
  * A back cover is the one photograph no other catalogue shows, and on an
- * Indian-language printing it is usually where the blurb, the translator's
- * note and the price actually live — so it is worth more than a thumbnail the
- * reader can't read. It is offered as a captioned link under the front cover
- * and opens full-size in a `:target` overlay: both images are in the served
- * HTML, and the overlay is pure CSS, because the public site runs no JavaScript
- * to reveal content (docs/web-platform-plan.md rule 3).
+ * Indian-language printing it is where the blurb, the translator's note and the
+ * price actually live. So it is worth reading, not glancing at: tapping the
+ * cover opens a full-screen viewer, and the two sides are a swipeable pair —
+ * arrows on a desktop, a finger on a phone.
+ *
+ * All of it is CSS. The track is `scroll-snap`, which gives native swipe with
+ * no script at all; the arrows and the Front/Back chips are ordinary fragment
+ * links, and the overlay is open whenever one of its slides is the `:target`.
+ * That last part is the only modern selector here (`:has`) — the `@supports`
+ * fallback in the stylesheet gives an older browser one slide at a time, still
+ * navigable by the same links. Nothing on this page needs JavaScript to appear
+ * (docs/web-platform-plan.md rule 3), and this doesn't change that.
+ *
+ * The photographs are reader shots of real printings — half a megabyte each,
+ * and `/img/c` is a pass-through proxy with no resizer — so the viewer's images
+ * are lazy inside a hidden container: nothing is fetched until it is opened,
+ * and the front is the one the hero already has in cache.
  */
 function coverBlock(work, edition) {
   const front = cover(work, { priority: true, width: 212 });
-  if (!edition.back_cover_url) return html`<div>${front}</div>`;
-  const src = coverSrc(edition.back_cover_url);
+  const sides = [];
+  if (work.cover_url) {
+    sides.push({ id: 'cover-front', label: 'Front', src: coverSrc(work.cover_url) });
+  }
+  if (edition.back_cover_url) {
+    sides.push({ id: 'cover-back', label: 'Back', src: coverSrc(edition.back_cover_url) });
+  }
+  // A typeset cover is drawn from the title — there is nothing to enlarge.
+  if (!sides.length) return html`<div>${front}</div>`;
+
+  const caption = (side) =>
+    html`<figcaption>
+      ${sides.map((s) =>
+        s.id === side.id
+          ? html`<b>${s.label} cover</b>`
+          : html`<a href="#${s.id}">${s.label} cover</a>`,
+      )}
+    </figcaption>`;
+
   return html`<div>
-    ${front}
-    <a class="bkc" href="#back-cover">
-      ${BACK_MARK}
-      <span class="l">Back cover<span class="s">The blurb, as printed</span></span>
-      <span class="go" aria-hidden="true">→</span>
-    </a>
-    <div class="lb" id="back-cover">
-      <a class="lbx" href="#main" aria-label="Close">×</a>
-      <figure>
-        <img src="${src}" alt="${`Back cover of ${work.title}`}" loading="lazy" decoding="async" />
-        <figcaption>Back cover · ${work.title}</figcaption>
-      </figure>
+    <a class="cvz" href="#${sides[0].id}" aria-label="${`See the cover of ${work.title} full size`}"
+      >${front}</a
+    >
+    ${sides.length > 1
+      ? html`<p class="cvpg">
+          ${sides.map((s) => html`<a href="#${s.id}">${s.label}</a>`)}
+        </p>`
+      : ''}
+    <div class="cvv">
+      <a class="cvx" href="#main" aria-label="Close">×</a>
+      ${sides.length > 1
+        ? html`<a class="cvn p" href="#${sides[0].id}" aria-label="Front cover">‹</a>
+            <a class="cvn n" href="#${sides[1].id}" aria-label="Back cover">›</a>`
+        : ''}
+      <div class="cvt">
+        ${sides.map(
+          (s) => html`<figure class="cvs" id="${s.id}">
+            <img src="${s.src}" alt="${`${s.label} cover of ${work.title}`}"
+                 loading="lazy" decoding="async" />
+            ${caption(s)}
+          </figure>`,
+        )}
+      </div>
     </div>
   </div>`;
 }

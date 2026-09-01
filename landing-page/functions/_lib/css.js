@@ -147,29 +147,45 @@ img{max-width:100%;display:block}
 .cv.g7 .ct{background:linear-gradient(155deg,#5C4A73,#33264A);color:#E7DEF2}
 .cv.g8 .ct{background:linear-gradient(155deg,#2F6360,#153A38);color:#D8ECEA}
 
-/* ---------- the back cover ---------- */
-/* Offered as a captioned link under the front cover, opened full-size by a
-   :target overlay — no JavaScript, and both images are in the served HTML. */
-.bkc{display:flex;align-items:center;gap:11px;margin-top:12px;padding:8px 11px;
-  border:1px solid var(--line);border-radius:11px;background:var(--card)}
-.bkc:hover{border-color:var(--gold)}
-.bkc .m{flex-shrink:0;color:var(--oxblood)}
-.bkc .l{font-size:12.5px;font-weight:600;line-height:1.3}
-.bkc .s{display:block;font-size:11px;font-weight:400;color:var(--ink-soft);margin-top:2px}
-.bkc .go{margin-left:auto;color:var(--oxblood);font-weight:700}
-.lb{display:none}
-.lb:target{display:flex;position:fixed;inset:0;z-index:90;padding:24px;
-  background:rgba(20,13,8,.93);align-items:center;justify-content:center}
-.lb figure{max-width:min(720px,94vw);text-align:center}
-/* The photograph is only fetched when the overlay opens (it is inside a
-   display:none container), so reserve a frame for it — min-height + contain
-   means the box appears at once and the image drops into it, rather than the
-   overlay opening onto nothing for a second on a slow connection. */
-.lb img{max-width:100%;max-height:80vh;min-height:38vh;object-fit:contain;border-radius:5px;
-  background:rgba(246,240,227,.07);box-shadow:0 18px 50px rgba(0,0,0,.5)}
-.lb figcaption{color:#E9DCC2;font-size:12px;margin-top:13px;letter-spacing:.03em}
-.lbx{position:absolute;top:14px;right:16px;width:38px;height:38px;border-radius:999px;font-size:21px;
-  display:flex;align-items:center;justify-content:center;background:rgba(246,240,227,.16);color:#F6F0E3}
+/* ---------- the cover viewer ---------- */
+/* Tapping the hero cover opens both sides of the book full-screen. The track is
+   a scroll-snap row, so swiping is the browser's own behaviour and costs no
+   script; the arrows and chips are fragment links, and the overlay is open
+   while one of its slides is the :target. */
+.cvz{display:block}
+.cvpg{display:flex;gap:8px;margin-top:10px}
+.cvpg a{flex:1;text-align:center;padding:5px 0;border:1px solid var(--line);border-radius:999px;
+  background:var(--card);font-size:11.5px;font-weight:600;color:var(--ink-soft)}
+.cvpg a:hover{border-color:var(--gold);color:var(--ink)}
+.cvv{display:none}
+.cvv:has(:target){display:block;position:fixed;inset:0;z-index:90;background:rgba(20,13,8,.94)}
+.cvt{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.cvt::-webkit-scrollbar{display:none}
+.cvs{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;padding:60px 18px 26px}
+/* Lazy inside a hidden container: the photograph is fetched when the viewer is
+   opened, never on the page view. min-height reserves the frame so opening it
+   on a slow connection shows a box filling, not an empty screen. */
+.cvs img{max-width:min(720px,100%);max-height:76vh;min-height:38vh;object-fit:contain;
+  border-radius:5px;background:rgba(246,240,227,.07);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.cvs figcaption{display:flex;gap:18px;color:#9d8f79;font-size:12px;letter-spacing:.03em}
+.cvs figcaption b{color:#F0E2C2;font-weight:600}
+.cvs figcaption a{color:#C9A45C;border-bottom:1px solid rgba(201,164,92,.4)}
+.cvx,.cvn{position:fixed;display:flex;align-items:center;justify-content:center;border-radius:999px;
+  background:rgba(246,240,227,.14);color:#F6F0E3}
+.cvx{top:14px;right:16px;width:38px;height:38px;font-size:21px}
+.cvn{top:50%;transform:translateY(-50%);width:44px;height:44px;font-size:26px;line-height:1}
+.cvn.p{left:12px}
+.cvn.n{right:12px}
+/* On a phone the sides are the image's own margins and swiping is the
+   natural gesture — the Front/Back links under the photograph are the
+   affordance there, and arrows would only sit on top of the cover. */
+@media(max-width:700px){.cvn{display:none}}
+/* Older browsers (pre-:has) get one side at a time — same links, no swipe. */
+@supports not selector(:has(*)){
+  .cvs:target{display:flex;position:fixed;inset:0;z-index:90;background:rgba(20,13,8,.94)}
+  .cvs{display:none}
+}
 
 /* ---------- grids ---------- */
 .strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:18px}
