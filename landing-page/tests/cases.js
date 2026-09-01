@@ -369,18 +369,22 @@ var backDoc = String(
 assertIncludes(backDoc, 'id="cover-back"', 'the back cover is a slide in the viewer');
 assertIncludes(backDoc, 'id="cover-front"', '…alongside the front');
 assertIncludes(backDoc, 'class="cvz" href="#cover-front"', 'the hero cover opens the viewer');
+assertIncludes(backDoc, 'class="cvb" href="#cover-back"',
+  'and the back cover is tucked at its corner, as it is in the app');
 assertIncludes(backDoc, 'class="cvt"', 'the two sides sit in one scroll-snap track — swipe is native');
 assertIncludes(backDoc, 'class="cvn n" href="#cover-back"', 'and the arrows are plain fragment links');
 assertIncludes(backDoc, 'Back cover of Chemmeen', 'the full-size image has a real alt');
 // Supabase-hosted covers go through our own proxy, same as the front.
 assertIncludes(backDoc, '/img/c?u=', 'the back cover is served through the cover proxy');
-// …once. These are reader photographs of real printings — half a megabyte each,
-// passed through by a proxy with no resizer — so the viewer's images are lazy
-// inside a hidden container and nothing is fetched until it is opened.
+// The corner thumbnail and the viewer's slide are the SAME url: one download
+// serves both, so the viewer opens on an image the browser already holds. It is
+// a full-size photograph either way — /img/c has no resizer — which is why it
+// is lazy and de-prioritised behind the hero cover.
 assert(
-  backDoc.split('back.jpg').length - 1 === 1,
-  'the back cover photograph is referenced once, and lazily',
+  backDoc.split('back.jpg').length - 1 === 2,
+  'the thumbnail and the viewer share one image url',
 );
+assertIncludes(backDoc, 'fetchpriority="low"', 'the back cover never competes with the LCP');
 assert(
   /<img src="[^"]*back\.jpg"[^>]*loading="lazy"/.test(backDoc.replace(/&[a-z]+;/g, '')) ||
     backDoc.indexOf('loading="lazy"') > -1,
@@ -392,7 +396,7 @@ assert(
 assertIncludes(bookDoc, 'class="cvz" href="#cover-front"', 'a lone front cover is still viewable');
 assertExcludes(bookDoc, 'id="cover-back"', 'an edition with no back cover offers no second slide');
 assertExcludes(bookDoc, 'class="cvn', '…and no arrows to nowhere');
-assertExcludes(bookDoc, 'class="cvpg"', '…and no Front/Back chips');
+assertExcludes(bookDoc, 'class="cvb"', '…and no corner thumbnail');
 
 // A typeset cover is drawn from the title. There is nothing to enlarge, and a
 // viewer over a generated image would be a promise the page cannot keep.

@@ -152,11 +152,17 @@ img{max-width:100%;display:block}
    a scroll-snap row, so swiping is the browser's own behaviour and costs no
    script; the arrows and chips are fragment links, and the overlay is open
    while one of its slides is the :target. */
+.cvh{position:relative}
 .cvz{display:block}
-.cvpg{display:flex;gap:8px;margin-top:10px}
-.cvpg a{flex:1;text-align:center;padding:5px 0;border:1px solid var(--line);border-radius:999px;
-  background:var(--card);font-size:11.5px;font-weight:600;color:var(--ink-soft)}
-.cvpg a:hover{border-color:var(--gold);color:var(--ink)}
+/* The back cover, tucked at the corner of the front — the app's own shelf
+   gesture (book_detail_screen.dart), and the shape a reader already knows.
+   It is the same URL the viewer's second slide uses, so the one download
+   serves both and opening the viewer is instant; fetchpriority=low keeps
+   those bytes behind the hero cover, which is the page's LCP. */
+.cvb{position:absolute;right:-8px;bottom:-8px;width:clamp(58px,34%,86px);display:block;
+  border-radius:2px 5px 5px 2px;overflow:hidden;box-shadow:0 4px 14px rgba(43,33,24,.34);
+  outline:2px solid var(--paper)}
+.cvb img{display:block;width:100%;aspect-ratio:2/3;object-fit:cover}
 .cvv{display:none}
 .cvv:has(:target){display:block;position:fixed;inset:0;z-index:90;background:rgba(20,13,8,.94)}
 .cvt{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}

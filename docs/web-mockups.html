@@ -238,9 +238,10 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 .sfoot .fb{font-family:'Fraunces',serif;font-size:17px;color:#F6F0E3;margin-bottom:6px}
 
 /* ---------- W3 book page ---------- */
-.cvpg{display:flex;gap:8px}
-.cvpg a{flex:1;text-align:center;padding:5px 0;border:1px solid var(--line);border-radius:999px;
-  background:var(--card);font-size:11.5px;font-weight:600;color:var(--ink-soft)}
+.cvh{position:relative}
+.cvb{position:absolute;right:-8px;bottom:-8px;width:34%;aspect-ratio:2/3;border-radius:2px 5px 5px 2px;
+  outline:2px solid var(--paper);box-shadow:0 4px 14px rgba(43,33,24,.34);
+  background:linear-gradient(155deg,#EFE6D2,#D9CDB4)}
 .bhero{display:grid;grid-template-columns:232px 1fr 232px;gap:32px;margin-top:20px;align-items:start}
 .bhero .cover-col{display:flex;flex-direction:column;gap:12px}
 .bhero .cover-col .cv{width:100%}
@@ -835,17 +836,19 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 
         <div class="bhero">
           <div class="cover-col">
-            <div class="cv c1"><span class="rib"></span><div class="ct"><div class="t ml" style="font-size:19px">ചെമ്മീൻ</div><div class="a">Thakazhi Sivasankara Pillai</div></div></div>
-            <!-- Front/Back, as this mockup always had them — built 1 Sep 2026,
-                 with a viewer behind them. Tapping the cover (or a chip) opens both
-                 sides full-screen: one scroll-snap track, so swiping is the
-                 browser's own behaviour, with arrows on a desktop and Front/Back
-                 links under the photograph. All CSS, no script — the overlay is open
-                 while one of its slides is the :target. Swapping the back cover into
-                 this 212px slot instead was the first attempt and the wrong one: on
-                 an Indian-language printing the back is where the blurb lives, and
-                 at that size nobody can read it. -->
-            <div class="cvpg"><a>Front</a><a>Back</a></div>
+            <!-- The back cover, tucked at the front's corner — the app's own shelf
+                 gesture (book_detail_screen.dart), which is where this design comes
+                 from. Tapping either opens both sides full-screen: one scroll-snap
+                 track, so swiping is the browser's own behaviour, with arrows on a
+                 desktop and Front/Back links under the photograph. All CSS, no
+                 script — the overlay is open while one of its slides is the :target.
+                 The thumbnail and the viewer share one image URL, so the download
+                 serves both. Built 1 Sep 2026, replacing the Front/Back chips this
+                 mockup used to show. -->
+            <div class="cvh">
+              <div class="cv c1"><span class="rib"></span><div class="ct"><div class="t ml" style="font-size:19px">ചെമ്മീൻ</div><div class="a">Thakazhi Sivasankara Pillai</div></div></div>
+              <div class="cvb"></div>
+            </div>
           </div>
 
           <div>

@@ -220,15 +220,18 @@ function coverBlock(work, edition) {
       )}
     </figcaption>`;
 
+  const back = sides.find((s) => s.id === 'cover-back');
   return html`<div>
-    <a class="cvz" href="#${sides[0].id}" aria-label="${`See the cover of ${work.title} full size`}"
-      >${front}</a
-    >
-    ${sides.length > 1
-      ? html`<p class="cvpg">
-          ${sides.map((s) => html`<a href="#${s.id}">${s.label}</a>`)}
-        </p>`
-      : ''}
+    <div class="cvh">
+      <a class="cvz" href="#${sides[0].id}" aria-label="${`See the cover of ${work.title} full size`}"
+        >${front}</a
+      >
+      ${back
+        ? html`<a class="cvb" href="#cover-back" aria-label="See the back cover">
+            <img src="${back.src}" alt="" loading="lazy" fetchpriority="low" decoding="async" />
+          </a>`
+        : ''}
+    </div>
     <div class="cvv">
       <a class="cvx" href="#main" aria-label="Close">×</a>
       ${sides.length > 1
