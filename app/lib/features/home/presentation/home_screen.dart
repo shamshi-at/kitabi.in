@@ -406,9 +406,12 @@ class _ClaimUsernameCard extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    l10n.homeUsernameTitle,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  // Same shape as the goal slip above, same reason.
+                  Flexible(
+                    child: Text(
+                      l10n.homeUsernameTitle,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
               ),
@@ -487,9 +490,16 @@ class _GoalSlip extends ConsumerWidget {
                     ),
                   ),
                   SizedBox(width: 6),
-                  Text(
-                    l10n.homeGoalOf(goal),
-                    style: TextStyle(fontSize: 13, color: AppColors.inkSoft, fontWeight: FontWeight.w500),
+                  // Flexible, not a bare Text: the numeral beside it is set at
+                  // 40px and grows with the reader's font scale, so on a 320dp
+                  // phone at 1.5x this label is sized to its natural width and
+                  // the Row has nothing to give — it striped over the goal slip
+                  // (verified on-emulator, 2 Sep 2026). Let it wrap instead.
+                  Flexible(
+                    child: Text(
+                      l10n.homeGoalOf(goal),
+                      style: TextStyle(fontSize: 13, color: AppColors.inkSoft, fontWeight: FontWeight.w500),
+                    ),
                   ),
                 ],
               )
