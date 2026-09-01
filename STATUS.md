@@ -424,6 +424,65 @@ audited against feature-map.md so every `[V1]` feature has a designed home befor
 
 ## Recent milestones
 
+- **1 Sep 2026** — **Console: a live dashboard, the moderation gaps closed, and a
+  handbook inside the console.** Three things, from one question — what would
+  somebody who has never seen the code need in order to run this?
+
+  **The dashboard is now a live view** rather than six static counts. A dark
+  "reading right now" panel (from `active_reading_sessions`, so it is a real
+  number rather than a derived one) refreshes itself every 20 seconds by
+  swapping in the same server-rendered fragment that painted it — no JSON API,
+  no websocket, and a hidden tab polls nothing. It shows the **count** and
+  aggregate shape (how many books, longest sitting) and deliberately **not who
+  is reading what**: the first cut listed reader names against book titles,
+  which is precisely the reader's private reading progress that the console
+  promises everywhere else it never opens, dressed as a dashboard. Six today tiles, four trend
+  cards with a direction against the previous equal window, a 7/28/90-day
+  growth chart, and two feeds (newest readers, newest catalogue rows with who
+  added them). The chart is plain SVG whose geometry is computed in
+  `console/insights.py` and unit-tested — the console has no build step and
+  takes no chart library. One thing that had to be got right: the four series
+  share **one** scale (`spark(peak=…)`), because normalising each to its own
+  maximum drew a day of 59 shelvings and a day of 16 reviews both touching the
+  ceiling.
+
+  **Two moderation surfaces that never existed.** Every queue in the console
+  waited for something to be *flagged* — but any signed-in reader can create a
+  work, an author, a publisher or an edition, and photograph a cover straight
+  into the public bucket, and all of it is on kitabi.in immediately. So
+  `/moderation/incoming` is a **review-by-default** feed of reader
+  contributions (newest first, who added them, filterable by kind and period)
+  and `/moderation/images` is a grid of the pictures readers uploaded, with a
+  Remove that clears the column and puts the URL in the audit log so a mistake
+  is undone by pasting it back. "Reviewed ✓" is an audit row rather than a new
+  table, so the tick is itself part of the trail. Two asymmetries the queries
+  had to respect: `publishers` and `editions` carry no `created_by_user_id`, so
+  a publisher shows no contributor and an edition borrows its parent work's.
+
+  **The rest of the gaps.** Readers gained paging, five saved filters and a
+  matching count (the list was the 50 newest with no way to reach the 51st, over
+  a heading that counted the whole table); a **Hide public profile** action — the
+  gentle half of moderation, for an offensive display name, which takes the
+  public page, shared library and public reviews down while the reader keeps
+  their app; and last-seen plus device platforms on the detail page. The audit
+  log gained filters (person, period, free text) and paging over its flat
+  200-row cap. **Service health** (`/system`) is the first place the LLM meter
+  has ever been visible: today's spend against the global daily cap, per-feature
+  14-day trends, the heaviest accounts today, and which optional integrations
+  are switched on — a limit nobody can see is a limit nobody notices hitting.
+
+  **The handbook is a section of the console** (`/handbook`), not a document
+  somebody has to remember to send: 17 topics written for a non-technical
+  operator, role-filtered so nobody reads about a screen they cannot open, every
+  heading separately linkable, searchable from the global search box, and
+  reachable from a **? Help** button in the top bar of every screen. Content is
+  data in `console/handbook.py` with a three-mark renderer that escapes first
+  and refuses off-site links.
+
+  Verified by driving the real ASGI app against a seeded local database — 52
+  routes rendered, both new write paths exercised, and every new route confirmed
+  to bounce a signed-out visitor. 45 admin tests (25 new), lint clean.
+
 - **31 Aug 2026** — **Console: admin names in the audit log, and language/advanced
   filters on the book lists.** The audit log showed an admin *id* fragment
   (`f9947d9f`); it now resolves `admin_id → email` in one batched query and shows

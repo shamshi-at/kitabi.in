@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Uploaded images · Kitabi Admin{% endblock %}
+{% block heading %}Uploaded images{% endblock %}
+{% block subheading %}Cover photos and portraits readers have uploaded to Kitabi{% endblock %}
+{% block topactions %}
+<a class="btn s" href="/moderation/incoming">New in catalog</a>
+<a class="btn s" href="/handbook/images" title="How to use this screen">? Help</a>
+{% endblock %}
+{% block content %}
+<div class="note warn" style="margin-bottom:14px">These pictures are already public on kitabi.in and
+in the app. Look for anything obscene, off-topic, a photo of a person, or a picture that isn't the
+book it claims to be. <b>Remove</b> takes it off the record straight away; the picture's address is
+kept in the audit log, so a mistake can be undone.</div>
+
+{% if not configured %}
+<div class="card"><div class="lbl">Not available here</div>
+  <div class="note" style="margin-top:10px">This console isn't connected to the image store, so it
+  can't tell which pictures were uploaded by readers. Nothing is wrong with the site — this screen
+  simply has nothing it can show.</div></div>
+{% else %}
+
+<form class="filterbar" method="get" action="/moderation/images">
+  <label class="fb"><span>Period</span>
+    <select name="window" onchange="this.form.submit()">
+      {% for key, days in windows.items() %}
+      <option value="{{ key }}" {% if window == key %}selected{% endif %}>Last {{ days }} day{{ '' if days == 1 else 's' }}</option>
+      {% endfor %}
+    </select></label>
+  <noscript><button class="btn s">Apply</button></noscript>
+</form>
+
+<div class="imggrid">
+  {% for r in rows %}
+  <div class="imgcard">
+    <a href="{{ r.href }}" class="imgthumb"><img src="{{ r.url }}" alt="" loading="lazy"></a>
+    <div class="imgmeta">
+      <span class="pill mute">{{ r.label }}</span>
+      <a href="{{ r.href }}" class="imgname">{{ r.name }}</a>
+      <div class="m">{{ r.updated_at.strftime('%-d %b, %H:%M') }}{% if r.adder_id %} ·
+        <a href="/readers/{{ r.adder_id }}">{{ r.adder_label }}</a>{% endif %}</div>
+      <form method="post" action="/moderation/images/{{ r.source }}/{{ r.id }}/remove"
+        onsubmit="return confirm('Remove this picture from “{{ r.name }}”? It can be put back from the audit log.')">
+        <button class="btn s d">Remove</button></form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% if not rows %}
+<div class="card"><div class="m" style="text-align:center;padding:22px">
+  No reader uploads in this period.</div></div>
+{% endif %}
+{% endif %}
+{% endblock %}

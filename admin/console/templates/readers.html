@@ -1,26 +1,62 @@
 {% extends "base.html" %}
 {% block title %}Readers · Kitabi Admin{% endblock %}
 {% block heading %}Readers{% endblock %}
-{% block subheading %}{{ "{:,}".format(total) }} accounts{% endblock %}
+{% block subheading %}{{ "{:,}".format(total) }} accounts{% if suspended %} · {{ suspended }} suspended{% endif %}{% endblock %}
 {% block topactions %}
-<form method="get" action="/readers"><input class="search" name="q" value="{{ q }}"
-  placeholder="Search name, @handle or email" style="width:260px"></form>
+<a class="btn s" href="/handbook/readers" title="What you can and can't do here">? Help</a>
 {% endblock %}
 {% block content %}
-<div class="tbl">
+<form class="filterbar" method="get" action="/readers">
+  <label class="fb" style="flex:1;min-width:210px"><span>Search</span>
+    <input class="search" name="q" value="{{ q }}" placeholder="Name, @handle or email"></label>
+  <label class="fb"><span>Show</span>
+    <select name="filter" onchange="this.form.submit()">
+      {% for key, label in filters.items() %}
+      <option value="{{ key }}" {% if which == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select></label>
+  <label class="fb"><span>Order</span>
+    <select name="sort" onchange="this.form.submit()">
+      {% for key, label in sorts.items() %}
+      <option value="{{ key }}" {% if sort == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select></label>
+  <button class="btn s">Apply</button>
+</form>
+
+<div class="worklist-head" style="margin-top:12px">
+  <div><span class="lbl">Showing</span>
+    <b>{{ "{:,}".format(matching) }} reader{{ '' if matching == 1 else 's' }}</b>
+    {% if q %}matching “{{ q }}”{% endif %}</div>
+  {% if pages > 1 %}<div class="m">Page {{ page }} of {{ pages }}</div>{% endif %}
+</div>
+
+<div class="tbl" style="margin-top:10px">
   <table>
-    <tr><th>Reader</th><th>Joined</th><th>Status</th><th></th></tr>
+    <tr><th>Reader</th><th>Joined</th><th>Public</th><th>Status</th><th></th></tr>
     {% for p in rows %}
     <tr>
       <td><div class="t">{{ p.full_name or 'Unnamed reader' }}</div>
         <div class="m">{% if p.username %}@{{ p.username }} · {% endif %}{{ p.email }}</div></td>
-      <td class="m">{{ p.created_at.strftime('%b %Y') }}</td>
+      <td class="m">{{ p.created_at.strftime('%-d %b %Y') }}</td>
+      <td>{% if p.profile_visible %}<span class="pill info">Profile</span>{% else %}<span class="pill mute">Private</span>{% endif %}</td>
       <td>{% if p.suspended_at %}<span class="pill no">Suspended</span>{% else %}<span class="pill ok">Active</span>{% endif %}</td>
       <td style="text-align:right"><a class="btn s" href="/readers/{{ p.id }}">View</a></td>
     </tr>
     {% endfor %}
-    {% if not rows %}<tr><td colspan="4" class="m" style="text-align:center;padding:24px">
-      {% if q %}No readers match “{{ q }}”.{% else %}No readers yet.{% endif %}</td></tr>{% endif %}
+    {% if not rows %}<tr><td colspan="5" class="m" style="text-align:center;padding:24px">
+      {% if q %}No readers match “{{ q }}”.{% else %}Nothing matches this filter.{% endif %}</td></tr>{% endif %}
   </table>
 </div>
+
+{% if pages > 1 %}
+{% set base = '/readers?filter=' ~ which ~ '&sort=' ~ sort ~ ('&q=' ~ q if q else '') %}
+<div class="pager">
+  {% if page > 1 %}<a class="btn s" href="{{ base }}&page={{ page - 1 }}">← Previous</a>
+  {% else %}<span class="btn s" aria-disabled="true" style="opacity:.4">← Previous</span>{% endif %}
+  <span class="m">Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a class="btn s" href="{{ base }}&page={{ page + 1 }}">Next →</a>
+  {% else %}<span class="btn s" aria-disabled="true" style="opacity:.4">Next →</span>{% endif %}
+</div>
+{% endif %}
 {% endblock %}

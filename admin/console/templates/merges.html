@@ -2,6 +2,7 @@
 {% block title %}Duplicate review · Kitabi Admin{% endblock %}
 {% block heading %}Duplicate review{% endblock %}
 {% block subheading %}{{ items | length }} cluster{{ '' if items | length == 1 else 's' }} awaiting a decision{% endblock %}
+{% block topactions %}<a class="btn s" href="/handbook/merges" title="How this screen works">? Help</a>{% endblock %}
 {% block content %}
 {% set can_edit = admin.role in ['editor', 'super_admin'] %}
 

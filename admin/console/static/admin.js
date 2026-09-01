@@ -434,3 +434,52 @@ if ("serviceWorker" in navigator) {
     }
   });
 })();
+
+// Live dashboard strip — polls the /live fragment and swaps it in place, so the
+// "right now" numbers tick without a reload. Server-rendered HTML, not JSON:
+// the same template paints the first load and every refresh, so the two can
+// never drift apart.
+//
+// Three rules it follows, each learned the boring way:
+//  * a hidden tab polls nothing (a console left open on a second screen must
+//    not be a load generator), and refreshes immediately on becoming visible;
+//  * a failed fetch leaves the last good strip on screen — a network blip is
+//    not news, and blanking the panel would be worse than being 20s stale;
+//  * the navigation loader is never shown for a background poll.
+(function () {
+  const host = document.getElementById("live");
+  if (!host) return;
+  const url = host.dataset.live;
+  if (!url) return;
+  const EVERY = 20000;
+  let timer = null;
+
+  async function refresh() {
+    if (document.hidden) return;
+    try {
+      const res = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
+      if (!res.ok) return;
+      host.innerHTML = await res.text();
+    } catch (_) {
+      /* keep the last good strip */
+    }
+  }
+
+  function start() {
+    stop();
+    timer = setInterval(refresh, EVERY);
+  }
+  function stop() {
+    if (timer) clearInterval(timer);
+    timer = null;
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stop();
+    else {
+      refresh();
+      start();
+    }
+  });
+  start();
+})();

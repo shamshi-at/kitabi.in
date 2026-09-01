@@ -3,6 +3,7 @@
 {% block heading %}Publishers{% endblock %}
 {% block subheading %}{% if q %}Results for “{{ q }}”{% else %}Most editions first{% endif %} · search is spelling-insensitive{% endblock %}
 {% block topactions %}
+<a class="btn s" href="/handbook/catalog" title="How this screen works">? Help</a>
 <form method="get" action="/catalog/publishers"><input class="search" name="q" value="{{ q }}"
   placeholder="Search publisher name" style="width:260px"></form>
 {% endblock %}

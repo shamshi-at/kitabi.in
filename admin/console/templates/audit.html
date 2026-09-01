@@ -2,8 +2,35 @@
 {% block title %}Audit log · Kitabi Admin{% endblock %}
 {% block heading %}Audit log{% endblock %}
 {% block subheading %}Append-only · newest first{% endblock %}
+{% block topactions %}
+<a class="btn s" href="/handbook/audit" title="How to read this log">? Help</a>
+{% endblock %}
 {% block content %}
-<div class="tbl">
+<form class="filterbar" method="get" action="/audit">
+  <label class="fb" style="flex:1;min-width:200px"><span>Find</span>
+    <input class="search" name="q" value="{{ q }}" placeholder="Action, target or detail"></label>
+  <label class="fb"><span>Admin</span>
+    <select name="who" onchange="this.form.submit()">
+      <option value="">Anyone</option>
+      {% for aid, email in actors %}
+      <option value="{{ aid }}" {% if who == aid|string %}selected{% endif %}>{{ email }}</option>
+      {% endfor %}
+    </select></label>
+  <label class="fb"><span>Period</span>
+    <select name="period" onchange="this.form.submit()">
+      {% for key, label in periods.items() %}
+      <option value="{{ key }}" {% if period == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select></label>
+  <button class="btn s">Apply</button>
+</form>
+
+<div class="worklist-head" style="margin-top:12px">
+  <div><span class="lbl">Showing</span><b>{{ "{:,}".format(matching) }} entr{{ 'y' if matching == 1 else 'ies' }}</b></div>
+  {% if pages > 1 %}<div class="m">Page {{ page }} of {{ pages }}</div>{% endif %}
+</div>
+
+<div class="tbl" style="margin-top:10px">
   <table>
     <tr><th style="width:150px">When (UTC)</th><th>Admin</th><th>Action</th><th>Target</th><th>Detail</th></tr>
     {% for r in rows %}
@@ -23,6 +50,16 @@
     {% if not rows %}<tr><td colspan="5" class="m" style="text-align:center;padding:30px">No entries yet.</td></tr>{% endif %}
   </table>
 </div>
+{% if pages > 1 %}
+{% set base = '/audit?period=' ~ period ~ '&who=' ~ who ~ ('&q=' ~ q if q else '') %}
+<div class="pager">
+  {% if page > 1 %}<a class="btn s" href="{{ base }}&page={{ page - 1 }}">← Newer</a>
+  {% else %}<span class="btn s" aria-disabled="true" style="opacity:.4">← Newer</span>{% endif %}
+  <span class="m">Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a class="btn s" href="{{ base }}&page={{ page + 1 }}">Older →</a>
+  {% else %}<span class="btn s" aria-disabled="true" style="opacity:.4">Older →</span>{% endif %}
+</div>
+{% endif %}
 <div class="note" style="margin-top:12px">Every moderation action and every sign-in attempt is written
 here and can never be edited or deleted — including by a super admin.</div>
 {% endblock %}

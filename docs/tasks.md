@@ -491,11 +491,11 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       `authors.linked_user_id`. The claimant sees a "Pending review" notice via a
       per-request `claim_pending` flag; every other reader keeps seeing the old value.
       Only `catalog_service.approve_claim` writes the link
-- [ ] Author claim review UI — approval is **manual** today: no endpoint, no admin screen.
-      `catalog_service.approve_claim` / `reject_claim` are the whole decision path (tested),
-      so this is a router + screen over existing logic. Until then, approve from `psql`:
-      look up the pending row in `author_claims`, then call the service (or set
-      `authors.linked_user_id` and the claim's `status`/`decided_at` in one transaction)
+- [x] Author claim review UI — **shipped with the admin console** (23–24 Jul 2026), not manual:
+      `/moderation/claims` (`admin/console/routers/claims.py`) lists pending claims and
+      approve/reject call `catalog_service.approve_claim` / `reject_claim`, audited. This entry
+      still said "no endpoint, no admin screen" as of 1 Sep 2026 — it had been stale for over a
+      month, which is what a checklist nobody re-reads after shipping looks like
 - [x] Personal activity log (finished X, rated Y, added Z) `[WIRED]` — written server-side as a side
       effect of other syncable ops, pulled to the client; no feed UI yet (feature-map.md: "flip it
       public later")
@@ -817,6 +817,52 @@ no advertising identifier, no new bill (CLAUDE.md rule 8).
       "In-app promotions" section + Profile opt-out under "Your choices")
 - [ ] End-to-end on a real phone against the deployed API — create a campaign in the
       console targeted at your own reader id, publish, confirm it appears, dismiss it
+
+## Phase C — The console as an operable product (1 Sep 2026)
+
+The console had every *screen* it needed and none of the things that make a tool
+usable by somebody who did not build it: no live view, no way to see reader
+contributions before a complaint arrives, no visible spend, and no documentation.
+
+- [x] **Live dashboard** — a "reading right now" panel off `active_reading_sessions`
+      that refreshes itself every 20s by swapping the same server-rendered fragment
+      (`/live`, `_dash_live.html`); six today tiles; four trend cards each carrying a
+      direction against the previous equal window; a 7/28/90-day growth chart; newest-
+      readers and newest-in-catalogue feeds. Geometry in `console/insights.py`, plain
+      SVG, no chart library (the console has no build step). The four series on the
+      combined chart **share one scale** — normalising each to its own maximum drew
+      59 shelvings and 16 reviews both touching the ceiling
+- [x] **New in catalog** (`/moderation/incoming`, editor+) — the review-by-default
+      queue. Every other queue waits to be *flagged*; readers' works, authors,
+      publishers and editions are public the moment they are created. "Reviewed ✓" is
+      an audit row, not a new table, so the tick is itself part of the trail
+- [x] **Uploaded images** (`/moderation/images`, editor+) — a grid of the pictures
+      readers uploaded to our own bucket, with Remove clearing the column and putting
+      the URL in the audit log so a mistake is undone by pasting it back
+- [x] **Readers**: paging, five saved filters, a matching count (the list was the 50
+      newest with no way to reach the 51st, under a heading that counted the whole
+      table), last-seen (from `sync_ops`, no new column) and device platforms
+- [x] **Hide public profile** — the gentle half of moderation. An offensive display
+      name previously left suspension as the only tool; clearing `profile_visible`
+      takes the public page, shared library and public reviews down together while
+      the reader keeps their app, and touches nothing else so undo is exact
+- [x] **Audit log**: filter by person / period / free text, and paging past the flat
+      200-row cap
+- [x] **Service health** (`/system`, editor+) — the first place the LLM meter is
+      visible: today's spend against the global daily cap, per-feature 14-day trends,
+      the heaviest accounts today, and which optional integrations are switched on
+- [x] **Handbook** (`/handbook`) — 17 topics for a non-technical operator, inside the
+      console rather than in a document nobody re-sends: role-filtered, every heading
+      separately linkable, searchable from the global search box, and reachable from a
+      **? Help** button on every screen. Content is data in `console/handbook.py`;
+      `fmt()` escapes first and refuses off-site links
+- [ ] Nav badge for unreviewed catalogue additions — deliberately skipped: it is four
+      counts plus an audit join on *every* page load, and the dashboard already carries
+      the figure. Revisit only if the queue is being missed
+- [ ] CSV export of any list (readers, audit, incoming). Asked for by nobody yet;
+      cheap when it is
+- [ ] Reader-facing moderation notice — today a hidden review and a hidden profile are
+      silent. Telling the reader is a product decision, not a console one
 
 ## Phase M — Kitabi Supporter (membership)
 

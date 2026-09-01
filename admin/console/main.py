@@ -23,11 +23,14 @@ from .routers import (
     claims,
     dashboard,
     edits,
+    handbook,
+    incoming,
     merges,
     promotions,
     readers,
     reports,
     search,
+    system,
 )
 from .templating import templates
 
@@ -74,6 +77,7 @@ app.include_router(dashboard.router)
 app.include_router(claims.router)
 app.include_router(merges.router)
 app.include_router(edits.router)
+app.include_router(incoming.router)
 app.include_router(reports.router)
 app.include_router(promotions.router)
 app.include_router(catalog.router)
@@ -82,6 +86,8 @@ app.include_router(admins.router)
 app.include_router(audit.router)
 app.include_router(account.router)
 app.include_router(search.router)
+app.include_router(system.router)
+app.include_router(handbook.router)
 
 
 @app.get("/healthz")

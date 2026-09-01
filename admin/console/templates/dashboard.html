@@ -1,9 +1,82 @@
 {% extends "base.html" %}
 {% block title %}Dashboard · Kitabi Admin{% endblock %}
 {% block heading %}Dashboard{% endblock %}
-{% block subheading %}Live counts · cached up to 45s{% endblock %}
+{% block subheading %}Live view of Kitabi — right now, and the last {{ growth.days }} days{% endblock %}
+{% block topactions %}
+<a class="btn s" href="/handbook/dashboard" title="What every number on this page means">? Help</a>
+{% endblock %}
 {% block content %}
-<div class="kpis">
+
+{# ---- The live strip. Swapped in place by admin.js; see _dash_live.html. ---- #}
+<div id="live" data-live="/live">{% include "_dash_live.html" %}</div>
+
+{# ---- Movement over the chosen window, each with a direction. ---- #}
+<div class="rangebar">
+  <div class="lbl">Trends</div>
+  <div class="rangepick">
+    {% for key, days in ranges.items() %}
+    <a class="btn s {% if range_key == key %}on{% endif %}" href="/?range={{ key }}">{{ days }} days</a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="kpis kpis4">
+  {% for key, label, colour in series %}
+  {% set d = growth.deltas[key] %}
+  <div class="kpi trend">
+    <div class="k">{{ label }}</div>
+    <div class="v">{{ "{:,}".format(growth.totals[key]) }}</div>
+    <div class="delta {% if d.up %}up{% elif d.down %}down{% endif %}">
+      {% if d.flat %}no change{% else %}{{ '▲' if d.up else '▼' }} {{ d.diff|abs }}{% if d.pct is not none %} ({{ d.pct|abs }}%){% endif %}{% endif %}
+      <s>vs previous {{ growth.days }}d</s>
+    </div>
+    {% set c = growth.charts[key] %}
+    <svg class="sparkline" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
+      <path d="{{ c.area }}" fill="{{ colour }}" opacity=".13"></path>
+      <path d="{{ c.line }}" fill="none" stroke="{{ colour }}" stroke-width="1.6"
+        vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+    </svg>
+  </div>
+  {% endfor %}
+</div>
+
+{# ---- The big chart. Plain SVG, geometry computed server-side in
+       insights.spark() — no chart library, no build step. Each day carries a
+       <title> so hovering names the day and the number with no JavaScript. ---- #}
+<div class="card chartcard">
+  <div class="worklist-head">
+    <div><span class="lbl">Growth</span><b>Daily arrivals, last {{ growth.days }} days</b></div>
+    <div class="legend">
+      {% for key, label, colour in series %}
+      <span><i style="background:{{ colour }}"></i>{{ label }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="chartwrap">
+    <svg class="bigchart" viewBox="0 0 100 34" preserveAspectRatio="none" role="img"
+      aria-label="Daily arrivals over the last {{ growth.days }} days">
+      {% for key, label, colour in series %}
+      {# Shared scale, not each series against its own maximum — otherwise a day
+         with 59 shelvings and a day with 16 reviews both touch the ceiling. #}
+      {% set c = growth.shared[key] %}
+      {% if loop.first %}<path d="{{ c.area }}" fill="{{ colour }}" opacity=".10"></path>{% endif %}
+      <path d="{{ c.line }}" fill="none" stroke="{{ colour }}" stroke-width="1.6"
+        vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+      {% endfor %}
+    </svg>
+    <div class="hoverbars">
+      {% for label in growth.labels %}
+      <div class="hb" title="{{ label }} — {% for key, slabel, colour in series %}{{ slabel }} {{ growth.series[key][loop.index0] }}{% if not loop.last %} · {% endif %}{% endfor %}"></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="chartaxis"><span>{{ growth.labels[0] }}</span>
+    <span>peak {{ growth.shared[series[0][0]].max }} in a day</span>
+    <span>{{ growth.labels[-1] }}</span></div>
+</div>
+
+{# ---- All-time totals. ---- #}
+<div class="kpis" style="margin-top:14px">
   <a class="kpi" href="/readers"><div class="v">{{ "{:,}".format(stats.readers) }}</div><div class="k">Readers</div></a>
   {% if admin.role in ['editor', 'super_admin'] %}
   <a class="kpi" href="/catalog"><div class="v">{{ "{:,}".format(stats.works) }}</div><div class="k">Works</div></a>
@@ -29,6 +102,14 @@
       <tr><td class="t">Reported content</td>
         <td style="text-align:right">{% if stats.badges.reports %}<span class="pill no">{{ stats.badges.reports }} open</span>{% else %}<span class="pill ok">clear</span>{% endif %}</td>
         <td style="text-align:right"><a class="btn s" href="/moderation/reports">Open</a></td></tr>
+      <tr><td class="t">Duplicate review</td>
+        <td style="text-align:right">{% if stats.badges.merges %}<span class="pill pend">{{ stats.badges.merges }} to check</span>{% else %}<span class="pill ok">clear</span>{% endif %}</td>
+        <td style="text-align:right"><a class="btn s" href="/moderation/merges">Open</a></td></tr>
+      {% if admin.role in ['editor', 'super_admin'] %}
+      <tr><td class="t">New in catalog</td>
+        <td style="text-align:right"><span class="pill info">{{ growth.totals.works + growth.totals.authors }} in {{ growth.days }}d</span></td>
+        <td style="text-align:right"><a class="btn s" href="/moderation/incoming">Open</a></td></tr>
+      {% endif %}
     </table>
   </div>
   <div class="card">
@@ -54,6 +135,35 @@
       {% endif %}
     </div>
     <div class="note" style="margin-top:12px">{{ "{:,}".format(stats.works) }} works · {{ "{:,}".format(stats.editions) }} editions in the catalog.</div>
+  </div>
+</div>
+
+{# ---- Two feeds: who joined, and what they added. ---- #}
+<div class="split" style="margin-top:14px">
+  <div class="card">
+    <div class="worklist-head"><div><span class="lbl">Newest readers</span></div>
+      <a class="btn s" href="/readers?sort=new">All readers</a></div>
+    <table class="linkrows feed" style="margin-top:6px">
+      {% for p in signups %}
+      <tr><td><a href="/readers/{{ p.id }}">{{ p.full_name or 'Unnamed reader' }}</a>
+          <div class="m">{{ p.email }}</div></td>
+        <td style="text-align:right" class="m">{{ p.created_at.strftime('%-d %b, %H:%M') }}</td></tr>
+      {% endfor %}
+      {% if not signups %}<tr><td class="m" style="padding:14px 0">No readers yet.</td></tr>{% endif %}
+    </table>
+  </div>
+  <div class="card">
+    <div class="worklist-head"><div><span class="lbl">Newest in the catalog</span></div>
+      {% if admin.role in ['editor', 'super_admin'] %}<a class="btn s" href="/moderation/incoming">Review all</a>{% endif %}</div>
+    <table class="linkrows feed" style="margin-top:6px">
+      {% for r in additions %}
+      <tr><td><span class="pill mute">{{ r.label }}</span>
+          {% if admin.role in ['editor', 'super_admin'] %}<a href="{{ r.href }}">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}
+          <div class="m">added by {{ r.adder_label }}</div></td>
+        <td style="text-align:right" class="m">{{ r.created_at.strftime('%-d %b, %H:%M') }}</td></tr>
+      {% endfor %}
+      {% if not additions %}<tr><td class="m" style="padding:14px 0">Nothing added yet.</td></tr>{% endif %}
+    </table>
   </div>
 </div>
 {% endblock %}

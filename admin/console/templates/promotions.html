@@ -6,6 +6,7 @@
   {{ counts.paused + counts.ended }} stopped
 {% endblock %}
 {% block topactions %}
+<a class="btn s" href="/handbook/promotions" title="How this screen works">? Help</a>
 <form method="post" action="/promotions/new">
   <button class="btn p">+ New campaign</button>
 </form>

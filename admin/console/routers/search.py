@@ -12,6 +12,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import or_, select
 
+from .. import handbook
 from ..deps import CurrentAdmin, DbSession
 from ..models_ref import Profile
 from ..templating import templates
@@ -67,6 +68,30 @@ _ACTIONS = [
         "href": "/catalog/buy-links",
         "keys": "amazon affiliate buy retail worklist links",
         "role": "editor",
+    },
+    {
+        "label": "New in catalog",
+        "href": "/moderation/incoming",
+        "keys": "incoming new added contributions review queue",
+        "role": "editor",
+    },
+    {
+        "label": "Uploaded images",
+        "href": "/moderation/images",
+        "keys": "images covers photos uploads pictures obscene",
+        "role": "editor",
+    },
+    {
+        "label": "Service health",
+        "href": "/system",
+        "keys": "health spend cost ai limit quota budget status integrations",
+        "role": "editor",
+    },
+    {
+        "label": "Handbook",
+        "href": "/handbook",
+        "keys": "help docs guide manual how to instructions handbook",
+        "role": "moderator",
     },
     {
         "label": "Readers",
@@ -142,7 +167,13 @@ async def search(
             .all()
         )
 
-    has_any = any([actions, books, authors, publishers, readers])
+    # Handbook topics rank alongside records, because "how do I suspend
+    # someone" is as real a search as the person's name — and an operator who
+    # can't remember which screen does a thing is exactly who the search box is
+    # for.
+    topics = handbook.search(q, admin.role) if ql else []
+
+    has_any = any([actions, books, authors, publishers, readers, topics])
     return templates.TemplateResponse(
         request,
         "_search_results.html",
@@ -153,6 +184,7 @@ async def search(
             "authors": authors,
             "publishers": publishers,
             "readers": readers,
+            "topics": topics,
             "has_any": has_any,
         },
     )

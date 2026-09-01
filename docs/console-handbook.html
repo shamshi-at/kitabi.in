@@ -1,0 +1,639 @@
+<title>Kitabi Console Handbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Kitabi's own "Reading Room" system, applied — paper, ink, oxblood, gold, moss
+   (docs/screen-design.md). The brand's device is "The Gold Line": one gold
+   hairline that runs down the sheet like the ribbon in the mark. */
+:root{
+  --ground:#EFE6D2; --sheet:#FFFCF4; --sheet-2:#F8F2E2;
+  --ink:#2B2118; --ink-soft:#6F6047;
+  --rule:#E2D6BD; --rule-soft:#EDE3CE;
+  --oxblood:#7E2A33; --gold:#B8862B; --moss:#48663F;
+  --warn-bg:#F9EEEA; --warn-rule:#7E2A33;
+  --chip:#EFE6D2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#191310; --sheet:#241B14; --sheet-2:#2C221A;
+    --ink:#EEE3CD; --ink-soft:#A3927A;
+    --rule:#3B2E22; --rule-soft:#332619;
+    --oxblood:#DE9199; --gold:#D9AC52; --moss:#9CBB8A;
+    --warn-bg:#33211F; --warn-rule:#DE9199;
+    --chip:#2F2419;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#191310; --sheet:#241B14; --sheet-2:#2C221A;
+  --ink:#EEE3CD; --ink-soft:#A3927A;
+  --rule:#3B2E22; --rule-soft:#332619;
+  --oxblood:#DE9199; --gold:#D9AC52; --moss:#9CBB8A;
+  --warn-bg:#33211F; --warn-rule:#DE9199;
+  --chip:#2F2419;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-size:16px; line-height:1.68; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--oxblood)}
+a:focus-visible,.chip:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:3px}
+code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.86em;
+  background:var(--chip);border-radius:4px;padding:1px 5px}
+
+/* ---- masthead ---------------------------------------------------------- */
+.mast{background:var(--sheet);border-bottom:1px solid var(--rule)}
+.mast-in{max-width:1120px;margin:0 auto;padding:52px 28px 44px;
+  display:flex;gap:26px;align-items:flex-start}
+.crest{width:46px;height:56px;flex:none;border:1px solid var(--rule);border-radius:3px;
+  background:var(--sheet-2);position:relative}
+.crest span{position:absolute;left:13px;top:-1px;bottom:-1px;width:3px;background:var(--gold)}
+.eyebrow{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
+h1{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:400;
+  font-size:clamp(2.1rem,5vw,3.05rem);line-height:1.06;margin:.28em 0 .34em;
+  letter-spacing:-.015em;text-wrap:balance}
+.lede{max-width:60ch;margin:0;color:var(--ink-soft);font-size:1.02rem}
+.lede b{color:var(--ink);font-weight:600}
+
+/* ---- shell: contents rail + document ----------------------------------- */
+.toc,.doc,.foot{max-width:1120px;margin:0 auto;padding:0 28px}
+@media (min-width:1000px){
+  .toc{position:sticky;top:0;float:left;width:264px;max-width:264px;padding:38px 0 38px 28px;
+    max-height:100vh;overflow-y:auto}
+  .doc{margin-left:264px;max-width:none;padding-right:28px}
+  .foot{margin-left:264px}
+}
+.toc-label{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);
+  padding-bottom:10px;border-bottom:1px solid var(--rule)}
+.toc-list{list-style:none;margin:12px 0 0;padding:0;
+  counter-reset:none;display:flex;flex-direction:column;gap:2px}
+.toc-list li{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.toc-list a{display:block;padding:4px 0;font-size:14px;text-decoration:none;color:var(--ink)}
+.toc-list a:hover{color:var(--oxblood)}
+.toc-list em{font-style:normal;font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* ---- topics ------------------------------------------------------------ */
+.doc{padding-top:38px;padding-bottom:26px;display:flex;flex-direction:column;gap:0}
+.topic{background:var(--sheet);border:1px solid var(--rule);border-radius:2px;
+  padding:30px 34px 26px;margin-bottom:20px;scroll-margin-top:24px;
+  position:relative;overflow-wrap:break-word}
+/* The gold line: the mark's ribbon, run down the bound edge of each sheet. */
+.topic::before{content:"";position:absolute;left:0;top:22px;bottom:22px;width:2px;
+  background:var(--gold);opacity:.55}
+.topic-head{border-bottom:1px solid var(--rule);padding-bottom:16px;margin-bottom:4px}
+h2{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:400;
+  font-size:clamp(1.5rem,3vw,1.92rem);line-height:1.15;margin:0;letter-spacing:-.01em;
+  text-wrap:balance}
+.summary{margin:.42em 0 0;color:var(--ink-soft);max-width:64ch}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.chip{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;
+  letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:2px;
+  background:var(--chip);color:var(--ink-soft);text-decoration:none;
+  border:1px solid var(--rule);display:inline-flex;gap:7px;align-items:center}
+.chip.role{color:var(--oxblood);border-color:var(--rule)}
+.chip.screen{color:var(--ink)}
+.chip.screen code{background:none;padding:0;font-size:inherit;color:var(--moss)}
+.chip.screen:hover{border-color:var(--gold)}
+
+.sec{padding-top:22px;scroll-margin-top:24px}
+.sec+.sec{border-top:1px solid var(--rule-soft)}
+h3{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:500;
+  font-size:1.14rem;line-height:1.3;margin:0 0 .5em;letter-spacing:-.005em;text-wrap:balance}
+.sec p{margin:0 0 .78em;max-width:66ch}
+.sec p b{font-weight:600}
+.steps{margin:.2em 0 .9em;padding-left:1.4em;max-width:66ch;
+  display:flex;flex-direction:column;gap:.5em}
+.steps li{padding-left:.25em}
+.steps li::marker{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.82em;
+  color:var(--gold)}
+.warn{background:var(--warn-bg);border-left:2px solid var(--warn-rule);
+  padding:13px 17px;margin:14px 0 4px;max-width:66ch;border-radius:0 2px 2px 0}
+.warn b{display:block;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--oxblood);margin-bottom:5px}
+.warn p{margin:0;font-size:.95rem}
+
+/* ---- footer ------------------------------------------------------------ */
+.foot{padding-top:8px;padding-bottom:56px}
+.foot p{max-width:66ch;color:var(--ink-soft);font-size:.92rem;
+  border-top:1px solid var(--rule);padding-top:18px;margin:0}
+
+@media (max-width:999px){
+  .mast-in{padding:36px 22px 30px;gap:18px}
+  .topic{padding:24px 20px 20px}
+  .toc{padding-top:26px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+
+<header class="mast">
+  <div class="mast-in">
+    <div class="crest" aria-hidden="true"><span></span></div>
+    <div>
+      <div class="eyebrow">Kitabi · admin console</div>
+      <h1>The Console Handbook</h1>
+      <p class="lede">Everything the back office does, written for whoever is running it
+      today. This is a copy — the living version is inside the console itself, at
+      <a href="https://admin.kitabi.in/handbook">admin.kitabi.in/handbook</a>, where every screen also has a
+      <b>? Help</b> button that opens the right page.</p>
+    </div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Contents"><div class="toc-in">
+<div class="toc-label">Contents</div><ol class="toc-list">
+<li><a href="#start">Start here</a></li>
+<li><a href="#dashboard">The dashboard</a></li>
+<li><a href="#incoming">New in catalog</a><em>Editor and above</em></li>
+<li><a href="#images">Uploaded images</a><em>Editor and above</em></li>
+<li><a href="#reports">Reported content</a></li>
+<li><a href="#claims">Author claims</a></li>
+<li><a href="#edits">Suggested edits</a><em>Editor and above</em></li>
+<li><a href="#merges">Duplicate review</a></li>
+<li><a href="#catalog">The catalogue</a><em>Editor and above</em></li>
+<li><a href="#promotions">Campaigns</a><em>Editor and above</em></li>
+<li><a href="#readers">Readers</a></li>
+<li><a href="#admins">Admin users</a><em>Super admin only</em></li>
+<li><a href="#audit">The audit log</a></li>
+<li><a href="#system">Service health</a><em>Editor and above</em></li>
+<li><a href="#account">Your own account</a></li>
+<li><a href="#problems">When something looks wrong</a></li>
+<li><a href="#glossary">Glossary</a></li>
+</ol></div></nav>
+<main class="doc">
+<article class="topic" id="start">
+<div class="topic-head">
+<h2>Start here</h2>
+<p class="summary">What this console is, what you are responsible for, and a daily routine.</p>
+<div class="meta">
+</div></div>
+<section class="sec" id="start-what">
+<h3>What Kitabi is</h3>
+<p>Kitabi is a personal library app. People add the books they own, track what they are reading, lend books to friends, and — if they choose to — write reviews and make their shelf public. There is also a public website, kitabi.in, which shows the books, authors and publishers everyone shares.</p>
+<p>Two kinds of information live side by side, and the difference decides almost everything you do here. <b>The catalogue is shared</b> — one entry for a book, seen by everyone, editable by readers. <b>A reader&#x27;s library is private</b> — their shelf, their notes, their reading progress. This console gives you full control of the shared half and almost none of the private half, on purpose.</p>
+</section>
+<section class="sec" id="start-job">
+<h3>What your job is here</h3>
+<p>Three things, in order of how often you will do them:</p>
+<ol class="steps">
+<li><b>Clear the queues.</b> Anything with a red number beside it in the left-hand menu is waiting for a human decision. Work through them.</li>
+<li><b>Look at what readers added.</b> New books, authors and cover photos go public straight away. <a href="https://admin.kitabi.in/moderation/incoming">New in catalog</a> is where you check them.</li>
+<li><b>Answer for the people.</b> Suspend an account that is causing harm, hide a profile with an offensive name, and put things back when you were wrong.</li>
+</ol>
+</section>
+<section class="sec" id="start-routine">
+<h3>A daily routine that works</h3>
+<ol class="steps">
+<li>Open the <a href="https://admin.kitabi.in/">Dashboard</a>. Read the top strip — is anything obviously odd?</li>
+<li>Look at <b>Waiting on you</b>. Anything that isn&#x27;t “clear”, open it and clear it.</li>
+<li>Open <a href="https://admin.kitabi.in/moderation/incoming">New in catalog</a>, set the period to the last day, and skim what readers added. Tick <b>Reviewed</b> as you go.</li>
+<li>Once a week, open <a href="https://admin.kitabi.in/moderation/images">Uploaded images</a> and look at the pictures readers have uploaded.</li>
+<li>Once a week, glance at <a href="https://admin.kitabi.in/system">Service health</a> — is anything costing more than usual?</li>
+</ol>
+</section>
+<section class="sec" id="start-roles">
+<h3>The three roles</h3>
+<p><b>Moderator</b> — the queues, readers, and the audit log. Cannot change the catalogue or publish anything to readers&#x27; phones.</p>
+<p><b>Editor</b> — everything a moderator can do, plus the catalogue (books, authors, publishers, series, buy links), the new-content and image reviews, campaigns, and service health.</p>
+<p><b>Super admin</b> — everything, plus creating and removing other admins.</p>
+<p>If a menu item isn&#x27;t there, your role doesn&#x27;t include it. That is not a fault — ask a super admin if you think you need it.</p>
+</section>
+<section class="sec" id="start-safe">
+<h3>Nothing here is truly destructive</h3>
+<p>Almost every action in this console is reversible, and every single one is written into the <a href="https://admin.kitabi.in/audit">audit log</a> with your name against it. Deleting a book hides it rather than destroying it. Suspending a reader keeps all their data. Removing a picture keeps its address in the log so it can be put back.</p>
+<p>So: act. A wrong decision that you notice and undo is a much smaller problem than a queue nobody touches for a month.</p>
+<aside class="warn"><b>Careful</b><p>The two things you cannot undo yourself are <b>merging two records together</b> (an editor can unmerge, but any hand edits made afterwards stay) and <b>removing another admin&#x27;s access</b>. Slow down for those two.</p></aside>
+</section>
+</article>
+<article class="topic" id="dashboard">
+<div class="topic-head">
+<h2>The dashboard</h2>
+<p class="summary">Every number on the front page, in plain English.</p>
+<div class="meta">
+<a class="chip screen" href="https://admin.kitabi.in/"><code>/</code> open</a>
+</div></div>
+<section class="sec" id="dashboard-live">
+<h3>The dark panel: right now</h3>
+<p>The big number is how many people have a reading timer running <b>this minute</b>. Under it: how many different books that is, and how long the longest sitting has been going. It refreshes by itself every twenty seconds — you never need to reload the page.</p>
+<p>It deliberately does not say *who* is reading *what*. The console never opens a reader&#x27;s shelf or reading progress, and a live list of names would be exactly that with a nicer frame around it. The count is what tells you the service is alive.</p>
+<p>This is the one number that is genuinely live. Everything else on the page is counted up to a few minutes ago.</p>
+</section>
+<section class="sec" id="dashboard-today">
+<h3>The six tiles: today</h3>
+<p><b>Active readers · 24h</b> — how many different people&#x27;s phones have sent anything to Kitabi in the last day. The closest thing we have to “people who used the app today”.</p>
+<p><b>New readers today</b>, <b>Books shelved today</b>, <b>Works added today</b>, <b>Reviews today</b> — counted from midnight UTC, which is 5:30am in India. So early in the Indian morning these will look small; that is the clock, not a problem.</p>
+<p><b>Minutes read today</b> — all reading time logged by everyone today, added up.</p>
+</section>
+<section class="sec" id="dashboard-trends">
+<h3>Trends and the growth chart</h3>
+<p>The four cards under <b>Trends</b> count the last 7, 28 or 90 days — you choose with the buttons. Under each number is the change against the period before it, so “▲ 12 (30%)” on the 28-day view means twelve more than the previous 28 days.</p>
+<p>The chart below draws the same four things per day. Hover anywhere on it and the day&#x27;s figures appear. The shaded line is new readers.</p>
+<p>A flat line is not necessarily bad — Kitabi is small, and single-digit days are normal. What matters is the direction over weeks.</p>
+</section>
+<section class="sec" id="dashboard-waiting">
+<h3>Waiting on you, and catalogue health</h3>
+<p><b>Waiting on you</b> repeats the queues from the left menu with an Open button beside each. If everything says “clear”, you are done for the day.</p>
+<p><b>Catalogue health</b> shows how much of the catalogue has a cover, a description and an ISBN. Click any bar to get the list of books still missing that thing — this is the best source of useful work when the queues are empty.</p>
+</section>
+<section class="sec" id="dashboard-feeds">
+<h3>The two feeds at the bottom</h3>
+<p><b>Newest readers</b> — the most recent sign-ups. Click a name to open their account.</p>
+<p><b>Newest in the catalogue</b> — the most recent books, authors and publishers, and who added each one. This is a preview of <a href="https://admin.kitabi.in/moderation/incoming">New in catalog</a>, which is the full version with the review ticks.</p>
+</section>
+</article>
+<article class="topic" id="incoming">
+<div class="topic-head">
+<h2>New in catalog</h2>
+<p class="summary">Reviewing what readers added to the shared catalogue before anyone complains.</p>
+<div class="meta">
+<span class="chip role">Editor and above</span>
+<a class="chip screen" href="https://admin.kitabi.in/moderation/incoming"><code>/moderation/incoming</code> open</a>
+</div></div>
+<section class="sec" id="incoming-why">
+<h3>Why this screen exists</h3>
+<p>Any signed-in reader can add a book, an author, a publisher or an edition, and it appears on the public website immediately. Nobody approves it first — that is deliberate, because asking permission to add your own book would make the app useless.</p>
+<p>Every other queue in this console waits for someone to *complain*. This one doesn&#x27;t. It is the screen where you catch a nonsense title, a joke author or a mis-typed publisher before a reader ever sees it.</p>
+</section>
+<section class="sec" id="incoming-using">
+<h3>How to work through it</h3>
+<ol class="steps">
+<li>Set <b>Period</b> to cover since you last looked (a day, a week).</li>
+<li>Leave <b>Show</b> on “Not yet reviewed” so you only see what nobody has checked.</li>
+<li>Click a row&#x27;s name to open the full record and look at it properly.</li>
+<li>Come back and press <b>Reviewed ✓</b>. The row disappears from your list.</li>
+<li>If something is wrong, fix it on the record&#x27;s own page — rename it, merge it into the right one, or delete it.</li>
+</ol>
+</section>
+<section class="sec" id="incoming-looking-for">
+<h3>What you are looking for</h3>
+<p><b>Gibberish or test entries</b> — “asdf”, “test book”, a title that is one letter.</p>
+<p><b>A book that already exists</b> under a slightly different name. Rename or merge rather than delete, so any reader who already shelved it keeps it.</p>
+<p><b>An author who is really a publisher</b>, or a publisher that is really a series. Easy honest mistakes on a small phone screen.</p>
+<p><b>Anything offensive</b> in a title, name or description.</p>
+<p><b>A real book you have never heard of</b> — that is not a problem. Kitabi exists for regional and translated books nobody else catalogues.</p>
+</section>
+<section class="sec" id="incoming-marks">
+<h3>What the tick means</h3>
+<p><b>Reviewed ✓</b> records that you looked, with your name and the time, in the <a href="https://admin.kitabi.in/audit">audit log</a>. It does not approve anything or change the record — the book was already public. It only stops two people reading the same rows.</p>
+<p>Publishers and editions show no contributor. That is not missing data being hidden from you: Kitabi never recorded who created those two kinds. Books and authors do show who added them.</p>
+</section>
+</article>
+<article class="topic" id="images">
+<div class="topic-head">
+<h2>Uploaded images</h2>
+<p class="summary">Cover photos and portraits readers upload — the fastest way to get hurt.</p>
+<div class="meta">
+<span class="chip role">Editor and above</span>
+<a class="chip screen" href="https://admin.kitabi.in/moderation/images"><code>/moderation/images</code> open</a>
+</div></div>
+<section class="sec" id="images-why">
+<h3>Why this needs a human</h3>
+<p>When a reader adds a book, they can photograph its cover with their phone. That photo goes straight onto the public website. There is no filter of any kind between the camera and the world.</p>
+<p>Almost all of them are exactly what they claim to be — a book on a table. The point of this screen is the handful that aren&#x27;t.</p>
+</section>
+<section class="sec" id="images-using">
+<h3>How to work through it</h3>
+<ol class="steps">
+<li>Set the period and scan the grid. It is deliberately a grid of pictures — you are looking, not reading.</li>
+<li>Anything you&#x27;re unsure about, click the title to open the record it belongs to and see the context.</li>
+<li>Press <b>Remove</b> on anything that should not be public.</li>
+</ol>
+</section>
+<section class="sec" id="images-remove">
+<h3>What Remove does</h3>
+<p>It takes the picture off that record straight away, on the website and in the app. The picture&#x27;s address is written into the <a href="https://admin.kitabi.in/audit">audit log</a>, so if you were wrong, a developer can put the exact same picture back.</p>
+<p>You do not need to be certain. Removing a good cover is a small, fixable mistake; leaving an obscene one up is not.</p>
+<aside class="warn"><b>Careful</b><p>A photograph of a <b>person</b> — not a book — deserves a second look. If it might be a picture of a child, remove it and tell the owner the same day.</p></aside>
+</section>
+<section class="sec" id="images-empty">
+<h3>If the screen says it isn&#x27;t available</h3>
+<p>That means this console isn&#x27;t connected to the picture store. The website is fine and readers are unaffected — this screen simply has nothing it can show you. Tell a developer; it is a settings change, not an outage.</p>
+</section>
+</article>
+<article class="topic" id="reports">
+<div class="topic-head">
+<h2>Reported content</h2>
+<p class="summary">Reviews that readers have flagged as abusive, and what to do about them.</p>
+<div class="meta">
+<a class="chip screen" href="https://admin.kitabi.in/moderation/reports"><code>/moderation/reports</code> open</a>
+</div></div>
+<section class="sec" id="reports-what">
+<h3>What lands here</h3>
+<p>Readers can flag a <b>public review</b> written by another reader. Nothing else in Kitabi can be reported — not books, not names, not pictures. If several people flag the same review, it appears once, with the number of flags.</p>
+<p>You see the review&#x27;s text, who wrote it, and what book or series it was about. You need all three: “this is rubbish” about a book is a review; the same words about an author may not be.</p>
+</section>
+<section class="sec" id="reports-deciding">
+<h3>Deciding</h3>
+<p><b>Uphold</b> if the review contains abuse, hate, threats, someone&#x27;s private information, spam or advertising, or is plainly not about the book.</p>
+<p><b>Dismiss</b> if it is a harsh but honest opinion. A one-star review with blunt words is exactly what a review site is for. Disliking the book, the author or the translation is not a violation.</p>
+<p>When you genuinely can&#x27;t decide, uphold it and tell the owner. It is reversible.</p>
+</section>
+<section class="sec" id="reports-effect">
+<h3>What each button actually does</h3>
+<p><b>Uphold</b> hides the review from the app and the website. It is not deleted — the text stays in the database and can be brought back. The reader is not told, and is not suspended.</p>
+<p><b>Dismiss</b> closes the report and leaves the review exactly as it was.</p>
+<p>Either way the reports on that review are closed, so it leaves your queue.</p>
+<p>If the same person keeps writing abusive reviews, that is a matter for their <a href="https://admin.kitabi.in/readers">reader account</a>, not for this screen.</p>
+</section>
+</article>
+<article class="topic" id="claims">
+<div class="topic-head">
+<h2>Author claims</h2>
+<p class="summary">“This is me” — a reader saying they are the author of a book.</p>
+<div class="meta">
+<a class="chip screen" href="https://admin.kitabi.in/moderation/claims"><code>/moderation/claims</code> open</a>
+</div></div>
+<section class="sec" id="claims-what">
+<h3>What a claim is</h3>
+<p>A reader has pressed “This is me” on an author in the catalogue. If you approve it, that author entry is linked to their account and they are shown as the verified author.</p>
+<p>Until you decide, nothing changes for anyone else. Only the claimant sees a “pending review” note.</p>
+</section>
+<section class="sec" id="claims-deciding">
+<h3>How to decide</h3>
+<p>This is an identity claim, so treat it as one. Approve when the evidence is real: an email address on the publisher&#x27;s domain, a matching public profile the person clearly controls, a message from the publisher.</p>
+<p>A matching name is not evidence. Neither is enthusiasm.</p>
+<p>When in doubt, leave it pending and ask the owner. There is no deadline, and a wrongly approved claim hands someone control over another writer&#x27;s identity on the site.</p>
+<aside class="warn"><b>Careful</b><p>Approving a claim for a well-known author is exactly the case where you should stop and check with the owner first.</p></aside>
+</section>
+</article>
+<article class="topic" id="edits">
+<div class="topic-head">
+<h2>Suggested edits</h2>
+<p class="summary">Readers proposing corrections to a book someone else added.</p>
+<div class="meta">
+<span class="chip role">Editor and above</span>
+<a class="chip screen" href="https://admin.kitabi.in/moderation/edits"><code>/moderation/edits</code> open</a>
+</div></div>
+<section class="sec" id="edits-what">
+<h3>What these are</h3>
+<p>When a reader improves a book entry that somebody else created, the change is not applied straight away — it waits here as a suggestion. You see the old value and the new one side by side.</p>
+<p>Most are genuinely helpful: a missing subtitle, a proper description, a corrected spelling.</p>
+</section>
+<section class="sec" id="edits-deciding">
+<h3>Approving and rejecting</h3>
+<p><b>Approve</b> when the new version is more accurate or more complete. You are not judging writing style — a plain description is better than none.</p>
+<p><b>Reject</b> when it is wrong, when it is an opinion (“best novel ever written” is not a description), or when it is about a different book.</p>
+<p>If the suggestion is half right, approve nothing and edit the book yourself on its own page. That is quicker than a conversation.</p>
+</section>
+</article>
+<article class="topic" id="merges">
+<div class="topic-head">
+<h2>Duplicate review</h2>
+<p class="summary">Two entries for the same author, publisher or book — folding them into one.</p>
+<div class="meta">
+<a class="chip screen" href="https://admin.kitabi.in/moderation/merges"><code>/moderation/merges</code> open</a>
+</div></div>
+<section class="sec" id="merges-what">
+<h3>What the queue holds</h3>
+<p>Kitabi automatically folds together entries that are *exactly* the same. Everything else — the near-misses — comes here, because only a person can tell “O. V. Vijayan” and “O V Vijayan” (the same writer) from two different people with similar names.</p>
+</section>
+<section class="sec" id="merges-using">
+<h3>How to decide safely</h3>
+<ol class="steps">
+<li>Click each name to <b>peek</b> — a popup showing what that entry actually has against it. Two people with one name are told apart by their books, never by their spelling.</li>
+<li>If they are the same, choose which spelling to keep. Keep the correct, fully punctuated one.</li>
+<li>Merge. Everything attached to the other entry moves across; old links keep working.</li>
+<li>If they are different people, dismiss the pair so it stops coming back.</li>
+</ol>
+<aside class="warn"><b>Careful</b><p>Merging moves other readers&#x27; ratings, reviews and shelves. Peek at both before you press it. An editor can unmerge, but any edits made after the merge do not come apart cleanly.</p></aside>
+</section>
+</article>
+<article class="topic" id="catalog">
+<div class="topic-head">
+<h2>The catalogue</h2>
+<p class="summary">Books, editions, authors, publishers, series and buy links.</p>
+<div class="meta">
+<span class="chip role">Editor and above</span>
+<a class="chip screen" href="https://admin.kitabi.in/catalog"><code>/catalog</code> open</a>
+</div></div>
+<section class="sec" id="catalog-work-edition">
+<h3>Work and edition — the one idea to learn</h3>
+<p>A <b>work</b> is the book as an idea: *Chemmeen*, written by Thakazhi. A reader&#x27;s rating and review belong to the work.</p>
+<p>An <b>edition</b> is a physical printing: the 1956 hardback, the 2011 DC Books paperback, the Malayalam original, the English translation. The cover, the ISBN and the page count belong to the edition.</p>
+<p>This matters because a reader owns an *edition*. If a book&#x27;s page count looks wrong, you are almost always looking at the wrong edition, not at a bug.</p>
+</section>
+<section class="sec" id="catalog-finding">
+<h3>Finding things</h3>
+<p>The search box at the top of every page searches everything at once — books, authors, publishers, readers — and understands typos and both scripts, so “chemmeen” finds “ചെമ്മീൻ”. Press <code>/</code> anywhere to jump into it.</p>
+<p>The catalogue page&#x27;s own filters narrow by language, type and what is missing. The “missing a cover / description / ISBN” counts are the best to-do list in the console.</p>
+</section>
+<section class="sec" id="catalog-editing">
+<h3>Editing</h3>
+<p>Open a book to edit its details, set its series, add a buy link to an edition, or delete it. Everything you change is logged.</p>
+<p><b>Delete</b> is a soft delete — the book stops appearing but is not destroyed. Kitabi refuses to delete a book that readers have shelved, rated or reviewed, and tells you so. That refusal is correct: deleting it would take the book off somebody&#x27;s shelf.</p>
+</section>
+<section class="sec" id="catalog-buy-links">
+<h3>Buy links</h3>
+<p><a href="https://admin.kitabi.in/catalog/buy-links">Buy links</a> is a worklist of editions with no shop link yet. Adding one puts a “buy” button on the book&#x27;s public page. Paste the normal product address; Kitabi handles the rest.</p>
+</section>
+</article>
+<article class="topic" id="promotions">
+<div class="topic-head">
+<h2>Campaigns</h2>
+<p class="summary">Messages that appear on readers&#x27; home screens inside the app.</p>
+<div class="meta">
+<span class="chip role">Editor and above</span>
+<a class="chip screen" href="https://admin.kitabi.in/promotions"><code>/promotions</code> open</a>
+</div></div>
+<section class="sec" id="promotions-what">
+<h3>What a campaign is</h3>
+<p>A banner or a card on the app&#x27;s home screen. This is the only part of the console that puts something in front of every reader, so it is the part to be slowest with.</p>
+<p>The composer shows a live preview of a phone as you type. What you see is what they get.</p>
+</section>
+<section class="sec" id="promotions-audience">
+<h3>Choosing who sees it</h3>
+<p>You can narrow by language, phone type, how long they have been a reader, how many books they have, what they are reading, and more. The estimate updates as you narrow, so you always know roughly how many people you are about to talk to.</p>
+<p>A campaign can carry different wording per language — one campaign, not two — so a Malayalam reader gets Malayalam.</p>
+</section>
+<section class="sec" id="promotions-safety">
+<h3>Before you publish</h3>
+<ol class="steps">
+<li>Read it out loud. Typos are permanent in a way a website&#x27;s are not.</li>
+<li>Check the link. Press it in the preview.</li>
+<li>Check the dates and the frequency cap.</li>
+<li>Publish. If it is wrong, <b>Stop now</b> takes it down immediately — readers&#x27; phones pick that up on their next refresh.</li>
+</ol>
+<aside class="warn"><b>Careful</b><p>Readers can switch promotions off entirely in their profile, and Kitabi honours that. Never work around it.</p></aside>
+</section>
+</article>
+<article class="topic" id="readers">
+<div class="topic-head">
+<h2>Readers</h2>
+<p class="summary">Finding an account, what you can see, and the two moderation actions.</p>
+<div class="meta">
+<a class="chip screen" href="https://admin.kitabi.in/readers"><code>/readers</code> open</a>
+</div></div>
+<section class="sec" id="readers-finding">
+<h3>Finding someone</h3>
+<p>Search by name, @handle or email. The filters answer the questions you actually have: who is suspended, who joined this week, whose profile is public. Long lists page at the bottom.</p>
+</section>
+<section class="sec" id="readers-seeing">
+<h3>What you can and cannot see</h3>
+<p>You can see what they have already made public — their name, handle, whether their profile and library are public — plus counts of what they have contributed, when they last used the app, and what kind of phone they use.</p>
+<p>You <b>cannot</b> see their shelf, their private notes, their reading progress, or reviews they haven&#x27;t published. Not “you shouldn&#x27;t” — the console has no screen that shows them.</p>
+</section>
+<section class="sec" id="readers-hide-profile">
+<h3>Hide public profile — the gentle action</h3>
+<p>Use this for an offensive display name, handle or picture, or when someone has made public something they clearly shouldn&#x27;t have.</p>
+<p>It takes their public page off kitabi.in, along with their shared library and any public reviews. <b>Their app keeps working normally</b> — their own library, reading and lending are untouched.</p>
+<p>Press <b>Make profile public again</b> to undo it, exactly as it was.</p>
+</section>
+<section class="sec" id="readers-suspending">
+<h3>Suspend — the serious action</h3>
+<p>Suspension locks the account out of the app entirely. Use it for harassment, repeated abuse after a warning, spam, or deliberate vandalism of the catalogue.</p>
+<p>Everything they have is kept. Lifting the suspension gives it all back, instantly.</p>
+<p>Tell the owner when you suspend someone. A suspended reader will email, and whoever answers needs to know why.</p>
+<aside class="warn"><b>Careful</b><p>There is no delete-account button, and that is on purpose. If a reader asks for their account to be erased, pass it to the owner — a real erasure is a careful operation across several systems, not a click.</p></aside>
+</section>
+</article>
+<article class="topic" id="admins">
+<div class="topic-head">
+<h2>Admin users</h2>
+<p class="summary">Adding, changing and removing the people who can use this console.</p>
+<div class="meta">
+<span class="chip role">Super admin only</span>
+<a class="chip screen" href="https://admin.kitabi.in/admins"><code>/admins</code> open</a>
+</div></div>
+<section class="sec" id="admins-adding">
+<h3>Adding someone</h3>
+<p>Create the admin, choose the lowest role that lets them do their job, and send them the invite link. They set their own password and must set up an authenticator app before they can reach anything.</p>
+<p>Give a new person <b>moderator</b> first. Roles are easy to raise later and awkward to explain after a mistake.</p>
+</section>
+<section class="sec" id="admins-removing">
+<h3>Removing someone</h3>
+<p>Revoking access is immediate — their current session stops working. Their past actions stay in the audit log for ever, with their name; that is the point of the log.</p>
+<p>You cannot revoke or demote yourself, and the last remaining super admin cannot be removed by anyone. That is a deliberate guard against locking everybody out.</p>
+<aside class="warn"><b>Careful</b><p>When someone leaves, revoke them the same day.</p></aside>
+</section>
+</article>
+<article class="topic" id="audit">
+<div class="topic-head">
+<h2>The audit log</h2>
+<p class="summary">Every action anyone took here — how to search it and how to read it.</p>
+<div class="meta">
+<a class="chip screen" href="https://admin.kitabi.in/audit"><code>/audit</code> open</a>
+</div></div>
+<section class="sec" id="audit-what">
+<h3>What is in it</h3>
+<p>Every action taken in this console, every sign-in and every failed sign-in, with who, what, when and from which address. It can never be edited or deleted — not by you, not by a super admin.</p>
+<p>Filter by person, by period, or type a word to find an action, a target or a detail. Times are UTC, which is 5 hours 30 minutes behind Indian time.</p>
+</section>
+<section class="sec" id="audit-using">
+<h3>What it is for</h3>
+<p><b>Undoing.</b> When a picture was removed by mistake, its address is in the log. When a name was changed, the old one is in the log.</p>
+<p><b>Answering “who did this?”</b> without anybody having to remember.</p>
+<p><b>Noticing trouble.</b> A run of failed sign-ins from an address you don&#x27;t recognise is worth telling the owner about.</p>
+</section>
+</article>
+<article class="topic" id="system">
+<div class="topic-head">
+<h2>Service health</h2>
+<p class="summary">What is switched on, and what is costing money today.</p>
+<div class="meta">
+<span class="chip role">Editor and above</span>
+<a class="chip screen" href="https://admin.kitabi.in/system"><code>/system</code> open</a>
+</div></div>
+<section class="sec" id="system-budget">
+<h3>The daily AI budget</h3>
+<p>Two Kitabi features cost real money each time they are used: book recommendations, and reading a book&#x27;s details out of a photograph of its cover. Every use is counted, and there is a hard daily limit for the whole service.</p>
+<p>The bar shows how much of today&#x27;s limit is gone. It resets at midnight UTC.</p>
+<p>If the limit is reached, those two features politely refuse for the rest of the day and everything else keeps working. That is the limit doing its job, not a fault. If it happens several days running, tell the owner — the limit may need raising.</p>
+</section>
+<section class="sec" id="system-heavy">
+<h3>Heaviest users</h3>
+<p>If one account is using far more than everyone else, open it. A person reads; a script doesn&#x27;t. This is the shape of somebody running up a bill on purpose.</p>
+</section>
+<section class="sec" id="system-switches">
+<h3>Switched on / off</h3>
+<p><b>Off</b> means a feature was never switched on, not that it has broken. Email, image uploads and the AI features each need a setting that only a developer can add. Kitabi is built to work quietly without them rather than to fail.</p>
+</section>
+</article>
+<article class="topic" id="account">
+<div class="topic-head">
+<h2>Your own account</h2>
+<p class="summary">Signing in, the authenticator code, and what to do if you&#x27;re locked out.</p>
+<div class="meta">
+</div></div>
+<section class="sec" id="account-signing-in">
+<h3>Signing in</h3>
+<p>Email and password, then a six-digit code from your authenticator app. The code is required — there is no way to switch it off, because this console can see every reader&#x27;s account.</p>
+<p>Five wrong passwords locks the account for fifteen minutes. Wait it out; trying harder makes it worse.</p>
+<p>You are signed out after twelve hours. That is normal.</p>
+</section>
+<section class="sec" id="account-recovery">
+<h3>Recovery codes</h3>
+<p>When you set up the authenticator you were given eight recovery codes. Each works once, in place of the six-digit code. <b>Keep them somewhere that is not your phone</b> — the whole point is that they survive losing it.</p>
+<p>If you have lost both your phone and the codes, a super admin has to reset you. There is no self-service path, deliberately.</p>
+</section>
+<section class="sec" id="account-hygiene">
+<h3>Basic care</h3>
+<p>Never share your sign-in. If two people need access, they get two accounts — otherwise the audit log stops meaning anything.</p>
+<p>Change your password from <a href="https://admin.kitabi.in/account/password">Change password</a> if you ever think it has been seen.</p>
+<p>You can install this console on your phone or desktop like an app: use your browser&#x27;s “Install” or “Add to Home Screen”. It still needs a connection — it does not work offline.</p>
+</section>
+</article>
+<article class="topic" id="problems">
+<div class="topic-head">
+<h2>When something looks wrong</h2>
+<p class="summary">What to check first, what to write down, and when to escalate.</p>
+<div class="meta">
+</div></div>
+<section class="sec" id="problems-first">
+<h3>Check these first</h3>
+<ol class="steps">
+<li>Reload the page. Then try a private/incognito window.</li>
+<li>Is it just you, or is the public site down too? Open kitabi.in in another tab — if the public site is fine, the problem is smaller than it feels.</li>
+<li>Check <a href="https://admin.kitabi.in/system">Service health</a>. An “off” switch or a reached limit explains a lot of “broken” behaviour.</li>
+<li>Check the <a href="https://admin.kitabi.in/audit">audit log</a> — did somebody change something a minute ago?</li>
+</ol>
+</section>
+<section class="sec" id="problems-escalate">
+<h3>Telling a developer</h3>
+<p>Send four things, and it will usually be fixed the same day: <b>the exact web address</b> you were on, <b>what you clicked</b>, <b>what you expected</b>, and <b>what happened instead</b> — with a screenshot including the whole screen and the time.</p>
+<p>“It&#x27;s broken” costs a day of guessing. “Pressing Reviewed on /moderation/incoming at 14:20 showed a red error” is fixed in an hour.</p>
+</section>
+<section class="sec" id="problems-never">
+<h3>Things not to do</h3>
+<p>Don&#x27;t repeat a failed action many times — especially a merge or a delete. If it half-worked, repeating it makes the mess bigger.</p>
+<p>Don&#x27;t share screenshots of reader emails outside the team.</p>
+<p>Don&#x27;t work around a reader&#x27;s privacy setting because someone asked you to. If it deserves an exception, it deserves the owner&#x27;s decision.</p>
+</section>
+</article>
+<article class="topic" id="glossary">
+<div class="topic-head">
+<h2>Glossary</h2>
+<p class="summary">The words this console uses, and what each one actually means.</p>
+<div class="meta">
+</div></div>
+<section class="sec" id="glossary-terms">
+<h3>Words you will meet</h3>
+<p><b>Work</b> — a book as an idea. Ratings and reviews attach here.</p>
+<p><b>Edition</b> — one printing of a work. Cover, ISBN and page count attach here. A reader owns an edition.</p>
+<p><b>Catalogue</b> — the shared list of books, authors, publishers and series that everyone sees.</p>
+<p><b>Library</b> — one reader&#x27;s private shelf. You cannot see inside it.</p>
+<p><b>Entry</b> — one book on one reader&#x27;s shelf.</p>
+<p><b>Sitting / session</b> — one stretch of reading, timed in the app.</p>
+<p><b>Claim</b> — a reader saying “this author is me”.</p>
+<p><b>Revision</b> — a suggested edit waiting for a decision.</p>
+<p><b>Merge</b> — folding two duplicate records into one.</p>
+<p><b>Soft delete</b> — hidden everywhere, but kept in the database and recoverable. Almost every “delete” here is one of these.</p>
+<p><b>Suspend</b> — lock a reader out, keep all their data.</p>
+<p><b>UTC</b> — the clock all times here are shown in. Indian time is 5 hours 30 minutes ahead.</p>
+<p><b>Sync</b> — a reader&#x27;s phone sending its changes to Kitabi. The app works offline and catches up later, so a change can be minutes old before it reaches here.</p>
+</section>
+</article>
+</main>
+
+<footer class="foot">
+  <p>Generated from the console's own handbook, so this copy cannot drift from the
+  screens it describes. When the console changes, the version at
+  <a href="https://admin.kitabi.in/handbook">admin.kitabi.in/handbook</a> changes with it — read that one
+  when the two disagree.</p>
+</footer>

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Handbook · Kitabi Admin{% endblock %}
+{% block heading %}Handbook{% endblock %}
+{% block subheading %}How to run Kitabi's back office — written for whoever is doing it today{% endblock %}
+{% block content %}
+<div class="note" style="margin-bottom:16px">Everything in this console is explained here, in plain
+English. Every screen also has a <b>? Help</b> button in its top bar that opens the right page
+directly. If something changes, this handbook changes with it — it is part of the console, not a
+document somebody has to remember to send you.</div>
+
+<div class="hbgrid">
+  {% for t in topics %}
+  <a class="hbcard" href="/handbook/{{ t.slug }}">
+    <div class="hbtitle">{{ t.title }}</div>
+    <div class="hbsum">{{ t.summary }}</div>
+    <div class="hbsecs">
+      {% for s in t.sections %}<span>{{ s.heading }}</span>{% endfor %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -3,6 +3,7 @@
 {% block heading %}Authors{% endblock %}
 {% block subheading %}{% if q %}Results for “{{ q }}”{% else %}Most works first{% endif %} · search is spelling-insensitive{% endblock %}
 {% block topactions %}
+<a class="btn s" href="/handbook/catalog" title="How this screen works">? Help</a>
 <form method="get" action="/catalog/authors"><input class="search" name="q" value="{{ q }}"
   placeholder="Search author name" style="width:260px"></form>
 {% endblock %}

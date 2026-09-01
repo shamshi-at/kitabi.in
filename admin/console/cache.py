@@ -29,6 +29,10 @@ _locks: dict[str, asyncio.Lock] = {}
 NAV_BADGES = "nav_badges"
 CATALOG_GAPS = "catalog_gaps"
 DASHBOARD_STATS = "dashboard_stats"
+# The live strip ("reading right now", today's arrivals) — 15s TTL, see
+# insights.pulse. Deliberately NOT a catalog key: it must keep ticking on its
+# own clock rather than being cleared by an unrelated catalog edit.
+PULSE = "pulse"
 
 # Catalog-derived entries — cleared together whenever the catalog is written.
 _CATALOG_KEYS = (CATALOG_GAPS, DASHBOARD_STATS)

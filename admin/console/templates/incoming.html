@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}New in catalog · Kitabi Admin{% endblock %}
+{% block heading %}New in catalog{% endblock %}
+{% block subheading %}What readers have added — review it before anyone reports it{% endblock %}
+{% block topactions %}
+<a class="btn s" href="/moderation/images">Uploaded images</a>
+<a class="btn s" href="/handbook/incoming" title="How to use this screen">? Help</a>
+{% endblock %}
+{% block content %}
+<div class="note" style="margin-bottom:14px">Anything a reader adds to the catalog appears on
+kitabi.in straight away. This is the only screen that shows you those additions before someone
+complains about one. Tick <b>Reviewed</b> when you've looked — the tick is recorded in the audit
+log with your name, and hides the row from the default view.</div>
+
+<form class="filterbar" method="get" action="/moderation/incoming">
+  <label class="fb"><span>Period</span>
+    <select name="window" onchange="this.form.submit()">
+      {% for key, days in windows.items() %}
+      <option value="{{ key }}" {% if window == key %}selected{% endif %}>Last {{ days }} day{{ '' if days == 1 else 's' }}</option>
+      {% endfor %}
+    </select></label>
+  <label class="fb"><span>Kind</span>
+    <select name="kind" onchange="this.form.submit()">
+      <option value="all" {% if kind == 'all' %}selected{% endif %}>Everything</option>
+      {% for key, label in kinds.items() %}
+      <option value="{{ key }}" {% if kind == key %}selected{% endif %}>{{ label }}s</option>
+      {% endfor %}
+    </select></label>
+  <label class="fb"><span>Show</span>
+    <select name="show" onchange="this.form.submit()">
+      <option value="new" {% if show != 'all' %}selected{% endif %}>Not yet reviewed</option>
+      <option value="all" {% if show == 'all' %}selected{% endif %}>Everything</option>
+    </select></label>
+  <noscript><button class="btn s">Apply</button></noscript>
+</form>
+
+<div class="tbl" style="margin-top:12px">
+  <table>
+    <tr><th>What</th><th>Added by</th><th>When</th><th></th></tr>
+    {% for r in rows %}
+    <tr>
+      <td><span class="pill mute">{{ r.label }}</span>
+        <a href="{{ r.href }}">{{ r.name }}</a>
+        {% if r.reviewed %}<span class="pill ok">reviewed</span>{% endif %}</td>
+      <td class="m">{% if r.adder_id %}<a href="/readers/{{ r.adder_id }}">{{ r.adder_label }}</a>{% else %}{{ r.adder_label }}{% endif %}</td>
+      <td class="m">{{ r.created_at.strftime('%-d %b %Y, %H:%M') }}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <a class="btn s" href="{{ r.href }}">Open</a>
+        {% if not r.reviewed %}
+        <form method="post" action="/moderation/incoming/{{ r.kind }}/{{ r.id }}/reviewed"
+          style="display:inline"><button class="btn s g">Reviewed ✓</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    {% if not rows %}
+    <tr><td colspan="4" class="m" style="text-align:center;padding:26px">
+      Nothing new in this period{% if show != 'all' %} that hasn't been reviewed{% endif %}.</td></tr>
+    {% endif %}
+  </table>
+</div>
+{% endblock %}

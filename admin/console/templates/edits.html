@@ -2,6 +2,7 @@
 {% block title %}Suggested edits · Kitabi Admin{% endblock %}
 {% block heading %}Suggested edits{% endblock %}
 {% block subheading %}{{ items | length }} pending{% endblock %}
+{% block topactions %}<a class="btn s" href="/handbook/edits" title="How this screen works">? Help</a>{% endblock %}
 {% block content %}
 {% if not items %}
   <div class="card" style="text-align:center;padding:44px">

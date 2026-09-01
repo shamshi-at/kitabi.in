@@ -2,7 +2,8 @@
 {% block title %}{{ p.full_name or p.email }} · Kitabi Admin{% endblock %}
 {% block heading %}{{ p.full_name or 'Unnamed reader' }}{% endblock %}
 {% block subheading %}{% if p.username %}@{{ p.username }} · {% endif %}{{ p.email }}{% endblock %}
-{% block topactions %}<a class="btn s" href="/readers" data-back>← All readers</a>{% endblock %}
+{% block topactions %}<a class="btn s" href="/readers" data-back>← All readers</a>
+<a class="btn s" href="/handbook/readers" title="What you can and can't do here">? Help</a>{% endblock %}
 {% block content %}
 {% if p.suspended_at %}
 <div class="flash err" style="margin-bottom:14px">Suspended {{ p.suspended_at.strftime('%d %b %Y') }} —
@@ -17,6 +18,11 @@ locked out of the app until reinstated.</div>
       <tr><td>Public library</td><td style="text-align:right">
         {% if p.library_visible %}<span class="pill ok">Visible</span>{% else %}<span class="pill mute">Private</span>{% endif %}</td></tr>
       <tr><td>Joined</td><td style="text-align:right">{{ p.created_at.strftime('%d %b %Y') }}</td></tr>
+      <tr><td>Last used the app</td><td style="text-align:right">
+        {% if last_seen %}{{ last_seen.strftime('%d %b %Y, %H:%M') }} UTC{% else %}<span class="m">no sync recorded</span>{% endif %}</td></tr>
+      <tr><td>Devices</td><td style="text-align:right">
+        {% if platforms %}{% for name, n in platforms %}<span class="pill mute">{{ name }}{% if n > 1 %} ×{{ n }}{% endif %}</span> {% endfor %}
+        {% else %}<span class="m">none registered</span>{% endif %}</td></tr>
       <tr><td>Status</td><td style="text-align:right">
         {% if p.suspended_at %}<span class="pill no">Suspended</span>{% else %}<span class="pill ok">Active</span>{% endif %}</td></tr>
     </table>
@@ -53,6 +59,14 @@ locked out of the app until reinstated.</div>
 <div class="card" style="margin-top:14px;max-width:520px">
   <div class="lbl">Moderation</div>
   <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+    {% if p.profile_visible %}
+    <form method="post" action="/readers/{{ p.id }}/hide-profile"
+      onsubmit="return confirm('Hide this reader\'s public profile? Their public page, shared library and public reviews come off the website. They keep full use of the app.')">
+      <button class="btn">Hide public profile</button></form>
+    {% else %}
+    <form method="post" action="/readers/{{ p.id }}/show-profile">
+      <button class="btn s">Make profile public again</button></form>
+    {% endif %}
     {% if p.suspended_at %}
     <form method="post" action="/readers/{{ p.id }}/unsuspend">
       <button class="btn g">Lift suspension</button></form>
@@ -62,8 +76,10 @@ locked out of the app until reinstated.</div>
       <button class="btn d">Suspend account</button></form>
     {% endif %}
   </div>
-  <div class="note" style="margin-top:11px">Suspension is reversible and keeps all their data.
-  Permanent deletion is deliberately not a button here — a full data erasure is a separate,
-  considered operation.</div>
+  <div class="note" style="margin-top:11px"><b>Hide public profile</b> is the gentle one — use it for
+  an offensive name, handle or picture. It takes their public page off kitabi.in and keeps their app
+  working. <b>Suspend</b> is the serious one — it locks them out of the app entirely. Both are
+  reversible and both keep every bit of their data. Permanent deletion is deliberately not a button
+  here: a full erasure is a separate, considered operation.</div>
 </div>
 {% endblock %}

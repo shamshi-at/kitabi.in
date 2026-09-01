@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Service health · Kitabi Admin{% endblock %}
+{% block heading %}Service health{% endblock %}
+{% block subheading %}What is running, what is switched on, and what is costing money{% endblock %}
+{% block topactions %}
+<a class="btn s" href="/handbook/system" title="What these numbers mean">? Help</a>
+{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="worklist-head">
+    <div><span class="lbl">Daily AI budget</span>
+      <b>{{ "{:,}".format(spend.used_today) }} of {{ "{:,}".format(spend.cap) }} requests used today</b></div>
+    {% if spend.tripped %}<span class="pill no">limit reached</span>
+    {% elif not spend.configured %}<span class="pill mute">switched off</span>
+    {% else %}<span class="pill ok">normal</span>{% endif %}
+  </div>
+  <div class="bar" style="margin-top:11px;height:9px">
+    <i style="width:{{ [spend.cap_pct, 100]|min }}%;background:{{ 'var(--oxblood)' if spend.cap_pct > 80 else 'var(--moss)' }}"></i>
+  </div>
+  <div class="note" style="margin-top:12px">
+    {% if not spend.configured %}
+    Kitabi's AI features are switched off, so nothing here is costing anything. The counters stay at
+    zero until an API key is added.
+    {% elif spend.tripped %}
+    <b>Today's limit has been reached.</b> Recommendations and cover-reading will politely refuse for
+    the rest of the day and start working again at midnight UTC. Nothing is broken and no extra money
+    is being spent — that is exactly what the limit is for. If this happens repeatedly, the limit
+    needs raising, which is a developer change.
+    {% else %}
+    This is a safety limit on how many AI requests Kitabi will pay for in one day, across every
+    reader. It resets at midnight UTC.
+    {% endif %}
+  </div>
+</div>
+
+<div class="split" style="margin-top:14px">
+  {% for key, f in spend.features.items() %}
+  <div class="card">
+    <div class="lbl">{{ f.label }}</div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:6px">
+      <div><b style="font-family:'Fraunces',serif;font-size:26px">{{ "{:,}".format(f.today) }}</b>
+        <span class="m">today</span></div>
+      <div class="m">{{ "{:,}".format(f.window) }} in 14 days</div>
+    </div>
+    <svg class="sparkline" style="position:static;height:40px;margin-top:8px" viewBox="0 0 100 34"
+      preserveAspectRatio="none" aria-hidden="true">
+      <path d="{{ f.chart.area }}" fill="var(--oxblood)" opacity=".12"></path>
+      <path d="{{ f.chart.line }}" fill="none" stroke="var(--oxblood)" stroke-width="1.6"
+        vector-effect="non-scaling-stroke" stroke-linejoin="round"></path>
+    </svg>
+    <div class="m" style="margin-top:6px">Each reader may use this
+      {% if f.per_reader_cap %}{{ f.per_reader_cap }} times a day{% else %}without a personal limit{% endif %}.</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="split3" style="margin-top:14px">
+  <div class="card">
+    <div class="lbl">Heaviest users of AI today</div>
+    <table class="linkrows" style="margin-top:8px">
+      {% for h in spend.heavy %}
+      <tr><td><a href="/readers/{{ h.id }}">{{ h.name }}</a></td>
+        <td style="text-align:right"><b>{{ h.calls }}</b> request{{ '' if h.calls == 1 else 's' }}</td></tr>
+      {% endfor %}
+      {% if not spend.heavy %}<tr><td class="m" style="padding:12px 0">Nobody has used an AI feature today.</td></tr>{% endif %}
+    </table>
+    <div class="note" style="margin-top:11px">If one account is doing far more than everyone else,
+    that is worth a look — open it and see whether it looks like a person or a script.</div>
+  </div>
+  <div class="card">
+    <div class="lbl">Switched on / off</div>
+    <table style="margin-top:8px">
+      {% for name, on in integrations %}
+      <tr><td>{{ name }}</td><td style="text-align:right">
+        {% if on %}<span class="pill ok">on</span>{% else %}<span class="pill mute">off</span>{% endif %}</td></tr>
+      {% endfor %}
+      <tr><td>Reader devices syncing (24h)</td>
+        <td style="text-align:right"><b>{{ "{:,}".format(sync_ops_24h) }}</b> changes</td></tr>
+    </table>
+    <div class="note" style="margin-top:11px"><b>Off</b> means a feature was never switched on, not
+    that it has broken. Turning one on is a developer change.</div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{# The moving strip. Rendered inside dashboard.html on first load and swapped in
+   by admin.js every 20s from /live — same template both times, so what ticks
+   can never drift from what first painted. #}
+<div class="livegrid">
+  <div class="livenow">
+    <div class="lbl">Reading right now</div>
+    <div class="bignum">{{ pulse.reading_now }}</div>
+    <div class="livesub">{% if pulse.reading_now == 1 %}one sitting in progress{% else %}sittings in progress{% endif %}</div>
+{# Deliberately no names and no titles — see insights.reading_now_shape. The
+   count is what makes this live; who is reading what is the reader's business. #}
+    {% if pulse.reading_now %}
+    <ul class="nowlist">
+      <li><span class="dot"></span>across <b>{{ reading_shape.books }}</b>
+        different book{{ '' if reading_shape.books == 1 else 's' }}</li>
+      <li><span class="dot"></span>longest running <b>{{ reading_shape.longest_minutes }}m</b></li>
+    </ul>
+    {% else %}
+    <div class="nowempty">Nobody has a timer running this minute.</div>
+    {% endif %}
+  </div>
+  <div class="todaygrid">
+    <div class="today"><div class="v">{{ "{:,}".format(pulse.active_24h) }}</div>
+      <div class="k">Active readers · 24h</div></div>
+    <div class="today"><div class="v">{{ "{:,}".format(pulse.new_readers_today) }}</div>
+      <div class="k">New readers today</div></div>
+    <div class="today"><div class="v">{{ "{:,}".format(pulse.shelved_today) }}</div>
+      <div class="k">Books shelved today</div></div>
+    <div class="today"><div class="v">{{ "{:,}".format(pulse.minutes_today) }}</div>
+      <div class="k">Minutes read today</div></div>
+    <div class="today"><div class="v">{{ "{:,}".format(pulse.works_today) }}</div>
+      <div class="k">Works added today</div></div>
+    <div class="today"><div class="v">{{ "{:,}".format(pulse.reviews_today) }}</div>
+      <div class="k">Reviews today</div></div>
+  </div>
+</div>
+<div class="liveasof">Updated {{ pulse.as_of.strftime('%H:%M:%S') }} UTC · refreshes every 20 seconds</div>

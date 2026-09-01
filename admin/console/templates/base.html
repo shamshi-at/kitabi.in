@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="icon" href="/static/logo.svg?v=2" type="image/svg+xml">
-<link rel="stylesheet" href="/static/admin.css?v=26">
-<script src="/static/admin.js?v=11" defer></script>
+<link rel="stylesheet" href="/static/admin.css?v=28">
+<script src="/static/admin.js?v=12" defer></script>
 <!-- Installable PWA (see main.py, static/sw.js). theme-color matches the top
      bar so the mobile status bar has no seam. -->
 <link rel="manifest" href="/manifest.webmanifest">
@@ -48,6 +48,11 @@
     {{ navlink('/moderation/reports', 'Reported content', 'reports', badges.reports) }}
     {{ navlink('/moderation/merges', 'Duplicate review', 'merges', badges.merges) }}
     {% if admin.role in ['editor', 'super_admin'] %}
+    {# Review-by-default, not complaint-driven: readers' catalogue additions and
+       uploaded pictures are public the moment they are made, so somebody has to
+       be able to look at them without waiting to be told. #}
+    {{ navlink('/moderation/incoming', 'New in catalog', 'incoming') }}
+    {{ navlink('/moderation/images', 'Uploaded images', 'images') }}
     {# Editor and above: a moderator handles reports; publishing to every
        reader's Home is an editor's job. #}
     <div class="grp">PROMOTIONS</div>
@@ -66,6 +71,10 @@
     {% endif %}
     <div class="grp">TRUST</div>
     {{ navlink('/audit', 'Audit log', 'audit') }}
+    {% if admin.role in ['editor', 'super_admin'] %}
+    {{ navlink('/system', 'Service health', 'system') }}
+    {% endif %}
+    {{ navlink('/handbook', 'Handbook', 'handbook') }}
     <div class="who">
       <b>{{ admin.email.split('@')[0] }}</b><s>{{ admin.email }}</s><br>
       <span class="role">{{ admin.role.replace('_', ' ') }}</span>

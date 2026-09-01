@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ topic.title }} · Handbook · Kitabi Admin{% endblock %}
+{% block heading %}{{ topic.title }}{% endblock %}
+{% block subheading %}{{ topic.summary }}{% endblock %}
+{% block topactions %}
+{% if topic.screen %}<a class="btn s p" href="{{ topic.screen }}">Open the screen →</a>{% endif %}
+<a class="btn s" href="/handbook" data-back>← Handbook</a>
+{% endblock %}
+{% block content %}
+<div class="hbwrap">
+  <div class="hbbody">
+    {% for s in topic.sections %}
+    <section id="{{ s.id }}" class="hbsection">
+      <h4>{{ s.heading }}
+        <a class="hbanchor" href="/handbook/{{ topic.slug }}#{{ s.id }}"
+          title="Link straight to this section" aria-label="Link to this section">#</a></h4>
+      {% for para in s.body %}<p>{{ fmt(para) }}</p>{% endfor %}
+      {% if s.steps %}
+      <ol class="hbsteps">{% for step in s.steps %}<li>{{ fmt(step) }}</li>{% endfor %}</ol>
+      {% endif %}
+      {% if s.warn %}<div class="note warn">{{ fmt(s.warn) }}</div>{% endif %}
+    </section>
+    {% endfor %}
+  </div>
+  <aside class="hbside">
+    <div class="card">
+      <div class="lbl">On this page</div>
+      <ul class="hbtoc">
+        {% for s in topic.sections %}
+        <li><a href="#{{ s.id }}">{{ s.heading }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="lbl">Other topics</div>
+      <ul class="hbtoc">
+        {% for t in topics %}{% if t.slug != topic.slug %}
+        <li><a href="/handbook/{{ t.slug }}">{{ t.title }}</a></li>
+        {% endif %}{% endfor %}
+      </ul>
+    </div>
+  </aside>
+</div>
+{% endblock %}

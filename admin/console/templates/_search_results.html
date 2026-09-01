@@ -2,12 +2,16 @@
 {% if items %}<div class="gs-group">{{ title }}</div>{% endif %}
 {% endmacro %}
 {% if not q %}
-  <div class="gs-hint">Type to search books, authors, publishers, readers — or an action.</div>
+  <div class="gs-hint">Type to search books, authors, publishers, readers, the handbook — or an action.</div>
 {% elif not has_any %}
   <div class="gs-hint">No matches for “{{ q }}”.</div>
 {% else %}
   {% if actions %}<div class="gs-group">ACTIONS</div>
     {% for a in actions %}<a class="gs-item" href="{{ a.href }}"><span class="gs-ic">›</span>{{ a.label }}</a>{% endfor %}
+  {% endif %}
+  {% if topics %}<div class="gs-group">HANDBOOK</div>
+    {% for t in topics %}<a class="gs-item" href="/handbook/{{ t.slug }}">
+      <span class="gs-ic">?</span><span>{{ t.title }}<span class="gs-sub">{{ t.summary }}</span></span></a>{% endfor %}
   {% endif %}
   {% if books %}<div class="gs-group">BOOKS</div>
     {% for b in books %}<a class="gs-item" href="/catalog/works/{{ b.id }}">
