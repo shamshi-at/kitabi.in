@@ -273,6 +273,16 @@ assertIncludes(ratedTypeset, 'rated 4.1 out of 5', 'a typeset cover carries the 
 var typesetStrip = String(bookStrip([{ title: 'No cover', slug: 'n' }], { priorityFirst: true }));
 assertExcludes(typesetStrip, 'fetchpriority', 'a generated cover carries no image priority hint');
 
+// A Malayalam title is a single unbreakable word. Without a break-inside-word
+// rule the browser sets it on one line past its 129px column, so card titles
+// ran into each other and typeset covers were clipped at their right edge
+// (owner report, 1 Sep 2026) — a defect only the Indic half of the catalogue
+// could ever show, because a space is a break opportunity.
+assert(
+  /body\{overflow-wrap:break-word\}/.test(CSS),
+  'a spaceless title wraps inside the word instead of running into its neighbour',
+);
+
 var bc = String(breadcrumb([{ label: 'Home', href: '/' }, { label: 'Chemmeen' }]));
 assertIncludes(bc, 'aria-label="Breadcrumb"', 'the breadcrumb is a labelled nav');
 assertIncludes(bc, '<span>Chemmeen</span>', 'the last crumb is not a link');

@@ -78,6 +78,13 @@ export const CSS = `
 html{-webkit-text-size-adjust:100%}
 body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.5;
   -webkit-font-smoothing:antialiased}
+/* A Malayalam title is one word — "ബാല്യകാലസ്മരണകൾ" has no space, hyphen or
+   soft break in it, so in a 129px card column a browser has nowhere to wrap and
+   sets the whole word on one line, past its box and into the next card's title.
+   A space is a break opportunity, which is why only the Indic half of the
+   catalogue ever looked broken. break-word, not anywhere, so a word breaks
+   only when it can't fit a line alone and no min-content width is lost. */
+body{overflow-wrap:break-word}
 a{color:inherit;text-decoration:none}
 img{max-width:100%;display:block}
 .serif{font-family:var(--serif)}

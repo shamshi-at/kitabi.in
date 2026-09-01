@@ -26,6 +26,9 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',system-ui,sans-serif;background:#E7DFCC;color:var(--ink);padding-bottom:80px}
+/* Matches css.js: a Malayalam title is one word with nowhere to break, so
+   without this it runs out of its card column and into the next one. */
+body{overflow-wrap:break-word}
 .ml{font-family:'Noto Sans Malayalam','Inter',sans-serif}
 .serif{font-family:'Fraunces',Georgia,serif}
 code,.mono{font-family:'JetBrains Mono',monospace;font-size:.92em}
