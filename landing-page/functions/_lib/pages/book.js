@@ -18,6 +18,7 @@ import {
   breadcrumb,
   byline,
   cover,
+  coverSrc,
   section,
   stars,
 } from '../components.js';
@@ -176,6 +177,52 @@ function factsTable(data) {
   return html`<div class="ftab">${rows}</div>`;
 }
 
+/** The link's mark: the back of a book — blurb lines and a barcode. Drawn
+ *  rather than photographed on purpose. These are reader photographs of real
+ *  printings and run to half a megabyte; the proxy passes them through at full
+ *  size (it has no resizer), so a thumbnail here would make every book page
+ *  carry a second full-resolution image to render a 34px speck. The photograph
+ *  loads when the reader asks for it, and not before. */
+const BACK_MARK = raw(
+  '<svg class="m" viewBox="0 0 24 34" aria-hidden="true" width="24" height="34">' +
+    '<rect x="1.6" y="1" width="20.8" height="32" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
+    '<path d="M6 8h12M6 12h12M6 16h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>' +
+    '<path d="M13 23v6M15 23v6M17 23v6M19 23v6" stroke="#B8862B" stroke-width="1.3" stroke-linecap="round"/>' +
+    '</svg>',
+);
+
+/**
+ * The hero cover, plus the back cover when the edition has one.
+ *
+ * A back cover is the one photograph no other catalogue shows, and on an
+ * Indian-language printing it is usually where the blurb, the translator's
+ * note and the price actually live — so it is worth more than a thumbnail the
+ * reader can't read. It is offered as a captioned link under the front cover
+ * and opens full-size in a `:target` overlay: both images are in the served
+ * HTML, and the overlay is pure CSS, because the public site runs no JavaScript
+ * to reveal content (docs/web-platform-plan.md rule 3).
+ */
+function coverBlock(work, edition) {
+  const front = cover(work, { priority: true, width: 212 });
+  if (!edition.back_cover_url) return html`<div>${front}</div>`;
+  const src = coverSrc(edition.back_cover_url);
+  return html`<div>
+    ${front}
+    <a class="bkc" href="#back-cover">
+      ${BACK_MARK}
+      <span class="l">Back cover<span class="s">The blurb, as printed</span></span>
+      <span class="go" aria-hidden="true">→</span>
+    </a>
+    <div class="lb" id="back-cover">
+      <a class="lbx" href="#main" aria-label="Close">×</a>
+      <figure>
+        <img src="${src}" alt="${`Back cover of ${work.title}`}" loading="lazy" decoding="async" />
+        <figcaption>Back cover · ${work.title}</figcaption>
+      </figure>
+    </div>
+  </div>`;
+}
+
 export function renderBook(data) {
   const primaryEdition = (data.editions || []).find((e) => e.cover_url) || data.editions?.[0] || {};
   const heroWork = {
@@ -216,7 +263,7 @@ export function renderBook(data) {
       ${breadcrumb(crumbs)}
 
       <div class="bhero">
-        <div>${cover(heroWork, { priority: true, width: 212 })}</div>
+        ${coverBlock(heroWork, primaryEdition)}
 
         <div>
           <h1>${data.title}</h1>

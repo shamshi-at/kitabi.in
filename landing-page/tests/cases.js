@@ -356,6 +356,34 @@ var noAffiliate = String(
 assertIncludes(noAffiliate, 'rel="nofollow noopener"', 'an unpaid link is still nofollow');
 assertExcludes(noAffiliate, 'may earn a commission', 'no disclosure when no link pays');
 assertExcludes(noAffiliate, 'rel="sponsored', 'no sponsored rel when no link pays');
+// The back cover (owner report, 1 Sep 2026): the site had no way to show one
+// at all. Field name is `back_cover_url`, from PublicEdition in
+// api/app/schemas/public.py — written from the schema, never from the
+// renderer, which is how the review-body bug shipped green (9 Aug 2026).
+var backDoc = String(
+  renderBook(Object.assign({}, BOOK, {
+    editions: [Object.assign({}, BOOK.editions[0],
+      { back_cover_url: 'https://ref.supabase.co/covers/back.jpg' })],
+  })).text(),
+);
+assertIncludes(backDoc, 'Back cover', 'a back cover is offered under the front one');
+assertIncludes(backDoc, 'id="back-cover"', 'and opens in the :target overlay — no JavaScript');
+assertIncludes(backDoc, 'Back cover of Chemmeen', 'the full-size image has a real alt');
+// Supabase-hosted covers go through our own proxy, same as the front.
+assertIncludes(backDoc, '/img/c?u=', 'the back cover is served through the cover proxy');
+// …once. These are reader photographs of real printings — half a megabyte each,
+// passed through at full size by a proxy with no resizer — so the page links to
+// the photograph and draws its own mark, rather than shipping a second
+// full-resolution image to render a 34px thumbnail nobody can read.
+assert(
+  backDoc.split('back.jpg').length - 1 === 1,
+  'the back cover photograph is fetched when opened, not on every page view',
+);
+// It belongs to the SAME printing as the front cover on display — a back cover
+// borrowed from another edition would be a different book's blurb.
+assertExcludes(bookDoc, 'id="back-cover"', 'an edition with no back cover offers nothing');
+assertExcludes(bookDoc, 'Back cover', '…and says nothing about one');
+
 assertIncludes(bookDoc, 'What readers said', 'reviews are on the page');
 assertIncludes(bookDoc, 'I read it first at fifteen', 'the review text is in the HTML');
 assertIncludes(bookDoc, 'fetchpriority="high"', 'the hero cover is the LCP element');

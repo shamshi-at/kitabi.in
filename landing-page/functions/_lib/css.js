@@ -147,6 +147,30 @@ img{max-width:100%;display:block}
 .cv.g7 .ct{background:linear-gradient(155deg,#5C4A73,#33264A);color:#E7DEF2}
 .cv.g8 .ct{background:linear-gradient(155deg,#2F6360,#153A38);color:#D8ECEA}
 
+/* ---------- the back cover ---------- */
+/* Offered as a captioned link under the front cover, opened full-size by a
+   :target overlay — no JavaScript, and both images are in the served HTML. */
+.bkc{display:flex;align-items:center;gap:11px;margin-top:12px;padding:8px 11px;
+  border:1px solid var(--line);border-radius:11px;background:var(--card)}
+.bkc:hover{border-color:var(--gold)}
+.bkc .m{flex-shrink:0;color:var(--oxblood)}
+.bkc .l{font-size:12.5px;font-weight:600;line-height:1.3}
+.bkc .s{display:block;font-size:11px;font-weight:400;color:var(--ink-soft);margin-top:2px}
+.bkc .go{margin-left:auto;color:var(--oxblood);font-weight:700}
+.lb{display:none}
+.lb:target{display:flex;position:fixed;inset:0;z-index:90;padding:24px;
+  background:rgba(20,13,8,.93);align-items:center;justify-content:center}
+.lb figure{max-width:min(720px,94vw);text-align:center}
+/* The photograph is only fetched when the overlay opens (it is inside a
+   display:none container), so reserve a frame for it — min-height + contain
+   means the box appears at once and the image drops into it, rather than the
+   overlay opening onto nothing for a second on a slow connection. */
+.lb img{max-width:100%;max-height:80vh;min-height:38vh;object-fit:contain;border-radius:5px;
+  background:rgba(246,240,227,.07);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.lb figcaption{color:#E9DCC2;font-size:12px;margin-top:13px;letter-spacing:.03em}
+.lbx{position:absolute;top:14px;right:16px;width:38px;height:38px;border-radius:999px;font-size:21px;
+  display:flex;align-items:center;justify-content:center;background:rgba(246,240,227,.16);color:#F6F0E3}
+
 /* ---------- grids ---------- */
 .strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:18px}
 .bk .bt{font-family:var(--serif);font-size:13.5px;font-weight:600;margin-top:9px;line-height:1.3}
