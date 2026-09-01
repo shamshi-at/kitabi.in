@@ -17,7 +17,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.api.deps import DbSession
-from app.models import Author, Publisher
+from app.models import Author, Publisher, Work
 from app.schemas import public as P
 from app.services import merge_service, public_service
 
@@ -251,3 +251,37 @@ async def merged_target(kind: str, key: str, db: DbSession, response: Response) 
         raise _not_found(kind.title())
     _cached(response, _CACHE)
     return {"slug": target.slug or str(target.id)}
+
+
+# The kinds a kitabi.in URL can name, in the URL's own words.
+_KINDS = {"book": Work, "author": Author, "publisher": Publisher}
+
+
+@router.get("/id/{kind}/{key}")
+async def resolve_id(kind: str, key: str, db: DbSession, response: Response) -> dict:
+    """The UUID behind a public URL key — how the *app* opens a kitabi.in link.
+
+    The site addresses a row by slug (`/book/chemmeen`); every in-app screen
+    addresses it by id, and the catalog endpoints take UUIDs. Universal links
+    claim `/book/*`, `/author/*` and `/publisher/*`, so without this the app
+    receives a slug it has no way to turn into a screen — it showed "Page Not
+    Found" instead of the book (owner report, 1 Sep 2026).
+
+    Resolving here rather than in the app keeps one slug→row rule
+    (`public_service.resolve`), the same one every public page already uses,
+    and follows a merge so a link to an author who was merged away opens the
+    survivor instead of dead-ending.
+    """
+    model = _KINDS.get(kind)
+    if model is None:
+        raise _not_found("Kind")
+    row = await public_service.resolve(db, model, key)
+    if row is None and kind != "book":
+        # Merged rows are excluded from `resolve` — chase the survivor, same
+        # as `/merged/...` does for the edge's 301.
+        row = await public_service.resolve_including_merged(db, model, key)
+        row = await merge_service.resolve_merged(db, f"{kind}s", row) or row
+    if row is None or row.deleted_at is not None:
+        raise _not_found(kind.title())
+    _cached(response, _CACHE)
+    return {"id": str(row.id), "slug": row.slug or str(row.id)}

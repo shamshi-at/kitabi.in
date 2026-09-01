@@ -41,7 +41,12 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="in.kitabi.kitabi" android:host="login-callback"/>
             </intent-filter>
-            <!-- Shareable content links (kitabi.in/b|a|p/:id) → open in-app.
+            <!-- Shareable content links → open in-app. Two spellings of each
+                 section: /b|a|p/:uuid is the original share URL (still indexed,
+                 still in every share card ever generated) and /book|author|
+                 publisher/:slug is the canonical page the site serves today.
+                 Both are claimed by apple-app-site-association too, and both
+                 resolve through shareRouteFor (core/router/app_router.dart).
                  autoVerify uses the assetlinks.json at kitabi.in/.well-known;
                  the real signing SHA-256 must be filled in there first. Handled
                  by the content deep-link listener (core/deep_links.dart). -->
@@ -52,11 +57,17 @@
                 <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/b/"/>
                 <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/a/"/>
                 <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/p/"/>
+                <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/book/"/>
+                <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/author/"/>
+                <data android:scheme="https" android:host="kitabi.in" android:pathPrefix="/publisher/"/>
                 <!-- www serves the same site; claim it so a shared www link
                      hands off too (deep_links.dart already accepts the host). -->
                 <data android:scheme="https" android:host="www.kitabi.in" android:pathPrefix="/b/"/>
                 <data android:scheme="https" android:host="www.kitabi.in" android:pathPrefix="/a/"/>
                 <data android:scheme="https" android:host="www.kitabi.in" android:pathPrefix="/p/"/>
+                <data android:scheme="https" android:host="www.kitabi.in" android:pathPrefix="/book/"/>
+                <data android:scheme="https" android:host="www.kitabi.in" android:pathPrefix="/author/"/>
+                <data android:scheme="https" android:host="www.kitabi.in" android:pathPrefix="/publisher/"/>
             </intent-filter>
         </activity>
         <!-- image_cropper (UCrop) — the crop screen shown after picking a cover /

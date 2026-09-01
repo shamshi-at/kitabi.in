@@ -9,6 +9,7 @@ import '../../features/catalog/presentation/add_edition_screen.dart';
 import '../../features/catalog/presentation/author_browse_screen.dart';
 import '../../features/catalog/presentation/author_picker_screen.dart';
 import '../../features/catalog/presentation/book_link_resolver_screen.dart';
+import '../../features/catalog/presentation/catalog_link_resolver.dart';
 import '../../features/catalog/presentation/browse_screen.dart';
 import '../../features/catalog/presentation/catalog_search_screen.dart';
 import '../../features/catalog/presentation/isbn_scan_screen.dart';
@@ -72,9 +73,12 @@ abstract final class Routes {
   // Short, shareable/deep-link paths that mirror the landing page's public
   // pages (kitabi.in/b/:id, /a/:id, /p/:id). Registering them here means an
   // opened universal link lands on the right screen in-app.
-  static const bookLink = '/b/:workId';
-  static const authorLink = '/a/:authorId';
-  static const publisherLink = '/p/:publisherId';
+  // The path parameter is a *key*: a UUID from an old `/b/<uuid>` link, or the
+  // slug from today's canonical `/book/<slug>` one. Resolved before the screen
+  // behind it is built.
+  static const bookLink = '/b/:key';
+  static const authorLink = '/a/:key';
+  static const publisherLink = '/p/:key';
   static const library = '/library';
   static const lendingLedger = '/lending';
   static const connections = '/connections';
@@ -133,24 +137,45 @@ String? readingTimerRouteFor(Uri uri) {
   return Routes.readingTimerPath(id);
 }
 
-/// The kitabi.in hosts whose share links open in the app, and the three
-/// sections they can name (`/b/` book, `/a/` author, `/p/` publisher) — the
-/// same set the Android manifest's autoVerify filters and the iOS
-/// apple-app-site-association declare.
+/// The kitabi.in hosts whose share links open in the app, and every section
+/// they can name, mapped to the in-app path that opens it — the same set the
+/// Android manifest's autoVerify filters and the iOS apple-app-site-association
+/// declare.
+///
+/// Two spellings of each, because the site has both: `/b/<uuid>` is the
+/// original share URL (still in Google's index, still in every share card ever
+/// generated, and the only shape the association files claimed when the first
+/// installs happened), and `/book/<slug>` is the canonical page a reader
+/// actually lands on and shares today. The association files claim both; the
+/// app recognised only the short one, so a tap on Safari's "Open in the Kitabi
+/// app" banner raised the app on Home and — once it was warm — showed "Page Not
+/// Found: https://kitabi.in/book/…", because the whole URI fell through to
+/// go_router with nothing to match (owner report, 1 Sep 2026).
 const _shareHosts = {'kitabi.in', 'www.kitabi.in'};
-const _shareSections = {'b', 'a', 'p'};
+const _shareSections = {
+  'b': 'b',
+  'a': 'a',
+  'p': 'p',
+  'book': 'b',
+  'author': 'a',
+  'publisher': 'p',
+};
 
 /// The route a shared kitabi.in link maps to, or null when it isn't one.
 /// Anything else on the domain (`/discover`, the marketing pages) is not ours
 /// to intercept and belongs in a browser.
+///
+/// The key kept here may be a slug rather than an id — the screens behind
+/// these paths resolve it (see `CatalogLinkResolver`), because only the server
+/// knows which row a slug names.
 String? shareRouteFor(Uri uri) {
   if (!uri.isScheme('https') || !_shareHosts.contains(uri.host)) return null;
   final segments = uri.pathSegments;
   if (segments.length < 2) return null;
-  final section = segments[0];
-  final id = segments[1];
-  if (!_shareSections.contains(section) || id.isEmpty) return null;
-  return '/$section/$id';
+  final section = _shareSections[segments[0]];
+  final key = segments[1];
+  if (section == null || key.isEmpty) return null;
+  return '/$section/$key';
 }
 
 /// Every URI that can arrive from *outside* the app, mapped to an in-app
@@ -622,20 +647,29 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.bookLink,
         name: 'book-link',
-        builder: (context, state) =>
-            BookLinkResolverScreen(workId: state.pathParameters['workId']!),
+        builder: (context, state) => CatalogLinkResolver(
+          kind: CatalogLinkKind.book,
+          linkKey: state.pathParameters['key']!,
+          builder: (id) => BookLinkResolverScreen(workId: id),
+        ),
       ),
       GoRoute(
         path: Routes.authorLink,
         name: 'author-link',
-        builder: (context, state) =>
-            AuthorBrowseScreen(authorId: state.pathParameters['authorId']!),
+        builder: (context, state) => CatalogLinkResolver(
+          kind: CatalogLinkKind.author,
+          linkKey: state.pathParameters['key']!,
+          builder: (id) => AuthorBrowseScreen(authorId: id),
+        ),
       ),
       GoRoute(
         path: Routes.publisherLink,
         name: 'publisher-link',
-        builder: (context, state) =>
-            PublisherBrowseScreen(publisherId: state.pathParameters['publisherId']!),
+        builder: (context, state) => CatalogLinkResolver(
+          kind: CatalogLinkKind.publisher,
+          linkKey: state.pathParameters['key']!,
+          builder: (id) => PublisherBrowseScreen(publisherId: id),
+        ),
       ),
       GoRoute(
         path: Routes.reviewEditor,

@@ -389,6 +389,79 @@ async def test_a_soft_deleted_edition_does_not_resolve(unauthenticated_client, d
 
 
 # --------------------------------------------------------------------------
+# Slug → id, for the app's universal links
+# --------------------------------------------------------------------------
+
+
+async def test_id_lookup_resolves_a_slug_and_a_uuid(unauthenticated_client, db_sessionmaker):
+    """The app opens a tapped kitabi.in link through here.
+
+    Universal links claim `/book/*`, `/author/*` and `/publisher/*` — canonical
+    slug URLs — while every in-app screen and every catalog endpoint addresses a
+    row by UUID. Both key forms resolve, forever: `/b/<uuid>` links are still in
+    the index and still bound to the association files.
+    """
+    async with db_sessionmaker() as db:
+        work, author = await _seed_book(db)
+        publisher = Publisher(name="DC Books")
+        db.add(publisher)
+        await db.flush()
+        await slug_service.ensure_slug(db, publisher)
+        await db.commit()
+
+    for kind, row in (("book", work), ("author", author), ("publisher", publisher)):
+        for key in (row.slug, str(row.id)):
+            resp = await unauthenticated_client.get(f"/public/id/{kind}/{key}")
+            assert resp.status_code == 200, (kind, key)
+            assert resp.json() == {"id": str(row.id), "slug": row.slug}, (kind, key)
+            assert "s-maxage" in resp.headers.get("cache-control", "")
+
+
+async def test_id_lookup_follows_a_merged_author(unauthenticated_client, db_sessionmaker):
+    """A link to an author who was merged away opens the survivor. Same rule the
+    edge's 301 follows — an app that 404s where the web redirects is a worse
+    answer than the browser the reader came from."""
+    async with db_sessionmaker() as db:
+        survivor = Author(name="Vaikom Muhammad Basheer")
+        db.add(survivor)
+        await db.flush()
+        duplicate = Author(name="Basheer", merged_into_id=survivor.id, deleted_at=datetime.now(UTC))
+        db.add(duplicate)
+        await db.flush()
+        await slug_service.ensure_slug(db, survivor)
+        await slug_service.ensure_slug(db, duplicate)
+        await db.commit()
+
+    resp = await unauthenticated_client.get(f"/public/id/author/{duplicate.slug}")
+    assert resp.status_code == 200
+    assert resp.json()["id"] == str(survivor.id)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/public/id/book/no-such-book",
+        "/public/id/series/anything",  # not a kind the app links to
+        f"/public/id/author/{uuid.uuid4()}",
+    ],
+)
+async def test_id_lookup_404s_rather_than_guessing(unauthenticated_client, path):
+    resp = await unauthenticated_client.get(path)
+    assert resp.status_code == 404
+    assert resp.json()["code"] == "not_found"
+
+
+async def test_id_lookup_does_not_resolve_a_deleted_book(unauthenticated_client, db_sessionmaker):
+    async with db_sessionmaker() as db:
+        work, _ = await _seed_book(db)
+        (await db.get(Work, work.id)).deleted_at = datetime.now(UTC)
+        await db.commit()
+
+    resp = await unauthenticated_client.get(f"/public/id/book/{work.slug}")
+    assert resp.status_code == 404
+
+
+# --------------------------------------------------------------------------
 # Through the router
 # --------------------------------------------------------------------------
 

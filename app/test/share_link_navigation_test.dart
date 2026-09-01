@@ -79,6 +79,47 @@ void main() {
       });
     }
 
+    // The canonical URLs the site actually serves — a reader shares (and
+    // Safari's "Open in the Kitabi app" banner opens) `/book/<slug>`, not
+    // `/b/<uuid>`. Both are claimed by the association files; only the short
+    // spelling was recognised here, so the banner raised the app on Home and,
+    // once warm, showed "Page Not Found: https://kitabi.in/book/…" — the whole
+    // URI fell through to go_router with nothing to match (1 Sep 2026).
+    for (final (section, short, label) in [
+      ('book', 'b', 'book'),
+      ('author', 'a', 'author'),
+      ('publisher', 'p', 'publisher'),
+    ]) {
+      testWidgets('kitabi.in/$section/<slug> lands on the $label page', (tester) async {
+        final router = buildRouter(booted: true);
+        await tester.pumpWidget(harness(router));
+        await tester.pumpAndSettle();
+
+        router.go('https://kitabi.in/$section/murder-on-the-orient-express');
+        await tester.pumpAndSettle();
+
+        expect(find.text('$label murder-on-the-orient-express'), findsOneWidget);
+        expect(find.textContaining('Page Not Found'), findsNothing);
+        expect(
+          router.routerDelegate.currentConfiguration.uri.path,
+          '/$short/murder-on-the-orient-express',
+        );
+      });
+    }
+
+    testWidgets('a deeper page under a book still opens the book', (tester) async {
+      // /book/<slug>/reviews is a real page on the site and is claimed by the
+      // same `/book/*` pattern, so it arrives here too.
+      final router = buildRouter(booted: true);
+      await tester.pumpWidget(harness(router));
+      await tester.pumpAndSettle();
+
+      router.go('https://kitabi.in/book/chemmeen/reviews');
+      await tester.pumpAndSettle();
+
+      expect(find.text('book chemmeen'), findsOneWidget);
+    });
+
     testWidgets('www. is the same link', (tester) async {
       final router = buildRouter(booted: true);
       await tester.pumpWidget(harness(router));
@@ -109,6 +150,9 @@ void main() {
       expect(externalRouteFor(Uri.parse('https://example.com/a/abc')), isNull);
       expect(externalRouteFor(Uri.parse('https://kitabi.in/discover')), isNull);
       expect(externalRouteFor(Uri.parse('https://kitabi.in/a/')), isNull);
+      // Sections the site has but the app does not claim stay in the browser.
+      expect(externalRouteFor(Uri.parse('https://kitabi.in/series/malgudi')), isNull);
+      expect(externalRouteFor(Uri.parse('https://kitabi.in/book/')), isNull);
       // Sign-in must keep working: that callback shares the app scheme.
       expect(externalRouteFor(Uri.parse('in.kitabi.kitabi://login-callback/')), isNull);
       // The Live Activity link still resolves through the same door.

@@ -975,6 +975,30 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   14 Aug. Note which screen each family wants: the "stopped while you were
   away" notice is *about* a sitting that has ended, so the timer is the one
   place it must not open.
+- **The association files and the app's own link rule are one decision written
+  in two places — and only one of them was updated when the site's URLs
+  changed.** `.well-known/apple-app-site-association` claims `/book/*`,
+  `/author/*` and `/publisher/*` (the canonical slug URLs the web platform
+  serves today) alongside the original `/b|a|p/<uuid>` share links, while
+  `shareRouteFor` in the app recognised only the short spelling. So iOS handed
+  the app a URL it had no rule for: the first tap on Safari's "Open in the
+  Kitabi app" banner raised Kitabi on **Home** (the redirect found no external
+  route, fell through to the boot gates and landed on the default), and the
+  second — app already warm, gates all passing — let the whole URI reach
+  go_router, which showed *"GoException: no routes for location:
+  https://kitabi.in/book/murder-on-the-orient-express"* (owner report,
+  1 Sep 2026). Claiming a URL pattern is a promise the app has to keep; the
+  Android manifest, the AASA and `shareRouteFor` must be edited together, and
+  the manifest was the third copy — it had never claimed the slug URLs at all,
+  so the same link opened Chrome on Android. Second half, and the reason it
+  isn't a one-line fix: the canonical URL names a row by **slug**, and every
+  in-app screen and catalog endpoint addresses it by UUID. Only the server
+  knows which row a slug names, so `GET /public/id/{kind}/{key}` resolves both
+  key forms with the same rule the public pages use, and `CatalogLinkResolver`
+  sits in front of the three link routes — passing a UUID straight through, so
+  a `/b/<uuid>` link still costs no round trip. Corollary for anything else
+  reachable from outside: a *display* URL that changes shape is a deep-link
+  change, even when no app code was touched in the same commit.
 - **A `flutter run` debug build cannot test a cold start on a physical iPhone —
   and the failure mimics a wedge in our own boot gate.** Killing the app kills
   the tool, and reopening the debug build from the home screen sticks on the

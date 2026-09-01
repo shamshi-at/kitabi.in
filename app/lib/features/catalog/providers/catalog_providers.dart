@@ -53,6 +53,14 @@ final seriesWorksProvider =
   return ref.watch(apiClientProvider).seriesWorks(seriesId);
 });
 
+/// The id behind a shared kitabi.in link whose key is a slug — see
+/// `presentation/catalog_link_resolver.dart` for why the app can't work this
+/// out for itself. A UUID key never reaches here.
+final resolvedCatalogIdProvider =
+    FutureProvider.autoDispose.family<String, ({String kind, String key})>((ref, args) {
+  return ref.watch(apiClientProvider).resolveCatalogId(args.kind, args.key);
+});
+
 /// Full Work detail — used by the add/edit form when editing an existing
 /// catalog entry (create passes no id and skips this entirely).
 final workProvider =

@@ -615,6 +615,18 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// The id behind a kitabi.in URL key — `kind` is `book`, `author` or
+  /// `publisher`, `key` the last segment of the link the reader tapped.
+  ///
+  /// The site names a row by slug (`kitabi.in/book/chemmeen`); every screen
+  /// and every catalog endpoint here takes a UUID. One server-side rule
+  /// resolves both forms, the same one the public pages use — the app never
+  /// tries to guess whether a key is a slug beyond "it isn't a UUID".
+  Future<String> resolveCatalogId(String kind, String key) async {
+    final res = await _dio.get('/public/id/$kind/$key');
+    return (res.data as Map<String, dynamic>)['id'] as String;
+  }
+
   /// Every public review on a book (newest first — sorting for display
   /// happens client-side over this list) plus the community rating picture
   /// (`rating_average`, `rating_count`, `rating_distribution`) computed from
