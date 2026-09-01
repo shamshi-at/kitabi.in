@@ -205,7 +205,17 @@ img{max-width:100%;display:block}
 }
 
 /* ---------- grids ---------- */
+/* 122px packs eight covers across a 1180px page, and a track that narrow is
+   thinner than a single Malayalam word — ബാല്യകാലസ്മരണകൾ sets at 136px — so from
+   600px up every tablet and desktop card broke it and left the chillu ൾ alone
+   on a second line. 138px spends one column at each width (eight become seven
+   at 1200px) for a 147px track that holds the word whole.
+   Held back under 360px deliberately: there the grid is already down to its
+   last two columns, so ANY larger minimum drops it to one 276px card per row.
+   A 320px phone keeps the narrow track and lets break-word do the wrapping,
+   which is the job that rule exists for. */
 .strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:18px}
+@media(min-width:360px){.strip{grid-template-columns:repeat(auto-fill,minmax(138px,1fr))}}
 .bk .bt{font-family:var(--serif);font-size:13.5px;font-weight:600;margin-top:9px;line-height:1.3}
 .bk:hover .bt{color:var(--oxblood)}
 .bk .ba{font-size:11.5px;color:var(--ink-soft);margin-top:2px}

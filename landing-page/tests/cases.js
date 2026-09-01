@@ -283,6 +283,17 @@ assert(
   'a spaceless title wraps inside the word instead of running into its neighbour',
 );
 
+// Wrapping stopped the collision but left the chillu ൾ alone on line two, at
+// every tablet and desktop width — a 126px track cannot hold a 136px word.
+// Both halves of the answer are load-bearing and each undoes the other if
+// removed: the raised floor widens the track from 600px up, and the 122px base
+// survives below 360px because there the grid is already on its last two
+// columns and any larger minimum yields ONE 276px card per row.
+assert(/\.strip\{[^}]*minmax\(122px,1fr\)/.test(CSS),
+  'the narrowest phones keep two columns rather than one giant card');
+assert(/@media\(min-width:360px\)\{\.strip\{[^}]*minmax\(138px,1fr\)/.test(CSS),
+  'everything above a small phone gets a track wide enough for one Malayalam word');
+
 var bc = String(breadcrumb([{ label: 'Home', href: '/' }, { label: 'Chemmeen' }]));
 assertIncludes(bc, 'aria-label="Breadcrumb"', 'the breadcrumb is a labelled nav');
 assertIncludes(bc, '<span>Chemmeen</span>', 'the last crumb is not a link');
