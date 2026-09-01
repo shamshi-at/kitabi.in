@@ -371,6 +371,13 @@ assertIncludes(backDoc, 'id="cover-front"', '…alongside the front');
 assertIncludes(backDoc, 'class="cvz" href="#cover-front"', 'the hero cover opens the viewer');
 assertIncludes(backDoc, 'class="cvb" href="#cover-back"',
   'and the back cover is tucked at its corner, as it is in the app');
+// …in front of it. The front cover's own <img> is z-index 2 inside a `.cv` that
+// makes no stacking context, so a thumbnail with no z-index is painted under
+// the cover it is tucked against (owner report, 1 Sep 2026).
+assert(
+  /\.cvb\{[^}]*z-index:4/.test(CSS),
+  'the tucked thumbnail sits above the front cover, not behind it',
+);
 assertIncludes(backDoc, 'class="cvt"', 'the two sides sit in one scroll-snap track — swipe is native');
 assertIncludes(backDoc, 'class="cvn n" href="#cover-back"', 'and the arrows are plain fragment links');
 assertIncludes(backDoc, 'Back cover of Chemmeen', 'the full-size image has a real alt');

@@ -159,7 +159,11 @@ img{max-width:100%;display:block}
    It is the same URL the viewer's second slide uses, so the one download
    serves both and opening the viewer is instant; fetchpriority=low keeps
    those bytes behind the hero cover, which is the page's LCP. */
-.cvb{position:absolute;right:-8px;bottom:-8px;width:clamp(58px,34%,86px);display:block;
+/* z-index 4 is not decoration: .cv is positioned but makes no stacking
+   context, so the front cover's own layers escape into this one — its image
+   sits at 2 and the spine rule at 3, and a thumbnail with no z-index at all
+   was painted UNDER the cover it is supposed to be tucked against. */
+.cvb{position:absolute;right:-8px;bottom:-8px;z-index:4;width:clamp(58px,34%,86px);display:block;
   border-radius:2px 5px 5px 2px;overflow:hidden;box-shadow:0 4px 14px rgba(43,33,24,.34);
   outline:2px solid var(--paper)}
 .cvb img{display:block;width:100%;aspect-ratio:2/3;object-fit:cover}
