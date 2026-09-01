@@ -22,7 +22,18 @@ import {
   section,
   stars,
 } from '../components.js';
-import { authorPath, bookPath, clamp, html, joinDot, num, publisherPath, raw, seg } from '../html.js';
+import {
+  authorPath,
+  bookPath,
+  clamp,
+  html,
+  joinDot,
+  num,
+  publisherPath,
+  raw,
+  seg,
+  seriesPath,
+} from '../html.js';
 import { page } from '../layout.js';
 
 const LANG_PATH = (l) => `/language/${seg(String(l).toLowerCase())}`;
@@ -87,12 +98,24 @@ function editionsTable(editions) {
       (e) => html`<div class="ed">
         ${cover({ title: e.publisher?.name || 'Edition', cover_url: e.cover_url }, { width: 44 })}
         <div>
-          <div class="et">${e.publisher?.name || 'Unknown publisher'}</div>
+          ${e.publisher
+            ? html`<a class="et" href="${publisherPath(e.publisher)}">${e.publisher.name}</a>`
+            : html`<div class="et">Unknown publisher</div>`}
           <div class="em">${joinDot([e.language, e.format])}</div>
         </div>
-        <div class="col"><b>${e.year || '—'}</b>${e.isbn ? `ISBN ${e.isbn}` : 'No ISBN'}</div>
-        <div class="col"><b>${e.page_count || '—'}</b>pages</div>
-        <div>${e.series?.name ? html`<span class="pill p-slate">${e.series.name}</span>` : ''}</div>
+        <!-- The three facts are one cell, not three. As separate grid children
+             they flowed into the two-column phone grid on their own — the
+             year/ISBN block landed in the 44px cover column and spilled over
+             the pages beside it (owner report, 1 Sep 2026). -->
+        <div class="edf">
+          <div class="col"><b>${e.year || '—'}</b>${e.isbn ? `ISBN ${e.isbn}` : 'No ISBN'}</div>
+          <div class="col"><b>${e.page_count || '—'}</b>pages</div>
+          <div class="col">
+            ${e.series?.name
+              ? html`<a class="pill p-slate" href="${seriesPath(e.series)}">${e.series.name}</a>`
+              : ''}
+          </div>
+        </div>
       </div>`,
     )}
   </div>`;

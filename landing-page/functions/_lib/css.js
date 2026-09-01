@@ -306,9 +306,15 @@ img{max-width:100%;display:block}
 
 /* ---------- editions ---------- */
 .eds{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
-.ed{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:center;
+.ed{display:grid;grid-template-columns:44px 1fr;gap:12px 14px;align-items:center;
   padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px}
-@media(min-width:700px){.ed{grid-template-columns:44px 1fr 128px 92px 88px}}
+/* On a phone the facts are their own row under the publisher — three grid
+   children of their own would flow into the 44px cover column. */
+.edf{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center}
+@media(min-width:700px){
+  .ed{grid-template-columns:44px 1fr auto}
+  .edf{grid-column:auto;display:grid;grid-template-columns:128px 92px 88px;gap:0}
+}
 .ed:last-child{border-bottom:0}
 .ed:nth-child(even){background:#FDFAF1}
 .ed .et{font-family:var(--serif);font-size:14px;font-weight:600;line-height:1.28}
@@ -320,7 +326,15 @@ img{max-width:100%;display:block}
 .ratings{display:grid;grid-template-columns:1fr;gap:22px;align-items:center;margin-bottom:22px}
 @media(min-width:620px){.ratings{grid-template-columns:180px 1fr;gap:30px}}
 .score{text-align:center}
-.score .n{font-family:var(--serif);font-size:48px;font-weight:700;line-height:1}
+/* DIRECT child only. stars() renders its own .n ("4.4 · 312 ratings")
+   inside this block, and a descendant selector set that to 48px serif too —
+   so the average was drawn twice, the second copy landing on top of the star
+   row (owner report, 1 Sep 2026). */
+.score>.n{font-family:var(--serif);font-size:48px;font-weight:700;line-height:1}
+/* …and the star row's number is redundant under a 48px copy of itself. The
+   screen-reader text lives in its own .sr span, so this hides nothing but ink. */
+.score .stars .n{display:none}
+.score .stars{justify-content:center}
 .score .of{font-size:12.5px;color:var(--ink-soft);margin-top:4px}
 .hist{display:flex;flex-direction:column;gap:6px}
 .hbar{display:flex;align-items:center;gap:10px;font-size:12px}

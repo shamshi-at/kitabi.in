@@ -318,6 +318,16 @@ assertIncludes(bookDoc, '9788126403455', 'the ISBN is in the served HTML');
 // Onward links — a book page is the densest crawl node on the site.
 assertIncludes(bookDoc, 'href="/author/thakazhi-sivasankara-pillai"', 'links to the author');
 assertIncludes(bookDoc, 'href="/publisher/dc-books"', 'links to the publisher');
+// From the editions table too, not only the hero rail: it names the publisher
+// in every row and linked none of them (owner report, 1 Sep 2026).
+assertIncludes(bookDoc, '<a class="et" href="/publisher/dc-books"',
+  'every edition row names a publisher and links it');
+// The three facts are ONE grid cell. As separate children they flowed into the
+// phone layout's two columns on their own and overlapped each other.
+assertIncludes(bookDoc, 'class="edf"', 'an edition row\'s facts are one cell');
+var edf = bookDoc.slice(bookDoc.indexOf('class="edf"'));
+edf = edf.slice(0, edf.indexOf('</div></div>') + 1);
+assert((edf.match(/class="col"/g) || []).length === 3, '…holding all three of them');
 assertIncludes(bookDoc, 'href="/language/malayalam"', 'links to the language hub');
 assertIncludes(bookDoc, 'href="/genre/literary-fiction"', 'links to the genre hub');
 assertIncludes(bookDoc, 'href="/book/kayar"', 'links to more by the author');
@@ -418,6 +428,10 @@ assertExcludes(typesetDoc, 'class="cvv"', '…and carries no viewer');
 assertIncludes(bookDoc, 'class="lb">5 ★', 'the histogram labels are untouched');
 
 assertIncludes(bookDoc, 'What readers said', 'reviews are on the page');
+// The big average is the score block's DIRECT child. stars() renders its own
+// .n inside that block, and a descendant selector drew that at 48px serif as
+// well — the average appeared twice, the second copy over the stars.
+assert(/\.score>\.n\{/.test(CSS), 'only the score block\'s own number is display-sized');
 assertIncludes(bookDoc, 'I read it first at fifteen', 'the review text is in the HTML');
 assertIncludes(bookDoc, 'fetchpriority="high"', 'the hero cover is the LCP element');
 assertIncludes(bookDoc, '"@type":"Book"', 'Book JSON-LD is emitted');
