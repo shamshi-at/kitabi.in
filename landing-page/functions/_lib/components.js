@@ -195,10 +195,14 @@ export function byline(authors) {
 /** Where the app can actually be got. Live stores are the ONLY thing that may
  *  render as a link — a store badge that goes nowhere is worse than one that
  *  says it isn't there yet, because a reader only learns the difference by
- *  tapping it. iOS is in App Store review as of 31 Aug 2026; when it is
- *  approved, fill in APP_STORE_URL and the badge becomes a link on its own. */
+ *  tapping it. Both are live now: Android 31 Aug 2026, iOS 1 Sep 2026.
+ *
+ *  The App Store link carries no country segment on purpose. Apple resolves
+ *  `/app/id…` to whichever storefront the visitor actually shops in; a `/us/`
+ *  or `/in/` path sends everyone else through a redirect at best, and this
+ *  site's readers are in India and its diaspora both. */
 export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=in.kitabi.kitabi';
-export const APP_STORE_URL = null;
+export const APP_STORE_URL = 'https://apps.apple.com/app/id6787361959';
 
 // The two store marks, inline so the band costs no extra request. Same paths as
 // the ones on /app (landing-page/app.html) — the two surfaces are the same

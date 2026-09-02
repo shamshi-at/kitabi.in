@@ -1124,15 +1124,25 @@ assertIncludes(
 );
 assertExcludes(band, 'href="#"', 'no badge links to nowhere');
 
-// The App Store half, while APP_STORE_URL is null. An inert <span>, not an <a>:
-// the reader must not learn which button works by tapping it.
-assert(APP_STORE_URL === null, 'iOS is still in review — nothing to link to yet');
-assertIncludes(band, '<span class="store ghost off"', 'the App Store button is inert while in review');
-assertIncludes(band, '<small>In review</small>', 'and says so, rather than looking clickable');
+// The App Store half, live since 1 Sep 2026. The rule it was written for still
+// stands and is what the inert <span> branch exists for: a reader must never
+// learn which button works by tapping it. So a store with a URL is an <a>, and
+// a store without one is a <span> that says so.
+assertIncludes(band, APP_STORE_URL, 'the app band carries the real App Store URL');
+assertIncludes(
+  band,
+  '<a class="store" href="' + APP_STORE_URL + '"',
+  'the App Store is a real link now, not a dead badge',
+);
+assertExcludes(band, 'In review', 'and no longer says it is in review');
+// No country segment: Apple resolves this to the visitor's own storefront, and
+// this site's readers are in India and its diaspora both.
+assertExcludes(band, 'apps.apple.com/us/', 'the App Store link is storefront-neutral');
+assertExcludes(band, 'apps.apple.com/in/', '…in both directions');
 
-// The band must never invent a second <a> for a store that has no URL: exactly
-// one anchor while exactly one store is live.
-assert((band.match(/<a class="store"/g) || []).length === 1, 'one live store, one link');
+// Two live stores, two links — and the inert branch is still there for the
+// next platform that is announced before it ships.
+assert((band.match(/<a class="store"/g) || []).length === 2, 'both stores are links');
 
 // Both halves are the same object — same icon, same two-line label — so the row
 // reads as one row of buttons. Only the kicker line differs.

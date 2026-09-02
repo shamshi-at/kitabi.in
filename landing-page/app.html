@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Get Kitabi — Beyond the Bookshelf | Book and Library Tracker</title>
-<meta name="description" content="Catalogue every book you own with a barcode scan, track lending, log reading sessions, and search Malayalam, Tamil &amp; English shelves in any script. Free &amp; private — download on Google Play.">
+<meta name="description" content="Catalogue every book you own with a barcode scan, track lending, log reading sessions, and search Malayalam, Tamil &amp; English shelves in any script. Free &amp; private — on the App Store and Google Play.">
 <meta name="keywords" content="book tracker app, home library app, personal library, book lending tracker, reading tracker, reading timer app, book barcode scanner, Goodreads import, Goodreads alternative, book catalogue app, book collection manager, Malayalam books, Tamil books, Indian languages reading app, library app India, Kitabi">
 <meta name="author" content="Kitabi">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -19,7 +19,7 @@
 <meta property="og:site_name" content="Kitabi">
 <meta property="og:locale" content="en_IN">
 <meta property="og:title" content="Kitabi — Beyond the Bookshelf">
-<meta property="og:description" content="Every book you own, who borrowed what, what to read next — free, private. Out now on Google Play.">
+<meta property="og:description" content="Every book you own, who borrowed what, what to read next — free, private. Out now on iPhone and Android.">
 <meta property="og:url" content="https://kitabi.in/app">
 <meta property="og:image" content="https://kitabi.in/og-image.png">
 <meta property="og:image:secure_url" content="https://kitabi.in/og-image.png">
@@ -57,7 +57,7 @@
       "@type": "MobileApplication",
       "name": "Kitabi",
       "description": "Catalogue every book you own, keep a lending ledger with due-date reminders, track your reading in pages, import from Goodreads or a spreadsheet, and get recommendations that explain themselves. Private by default.",
-      "operatingSystem": "ANDROID",
+      "operatingSystem": ["ANDROID", "IOS"],
       "applicationCategory": "LifestyleApplication",
       "featureList": [
         "ISBN barcode scanning",
@@ -74,8 +74,8 @@
         "Opt-in book recommendations that explain themselves",
         "Shareable book cards and public book pages"
       ],
-      "installUrl": "https://play.google.com/store/apps/details?id=in.kitabi.kitabi",
-      "downloadUrl": "https://play.google.com/store/apps/details?id=in.kitabi.kitabi",
+      "installUrl": ["https://play.google.com/store/apps/details?id=in.kitabi.kitabi", "https://apps.apple.com/app/id6787361959"],
+      "downloadUrl": ["https://play.google.com/store/apps/details?id=in.kitabi.kitabi", "https://apps.apple.com/app/id6787361959"],
       "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"},
       "publisher": {"@id": "https://kitabi.in/#org"},
       "image": "https://kitabi.in/kitabi-logo.png",
@@ -118,7 +118,7 @@
         {
           "@type": "Question",
           "name": "Is Kitabi available yet?",
-          "acceptedAnswer": {"@type": "Answer", "text": "Kitabi is out now on Android — download it free from Google Play. The iPhone and iPad version is in App Store review and will be announced right here at kitabi.in."}
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. Kitabi is out now on both stores — free on the App Store for iPhone and iPad, and free on Google Play for Android."}
         }
       ]
     }
@@ -218,11 +218,6 @@ body{
 .store .ic{flex-shrink:0}
 .store small{display:block;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--oxblood)}
 .store span{font-size:15.5px;font-weight:700}
-.store.ghost{background:transparent;color:var(--paper);border:1.5px solid rgba(246,240,227,.45)}
-.store.ghost small{color:var(--gold)}
-/* The App Store side, while it is in review. Not an <a> — a badge that goes
-   nowhere teaches a reader to distrust the one beside it that does. */
-.store.off{cursor:default;opacity:.75}
 .trust{margin-top:22px;font-size:12.5px;color:#A08D6E}
 .trust b{color:#CBB897;font-weight:600}
 .cue{margin:30px auto 0;width:26px;height:42px;border:2px solid rgba(239,227,200,.4);border-radius:14px;position:relative}
@@ -535,7 +530,7 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 
 <nav class="nav" id="nav" aria-label="Kitabi">
   <a class="brand" href="/"><img src="/logo.svg" alt=""><b>Kitabi</b></a>
-  <a class="go" href="https://play.google.com/store/apps/details?id=in.kitabi.kitabi" rel="noopener">Download</a>
+  <a class="go" href="#get">Download</a>
 </nav>
 
 <header class="cine" id="top">
@@ -581,10 +576,10 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
       <svg class="ic" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M4 2.3v19.4c0 .4.45.65.79.42l14.4-9.7a.5.5 0 0 0 0-.84L4.79 1.88A.5.5 0 0 0 4 2.3z"/></svg>
       <span><small>Get it on</small><span>Google Play</span></span>
     </a>
-    <span class="store ghost off" role="note">
+    <a class="store" href="https://apps.apple.com/app/id6787361959" rel="noopener" aria-label="Get Kitabi on the App Store">
       <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
-      <span><small>In review</small><span>App Store</span></span>
-    </span>
+      <span><small>Download on the</small><span>App Store</span></span>
+    </a>
   </div>
   <p class="trust fx" style="--a:.82;--b:.15"><b>Free</b> · <b>Your library stays private</b> · Your Goodreads list moves in, in minutes</p>
   <div class="fx" style="--a:.88;--b:.12">
@@ -1016,28 +1011,26 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
     </details>
     <details>
       <summary>Is Kitabi available yet?</summary>
-      <p class="fa">Yes — Kitabi is <b>out now on Android</b>, free on
-      <a href="https://play.google.com/store/apps/details?id=in.kitabi.kitabi" rel="noopener">Google Play</a>.
-      The iPhone and iPad version is <b>in App Store review</b>; it will be announced right here
-      at kitabi.in.</p>
+      <p class="fa">Yes — Kitabi is <b>out now</b>, free on both stores:
+      <a href="https://apps.apple.com/app/id6787361959" rel="noopener">the App Store</a> for iPhone and iPad, and
+      <a href="https://play.google.com/store/apps/details?id=in.kitabi.kitabi" rel="noopener">Google Play</a> for Android.</p>
     </details>
   </div>
 </section>
 
-<section class="close" id="notify">
+<section class="close" id="get">
   <div class="reveal">
     <div class="orn">❦</div>
     <h2>Your shelf is waiting</h2>
-    <p>Kitabi is <b>out now on Android</b> — because your books deserve better than a
-    spreadsheet. The iPhone version is in App Store review, and lands right here at
-    <b>kitabi.in</b>.</p>
+    <p>Kitabi is <b>out now on iPhone and Android</b> — because your books deserve better
+    than a spreadsheet. Free, private, and yours to keep.</p>
     <div class="ctas dark">
       <a class="store" href="https://play.google.com/store/apps/details?id=in.kitabi.kitabi" rel="noopener" aria-label="Get Kitabi on Google Play">
         <svg class="ic" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M4 2.3v19.4c0 .4.45.65.79.42l14.4-9.7a.5.5 0 0 0 0-.84L4.79 1.88A.5.5 0 0 0 4 2.3z"/></svg>
         <span><small>Get it on</small><span>Google Play</span></span></a>
-      <span class="store off" role="note">
+      <a class="store" href="https://apps.apple.com/app/id6787361959" rel="noopener" aria-label="Get Kitabi on the App Store">
         <svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.05 12.54c-.03-2.89 2.36-4.27 2.47-4.34-1.35-1.97-3.44-2.24-4.18-2.27-1.78-.18-3.47 1.05-4.37 1.05-.9 0-2.29-1.02-3.77-1-1.94.03-3.72 1.13-4.72 2.86-2.01 3.49-.51 8.66 1.45 11.5.96 1.39 2.1 2.95 3.6 2.89 1.45-.06 2-.93 3.75-.93 1.75 0 2.24.93 3.77.9 1.56-.03 2.55-1.41 3.5-2.81 1.1-1.61 1.55-3.17 1.58-3.25-.03-.01-3.03-1.16-3.08-4.6zM14.16 4.06c.8-.97 1.34-2.32 1.19-3.66-1.15.05-2.55.77-3.38 1.74-.74.86-1.39 2.23-1.22 3.55 1.29.1 2.6-.65 3.41-1.63z"/></svg>
-        <span><small>In review</small><span>App Store</span></span></span>
+        <span><small>Download on the</small><span>App Store</span></span></a>
     </div>
   </div>
 </section>
