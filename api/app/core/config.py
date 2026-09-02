@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     # This is the number that actually bounds the bill — the per-reader caps
     # only stop one account from being the whole problem.
     llm_daily_global_cap: int = 1000
+    # How long a cached recommendation result stays servable when its inputs
+    # haven't changed. The fingerprint invalidates on any rating/library
+    # change; this bound exists so a dormant shelf still sees catalogue growth.
+    recs_cache_ttl_days: int = 7
 
     # Affiliate tag for the generated Amazon buy link (services/buy_links.py —
     # docs/revenue-plan.md §3.1, Amazon-only since 9 Aug 2026). A plain URL

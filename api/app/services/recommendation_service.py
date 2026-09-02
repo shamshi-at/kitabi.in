@@ -6,8 +6,10 @@ the reader's own ratings — never ads, never a feed. The LLM call is isolated i
 `_generate_picks` so the rest is unit-testable without a key.
 """
 
+import hashlib
 import json
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -16,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings, get_settings
-from app.models import FEATURE_RECOMMENDATIONS, Edition, LibraryEntry, Rating, Work
+from app.models import FEATURE_RECOMMENDATIONS, Edition, LibraryEntry, Rating, RecCache, Work
 from app.services import llm_quota
 from app.services.anthropic_client import ANTHROPIC_URL, headers, reply_text
 
@@ -122,6 +124,56 @@ async def _generate_picks(
             await client.aclose()
 
 
+def _fingerprint(
+    rated: list[tuple[Work, int]],
+    owned: set[uuid.UUID],
+    limit: int,
+    model: str,
+) -> str:
+    """Hash of exactly what feeds the prompt. Sorted, so ordering artifacts of
+    the queries can't fake a change; includes the model so a model bump
+    refreshes everyone rather than serving picks reasoned by its predecessor."""
+    payload = json.dumps(
+        {
+            "rated": sorted((str(w.id), v) for w, v in rated),
+            "owned": sorted(str(w) for w in owned),
+            "limit": limit,
+            "model": model,
+        },
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+async def _hydrate_cached(
+    db: AsyncSession, picks: list[dict[str, Any]], limit: int
+) -> list[tuple[Work, str]]:
+    """Cached picks back into live rows, in pick order. The cache stores work
+    ids, never work data, so a book deleted or edited since generation is
+    dropped or shown current — a vanished pick just shortens the list."""
+    ids: list[uuid.UUID] = []
+    for pick in picks:
+        try:
+            ids.append(uuid.UUID(str(pick.get("work_id"))))
+        except ValueError:
+            continue
+    if not ids:
+        return []
+    stmt = (
+        select(Work)
+        .options(selectinload(Work.authors), selectinload(Work.editions))
+        .where(Work.id.in_(ids), Work.deleted_at.is_(None))
+    )
+    by_id = {w.id: w for w in (await db.execute(stmt)).scalars().all()}
+    result: list[tuple[Work, str]] = []
+    for pick in picks:
+        work = by_id.get(uuid.UUID(str(pick["work_id"]))) if pick.get("work_id") else None
+        why = pick.get("why")
+        if work is not None and isinstance(why, str) and why.strip():
+            result.append((work, why.strip()))
+    return result[:limit]
+
+
 async def recommend(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -139,7 +191,28 @@ async def recommend(
     if not rated:
         return []  # reasoned from ratings only — nothing to reason from yet
 
-    exclude = {w.id for w, _ in rated} | await _owned_work_ids(db, user_id)
+    owned = await _owned_work_ids(db, user_id)
+
+    # The picks are a pure function of what feeds the prompt, and none of it
+    # changes between two visits to the screen — so an unchanged fingerprint
+    # within the TTL is served from the cache: zero spend, zero quota, and the
+    # check sits BEFORE `consume` on purpose, so a reader who is over quota
+    # still sees their standing picks instead of an error (owner request,
+    # 2 Sep 2026). Only a changed shelf or an aged cache pays for regeneration.
+    fingerprint = _fingerprint(rated, owned, limit, settings.recs_model)
+    cached = await db.get(RecCache, user_id)
+    if (
+        cached is not None
+        and cached.fingerprint == fingerprint
+        and datetime.now(UTC) - cached.generated_at < timedelta(days=settings.recs_cache_ttl_days)
+    ):
+        hydrated = await _hydrate_cached(db, cached.picks, limit)
+        # Every cached pick vanished (deleted/merged away) → nothing worth
+        # serving; fall through and regenerate rather than showing a blank.
+        if hydrated:
+            return hydrated
+
+    exclude = {w.id for w, _ in rated} | owned
     candidates = await _candidate_works(db, exclude)
     if not candidates:
         return []
@@ -158,4 +231,26 @@ async def recommend(
         why = pick.get("why")
         if work is not None and isinstance(why, str) and why.strip():
             result.append((work, why.strip()))
-    return result[:limit]
+    result = result[:limit]
+
+    # Only a non-empty answer is worth pinning for the TTL: caching an empty
+    # one would freeze "nothing for you" for a week when the next attempt
+    # might do better (a flaky reply, a refusal). The retry costs quota — the
+    # quota is the backstop, and that is its job.
+    if result:
+        stored = [{"work_id": str(w.id), "why": why} for w, why in result]
+        if cached is None:
+            db.add(
+                RecCache(
+                    user_id=user_id,
+                    fingerprint=fingerprint,
+                    picks=stored,
+                    generated_at=datetime.now(UTC),
+                )
+            )
+        else:
+            cached.fingerprint = fingerprint
+            cached.picks = stored
+            cached.generated_at = datetime.now(UTC)
+        await db.commit()
+    return result

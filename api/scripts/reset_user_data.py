@@ -73,6 +73,7 @@ USER_TABLES: tuple[str, ...] = (
     "author_claims",  # → authors (kept)
     "work_revisions",  # → works (kept)
     "llm_usage",
+    "rec_cache",  # cached picks are derived from the shelf being wiped
     "promotion_events",  # reader impressions/clicks; the campaign itself stays
     "profiles",
 )

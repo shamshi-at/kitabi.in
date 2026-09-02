@@ -82,6 +82,7 @@ from app.models.publisher import Publisher
 from app.models.rating import Rating
 from app.models.reading_note import ReadingNote
 from app.models.reading_session import ReadingSession
+from app.models.rec_cache import RecCache
 from app.models.review import Review
 from app.models.series import Series
 from app.models.sync_op import SyncOp
@@ -112,6 +113,7 @@ __all__ = [
     "work_translators",
     "LibraryEntry",
     "Rating",
+    "RecCache",
     "ReadingNote",
     "ReadingSession",
     "Review",
