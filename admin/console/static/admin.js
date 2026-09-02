@@ -296,6 +296,41 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// "Install as app" in the rail (see #pwaInstall in base.html). Chrome decides
+// when a site is installable and says so through `beforeinstallprompt`; the
+// button exists only between that event and a successful install, so it can
+// never promise what the browser won't deliver. Running standalone (already
+// installed, opened as the app) the event never fires and the button never
+// shows — no display-mode check needed.
+(function () {
+  const btn = document.getElementById("pwaInstall");
+  if (!btn) return;
+  let prompt = null;
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    // Chrome's own mini-infobar is suppressed in favour of our menu entry.
+    e.preventDefault();
+    prompt = e;
+    btn.hidden = false;
+  });
+
+  btn.addEventListener("click", async () => {
+    if (!prompt) return;
+    const p = prompt;
+    // A prompt event is single-use: spent now, whatever the answer. If the
+    // admin dismisses it, Chrome fires beforeinstallprompt again on a later
+    // visit and the button returns with a fresh one.
+    prompt = null;
+    btn.hidden = true;
+    await p.prompt();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    prompt = null;
+    btn.hidden = true;
+  });
+})();
+
 // Navigation loader (see .navload in admin.css, the markup in base.html).
 //
 // The console is server-rendered: a link is a full page load and a form is a

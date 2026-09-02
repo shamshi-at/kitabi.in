@@ -79,6 +79,11 @@
       <b>{{ admin.email.split('@')[0] }}</b><s>{{ admin.email }}</s><br>
       <span class="role">{{ admin.role.replace('_', ' ') }}</span>
       <a class="out" href="/account/password">Change password</a>
+      {# Shown only when the browser hands us an install prompt (admin.js):
+         hidden when already installed, running standalone, or on a browser
+         with no beforeinstallprompt (Safari/iOS — Share → Add to Home Screen
+         is the path there, and a button we can't honour would be a lie). #}
+      <button class="out install" id="pwaInstall" type="button" hidden>⤓ Install as app</button>
       <a class="out" href="/sign-out">Sign out</a>
     </div>
   </nav>

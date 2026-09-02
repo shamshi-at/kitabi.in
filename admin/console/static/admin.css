@@ -36,6 +36,10 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 .rail .who .role{display:inline-block;margin-top:5px;background:var(--gold);color:#241811;font-size:9px;
   font-weight:700;letter-spacing:.8px;border-radius:3px;padding:2px 6px;text-transform:uppercase}
 .rail .who a.out{display:block;margin-top:9px;font-size:11px;color:#c9b795;text-decoration:none}
+/* The install button dresses as the account links around it — it is one of
+   them, not a call to action. Gold, because it is the one that goes away. */
+.rail .who button.install{display:block;margin-top:9px;padding:0;border:0;background:none;
+  font:inherit;font-size:11px;color:var(--gold);cursor:pointer}
 .rail .who a.out:hover{color:var(--gold)}
 
 .main{flex:1;background:var(--paper);min-width:0;display:flex;flex-direction:column}
