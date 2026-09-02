@@ -5590,6 +5590,60 @@ abstract class AppLocalizations {
   /// **'Couldn\'t read any details from the photos.'**
   String get formExtractNothing;
 
+  /// Scan-back-cover sheet: run the blurb extraction on the back-cover photo the form already holds, without a new capture
+  ///
+  /// In en, this message translates to:
+  /// **'Read the uploaded back cover'**
+  String get scanBackSheetUploaded;
+
+  /// Scan-back-cover sheet: photograph the back cover now and read the blurb off the fresh photo
+  ///
+  /// In en, this message translates to:
+  /// **'Capture it with the camera'**
+  String get scanBackSheetCapture;
+
+  /// Dialog title after a fresh back-cover capture was read, when the book already holds a back-cover photo
+  ///
+  /// In en, this message translates to:
+  /// **'Make this the back cover?'**
+  String get scanBackReplaceTitle;
+
+  /// Dialog body for the replace-back-cover question
+  ///
+  /// In en, this message translates to:
+  /// **'Replace the current back-cover photo with the one you just captured?'**
+  String get scanBackReplaceBody;
+
+  /// Dialog action: use the fresh capture as the back cover
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get scanBackReplace;
+
+  /// Dialog action: keep the existing back-cover photo — the capture was only for reading
+  ///
+  /// In en, this message translates to:
+  /// **'Keep current'**
+  String get scanBackKeep;
+
+  /// Dialog body after a fresh capture was read, when the book has no back-cover photo yet
+  ///
+  /// In en, this message translates to:
+  /// **'Use the photo you just captured as the book\'s back cover?'**
+  String get scanBackSetBody;
+
+  /// Dialog action: adopt the fresh capture as the back cover
+  ///
+  /// In en, this message translates to:
+  /// **'Use it'**
+  String get scanBackSet;
+
+  /// Dialog action: leave the back-cover slot empty — the capture was only for reading
+  ///
+  /// In en, this message translates to:
+  /// **'No thanks'**
+  String get scanBackSkip;
+
   /// Snackbar when the server has no LLM key (extraction dormant)
   ///
   /// In en, this message translates to:

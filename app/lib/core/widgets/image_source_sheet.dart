@@ -104,6 +104,45 @@ Future<CoverAction?> showCoverActionSheet(
   );
 }
 
+/// What the reader chose from the "scan the back cover" sheet on the add-book
+/// form: read the back-cover photo the form already holds, or point the camera
+/// at the book. Shown only when an uploaded back cover exists — with nothing
+/// to re-read, the flow goes straight to the camera instead (owner request,
+/// 2 Sep 2026: re-photographing what the form already has is the camera as a
+/// punishment).
+enum ScanBackChoice { uploaded, capture }
+
+Future<ScanBackChoice?> showScanBackSheet(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
+  return showModalBottomSheet<ScanBackChoice>(
+    context: context,
+    backgroundColor: AppColors.paper,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _SheetGrip(),
+          ListTile(
+            leading: Icon(Icons.image_outlined, color: AppColors.oxblood),
+            title: Text(l10n.scanBackSheetUploaded),
+            onTap: () => Navigator.of(context).pop(ScanBackChoice.uploaded),
+          ),
+          ListTile(
+            leading: Icon(Icons.photo_camera_outlined, color: AppColors.oxblood),
+            title: Text(l10n.scanBackSheetCapture),
+            onTap: () => Navigator.of(context).pop(ScanBackChoice.capture),
+          ),
+          _CancelRow(onTap: () => Navigator.of(context).pop()),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+}
+
 /// The step between two chained cover captures. When a camera capture has just
 /// filled one side of a coverless book and the other side is still empty, this
 /// asks — right in the capture flow, before returning to the screen — whether

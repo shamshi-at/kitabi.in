@@ -3443,6 +3443,35 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t read any details from the photos.';
 
   @override
+  String get scanBackSheetUploaded => 'Read the uploaded back cover';
+
+  @override
+  String get scanBackSheetCapture => 'Capture it with the camera';
+
+  @override
+  String get scanBackReplaceTitle => 'Make this the back cover?';
+
+  @override
+  String get scanBackReplaceBody =>
+      'Replace the current back-cover photo with the one you just captured?';
+
+  @override
+  String get scanBackReplace => 'Replace';
+
+  @override
+  String get scanBackKeep => 'Keep current';
+
+  @override
+  String get scanBackSetBody =>
+      'Use the photo you just captured as the book\'s back cover?';
+
+  @override
+  String get scanBackSet => 'Use it';
+
+  @override
+  String get scanBackSkip => 'No thanks';
+
+  @override
   String get formExtractUnavailable =>
       'Reading details from photos isn\'t available right now.';
 

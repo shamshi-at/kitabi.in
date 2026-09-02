@@ -998,19 +998,26 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// URL(s) to `POST /catalog/cover-extract` and prefill whatever came back —
   /// but only into fields that are still empty. The user's own typing always
   /// wins, and everything stays editable.
-  Future<void> _fillFromPhotos() async {
+  ///
+  /// [backUrl] overrides the form's back-cover slot — the scan flow reads a
+  /// freshly captured photo that deliberately is NOT the slot's value yet.
+  /// Returns whether the extraction call itself succeeded; "nothing readable"
+  /// still counts (the photo reached the reader — the fields were simply full,
+  /// or the text unreadable), a transport/server error does not.
+  Future<bool> _fillFromPhotos({String? backUrl}) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _extracting = true);
     try {
       final fields = await ref.read(apiClientProvider).extractFromCovers(
             frontUrl: _isOwnUpload(_coverUrl) ? _coverUrl : null,
-            backUrl: _isOwnUpload(_backCoverUrl) ? _backCoverUrl : null,
+            backUrl: backUrl ?? (_isOwnUpload(_backCoverUrl) ? _backCoverUrl : null),
           );
-      if (!mounted) return;
+      if (!mounted) return true;
       if (!_applyExtracted(fields)) {
         messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractNothing)));
       }
+      return true;
     } on DioException catch (err) {
       final data = err.response?.data;
       final code = data is Map ? data['code'] : null;
@@ -1019,28 +1026,46 @@ class _BookFormState extends ConsumerState<_BookForm> {
           code == 'extraction_disabled' ? l10n.formExtractUnavailable : l10n.formExtractFailed,
         ),
       ));
+      return false;
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractFailed)));
+      return false;
     } finally {
       if (mounted) setState(() => _extracting = false);
     }
   }
 
-  /// One-tap "read the back": photograph the book's back cover, upload it, set
-  /// it as the back cover, then run the same extraction — the blurb goes in the
-  /// Description and the printed literary form ("നോവൽ" → Novel) fills the Type.
-  /// Meant for a book already in your library whose description you never
-  /// typed; still fills only empty fields, so your own text is never clobbered.
+  /// "Read the back": get the blurb (and the printed literary form —
+  /// "നോവൽ" → Novel) off the book's back cover into the empty fields. Still
+  /// fills only empty fields, so your own text is never clobbered.
+  ///
+  /// Reworked 2 Sep 2026 (owner request). When the form already holds an
+  /// uploaded back cover, a sheet asks whether to read *that* or point the
+  /// camera at the book — re-photographing what the form already has is the
+  /// camera as a punishment. A fresh capture goes straight to the camera with
+  /// NO crop step (the photo is taken to be read, not shelved — between the
+  /// shutter and the answer there is nothing to decide), and it no longer
+  /// clobbers the back-cover slot on its way in: only after a successful read,
+  /// and only with the reader's say-so, does it become the back cover — the
+  /// photo was framed to be read, not to be shown on a shelf, so whatever the
+  /// slot holds the question is asked (owner decision, 2 Sep 2026).
   Future<void> _scanBackCover() async {
-    final source = await showImageSourceSheet(context);
-    if (source == null || !mounted) return;
-    // Capture + upload first — it shows its own camera/crop UI, so raise the
-    // back slot's spinner rather than the full "reading your cover" overlay.
+    final l10n = AppLocalizations.of(context)!;
+    // Only an own upload can be re-read: the extractor accepts covers-bucket
+    // URLs alone, so an external back cover has nothing to offer here.
+    if (_isOwnUpload(_backCoverUrl)) {
+      final choice = await showScanBackSheet(context);
+      if (choice == null || !mounted) return;
+      if (choice == ScanBackChoice.uploaded) {
+        await _fillFromPhotos();
+        return;
+      }
+    }
+
     setState(() => _uploadingBack = true);
     String? url;
     try {
-      url = await pickCropUploadImage(
-          source: source, folder: 'covers', ratio: CropRatio.cover);
+      url = await pickUploadPhoto(source: ImageSource.camera, folder: 'covers');
     } catch (err) {
       if (mounted) {
         showQuietError(context, AppLocalizations.of(context)!.coverUploadFailed, err);
@@ -1049,10 +1074,31 @@ class _BookFormState extends ConsumerState<_BookForm> {
       if (mounted) setState(() => _uploadingBack = false);
     }
     if (url == null || !mounted) return;
-    // Show the freshly-photographed back cover in its slot, then read it — the
-    // shared path already sends back_url (an own-upload) to the extractor.
-    setState(() => _backCoverUrl = url);
-    await _fillFromPhotos();
+
+    // Read the fresh photo, not the slot — the slot may still hold the old
+    // cover, and must keep holding it if the reader says so below.
+    final ok = await _fillFromPhotos(backUrl: url);
+    if (!ok || !mounted) return;
+
+    final hasExisting = _backCoverUrl != null;
+    final use = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.scanBackReplaceTitle),
+        content: Text(hasExisting ? l10n.scanBackReplaceBody : l10n.scanBackSetBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(hasExisting ? l10n.scanBackKeep : l10n.scanBackSkip),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(hasExisting ? l10n.scanBackReplace : l10n.scanBackSet),
+          ),
+        ],
+      ),
+    );
+    if (use == true && mounted) setState(() => _backCoverUrl = url);
   }
 
   /// Prefill empty fields from the extraction result. Returns whether anything

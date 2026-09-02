@@ -33,6 +33,26 @@ Future<String?> pickCropUploadImage({
   return _uploadJpeg(bytes, folder);
 }
 
+/// Capture a photo and upload it as-is — no crop step in between. For a photo
+/// taken to be *read* rather than shelved (scanning the back cover for its
+/// blurb): between the shutter and the answer there is nothing to decide, so a
+/// crop UI there is one more screen in the way. Same size cap as every other
+/// capture (see image_crop.dart for why 1600px). Returns null if the capture
+/// is cancelled; throws on upload failure (caller shows a message).
+Future<String?> pickUploadPhoto({
+  required ImageSource source,
+  required String folder,
+}) async {
+  final picked = await ImagePicker().pickImage(
+    source: source,
+    maxWidth: 1600,
+    maxHeight: 1600,
+    imageQuality: 85,
+  );
+  if (picked == null) return null;
+  return _uploadJpeg(await picked.readAsBytes(), folder);
+}
+
 /// Author portraits / publisher logos — square crop.
 Future<String?> pickAndUploadCatalogImage({
   required String folder,
