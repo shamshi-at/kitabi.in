@@ -174,6 +174,14 @@ Upload via Apple Transporter or `xcrun altool --upload-app`. Notes:
 - **Bump `version:` in `pubspec.yaml`** (the `+NN` build number) for every store
   upload — Play rejects a duplicate `versionCode` outright ("Version code 124 has
   already been used"), and it is the *Android* number that pubspec really governs.
+  **Check what Play already has before choosing the number**, because pubspec is
+  not a reliable record of it: the repo said `+145`, Play's internal track was
+  already on `+146`, and the duplicate came back not as the message above but as
+  *"You can't roll out this release because it doesn't allow any existing users
+  to upgrade to the newly added app bundles"* — which reads like a device-support
+  regression and sends you inspecting ABIs and `uses-feature` for a bundle that
+  is perfectly fine (3 Sep 2026). Play Console -> Internal testing -> Releases
+  names the active `versionCode`; take pubspec past that, not past itself.
   **iOS quietly manages its own**: Flutter's export options set
   `manageAppVersionAndBuildNumber = true`, so at export time Xcode asks App Store
   Connect what already exists and increments past it — app and both extensions
