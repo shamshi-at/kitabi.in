@@ -253,6 +253,21 @@ Future<LoggedSession?> stopAndLogActiveSession(
   final pageStartRaw = await db.keyValuesDao.getValue(activeSessionPageStartKey);
   final pageStart = int.tryParse(pageStartRaw ?? '');
 
+  // **Before the filing, not after it.** The lock-screen clock is the one part
+  // of a stop the reader watches, and it used to come down at the very end of
+  // this function — behind `logSession`, `publishPendingNoteLinks`, seven
+  // key_values writes and two plugin cancels. Every one of those is a Drift
+  // round trip, and `logSession`'s own `enqueue` fires the sync trigger, whose
+  // pull applies each page inside `db.transaction` — an exclusive lock that
+  // queues every query issued after it until it commits. So the tail of this
+  // function was serialized behind a sync pass that this very call had just
+  // started, and the notification stayed up for as long as that took: seconds,
+  // at random, depending on how much there was to pull (owner report, 3 Sep
+  // 2026). Nothing below needs the surface, and the one path that can fail —
+  // `logSession` throwing — puts it back via `_hydrate()`. Ending it costs no
+  // database access at all, so it cannot be held behind a transaction.
+  await _endLiveSurface();
+
   final endedAt = DateTime.now();
   final durationSeconds = endedAt.difference(startedAt).inSeconds;
   final repo = ReadingSessionsRepository(db, session, onMutation: onMutation);
@@ -300,6 +315,11 @@ Future<LoggedSession?> stopAndLogActiveSession(
   try {
     await Workmanager().cancelByUniqueName(readingEnforcementTaskName(entryId));
   } catch (_) {}
+  // Belt and braces: the surface came down at the top of this function, long
+  // before any of the above could throw. Repeating it is idempotent and free,
+  // and it covers the one thing that can put it back in the meantime — a
+  // `reconcile()` from a foreground resume landing while the key_values rows
+  // above were still being cleared.
   await _endLiveSurface();
 
   return LoggedSession(
@@ -356,6 +376,37 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   // popping the timer screen) before the button's own setState landed —
   // dropping the wax-seal page-count screen on what looked like most stops.
   bool _stopping = false;
+
+  /// The mirror image of [_stopping], for the same reason. [start] now
+  /// publishes `state` *before* writing the sitting to key_values (so the
+  /// clock starts the moment the reader taps, not when Drift catches up), and
+  /// that opens the same transient window in the other direction: for the
+  /// length of those writes the in-memory sitting names an entry the database
+  /// does not, which the safety net's divergence check reads as "someone else
+  /// stopped it" and answers by nulling the very session just started.
+  bool _starting = false;
+
+  /// Serializes [start] against [stop]. Not a single-flight guard — nothing is
+  /// coalesced or dropped, each call simply waits its turn.
+  ///
+  /// Both now move `state` and `key_values` in separate steps, and both take
+  /// long enough to overlap when the database is held by a sync pull. A Stop
+  /// tapped inside a Start's write window used to be a silent no-op (`state`
+  /// was still null, so `stop()` returned early); publishing `state` first
+  /// makes that tap do what it says — and then its seven deletes interleave
+  /// with the five writes still landing behind it, leaving key_values holding
+  /// half a sitting that belongs to neither. One at a time is the only
+  /// arrangement in which "start" and "stop" mean what they say.
+  Future<void> _lock = Future<void>.value();
+
+  Future<T> _exclusive<T>(Future<T> Function() body) {
+    final prior = _lock;
+    final done = Completer<void>();
+    // Never completed with an error, so a failed start can't wedge every
+    // later stop behind it — the caller still sees its own exception.
+    _lock = done.future;
+    return prior.then((_) => body()).whenComplete(() => done.complete());
+  }
 
   /// The in-flight (or already-completed) `_hydrate()` call from [build] —
   /// awaited at the top of [start] and [stop] so a tap that lands before a
@@ -487,14 +538,44 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   /// Scheduling the "still reading?" check-in is the caller's job (it needs
   /// localized copy from a `BuildContext`, which a `Notifier` doesn't have —
   /// see `_ReadingSessionCard._open` for the only call site).
-  Future<void> start(String libraryEntryId, {int? pageStart}) async {
+  Future<void> start(String libraryEntryId, {int? pageStart}) =>
+      _exclusive(() => _start(libraryEntryId, pageStart: pageStart));
+
+  Future<void> _start(String libraryEntryId, {int? pageStart}) async {
     await _hydration;
     if (state?.libraryEntryId == libraryEntryId) return;
-    if (state != null) await stop();
+    if (state != null) await _stop();
 
+    _starting = true;
+    try {
+      await _startLocked(libraryEntryId, pageStart: pageStart);
+    } finally {
+      _starting = false;
+    }
+  }
+
+  /// The body of [_start], split out only so `_starting` is raised and lowered
+  /// around every path out of it, `return`s and throws alike.
+  Future<void> _startLocked(String libraryEntryId, {int? pageStart}) async {
     final startedAt = DateTime.now();
     final sessionId = const Uuid().v4();
     final db = ref.read(appDatabaseProvider);
+    // Set *before* the writes, the mirror of what [stop] does after it. The
+    // clock starts when the reader says it starts; everything below is filing.
+    // Published last, `state` only became non-null after five sequential Drift
+    // writes — and a Drift write issued while the sync engine's pull holds its
+    // `db.transaction` waits for that transaction to commit. So a start that
+    // happened to land during a sync pass left every surface that renders the
+    // clock (this screen's numerals, the mini-bar, Home's live card) reading a
+    // session of null: a sweeping hand over 0:00, for as long as the pull took
+    // (owner report, 3 Sep 2026 — "sometimes when I start the timer, the clock
+    // is not moving"). Nothing below reads `state`.
+    state = ActiveSession(
+      libraryEntryId: libraryEntryId,
+      startedAt: startedAt,
+      id: sessionId,
+      pageStart: pageStart,
+    );
     await db.keyValuesDao.setValue(activeSessionEntryKey, libraryEntryId);
     await db.keyValuesDao.setValue(activeSessionStartedKey, startedAt.toIso8601String());
     await db.keyValuesDao.setValue(activeSessionIdKey, sessionId);
@@ -504,16 +585,19 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
     if (pageStart != null) {
       await db.keyValuesDao.setValue(activeSessionPageStartKey, '$pageStart');
     }
-    state = ActiveSession(
-      libraryEntryId: libraryEntryId,
-      startedAt: startedAt,
-      id: sessionId,
-      pageStart: pageStart,
-    );
     await _showLive(libraryEntryId, startedAt);
     // Let the reader's other devices in on it. Best-effort by construction —
     // see ActiveSessionSync.
-    await ref.read(activeSessionSyncProvider).publishStart(state!);
+    //
+    // Deliberately *not* awaited, for the same reason the matching
+    // `publishStop` isn't: it is a network round trip, the sitting is already
+    // running and durable without it, and nothing on screen waits for its
+    // answer. Awaiting it also held the start/stop lock for the length of a
+    // Dio timeout, so a Start on a network that has gone quiet without saying
+    // so would have left a Stop tapped seconds later doing nothing at all.
+    // A publish that never lands is republished by `pullAndApply` the moment
+    // it finds the account reachable and empty (15 Aug 2026).
+    unawaited(ref.read(activeSessionSyncProvider).publishStart(state!));
   }
 
   /// Stops the running session (if any), logs it via the repository, and
@@ -521,7 +605,10 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
   /// null if nothing was running. [autoStopped] marks a stop the safety net
   /// triggered rather than the reader tapping Stop — see
   /// [checkReadingTimerSafetyNet], the only caller that passes true.
-  Future<LoggedSession?> stop({bool autoStopped = false}) async {
+  Future<LoggedSession?> stop({bool autoStopped = false}) =>
+      _exclusive(() => _stop(autoStopped: autoStopped));
+
+  Future<LoggedSession?> _stop({bool autoStopped = false}) async {
     await _hydration;
     if (state == null) return null;
     _stopping = true;
@@ -588,9 +675,12 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
     state = null;
   }
 
-  /// Whether this controller's own [stop] is mid-flight — see the [_stopping]
-  /// field doc for why [checkReadingTimerSafetyNet] needs to know.
-  bool get isStopping => _stopping;
+  /// Whether this controller is mid-flight in a [stop] or a [start] — see the
+  /// [_stopping] and [_starting] field docs for why
+  /// [checkReadingTimerSafetyNet] needs to know. Both are windows in which
+  /// `state` and key_values legitimately disagree, and reading that gap as an
+  /// event is the safety net's whole job.
+  bool get isSettling => _stopping || _starting;
 }
 
 final activeSessionProvider =
@@ -617,19 +707,22 @@ final activeSessionProvider =
 /// someone else already stopped it — just drop local state instead of
 /// re-stopping (and double-logging) a session that's already gone.
 ///
-/// Skips entirely while [ActiveSessionController.isStopping] — a legitimate
-/// in-app `stop()` clears KeyValues in several awaited steps before its own
-/// `state` finally goes null, and a concurrent tick landing in that window
-/// misread it as "stopped elsewhere," racing ahead of the stop button's own
-/// `setState` and popping the timer screen before the wax-seal page-count
-/// step could show (bug introduced by this same safety-net check, caught
-/// live on-device 16 Jul 2026).
+/// Skips entirely while [ActiveSessionController.isSettling] — both a
+/// legitimate in-app `stop()` and a `start()` move `state` and key_values in
+/// separate steps, and a tick landing between them reads the gap as "stopped
+/// elsewhere". Stopping was the first half: it clears KeyValues in several
+/// awaited steps before its own `state` finally goes null, and a concurrent
+/// tick misread that window, racing ahead of the stop button's own `setState`
+/// and popping the timer screen before the wax-seal page-count step could show
+/// (caught live on-device 16 Jul 2026). Starting is now the mirror: `state` is
+/// published *first* so the clock moves at once, leaving key_values a few Drift
+/// writes behind it (3 Sep 2026).
 Future<LoggedSession?> checkReadingTimerSafetyNet(WidgetRef ref) async {
   final active = ref.read(activeSessionProvider);
   if (active == null) return null;
 
   final notifier = ref.read(activeSessionProvider.notifier);
-  if (notifier.isStopping) return null;
+  if (notifier.isSettling) return null;
 
   final db = ref.read(appDatabaseProvider);
   final dbEntryId = await db.keyValuesDao.getValue(activeSessionEntryKey);

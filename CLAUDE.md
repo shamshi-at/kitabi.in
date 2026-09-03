@@ -1030,7 +1030,53 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   match what `SplashScreen` renders. A *static* logo means Dart never started;
   the in-app one animates (logo scales in, the name rises, the gold line draws
   across, ~1.6s). Ask which one before debugging the boot gate.
-
+- **A surface the reader is watching must never be updated at the end of a
+  chain of Drift writes — the sync engine's pull holds an exclusive
+  `db.transaction`, and drift queues every query issued after it.** Two
+  complaints, one mechanism, both random because the variable is whether a sync
+  pass happened to be mid-pull (owner report, 3 Sep 2026: "the live
+  notification bar is not getting removed for a few seconds after stopping",
+  and "sometimes when I start the timer, the clock is not moving").
+  `stopAndLogActiveSession` took the lock-screen clock down *last*, behind
+  `logSession`, `publishPendingNoteLinks`, seven key_values writes and two
+  plugin cancels — and `logSession`'s own `enqueue` fires the sync trigger, so
+  the tail of the stop waited on a pull the stop itself had started. `start()`
+  was the mirror: it published `state` — the thing every clock surface renders
+  from — only after five sequential key_values writes, so a start landing
+  during a pull left the mini-bar, Home's live card and the timer face reading
+  a session of null: a sweeping hand over a frozen 0:00. `stop()` already had
+  the rule written on it ("cleared synchronously, before the first await — the
+  clock stops when the reader says it stops, everything after this is filing")
+  and `start()` simply never got it. Two things fall out of applying it: the
+  in-memory state and key_values now legitimately disagree for the length of
+  those writes, which is exactly what the safety net reads as "stopped
+  elsewhere", so starting needs the same `isSettling` guard stopping has had
+  since 16 Jul; and a teardown moved to the front still wants a repeat at the
+  back, because a `reconcile()` on resume can put the surface back while the
+  rows are still being cleared. Proof, not inference: a 400ms
+  `db.transaction` delays an unrelated `getValue` on the same database by
+  365ms.
+- **The 29 Aug "state read after an await is from a different moment than the
+  answer it is judging" fix was applied to one of the two values it compares.**
+  `pullAndApply` snapshots `pendingStopId` before its GET and reads `localId`
+  *after* it — so a sitting started while the request was in the air was judged
+  against an answer that predates it. With `publishStart` landing in the same
+  window, `mirrored == localId` held and an empty answer read as "stopped on
+  the other device": the timer the reader had just started was cleared,
+  unlogged. The mirror case is worse — a GET that comes back holding the
+  sitting they stopped a moment earlier makes the older-start rule *log* their
+  seconds-old new sitting and adopt the dead row over it. When a rule compares
+  a remote answer with local state, every local value in the comparison has to
+  be as old as the answer; re-read the anchor afterwards and bail if it moved,
+  rather than snapshotting one field at a time as each bug arrives.
+- **`ActivityKit`'s `Activity.end` is async, so `Task { for a in
+  Activity.activities { await a.end(…) } }` ends whatever is running *when the
+  task gets around to it*.** `ReadingActivityController.start` called `end()`
+  to clear a stale card and then synchronously requested the new one — and when
+  the detached task ran second, its enumeration included the activity just
+  created and dismissed the live clock moments after starting it. Capture the
+  list of activities to dismiss synchronously, before the `request`, and end
+  only those.
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

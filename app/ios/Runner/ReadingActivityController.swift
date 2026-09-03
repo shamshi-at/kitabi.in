@@ -41,7 +41,15 @@ enum ReadingActivityController {
     guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
     // One sitting at a time — a stale activity from a session that ended
     // without us hearing about it must never sit next to the new one.
-    end()
+    //
+    // The list is captured *now*, synchronously, and only these are ended.
+    // Calling `end()` here instead was a race the reader saw at random: ending
+    // is asynchronous (`activity.end` is), so its `Task` enumerated
+    // `Activity.activities` whenever it happened to run — and if that was
+    // after the `request` below, the enumeration included the activity we had
+    // just created and dismissed the live clock a moment after starting it.
+    let stale = Activity<ReadingActivityAttributes>.activities
+    current = nil
 
     let startedAt: Date
     if let seconds = args["startedAt"] as? Double {
@@ -83,6 +91,7 @@ enum ReadingActivityController {
     } catch {
       current = nil
     }
+    endAll(stale)
   }
 
   private static func update(_ args: [String: Any]) {
@@ -105,8 +114,18 @@ enum ReadingActivityController {
   private static func end() {
     guard #available(iOS 16.2, *) else { return }
     current = nil
+    endAll(Activity<ReadingActivityAttributes>.activities)
+  }
+
+  /// Dismisses exactly the activities handed in — never "whatever is running
+  /// when this task gets around to it", which is what let a start end its own
+  /// brand-new activity. `.immediate` because a stopped sitting must leave the
+  /// lock screen at once; the default policy leaves the card up for hours.
+  @available(iOS 16.2, *)
+  private static func endAll(_ activities: [Activity<ReadingActivityAttributes>]) {
+    guard !activities.isEmpty else { return }
     Task {
-      for activity in Activity<ReadingActivityAttributes>.activities {
+      for activity in activities {
         await activity.end(nil, dismissalPolicy: .immediate)
       }
     }

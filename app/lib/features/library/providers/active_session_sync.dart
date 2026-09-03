@@ -95,6 +95,19 @@ class ActiveSessionSync {
     // logged it, lock-screen clock and all. The note has to be as old as the
     // answer it is being compared against.
     final pendingStopId = await db.keyValuesDao.getValue(activeSessionPendingStopKey);
+    // …and so does the sitting we are about to judge against that answer. The
+    // note above fixed one half of this and left the other: `localId` was read
+    // *after* the GET, so a sitting started (or stopped) on this device while
+    // the request was in flight was compared with an answer that predates it.
+    // Both outcomes were wrong and both were random, which is exactly how they
+    // were reported ("sometimes when I start the timer, the clock is not
+    // moving", 3 Sep 2026). If `publishStart` happened to land before this
+    // resumed, `mirrored == localId` and the empty answer read as "stopped on
+    // the other device" — so the timer the reader had *just* started was
+    // cleared, unlogged, clock frozen at 0:00. And if the GET came back
+    // holding the sitting they had stopped a moment earlier, the older-start
+    // rule logged their brand-new one and adopted the dead row over it.
+    final localIdBefore = await db.keyValuesDao.getValue(activeSessionIdKey);
 
     final Map<String, dynamic>? remote;
     try {
@@ -104,6 +117,17 @@ class ActiveSessionSync {
     }
 
     final localId = await db.keyValuesDao.getValue(activeSessionIdKey);
+    if (localId != localIdBefore) {
+      // The reader moved while we were asking. Whatever the server said is
+      // about the sitting that was here then, not the one that is here now —
+      // and a start or a stop publishes itself, so the account is already
+      // being told by the path that owns the change. Bailing here also skips
+      // this pass's pending-stop retry, deliberately: that note survives (only
+      // a landed DELETE clears it) and every later pull tries again, which is
+      // a far cheaper outcome than deleting a note that belongs to a stop we
+      // never saw.
+      return false;
+    }
 
     // The server is still showing a sitting this device already stopped and
     // logged — the delete never landed (stopped offline, or auto-stopped by a

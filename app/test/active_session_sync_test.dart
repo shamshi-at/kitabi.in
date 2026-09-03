@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,9 +22,15 @@ class _FakeApi extends ApiClient {
   int deletes = 0;
   Map<String, dynamic>? lastPut;
 
+  /// Lets a test hold the GET open and do something on the device while the
+  /// request is in flight — the window every "stale answer" bug lives in.
+  Completer<void>? holdGet;
+
   @override
   Future<Map<String, dynamic>?> getActiveSession() async {
     gets++;
+    final hold = holdGet;
+    if (hold != null) await hold.future;
     return active;
   }
 
@@ -135,6 +143,64 @@ void main() {
     // The other device wrote the row; writing a second one here is the
     // duplicate this whole design exists to avoid.
     expect(await db.readingSessionsDao.allSince(DateTime.utc(2020)), isEmpty);
+  });
+
+  /// The reader started reading while this pull's GET was in the air.
+  ///
+  /// `pendingStopId` was already snapshotted before the request (29 Aug 2026);
+  /// `localId` was not, so it was read *after* — and judged against an answer
+  /// that predated the sitting it named. With `publishStart` landing in the
+  /// same window, `mirrored == localId` held and the empty answer read as
+  /// "stopped on the other device": the timer the reader had just started was
+  /// cleared, unlogged, and every surface that renders the clock fell to a
+  /// frozen 0:00 (owner report, 3 Sep 2026).
+  test('a sitting started while the GET was in flight is not cleared by it', () async {
+    api.active = null; // true when the request was issued, stale when it lands
+    api.holdGet = Completer<void>();
+
+    final pull = sync().pullAndApply();
+    await Future<void>.delayed(Duration.zero);
+
+    // The reader taps Start. Both halves of the hazard: the sitting is written
+    // locally *and* published, so the account now has a row this answer
+    // predates.
+    await writeLocal(id: 's-fresh', mirroredId: 's-fresh');
+    api.holdGet!.complete();
+
+    expect(await pull, isFalse, reason: 'nothing was decided — the answer aged out');
+    expect(await db.keyValuesDao.getValue(activeSessionIdKey), 's-fresh');
+    expect(await db.keyValuesDao.getValue(activeSessionEntryKey), 'entry-1');
+  });
+
+  /// The same window, the other way round: the answer holds the sitting the
+  /// reader has just stopped. The older-start rule would then log their
+  /// seconds-old new sitting and adopt the dead row over it.
+  test('a sitting started while the GET was in flight is not replaced by a dead one',
+      () async {
+    api.active = {
+      'session_id': 's-old',
+      'library_entry_id': 'entry-1',
+      'started_at': DateTime.utc(2026, 8, 14, 9).toIso8601String(),
+      'page_start': null,
+      'confirmed_at': null,
+      'device_id': 'this-phone',
+    };
+    api.holdGet = Completer<void>();
+
+    final pull = sync().pullAndApply();
+    await Future<void>.delayed(Duration.zero);
+
+    await writeLocal(id: 's-fresh');
+    await db.keyValuesDao.setValue(
+      activeSessionStartedKey,
+      DateTime.utc(2026, 8, 14, 11).toIso8601String(),
+    );
+    api.holdGet!.complete();
+
+    expect(await pull, isFalse);
+    expect(await db.keyValuesDao.getValue(activeSessionIdKey), 's-fresh');
+    expect(await db.readingSessionsDao.allSince(DateTime.utc(2020)), isEmpty,
+        reason: 'a sitting seconds old is not a sitting to file away');
   });
 
   test('publishing a start is what records that the account knows', () async {

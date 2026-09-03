@@ -214,11 +214,27 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     if (startedAt == null) return;
     _handSeeded = true;
     final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
-    _hand.value = (elapsedMs % _handPeriod.inMilliseconds) / _handPeriod.inMilliseconds;
+    final seeded = (elapsedMs % _handPeriod.inMilliseconds) / _handPeriod.inMilliseconds;
+    // Assigning `value` *stops* the controller, which completes the running
+    // sweep's TickerFuture and hands `_loopHand` its cue — so a seed that
+    // arrives while the hand is already turning (the late-resolve path this
+    // is called from, and the only one that needs seeding at all) was undone
+    // one microtask later by a `forward(from: 0)`. Restart the sweep here,
+    // from the seeded position, and let `_loopHand` see it is already going.
+    final wasAnimating = _hand.isAnimating;
+    _hand.value = seeded;
+    if (wasAnimating) _hand.forward(from: seeded).whenComplete(_loopHand);
   }
 
   void _loopHand() {
     if (!mounted) return;
+    // A seed has already restarted the sweep from where the sitting actually
+    // is; looping again from zero would throw that away.
+    if (_hand.isAnimating) return;
+    // `stop()` completes the TickerFuture too, so this fires when the hand is
+    // deliberately halted — without this, switching the phone to reduced
+    // motion mid-sitting simply started it again.
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) return;
     _hand.forward(from: 0).whenComplete(_loopHand);
   }
 

@@ -27,10 +27,15 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final cancelled = <int>[];
+  /// Everything the stop path does, in the order it does it — the channel
+  /// mock below appends `surface-down`, and the tests that care append their
+  /// own markers. Ordering is the whole point of the latency test.
+  final order = <String>[];
   var failCheckInCancel = false;
 
   setUp(() {
     cancelled.clear();
+    order.clear();
     failCheckInCancel = false;
     // The live surface is only a *notification* on Android, so that is the
     // half worth asserting on — and the plugin picks its implementation from
@@ -48,6 +53,7 @@ void main() {
           throw PlatformException(code: 'no_channel');
         }
         cancelled.add(id);
+        if (id == ReadingLiveActivity.notificationId) order.add('surface-down');
         return null;
       }
       // `initialize` and the permission requests are typed `bool` plugin-side.
@@ -98,6 +104,35 @@ void main() {
 
     expect(await stopAndLogActiveSession(db, session), isNull);
     expect(cancelled, contains(ReadingLiveActivity.notificationId));
+  });
+
+  test('the clock comes down before the stop files anything', () async {
+    // The 14 Aug regression was "the notification never goes"; this is its
+    // slower cousin — "it goes a few seconds late" (owner report, 3 Sep 2026).
+    // The teardown used to be the *last* thing this function did, behind
+    // `logSession`, `publishPendingNoteLinks`, seven key_values writes and two
+    // plugin cancels. That matters because `logSession`'s own `enqueue` fires
+    // `onMutation`, which is the sync trigger, whose pull applies each page
+    // inside `db.transaction` — and drift queues every query issued after an
+    // open transaction until it commits. So the stop's own tail waited on a
+    // sync pass the stop itself had started, and the reader watched a clock
+    // for a sitting they had already ended.
+    //
+    // `onMutation` is therefore the line to measure against: the surface must
+    // be down before the sync pass exists, not merely before this returns.
+    final db = await dbWithRunningSitting();
+
+    await stopAndLogActiveSession(
+      db,
+      session,
+      onMutation: () => order.add('sync-triggered'),
+    );
+
+    expect(order, isNotEmpty);
+    expect(order.first, 'surface-down',
+        reason: 'nothing the reader can see may wait on the filing');
+    expect(order, contains('sync-triggered'));
+    expect(order.indexOf('surface-down'), lessThan(order.indexOf('sync-triggered')));
   });
 
   test('stopping leaves a note to take the sitting off the account', () async {
