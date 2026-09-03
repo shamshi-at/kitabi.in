@@ -58,6 +58,18 @@ void main() {
     expect(result.pagesFilledTo, 724);
   });
 
+  test('says whether this call is what finished the book', () async {
+    // "The reader has just finished a book" is a one-time event, and the
+    // review nudge hangs off it — but every surface can reach this call again
+    // on a book that is already Read, and the call is deliberately idempotent.
+    // Without the distinction, each caller would have to re-derive it from an
+    // entry read before calling, which is the duplicated rule this file exists
+    // to prevent.
+    await seed(id: 'e1', currentPage: 100, pageCount: 200);
+    expect((await markBookFinished(db: db, repo: repo, libraryEntryId: 'e1')).justFinished, isTrue);
+    expect((await markBookFinished(db: db, repo: repo, libraryEntryId: 'e1')).justFinished, isFalse);
+  });
+
   test('never re-stamps a book that was already finished once', () async {
     final original = DateTime(2026, 6, 1);
     await seed(id: 'e2', status: 'read', currentPage: 200, pageCount: 200, finishDate: original);

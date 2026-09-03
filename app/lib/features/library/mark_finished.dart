@@ -5,9 +5,19 @@ import '../../data/repositories/repositories.dart';
 /// the progress was snapped to, and null when there was nothing to snap (no
 /// page count, or the reader was already on the last page).
 class FinishedBookResult {
-  const FinishedBookResult({this.pagesFilledTo});
+  const FinishedBookResult({this.pagesFilledTo, this.justFinished = false});
 
   final int? pagesFilledTo;
+
+  /// Whether *this* call is what turned the book Read.
+  ///
+  /// Every one of the surfaces below can be reached again on a book that is
+  /// already finished, and this call is deliberately idempotent — but "the
+  /// reader has just finished a book" is a one-time event, and the review
+  /// nudge hangs off it. Without the distinction the nudge would have to be
+  /// re-derived by each caller from an entry it read before calling, which is
+  /// exactly the kind of duplicated rule this file exists to prevent.
+  final bool justFinished;
 }
 
 /// Everything finishing a book means, in one place: the status, the date it
@@ -32,7 +42,8 @@ Future<FinishedBookResult> markBookFinished({
   final entry = await db.libraryEntriesDao.getById(libraryEntryId);
   if (entry == null) return const FinishedBookResult();
 
-  if (entry.status != 'read') {
+  final justFinished = entry.status != 'read';
+  if (justFinished) {
     await repo.updateStatus(libraryEntryId, 'read');
   }
   // Never re-stamp a book that was already finished once — the original date
@@ -49,9 +60,9 @@ Future<FinishedBookResult> markBookFinished({
   final total = book?.pageCount;
   if (total != null && total > 0 && (entry.currentPage ?? 0) < total) {
     await repo.updateProgress(libraryEntryId, currentPage: total);
-    return FinishedBookResult(pagesFilledTo: total);
+    return FinishedBookResult(pagesFilledTo: total, justFinished: justFinished);
   }
-  return const FinishedBookResult();
+  return FinishedBookResult(justFinished: justFinished);
 }
 
 /// Reaching the last page and tapping "Read" ought to mean the same thing.

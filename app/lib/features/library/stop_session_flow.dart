@@ -7,6 +7,7 @@ import '../../data/repositories/repository_providers.dart';
 import '../../data/sync/sync_providers.dart';
 import 'mark_finished.dart';
 import 'providers/reading_timer_providers.dart';
+import 'presentation/finished_review_prompt.dart';
 import 'presentation/stop_session_sheet.dart';
 import 'reading_progress.dart';
 
@@ -128,18 +129,33 @@ Future<void> quickStopSession(BuildContext context, WidgetRef ref) async {
   // The page is settled first, so finishing only has the status, the date and
   // any leftover progress gap to close. Same shared call the timer's wax-seal
   // face and the book page's status row make.
+  final bool finished;
   if (result.finished) {
-    await markBookFinished(
+    finished = (await markBookFinished(
+      db: db,
+      repo: libraryRepo,
+      libraryEntryId: logged.libraryEntryId,
+    ))
+        .justFinished;
+  } else {
+    // Reaching the last page without tapping "I finished the book" still
+    // means the book is done.
+    finished = await autoFinishIfOnLastPage(
       db: db,
       repo: libraryRepo,
       libraryEntryId: logged.libraryEntryId,
     );
-  } else {
-    // Reaching the last page without tapping "I finished the book" still
-    // means the book is done.
-    await autoFinishIfOnLastPage(
-      db: db,
-      repo: libraryRepo,
+  }
+
+  // Finishing a book here was silent — the book page's status row was the one
+  // door onto the review nudge, and this is the door most readers actually
+  // use, since it is where "✓ I finished the book" lives. `navigator.context`
+  // and the captured container, never `ref`/`context`: the mini-bar that
+  // asked for this stop is long gone (19 Jul, 31 Jul 2026).
+  if (finished && navigator.mounted) {
+    await maybePromptForReview(
+      navigator.context,
+      container,
       libraryEntryId: logged.libraryEntryId,
     );
   }

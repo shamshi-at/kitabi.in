@@ -20,6 +20,7 @@ import '../providers/library_providers.dart';
 import '../mark_finished.dart';
 import '../providers/reading_timer_providers.dart';
 import '../reading_progress.dart';
+import 'finished_review_prompt.dart';
 import 'note_page.dart';
 import 'session_notes_block.dart';
 import 'session_page_entry.dart';
@@ -324,14 +325,16 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// Guarded against the entry's *live* page rather than [widget.currentPage],
   /// which is a snapshot from when this screen opened and goes stale the
   /// moment progress changes anywhere else mid-session.
-  Future<void> _savePage() async {
+  /// Returns whether this save is what finished the book — the review nudge
+  /// hangs off that, and only this method knows it.
+  Future<bool> _savePage() async {
     await _saveTotalPages();
     final logged = _logged;
     final page = int.tryParse(_pageController.text.trim());
-    if (logged == null || page == null) return;
+    if (logged == null || page == null) return false;
     // Back/swipe saves too (16 Jul 2026), so the same guard that disables Done
     // has to hold here — otherwise leaving by gesture is a way around it.
-    if (_pageError != null) return;
+    if (_pageError != null) return false;
     final entry = await ref.read(appDatabaseProvider).libraryEntriesDao.getById(widget.libraryEntryId);
     // The sitting's own end page is always recorded — it and the entry's
     // progress are two different facts. They were behind one "unchanged"
@@ -342,14 +345,35 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
     // starting the clock.
     final sessionsRepo = await ref.read(readingSessionsRepositoryProvider.future);
     await sessionsRepo.updateSessionPageEnd(logged.sessionId, page);
-    if (page == entry?.currentPage) return; // progress genuinely unchanged
+    if (page == entry?.currentPage) return false; // progress genuinely unchanged
     final libraryRepo = await ref.read(libraryRepositoryProvider.future);
     await libraryRepo.updateProgress(widget.libraryEntryId, currentPage: page);
     // Ending a plain (non-"I finished the book") sitting on the last page
     // finishes it too — _markFinished already handles its own explicit path.
-    await autoFinishIfOnLastPage(
+    return autoFinishIfOnLastPage(
       db: ref.read(appDatabaseProvider),
       repo: libraryRepo,
+      libraryEntryId: widget.libraryEntryId,
+    );
+  }
+
+  /// The review nudge, shown from the *root* navigator once this screen is on
+  /// its way out — the book page (or Home) is what is left underneath, and it
+  /// is where the rating the reader gives will show up. Both handles are read
+  /// before the first await, because every path here is a path off this
+  /// screen (19 Jul, 31 Jul 2026).
+  ({ProviderContainer container, NavigatorState navigator}) _leaveHandles() => (
+        container: ProviderScope.containerOf(context, listen: false),
+        navigator: Navigator.of(context, rootNavigator: true),
+      );
+
+  Future<void> _promptReview(
+    ({ProviderContainer container, NavigatorState navigator}) handles,
+  ) async {
+    if (!handles.navigator.mounted) return;
+    await maybePromptForReview(
+      handles.navigator.context,
+      handles.container,
       libraryEntryId: widget.libraryEntryId,
     );
   }
@@ -369,8 +393,10 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
 
   Future<void> _done() async {
     if (_logged != null) setState(() => _saving = true);
-    await _savePage();
+    final handles = _leaveHandles();
+    final finished = await _savePage();
     if (mounted) _leave();
+    if (finished) await _promptReview(handles);
   }
 
   /// "I finished the book" — the other way off this face. Stopping the clock
@@ -397,7 +423,12 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
       // error is outstanding.
       _pageError = null;
     }
-    await _savePage();
+    final handles = _leaveHandles();
+    // The page save may already have finished the book (the line above forces
+    // the field to the total), in which case `markBookFinished` has nothing
+    // left to change and reports so — but the reader has still just finished a
+    // book, and it is one event however many calls noticed it.
+    final finishedBySave = await _savePage();
 
     final db = ref.read(appDatabaseProvider);
     final repo = await ref.read(libraryRepositoryProvider.future);
@@ -413,6 +444,16 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
           : l10n.statusReadAllPages(result.pagesFilledTo!)),
     ));
     if (mounted) _leave();
+    if (finishedBySave || result.justFinished) await _promptReview(handles);
+  }
+
+  /// Leaving by the back gesture saves the page too (16 Jul 2026) — so if that
+  /// save is what finished the book, it earns the same nudge Done gets.
+  void _savePageOnPop() {
+    final handles = _leaveHandles();
+    unawaited(() async {
+      if (await _savePage()) await _promptReview(handles);
+    }());
   }
 
   /// N1 -> N2. Opens a fresh note page without touching the session: the clock
@@ -523,7 +564,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
       // data-loss path). The pop itself is never blocked; we just save on the
       // way out.
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) _savePage();
+        if (didPop) _savePageOnPop();
       },
       child: Scaffold(
         backgroundColor: AppColors.night,

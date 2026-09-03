@@ -1077,6 +1077,26 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   created and dismissed the live clock moments after starting it. Capture the
   list of activities to dismiss synchronously, before the `request`, and end
   only those.
+- **A prompt written as a private method on the screen that happens to trigger
+  it is a prompt with one door, and the feature has several.** The
+  finished-reading review nudge lived on the book page's reading card, keyed on
+  its own status row picking "Read" — so every other way a book becomes
+  finished passed in silence: the timer's "I finished the book", the quick-stop
+  sheet's tick, and above all simply typing the last page, which
+  `autoFinishIfOnLastPage` has treated as finishing a book since it was written
+  (owner report, 3 Sep 2026). Same shape as the 19 Jul total-pages field and
+  the four progress surfaces: the rule went in one place, the moment it belongs
+  to has five. It is `maybePromptForReview` now, beside `markBookFinished` —
+  which had to grow a `justFinished` so callers can tell "the reader has just
+  finished a book" (a one-time event) from "this idempotent call ran again on a
+  book already Read". Two things the extraction forces: the shared prompt takes
+  a `ProviderContainer` and a root-navigator context rather than a `WidgetRef`,
+  because most of the surfaces that finish a book are surfaces that *vanish*
+  when they do; and it resolves the Work id from the catalog mirror while
+  letting a caller that already knows it pass it in — the book page's own route
+  carries it, and a nudge that needed the mirror to be warm would silently skip
+  the very screen it used to work on.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -464,6 +465,56 @@ void main() {
     final sessions = await tester.runAsync(() => db.readingSessionsDao.watchForEntry(entry!.id).first);
     expect(sessions, hasLength(1));
     expect(sessions!.first.pageStart, 50);
+
+    await flushTree(tester);
+  });
+
+  /// The nudge used to live on one door only — the status row's "Read" tile —
+  /// so every other way of finishing a book passed in silence, above all the
+  /// commonest one: typing the last page (owner report, 3 Sep 2026).
+  /// `autoFinishIfOnLastPage` has always treated that as finishing the book.
+  testWidgets('ending a sitting on the last page prompts a review too', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      // The catalog mirror, because "how long is this book?" is answered from
+      // Drift and nowhere else — `autoFinishIfOnLastPage` stays silent rather
+      // than guess when it can't say.
+      await db.cachedBooksDao.upsert(CachedBooksCompanion.insert(
+        editionId: _editionId,
+        workId: _workId,
+        title: 'Chemmeen',
+        authorNames: 'Thakazhi Sivasankara Pillai',
+        pageCount: const Value(184),
+      ));
+      final repo = LibraryRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      final id = await repo.add(editionId: _editionId);
+      await repo.updateStatus(id, 'reading');
+      await repo.updateProgress(id, currentPage: 50);
+    });
+
+    await tester.pumpWidget(wrapWithRouter('/book/$_workId/$_editionId'));
+    await settle(tester);
+
+    await tester.tap(find.text('Start a session'));
+    await settle(tester);
+    await tester.tap(find.text('Stop & log').last);
+    await settle(tester);
+    await settle(tester);
+
+    // The wax-seal face's page field: the edition is 184 pages long, so this
+    // is the reader closing the book.
+    await tester.enterText(find.byType(TextField).first, '184');
+    await settle(tester);
+    await tester.tap(find.text('Done'));
+    await settle(tester);
+    await settle(tester);
+
+    final entry = await tester.runAsync(() => db.libraryEntriesDao.getByEditionId(_editionId));
+    expect(entry!.status, 'read', reason: 'the last page finishes the book');
+    expect(find.text('You finished it!'), findsOneWidget);
 
     await flushTree(tester);
   });

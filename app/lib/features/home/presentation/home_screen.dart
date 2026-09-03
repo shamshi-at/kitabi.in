@@ -20,6 +20,7 @@ import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../insights/providers/insights_providers.dart';
 import '../../library/mark_finished.dart';
+import '../../library/presentation/finished_review_prompt.dart';
 import '../../library/providers/library_providers.dart';
 import '../../library/providers/reading_timer_providers.dart';
 import '../../library/reading_progress.dart';
@@ -784,11 +785,20 @@ class _CurrentlyReadingCard extends ConsumerWidget {
       currentPage: newPage,
       startDate: entry.startDate == null ? DateTime.now() : null,
     );
-    await autoFinishIfOnLastPage(
+    final finished = await autoFinishIfOnLastPage(
       db: ref.read(appDatabaseProvider),
       repo: repo,
       libraryEntryId: entry.id,
     );
+    // Typing the last page finishes the book, here as everywhere else — so it
+    // gets the same nudge to say something about it.
+    if (finished && context.mounted) {
+      await maybePromptForReview(
+        context,
+        ProviderScope.containerOf(context, listen: false),
+        libraryEntryId: entry.id,
+      );
+    }
   }
 }
 

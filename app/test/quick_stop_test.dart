@@ -156,6 +156,83 @@ void main() {
     reportTestException = reportOriginal;
   });
 
+  /// The door most readers actually use — "✓ I finished the book" lives on
+  /// this sheet — and finishing through it was silent: the review nudge hung
+  /// off the book page's status row alone (owner report, 3 Sep 2026). What
+  /// makes this path its own test rather than a repeat of the timer's is that
+  /// the caller is *gone* by the time the prompt shows, so the sheet has to
+  /// come up on the captured root navigator and container — the failure mode
+  /// this file exists for (19 Jul, 31 Jul 2026).
+  testWidgets('finishing the book from the quick-stop sheet asks for a review',
+      (tester) async {
+    // Two sheets deep on the default 800x600 surface is 29px short; the
+    // question is where the nudge comes from, not how it folds.
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    GoogleFonts.config.allowRuntimeFetching = false;
+    final reportOriginal = reportTestException;
+    reportTestException = (details, testDescription) {
+      if (details.exception.toString().contains('GoogleFonts')) return;
+      reportOriginal(details, testDescription);
+    };
+
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    const session = SessionContext(userId: 'u1', deviceId: 'd1');
+    final repo = LibraryRepository(db, session);
+
+    final entryId = await tester.runAsync(() async {
+      final id = await repo.add(editionId: _editionId);
+      await repo.updateStatus(id, 'reading');
+      await db.cachedBooksDao.upsert(CachedBooksCompanion.insert(
+        editionId: _editionId, workId: 'w', title: 'T', authorNames: 'A',
+        pageCount: const Value(200),
+      ));
+      return id;
+    });
+
+    Future<void> settle({Finder? until}) async {
+      var graceLeft = 8;
+      for (var i = 0; i < (until == null ? 8 : 120); i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.pump(const Duration(milliseconds: 30));
+        if (until != null && until.evaluate().isNotEmpty && --graceLeft <= 0) return;
+      }
+    }
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        apiClientProvider.overrideWithValue(_FakeApi()),
+        sessionContextProvider.overrideWith((ref) async => session),
+        syncTriggerProvider.overrideWithValue(() {}),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: _Host(entryId: entryId!),
+      ),
+    ));
+    await settle();
+
+    await tester.tap(find.text('start'));
+    await settle();
+    await tester.tap(find.text('stop'));
+    await settle(until: find.byType(TextField));
+
+    await tester.tap(find.textContaining('I finished the book'));
+    await settle(until: find.text('You finished it!'));
+
+    final entry = await tester.runAsync(() => db.libraryEntriesDao.getById(entryId));
+    expect(entry?.status, 'read');
+    expect(find.text('You finished it!'), findsOneWidget,
+        reason: 'the caller unmounted — the nudge rides the captured navigator');
+
+    await tester.pumpWidget(const SizedBox());
+    await settle();
+    reportTestException = reportOriginal;
+  });
+
   testWidgets('the page sheet still opens when the caller unmounts mid-flow',
       (tester) async {
     // The test above passes by timing luck: stop() only *schedules* the
