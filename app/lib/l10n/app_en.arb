@@ -3605,6 +3605,15 @@
   "@formIsbnTakenOpen": {"description": "Action that opens the existing entry for editing, carrying everything typed on the add form"},
   "formIsbnTakenStay": "Let me check the ISBN",
   "@formIsbnTakenStay": {"description": "Action that dismisses the ISBN-taken dialog and returns to the add form, e.g. to correct a mistyped number"},
+  "formIsbnTakenDifferent": "No, mine's a different book",
+  "@formIsbnTakenDifferent": {"description": "Action on the already-catalogued dialog for a reader who insists the book they are adding is not the one the scan resolved"},
+  "formScanAlreadyCatalogued": "{title} is already in the catalogue — it's the book you scanned. Add your covers and details to that entry rather than adding the book a second time?",
+  "@formScanAlreadyCatalogued": {
+    "description": "Dialog shown when saving an add form that was filled from a barcode scan, which always resolves a book the catalogue already holds",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "formScanAlreadyCataloguedUntitled": "This book is already in the catalogue — it's the one you scanned. Add your covers and details to that entry rather than adding the book a second time?",
+  "@formScanAlreadyCataloguedUntitled": {"description": "The same dialog when the scanned work came back with no title to name"},
   "formDiscardTitle": "Discard this book?",
   "@formDiscardTitle": {"description": "Title of the unsaved-changes dialog when leaving the add form"},
   "formDiscardEditTitle": "Discard your edits?",

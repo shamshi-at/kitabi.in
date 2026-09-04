@@ -549,6 +549,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             // covers and details already captured there, to fill whatever
             // this entry is still missing.
             seed: map['seed'] as Map<String, dynamic>?,
+            // …and *which printing* that fork was about, when it knew: a scan
+            // and a duplicate-ISBN 409 each resolved one specific edition, and
+            // the form would otherwise edit whichever came back first.
+            editionId: map['editionId'] as String?,
             // T6's "Add a translation": the original's summary, pre-linking
             // the form's Translated-from row.
             initialOriginal: map['originalWork'] as Map<String, dynamic>?,

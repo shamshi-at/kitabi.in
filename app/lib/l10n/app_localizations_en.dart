@@ -4546,6 +4546,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formIsbnTakenStay => 'Let me check the ISBN';
 
   @override
+  String get formIsbnTakenDifferent => 'No, mine\'s a different book';
+
+  @override
+  String formScanAlreadyCatalogued(String title) {
+    return '$title is already in the catalogue — it\'s the book you scanned. Add your covers and details to that entry rather than adding the book a second time?';
+  }
+
+  @override
+  String get formScanAlreadyCataloguedUntitled =>
+      'This book is already in the catalogue — it\'s the one you scanned. Add your covers and details to that entry rather than adding the book a second time?';
+
+  @override
   String get formDiscardTitle => 'Discard this book?';
 
   @override

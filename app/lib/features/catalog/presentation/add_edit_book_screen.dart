@@ -59,10 +59,23 @@ class AddEditBookScreen extends ConsumerWidget {
     this.initialTitle,
     this.initialOriginal,
     this.seed,
+    this.editionId,
     this.returnCreated = false,
   });
 
   final String? workId;
+
+  /// *Which* printing this edit is about.
+  ///
+  /// The form edits one Edition alongside the Work, and picking it with
+  /// `editions.first` is the trap `work_editions.dart` exists to name: two
+  /// printings differ in exactly the fields being edited here — page count,
+  /// covers, format, publisher — so improving the wrong one writes a reader's
+  /// 240-page reprint onto the 55-page first edition. Every caller that
+  /// resolved a specific printing (a scan, a duplicate-ISBN 409) passes it;
+  /// null still means "the only one, or the first" for the paths that
+  /// genuinely have nothing better to go on.
+  final String? editionId;
 
   /// A scanned-but-unmatched ISBN carried in from the scanner's not-found
   /// state, so the form starts with the number already filled.
@@ -110,7 +123,7 @@ class AddEditBookScreen extends ConsumerWidget {
         child: work.when(
           loading: () => ListSkeleton(),
           error: (err, _) => ErrorRetry(onRetry: () => ref.invalidate(workProvider(workId!))),
-          data: (body) => _BookForm(initialWork: body, seed: seed),
+          data: (body) => _BookForm(initialWork: body, seed: seed, editionId: editionId),
         ),
       ),
     );
@@ -124,6 +137,7 @@ class _BookForm extends ConsumerStatefulWidget {
     this.initialTitle,
     this.initialOriginal,
     this.seed,
+    this.editionId,
     this.returnCreated = false,
   });
 
@@ -132,6 +146,7 @@ class _BookForm extends ConsumerStatefulWidget {
   final String? initialTitle;
   final Map<String, dynamic>? initialOriginal;
   final Map<String, dynamic>? seed;
+  final String? editionId;
   final bool returnCreated;
 
   @override
@@ -233,7 +248,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
   // offering it back under "Already in the catalogue?" was noise (owner
   // report, 13 Aug 2026: "it still shows the same book … but I am editing the
   // same one").
+  /// What an in-form scan resolved: the catalogue row it filled this form
+  /// from, the printing inside it, and the title to name in a question about
+  /// it. Held because a scan *always* lands on a book the catalogue already
+  /// has — `_applyScannedWork` says so in as many words — so saving this form
+  /// as a new book is never right; see [_offerTheEntryTheScanResolved].
   String? _prefillWorkId;
+  String? _prefillEditionId;
+  String? _prefillWorkTitle;
 
   // Unsaved-changes guard: a fingerprint of the form as it was seeded, so any
   // divergence means "dirty". [_confirmedLeave] lets the post-save pops (and a
@@ -242,9 +264,25 @@ class _BookFormState extends ConsumerState<_BookForm> {
   bool _confirmedLeave = false;
   bool _discardDialogOpen = false;
 
+  /// The printing this form is editing.
+  ///
+  /// [_BookForm.editionId] when the caller resolved one — a scan and a
+  /// duplicate-ISBN 409 both know exactly which printing they mean, and
+  /// `editions.first` would quietly edit a different one (work_editions.dart;
+  /// owner report, 13 Aug 2026). The fallback is for the callers that have
+  /// nothing better, and for an id that no longer matches a row.
   Map<String, dynamic>? get _edition {
-    final editions = widget.initialWork?['editions'] as List?;
-    return editions != null && editions.isNotEmpty ? editions.first as Map<String, dynamic> : null;
+    final work = widget.initialWork;
+    if (work == null) return null;
+    final editions = editionsOf(work);
+    if (editions.isEmpty) return null;
+    final wanted = widget.editionId;
+    if (wanted != null) {
+      for (final edition in editions) {
+        if (edition['id'] == wanted) return edition;
+      }
+    }
+    return editions.first;
   }
 
   @override
@@ -631,17 +669,41 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final workId = data['work_id'] as String?;
     if (workId == null) return false;
 
+    await _offerExistingEntry(
+      workId: workId,
+      // The server resolved the printing that holds the number — improving any
+      // other one would put the reader's details on the wrong copy.
+      editionId: data['edition_id'] as String?,
+      message: data['message'] as String? ?? '',
+      stayLabel: AppLocalizations.of(context)!.formIsbnTakenStay,
+    );
+    // Handled either way: the reader has been told what happened in a sentence
+    // that fits, so the caller's "check your connection" must not follow it.
+    return true;
+  }
+
+  /// The form is holding a book the catalogue already has. Offer it.
+  ///
+  /// Returns true when the reader took the offer and we have navigated to that
+  /// entry; false when they want to carry on with this form (or the screen went
+  /// away underneath the question).
+  Future<bool> _offerExistingEntry({
+    required String workId,
+    required String message,
+    required String stayLabel,
+    String? editionId,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
     final open = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.paper,
         title: Text(l10n.formIsbnTakenTitle),
-        content: Text(data['message'] as String? ?? ''),
+        content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.formIsbnTakenStay),
+            child: Text(stayLabel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -650,9 +712,50 @@ class _BookFormState extends ConsumerState<_BookForm> {
         ],
       ),
     );
-    if (open != true || !mounted) return true;
-    _forkImproveEntry({'id': workId});
+    if (open != true || !mounted) return false;
+    _forkImproveEntry({'id': workId}, editionId: editionId);
     return true;
+  }
+
+  /// A save that would add a book the scan already found.
+  ///
+  /// `_applyScannedWork` states the fact plainly — "a scan resolves through the
+  /// catalogue (an OpenLibrary hit is cached on the way past), so the book is
+  /// always in it by the time we get here" — and acts on it by hiding the
+  /// duplicate-match panel. It then let the save post a create anyway, so the
+  /// one warning that would have caught the duplicate was suppressed *because*
+  /// the app knew the duplicate was certain. That produced seven identical
+  /// Dharmapuranams in a row, each rejected only by the ISBN's unique index
+  /// (owner report, 4 Sep 2026) — and would have produced a real duplicate Work
+  /// on any scanned printing that carries no ISBN.
+  ///
+  /// So it is asked here rather than reported afterwards: this is knowledge the
+  /// form has held since the scan returned, and the reader should not have to
+  /// spend a round trip to find it out. Their answer is believed — "it's a
+  /// different book" clears the prefill so the question is not asked twice, and
+  /// the server's 409 remains the backstop if it really is the same printing.
+  ///
+  /// Returns true when the save must not go on.
+  Future<bool> _offerTheEntryTheScanResolved() async {
+    final workId = _prefillWorkId;
+    if (workId == null) return false;
+    final l10n = AppLocalizations.of(context)!;
+    final title = _prefillWorkTitle?.trim();
+    final opened = await _offerExistingEntry(
+      workId: workId,
+      editionId: _prefillEditionId,
+      message: title == null || title.isEmpty
+          ? l10n.formScanAlreadyCataloguedUntitled
+          : l10n.formScanAlreadyCatalogued(title),
+      stayLabel: l10n.formIsbnTakenDifferent,
+    );
+    if (opened || !mounted) return true;
+    setState(() {
+      _prefillWorkId = null;
+      _prefillEditionId = null;
+      _prefillWorkTitle = null;
+    });
+    return false;
   }
 
   /// M1 — the fork. A similar-title match means one of several things, and
@@ -771,11 +874,16 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// `pushReplacement`, because this form's reason to exist is gone: the book
   /// is not being added, it is being improved, and backing into a stale
   /// half-filled add form would invite the duplicate all over again.
-  void _forkImproveEntry(Map<String, dynamic> work) {
+  /// [editionId] names the printing being improved when the caller resolved
+  /// one. The similar-title fork does not — a title match says nothing about
+  /// which printing — but a scan and a duplicate-ISBN 409 both do, and without
+  /// it the reader's page count and covers land on `editions.first`.
+  void _forkImproveEntry(Map<String, dynamic> work, {String? editionId}) {
     _confirmedLeave = true;
     context.pushReplacement(Routes.catalogAdd, extra: <String, dynamic>{
       'workId': work['id'] as String,
       'seed': _capturedFields(),
+      'editionId': ?editionId,
     });
   }
 
@@ -818,6 +926,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
         _selectedGenres.addAll(names);
         _customGenreList.addAll(names.where((g) => !_commonGenres.contains(g)));
       }
+      // A different literary form is a *new* Work by design (rule 17), so the
+      // scanned book is no longer what this form is about — forget it, or the
+      // save would offer to improve the novel the screenplay came from.
+      _prefillWorkId = null;
+      _prefillEditionId = null;
+      _prefillWorkTitle = null;
       // The one thing that is *not* shared — ask for it rather than inherit it.
       _form = null;
       _detailsExpanded = true;
@@ -1226,6 +1340,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
       // the way past), so the book is always in it by the time we get here —
       // which is exactly why it must not then be offered back as a match.
       _prefillWorkId = work['id'] as String?;
+      _prefillEditionId = edition?['id'] as String?;
+      _prefillWorkTitle = work['title'] as String?;
       _similar = [
         for (final w in _similar)
           if (w['id'] != _prefillWorkId) w,
@@ -1441,6 +1557,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
       final api = ref.read(apiClientProvider);
       final workId = widget.initialWork?['id'] as String?;
       if (workId == null) {
+        // Before the round trip, not after it: the scan already told us this
+        // book is in the catalogue.
+        if (await _offerTheEntryTheScanResolved()) return;
         created = await api.createWork(payload);
       } else {
         final result = await api.updateWork(workId, payload);

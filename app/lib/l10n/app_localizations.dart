@@ -7294,6 +7294,24 @@ abstract class AppLocalizations {
   /// **'Let me check the ISBN'**
   String get formIsbnTakenStay;
 
+  /// Action on the already-catalogued dialog for a reader who insists the book they are adding is not the one the scan resolved
+  ///
+  /// In en, this message translates to:
+  /// **'No, mine\'s a different book'**
+  String get formIsbnTakenDifferent;
+
+  /// Dialog shown when saving an add form that was filled from a barcode scan, which always resolves a book the catalogue already holds
+  ///
+  /// In en, this message translates to:
+  /// **'{title} is already in the catalogue — it\'s the book you scanned. Add your covers and details to that entry rather than adding the book a second time?'**
+  String formScanAlreadyCatalogued(String title);
+
+  /// The same dialog when the scanned work came back with no title to name
+  ///
+  /// In en, this message translates to:
+  /// **'This book is already in the catalogue — it\'s the one you scanned. Add your covers and details to that entry rather than adding the book a second time?'**
+  String get formScanAlreadyCataloguedUntitled;
+
   /// Title of the unsaved-changes dialog when leaving the add form
   ///
   /// In en, this message translates to:
