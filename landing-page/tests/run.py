@@ -52,6 +52,11 @@ MODULES = [
     "pages/discover.js",
     "lists.js",
     "pages/more.js",
+    # Last: it imports from every renderer above. Included so the merge 301 is
+    # covered — servePage's cache and fetch are stubbable (a non-GET request
+    # skips `cached` entirely), and a redirect nothing tests is a redirect that
+    # quietly stops happening.
+    "handler.js",
 ]
 
 # Route modules that are worth testing directly (not under _lib).

@@ -7,5 +7,6 @@ export function onRequestGet(context) {
   const key = context.params.key;
   return servePage(context, `/public/publisher/${encodeURIComponent(key)}`, renderPublisher, {
     what: 'publisher',
+    mergedFrom: { kind: 'publisher', key },
   });
 }

@@ -17,7 +17,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.api.deps import DbSession
-from app.models import Author, Publisher, Work
+from app.models import Author, Publisher, Series, Work
 from app.schemas import public as P
 from app.services import merge_service, public_service
 
@@ -242,11 +242,11 @@ async def merged_target(kind: str, key: str, db: DbSession, response: Response) 
     otherwise. The site calls this only after a normal lookup misses, so it
     costs nothing on the happy path.
     """
-    model = {"author": Author, "publisher": Publisher}.get(kind)
+    model = _MERGEABLE.get(kind)
     if model is None:
         raise _not_found("Kind")
     row = await public_service.resolve_including_merged(db, model, key)
-    target = await merge_service.resolve_merged(db, f"{kind}s", row)
+    target = await merge_service.resolve_merged(db, row)
     if target is None:
         raise _not_found(kind.title())
     _cached(response, _CACHE)
@@ -255,6 +255,10 @@ async def merged_target(kind: str, key: str, db: DbSession, response: Response) 
 
 # The kinds a kitabi.in URL can name, in the URL's own words.
 _KINDS = {"book": Work, "author": Author, "publisher": Publisher}
+
+# Everything that carries `merged_into_id`, so a folded-away row's URL can 301
+# rather than 404. Books joined the list when readers could merge them.
+_MERGEABLE = {"book": Work, "author": Author, "publisher": Publisher, "series": Series}
 
 
 @router.get("/id/{kind}/{key}")
@@ -276,11 +280,13 @@ async def resolve_id(kind: str, key: str, db: DbSession, response: Response) -> 
     if model is None:
         raise _not_found("Kind")
     row = await public_service.resolve(db, model, key)
-    if row is None and kind != "book":
+    if row is None:
         # Merged rows are excluded from `resolve` — chase the survivor, same
-        # as `/merged/...` does for the edge's 301.
+        # as `/merged/...` does for the edge's 301. Books included: a reader
+        # can merge those now, so an app link to one that was folded away has
+        # to open the survivor rather than dead-end.
         row = await public_service.resolve_including_merged(db, model, key)
-        row = await merge_service.resolve_merged(db, f"{kind}s", row) or row
+        row = await merge_service.resolve_merged(db, row) or row
     if row is None or row.deleted_at is not None:
         raise _not_found(kind.title())
     _cached(response, _CACHE)

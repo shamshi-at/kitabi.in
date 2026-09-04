@@ -3,7 +3,9 @@ import { servePage } from '../_lib/handler.js';
 import { renderSeries } from '../_lib/pages/more.js';
 
 export function onRequestGet(context) {
-  return servePage(context, `/public/series/${encodeURIComponent(context.params.key)}`, renderSeries, {
+  const key = context.params.key;
+  return servePage(context, `/public/series/${encodeURIComponent(key)}`, renderSeries, {
     what: 'series',
+    mergedFrom: { kind: 'series', key },
   });
 }

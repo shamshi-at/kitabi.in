@@ -269,7 +269,7 @@ async def peek(
             "series": "Series",
         }[kind],
         id=str(row.id),
-        merged_into=await merge_service.resolve_merged(db, kind, row) if kind != "works" else None,
+        merged_into=await merge_service.resolve_merged(db, row),
         deleted=row.deleted_at is not None,
     )
     return templates.TemplateResponse(request, "_peek.html", {"p": peeked, "kind": kind})
@@ -1098,7 +1098,7 @@ async def author_detail(
             "kind": "authors",
             "merge_q": merge_q,
             "merge_candidates": await _merge_candidates(db, "authors", author_id, merge_q),
-            "merged_into": await merge_service.resolve_merged(db, "authors", author),
+            "merged_into": await merge_service.resolve_merged(db, author),
             "flash": flash,
         },
     )
@@ -1190,7 +1190,7 @@ async def series_detail(
             "kind": "series",
             "merge_q": merge_q,
             "merge_candidates": await _merge_candidates(db, "series", series_id, merge_q),
-            "merged_into": await merge_service.resolve_merged(db, "series", series),
+            "merged_into": await merge_service.resolve_merged(db, series),
             "flash": flash,
         },
     )
@@ -1325,7 +1325,7 @@ async def publisher_detail(
             "kind": "publishers",
             "merge_q": merge_q,
             "merge_candidates": await _merge_candidates(db, "publishers", publisher_id, merge_q),
-            "merged_into": await merge_service.resolve_merged(db, "publishers", publisher),
+            "merged_into": await merge_service.resolve_merged(db, publisher),
             "flash": flash,
         },
     )

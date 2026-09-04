@@ -1161,3 +1161,63 @@ assert(
 // intact — an entity-escaped href is the 9 Aug aria-current bug wearing a
 // different hat, and it would look perfectly fine on screen.
 assertExcludes(band, '&amp;', 'the store URL is not entity-mangled');
+
+// --------------------------------------------------------------------------
+// A merged row's URL moves instead of dying
+// --------------------------------------------------------------------------
+//
+// Duplicates get folded together — an admin always could, and a reader can now
+// fold the rows a typo'd title left behind — and the loser keeps a pointer at
+// the survivor precisely so its URL can 301. Nothing was asking for that
+// pointer: /public/merged/ had existed since the console's dedupe and no caller
+// ever called it, so every merged row 404'd anyway and the ranking the merge
+// was meant to consolidate went out with it (4 Sep 2026).
+//
+// These cover `pageOutcome`, the pure decision. The two awaits and the cache
+// around it are runtime plumbing this harness cannot reach by design; the live
+// 301 is probed against the deployed site.
+
+var moved = pageOutcome({
+  data: null,
+  missing: true,
+  movedTo: '/book/dharmapuranam',
+  what: 'book',
+});
+assert(moved.status === 301, 'a merged book 301s rather than 404ing');
+assert(moved.headers.get('location') === '/book/dharmapuranam', 'the 301 names the survivor');
+assertIncludes(
+  moved.headers.get('cache-control'),
+  'max-age=',
+  'the redirect is cached, so the lookup behind it is not repeated per visitor',
+);
+
+// A book that is simply gone still has to 404, or a dead link never leaves the
+// index.
+assert(
+  pageOutcome({ data: null, missing: true, movedTo: null, what: 'book' }).status === 404,
+  'a miss with no survivor is still a 404',
+);
+
+// The distinction this whole module is built around, and the one a merge lookup
+// must not blur: an origin blip is a 503. A merge lookup that ALSO failed
+// during that blip returns null, and null must not read as "no survivor,
+// therefore gone".
+assert(
+  pageOutcome({ data: null, missing: false, movedTo: null, what: 'book' }).status === 503,
+  'an origin blip is 503, never a 404 or a redirect',
+);
+assert(
+  pageOutcome({ data: null, missing: false, movedTo: '/book/x', what: 'book' }).status === 503,
+  'a blip is 503 even if a redirect target somehow came back',
+);
+
+// A live page never redirects, whatever else is true.
+assert(
+  pageOutcome({
+    data: { slug: 'chemmeen' },
+    missing: false,
+    movedTo: '/book/other',
+    render: function () { return new Response('page', { status: 200 }); },
+  }).status === 200,
+  'data always wins — a resolved page renders',
+);

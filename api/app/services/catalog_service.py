@@ -1012,6 +1012,19 @@ async def merge_works(db: AsyncSession, keep_id: uuid.UUID, absorb_id: uuid.UUID
     await db.execute(
         update(Work).where(Work.original_work_id == absorb_id).values(original_work_id=keep_id)
     )
+    # Anything already merged into the absorbed row is repointed at the
+    # survivor, or merging a row that others were merged into builds a CHAIN:
+    #   dharmapuranm -> dharma-puranam -> dharmapuranam
+    # Resolution does a single hop, so the far end of a chain silently 404s —
+    # the exact failure the pointer exists to prevent. Keeping the graph flat
+    # means every merged row always points directly at a live survivor. Lifted
+    # from merge_service, which learned it on authors first.
+    await db.execute(
+        update(Work).where(Work.merged_into_id == absorb_id).values(merged_into_id=keep_id)
+    )
+    # The pointer, not just a delete: a merged book's URL 301s to the survivor
+    # instead of dying, and clearing this one column undoes the merge.
+    absorb.merged_into_id = keep_id
     absorb.deleted_at = now
     absorb.updated_at = now
     await db.commit()

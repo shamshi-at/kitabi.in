@@ -391,11 +391,17 @@ async def dismiss(
     return True
 
 
-async def resolve_merged(db: AsyncSession, kind: str, row) -> object | None:  # noqa: ANN001
-    """The row a merged entity now points at, or None if it isn't merged."""
+async def resolve_merged(db: AsyncSession, row) -> object | None:  # noqa: ANN001
+    """The row a merged entity now points at, or None if it isn't merged.
+
+    Takes the row rather than a `kind` string because the row already knows its
+    own model — and the string map here covers only the three kinds this module
+    merges. Works are merged elsewhere (catalog_service.merge_works, which the
+    add form now reaches), and every caller had to special-case them.
+    """
     if row is None or getattr(row, "merged_into_id", None) is None:
         return None
-    return await db.get(MODELS[kind], row.merged_into_id)
+    return await db.get(type(row), row.merged_into_id)
 
 
 async def canonical(db: AsyncSession, row) -> object | None:  # noqa: ANN001

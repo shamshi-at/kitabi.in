@@ -7,5 +7,6 @@ export function onRequestGet(context) {
   const key = context.params.key;
   return servePage(context, `/public/author/${encodeURIComponent(key)}`, renderAuthor, {
     what: 'author',
+    mergedFrom: { kind: 'author', key },
   });
 }

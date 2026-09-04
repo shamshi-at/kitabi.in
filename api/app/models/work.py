@@ -115,6 +115,18 @@ class Work(CatalogMixin, Base):
     # contribution score. Null for OpenLibrary-imported / seeded rows.
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, default=None, index=True)
 
+    # Set when this Work was merged into another as a duplicate. The row is soft
+    # deleted too, but the pointer is what keeps its URL alive: resolution
+    # follows it and 301s to the survivor rather than 404ing, so a merge
+    # consolidates ranking instead of discarding it. Authors, publishers and
+    # series have had this since the console's dedupe; Works did not, because
+    # only an admin could merge one. Readers can now (POST /catalog/works/{id}
+    # /merge), which makes a book's URL far likelier to move — and a book page
+    # is the one page here that actually earns inbound links.
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("works.id"), default=None, index=True
+    )
+
     authors: Mapped[list["Author"]] = relationship(secondary=work_authors, lazy="selectin")
     translators: Mapped[list["Author"]] = relationship(secondary=work_translators, lazy="selectin")
     genres: Mapped[list["Genre"]] = relationship(secondary=work_genres, lazy="selectin")

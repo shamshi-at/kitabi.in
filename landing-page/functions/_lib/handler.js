@@ -15,16 +15,57 @@ import { renderList, renderListIndex, renderTranslationIndex } from './pages/mor
  *
  * The three outcomes are deliberately distinct:
  *   * data          → render, cache
- *   * missing (404) → a real 404 + noindex, so a dead link leaves the index
+ *   * missing (404) → a merged row's 301 if there is one, else a real 404 +
+ *     noindex, so a dead link leaves the index
  *   * anything else → 503 + Retry-After, NEVER a 404. A blip must not read as
  *     "this book no longer exists", or one bad minute deindexes the site.
+ *
+ * `mergedFrom` ({ kind, key }) is what makes a merge survivable. Duplicates get
+ * folded together — an admin has always been able to, and a reader can now fold
+ * the rows a typo'd title left behind — and the loser keeps a pointer at the
+ * survivor precisely so its URL can move rather than die. Nothing was asking
+ * for that pointer: the API has served /public/merged/ since the console's
+ * dedupe and no caller ever called it, so every merged row 404'd anyway and the
+ * ranking a merge was meant to consolidate went out with it.
+ *
+ * Asked only *after* a normal lookup misses, so it costs nothing on the happy
+ * path — one extra request on a page that was going to 404 regardless.
  */
-export function servePage(context, apiPath, render, { what = 'page' } = {}) {
+export function servePage(context, apiPath, render, { what = 'page', mergedFrom = null } = {}) {
   return cached(context, async () => {
     const { data, missing } = await fetchPage(apiPath);
-    if (data) return render(data);
-    return missing ? notFound({ what }) : unavailable();
+    // Asked only after a miss, so a page that resolved never pays for it.
+    const movedTo = missing && mergedFrom ? await mergedTarget(mergedFrom) : null;
+    return pageOutcome({ data, missing, movedTo, render, what });
   });
+}
+
+/**
+ * Which of the four answers a lookup earns — pure, so it can actually be tested.
+ *
+ * The orchestration around it is two awaits and a cache; *this* is where a
+ * mistake costs something, and the harness that covers this file is synchronous
+ * (landing-page/tests/run.py — no Cache API, no fetch). Same reason the app
+ * keeps `pushTapRoute` and `localNotificationRoute` as pure top-level rules: the
+ * rule is the feature, and a rule buried in an async pipeline gets tested by
+ * nothing and then quietly stops holding.
+ */
+export function pageOutcome({ data, missing, movedTo, render, what = 'page' }) {
+  if (data) return render(data);
+  if (missing && movedTo) return permanentRedirect(movedTo);
+  return missing ? notFound({ what }) : unavailable();
+}
+
+/**
+ * Where a row that was merged away now lives, as a path — or null.
+ *
+ * Never throws and never blocks the 404: a redirect we could not look up is a
+ * 404, which is what would have happened anyway.
+ */
+async function mergedTarget({ kind, key }) {
+  const { data } = await fetchPage(`/public/merged/${kind}/${encodeURIComponent(key)}`);
+  const slug = data?.slug;
+  return slug ? `/${kind}/${encodeURIComponent(slug)}` : null;
 }
 
 /** 301, cached for a day so the lookup behind it isn't repeated per visitor. */
