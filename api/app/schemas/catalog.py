@@ -526,6 +526,13 @@ class CoverExtractIn(BaseModel):
 
     front_url: str | None = None
     back_url: str | None = None
+    # Which half of the read to run. The identity fields come back in a second
+    # or two; the back-cover blurb is up to 150 words and, in Malayalam, most
+    # of the wait — so the form asks for them separately and fills the blurb in
+    # behind the title. Omitted runs both concurrently and merges, which is
+    # what an app build older than the split sends (and what a caller that
+    # simply wants everything in one response gets).
+    part: Literal["identity", "description"] | None = None
 
 
 class CoverExtractOut(BaseModel):

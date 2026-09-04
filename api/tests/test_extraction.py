@@ -6,11 +6,15 @@ import httpx
 import pytest
 
 from app.core.config import Settings, get_settings
+from app.services import extraction_service
 from app.services.extraction_service import (
+    _BLURB_SYSTEM,
     _clean,
     _extract_object,
     allowed_image_url,
+    extract_blurb,
     extract_from_covers,
+    extract_identity,
     valid_isbn13,
 )
 
@@ -121,12 +125,12 @@ def test_allowed_image_url_is_scoped_to_our_covers_bucket():
 async def test_extract_from_covers_round_trip_with_fake_llm():
     """Full service path against a faked Anthropic response: images in, cleaned
     fields out."""
-    captured: dict = {}
+    bodies: list[dict] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         import json
 
-        captured.update(json.loads(request.content))
+        bodies.append(json.loads(request.content))
         reply = (
             '{"title": "മയ്യഴിപ്പുഴയുടെ തീരങ്ങളിൽ", "authors": ["എം. മുകുന്ദൻ"], '
             '"publisher": "DC Books", "description": "ഒരു നോവൽ.", '
@@ -147,10 +151,14 @@ async def test_extract_from_covers_round_trip_with_fake_llm():
     assert fields["authors"] == ["എം. മുകുന്ദൻ"]
     assert fields["publisher"] == "DC Books"
     assert fields["language"] == "Malayalam"
+    assert fields["description"] == "ഒരു നോവൽ."
+    # Identified by its prompt rather than by arrival order — the two calls are
+    # concurrent, so which lands first is not something to assert on.
+    identity = next(b for b in bodies if b["system"] != _BLURB_SYSTEM)
     # Both photos were sent as URL image blocks, front first.
-    images = [b for b in captured["messages"][0]["content"] if b["type"] == "image"]
+    images = [b for b in identity["messages"][0]["content"] if b["type"] == "image"]
     assert [i["source"]["url"] for i in images] == [f"{_BUCKET}/front.jpg", f"{_BUCKET}/back.jpg"]
-    assert captured["model"] == settings.extraction_model
+    assert identity["model"] == settings.extraction_model
 
 
 def test_clean_gates_form_to_the_vocabulary():
@@ -168,3 +176,149 @@ def test_cover_extract_out_surfaces_the_detected_type():
 
     out = CoverExtractOut(**_clean({"title": "x", "form": "Novel"}))
     assert out.form == "Novel"
+
+
+# --- the split: identity fast, blurb behind it -----------------------------
+
+
+def _fake_transport(calls: list[dict], reply_for):
+    """Records every request body and answers with `reply_for(body)` text."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json
+
+        body = json.loads(request.content)
+        calls.append(body)
+        return httpx.Response(200, json={"content": [{"type": "text", "text": reply_for(body)}]})
+
+    return httpx.MockTransport(handler)
+
+
+@pytest.mark.anyio
+async def test_identity_call_never_carries_the_blurb():
+    """The whole point of the split: the fast half must not spend its output
+    budget on a 150-word Malayalam paragraph. Even when the model volunteers a
+    description anyway, the identity result drops it — the blurb call owns that
+    field, and a half-filled one would race the real answer into the form."""
+    calls: list[dict] = []
+    reply = (
+        '{"title": "മയ്യഴിപ്പുഴയുടെ തീരങ്ങളിൽ", "authors": ["എം. മുകുന്ദൻ"], '
+        '"publisher": "DC Books", "description": "ഒരു നീണ്ട നോവൽ.", "isbn": null}'
+    )
+    settings = Settings(anthropic_api_key="test-key", supabase_url="https://proj.supabase.co")
+    async with httpx.AsyncClient(transport=_fake_transport(calls, lambda _: reply)) as fake:
+        fields = await extract_identity(
+            settings,
+            front_url=f"{_BUCKET}/front.jpg",
+            back_url=f"{_BUCKET}/back.jpg",
+            client=fake,
+        )
+
+    assert fields["title"] == "മയ്യഴിപ്പുഴയുടെ തീരങ്ങളിൽ"
+    assert fields["publisher"] == "DC Books"
+    assert "description" not in fields
+    # Both photos go in — the title is on the front, the ISBN on the back.
+    images = [b for b in calls[0]["messages"][0]["content"] if b["type"] == "image"]
+    assert [i["source"]["url"] for i in images] == [f"{_BUCKET}/front.jpg", f"{_BUCKET}/back.jpg"]
+    # The blurb's budget is not handed to the fast call.
+    assert calls[0]["max_tokens"] < 2048
+
+
+@pytest.mark.anyio
+async def test_blurb_call_sends_only_the_back_cover():
+    calls: list[dict] = []
+    reply = '{"description": "കടലിന്റെ കഥ."}'
+    settings = Settings(anthropic_api_key="test-key", supabase_url="https://proj.supabase.co")
+    async with httpx.AsyncClient(transport=_fake_transport(calls, lambda _: reply)) as fake:
+        fields = await extract_blurb(settings, back_url=f"{_BUCKET}/back.jpg", client=fake)
+
+    assert fields == {"description": "കടലിന്റെ കഥ."}
+    images = [b for b in calls[0]["messages"][0]["content"] if b["type"] == "image"]
+    assert [i["source"]["url"] for i in images] == [f"{_BUCKET}/back.jpg"]
+
+
+@pytest.mark.anyio
+async def test_blurb_falls_back_to_the_front_when_that_is_the_only_photo():
+    """It would be cheaper to skip the call outright without a back cover, but
+    a front-only read can already return a description today and must keep
+    doing so — the split is for latency, not thrift."""
+    calls: list[dict] = []
+    reply = '{"description": "കടലിന്റെ കഥ."}'
+    settings = Settings(anthropic_api_key="test-key", supabase_url="https://proj.supabase.co")
+    async with httpx.AsyncClient(transport=_fake_transport(calls, lambda _: reply)) as fake:
+        fields = await extract_blurb(
+            settings, back_url=None, front_url=f"{_BUCKET}/front.jpg", client=fake
+        )
+
+    assert fields == {"description": "കടലിന്റെ കഥ."}
+    images = [b for b in calls[0]["messages"][0]["content"] if b["type"] == "image"]
+    assert [i["source"]["url"] for i in images] == [f"{_BUCKET}/front.jpg"]
+
+
+@pytest.mark.anyio
+async def test_extract_from_covers_merges_both_halves():
+    """An app build older than the split sends no `part` and must still get one
+    complete answer — now assembled from two concurrent calls."""
+    calls: list[dict] = []
+
+    def reply_for(body: dict) -> str:
+        if body["system"] == _BLURB_SYSTEM:
+            return '{"description": "കടലിന്റെ കഥ."}'
+        return '{"title": "ചെമ്മീൻ", "authors": ["തകഴി"], "form": "Novel"}'
+
+    settings = Settings(anthropic_api_key="test-key", supabase_url="https://proj.supabase.co")
+    async with httpx.AsyncClient(transport=_fake_transport(calls, reply_for)) as fake:
+        fields = await extract_from_covers(
+            settings,
+            front_url=f"{_BUCKET}/front.jpg",
+            back_url=f"{_BUCKET}/back.jpg",
+            client=fake,
+        )
+
+    assert len(calls) == 2
+    assert fields["title"] == "ചെമ്മീൻ"
+    assert fields["authors"] == ["തകഴി"]
+    assert fields["form"] == "Novel"
+    assert fields["description"] == "കടലിന്റെ കഥ."
+
+
+@pytest.mark.anyio
+async def test_each_part_spends_its_own_quota_unit(client, monkeypatch):
+    """The split is two paid calls, so it is two units — a latency win, not a
+    way to read twice as many covers on one day's quota. Pinned because the
+    opposite (metering one half only) would ship an unmetered paid call, which
+    CLAUDE.md forbids outright."""
+    from app.services import llm_quota
+
+    enabled = get_settings().model_copy(
+        # `_BUCKET` has to be the bucket these settings name, or the router
+        # rejects the URLs before it ever reaches the meter.
+        update={"anthropic_api_key": "test-key", "supabase_url": "https://proj.supabase.co"}
+    )
+    monkeypatch.setattr("app.api.catalog.get_settings", lambda: enabled)
+
+    consumed: list[str] = []
+
+    async def _record(db, user_id, feature, **kwargs):
+        consumed.append(feature)
+        return len(consumed)
+
+    monkeypatch.setattr(llm_quota, "consume", _record)
+
+    async def _fake_blurb(settings, **kwargs):
+        return {"description": "കടലിന്റെ കഥ."}
+
+    async def _fake_identity(settings, **kwargs):
+        return {"title": "ചെമ്മീൻ", "authors": [], "publisher": None}
+
+    monkeypatch.setattr(extraction_service, "extract_blurb", _fake_blurb)
+    monkeypatch.setattr(extraction_service, "extract_identity", _fake_identity)
+
+    for part in ("identity", "description"):
+        resp = await client.post(
+            "/catalog/cover-extract",
+            json={"front_url": f"{_BUCKET}/f.jpg", "back_url": f"{_BUCKET}/b.jpg", "part": part},
+        )
+        assert resp.status_code == 200, resp.text
+
+    assert len(consumed) == 2

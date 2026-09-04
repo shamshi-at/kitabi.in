@@ -27,8 +27,19 @@ class _Fake extends ApiClient {
   }
 
   @override
-  Future<Map<String, dynamic>> extractFromCovers({String? frontUrl, String? backUrl}) async =>
-      extractResult;
+  Future<Map<String, dynamic>> extractFromCovers({
+    String? frontUrl,
+    String? backUrl,
+    String? part,
+  }) async {
+    // Split as the server does: the blurb arrives on its own call, behind the
+    // identity fields.
+    if (part == 'description') return {'description': extractResult['description']};
+    return {
+      for (final e in extractResult.entries)
+        if (e.key != 'description') e.key: e.value,
+    };
+  }
 }
 
 Widget _app(_Fake fake, {Map<String, dynamic>? seed, List<Object?>? popped}) {

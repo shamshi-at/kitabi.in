@@ -10,6 +10,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/image_source_sheet.dart';
 import '../../../data/api/api_client.dart';
+import '../cover_extract.dart';
 import '../../../l10n/app_localizations.dart';
 import '../catalog_image_upload.dart';
 import '../work_editions.dart';
@@ -105,16 +106,22 @@ class _AddEditionScreenState extends ConsumerState<AddEditionScreen> {
   Future<void> _fillFromPhotos() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    // Read before the awaits: the blurb lands frames later, and a `ref` read
+    // after an await is a read on a widget that may be gone.
+    final api = ref.read(apiClientProvider);
     setState(() => _extracting = true);
+
+    // Both halves leave together, so the blurb is already being transcribed
+    // while the reader reads the title.
+    final parts = startCoverExtract(
+      api,
+      frontUrl: _isOwnUpload(_coverUrl) ? _coverUrl : null,
+      backUrl: _isOwnUpload(_backCoverUrl) ? _backCoverUrl : null,
+    );
+
+    var filled = false;
     try {
-      final fields = await ref.read(apiClientProvider).extractFromCovers(
-            frontUrl: _isOwnUpload(_coverUrl) ? _coverUrl : null,
-            backUrl: _isOwnUpload(_backCoverUrl) ? _backCoverUrl : null,
-          );
-      if (!mounted) return;
-      if (!_applyExtracted(fields)) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractNothing)));
-      }
+      filled = _applyExtracted(await parts.identity);
     } on DioException catch (err) {
       final data = err.response?.data;
       final code = data is Map ? data['code'] : null;
@@ -123,10 +130,23 @@ class _AddEditionScreenState extends ConsumerState<AddEditionScreen> {
           code == 'extraction_disabled' ? l10n.formExtractUnavailable : l10n.formExtractFailed,
         ),
       ));
+      return;
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractFailed)));
+      return;
     } finally {
+      // Dropped as soon as the identity fields are in — the reader is not kept
+      // waiting behind a blurb they can watch arrive.
       if (mounted) setState(() => _extracting = false);
+    }
+
+    // …and the blurb behind them. Never throws (see startCoverExtract).
+    if (!mounted) return;
+    if (_applyExtracted(await parts.description)) filled = true;
+    // Said only once both halves have settled: a read that found no title but
+    // did find a blurb has not "found nothing".
+    if (mounted && !filled) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractNothing)));
     }
   }
 

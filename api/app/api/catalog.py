@@ -380,12 +380,23 @@ async def cover_extract(
             detail={"code": "bad_image_url", "message": "Only uploaded cover photos can be read"},
         )
     # Last thing before the paid call, and after every cheap rejection above —
-    # a malformed request must not spend the reader's daily quota.
+    # a malformed request must not spend the reader's daily quota. One unit per
+    # request, so a form that asks for the two halves separately spends two:
+    # the split is a latency win, not a way to read twice as many covers.
     await llm_quota.consume(db, uuid.UUID(user["id"]), FEATURE_COVER_EXTRACT, settings=settings)
     try:
-        fields = await extraction_service.extract_from_covers(
-            settings, front_url=payload.front_url, back_url=payload.back_url
-        )
+        if payload.part == "identity":
+            fields = await extraction_service.extract_identity(
+                settings, front_url=payload.front_url, back_url=payload.back_url
+            )
+        elif payload.part == "description":
+            fields = await extraction_service.extract_blurb(
+                settings, back_url=payload.back_url, front_url=payload.front_url
+            )
+        else:
+            fields = await extraction_service.extract_from_covers(
+                settings, front_url=payload.front_url, back_url=payload.back_url
+            )
     except httpx.HTTPError as err:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

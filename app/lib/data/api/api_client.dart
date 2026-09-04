@@ -595,10 +595,22 @@ class ApiClient {
   /// blurb off the already-uploaded cover photo URL(s) so the add-book form can
   /// prefill itself for a book no catalog knows. 503 (`extraction_disabled`)
   /// when the server has no LLM key; the form shows a quiet "unavailable".
-  Future<Map<String, dynamic>> extractFromCovers({String? frontUrl, String? backUrl}) async {
+  ///
+  /// [part] picks one half of the read: `identity` (title, authors, publisher,
+  /// series, language, type, ISBN) comes back in a second or two, while
+  /// `description` transcribes the back-cover blurb and is most of the wait —
+  /// see `cover_extract.dart`, which runs the two together so the form can fill
+  /// the fields the reader is watching first. Omit it to get everything in one
+  /// response. Each part is a paid call and spends its own quota unit.
+  Future<Map<String, dynamic>> extractFromCovers({
+    String? frontUrl,
+    String? backUrl,
+    String? part,
+  }) async {
     final res = await _dio.post('/catalog/cover-extract', data: {
       'front_url': ?frontUrl,
       'back_url': ?backUrl,
+      'part': ?part,
     }, options: _llmOptions);
     return res.data as Map<String, dynamic>;
   }

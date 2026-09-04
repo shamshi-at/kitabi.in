@@ -75,12 +75,32 @@ class _FakeApiClient extends ApiClient {
     return similarResult;
   }
 
+  /// Every `part` the screen asked for, in arrival order.
+  final List<String?> extractParts = [];
+
   @override
-  Future<Map<String, dynamic>> extractFromCovers({String? frontUrl, String? backUrl}) async {
-    lastExtractFront = frontUrl;
-    lastExtractBack = backUrl;
+  Future<Map<String, dynamic>> extractFromCovers({
+    String? frontUrl,
+    String? backUrl,
+    String? part,
+  }) async {
+    // Only the identity half carries both photos; recording the blurb call's
+    // single URL here too would erase what the screen actually asked to read.
+    if (part != 'description') {
+      lastExtractFront = frontUrl;
+      lastExtractBack = backUrl;
+    }
+    extractParts.add(part);
     if (extractGate != null) await extractGate!.future;
-    return extractResult;
+    // Split the same way the server does, so a test that sets a full
+    // `extractResult` exercises both halves landing separately.
+    if (part == 'description') {
+      return {'description': extractResult['description']};
+    }
+    return {
+      for (final e in extractResult.entries)
+        if (e.key != 'description') e.key: e.value,
+    };
   }
 
   @override
