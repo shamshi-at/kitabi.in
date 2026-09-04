@@ -324,9 +324,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     }
     final publisher = edition?['publisher'] as Map?;
     if (publisher != null) _publisher = Map<String, dynamic>.from(publisher);
-    _title = TextEditingController(
-      text: work?['title'] as String? ?? widget.initialTitle ?? '',
-    );
+    _title = TextEditingController(text: work?['title'] as String? ?? widget.initialTitle ?? '');
     // Live cover preview (S7b): the typeset cover mirrors the title/author as
     // they're typed, so a keystroke redraws it.
     _title.addListener(_onCoverChanged);
@@ -339,12 +337,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
     _seriesPick = seededSeries;
     _series = TextEditingController(text: seededSeries?['name'] as String? ?? '');
     _hasSeries = seededSeries?['name'] != null;
-    _seriesNumber =
-        TextEditingController(text: edition?['series_number']?.toString() ?? '');
+    _seriesNumber = TextEditingController(text: edition?['series_number']?.toString() ?? '');
     _pages = TextEditingController(text: edition?['page_count']?.toString() ?? '');
-    _isbn = TextEditingController(
-      text: edition?['isbn'] as String? ?? widget.initialIsbn ?? '',
-    );
+    _isbn = TextEditingController(text: edition?['isbn'] as String? ?? widget.initialIsbn ?? '');
     _format = edition?['format'] as String?;
     _form = work?['form'] as String?;
     // Edit mode has content everywhere; a carried-in scanned ISBN lives inside
@@ -433,7 +428,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
     }
     final authors = (seed['author_names'] as List?)?.cast<String>() ?? const <String>[];
     if (_authors.isEmpty && authors.isNotEmpty) {
-      _authors.addAll([for (final name in authors) {'name': name}]);
+      _authors.addAll([
+        for (final name in authors) {'name': name},
+      ]);
       filled = true;
     }
     if (filled) {
@@ -446,24 +443,24 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// the unsaved-changes guard fires only when this diverges from the value
   /// captured right after the form was seeded.
   String _fingerprint() => [
-        _title.text,
-        _description.text,
-        _seriesPick?['id'] as String? ?? _series.text,
-        _seriesNumber.text,
-        _pages.text,
-        _isbn.text,
-        _format ?? '',
-        _language ?? '',
-        _form ?? '',
-        '$_hasSeries',
-        (_selectedGenres.toList()..sort()).join('|'),
-        [for (final a in _authors) a['name']].join('|'),
-        [for (final t in _translators) t['name']].join('|'),
-        _publisher?['name'] ?? '',
-        _original?['id'] ?? '',
-        _coverUrl ?? '',
-        _backCoverUrl ?? '',
-      ].join('\u0000');
+    _title.text,
+    _description.text,
+    _seriesPick?['id'] as String? ?? _series.text,
+    _seriesNumber.text,
+    _pages.text,
+    _isbn.text,
+    _format ?? '',
+    _language ?? '',
+    _form ?? '',
+    '$_hasSeries',
+    (_selectedGenres.toList()..sort()).join('|'),
+    [for (final a in _authors) a['name']].join('|'),
+    [for (final t in _translators) t['name']].join('|'),
+    _publisher?['name'] ?? '',
+    _original?['id'] ?? '',
+    _coverUrl ?? '',
+    _backCoverUrl ?? '',
+  ].join('\u0000');
 
   bool get _dirty => _fingerprint() != _cleanFingerprint;
 
@@ -480,9 +477,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final discard = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(
-          widget.initialWork == null ? l10n.formDiscardTitle : l10n.formDiscardEditTitle,
-        ),
+        title: Text(widget.initialWork == null ? l10n.formDiscardTitle : l10n.formDiscardEditTitle),
         content: Text(l10n.formDiscardBody),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
@@ -508,12 +503,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// Neither blocks the form — a failure just leaves the hardcoded
   /// suggestions, which is exactly what the row showed before.
   Future<void> _loadGenreVocabulary() async {
-    ref.read(readerGenresProvider.future).then((genres) {
-      if (mounted) setState(() => _readerGenres = genres);
-    }).catchError((_) {});
-    ref.read(catalogueGenresProvider.future).then((genres) {
-      if (mounted) setState(() => _catalogueGenres = genres);
-    }).catchError((_) {});
+    ref
+        .read(readerGenresProvider.future)
+        .then((genres) {
+          if (mounted) setState(() => _readerGenres = genres);
+        })
+        .catchError((_) {});
+    ref
+        .read(catalogueGenresProvider.future)
+        .then((genres) {
+          if (mounted) setState(() => _catalogueGenres = genres);
+        })
+        .catchError((_) {});
   }
 
   void _onCoverChanged() {
@@ -552,10 +553,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
       final results = await ref.read(apiClientProvider).similarWorks(q);
       // Drop stale responses (a newer keystroke started a newer lookup).
       if (!mounted || seq != _similarSeq || _title.text.trim() != q) return;
-      setState(() => _similar = [
-            for (final work in results)
-              if (work['id'] != _prefillWorkId) work,
-          ]);
+      setState(
+        () => _similar = [
+          for (final work in results)
+            if (work['id'] != _prefillWorkId) work,
+        ],
+      );
     } catch (_) {
       // Best-effort suggestion — never surface an error for it.
     }
@@ -565,14 +568,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
   void dispose() {
     _similarDebounce?.cancel();
     _title.removeListener(_onCoverChanged);
-    for (final c in [
-      _title,
-      _description,
-      _series,
-      _seriesNumber,
-      _pages,
-      _isbn,
-    ]) {
+    for (final c in [_title, _description, _series, _seriesNumber, _pages, _isbn]) {
       c.dispose();
     }
     _scroll.dispose();
@@ -631,15 +627,18 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// stubbed) original lands as the gold card; on save the new Work joins its
   /// translation group.
   Future<void> _pickOriginal() async {
-    final picked = await context.push<Map<String, dynamic>>(Routes.workPicker, extra: {
-      'forOriginal': true,
-      if (widget.initialWork != null) 'excludeWorkId': widget.initialWork!['id'] as String?,
-      'seed': {
-        'authors': [for (final a in _authors) Map<String, dynamic>.from(a)],
-        'form': _form,
-        'genre_names': _selectedGenres.toList(),
+    final picked = await context.push<Map<String, dynamic>>(
+      Routes.workPicker,
+      extra: {
+        'forOriginal': true,
+        if (widget.initialWork != null) 'excludeWorkId': widget.initialWork!['id'] as String?,
+        'seed': {
+          'authors': [for (final a in _authors) Map<String, dynamic>.from(a)],
+          'form': _form,
+          'genre_names': _selectedGenres.toList(),
+        },
       },
-    });
+    );
     if (picked == null || !mounted) return;
     setState(() {
       _original = picked;
@@ -710,10 +709,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
         title: Text(l10n.formIsbnTakenTitle),
         content: Text(message),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(stayLabel),
-          ),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(stayLabel)),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(l10n.formIsbnTakenOpen),
@@ -777,15 +773,17 @@ class _BookFormState extends ConsumerState<_BookForm> {
   Future<void> _openFork(Map<String, dynamic> work) async {
     final choice = await showModalBottomSheet<String>(
       context: context,
+      // Seven answers do not fit a half-screen sheet on a phone, and the
+      // default cap clips rather than scrolls — the last option was simply
+      // unreachable (owner report, 5 Sep 2026). Every other sheet in this
+      // file already sets this; this one was the exception.
+      isScrollControlled: true,
       backgroundColor: AppColors.paper,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _ForkSheet(
-        work: work,
-        hasCaptured: _hasCapturedDetails,
-        duplicateCount: _similar.length,
-      ),
+      builder: (ctx) =>
+          _ForkSheet(work: work, hasCaptured: _hasCapturedDetails, duplicateCount: _similar.length),
     );
     if (choice == null || !mounted) return;
     switch (choice) {
@@ -895,11 +893,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// it the reader's page count and covers land on `editions.first`.
   void _forkImproveEntry(Map<String, dynamic> work, {String? editionId}) {
     _confirmedLeave = true;
-    context.pushReplacement(Routes.catalogAdd, extra: <String, dynamic>{
-      'workId': work['id'] as String,
-      'seed': _capturedFields(),
-      'editionId': ?editionId,
-    });
+    context.pushReplacement(
+      Routes.catalogAdd,
+      extra: <String, dynamic>{
+        'workId': work['id'] as String,
+        'seed': _capturedFields(),
+        'editionId': ?editionId,
+      },
+    );
   }
 
   /// The fork's "these are all the same book" — fold the typo'd rows together.
@@ -937,10 +938,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
       if (!mounted) return;
       final survivor = merged['work'] as Map<String, dynamic>;
       final count = (merged['merged'] as List?)?.length ?? 0;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context)!.forkMergedCount(count)),
-        duration: const Duration(seconds: 4),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.forkMergedCount(count)),
+          duration: const Duration(seconds: 4),
+        ),
+      );
       // Straight on to improving what survived — the merge tidied the shelf,
       // it did not put the reader's covers and page count anywhere.
       _forkImproveEntry(survivor);
@@ -988,7 +991,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
       if (_selectedGenres.isEmpty) {
         final names =
             (work['genres'] as List?)?.map((g) => (g as Map)['name'] as String).toSet() ??
-                <String>{};
+            <String>{};
         _selectedGenres.addAll(names);
         _customGenreList.addAll(names.where((g) => !_commonGenres.contains(g)));
       }
@@ -1026,13 +1029,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
         await repo.add(editionId: editionId);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.forkOwnThisAdded)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.forkOwnThisAdded)));
       _confirmedLeave = true; // the fork replaced this screen — nothing to guard
-      context.pushReplacement(
-        Routes.bookDetailPath(work['id'] as String, editionId),
-      );
+      context.pushReplacement(Routes.bookDetailPath(work['id'] as String, editionId));
     } catch (err) {
       if (mounted) showQuietError(context, l10n.quickAddFailed, err);
     }
@@ -1047,17 +1046,14 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// Every Type on offer: the closed vocabulary plus the reader's own custom
   /// value when it's off-list, so an existing custom Type never vanishes.
   List<String> get _typeOptions => [
-        ...kWorkForms,
-        if (_form != null && !kWorkForms.contains(_form)) _form!,
-      ];
+    ...kWorkForms,
+    if (_form != null && !kWorkForms.contains(_form)) _form!,
+  ];
 
   List<String> get _visibleTypes {
     final options = _typeOptions;
     // The selected Type leads, so it's never the one hidden by the cut.
-    final ordered = [
-      ?_form,
-      ...options.where((f) => f != _form),
-    ];
+    final ordered = [?_form, ...options.where((f) => f != _form)];
     return ordered.take(_kVisibleChips).toList();
   }
 
@@ -1235,7 +1231,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _extracting = true);
     try {
-      final fields = await ref.read(apiClientProvider).extractFromCovers(
+      final fields = await ref
+          .read(apiClientProvider)
+          .extractFromCovers(
             frontUrl: _isOwnUpload(_coverUrl) ? _coverUrl : null,
             backUrl: backUrl ?? (_isOwnUpload(_backCoverUrl) ? _backCoverUrl : null),
           );
@@ -1247,11 +1245,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
     } on DioException catch (err) {
       final data = err.response?.data;
       final code = data is Map ? data['code'] : null;
-      messenger.showSnackBar(SnackBar(
-        content: Text(
-          code == 'extraction_disabled' ? l10n.formExtractUnavailable : l10n.formExtractFailed,
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            code == 'extraction_disabled' ? l10n.formExtractUnavailable : l10n.formExtractFailed,
+          ),
         ),
-      ));
+      );
       return false;
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractFailed)));
@@ -1341,7 +1341,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
       if (_authors.isEmpty && authors.isNotEmpty) {
         // Name-only entries — the save payload already routes id-less authors
         // through `author_names` (server get-or-creates them).
-        _authors.addAll([for (final name in authors) {'name': name}]);
+        _authors.addAll([
+          for (final name in authors) {'name': name},
+        ]);
         filled = true;
       }
       final publisher = fields['publisher'] as String?;
@@ -1480,10 +1482,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
 
     if (action == CoverAction.camera) {
       final captured = await _captureCoverCamera(back: back);
-      if (captured &&
-          bothEmpty &&
-          mounted &&
-          (back ? _coverUrl == null : _backCoverUrl == null)) {
+      if (captured && bothEmpty && mounted && (back ? _coverUrl == null : _backCoverUrl == null)) {
         final next = await showChainedCoverSheet(context, nextIsBack: !back);
         if (next && mounted) await _captureCoverCamera(back: !back);
       }
@@ -1496,7 +1495,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
       switch (action) {
         case CoverAction.gallery:
           url = await pickCropUploadImage(
-              source: ImageSource.gallery, folder: 'covers', ratio: CropRatio.cover);
+            source: ImageSource.gallery,
+            folder: 'covers',
+            ratio: CropRatio.cover,
+          );
         case CoverAction.adjust:
           url = await recropUploadImage(url: current!, folder: 'covers', ratio: CropRatio.cover);
         case CoverAction.rotate:
@@ -1533,7 +1535,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
     setState(() => back ? _uploadingBack = true : _uploadingFront = true);
     try {
       final url = await pickCropUploadImage(
-          source: ImageSource.camera, folder: 'covers', ratio: CropRatio.cover);
+        source: ImageSource.camera,
+        folder: 'covers',
+        ratio: CropRatio.cover,
+      );
       if (mounted && url != null) {
         setState(() => back ? _backCoverUrl = url : _coverUrl = url);
       }
@@ -1601,8 +1606,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
       'original_work_id': _original?['id'],
       'genre_names': genres,
       'publisher_id': publisherId,
-      'publisher_name':
-          publisherId == null ? (_publisher?['name'] as String?) : null,
+      'publisher_name': publisherId == null ? (_publisher?['name'] as String?) : null,
       'series_id': _hasSeries ? (_seriesPick?['id'] as String?) : null,
       // Only when nothing was picked: a name off a scanned cover still beats
       // losing the series, and the server get-or-creates it.
@@ -1674,7 +1678,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
             // entry that has no publisher at all.
             if (publisherId != null && publisherId != _initialPublisherId)
               'publisher_id': publisherId,
-            if (publisherId == null && publisherName != null && publisherName != _initialPublisherName)
+            if (publisherId == null &&
+                publisherName != null &&
+                publisherName != _initialPublisherName)
               'publisher_name': publisherName,
           };
           if (edPatch.isNotEmpty) {
@@ -1699,10 +1705,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
           // queue instead of the live catalog — say so, or "saved" silence
           // reads as the change having vanished.
           if (result['applied'] == false) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(AppLocalizations.of(context)!.editPendingApproval),
-              duration: const Duration(seconds: 5),
-            ));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.editPendingApproval),
+                duration: const Duration(seconds: 5),
+              ),
+            );
           }
           _confirmedLeave = true; // saved — nothing left for the guard to protect
           context.pop();
@@ -1911,8 +1919,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                         disabledBackgroundColor: phase == 'added'
                             ? AppColors.moss.withValues(alpha: 0.14)
                             : null,
-                        disabledForegroundColor:
-                            phase == 'added' ? AppColors.moss : null,
+                        disabledForegroundColor: phase == 'added' ? AppColors.moss : null,
                       ),
                       icon: phase == 'adding'
                           ? SizedBox(
@@ -1993,10 +2000,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
                     ),
                     Text(
                       l10n.formSubtitle,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: AppColors.inkSoft),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
                     ),
                   ],
                 ),
@@ -2116,10 +2122,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                     ? SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.oxblood,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.oxblood),
                       )
                     : Icon(Icons.auto_awesome, size: 16, color: AppColors.oxblood),
                 label: Text(l10n.formFillFromPhotos),
@@ -2166,7 +2169,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
             unsetLabel: l10n.formLanguageUnset,
             // The reader's own languages first; note points to profile to
             // manage the list. Falls back to all if none set yet.
-            languages: (ref.watch(meProvider).valueOrNull?['preferred_languages'] as List?)
+            languages:
+                (ref.watch(meProvider).valueOrNull?['preferred_languages'] as List?)
                     ?.cast<String>() ??
                 const [],
             note: l10n.formLanguageProfileNote,
@@ -2219,9 +2223,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                     fontWeight: FontWeight.w600,
                     color: _form == form ? AppColors.paper : AppColors.ink,
                   ),
-                  side: BorderSide(
-                    color: _form == form ? AppColors.oxblood : AppColors.line,
-                  ),
+                  side: BorderSide(color: _form == form ? AppColors.oxblood : AppColors.line),
                 ),
               _MoreChip(onTap: _openTypePicker),
             ],
@@ -2255,8 +2257,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                     color: _selectedGenres.contains(genre) ? AppColors.paper : AppColors.ink,
                   ),
                   side: BorderSide(
-                    color:
-                        _selectedGenres.contains(genre) ? AppColors.oxblood : AppColors.line,
+                    color: _selectedGenres.contains(genre) ? AppColors.oxblood : AppColors.line,
                   ),
                 ),
               _MoreChip(onTap: _openGenrePicker),
@@ -2264,10 +2265,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
           ),
           if (_readerGenres.isNotEmpty) ...[
             SizedBox(height: 5),
-            Text(
-              l10n.formGenreYoursNote,
-              style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
-            ),
+            Text(l10n.formGenreYoursNote, style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
           ],
           // Everything less essential folds into one disclosure — collapsed on
           // a fresh create, open on edit or when a scan/photo-read filled it.
@@ -2294,8 +2292,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
                             Expanded(
                               child: Text(
                                 l10n.formMoreDetails,
-                                style:
-                                    TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
                               ),
                             ),
                             Icon(
@@ -2346,7 +2343,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
                                 Text(
                                   l10n.formSeriesHint,
                                   style: TextStyle(
-                                      fontSize: 11.5, color: AppColors.inkSoft, height: 1.3),
+                                    fontSize: 11.5,
+                                    color: AppColors.inkSoft,
+                                    height: 1.3,
+                                  ),
                                 ),
                                 SizedBox(height: 10),
                                 Row(
@@ -2368,9 +2368,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
                                         onClear: _series.text.isEmpty
                                             ? null
                                             : () => setState(() {
-                                                  _seriesPick = null;
-                                                  _series.clear();
-                                                }),
+                                                _seriesPick = null;
+                                                _series.clear();
+                                              }),
                                       ),
                                     ),
                                     SizedBox(width: 8),
@@ -2466,8 +2466,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
                                             color: AppColors.oxblood,
                                           ),
                                         )
-                                      : Icon(Icons.document_scanner_outlined,
-                                          size: 12, color: AppColors.oxblood),
+                                      : Icon(
+                                          Icons.document_scanner_outlined,
+                                          size: 12,
+                                          color: AppColors.oxblood,
+                                        ),
                                   SizedBox(width: 4),
                                   Text(
                                     l10n.formScanBackCover,
@@ -2507,27 +2510,27 @@ class _BookFormState extends ConsumerState<_BookForm> {
         if (!didPop) _maybeLeave();
       },
       child: Stack(
-      children: [
-        Column(
-          children: [
-            Expanded(child: form),
-            FormSaveBar(
-              saving: _saving,
-              onSave: _save,
-              label: l10n.formSave,
-              // The create hint promises the shared catalogue; the edit path
-              // says where an edit actually goes (M5).
-              hint: isEdit ? l10n.formSaveHintEdit : l10n.formSaveHint,
-            ),
-          ],
-        ),
-        if (_extracting)
-          _ExtractingOverlay(
-            coverUrl: _coverUrl ?? _backCoverUrl,
-            title: _title.text.isEmpty ? '…' : _title.text,
-            author: _authors.isEmpty ? null : _authors.first['name'] as String?,
+        children: [
+          Column(
+            children: [
+              Expanded(child: form),
+              FormSaveBar(
+                saving: _saving,
+                onSave: _save,
+                label: l10n.formSave,
+                // The create hint promises the shared catalogue; the edit path
+                // says where an edit actually goes (M5).
+                hint: isEdit ? l10n.formSaveHintEdit : l10n.formSaveHint,
+              ),
+            ],
           ),
-      ],
+          if (_extracting)
+            _ExtractingOverlay(
+              coverUrl: _coverUrl ?? _backCoverUrl,
+              title: _title.text.isEmpty ? '…' : _title.text,
+              author: _authors.isEmpty ? null : _authors.first['name'] as String?,
+            ),
+        ],
       ),
     );
   }
@@ -2545,10 +2548,7 @@ class _EditReviewBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.goldSoft,
-        borderRadius: BorderRadius.circular(10),
-      ),
+      decoration: BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(10)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2586,10 +2586,7 @@ class _PrefillBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.goldSoft,
-        borderRadius: BorderRadius.circular(10),
-      ),
+      decoration: BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(10)),
       child: Row(
         children: [
           Icon(Icons.auto_awesome, size: 14, color: _ink),
@@ -2617,11 +2614,7 @@ class _PrefillBanner extends StatelessWidget {
 /// the title being typed. A soft paperDeep well — no dialog, no focus steal —
 /// with compact tappable rows and an ✕ that dismisses it for this form.
 class _SimilarWorksPanel extends StatelessWidget {
-  const _SimilarWorksPanel({
-    required this.works,
-    required this.onDismiss,
-    required this.onPick,
-  });
+  const _SimilarWorksPanel({required this.works, required this.onDismiss, required this.onPick});
 
   final List<Map<String, dynamic>> works;
   final VoidCallback onDismiss;
@@ -2647,11 +2640,7 @@ class _SimilarWorksPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   l10n.formSimilarHeader,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.ink,
-                  ),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.ink),
                 ),
               ),
               GestureDetector(
@@ -2752,8 +2741,10 @@ class _ExtractingOverlay extends StatefulWidget {
 
 class _ExtractingOverlayState extends State<_ExtractingOverlay>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  );
 
   @override
   void didChangeDependencies() {
@@ -2813,11 +2804,13 @@ class _ExtractingOverlayState extends State<_ExtractingOverlay>
                             child: Container(
                               height: 2,
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [
-                                  AppColors.gold.withValues(alpha: 0),
-                                  AppColors.gold,
-                                  AppColors.gold.withValues(alpha: 0),
-                                ]),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.gold.withValues(alpha: 0),
+                                    AppColors.gold,
+                                    AppColors.gold.withValues(alpha: 0),
+                                  ],
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: AppColors.gold.withValues(alpha: 0.7),
@@ -2837,10 +2830,9 @@ class _ExtractingOverlayState extends State<_ExtractingOverlay>
                 const SizedBox(height: 8),
                 Text(
                   l10n.formExtractingTitle,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontSize: 18, color: AppColors.ink),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontSize: 18, color: AppColors.ink),
                 ),
                 const SizedBox(height: 6),
                 Padding(
@@ -3040,10 +3032,7 @@ class _LanguageField extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final base = languageOptions(languages);
-    final options = [
-      ...base,
-      if (value != null && !base.contains(value)) value!,
-    ];
+    final options = [...base, if (value != null && !base.contains(value)) value!];
     return SelectField(
       label: label,
       displayValue: value ?? unsetLabel,
@@ -3132,10 +3121,7 @@ class _TranslatedFromField extends StatelessWidget {
     final authors = (original['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     final language = original['language'] as String? ?? edition?['language'] as String?;
     final year = original['first_publish_year'];
-    final subtitle = [
-      ?language,
-      if (year != null) '$year',
-    ].join(' · ');
+    final subtitle = [?language, if (year != null) '$year'].join(' · ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3178,10 +3164,7 @@ class _TranslatedFromField extends StatelessWidget {
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     if (subtitle.isNotEmpty)
-                      Text(
-                        subtitle,
-                        style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
-                      ),
+                      Text(subtitle, style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
                   ],
                 ),
               ),
@@ -3202,11 +3185,7 @@ class _TranslatedFromField extends StatelessWidget {
 /// T4 — translator credits, shown only while an original is linked. The same
 /// chip idiom as the author field, feeding the same author picker.
 class _TranslatorField extends StatelessWidget {
-  const _TranslatorField({
-    required this.translators,
-    required this.onAdd,
-    required this.onRemove,
-  });
+  const _TranslatorField({required this.translators, required this.onAdd, required this.onRemove});
 
   final List<Map<String, dynamic>> translators;
   final VoidCallback onAdd;
@@ -3269,11 +3248,7 @@ class _TranslatorField extends StatelessWidget {
 /// fork, phrased in the reader's words; pops one of
 /// 'shelf' | 'edition' | 'translation' | 'different'.
 class _ForkSheet extends StatelessWidget {
-  const _ForkSheet({
-    required this.work,
-    required this.hasCaptured,
-    this.duplicateCount = 0,
-  });
+  const _ForkSheet({required this.work, required this.hasCaptured, this.duplicateCount = 0});
 
   final Map<String, dynamic> work;
 
@@ -3290,15 +3265,13 @@ class _ForkSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final edition = (work['editions'] as List?)?.cast<Map<String, dynamic>>().firstOrNull ??
+    final edition =
+        (work['editions'] as List?)?.cast<Map<String, dynamic>>().firstOrNull ??
         work['edition'] as Map<String, dynamic>?;
     final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     final author = authors.isNotEmpty ? authors.first['name'] as String? : null;
     final year = work['first_publish_year'];
-    final meta = [
-      ?author,
-      if (year != null) '$year',
-    ].join(' · ');
+    final meta = [?author, if (year != null) '$year'].join(' · ');
 
     Widget option({
       required String value,
@@ -3379,10 +3352,7 @@ class _ForkSheet extends StatelessWidget {
               ),
             ),
             SizedBox(height: 12),
-            Text(
-              l10n.forkAlreadyHere,
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
+            Text(l10n.forkAlreadyHere, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             SizedBox(height: 8),
             Row(
               children: [
@@ -3405,10 +3375,7 @@ class _ForkSheet extends StatelessWidget {
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                       if (meta.isNotEmpty)
-                        Text(
-                          meta,
-                          style: TextStyle(fontSize: 11, color: AppColors.inkSoft),
-                        ),
+                        Text(meta, style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
                     ],
                   ),
                 ),
@@ -3425,52 +3392,60 @@ class _ForkSheet extends StatelessWidget {
               ),
             ),
             SizedBox(height: 6),
-            option(
-              value: 'shelf',
-              title: l10n.forkOwnThis,
-              accent: AppColors.moss,
-            ),
-            // Offered only when there is something to carry over — otherwise
-            // it is "I own this one" with extra steps.
-            if (hasCaptured)
-              option(
-                value: 'improve',
-                title: l10n.forkImproveThis,
-                help: l10n.forkImproveThisHelp,
-                accent: AppColors.moss,
+            // The answers scroll; the book above them does not. Scrolling the
+            // heading away would leave a list of choices with nothing saying
+            // what they are choices *about*.
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    option(value: 'shelf', title: l10n.forkOwnThis, accent: AppColors.moss),
+                    // Offered only when there is something to carry over — otherwise
+                    // it is "I own this one" with extra steps.
+                    if (hasCaptured)
+                      option(
+                        value: 'improve',
+                        title: l10n.forkImproveThis,
+                        help: l10n.forkImproveThisHelp,
+                        accent: AppColors.moss,
+                      ),
+                    // Only with something to merge *with*. One match is a match; several
+                    // near-identical ones are a title that got typed wrong more than
+                    // once, which is a different problem and needs a different answer.
+                    if (duplicateCount > 1)
+                      option(
+                        value: 'merge',
+                        title: l10n.forkSameBookTwice,
+                        help: l10n.forkSameBookTwiceHelp(duplicateCount),
+                        accent: AppColors.oxblood,
+                      ),
+                    option(
+                      value: 'edition',
+                      title: l10n.forkDifferentPrinting,
+                      help: l10n.forkDifferentPrintingHelp,
+                      accent: AppColors.gold,
+                    ),
+                    option(
+                      value: 'translation',
+                      title: l10n.forkTranslation,
+                      help: l10n.forkTranslationHelp,
+                      accent: AppColors.oxblood,
+                    ),
+                    option(
+                      value: 'form',
+                      title: l10n.forkDifferentForm,
+                      help: l10n.forkDifferentFormHelp,
+                      accent: AppColors.oxblood,
+                    ),
+                    option(
+                      value: 'different',
+                      title: l10n.forkDifferentBook,
+                      accent: AppColors.line,
+                    ),
+                  ],
+                ),
               ),
-            // Only with something to merge *with*. One match is a match; several
-            // near-identical ones are a title that got typed wrong more than
-            // once, which is a different problem and needs a different answer.
-            if (duplicateCount > 1)
-              option(
-                value: 'merge',
-                title: l10n.forkSameBookTwice,
-                help: l10n.forkSameBookTwiceHelp(duplicateCount),
-                accent: AppColors.oxblood,
-              ),
-            option(
-              value: 'edition',
-              title: l10n.forkDifferentPrinting,
-              help: l10n.forkDifferentPrintingHelp,
-              accent: AppColors.gold,
-            ),
-            option(
-              value: 'translation',
-              title: l10n.forkTranslation,
-              help: l10n.forkTranslationHelp,
-              accent: AppColors.oxblood,
-            ),
-            option(
-              value: 'form',
-              title: l10n.forkDifferentForm,
-              help: l10n.forkDifferentFormHelp,
-              accent: AppColors.oxblood,
-            ),
-            option(
-              value: 'different',
-              title: l10n.forkDifferentBook,
-              accent: AppColors.line,
             ),
           ],
         ),
@@ -3613,10 +3588,7 @@ class _MergeSheetState extends State<_MergeSheet> {
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
-            Text(
-              l10n.mergeSheetHelp,
-              style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
-            ),
+            Text(l10n.mergeSheetHelp, style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft)),
             const SizedBox(height: 10),
             Flexible(
               child: ListView(
@@ -3642,12 +3614,9 @@ class _MergeSheetState extends State<_MergeSheet> {
               child: FilledButton(
                 onPressed: _absorb.isEmpty
                     ? null
-                    : () => Navigator.of(context).pop(
-                          _MergeChoice(
-                            survivorId: _survivorId,
-                            absorbIds: _absorb.toList(),
-                          ),
-                        ),
+                    : () => Navigator.of(
+                        context,
+                      ).pop(_MergeChoice(survivorId: _survivorId, absorbIds: _absorb.toList())),
                 style: FilledButton.styleFrom(backgroundColor: AppColors.oxblood),
                 child: Text(l10n.mergeSheetConfirm(_absorb.length)),
               ),
