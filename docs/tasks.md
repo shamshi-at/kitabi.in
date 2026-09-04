@@ -1201,6 +1201,14 @@ out of the sitemap until a work actually carries a genre.
 - [ ] **Merge duplicate authors** — `Basheer, Vaikom Muhammad` and `Vokom M. Basheer` are
       live right now as two rows for one person. Two rows = two thin pages competing.
       **Prerequisite for indexing author pages at all**
+  - [x] **A merge now sticks on every path a name comes back** (4 Sep 2026, owner
+        report). Merging a Malayalam publisher into its English row left the cover
+        extractor still suggesting the merged-away spelling, and the pickers
+        answering it with nothing at all — so the queue could be emptied and the
+        duplicates would simply reopen. One rule (`merge_service.canonical`) is now
+        consulted by the extractor (publisher, authors, series), the author /
+        publisher / series typeaheads, the "add new" endpoints and the id paths on
+        save. `api/tests/test_canonical_names.py`
 - [ ] Fix imported titles — the seed is Library of Congress MARC, not a bookshop feed.
       Audited 31 Aug 2026 over all 1,428 works: **1,198 (83%) are in an Indic language
       with a Latin-script title**, 85% of author names and 77% of publisher names are

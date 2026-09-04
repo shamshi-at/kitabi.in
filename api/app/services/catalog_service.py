@@ -41,7 +41,7 @@ from app.schemas.catalog import (
     WorkUpdate,
 )
 from app.services import isbn as isbn_util
-from app.services import slug_service
+from app.services import merge_service, slug_service
 from app.services.openlibrary_client import OpenLibraryClient, normalize_isbn_lookup
 from app.services.translit import fold, transliterate
 
@@ -140,38 +140,57 @@ async def _existing_by_name(db: AsyncSession, model: type, name: str) -> object 
     request.
 
     Soft-deleted rows are skipped, but a merged one is followed to its
-    survivor: merging soft-deletes the loser, so without the hop the next cover
-    that reads the loser's name re-creates the very duplicate an admin had just
-    merged away.
+    survivor (`merge_service.canonical`): merging soft-deletes the loser, so
+    without the hop the next cover that reads the loser's name re-creates the
+    very duplicate an admin had just merged away.
+
+    Live rows first, merged-away ones only as a fallback — a spelling that is
+    still a row of its own is the answer; the pointer is what the catalogue
+    says when it isn't.
     """
     cleaned = name.strip()
-    stmt = (
-        select(model)
-        .where(model.name.ilike(cleaned), model.deleted_at.is_(None))
-        .order_by(model.created_at, model.id)
-        .limit(1)
-    )
-    live = (await db.execute(stmt)).scalars().first()
-    if live is not None:
-        return live
-    if not hasattr(model, "merged_into_id"):
+    if not cleaned:
         return None
-    merged = (
+    rows = (
         (
             await db.execute(
                 select(model)
-                .where(model.name.ilike(cleaned), model.merged_into_id.is_not(None))
-                .order_by(model.created_at, model.id)
-                .limit(1)
+                .where(model.name.ilike(cleaned))
+                .order_by(
+                    case((model.deleted_at.is_(None), 0), else_=1),
+                    model.created_at,
+                    model.id,
+                )
+                # More than one row can spell a name (see above); a handful is
+                # plenty to find one that still resolves to something live.
+                .limit(10)
             )
         )
         .scalars()
-        .first()
+        .all()
     )
-    if merged is None:
-        return None
-    survivor = await db.get(model, merged.merged_into_id)
-    return survivor if survivor is not None and survivor.deleted_at is None else None
+    for row in rows:
+        resolved = await merge_service.canonical(db, row)
+        if resolved is not None:
+            return resolved
+    return None
+
+
+async def canonical_name(db: AsyncSession, model: type, name: str) -> str:
+    """The catalogue's own spelling of a free-text name, or that name back
+    unchanged when it doesn't know one.
+
+    What a cover prints is evidence, not an answer: the catalogue may already
+    hold that name under a spelling an admin has consolidated everything else
+    onto, and offering the reader the cover's spelling instead is how the
+    duplicate gets recreated a week after it was merged away.
+
+    Exact spelling or a merge pointer only — never the fuzzy search. A
+    suggestion that quietly swaps what is printed on the book for a near-miss
+    is worse than showing the book's own words.
+    """
+    row = await _existing_by_name(db, model, name)
+    return row.name if row is not None else name
 
 
 async def _get_or_create(db: AsyncSession, model: type, name: str) -> object:
@@ -205,9 +224,11 @@ async def create_author(db: AsyncSession, **fields: object) -> Author:
     is_me = bool(fields.pop("is_me", False))
     created_by = fields.get("created_by_user_id")
     name = str(fields["name"]).strip()
-    existing = (
-        await db.execute(select(Author).where(Author.name.ilike(name)))
-    ).scalar_one_or_none()
+    # The same lookup the free-text path uses, for the same three reasons: two
+    # rows may spell one name (`scalar_one_or_none` *raised* on that), a merged
+    # name answers with its survivor, and a soft-deleted one answers with
+    # nothing rather than handing back a row search will never show again.
+    existing = await _existing_by_name(db, Author, name)
     if existing is not None:
         # Get-or-create hit: "This is me" on a name that already exists is the
         # same unverifiable claim as tapping it on the author's page, so it
@@ -415,9 +436,7 @@ async def create_publisher(db: AsyncSession, **fields: object) -> Publisher:
     """Publisher picker's "add new" flow — same get-or-create-by-name shape as
     create_author."""
     name = str(fields["name"]).strip()
-    existing = (
-        await db.execute(select(Publisher).where(Publisher.name.ilike(name)))
-    ).scalar_one_or_none()
+    existing = await _existing_by_name(db, Publisher, name)
     if existing is not None:
         return existing
     publisher = Publisher(**{**fields, "name": name})
@@ -439,7 +458,15 @@ async def _resolve_authors(
     seen: set[uuid.UUID] = set()
     for author_id in author_ids:
         author = await db.get(Author, author_id)
-        if author is not None and author.id not in seen:
+        if author is None:
+            continue
+        # An id can be older than a merge — the picker's answer is cached in a
+        # form the reader left open, or in an install that has not searched
+        # since. Credit the author the catalogue now keeps, never the row that
+        # was folded away. A dead end (soft-deleted, unmerged) keeps its credit
+        # rather than silently dropping an author off the book.
+        author = await merge_service.canonical(db, author) or author
+        if author.id not in seen:
             resolved.append(author)
             seen.add(author.id)
     for name in author_names:
@@ -468,10 +495,25 @@ async def publisher_by_name(db: AsyncSession, name: str) -> Publisher | None:
     row carrying the most editions wins. Fold *equality* only, never the fuzzy
     search predicate: the picker is where a reader chooses between houses, this
     only collapses two spellings of one.
+
+    A row an admin has already merged away is a *match*, not a candidate: it is
+    considered under its own name and then answered for by its survivor
+    (`merge_service.canonical`). Nothing else can bridge two spellings that
+    share neither letters nor script — "ഡി സി ബുക്സ്" folds nowhere near
+    "DC Books", so the merge pointer a human set is the only thing that knows
+    they are one house. Without this, a Malayalam cover kept being offered its
+    own spelling of a publisher the catalogue had long since consolidated
+    (owner report, 4 Sep 2026).
     """
     cleaned = name.strip()
     if not cleaned:
         return None
+    # SCALE: this aggregates the whole editions table on every call (every
+    # cover extraction, every save that carries a publisher name). At the
+    # catalogue's current size that is a sub-millisecond hash aggregate over a
+    # few thousand rows; past a few hundred thousand editions it wants a
+    # counter column on Publisher maintained by the merge/create paths, not a
+    # cache and certainly not a new service.
     uses = (
         select(Edition.publisher_id.label("publisher_id"), func.count().label("n"))
         .where(Edition.deleted_at.is_(None))
@@ -486,16 +528,24 @@ async def publisher_by_name(db: AsyncSession, name: str) -> Publisher | None:
     stmt = (
         select(Publisher)
         .outerjoin(uses, uses.c.publisher_id == Publisher.id)
-        .where(match, Publisher.deleted_at.is_(None))
+        # Live rows and merged-away ones both; a merge carries the loser's
+        # editions to the survivor, so a loser sits at zero uses and can only
+        # ever win its tier on the strength of the *name* — which is exactly
+        # the evidence it has.
+        .where(match, or_(Publisher.deleted_at.is_(None), Publisher.merged_into_id.is_not(None)))
         .order_by(
             case((exact, 0), else_=1),
             func.coalesce(uses.c.n, 0).desc(),
             Publisher.created_at,
             Publisher.id,
         )
-        .limit(1)
+        .limit(5)
     )
-    return (await db.execute(stmt)).scalars().first()
+    for row in (await db.execute(stmt)).scalars().all():
+        resolved = await merge_service.canonical(db, row)
+        if resolved is not None:
+            return resolved
+    return None
 
 
 async def _resolve_publisher(
@@ -504,7 +554,9 @@ async def _resolve_publisher(
     if publisher_id is not None:
         publisher = await db.get(Publisher, publisher_id)
         if publisher is not None:
-            return publisher
+            # Same as the author path: a remembered id must land on the house
+            # the catalogue kept, not on the one an admin merged away.
+            return await merge_service.canonical(db, publisher) or publisher
     if publisher_name:
         # Most-used match first; `_get_or_create` only ever gets to run when the
         # catalogue genuinely has no such house yet.
@@ -524,17 +576,13 @@ async def _resolve_series(
     "Ponniyin Selvan" and "ponniyin selvan " becoming two orderings."""
     if series_id is not None:
         series = await db.get(Series, series_id)
-        if series is not None:
-            # The merge check comes FIRST: merging soft-deletes the loser, so a
-            # `deleted_at is None` guard in front of it would reject exactly the
-            # rows the redirect exists for, and the app would silently drop the
-            # series instead of landing on the canonical one.
-            if series.merged_into_id is not None:
-                survivor = await db.get(Series, series.merged_into_id)
-                if survivor is not None and survivor.deleted_at is None:
-                    return survivor
-            elif series.deleted_at is None:
-                return series
+        # The merge check comes FIRST (it is inside `canonical`): merging
+        # soft-deletes the loser, so a `deleted_at is None` guard in front of
+        # it would reject exactly the rows the redirect exists for, and the app
+        # would silently drop the series instead of landing on the canonical one.
+        resolved = await merge_service.canonical(db, series)
+        if resolved is not None:
+            return resolved
     if series_name:
         return await _get_or_create(db, Series, series_name)
     return None
@@ -1392,6 +1440,57 @@ def _name_match_and_rank(name_col, translit_col, fold_col, q: str):  # noqa: ANN
     return match, func.greatest(*ranks)
 
 
+async def _canonical_matches(
+    db: AsyncSession, model, match, rank, limit: int
+) -> list:  # noqa: ANN001
+    """Run a name search and answer in canonical rows only.
+
+    A merged-away row is searched *under its own name* and then answered for by
+    its survivor, so typing "ഡി സി ബുക്സ്" into the publisher picker offers
+    DC Books rather than nothing at all. Filtering the losers out instead — what
+    this did before — is only half the decision: it stops the dead row being
+    shown, and leaves the reader who spells the house the way their cover does
+    with an empty list and one obvious next move, which is to create it again.
+
+    Two queries whatever the result size: the candidates, then the survivors
+    they point at in one batch. `limit * 3` candidates, because several losers
+    can fold into one survivor and each collapse costs a row.
+    """
+    rows = (
+        (
+            await db.execute(
+                select(model)
+                .where(match, or_(model.deleted_at.is_(None), model.merged_into_id.is_not(None)))
+                .order_by(rank.desc(), model.name)
+                .limit(limit * 3)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    targets = {r.merged_into_id for r in rows if r.merged_into_id is not None}
+    survivors: dict = {}
+    if targets:
+        survivors = {
+            row.id: row
+            for row in (
+                (await db.execute(select(model).where(model.id.in_(targets)))).scalars().all()
+            )
+            if row.deleted_at is None
+        }
+    out: list = []
+    seen: set = set()
+    for row in rows:
+        canonical = row if row.merged_into_id is None else survivors.get(row.merged_into_id)
+        if canonical is None or canonical.id in seen:
+            continue
+        seen.add(canonical.id)
+        out.append(canonical)
+        if len(out) == limit:
+            break
+    return out
+
+
 async def search_authors(db: AsyncSession, query: str, limit: int = 10) -> list[Author]:
     """Author search for the global search (S4) and the add/edit form's
     typeahead — typo-tolerant ('Thakazi' finds Thakazhi) and cross-script
@@ -1401,15 +1500,9 @@ async def search_authors(db: AsyncSession, query: str, limit: int = 10) -> list[
         return []
     await _relax_word_similarity(db)
     match, rank = _name_match_and_rank(Author.name, Author.name_translit, Author.name_fold, q)
-    # deleted_at also covers merged duplicates (merge soft-deletes the loser) —
-    # without this filter a folded row kept surfacing in search and typeaheads.
-    stmt = (
-        select(Author)
-        .where(match, Author.deleted_at.is_(None))
-        .order_by(rank.desc(), Author.name)
-        .limit(limit)
-    )
-    return list((await db.execute(stmt)).scalars().all())
+    # A merged-away duplicate never surfaces as itself — it answers with the
+    # author it was merged into (see _canonical_matches).
+    return await _canonical_matches(db, Author, match, rank, limit)
 
 
 async def search_publishers(db: AsyncSession, query: str, limit: int = 10) -> list[Publisher]:
@@ -1421,13 +1514,7 @@ async def search_publishers(db: AsyncSession, query: str, limit: int = 10) -> li
     match, rank = _name_match_and_rank(
         Publisher.name, Publisher.name_translit, Publisher.name_fold, q
     )
-    stmt = (
-        select(Publisher)
-        .where(match, Publisher.deleted_at.is_(None))
-        .order_by(rank.desc(), Publisher.name)
-        .limit(limit)
-    )
-    return list((await db.execute(stmt)).scalars().all())
+    return await _canonical_matches(db, Publisher, match, rank, limit)
 
 
 async def search_series(db: AsyncSession, query: str, limit: int = 10) -> list[Series]:
@@ -1440,13 +1527,7 @@ async def search_series(db: AsyncSession, query: str, limit: int = 10) -> list[S
         return []
     await _relax_word_similarity(db)
     match, rank = _name_match_and_rank(Series.name, Series.name_translit, Series.name_fold, q)
-    stmt = (
-        select(Series)
-        .where(match, Series.deleted_at.is_(None))
-        .order_by(rank.desc(), Series.name)
-        .limit(limit)
-    )
-    return list((await db.execute(stmt)).scalars().all())
+    return await _canonical_matches(db, Series, match, rank, limit)
 
 
 async def find_or_fetch_by_isbn(

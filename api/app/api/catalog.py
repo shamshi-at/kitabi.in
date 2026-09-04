@@ -388,16 +388,11 @@ async def cover_extract(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail={"code": "extraction_failed", "message": "Couldn't read the photos"},
         ) from err
-    # A house read off a cover is a *name*, and names are how duplicate
-    # publishers get made. Hand back the catalogue's canonical row for it when
-    # there is one, so the form shows the publisher the rest of the shelf
-    # already uses rather than this cover's spelling of it.
-    name = fields.get("publisher")
-    if name:
-        known = await catalog_service.publisher_by_name(db, name)
-        if known is not None:
-            fields = {**fields, "publisher": known.name, "publisher_id": known.id}
-    return CoverExtractOut(**fields)
+    # Anything read off a cover is a *name*, and names are how duplicate rows
+    # get made. Hand back the catalogue's own spelling of each one — publisher,
+    # authors, series — so the form shows the rows the rest of the shelf
+    # already uses rather than this cover's spelling of them.
+    return CoverExtractOut(**await extraction_service.canonicalise(db, fields))
 
 
 # NOTE: declared before /works/{work_id} — otherwise "similar" would be

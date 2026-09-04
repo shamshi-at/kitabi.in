@@ -1096,6 +1096,31 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   letting a caller that already knows it pass it in — the book page's own route
   carries it, and a nudge that needed the mirror to be warm would silently skip
   the very screen it used to work on.
+- **A merge is a decision, and it only holds on the paths that ask about it.**
+  Folding "ഡി സി ബുക്സ്" into "DC Books" in the console repointed the editions
+  and gave the loser's URL its 301 — and the very next photographed Malayalam
+  cover was offered "ഡി സി ബുക്സ്" all over again (owner report, 4 Sep 2026).
+  `publisher_by_name`, the lookup behind that suggestion, filtered
+  `deleted_at IS NULL`, and a merge soft-deletes the loser: the one row that
+  knew the two spellings are one house was invisible to exactly the code that
+  needed it. Nothing else can know — the names share neither letters nor
+  script, so no fold, transliteration or trigram will ever bridge them; the
+  pointer a human set is the whole of the evidence. The rule is one function
+  now (`merge_service.canonical`) and every path that turns a name or a
+  remembered id back into a row goes through it: the extractor's suggestions
+  (publisher, authors *and* series), the three pickers' typeaheads, the "add
+  new" endpoints, and the id paths on save — an id can be older than the merge,
+  in a form left open or an install that hasn't searched since. Two things it
+  clarified. Filtering the losers out of a typeahead is only *half* a decision:
+  it stops the dead row being shown, and leaves the reader who spells the house
+  the way their cover does with an empty list whose one obvious next move is to
+  create it again — a merged row should answer *as* its survivor, not go quiet.
+  And a fixture pair like "ഡി സി ബുക്സ്"/"DC Books" proves nothing about any of
+  this, because the fuzzy search bridges it unaided ("di si buks" ≈ "DC Books");
+  a test that the *pointer* is honoured needs names no matcher could reach — an
+  initialism ("എൻ ബി എസ്" → National Book Stall) or a pen name (Beypore Sultan →
+  Vaikom Muhammad Basheer). Two of the new tests passed against the unfixed code
+  until they were rewritten that way.
 
 ## Open decisions
 

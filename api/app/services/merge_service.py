@@ -396,3 +396,34 @@ async def resolve_merged(db: AsyncSession, kind: str, row) -> object | None:  # 
     if row is None or getattr(row, "merged_into_id", None) is None:
         return None
     return await db.get(MODELS[kind], row.merged_into_id)
+
+
+async def canonical(db: AsyncSession, row) -> object | None:  # noqa: ANN001
+    """The live row `row` stands for — itself when it is live, the survivor it
+    was merged into when it isn't, None when it is a dead end.
+
+    **The one rule for "which row does this name mean".** A merge is a decision
+    a human made once in the console ("ഡി സി ബുക്സ് is DC Books"), and every
+    place a free-text name or a remembered id turns back into a catalogue row
+    has to honour it, or the merge only holds until the next cover is
+    photographed: the extractor reads the loser's spelling, nothing recognises
+    it, and a fresh duplicate opens next door — the exact row that was just
+    folded away.
+
+    One hop is enough by construction: `merge` repoints anything already
+    aimed at a loser, so the graph stays flat (see the CHAIN note there).
+
+    None has two causes and they are deliberately the same answer: a row that
+    was soft-deleted without being merged points nowhere, and neither does one
+    whose survivor has since gone. In both cases the caller holds a name that
+    no longer names anything, which is what "None" means.
+    """
+    if row is None:
+        return None
+    target_id = getattr(row, "merged_into_id", None)
+    if target_id is None:
+        return row if row.deleted_at is None else None
+    survivor = await db.get(type(row), target_id)
+    if survivor is None or survivor.deleted_at is not None:
+        return None
+    return survivor

@@ -18,9 +18,12 @@ import json
 from typing import Any
 
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.models import Author, Series
 from app.schemas.catalog import WORK_FORMS
+from app.services import catalog_service
 from app.services import isbn as isbn_util
 from app.services.anthropic_client import ANTHROPIC_URL, headers, reply_text
 
@@ -188,3 +191,35 @@ async def extract_from_covers(
     finally:
         if owns_client:
             await client.aclose()
+
+
+async def canonicalise(db: AsyncSession, fields: dict[str, Any]) -> dict[str, Any]:
+    """Rewrite every name the covers gave us as the catalogue spells it.
+
+    A title, a house, an author read off a photograph is a *name*, and names
+    are how duplicate rows get made. The catalogue has one answer for "who is
+    this" — a live row of that name, or, when an admin has already folded two
+    rows together, the survivor of that merge — and the form should show it, so
+    that the reader shelving a Malayalam printing of DC Books is offered
+    DC Books rather than this cover's spelling of it (owner request,
+    4 Sep 2026). Nothing is decided here: every field stays editable, and a
+    name the catalogue has never seen comes back exactly as it was read.
+
+    The publisher additionally carries its id, because the form has a slot for
+    one and an id survives a later rename of the row; authors and the series
+    travel as names, which the save path resolves through the same lookup.
+    """
+    out = dict(fields)
+    name = out.get("publisher")
+    if name:
+        known = await catalog_service.publisher_by_name(db, name)
+        if known is not None:
+            out["publisher"] = known.name
+            out["publisher_id"] = known.id
+    authors = out.get("authors")
+    if authors:
+        out["authors"] = [await catalog_service.canonical_name(db, Author, a) for a in authors]
+    series_name = out.get("series_name")
+    if series_name:
+        out["series_name"] = await catalog_service.canonical_name(db, Series, series_name)
+    return out
