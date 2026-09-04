@@ -22,6 +22,7 @@ from app.schemas.catalog import (
     CoverExtractOut,
     EditionCreate,
     EditionOut,
+    EditionPatchResult,
     EditionUpdate,
     GenreCountOut,
     GlobalSearchOut,
@@ -546,13 +547,15 @@ async def merge_works(
 
 @router.get("/revisions/pending", response_model=list[WorkRevisionOut])
 async def pending_revisions(user: CurrentUser, db: DbSession) -> list[WorkRevisionOut]:
-    """The approval inbox — pending edits to books this reader contributed."""
+    """The approval inbox — pending edits to books this reader contributed,
+    to the Work itself or to one of its printings (`edition_id`)."""
     rows = await catalog_service.pending_revisions_for_approver(db, uuid.UUID(user["id"]))
     return [
         WorkRevisionOut(
             id=rev.id,
             work_id=rev.work_id,
             work_title=title,
+            edition_id=rev.edition_id,
             proposed_by_name=proposer,
             payload=rev.payload,
             status=rev.status,
@@ -616,13 +619,31 @@ async def get_edition_work(edition_id: uuid.UUID, db: DbSession) -> WorkOut:
     return await _work_out(db, work)
 
 
-@router.patch("/editions/{edition_id}", response_model=EditionOut)
+@router.patch("/editions/{edition_id}", response_model=EditionPatchResult)
 async def patch_edition(
     edition_id: uuid.UUID, payload: EditionUpdate, user: CurrentUser, db: DbSession
-) -> EditionOut:
+) -> EditionPatchResult:
+    """The same wiki-style edit as `patch_work`, on a printing: the
+    contributor of the book (and anyone, on a book nobody owns) changes it
+    live; anyone else's change is queued as a pending revision for them to
+    approve — `applied` says which happened.
+
+    This gate is newer than the endpoint. Until 5 Sep 2026 an edition patch
+    went straight to `update_edition`, so any signed-in reader could rewrite
+    any printing's ISBN, page count, format, publisher and covers with no
+    approval and no record — beside a Work patch that queued a blurb change.
+    That asymmetry is what made the add-book duplicate fork's "improve this
+    entry" path as damaging as it was.
+    """
     edition = await catalog_service.get_edition_or_404(db, edition_id)
-    edition = await catalog_service.update_edition(db, edition, payload)
-    return EditionOut.model_validate(edition)
+    applied, edition, revision = await catalog_service.propose_or_apply_edition_update(
+        db, edition, payload, uuid.UUID(user["id"])
+    )
+    return EditionPatchResult(
+        applied=applied,
+        revision_id=revision.id if revision else None,
+        edition=EditionOut.model_validate(edition),
+    )
 
 
 @router.get("/authors", response_model=list[AuthorOut])

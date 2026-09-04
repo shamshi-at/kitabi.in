@@ -14,6 +14,41 @@ class _FakeApiClient extends ApiClient {
   List<Map<String, dynamic>> claims = [];
   String? withdrawnId;
 
+  /// The live Work the cards diff against. Two printings, so a card that
+  /// picked `editions[0]` instead of matching on `edition_id` would diff the
+  /// edit against the wrong one.
+  @override
+  Future<Map<String, dynamic>> getWork(String workId) async => {
+        'id': workId,
+        'title': 'ചെമ്മീൻ',
+        'description': 'The original blurb.',
+        'genres': const <Map<String, dynamic>>[],
+        'editions': [
+          {
+            'id': 'ed-first',
+            'isbn': '9788126400000',
+            'page_count': 55,
+            'format': 'Paperback',
+            'cover_url': null,
+            'back_cover_url': null,
+            'series_number': null,
+            'publisher': null,
+            'series': null,
+          },
+          {
+            'id': 'ed-1',
+            'isbn': '9788126415419',
+            'page_count': 184,
+            'format': 'Paperback',
+            'cover_url': null,
+            'back_cover_url': null,
+            'series_number': null,
+            'publisher': null,
+            'series': null,
+          },
+        ],
+      };
+
   @override
   Future<List<Map<String, dynamic>>> pendingRevisions() async => pending;
 
@@ -58,6 +93,20 @@ Map<String, dynamic> _revision() => {
       'payload': {'description': 'A better blurb.', 'first_publish_year': 1956},
       'status': 'pending',
       'created_at': '2026-07-08T10:00:00Z',
+    };
+
+/// An edit to one printing rather than to the book — `edition_id` is what
+/// tells the two apart, and until 5 Sep 2026 this kind never reached the inbox
+/// at all: the endpoint applied it live to anyone who asked.
+Map<String, dynamic> _editionRevision() => {
+      'id': 'rev-2',
+      'work_id': 'w-1',
+      'work_title': 'ചെമ്മീൻ',
+      'edition_id': 'ed-1',
+      'proposed_by_name': 'Anu',
+      'payload': {'page_count': 240, 'isbn': '9789386906366'},
+      'status': 'pending',
+      'created_at': '2026-09-05T10:00:00Z',
     };
 
 void main() {
@@ -144,5 +193,53 @@ void main() {
 
     expect(find.text('Not approved'), findsOneWidget);
     expect(find.text('Withdraw'), findsNothing);
+  });
+
+  testWidgets('an edition edit is listed as a printing, diffed against that printing',
+      (tester) async {
+    final fake = _FakeApiClient()..pending = [_editionRevision()];
+    await tester.pumpWidget(_wrap(fake));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ചെമ്മീൻ'), findsOneWidget);
+    // Named as a printing, and as *which* printing — a contributor deciding an
+    // edit needs to know it isn't the copy they hold.
+    expect(
+      find.textContaining('This printing · 9788126415419 · Paperback · 184 pp'),
+      findsOneWidget,
+    );
+    // The Edition field keys read as the form's own labels, not as raw keys.
+    expect(find.textContaining('PAGES', findRichText: true), findsWidgets);
+    expect(find.textContaining('ISBN', findRichText: true), findsWidgets);
+    // Old → new comes off the targeted edition (184 → 240), not off the Work
+    // (where every one of these keys is null) and not off editions[0], whose
+    // 55 pages and different ISBN must appear nowhere on this card.
+    expect(find.textContaining('184  →  240', findRichText: true), findsOneWidget);
+    expect(
+      find.textContaining('9788126415419  →  9789386906366', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.textContaining('55  →', findRichText: true), findsNothing);
+    expect(find.textContaining('9788126400000', findRichText: true), findsNothing);
+  });
+
+  testWidgets('an edition edit approves through the same button', (tester) async {
+    final fake = _FakeApiClient()..pending = [_editionRevision()];
+    await tester.pumpWidget(_wrap(fake));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Approve'));
+    await tester.pumpAndSettle();
+
+    expect(fake.approvedId, 'rev-2');
+    expect(find.text('Edit approved and applied.'), findsOneWidget);
+  });
+
+  testWidgets('a work edit still says nothing about printings', (tester) async {
+    final fake = _FakeApiClient()..pending = [_revision()];
+    await tester.pumpWidget(_wrap(fake));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('This printing'), findsNothing);
   });
 }

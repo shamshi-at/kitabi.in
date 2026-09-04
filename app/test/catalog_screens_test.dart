@@ -271,11 +271,21 @@ class _FakeApiClient extends ApiClient {
   /// them means the *patch* is the only place an edit to them can show up.
   Map<String, dynamic>? lastEditionPatch;
 
+  /// When false, mirrors the API queueing the *edition* edit for the
+  /// contributor's approval — the gate `PATCH /catalog/editions/{id}` grew on
+  /// 5 Sep 2026, having applied every edit live until then.
+  bool editionUpdateApplies = true;
+
   @override
   Future<Map<String, dynamic>> updateEdition(String editionId, Map<String, dynamic> patch) async {
     lastEditionPatch = patch;
     final edition = Map<String, dynamic>.from((_work()['editions'] as List).first as Map);
-    return {...edition, ...patch};
+    return {
+      'applied': editionUpdateApplies,
+      'revision_id': editionUpdateApplies ? null : 'rev-2',
+      // A queued edit leaves the live printing exactly as it was.
+      'edition': editionUpdateApplies ? {...edition, ...patch} : edition,
+    };
   }
 
   /// When false, mirrors the API queueing the edit for the contributor's
@@ -855,6 +865,50 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(fake.updateCalls, 1);
+    expect(
+      find.text('Edit sent — the reader who added this book will review it.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets("an edition-only edit to someone else's book reports pending approval",
+      (tester) async {
+    // The work half is deliberately left applying. Both halves ask the same
+    // question of the same Work, so in the field they agree — which is exactly
+    // why `applied` on the *edition* reply has to be read on its own: with both
+    // false, a test passes even against code that ignores the edition entirely.
+    // The page count, ISBN, format, publisher and covers are all on this half.
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final fake = _FakeApiClient()
+      ..updateApplies = true
+      ..editionUpdateApplies = false;
+    final router = GoRouter(
+      initialLocation: '/edit',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('home'))),
+        GoRoute(path: '/edit', builder: (_, _) => AddEditBookScreen(workId: _workId)),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [apiClientProvider.overrideWithValue(fake)],
+      child: MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Change only a printing field — the pre-filled 184-page count.
+    await tester.enterText(find.widgetWithText(TextFormField, '184'), '240');
+    await tester.tap(find.text('Save to catalogue'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // The patch really went out, and the reader is told where it went.
+    expect(fake.lastEditionPatch, containsPair('page_count', 240));
     expect(
       find.text('Edit sent — the reader who added this book will review it.'),
       findsOneWidget,

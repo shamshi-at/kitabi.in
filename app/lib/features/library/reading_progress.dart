@@ -22,9 +22,14 @@ Future<void> saveBookTotalPages(
   if (total <= 0) return;
   await db.cachedBooksDao.updatePageCount(editionId, total);
   try {
+    // The reply's `applied` is deliberately ignored. On a book someone else
+    // contributed the total is queued for them (5 Sep 2026) — but the reader
+    // typed it to make *their own* progress a percentage, and the local mirror
+    // above is what every progress surface reads. Nothing here is worth
+    // interrupting a reading session for.
     await api.updateEdition(editionId, {'page_count': total});
   } catch (_) {
-    // Offline or rejected — the local mirror still has it, and the reader can
+    // Offline or refused — the local mirror still has it, and the reader can
     // set it again from the book page to push it to the catalog.
   }
 }

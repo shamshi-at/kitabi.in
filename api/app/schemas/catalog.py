@@ -398,6 +398,23 @@ class WorkPatchResult(BaseModel):
     work: "WorkOut"
 
 
+class EditionPatchResult(BaseModel):
+    """PATCH /editions outcome — the same shape as [WorkPatchResult], because
+    it is the same decision one level down. `applied` False means the edit was
+    queued as a pending revision for the *Work's* contributor to approve, and
+    `edition` is then the still-unchanged live printing.
+
+    Until 5 Sep 2026 this endpoint returned a bare EditionOut and applied
+    every edit live, so a reader could rewrite any printing's ISBN, page
+    count, format, publisher and covers on the shared catalogue while the far
+    less destructive Work-level edit beside it was queued.
+    """
+
+    applied: bool
+    revision_id: uuid.UUID | None = None
+    edition: "EditionOut"
+
+
 class WorkMergeRequest(BaseModel):
     """ "These are all the same book" — fold `absorb_ids` into one survivor.
 
@@ -425,11 +442,14 @@ class MergedWorkOut(BaseModel):
 
 
 class WorkRevisionOut(BaseModel):
-    """One pending edit in the contributor's approval inbox."""
+    """One pending edit in the contributor's approval inbox — to the Work, or
+    to one of its printings when `edition_id` is set (the payload is then an
+    EditionUpdate, and the inbox diffs it against that edition)."""
 
     id: uuid.UUID
     work_id: uuid.UUID
     work_title: str
+    edition_id: uuid.UUID | None = None
     proposed_by_name: str | None = None
     payload: dict
     status: str

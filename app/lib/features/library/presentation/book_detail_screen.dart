@@ -1195,7 +1195,7 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
       // widget with fresh urls.
       final chainToOther =
           action == CoverAction.camera && widget.coverUrl == null && widget.otherSideEmpty;
-      final url = switch (action) {
+      final upload = switch (action) {
         CoverAction.rotate || CoverAction.adjust => await rotateAndUploadCover(
             ref,
             context,
@@ -1210,26 +1210,35 @@ class _CoverUploaderState extends ConsumerState<_CoverUploader> {
             back: widget.back,
           ),
       };
-      if (url != null) {
+      if (upload != null) {
         ref.invalidate(bookDetailWorkProvider(widget.workId));
         ref.invalidate(cachedBookProvider(widget.editionId));
-        messenger.showSnackBar(SnackBar(content: Text(l10n.coverUploaded)));
+        // The cover lives on a shared catalogue row, so on a book someone else
+        // contributed it is queued for them — "Cover updated" over a pending
+        // edit is a claim the page can't back up (5 Sep 2026).
+        messenger.showSnackBar(SnackBar(
+          content: Text(upload.applied ? l10n.coverUploaded : l10n.editPendingApproval),
+          duration: Duration(seconds: upload.applied ? 4 : 5),
+        ));
         // Both sides were empty and the camera just filled one — offer the
         // other side right away, in the same camera run, instead of sending
         // the user back to the page to find and tap the other slot.
         if (chainToOther && mounted) {
           final next = await showChainedCoverSheet(context, nextIsBack: !widget.back);
           if (next && mounted) {
-            final otherUrl = await pickAndUploadCover(
+            final other = await pickAndUploadCover(
               ref,
               editionId: widget.editionId,
               source: ImageSource.camera,
               back: !widget.back,
             );
-            if (otherUrl != null && mounted) {
+            if (other != null && mounted) {
               ref.invalidate(bookDetailWorkProvider(widget.workId));
               ref.invalidate(cachedBookProvider(widget.editionId));
-              messenger.showSnackBar(SnackBar(content: Text(l10n.coverUploaded)));
+              messenger.showSnackBar(SnackBar(
+                content: Text(other.applied ? l10n.coverUploaded : l10n.editPendingApproval),
+                duration: Duration(seconds: other.applied ? 4 : 5),
+              ));
             }
           }
         }

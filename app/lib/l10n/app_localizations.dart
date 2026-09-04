@@ -1714,6 +1714,30 @@ abstract class AppLocalizations {
   /// **'Suggested by {name}'**
   String revisionsProposedBy(String name);
 
+  /// Marks a pending edit as targeting one edition (printing) rather than the book itself
+  ///
+  /// In en, this message translates to:
+  /// **'This printing'**
+  String get revisionsEditionScope;
+
+  /// Page count on the printing line of a pending edition edit
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pp'**
+  String revisionsEditionPages(int count);
+
+  /// Field label in a pending edit diff — the edition's front cover image
+  ///
+  /// In en, this message translates to:
+  /// **'COVER'**
+  String get revisionsFieldCover;
+
+  /// Field label in a pending edit diff — the edition's back cover image
+  ///
+  /// In en, this message translates to:
+  /// **'BACK COVER'**
+  String get revisionsFieldBackCover;
+
   /// Apply a pending edit
   ///
   /// In en, this message translates to:

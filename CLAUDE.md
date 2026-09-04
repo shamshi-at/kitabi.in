@@ -1096,6 +1096,33 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   letting a caller that already knows it pass it in — the book page's own route
   carries it, and a nudge that needed the mirror to be warm would silently skip
   the very screen it used to work on.
+- **Two endpoints beside each other with different rules is not a design; it is
+  the older one never being revisited.** `PATCH /catalog/works/{id}` has queued a
+  stranger's blurb change for the book's contributor since 8 Jul 2026;
+  `PATCH /catalog/editions/{id}`, twenty lines further down the same router,
+  called `update_edition` directly — so any signed-in reader could rewrite any
+  printing's ISBN, page count, format, publisher and cover URLs live, with no
+  approval and no record (5 Sep 2026). The gate was written when the Work was
+  the interesting row, and the fields that migrated to the Edition (rule 17)
+  never took it with them; the asymmetry is what made the add-book fork's
+  "improve this entry" path write a reader's captured cover onto a stranger's
+  edition. Three things the fix pins down. A permission question gets **one**
+  predicate — `_may_edit` now answers "whose row is this?" for the work edit,
+  the edition edit and the reader-facing merge, and `_may_absorb`'s own comment
+  had been claiming that was already true. A shared queue beats a second table
+  when the *approver* is the same person: an Edition has no
+  `created_by_user_id`, so the approver was always the Work's contributor, and
+  a nullable `edition_id` on `work_revisions` left the inbox, the admin
+  escalation and `decide_revision` unchanged. And a gate must not turn a
+  *refusal* into a promise: an ISBN that already names another book is still an
+  immediate 409, because the app answers a conflict by offering that book, and
+  queuing it instead would swap that offer for a "sent for approval" about an
+  edit that could never apply — while a *genuinely wrong* ISBN still queues,
+  since that judgement belongs to the contributor, not to a hard block.
+  Corollary for the client: a response shape that grows a wrapper needs the
+  *old* shape tolerated on the way in (`ApiClient.editionFrom` /
+  `appliedLive`), and every caller re-read — three call sites shared this
+  endpoint and only one of them was in the bug report.
 - **A merge is a decision, and it only holds on the paths that ask about it.**
   Folding "ഡി സി ബുക്സ്" into "DC Books" in the console repointed the editions
   and gave the loser's URL its 301 — and the very next photographed Malayalam

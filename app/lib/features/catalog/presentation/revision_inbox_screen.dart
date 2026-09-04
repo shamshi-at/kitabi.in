@@ -14,6 +14,10 @@ import 'picker_widgets.dart';
 /// contributor is the approver — proper moderation comes with the community
 /// layer). Each card shows what would change; Approve applies it to the live
 /// catalog, Reject discards it.
+///
+/// A card is an edit to the book, or — since 5 Sep 2026 — to one of its
+/// printings, which is where the ISBN, page count, format, publisher and
+/// covers live. Those used to bypass this screen entirely.
 final _pendingRevisionsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
   return ref.watch(apiClientProvider).pendingRevisions();
@@ -303,12 +307,21 @@ class _RevisionCardState extends ConsumerState<_RevisionCard> {
   }
 
   /// Human labels for the payload's field keys — reusing the form's own labels
-  /// so the diff reads in the user's language.
+  /// so the diff reads in the user's language. Edition keys sit in the same
+  /// map: a revision names either a Work's fields or a printing's, never both,
+  /// and the keys don't collide.
   String _fieldLabel(AppLocalizations l10n, String key) => switch (key) {
         'title' => l10n.formFieldTitle,
         'description' => l10n.formFieldDescription,
         'language' => l10n.formFieldLanguage,
         'genre_names' => l10n.formFieldGenres,
+        'isbn' => l10n.formFieldIsbn,
+        'page_count' => l10n.formFieldPages,
+        'format' => l10n.formFieldFormat,
+        'publisher_name' || 'publisher_id' => l10n.formFieldPublisher,
+        'series_name' || 'series_id' => l10n.formFieldSeries,
+        'cover_url' => l10n.revisionsFieldCover,
+        'back_cover_url' => l10n.revisionsFieldBackCover,
         _ => key.replaceAll('_', ' '),
       };
 
@@ -335,6 +348,54 @@ class _RevisionCardState extends ConsumerState<_RevisionCard> {
     };
   }
 
+  /// The same, for a revision that names one printing. The old value has to
+  /// come off the *edition* — read off the Work every one of these keys is
+  /// null, and a diff that shows no old value invites approving a change
+  /// nobody could see the size of.
+  dynamic _currentEditionValue(Map<String, dynamic>? edition, String key) {
+    if (edition == null) return null;
+    return switch (key) {
+      'isbn' => edition['isbn'],
+      'page_count' => edition['page_count'],
+      'format' => edition['format'],
+      'language' => edition['language'],
+      'pub_date' => edition['pub_date'],
+      'cover_url' => edition['cover_url'],
+      'back_cover_url' => edition['back_cover_url'],
+      'publisher_name' => (edition['publisher'] as Map?)?['name'],
+      'series_name' => (edition['series'] as Map?)?['name'],
+      'series_number' => edition['series_number'],
+      _ => null,
+    };
+  }
+
+  /// The printing this revision targets, out of the live Work — matched by id,
+  /// never `editions[0]`: a Work with several printings would otherwise diff
+  /// the edit against whichever one happens to be listed first (CLAUDE.md,
+  /// 13 Aug 2026).
+  Map<String, dynamic>? _targetEdition(Map<String, dynamic>? work, String? editionId) {
+    if (work == null || editionId == null) return null;
+    for (final e in (work['editions'] as List? ?? const [])) {
+      if (e is Map<String, dynamic> && e['id'] == editionId) return e;
+    }
+    return null;
+  }
+
+  /// How a printing names itself on the card — an ISBN if it has one, else its
+  /// format and page count. A contributor deciding an edit to "the 2019
+  /// paperback" needs to know it is not the one they hold.
+  String _editionLabel(AppLocalizations l10n, Map<String, dynamic>? edition) {
+    if (edition == null) return l10n.revisionsEditionScope;
+    final parts = [
+      if (edition['isbn'] != null) edition['isbn'] as String,
+      if (edition['format'] != null) edition['format'] as String,
+      if (edition['page_count'] != null) l10n.revisionsEditionPages(edition['page_count'] as int),
+    ];
+    return parts.isEmpty
+        ? l10n.revisionsEditionScope
+        : '${l10n.revisionsEditionScope} · ${parts.join(' · ')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -346,6 +407,11 @@ class _RevisionCardState extends ConsumerState<_RevisionCard> {
     final workId = widget.revision['work_id'] as String?;
     final currentWork =
         workId == null ? null : ref.watch(workProvider(workId)).valueOrNull;
+    // A revision names the Work, or one of its printings. The queue is shared
+    // (one inbox, one approve/reject) — `edition_id` is what tells them apart,
+    // and the diff has to be read off whichever row the payload describes.
+    final editionId = widget.revision['edition_id'] as String?;
+    final targetEdition = _targetEdition(currentWork, editionId);
 
     return Container(
       padding: EdgeInsets.all(12),
@@ -361,6 +427,19 @@ class _RevisionCardState extends ConsumerState<_RevisionCard> {
             widget.revision['work_title'] as String? ?? '',
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
           ),
+          if (editionId != null)
+            Padding(
+              padding: EdgeInsets.only(top: 3),
+              child: Text(
+                _editionLabel(l10n, targetEdition),
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 0.6,
+                  color: AppColors.oxbloodDeep,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           if (proposer != null && proposer.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 2),
@@ -373,7 +452,9 @@ class _RevisionCardState extends ConsumerState<_RevisionCard> {
           for (final entry in payload.entries)
             Builder(builder: (context) {
               final proposed = _fieldValue(entry.value);
-              final current = _currentValue(currentWork, entry.key);
+              final current = editionId == null
+                  ? _currentValue(currentWork, entry.key)
+                  : _currentEditionValue(targetEdition, entry.key);
               final currentText = current == null ? null : _fieldValue(current);
               final unchanged = currentText != null && currentText == proposed;
               return Padding(

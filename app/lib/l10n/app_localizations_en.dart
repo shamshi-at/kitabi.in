@@ -995,6 +995,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get revisionsEditionScope => 'This printing';
+
+  @override
+  String revisionsEditionPages(int count) {
+    return '$count pp';
+  }
+
+  @override
+  String get revisionsFieldCover => 'COVER';
+
+  @override
+  String get revisionsFieldBackCover => 'BACK COVER';
+
+  @override
   String get revisionsApprove => 'Approve';
 
   @override

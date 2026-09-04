@@ -1796,6 +1796,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
     };
 
     Map<String, dynamic>? created;
+    // Set when the edition half of the save went to the approval queue — both
+    // halves ask the same question of the same Work, so in practice they agree;
+    // read separately anyway, because "they can't disagree" is an assumption
+    // and a snackbar the reader never sees is the cost of it being wrong.
+    var editionPending = false;
     try {
       final api = ref.read(apiClientProvider);
       final workId = widget.initialWork?['id'] as String?;
@@ -1857,7 +1862,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
               'publisher_name': publisherName,
           };
           if (edPatch.isNotEmpty) {
-            patchedEdition = await api.updateEdition(editionId, edPatch);
+            final edResult = await api.updateEdition(editionId, edPatch);
+            // The printing is moderated too, since 5 Sep 2026 — and it is the
+            // half that carries the ISBN, page count, format, publisher and
+            // covers, so an edit of someone else's book that queued the blurb
+            // and silently applied all of *that* was the asymmetry behind the
+            // duplicate-fork report. `edition` is the live row either way, so
+            // splicing it into the cache is right whichever answer came back.
+            editionPending = !ApiClient.appliedLive(edResult);
+            patchedEdition = ApiClient.editionFrom(edResult);
           }
         }
         // Mirror the edit into the offline cache the shelf reads from —
@@ -1877,7 +1890,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
           // Someone else's book: the edit went to its contributor's approval
           // queue instead of the live catalog — say so, or "saved" silence
           // reads as the change having vanished.
-          if (result['applied'] == false) {
+          if (result['applied'] == false || editionPending) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(AppLocalizations.of(context)!.editPendingApproval),

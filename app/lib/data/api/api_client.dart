@@ -737,10 +737,33 @@ class ApiClient {
   }
 
   /// Update an edition's fields (e.g. a user-uploaded cover URL) — S7b.
+  ///
+  /// Moderated the same way as [updateWork], since 5 Sep 2026: the reply is
+  /// `{applied, revision_id, edition}`, and `applied: false` means the change
+  /// went to the contributor's approval queue rather than the live catalogue.
+  /// Callers must read `applied` — the printing is where the ISBN, page count,
+  /// format, publisher and covers live, so "saved" silence over a queued edit
+  /// is the most misleading silence in the app.
+  ///
+  /// [editionFrom] unwraps the reply for callers that only want the row, and
+  /// tolerates an older API that still answers with a bare edition.
   Future<Map<String, dynamic>> updateEdition(String editionId, Map<String, dynamic> patch) async {
     final res = await _dio.patch('/catalog/editions/$editionId', data: patch);
     return res.data as Map<String, dynamic>;
   }
+
+  /// The edition out of an [updateEdition] reply — the wrapper's `edition`,
+  /// or the whole body when it has no wrapper (an API older than the gate).
+  static Map<String, dynamic>? editionFrom(Map<String, dynamic> result) {
+    final edition = result['edition'];
+    if (edition is Map<String, dynamic>) return edition;
+    return result.containsKey('applied') ? null : result;
+  }
+
+  /// Whether an [updateEdition] / [updateWork] reply says the change reached
+  /// the live catalogue. A body with no `applied` key is an older API, which
+  /// only ever applied live.
+  static bool appliedLive(Map<String, dynamic> result) => result['applied'] != false;
 
   /// Add another edition (printing/ISBN) to an existing Work — returns the new
   /// edition.

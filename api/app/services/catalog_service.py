@@ -842,6 +842,18 @@ async def update_work(db: AsyncSession, work: Work, patch: WorkUpdate) -> Work:
     return await get_work_or_404(db, work.id)
 
 
+def _may_edit(work: Work, user_id: uuid.UUID) -> bool:
+    """May this reader change this book's catalogue entry live?
+
+    A Work nobody claims (OpenLibrary imports and seeds) or one this reader
+    contributed. The one predicate behind every wiki-moderated write —
+    `propose_or_apply_update`, `propose_or_apply_edition_update` and
+    `_may_absorb` all ask it here, because two answers to "whose row is this?"
+    is how the two drift apart.
+    """
+    return work.created_by_user_id is None or work.created_by_user_id == user_id
+
+
 async def propose_or_apply_update(
     db: AsyncSession, work: Work, patch: WorkUpdate, user_id: uuid.UUID
 ) -> tuple[bool, Work, WorkRevision | None]:
@@ -849,7 +861,7 @@ async def propose_or_apply_update(
     Work (or anyone, for Works nobody owns — OpenLibrary imports and seeds)
     edits live; everyone else's change is queued as a pending [WorkRevision]
     for the contributor to approve. Returns (applied, live work, revision)."""
-    if work.created_by_user_id is None or work.created_by_user_id == user_id:
+    if _may_edit(work, user_id):
         return True, await update_work(db, work, patch), None
     revision = WorkRevision(
         work_id=work.id,
@@ -861,6 +873,53 @@ async def propose_or_apply_update(
     await db.commit()
     await db.refresh(revision)
     return False, work, revision
+
+
+async def propose_or_apply_edition_update(
+    db: AsyncSession, edition: Edition, patch: EditionUpdate, user_id: uuid.UUID
+) -> tuple[bool, Edition, WorkRevision | None]:
+    """The same moderation, one level down — an edit to a printing.
+
+    This was the asymmetry the 5 Sep 2026 duplicate-fork report exposed: a
+    change to the Work's blurb was queued for its contributor while a change
+    to the ISBN, page count, format, publisher and covers of that Work's
+    printing — the fields a reader actually navigates by, and the ones a wrong
+    value makes actively misleading — applied live to anyone who asked.
+
+    The approver is the *Work's* contributor: an Edition carries no
+    contributor of its own (`CatalogMixin` has no `created_by_user_id`), and
+    the reader who put the book in the catalogue is the one who can say
+    whether this is really the printing they hold.
+
+    A genuinely wrong ISBN stays correctable — it is queued, not refused; the
+    contributor's inbox is where that judgement belongs.
+
+    Returns (applied, live edition, revision).
+    """
+    work = await get_work_or_404(db, edition.work_id)
+    if _may_edit(work, user_id):
+        return True, await update_edition(db, edition, patch), None
+    # Checked before queuing, not only on approval: an ISBN that already names
+    # another book is not a matter of opinion, and the app answers a conflict
+    # by offering that book (`_offerTheBookThisIsbnAlreadyNames`). Queuing it
+    # instead would swap that offer for a "sent for approval" about an edit
+    # that can never apply.
+    if patch.isbn is not None and "isbn" in patch.model_fields_set:
+        clash = await _edition_with_isbn(db, patch.isbn, exclude_edition_id=edition.id)
+        if clash is not None:
+            raise await _isbn_conflict(db, clash)
+    revision = WorkRevision(
+        work_id=work.id,
+        edition_id=edition.id,
+        proposed_by_user_id=user_id,
+        # mode="json" so UUIDs (publisher_id, series_id) and the pub_date
+        # serialise for the JSONB column.
+        payload=patch.model_dump(exclude_unset=True, mode="json"),
+    )
+    db.add(revision)
+    await db.commit()
+    await db.refresh(revision)
+    return False, edition, revision
 
 
 async def pending_revisions_for_approver(
@@ -890,11 +949,15 @@ async def decide_revision(
     approve: bool,
     admin_override: bool = False,
 ) -> Work:
-    """Approve (apply the queued WorkUpdate) or reject a pending revision.
-    Only the Work's contributor may decide — unless `admin_override`, the
-    escalation path the admin console uses to decide edits on seeded books that
-    have no contributor, or ones a contributor has left sitting. Returns the
-    live Work either way."""
+    """Approve (apply the queued edit) or reject a pending revision.
+
+    The payload is a WorkUpdate, or an EditionUpdate against `edition_id` when
+    the revision names a printing. Only the Work's contributor may decide —
+    unless `admin_override`, the escalation path the admin console uses to
+    decide edits on seeded books that have no contributor, or ones a
+    contributor has left sitting. Returns the live Work either way, edition
+    edits included: the Work is what every caller renders afterwards, and it
+    carries the edition."""
     revision = await db.get(WorkRevision, revision_id)
     if revision is None or revision.status != "pending":
         raise HTTPException(
@@ -914,6 +977,10 @@ async def decide_revision(
     revision.decided_at = datetime.now(UTC)
     revision.decided_by_user_id = approver_id
     if approve:
+        if revision.edition_id is not None:
+            edition = await get_edition_or_404(db, revision.edition_id)
+            await update_edition(db, edition, EditionUpdate(**revision.payload))
+            return await get_work_or_404(db, work.id)
         return await update_work(db, work, WorkUpdate(**revision.payload))
     await db.commit()
     return work
@@ -1039,17 +1106,17 @@ async def merge_works(db: AsyncSession, keep_id: uuid.UUID, absorb_id: uuid.UUID
 def _may_absorb(work: Work, user_id: uuid.UUID) -> bool:
     """May this reader make this Work disappear into another one?
 
-    The same predicate `propose_or_apply_update` uses for a live edit — a Work
-    nobody claims (OpenLibrary imports and seeds, which is what a typo'd
-    duplicate almost always is), or one this reader contributed themselves.
-    Deliberately not a second, merge-specific rule: two answers to "whose row is
-    this?" is how the two drift apart.
+    The same predicate a live edit uses (`_may_edit`) — a Work nobody claims
+    (OpenLibrary imports and seeds, which is what a typo'd duplicate almost
+    always is), or one this reader contributed themselves. Deliberately not a
+    second, merge-specific rule: two answers to "whose row is this?" is how the
+    two drift apart.
 
     Gated on the *absorbed* side only. That is the row that goes away, and it is
     the whole of the risk; the survivor is added to, and gaining an edition is
     not something it needs protecting from (owner decision, 4 Sep 2026).
     """
-    return work.created_by_user_id is None or work.created_by_user_id == user_id
+    return _may_edit(work, user_id)
 
 
 async def merge_duplicate_works(

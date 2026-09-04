@@ -17,12 +17,19 @@ import '../../data/sync/sync_providers.dart';
 /// like the rest of the Supabase project (see STATUS.md open decisions).
 const _coverBucket = 'covers';
 
+/// The outcome of a cover upload: the new URL, and whether pointing the
+/// edition at it reached the live catalogue or went to the book contributor's
+/// approval queue (`applied: false`). The caller needs both — a cover on
+/// someone else's book that reports "Cover updated" is claiming a change that
+/// hasn't happened yet.
+typedef CoverUpload = ({String url, bool applied});
+
 /// Capture/pick a photo from [source], crop it to a 2:3 book-cover portrait,
 /// upload it to Storage, point the edition's front (`cover_url`) or back
-/// (`back_cover_url`) at it, and refresh the local cache. Returns the new URL,
+/// (`back_cover_url`) at it, and refresh the local cache. Returns the upload,
 /// or null if the capture or crop is cancelled. Throws on upload/patch failure
 /// (caller shows a message).
-Future<String?> pickAndUploadCover(
+Future<CoverUpload?> pickAndUploadCover(
   WidgetRef ref, {
   required String editionId,
   required ImageSource source,
@@ -38,7 +45,7 @@ Future<String?> pickAndUploadCover(
 /// left the book page (where a reader actually notices a crooked cover)
 /// unable to fix it: exactly the "one entry point, not all of them" trap
 /// CLAUDE.md already records. Returns null if the reader backs out.
-Future<String?> rotateAndUploadCover(
+Future<CoverUpload?> rotateAndUploadCover(
   WidgetRef ref,
   BuildContext context, {
   required String editionId,
@@ -76,7 +83,7 @@ Future<String?> rotateAndUploadCover(
   }
 }
 
-Future<String?> _uploadCoverBytes(
+Future<CoverUpload?> _uploadCoverBytes(
   WidgetRef ref, {
   required String editionId,
   required Uint8List bytes,
@@ -98,11 +105,17 @@ Future<String?> _uploadCoverBytes(
   final coverUrl = '$base?v=${bytes.length}';
 
   final field = back ? 'back_cover_url' : 'cover_url';
-  await ref.read(apiClientProvider).updateEdition(editionId, {field: coverUrl});
+  final result = await ref.read(apiClientProvider).updateEdition(editionId, {field: coverUrl});
+  // The edition is a shared catalogue row, so a cover for a book someone else
+  // contributed is queued for them rather than applied (5 Sep 2026).
+  final applied = ApiClient.appliedLive(result);
   // Only the front cover feeds the offline grid cache; the back shows only on
-  // the book page (fetched fresh), so there's nothing to cache for it.
-  if (!back) {
+  // the book page (fetched fresh), so there's nothing to cache for it. Not
+  // cached at all while the edit is pending: the cache mirrors the catalogue,
+  // and writing a cover the catalogue hasn't accepted would show it on the
+  // shelf until the next fetch quietly took it away again.
+  if (!back && applied) {
     await ref.read(appDatabaseProvider).cachedBooksDao.updateCoverUrl(editionId, coverUrl);
   }
-  return coverUrl;
+  return (url: coverUrl, applied: applied);
 }

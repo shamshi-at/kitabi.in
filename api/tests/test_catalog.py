@@ -64,8 +64,11 @@ async def test_create_and_patch_edition_covers(client):
         json={"back_cover_url": "https://cdn.example/back-v2.jpg"},
     )
     assert patched.status_code == 200
-    assert patched.json()["back_cover_url"] == "https://cdn.example/back-v2.jpg"
-    assert patched.json()["cover_url"] == "https://cdn.example/front.jpg"
+    # The reply is {applied, revision_id, edition} — the same shape as a work
+    # patch, since 5 Sep 2026: an edition edit is moderated too.
+    assert patched.json()["applied"] is True
+    assert patched.json()["edition"]["back_cover_url"] == "https://cdn.example/back-v2.jpg"
+    assert patched.json()["edition"]["cover_url"] == "https://cdn.example/front.jpg"
 
 
 async def test_get_and_patch_work(client):
@@ -518,7 +521,7 @@ async def test_edition_buy_links_generated_and_patchable(client, monkeypatch):
         },
     )
     assert patched.status_code == 200
-    links = patched.json()["buy_links"]
+    links = patched.json()["edition"]["buy_links"]
     # The PATCH echo is the *stored* list (the edit form edits exactly what is
     # stored); the merged view is what the work-shaped endpoints serve.
     assert [b["retailer"] for b in links] == ["Amazon", "Flipkart"]

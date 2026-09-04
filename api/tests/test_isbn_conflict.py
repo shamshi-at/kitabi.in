@@ -140,7 +140,7 @@ async def test_resaving_an_edition_without_changing_its_isbn_is_fine(client, db_
     )
 
     assert resp.status_code == 200
-    assert resp.json()["page_count"] == 220
+    assert resp.json()["edition"]["page_count"] == 220
 
 
 async def test_a_soft_deleted_row_still_holds_the_number_and_says_so(client, db_sessionmaker):

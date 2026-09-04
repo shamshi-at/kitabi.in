@@ -471,6 +471,14 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       contributor approves/rejects from the profile's "Pending edits" inbox; the editor sees
       "Edit sent … will review it". V1 approver = the reader who added the book; proper
       moderation comes with the community layer (8 Jul 2026)
+- [x] …and the same gate on **printings** (5 Sep 2026) — `PATCH /catalog/editions/{id}` had
+      none, so any signed-in reader could rewrite any edition's ISBN, page count, format,
+      publisher and covers live while the far less destructive Work edit beside it queued.
+      Same queue (`work_revisions.edition_id`, migration `000050`), same inbox, same
+      approve/reject; the reply is now `{applied, revision_id, edition}` like the Work's,
+      the edit form and the book page's cover actions both read `applied`, and the inbox
+      diffs an edition edit against the printing it names. A wrong ISBN is still
+      correctable — it queues rather than being refused
 - [ ] Author account linking ("This is me") — `authors.linked_user_id` column + migration;
       "This is me" checkbox wired into the existing `create_author` call for a brand-new
       Author, plus a one-tap self-link button (`linked_user_id IS NULL` guard, first-come)

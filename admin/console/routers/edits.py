@@ -2,6 +2,9 @@
 review edits to books they contributed; this lists *every* pending revision
 (seeded books with no contributor, ones a contributor left sitting) and lets an
 admin decide via the API's own decide_revision with the admin override.
+
+A revision is an edit to the Work, or — since 5 Sep 2026 — to one of its
+printings (`edition_id`); both share this queue and this decide path.
 """
 
 import uuid
@@ -36,14 +39,26 @@ async def _pending(db: DbSession) -> list[dict]:
     out = []
     for rev, title, full_name, username in rows:
         work = await catalog_service.get_work_or_404(db, rev.work_id)
-        # Current values for each field the revision proposes to change.
-        current = {k: getattr(work, k, None) for k in rev.payload}
+        # An edition revision's payload names Edition fields, so the "current"
+        # column has to be read off the printing it targets — read off the Work
+        # every one of them would come back None, which renders as "— empty —"
+        # and invites an approval against a diff that never showed the old
+        # value.
+        subject = work
+        printing = None
+        if rev.edition_id is not None:
+            subject = await catalog_service.get_edition_or_404(db, rev.edition_id)
+            printing = subject.isbn or (
+                f"{subject.page_count} pp" if subject.page_count else str(subject.id)[:8]
+            )
+        current = {k: getattr(subject, k, None) for k in rev.payload}
         out.append(
             {
                 "rev": rev,
                 "title": title,
                 "proposer": full_name or (f"@{username}" if username else None),
                 "current": current,
+                "printing": printing,
                 "orphan": work.created_by_user_id is None,
             }
         )
