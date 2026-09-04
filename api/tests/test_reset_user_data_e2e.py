@@ -39,6 +39,7 @@ from app.models.publisher import Publisher
 from app.models.rating import Rating
 from app.models.reading_note import ReadingNote
 from app.models.reading_session import ReadingSession
+from app.models.rec_cache import RecCache
 from app.models.review import Review
 from app.models.sync_op import SyncOp
 from app.models.work import Work
@@ -159,6 +160,12 @@ async def _seed(db, user_id: uuid.UUID) -> dict:
             AuthorClaim(author_id=author.id, user_id=user_id),
             WorkRevision(work_id=work.id, proposed_by_user_id=user_id, payload={"title": "x"}),
             LlmUsage(user_id=user_id, feature="recommendations", day=now.date(), count=3),
+            RecCache(
+                user_id=user_id,
+                fingerprint="whatever fed the prompt",
+                picks=[{"work_id": str(work.id), "why": "Because."}],
+                generated_at=now,
+            ),
             PromotionEvent(
                 id=uuid.uuid4(),
                 promotion_id=promotion.id,
@@ -185,11 +192,20 @@ async def test_wipe_removes_every_reader_row_and_keeps_the_catalog(db_sessionmak
     user_id = uuid.UUID(user["id"])
 
     async with db_sessionmaker() as db:
+        # Counted either side of the seed, and compared as a DELTA.
+        #
+        # `_counts` counts whole tables, and `run_wipe` empties whole tables, so
+        # this suite's other tests leave committed rows lying about. Asserting
+        # "every table is non-empty" therefore passed on *their* rows: rec_cache
+        # sat in USER_TABLES with nothing in this seed ever touching it, and the
+        # check that exists to catch exactly that stayed green — while failing
+        # the moment the file was run on its own, which is how it surfaced
+        # (4 Sep 2026). A delta only passes if THIS seed inserted the row.
+        empty = await _counts(db, mod.USER_TABLES)
         seeded = await _seed(db, user_id)
-
-        # Every reader table genuinely had a row — otherwise "empty after" proves nothing.
         before = await _counts(db, mod.USER_TABLES)
-        assert all(before.values()), f"seed missed: {[t for t, n in before.items() if not n]}"
+        missed = [t for t in mod.USER_TABLES if before[t] <= empty[t]]
+        assert not missed, f"seed missed: {missed}"
 
         await mod.run_wipe(db, list(mod.USER_TABLES))
         await db.commit()
