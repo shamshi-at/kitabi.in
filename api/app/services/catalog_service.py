@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, case, func, literal, or_, select, text, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -638,12 +639,111 @@ async def _propagate_series_to_group(db: AsyncSession, work: Work) -> int:
     return touched
 
 
+async def _edition_with_isbn(
+    db: AsyncSession,
+    isbn: str | None,
+    *,
+    exclude_edition_id: uuid.UUID | None = None,
+    include_deleted: bool = False,
+) -> Edition | None:
+    """The edition already carrying this ISBN, if the catalogue holds one.
+
+    Matched on `variants()` like every other ISBN lookup here, so the check is
+    deliberately *stricter* than the database's own unique index: the stored row
+    may be the ISBN-10 off an older printing while the reader types the ISBN-13
+    off theirs. Those are two spellings of one printing — the constraint sees two
+    different strings and lets the duplicate through, which is exactly the pair
+    of rows `services/isbn`'s docstring exists to lament.
+    """
+    forms = isbn_util.variants(isbn) if isbn else None
+    if not forms:
+        return None
+    stmt = select(Edition).where(Edition.isbn.in_(forms))
+    if not include_deleted:
+        stmt = stmt.where(Edition.deleted_at.is_(None))
+    if exclude_edition_id is not None:
+        stmt = stmt.where(Edition.id != exclude_edition_id)
+    stmt = stmt.order_by(Edition.deleted_at.is_(None).desc(), Edition.created_at, Edition.id)
+    return (await db.execute(stmt)).scalars().first()
+
+
+async def _isbn_conflict(db: AsyncSession, edition: Edition | None) -> HTTPException:
+    """A 409 that *names the book the reader is looking for*.
+
+    An ISBN already in the catalogue does not mean "go away" — it means this
+    exact printing is already here, and the reader in front of the book wants
+    that row so they can add their copy and fill in what the entry is missing.
+    Same rule as `GET /catalog/isbn/{isbn}` (13 Aug 2026): an endpoint that
+    resolved a specific row must say which, because the caller cannot work it
+    out from the outside.
+
+    A soft-deleted row still occupies the number — `editions_isbn_key` is a
+    plain unique index, not a partial one — and there is no book to send anyone
+    to in that case, so the message stays honest instead of inventing a target.
+    """
+    if edition is None or edition.deleted_at is not None:
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "isbn_exists",
+                "message": "That ISBN is already recorded in the catalogue.",
+            },
+        )
+    work = await _load_work(db, edition.work_id)
+    title = (work.title if work else None) or "That book"
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "code": "isbn_exists",
+            "message": (
+                f"{title} is already in the catalogue with this ISBN. "
+                "Open it to add your copy and fill in what's missing."
+            ),
+            "work_id": str(edition.work_id),
+            "work_slug": work.slug if work else None,
+            "edition_id": str(edition.id),
+        },
+    )
+
+
+def _is_isbn_violation(exc: IntegrityError) -> bool:
+    """Was this the ISBN index, or some other constraint we must not mislabel?"""
+    return "editions_isbn_key" in str(getattr(exc, "orig", exc))
+
+
+async def _commit_guarding_isbn(db: AsyncSession, isbn: str | None) -> None:
+    """Commit, turning a lost race on the ISBN index into the same 409.
+
+    The pre-check cannot be the whole answer: it reads live rows only (a
+    soft-deleted edition holds the number invisibly), and two readers can add
+    one printing in the same second. Without this the loser gets a raw
+    IntegrityError, which is a 500 — the bug this whole guard exists for.
+    """
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if not _is_isbn_violation(exc):
+            raise
+        raise await _isbn_conflict(
+            db, await _edition_with_isbn(db, isbn, include_deleted=True)
+        ) from exc
+
+
 async def create_work_with_edition(
     db: AsyncSession, payload: WorkCreate, *, created_by: uuid.UUID | None = None
 ) -> Work:
     """The manual add/edit flow (S7b) — get-or-create every referenced
     author/publisher/genre/series, then create the Work + its first Edition.
     [created_by] credits the contributing reader for their score."""
+    # Before anything is created: a taken ISBN means this printing is already
+    # catalogued, and a second Work for it is not what the reader wants (owner
+    # report, 4 Sep 2026 — Dharmapuranam, 9788171300662, already here as an
+    # OpenLibrary stub, and the collision surfaced as a 500 at commit).
+    existing = await _edition_with_isbn(db, payload.isbn)
+    if existing is not None:
+        raise await _isbn_conflict(db, existing)
+
     authors = await _resolve_authors(db, payload.author_ids, payload.author_names)
     translators = await _resolve_authors(db, payload.translator_ids, payload.translator_names)
     genres = [await _get_or_create(db, Genre, name) for name in payload.genre_names]
@@ -702,7 +802,7 @@ async def create_work_with_edition(
         back_cover_url=payload.back_cover_url,
     )
     db.add(edition)
-    await db.commit()
+    await _commit_guarding_isbn(db, payload.isbn)
     return await get_work_or_404(db, work.id)
 
 
@@ -934,6 +1034,12 @@ async def update_edition(db: AsyncSession, edition: Edition, patch: EditionUpdat
             "series_number",
         },
     )
+    if "isbn" in data:
+        # Excluding this row, so re-saving a printing without touching its ISBN
+        # is never a conflict with itself.
+        clash = await _edition_with_isbn(db, data["isbn"], exclude_edition_id=edition.id)
+        if clash is not None:
+            raise await _isbn_conflict(db, clash)
     for field, value in data.items():
         setattr(edition, field, value)
     if patch.publisher_id is not None or patch.publisher_name is not None:
@@ -957,7 +1063,7 @@ async def update_edition(db: AsyncSession, edition: Edition, patch: EditionUpdat
                 series = await db.get(Series, work.series_id)
             number = patch.series_number if patch.series_number is not None else work.series_number
             await set_work_series(db, work, series, number)
-    await db.commit()
+    await _commit_guarding_isbn(db, edition.isbn)
     return await get_edition_or_404(db, edition.id)
 
 
@@ -1562,6 +1668,10 @@ async def find_or_fetch_by_isbn(
         return None
     normalized = normalize_isbn_lookup(raw, isbn_util.canonical(lookup_isbn) or lookup_isbn)
 
+    # No second conflict check here: `normalize_isbn_lookup` stamps the row
+    # with `canonical(lookup_isbn)`, which is by construction one of `forms` —
+    # and the local match above has already ruled every one of them out. A
+    # guard for a collision on this path would be dead code.
     work_payload = WorkCreate(
         title=normalized["title"],
         subtitle=normalized["subtitle"],
@@ -1595,6 +1705,10 @@ async def create_edition(db: AsyncSession, work: Work, payload: EditionCreate) -
     the Work is missing gets filled from what they supplied; anything it
     already answers is left exactly as it is.
     """
+    existing = await _edition_with_isbn(db, payload.isbn)
+    if existing is not None:
+        raise await _isbn_conflict(db, existing)
+
     publisher = await _resolve_publisher(db, payload.publisher_id, payload.publisher_name)
     # A series arriving with a new printing describes the *book*, not the
     # printing — so it lands on the Work, the same as on the edit path. An app
@@ -1619,7 +1733,7 @@ async def create_edition(db: AsyncSession, work: Work, payload: EditionCreate) -
     )
     db.add(edition)
     _fill_empty_work_fields(work, payload)
-    await db.commit()
+    await _commit_guarding_isbn(db, payload.isbn)
     return await get_edition_or_404(db, edition.id)
 
 
