@@ -25,6 +25,7 @@ from app.schemas.catalog import (
     EditionUpdate,
     GenreCountOut,
     GlobalSearchOut,
+    MergedWorkOut,
     PublicReviewOut,
     PublicReviewsPageOut,
     PublisherCreate,
@@ -37,6 +38,8 @@ from app.schemas.catalog import (
     SeriesWithCountOut,
     TranslationLinkIn,
     WorkCreate,
+    WorkMergeRequest,
+    WorkMergeResult,
     WorkOut,
     WorkPatchResult,
     WorkRevisionOut,
@@ -499,6 +502,34 @@ async def patch_work(
         applied=applied,
         revision_id=revision.id if revision else None,
         work=await _work_out(db, work),
+    )
+
+
+@router.post("/works/{work_id}/merge", response_model=WorkMergeResult)
+async def merge_works(
+    work_id: uuid.UUID, payload: WorkMergeRequest, user: CurrentUser, db: DbSession
+) -> WorkMergeResult:
+    """ "These are all the same book, listed several times" — fold the duplicates
+    into this Work (owner request, 4 Sep 2026).
+
+    A typo'd title arrives as three or four catalogue rows at once, and until
+    now only the admin console could fold them together. Reader-facing because
+    the reader with the book in their hand is the one who can tell that
+    "Dharmapuranam", "Dharmapuranm" and "Dharma Puranam" are one book — but
+    scoped by `_may_absorb`, so the rows that disappear are only ever ones
+    nobody has claimed or ones this reader contributed.
+
+    Nothing is destroyed: the absorbed Works are soft-deleted (rule 3) after
+    their editions, ratings and reviews are repointed here, so a mistake is a
+    correction rather than an excavation.
+    """
+    absorbed = await catalog_service.merge_duplicate_works(
+        db, work_id, payload.absorb_ids, uuid.UUID(user["id"])
+    )
+    work = await catalog_service.get_work_or_404(db, work_id)
+    return WorkMergeResult(
+        work=await _work_out(db, work),
+        merged=[MergedWorkOut(id=w.id, title=w.title) for w in absorbed],
     )
 
 

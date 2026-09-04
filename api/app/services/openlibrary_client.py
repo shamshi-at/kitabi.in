@@ -72,6 +72,13 @@ def normalize_isbn_lookup(data: dict[str, Any], isbn: str) -> dict[str, Any]:
         "first_publish_year": year,
         "pub_date": date(year, 1, 1) if year else None,
         "page_count": data.get("number_of_pages"),
+        # The printing's physical shape, which OpenLibrary knows and we were
+        # throwing away — free, and far more reliable than asking a model to
+        # guess "paperback or hardcover?" from a photograph of a cover, where
+        # the answer is usually not written down at all (owner request, 4 Sep
+        # 2026). Free text upstream ("pbk.", "Trade Paperback"); the schema's
+        # NormalizedFormat folds it on the way in.
+        "format": data.get("physical_format"),
         "cover_url": cover.get("large") or cover.get("medium") or cover.get("small"),
         "isbn": isbn,
         "external_source": "openlibrary",

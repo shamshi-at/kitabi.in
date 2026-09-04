@@ -5,7 +5,7 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 
 from app.services import isbn as isbn_util
 
@@ -60,6 +60,52 @@ def normalize_form(value: str | None) -> str | None:
         if cleaned.casefold() == known.casefold():
             return known
     return cleaned
+
+
+# The physical shape of a printing — Edition.format, which the app calls
+# "Format" and offers as four chips. Separate axis from WORK_FORMS (the
+# *literary* form): a screenplay can be a paperback.
+EDITION_FORMATS = ("Paperback", "Hardcover", "eBook", "Audiobook")
+
+# What the world actually writes for those four. OpenLibrary's
+# `physical_format` is free text filled in by thousands of contributors, so it
+# arrives as "pbk.", "Trade Paperback", "hardback", "Electronic resource" — one
+# printing's shape spelled a dozen ways. Substring matching, because the useful
+# word is nearly always in there somewhere ("Mass Market Paperback").
+_FORMAT_HINTS = (
+    ("Hardcover", ("hardcover", "hardback", "hard cover", "hbk", "casebound", "boards")),
+    ("Paperback", ("paperback", "paper back", "pbk", "softcover", "soft cover", "trade pb")),
+    ("eBook", ("ebook", "e-book", "electronic", "kindle", "epub", "pdf", "digital")),
+    ("Audiobook", ("audiobook", "audio book", "audio cd", "audio", "mp3", "spoken", "cassette")),
+)
+
+
+def normalize_edition_format(value: str | None) -> str | None:
+    """Fold a printing's format onto one of [EDITION_FORMATS], or keep it.
+
+    Same bargain as [normalize_form]: the vocabulary is suggested, not closed,
+    so a format we did not think of survives rather than being thrown away — but
+    the spellings we *can* recognise are folded, or the facet splits four ways
+    and the app's chip row silently fails to preselect anything.
+    """
+    if value is None:
+        return None
+    cleaned = " ".join(value.split())
+    if not cleaned:
+        return None
+    for known in EDITION_FORMATS:
+        if cleaned.casefold() == known.casefold():
+            return known
+    lowered = cleaned.casefold()
+    for known, hints in _FORMAT_HINTS:
+        if any(hint in lowered for hint in hints):
+            return known
+    return cleaned
+
+
+# Applied as a type, for the reason NormalizedIsbn is: a new schema carrying a
+# format cannot quietly skip the folding.
+NormalizedFormat = Annotated[str | None, BeforeValidator(normalize_edition_format)]
 
 
 def _validate_form(value: str | None) -> str | None:
@@ -313,7 +359,7 @@ class WorkCreate(BaseModel):
     isbn: NormalizedIsbn = None
     page_count: int | None = None
     pub_date: date | None = None
-    format: str | None = None
+    format: NormalizedFormat = None
     cover_url: str | None = None
     back_cover_url: str | None = None
 
@@ -350,6 +396,32 @@ class WorkPatchResult(BaseModel):
     applied: bool
     revision_id: uuid.UUID | None = None
     work: "WorkOut"
+
+
+class WorkMergeRequest(BaseModel):
+    """ "These are all the same book" — fold `absorb_ids` into one survivor.
+
+    A list rather than a pair because that is the shape of the problem: a
+    typo'd title arrives as three or four rows at once, and merging them one at
+    a time means re-picking the survivor at every step.
+    """
+
+    # Capped because this is a reader-facing write that soft-deletes catalogue
+    # rows; nobody legitimately folds a dozen books together in one gesture.
+    absorb_ids: list[uuid.UUID] = Field(min_length=1, max_length=10)
+
+
+class WorkMergeResult(BaseModel):
+    """What the merge actually did. `merged` names the rows that went away, so
+    the app can say so rather than leaving the reader to infer it."""
+
+    work: "WorkOut"
+    merged: list["MergedWorkOut"]
+
+
+class MergedWorkOut(BaseModel):
+    id: uuid.UUID
+    title: str
 
 
 class WorkRevisionOut(BaseModel):
@@ -398,7 +470,7 @@ class EditionCreate(BaseModel):
     language: str | None = None
     page_count: int | None = None
     pub_date: date | None = None
-    format: str | None = None
+    format: NormalizedFormat = None
     cover_url: str | None = None
     back_cover_url: str | None = None
     # Work-level, fill-if-empty — see the class docstring.
@@ -419,7 +491,7 @@ class EditionUpdate(BaseModel):
     isbn: NormalizedIsbn = None
     page_count: int | None = None
     pub_date: date | None = None
-    format: str | None = None
+    format: NormalizedFormat = None
     cover_url: str | None = None
     back_cover_url: str | None = None
     buy_links: list[BuyLink] | None = None

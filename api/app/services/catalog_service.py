@@ -1023,6 +1023,58 @@ async def merge_works(db: AsyncSession, keep_id: uuid.UUID, absorb_id: uuid.UUID
     }
 
 
+def _may_absorb(work: Work, user_id: uuid.UUID) -> bool:
+    """May this reader make this Work disappear into another one?
+
+    The same predicate `propose_or_apply_update` uses for a live edit — a Work
+    nobody claims (OpenLibrary imports and seeds, which is what a typo'd
+    duplicate almost always is), or one this reader contributed themselves.
+    Deliberately not a second, merge-specific rule: two answers to "whose row is
+    this?" is how the two drift apart.
+
+    Gated on the *absorbed* side only. That is the row that goes away, and it is
+    the whole of the risk; the survivor is added to, and gaining an edition is
+    not something it needs protecting from (owner decision, 4 Sep 2026).
+    """
+    return work.created_by_user_id is None or work.created_by_user_id == user_id
+
+
+async def merge_duplicate_works(
+    db: AsyncSession, keep_id: uuid.UUID, absorb_ids: Sequence[uuid.UUID], user_id: uuid.UUID
+) -> list[Work]:
+    """ "These are all the same book" — the reader-facing merge.
+
+    Every id is validated *before* the first row moves: a merge is many writes
+    and a refusal discovered halfway through would leave the catalogue in a
+    state nobody asked for, with some duplicates folded and the rest still
+    listed. Returns the absorbed Works so the caller can name what went away.
+    """
+    keep = await get_work_or_404(db, keep_id)
+    absorbed: list[Work] = []
+    seen: set[uuid.UUID] = set()
+    for absorb_id in absorb_ids:
+        if absorb_id in seen:
+            continue
+        seen.add(absorb_id)
+        _, absorb = await _merge_pair(db, keep_id, absorb_id)
+        if not _may_absorb(absorb, user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "not_yours_to_merge",
+                    "message": (
+                        f"“{absorb.title}” was added by another reader, so it can't be "
+                        "merged away here. Report it instead and we'll take a look."
+                    ),
+                },
+            )
+        absorbed.append(absorb)
+
+    for absorb in absorbed:
+        await merge_works(db, keep.id, absorb.id)
+    return absorbed
+
+
 async def update_edition(db: AsyncSession, edition: Edition, patch: EditionUpdate) -> Edition:
     data = patch.model_dump(
         exclude_unset=True,
@@ -1681,6 +1733,7 @@ async def find_or_fetch_by_isbn(
         isbn=normalized["isbn"],
         page_count=normalized["page_count"],
         pub_date=normalized["pub_date"],
+        format=normalized["format"],
         cover_url=normalized["cover_url"],
     )
     work = await create_work_with_edition(db, work_payload)
