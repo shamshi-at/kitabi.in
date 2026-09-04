@@ -18,6 +18,7 @@ PushEntity = Literal[
     "lending_records",
     "reading_sessions",
     "reading_notes",
+    "reads",
 ]
 PullEntity = PushEntity | Literal["activity_log_entries"]
 OpType = Literal["create", "update", "delete"]

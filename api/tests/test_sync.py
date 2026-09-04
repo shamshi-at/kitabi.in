@@ -1030,3 +1030,32 @@ async def test_reading_note_citing_another_users_session_is_rejected(
     assert results[0]["status"] == "applied"
     assert results[1]["status"] == "rejected"
     assert results[1]["code"] == "invalid_reference"
+
+
+def test_every_pullable_entity_can_be_serialised():
+    """The pull's model map and the wire vocabulary are one decision in two
+    places, and only one of them got `reads`.
+
+    `pull_changes` iterates `PULL_MODELS` — built from `ENTITIES`, which the
+    reads work registered — and wraps each row in a `SyncChange` whose `entity`
+    is a `Literal`. That Literal did not list "reads", so the moment migration
+    000050 backfilled a read row for a reader, their very next `/sync/pull`
+    raised a ValidationError and returned 500: not a feature that failed to
+    appear, but every existing entity's sync stopping dead behind it.
+
+    Nothing caught it because no test pulled after a read existed. This one
+    needs no rows at all — it asks the two lists whether they still agree.
+    """
+    from app.schemas.sync import SyncChange
+    from app.services.sync_service import PULL_MODELS
+
+    unserialisable = []
+    for entity in PULL_MODELS:
+        try:
+            SyncChange(entity=entity, data={})
+        except Exception:
+            unserialisable.append(entity)
+    assert unserialisable == [], (
+        f"the pull can emit {unserialisable} but SyncChange.entity cannot hold them — "
+        "add them to PushEntity/PullEntity in app/schemas/sync.py"
+    )
