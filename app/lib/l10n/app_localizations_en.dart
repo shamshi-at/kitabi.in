@@ -4537,6 +4537,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save — check your connection and try again.';
 
   @override
+  String get formIsbnTakenTitle => 'Already on the shelf';
+
+  @override
+  String get formIsbnTakenOpen => 'Add my details to it';
+
+  @override
+  String get formIsbnTakenStay => 'Let me check the ISBN';
+
+  @override
   String get formDiscardTitle => 'Discard this book?';
 
   @override

@@ -7276,6 +7276,24 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save — check your connection and try again.'**
   String get formSaveFailed;
 
+  /// Title of the dialog shown when the ISBN typed on the add form is already in the catalogue
+  ///
+  /// In en, this message translates to:
+  /// **'Already on the shelf'**
+  String get formIsbnTakenTitle;
+
+  /// Action that opens the existing entry for editing, carrying everything typed on the add form
+  ///
+  /// In en, this message translates to:
+  /// **'Add my details to it'**
+  String get formIsbnTakenOpen;
+
+  /// Action that dismisses the ISBN-taken dialog and returns to the add form, e.g. to correct a mistyped number
+  ///
+  /// In en, this message translates to:
+  /// **'Let me check the ISBN'**
+  String get formIsbnTakenStay;
+
   /// Title of the unsaved-changes dialog when leaving the add form
   ///
   /// In en, this message translates to:

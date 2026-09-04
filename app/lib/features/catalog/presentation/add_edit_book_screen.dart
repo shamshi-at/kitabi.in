@@ -609,6 +609,52 @@ class _BookFormState extends ConsumerState<_BookForm> {
     });
   }
 
+  /// A save refused because the ISBN is already catalogued (409 `isbn_exists`).
+  ///
+  /// The title panel is a *guess* the reader may ignore; this is a fact, and it
+  /// arrives at the one moment they can do nothing else about it — the server
+  /// will refuse this book for as long as the number stays on it. So it is not
+  /// reported as an error but offered as the door it actually is: the entry
+  /// they meant, opened for editing with every cover and field they typed
+  /// carried over ([_forkImproveEntry]). Staying put is the other real answer,
+  /// because a mistyped digit lands here too.
+  ///
+  /// Returns true when it handled the failure, so the caller's snackbar — which
+  /// blames the network — stays out of the way.
+  Future<bool> _offerTheBookThisIsbnAlreadyNames(Object err) async {
+    if (err is! DioException || err.response?.statusCode != 409) return false;
+    final data = err.response?.data;
+    if (data is! Map || data['code'] != 'isbn_exists') return false;
+    // Only the server can name the row; without an id there is nowhere to go
+    // and the plain error is the honest outcome (a soft-deleted edition still
+    // holds the number, and no reader can open that).
+    final workId = data['work_id'] as String?;
+    if (workId == null) return false;
+
+    final l10n = AppLocalizations.of(context)!;
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.paper,
+        title: Text(l10n.formIsbnTakenTitle),
+        content: Text(data['message'] as String? ?? ''),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.formIsbnTakenStay),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.formIsbnTakenOpen),
+          ),
+        ],
+      ),
+    );
+    if (open != true || !mounted) return true;
+    _forkImproveEntry({'id': workId});
+    return true;
+  }
+
   /// M1 — the fork. A similar-title match means one of several things, and
   /// only the reader knows which: their copy of that same book (→ shelf), that
   /// same book but the entry is thin and they have better details (→ improve
@@ -1478,7 +1524,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
         }
       }
     } catch (err) {
-      if (mounted) showQuietError(context, AppLocalizations.of(context)!.formSaveFailed, err);
+      if (mounted && !await _offerTheBookThisIsbnAlreadyNames(err)) {
+        if (mounted) showQuietError(context, AppLocalizations.of(context)!.formSaveFailed, err);
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
