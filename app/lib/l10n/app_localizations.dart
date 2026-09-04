@@ -6580,6 +6580,60 @@ abstract class AppLocalizations {
   /// **'Fills in whatever this entry is missing'**
   String get forkImproveThisHelp;
 
+  /// Fork option: several near-identical catalogue rows are one book typed wrong more than once, and should be merged
+  ///
+  /// In en, this message translates to:
+  /// **'These are all the same book'**
+  String get forkSameBookTwice;
+
+  /// Helper under the merge-duplicates fork option
+  ///
+  /// In en, this message translates to:
+  /// **'{count} entries — keep one, fold the rest into it'**
+  String forkSameBookTwiceHelp(int count);
+
+  /// Snackbar after a reader merges duplicate catalogue rows
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 duplicate folded in} other{{count} duplicates folded in}}'**
+  String forkMergedCount(int count);
+
+  /// Snackbar when the merge request fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t merge those entries.'**
+  String get forkMergeFailed;
+
+  /// Title of the sheet that picks a survivor and the duplicates to fold into it
+  ///
+  /// In en, this message translates to:
+  /// **'Which entry should stay?'**
+  String get mergeSheetTitle;
+
+  /// Reassurance under the merge sheet title
+  ///
+  /// In en, this message translates to:
+  /// **'Covers, ratings and reviews move to the entry you keep. Nothing is deleted.'**
+  String get mergeSheetHelp;
+
+  /// Confirm button on the merge sheet
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Merge 1 entry} other{Merge {count} entries}}'**
+  String mergeSheetConfirm(int count);
+
+  /// Badge on the row that will survive the merge
+  ///
+  /// In en, this message translates to:
+  /// **'KEEPING'**
+  String get mergeKeepThis;
+
+  /// Action that makes this row the survivor instead
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this one'**
+  String get mergeKeepInstead;
+
   /// Fork option: the same story in another literary form — its own book, prefilled from the match
   ///
   /// In en, this message translates to:

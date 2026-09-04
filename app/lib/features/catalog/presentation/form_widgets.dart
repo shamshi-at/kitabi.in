@@ -282,10 +282,16 @@ class FormTextField extends StatelessWidget {
     this.maxLines = 1,
     this.expandable = false,
     this.labelAction,
+    this.focusNode,
   });
 
   final String label;
   final TextEditingController controller;
+
+  /// So a caller can put the cursor here — "Create another" reopens the form
+  /// at the top with the title waiting, rather than leaving the reader to
+  /// scroll back up and tap.
+  final FocusNode? focusNode;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
   final int maxLines;
@@ -365,6 +371,7 @@ class FormTextField extends StatelessWidget {
         TextFormField(
           textCapitalization: TextCapitalization.sentences,
           controller: controller,
+          focusNode: focusNode,
           validator: validator,
           keyboardType: keyboardType,
           maxLines: maxLines,

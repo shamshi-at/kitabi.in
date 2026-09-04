@@ -659,6 +659,19 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// "These are all the same book" — fold [absorbIds] into [workId].
+  ///
+  /// The server refuses (403 `not_yours_to_merge`) any row another reader
+  /// contributed, and checks every id before moving anything, so a partial
+  /// merge is not a state this can produce.
+  Future<Map<String, dynamic>> mergeWorks(String workId, List<String> absorbIds) async {
+    final res = await _dio.post(
+      '/catalog/works/$workId/merge',
+      data: {'absorb_ids': absorbIds},
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
   /// The approval inbox — pending edits to books this reader contributed.
   Future<List<Map<String, dynamic>>> pendingRevisions() async {
     final res = await _dio.get('/catalog/revisions/pending');

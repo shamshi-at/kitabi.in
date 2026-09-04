@@ -4048,6 +4048,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forkImproveThisHelp => 'Fills in whatever this entry is missing';
 
   @override
+  String get forkSameBookTwice => 'These are all the same book';
+
+  @override
+  String forkSameBookTwiceHelp(int count) {
+    return '$count entries — keep one, fold the rest into it';
+  }
+
+  @override
+  String forkMergedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count duplicates folded in',
+      one: '1 duplicate folded in',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get forkMergeFailed => 'Couldn\'t merge those entries.';
+
+  @override
+  String get mergeSheetTitle => 'Which entry should stay?';
+
+  @override
+  String get mergeSheetHelp =>
+      'Covers, ratings and reviews move to the entry you keep. Nothing is deleted.';
+
+  @override
+  String mergeSheetConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Merge $count entries',
+      one: 'Merge 1 entry',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mergeKeepThis => 'KEEPING';
+
+  @override
+  String get mergeKeepInstead => 'Keep this one';
+
+  @override
   String get forkDifferentForm => 'Mine\'s the screenplay, play or comic';
 
   @override

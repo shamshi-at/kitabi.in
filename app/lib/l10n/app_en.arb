@@ -3269,6 +3269,33 @@
   "@forkImproveThis": {"description": "Fork option: open the matched entry for editing, carrying the covers and details already captured on the add form"},
   "forkImproveThisHelp": "Fills in whatever this entry is missing",
   "@forkImproveThisHelp": {"description": "Helper under the improve-this-entry fork option"},
+  "forkSameBookTwice": "These are all the same book",
+  "@forkSameBookTwice": {"description": "Fork option: several near-identical catalogue rows are one book typed wrong more than once, and should be merged"},
+  "forkSameBookTwiceHelp": "{count} entries — keep one, fold the rest into it",
+  "@forkSameBookTwiceHelp": {
+    "description": "Helper under the merge-duplicates fork option",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "forkMergedCount": "{count, plural, =1{1 duplicate folded in} other{{count} duplicates folded in}}",
+  "@forkMergedCount": {
+    "description": "Snackbar after a reader merges duplicate catalogue rows",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "forkMergeFailed": "Couldn't merge those entries.",
+  "@forkMergeFailed": {"description": "Snackbar when the merge request fails"},
+  "mergeSheetTitle": "Which entry should stay?",
+  "@mergeSheetTitle": {"description": "Title of the sheet that picks a survivor and the duplicates to fold into it"},
+  "mergeSheetHelp": "Covers, ratings and reviews move to the entry you keep. Nothing is deleted.",
+  "@mergeSheetHelp": {"description": "Reassurance under the merge sheet title"},
+  "mergeSheetConfirm": "{count, plural, =1{Merge 1 entry} other{Merge {count} entries}}",
+  "@mergeSheetConfirm": {
+    "description": "Confirm button on the merge sheet",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "mergeKeepThis": "KEEPING",
+  "@mergeKeepThis": {"description": "Badge on the row that will survive the merge"},
+  "mergeKeepInstead": "Keep this one",
+  "@mergeKeepInstead": {"description": "Action that makes this row the survivor instead"},
   "forkDifferentForm": "Mine's the screenplay, play or comic",
   "@forkDifferentForm": {"description": "Fork option: the same story in another literary form — its own book, prefilled from the match"},
   "forkDifferentFormHelp": "Same story, different form — its own book",

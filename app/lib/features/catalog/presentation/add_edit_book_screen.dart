@@ -183,6 +183,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
   // description) fold into a "More details" section — collapsed on a fresh
   // create, open when editing or when a scan/photo-read prefilled them.
   bool _detailsExpanded = false;
+
+  /// "Create another" has to *look* like a fresh form, not a cleared one: the
+  /// reader is at the bottom of a long page when the popup closes, so a wiped
+  /// form left where it stood reads as nothing having happened (owner request,
+  /// 4 Sep 2026). The list goes back to the top and the title takes the cursor.
+  final _scroll = ScrollController();
+  final _titleFocus = FocusNode();
   // What prefilled the form last ('scan' | 'photos') — drives the dismissible
   // provenance banner so prefilled data is announced, not silent.
   String? _prefillSource;
@@ -568,6 +575,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
     ]) {
       c.dispose();
     }
+    _scroll.dispose();
+    _titleFocus.dispose();
     super.dispose();
   }
 
@@ -772,7 +781,11 @@ class _BookFormState extends ConsumerState<_BookForm> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _ForkSheet(work: work, hasCaptured: _hasCapturedDetails),
+      builder: (ctx) => _ForkSheet(
+        work: work,
+        hasCaptured: _hasCapturedDetails,
+        duplicateCount: _similar.length,
+      ),
     );
     if (choice == null || !mounted) return;
     switch (choice) {
@@ -780,6 +793,8 @@ class _BookFormState extends ConsumerState<_BookForm> {
         await _forkAddToShelf(work);
       case 'improve':
         _forkImproveEntry(work);
+      case 'merge':
+        await _forkMergeDuplicates(work);
       case 'form':
         await _forkDifferentForm(work);
       case 'edition':
@@ -885,6 +900,57 @@ class _BookFormState extends ConsumerState<_BookForm> {
       'seed': _capturedFields(),
       'editionId': ?editionId,
     });
+  }
+
+  /// The fork's "these are all the same book" — fold the typo'd rows together.
+  ///
+  /// One book typed wrong three times is three catalogue rows, and every one of
+  /// them is *true*: same book, same author, a letter out of place (owner
+  /// request, 4 Sep 2026). Nothing in the app could say so; only the admin
+  /// console could fold them. The reader holding the book is the one who knows.
+  ///
+  /// The reader picks which row survives — the fullest one, usually, not the
+  /// one they happened to tap — and the rest are absorbed into it: their
+  /// editions, ratings and reviews move across and they are soft-deleted, never
+  /// destroyed. Then the survivor opens for improving, carrying everything this
+  /// form was holding, because the point was never the merge on its own.
+  ///
+  /// The server refuses any row another reader contributed, so a merge that
+  /// comes back 403 is not a bug to hide — it names the book it would not fold.
+  Future<void> _forkMergeDuplicates(Map<String, dynamic> tapped) async {
+    final choice = await showModalBottomSheet<_MergeChoice>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _MergeSheet(works: _similar, initialSurvivorId: tapped['id'] as String?),
+    );
+    if (choice == null || !mounted || choice.absorbIds.isEmpty) return;
+
+    setState(() => _saving = true);
+    try {
+      final merged = await ref
+          .read(apiClientProvider)
+          .mergeWorks(choice.survivorId, choice.absorbIds);
+      if (!mounted) return;
+      final survivor = merged['work'] as Map<String, dynamic>;
+      final count = (merged['merged'] as List?)?.length ?? 0;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context)!.forkMergedCount(count)),
+        duration: const Duration(seconds: 4),
+      ));
+      // Straight on to improving what survived — the merge tidied the shelf,
+      // it did not put the reader's covers and page count anywhere.
+      _forkImproveEntry(survivor);
+    } catch (err) {
+      if (mounted) {
+        showQuietError(context, AppLocalizations.of(context)!.forkMergeFailed, err);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   /// The fork's "mine's a different form" — the screenplay of a novel, the
@@ -1698,10 +1764,20 @@ class _BookFormState extends ConsumerState<_BookForm> {
       _similar = const [];
       _similarDismissed = false;
       _similarDismissedQuery = '';
+      // The book that was just saved is not this one. Leaving the scan's
+      // prefill behind would have the next save offer to improve the previous
+      // reader's book — the identity has to be wiped with the fields.
+      _prefillWorkId = null;
+      _prefillEditionId = null;
+      _prefillWorkTitle = null;
     });
     // A blank form has nothing to lose — re-baseline the unsaved guard.
     _cleanFingerprint = _fingerprint();
     _confirmedLeave = false;
+    // Back to the top, cursor in the title: a fresh record starts where a
+    // reader would start one.
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+    _titleFocus.requestFocus();
   }
 
   /// The just-created book's confirmation popup: its metadata, an
@@ -1898,6 +1974,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final form = Form(
       key: _formKey,
       child: ListView(
+        controller: _scroll,
         padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
           Row(
@@ -2057,6 +2134,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
           FormTextField(
             label: l10n.formFieldTitle,
             controller: _title,
+            focusNode: _titleFocus,
             validator: (v) => (v == null || v.trim().isEmpty) ? l10n.formTitleRequired : null,
           ),
           // Quiet duplicate check (create mode): near-matches already in the
@@ -3191,9 +3269,18 @@ class _TranslatorField extends StatelessWidget {
 /// fork, phrased in the reader's words; pops one of
 /// 'shelf' | 'edition' | 'translation' | 'different'.
 class _ForkSheet extends StatelessWidget {
-  const _ForkSheet({required this.work, required this.hasCaptured});
+  const _ForkSheet({
+    required this.work,
+    required this.hasCaptured,
+    this.duplicateCount = 0,
+  });
 
   final Map<String, dynamic> work;
+
+  /// How many near-matches the panel is showing. Two or more is the shape of a
+  /// typo'd title split across rows, and the only case where "these are all the
+  /// same book" is a sensible thing to offer.
+  final int duplicateCount;
 
   /// Whether the form is holding covers or details worth carrying onto the
   /// matched entry — the difference between "improve this entry" being the
@@ -3352,6 +3439,16 @@ class _ForkSheet extends StatelessWidget {
                 help: l10n.forkImproveThisHelp,
                 accent: AppColors.moss,
               ),
+            // Only with something to merge *with*. One match is a match; several
+            // near-identical ones are a title that got typed wrong more than
+            // once, which is a different problem and needs a different answer.
+            if (duplicateCount > 1)
+              option(
+                value: 'merge',
+                title: l10n.forkSameBookTwice,
+                help: l10n.forkSameBookTwiceHelp(duplicateCount),
+                accent: AppColors.oxblood,
+              ),
             option(
               value: 'edition',
               title: l10n.forkDifferentPrinting,
@@ -3426,6 +3523,225 @@ class _MoreChip extends StatelessWidget {
                   color: AppColors.oxblood,
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// What [_MergeSheet] hands back: the row that stays, and the rows folded into
+/// it.
+class _MergeChoice {
+  const _MergeChoice({required this.survivorId, required this.absorbIds});
+  final String survivorId;
+  final List<String> absorbIds;
+}
+
+/// "Which of these should stay?"
+///
+/// Two decisions in one sheet, because they are one decision: the reader picks
+/// the row that survives, and every other row they tick is folded into it. The
+/// survivor is a radio and the rest are checkboxes so that is legible at a
+/// glance — and a row cannot be both, which is the one combination that means
+/// nothing.
+///
+/// Everything is ticked by default *except* nothing: the reader came here
+/// saying these are duplicates, and unticking is the rarer correction. What is
+/// not defaulted is the survivor — that is the judgement call, so it starts on
+/// the row they tapped and invites a change.
+class _MergeSheet extends StatefulWidget {
+  const _MergeSheet({required this.works, this.initialSurvivorId});
+
+  final List<Map<String, dynamic>> works;
+  final String? initialSurvivorId;
+
+  @override
+  State<_MergeSheet> createState() => _MergeSheetState();
+}
+
+class _MergeSheetState extends State<_MergeSheet> {
+  late String _survivorId;
+  late Set<String> _absorb;
+
+  @override
+  void initState() {
+    super.initState();
+    _survivorId = widget.initialSurvivorId ?? widget.works.first['id'] as String;
+    _absorb = {
+      for (final w in widget.works)
+        if (w['id'] != _survivorId) w['id'] as String,
+    };
+  }
+
+  void _pickSurvivor(String id) {
+    setState(() {
+      _survivorId = id;
+      // A row cannot be absorbed into itself, and the one it displaces goes
+      // back on the list rather than silently dropping out of the merge.
+      _absorb = {
+        for (final w in widget.works)
+          if (w['id'] != id) w['id'] as String,
+      };
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 32,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.mergeSheetTitle,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l10n.mergeSheetHelp,
+              style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+            ),
+            const SizedBox(height: 10),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final work in widget.works)
+                    _MergeRow(
+                      work: work,
+                      isSurvivor: work['id'] == _survivorId,
+                      absorbed: _absorb.contains(work['id']),
+                      onKeep: () => _pickSurvivor(work['id'] as String),
+                      onToggle: (on) => setState(() {
+                        final id = work['id'] as String;
+                        on ? _absorb.add(id) : _absorb.remove(id);
+                      }),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _absorb.isEmpty
+                    ? null
+                    : () => Navigator.of(context).pop(
+                          _MergeChoice(
+                            survivorId: _survivorId,
+                            absorbIds: _absorb.toList(),
+                          ),
+                        ),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.oxblood),
+                child: Text(l10n.mergeSheetConfirm(_absorb.length)),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(l10n.bookCancel),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MergeRow extends StatelessWidget {
+  const _MergeRow({
+    required this.work,
+    required this.isSurvivor,
+    required this.absorbed,
+    required this.onKeep,
+    required this.onToggle,
+  });
+
+  final Map<String, dynamic> work;
+  final bool isSurvivor;
+  final bool absorbed;
+  final VoidCallback onKeep;
+  final ValueChanged<bool> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final authors = (work['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final author = authors.isNotEmpty ? authors.first['name'] as String? : null;
+    final year = work['first_publish_year'];
+    final meta = [?author, if (year != null) '$year'].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: isSurvivor ? AppColors.oxblood : AppColors.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      work['title'] as String? ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    if (meta.isNotEmpty)
+                      Text(meta, style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
+                  ],
+                ),
+              ),
+              if (isSurvivor)
+                Text(
+                  l10n.mergeKeepThis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.oxblood,
+                  ),
+                )
+              else ...[
+                TextButton(
+                  onPressed: onKeep,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(l10n.mergeKeepInstead, style: const TextStyle(fontSize: 11)),
+                ),
+                Checkbox(
+                  value: absorbed,
+                  onChanged: (v) => onToggle(v ?? false),
+                  activeColor: AppColors.oxblood,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
             ],
           ),
         ),
