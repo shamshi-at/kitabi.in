@@ -15,19 +15,25 @@
   <a class="btn s" href="/catalog/authors">← All authors</a>
 </div>
 {% endif %}
-<div class="tbl">
+<div class="tbl" data-bulklist>
   <table>
-    <tr><th style="width:44%">Name</th><th>Language</th><th>On Kitabi</th><th>Author id</th></tr>
+    <tr><th style="width:34px"><input type="checkbox" data-selall aria-label="Select all"></th>
+      <th style="width:40%">Name</th><th>Works</th><th>Language</th><th>On Kitabi</th><th>Author id</th></tr>
     {% for a in rows %}
     <tr>
+      <td><input type="checkbox" class="rowchk" value="{{ a.id }}"
+        data-name="{{ a.name }}" data-sub="{{ a.name_translit or '' }}"
+        data-count="{{ counts.get(a.id, 0) }}" aria-label="Select {{ a.name }}"></td>
       <td><a class="t" href="/catalog/authors/{{ a.id }}" style="text-decoration:none">{{ a.name }}</a>
         <div class="m mono">{{ a.name_translit or '' }}{% if a.pen_name %} · “{{ a.pen_name }}”{% endif %}</div></td>
+      <td>{{ counts.get(a.id, 0) }}</td>
       <td class="m">{{ a.primary_language or '—' }}</td>
       <td>{% if a.linked_user_id %}<span class="pill info">🔗 linked</span>{% else %}<span class="m">—</span>{% endif %}</td>
       <td class="mono" style="font-size:10.5px;color:var(--ink-soft)">{{ a.id }}</td>
     </tr>
-    {% else %}<tr><td colspan="4" class="m" style="text-align:center;padding:24px">
+    {% else %}<tr><td colspan="6" class="m" style="text-align:center;padding:24px">
       {% if q %}No authors match “{{ q }}”.{% else %}No authors yet.{% endif %}</td></tr>{% endfor %}
   </table>
 </div>
+{% with kind = "authors", unit = "works" %}{% include "_bulk_merge.html" %}{% endwith %}
 {% endblock %}

@@ -21,10 +21,11 @@
     </table>
   </div>
   <div class="card">
-    <div class="lbl">Merge duplicates</div>
-    <p style="margin-top:8px;font-size:12.5px;line-height:1.6;color:var(--ink-soft)">Search, then tap
-    <b>Keep</b> on the record that stays and <b>Absorb</b> on the duplicate. You'll see exactly what
-    moves before it commits — merge moves other readers' ratings, reviews and library entries.</p>
+    <div class="lbl">Merge by id</div>
+    <p style="margin-top:8px;font-size:12.5px;line-height:1.6;color:var(--ink-soft)">For two
+    duplicates that no single search brings together — different titles entirely. Gives you the
+    full preview of what moves before it commits. When both rows <em>do</em> appear in one
+    search, tick them below and press <b>Merge</b> instead.</p>
     <form method="get" action="/catalog/merge" id="mergeform" style="display:flex;gap:8px;margin-top:10px">
       <input class="search" name="keep" placeholder="keep work id" style="flex:1;min-width:0"
         value="{{ keep or '' }}">
@@ -73,23 +74,22 @@
 </div>
 {% endif %}
 {% if q or filter_label %}
-<form id="bulkform" method="post" action="/catalog/works/delete">
+<form id="bulkform" data-bulklist method="post" action="/catalog/works/delete">
   <input type="hidden" name="confirm" value="DELETE">
   <input type="hidden" name="back" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
   {# Bulk action bar — hidden by admin.js until at least one row is checked. #}
-  <div class="bulkbar" data-bulkbar hidden>
-    <span><b data-bulkcount>0</b> selected</span>
-    <button class="btn s d" type="submit">Delete selected</button>
-    <span class="hint">Works that readers have shelved, rated or reviewed are skipped — merge those.</span>
-  </div>
   <div class="tbl">
     <table>
       <tr>
         <th style="width:34px"><input type="checkbox" data-selall aria-label="Select all"></th>
-        <th style="width:36%">Title</th><th>Author</th><th>Editions</th><th>Shelved</th><th>Merge</th></tr>
+        <th style="width:36%">Title</th><th>Author</th><th>Editions</th><th>Shelved</th>
+        <th>Ratings</th><th>Reviews</th></tr>
       {% for r in rows %}
       <tr>
         <td><input type="checkbox" class="rowchk" name="ids" value="{{ r.w.id }}"
+          data-name="{{ r.w.title }}"
+          data-sub="{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}"
+          data-count="{{ r.shelved or 0 }}"
           aria-label="Select {{ r.w.title }}"></td>
         <td><button type="button" class="peek t" data-peek="/catalog/peek/works/{{ r.w.id }}">{{ r.w.title }}</button>
           <div class="m mono">{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}
@@ -97,20 +97,19 @@
         <td class="m">{{ r.author }}</td>
         <td>{{ r.editions }}</td>
         <td>{{ r.shelved }}</td>
-        <td><div style="display:flex;gap:4px">
-          <button type="button" class="btn s" data-mergepick="keep" data-id="{{ r.w.id }}">Keep</button>
-          <button type="button" class="btn s" data-mergepick="absorb" data-id="{{ r.w.id }}">Absorb</button>
-        </div></td>
+        <td>{{ r.ratings or 0 }}</td>
+        <td>{{ r.reviews or 0 }}</td>
       </tr>
       {% endfor %}
-      {% if not rows %}<tr><td colspan="6" class="m" style="text-align:center;padding:24px">
+      {% if not rows %}<tr><td colspan="7" class="m" style="text-align:center;padding:24px">
         {% if q %}No matches for “{{ q }}”.{% else %}Nothing here — this gap is clear.{% endif %}</td></tr>{% endif %}
     </table>
   </div>
 </form>
-<p class="cap" style="margin-top:8px;font-size:11.5px;color:var(--ink-soft)">Tick rows to
-<b>delete</b> junk in bulk, or tap <b>Keep</b> and <b>Absorb</b> on two rows to <b>merge</b>
-duplicates. Merge keeps readers; delete is for rows nobody has.</p>
+{% with kind = "works", unit = "editions", deletable = True %}{% include "_bulk_merge.html" %}{% endwith %}
+<p class="cap" style="margin-top:8px;font-size:11.5px;color:var(--ink-soft)">Tick rows, then
+<b>Merge</b> to fold duplicate books into one — any number at once — or <b>Delete</b> the junk.
+Merge keeps readers; delete is for rows nobody has.</p>
 {% else %}
 <div class="note">Search a title or author above, pick a <b>language</b> or <b>Type</b> to browse, or open a quality-gap worklist.</div>
 {% endif %}

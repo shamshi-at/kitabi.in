@@ -17,11 +17,15 @@
 </div>
 {% endif %}
 
-<div class="tbl">
+<div class="tbl" data-bulklist>
   <table>
-    <tr><th style="width:50%">Series</th><th>Books</th><th>Language</th><th></th></tr>
+    <tr><th style="width:34px"><input type="checkbox" data-selall aria-label="Select all"></th>
+      <th style="width:46%">Series</th><th>Books</th><th>Language</th><th></th></tr>
     {% for r in rows %}
     <tr>
+      <td><input type="checkbox" class="rowchk" value="{{ r.s.id }}"
+        data-name="{{ r.s.name }}" data-sub="{{ r.s.name_translit or '' }}"
+        data-count="{{ r.count or 0 }}" aria-label="Select {{ r.s.name }}"></td>
       <td>
         <button type="button" class="peek t" data-peek="/catalog/peek/series/{{ r.s.id }}">{{ r.s.name }}</button>
         <div class="m mono">{{ r.s.name_translit or '' }}
@@ -32,9 +36,10 @@
       <td style="text-align:right"><a class="btn s" href="/catalog/series/{{ r.s.id }}">Manage</a></td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="m" style="text-align:center;padding:24px">
+    <tr><td colspan="5" class="m" style="text-align:center;padding:24px">
       {% if q %}No series match “{{ q }}”.{% else %}No series in the catalog yet.{% endif %}</td></tr>
     {% endfor %}
   </table>
 </div>
+{% with kind = "series", unit = "books" %}{% include "_bulk_merge.html" %}{% endwith %}
 {% endblock %}

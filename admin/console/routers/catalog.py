@@ -14,9 +14,10 @@ from app.services import (
     catalog_service,  # noqa: E402
     merge_service,  # noqa: E402
 )
-from fastapi import APIRouter, Form, Query, Request, UploadFile
+from fastapi import APIRouter, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from sqlalchemy import Text, cast, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from .. import assets, cache, queries, security
@@ -367,12 +368,28 @@ async def _work_rows(db: DbSession, works: list) -> list[dict]:
             )
         ).all()
     )
+    # Ratings and reviews: a work merge moves *other readers'* opinions, so the
+    # survivor choice has to be made against them, not against which title is
+    # spelled best. One grouped count each, same shape as the two above.
+    reader_counts = {}
+    for model, key in ((Rating, "ratings"), (Review, "reviews")):
+        reader_counts[key] = dict(
+            (
+                await db.execute(
+                    select(model.work_id, func.count())
+                    .where(model.work_id.in_(ids), model.deleted_at.is_(None))
+                    .group_by(model.work_id)
+                )
+            ).all()
+        )
     return [
         {
             "w": w,
             "author": ", ".join(a.name for a in w.authors) if w.authors else "—",
             "editions": int(edition_counts.get(w.id, 0)),
             "shelved": int(shelved_counts.get(w.id, 0)),
+            "ratings": int(reader_counts["ratings"].get(w.id, 0)),
+            "reviews": int(reader_counts["reviews"].get(w.id, 0)),
         }
         for w in works
     ]
@@ -944,6 +961,7 @@ async def authors(
     else:
         rows = await catalog_service.browse_authors(db, 60, 0, popular=True)
     badges = await queries.nav_badges(db)
+    counts = await _merge_counts(db, "authors", [r.id for r in rows])
     return templates.TemplateResponse(
         request,
         "authors.html",
@@ -954,6 +972,7 @@ async def authors(
             "q": q,
             "rows": rows,
             "filter_label": filter_label,
+            "counts": counts,
         },
     )
 
@@ -1020,6 +1039,92 @@ async def entity_merge(
     )
     await db.commit()
     set_flash(resp, "ok", f"Merged “{loser_name}” in. Its old URL redirects here now.")
+    return resp
+
+
+async def _fold_one(
+    db: AsyncSession, kind: str, survivor_id: uuid.UUID, loser_id: uuid.UUID
+) -> bool:
+    """Fold one row into another, whichever engine that kind uses.
+
+    Names go through `merge_service.merge`; works go through
+    `catalog_service.merge_works`, which moves editions, ratings and reviews and
+    commits for itself. The console should not have to care which — the operator
+    ticked rows on a list and pressed Merge.
+    """
+    if kind == "works":
+        await catalog_service.merge_works(db, survivor_id, loser_id)
+        return True
+    return await merge_service.merge(db, kind, survivor_id, loser_id)
+
+
+@router.post("/bulk-merge")
+async def bulk_merge(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    kind: Annotated[str, Form()],
+    survivor_id: Annotated[uuid.UUID, Form()],
+    loser_ids: Annotated[list[uuid.UUID], Form()],
+    back: Annotated[str, Form()] = "",
+) -> RedirectResponse:
+    """ "These are all the same record" — fold every ticked row into the one kept.
+
+    The moderation queue has always been able to do this; the lists could not,
+    and the lists are where a human sees the cluster a matcher missed. Three
+    spellings of DC Books is the normal shape of it in a Malayalam catalogue
+    (owner report, 5 Sep 2026), and Keep/Absorb could only ever pair two.
+
+    Returns to the list, not to the survivor: the operator is working through a
+    search and usually has another cluster in it.
+    """
+    kinds = {"works", *merge_service.MODELS}
+    target = back if back.startswith("/catalog/") else f"/catalog/{kind}"
+    resp = RedirectResponse(target, status_code=303)
+    if kind not in kinds:
+        set_flash(resp, "err", "Unknown kind.")
+        return resp
+
+    # Name the losers before they are folded — after the merge their rows are
+    # soft-deleted and the message would have nothing to say.
+    names: list[str] = []
+    merged = 0
+    for loser_id in loser_ids:
+        if loser_id == survivor_id:
+            continue
+        row = await db.get(Work if kind == "works" else merge_service.MODELS[kind], loser_id)
+        label = (row.title if kind == "works" else row.name) if row else "?"
+        try:
+            ok = await _fold_one(db, kind, survivor_id, loser_id)
+        except HTTPException:
+            # merge_works refuses a row that is gone or is the survivor itself.
+            ok = False
+        if ok:
+            merged += 1
+            names.append(label)
+    if not merged:
+        set_flash(resp, "err", "Nothing merged — those rows may already be folded away.")
+        return resp
+    await db.commit()
+
+    survivor = await db.get(Work if kind == "works" else merge_service.MODELS[kind], survivor_id)
+    kept = (survivor.title if kind == "works" else survivor.name) if survivor else "?"
+    await security.audit(
+        db,
+        "merge.apply",
+        admin_id=admin.id,
+        target_type=kind,
+        target_id=str(survivor_id),
+        summary=f"folded {merged} into “{kept}”: " + ", ".join(f"“{n}”" for n in names),
+        ip=client_ip(request),
+    )
+    await db.commit()
+    set_flash(
+        resp,
+        "ok",
+        f"Merged {merged} into “{kept}”. Their old URLs redirect here, and a cover read "
+        "under those names now resolves here too.",
+    )
     return resp
 
 
@@ -1281,10 +1386,18 @@ async def publishers(
         else await catalog_service.browse_publishers(db, 60, 0, popular=True)
     )
     badges = await queries.nav_badges(db)
+    counts = await _merge_counts(db, "publishers", [r.id for r in rows])
     return templates.TemplateResponse(
         request,
         "publishers.html",
-        {"admin": admin, "active": "publishers", "badges": badges, "q": q, "rows": rows},
+        {
+            "admin": admin,
+            "active": "publishers",
+            "badges": badges,
+            "q": q,
+            "rows": rows,
+            "counts": counts,
+        },
     )
 
 

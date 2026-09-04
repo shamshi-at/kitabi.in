@@ -8,18 +8,27 @@
   placeholder="Search publisher name" style="width:260px"></form>
 {% endblock %}
 {% block content %}
-<div class="tbl">
+<div class="tbl" data-bulklist>
   <table>
-    <tr><th style="width:56%">Name</th><th>Language</th><th>Publisher id</th></tr>
+    <tr><th style="width:34px"><input type="checkbox" data-selall aria-label="Select all"></th>
+      <th style="width:50%">Name</th><th>Editions</th><th>Language</th><th>Publisher id</th></tr>
     {% for p in rows %}
     <tr>
+      <td><input type="checkbox" class="rowchk" value="{{ p.id }}"
+        data-name="{{ p.name }}" data-sub="{{ p.name_translit or '' }}"
+        data-count="{{ counts.get(p.id, 0) }}" aria-label="Select {{ p.name }}"></td>
       <td><a class="t" href="/catalog/publishers/{{ p.id }}" style="text-decoration:none">{{ p.name }}</a>
         <div class="m mono">{{ p.name_translit or '' }}</div></td>
+      <td>{{ counts.get(p.id, 0) }}</td>
       <td class="m">{{ p.primary_language or '—' }}</td>
       <td class="mono" style="font-size:10.5px;color:var(--ink-soft)">{{ p.id }}</td>
     </tr>
-    {% else %}<tr><td colspan="3" class="m" style="text-align:center;padding:24px">
+    {% else %}<tr><td colspan="5" class="m" style="text-align:center;padding:24px">
       {% if q %}No publishers match “{{ q }}”.{% else %}No publishers yet.{% endif %}</td></tr>{% endfor %}
   </table>
 </div>
+{% with kind = "publishers", unit = "editions" %}{% include "_bulk_merge.html" %}{% endwith %}
+<p class="cap" style="margin-top:8px;font-size:11.5px;color:var(--ink-soft)">Tick two or more
+rows and press <b>Merge</b> to fold spellings of one house together — “DC Books”, “Ḍi Si Buks”
+and “ഡിസി ബുക്സ്” share no letters, so only you can pair them.</p>
 {% endblock %}

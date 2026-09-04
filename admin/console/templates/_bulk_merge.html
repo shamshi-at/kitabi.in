@@ -1,0 +1,71 @@
+{# Select rows on a catalogue list and fold them into one.
+
+   The console had three different answers to "these are the same record":
+   Works offered Keep/Absorb on two rows, the three name-kinds offered nothing
+   on the list at all (open one, search its twin on the detail page), and the
+   moderation queue offered the good one — pick a survivor, merge the rest into
+   it, any number at once. This is the queue's answer, on every list.
+
+   Two rows at a time was the ceiling that mattered: "merge every DC Books into
+   one" is an N-row problem, and three spellings of one house is the normal
+   shape of it in a Malayalam catalogue (owner report, 5 Sep 2026).
+
+   Context: kind — "publishers" | "authors" | "series" | "works"
+            unit — what the count column counts, plural ("editions", "books")
+            deletable — works only; its bulk delete stays beside the merge,
+                        because delete and merge are different verbs with
+                        different risks and the operator picks between them.
+
+   The dialog lives OUTSIDE the list form (HTML forbids nested forms), so every
+   template includes this AFTER the table's form closes. #}
+
+<div class="bulkbar" data-bulkbar hidden>
+  <span><b data-bulkcount>0</b> selected</span>
+  <button type="button" class="btn s" data-bulkclear>Clear</button>
+  <span class="spacer" style="margin-left:auto"></span>
+  {# Only works has anything to delete; the three name-kinds never set this. #}
+  {% if deletable is defined and deletable %}
+  <button class="btn s d" type="submit" form="bulkform" data-bulkdelete>Delete selected</button>
+  <span class="hint">Delete is for rows nobody has. Merge keeps readers.</span>
+  {% endif %}
+  <button type="button" class="btn p s" data-mergeopen>Merge…</button>
+</div>
+
+<dialog class="mgdlg" data-mergedlg aria-label="Merge records">
+  <form method="post" action="/catalog/bulk-merge">
+    <input type="hidden" name="kind" value="{{ kind }}">
+    <input type="hidden" name="back"
+      value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
+    <div class="mg-head">
+      <h4>Merge <span data-mergen>2</span> {{ kind }}</h4>
+      <p>Everything they carry moves to the record you keep.</p>
+    </div>
+    <div class="mg-sec">
+      <div class="lbl">Which record stays?</div>
+      {# Filled from the ticked rows — the survivor is a choice, because the
+         fullest record is not always the best-named one. #}
+      <div data-mergeopts></div>
+    </div>
+    <div class="mg-sec">
+      <div class="lbl">What moves</div>
+      <div class="mg-moves">
+        <div><b data-mergemoved>0</b> {{ unit }}, with everything that hangs off them</div>
+        {% if kind == "works" %}
+        <div class="warn-line">Ratings and reviews written by <b>other readers</b> move too.
+          They keep their opinion; it lands on the surviving book.</div>
+        {% else %}
+        <div><b data-mergelosers>1</b> spelling kept as a pointer — a cover read later under
+          that name resolves here instead of making the row again</div>
+        {% endif %}
+      </div>
+    </div>
+    <p class="mg-reassure">Nothing is deleted. Each merged record keeps a pointer at the
+      survivor, so its old URL redirects rather than dying — and <b>Unmerge</b> on that
+      record puts it back.</p>
+    <div class="mg-foot">
+      <button type="button" class="btn" data-mergecancel>Cancel</button>
+      <span style="margin-left:auto"></span>
+      <button class="btn p" data-mergego disabled>Merge</button>
+    </div>
+  </form>
+</dialog>

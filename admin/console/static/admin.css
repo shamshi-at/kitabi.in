@@ -629,3 +629,27 @@ table.feed td{vertical-align:top}
   .hbside{order:-1}
   .hbbody{padding:6px 15px 16px}
 }
+
+/* ---- bulk merge: the selection bar's dialog, shared by all four catalogue
+   lists (templates/_bulk_merge.html) ---- */
+.bulkbar .spacer{margin-left:auto}
+.mgdlg{border:1px solid var(--line);border-radius:10px;padding:0;max-width:520px;width:calc(100% - 32px);
+  background:var(--card);color:var(--ink);box-shadow:0 18px 44px rgba(43,33,24,.28)}
+.mgdlg::backdrop{background:rgba(43,33,24,.42)}
+.mg-head{padding:15px 18px 13px;border-bottom:1px solid var(--line)}
+.mg-head h4{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:19px}
+.mg-head p{margin-top:4px;font-size:12px;color:var(--ink-soft)}
+.mg-sec{padding:14px 18px;border-bottom:1px solid var(--line)}
+.mg-opt{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:7px;
+  border:1px solid var(--line);margin-bottom:6px;background:var(--paper);cursor:pointer}
+.mg-opt:last-child{margin-bottom:0}
+.mg-opt.keep{border-color:var(--oxblood);background:var(--card);box-shadow:inset 3px 0 0 var(--oxblood)}
+.mg-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.mg-meta b{font-size:13.5px;font-weight:600}
+.mg-meta .m{font-size:11px;color:var(--ink-soft)}
+.mg-cnt{font-size:11.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mg-moves{display:grid;gap:7px;font-size:12.5px}
+.mg-moves .warn-line{color:var(--oxblood)}
+.mg-reassure{font-size:11.5px;color:var(--ink-soft);line-height:1.5;padding:12px 18px;
+  background:var(--paper-deep);margin:0}
+.mg-foot{padding:13px 18px;display:flex;gap:9px;align-items:center}

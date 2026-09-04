@@ -401,36 +401,155 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("pageshow", hide);
 })();
 
-// Bulk selection on the catalog worklist — tick rows, delete the junk in one
-// confirmed submit. The form (#bulkform) posts checked ids to
-// /catalog/works/delete; the server skips anything a reader depends on.
+// Bulk selection on every catalogue list — tick rows, then merge them into one
+// (or, on works, delete the junk).
+//
+// Scoped to [data-bulklist] rather than #bulkform: the three name-kinds have no
+// form to hang off (nothing to delete), and works keeps its form for exactly
+// that. One block serves all four lists.
 (function () {
-  const form = document.getElementById("bulkform");
-  if (!form) return;
-  const selall = form.querySelector("[data-selall]");
-  const bar = form.querySelector("[data-bulkbar]");
-  const count = form.querySelector("[data-bulkcount]");
-  const boxes = () => Array.from(form.querySelectorAll(".rowchk"));
+  const scope = document.querySelector("[data-bulklist]");
+  if (!scope) return;
+  const form = scope.tagName === "FORM" ? scope : null;
+  const selall = scope.querySelector("[data-selall]");
+  const bar = document.querySelector("[data-bulkbar]");
+  const count = bar && bar.querySelector("[data-bulkcount]");
+  const boxes = () => Array.from(scope.querySelectorAll(".rowchk"));
+  const checked = () => boxes().filter((b) => b.checked);
+
+  const dlg = document.querySelector("[data-mergedlg]");
+  const opts = dlg && dlg.querySelector("[data-mergeopts]");
+  const go = dlg && dlg.querySelector("[data-mergego]");
 
   function sync() {
     const all = boxes();
     const on = all.filter((b) => b.checked);
     if (count) count.textContent = on.length;
     if (bar) bar.hidden = on.length === 0;
+    const merge = bar && bar.querySelector("[data-mergeopen]");
+    // One row is a selection, not a duplicate — merging needs something to
+    // merge *with*.
+    if (merge) merge.disabled = on.length < 2;
     if (selall) {
       selall.checked = all.length > 0 && on.length === all.length;
       selall.indeterminate = on.length > 0 && on.length < all.length;
     }
   }
 
-  form.addEventListener("change", (e) => {
+  scope.addEventListener("change", (e) => {
     if (e.target === selall) boxes().forEach((b) => (b.checked = selall.checked));
     sync();
   });
 
+  if (bar) {
+    bar.addEventListener("click", (e) => {
+      if (e.target.closest("[data-bulkclear]")) {
+        boxes().forEach((b) => (b.checked = false));
+        sync();
+      }
+      if (e.target.closest("[data-mergeopen]")) openMerge();
+    });
+  }
+
+  // The survivor list is built from the ticked rows, largest first — the row
+  // carrying the most is the usual keeper, so it is preselected. It stays a
+  // radio because "usual" is not "always".
+  function openMerge() {
+    const rows = checked();
+    if (rows.length < 2 || !dlg || !opts) return;
+    const items = rows
+      .map((b) => ({
+        id: b.value,
+        name: b.dataset.name || "",
+        sub: b.dataset.sub || "",
+        n: parseInt(b.dataset.count || "0", 10) || 0,
+      }))
+      .sort((a, b) => b.n - a.n);
+
+    opts.replaceChildren();
+    items.forEach((it, i) => {
+      const label = document.createElement("label");
+      label.className = "mg-opt" + (i === 0 ? " keep" : "");
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "survivor_id";
+      radio.value = it.id;
+      radio.checked = i === 0;
+      const meta = document.createElement("span");
+      meta.className = "mg-meta";
+      const nm = document.createElement("b");
+      nm.textContent = it.name;
+      meta.appendChild(nm);
+      if (it.sub) {
+        const sub = document.createElement("span");
+        sub.className = "mono m";
+        sub.textContent = it.sub;
+        meta.appendChild(sub);
+      }
+      const cnt = document.createElement("span");
+      cnt.className = "mg-cnt";
+      cnt.textContent = it.n;
+      label.append(radio, meta, cnt);
+      opts.appendChild(label);
+      radio.addEventListener("change", paint);
+    });
+
+    dlg.querySelectorAll("[data-loser]").forEach((n) => n.remove());
+    const total = items.reduce((a, b) => a + b.n, 0);
+    dlg.querySelector("[data-mergen]").textContent = items.length;
+    paint();
+
+    function paint() {
+      const survivor = dlg.querySelector("input[name=survivor_id]:checked");
+      opts.querySelectorAll(".mg-opt").forEach((l) => {
+        l.classList.toggle("keep", l.querySelector("input").checked);
+      });
+      const kept = items.find((i) => survivor && i.id === survivor.value);
+      const moved = dlg.querySelector("[data-mergemoved]");
+      if (moved) moved.textContent = total - (kept ? kept.n : 0);
+      const losers = dlg.querySelector("[data-mergelosers]");
+      if (losers) losers.textContent = items.length - 1;
+      if (go) go.disabled = !survivor;
+    }
+
+    if (typeof dlg.showModal === "function") dlg.showModal();
+    else dlg.setAttribute("open", "");
+  }
+
+  if (dlg) {
+    dlg.addEventListener("click", (e) => {
+      if (e.target.closest("[data-mergecancel]")) {
+        e.preventDefault();
+        dlg.close();
+      }
+    });
+    // The losers are everything ticked that is not the survivor. Written at
+    // submit time so changing the radio can never leave a stale set behind.
+    dlg.querySelector("form").addEventListener("submit", (e) => {
+      const survivor = dlg.querySelector("input[name=survivor_id]:checked");
+      if (!survivor) {
+        e.preventDefault();
+        return;
+      }
+      dlg.querySelectorAll("[data-loser]").forEach((n) => n.remove());
+      checked()
+        .filter((b) => b.value !== survivor.value)
+        .forEach((b) => {
+          const h = document.createElement("input");
+          h.type = "hidden";
+          h.name = "loser_ids";
+          h.value = b.value;
+          h.setAttribute("data-loser", "");
+          e.target.appendChild(h);
+        });
+    });
+  }
+
   // The confirm is on the form element, so it runs before the document-level
-  // navigation loader — a cancelled delete never flashes the loader.
-  form.addEventListener("submit", (e) => {
+  // navigation loader — a cancelled delete never flashes the loader. Only the
+  // works list has a form (and therefore a delete).
+  if (form)
+    form.addEventListener("submit", (e) => {
     const n = boxes().filter((b) => b.checked).length;
     if (n === 0) {
       e.preventDefault();
