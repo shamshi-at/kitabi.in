@@ -16,6 +16,7 @@ import '../../../core/widgets/image_source_sheet.dart';
 import '../../../core/widgets/select_sheet.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/api/api_client.dart';
+import '../cover_extract.dart';
 import '../../../data/db/catalog_cache.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
@@ -55,11 +56,11 @@ class AddEditBookScreen extends ConsumerWidget {
   const AddEditBookScreen({
     super.key,
     this.workId,
+    this.editionId,
     this.initialIsbn,
     this.initialTitle,
     this.initialOriginal,
     this.seed,
-    this.editionId,
     this.returnCreated = false,
   });
 
@@ -133,20 +134,20 @@ class AddEditBookScreen extends ConsumerWidget {
 class _BookForm extends ConsumerStatefulWidget {
   const _BookForm({
     this.initialWork,
+    this.editionId,
     this.initialIsbn,
     this.initialTitle,
     this.initialOriginal,
     this.seed,
-    this.editionId,
     this.returnCreated = false,
   });
 
   final Map<String, dynamic>? initialWork;
+  final String? editionId;
   final String? initialIsbn;
   final String? initialTitle;
   final Map<String, dynamic>? initialOriginal;
   final Map<String, dynamic>? seed;
-  final String? editionId;
   final bool returnCreated;
 
   @override
@@ -250,6 +251,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
   String _similarDismissedQuery = '';
   Timer? _similarDebounce;
   int _similarSeq = 0;
+  // The similar row whose full Work is being fetched for the fork sheet — the
+  // sheet cannot ask an honest question until the printings are in hand.
+  String? _forkBusyId;
+
+  // What this copy said where the entry already had an answer of its own.
+  // Collected by [_applySeed] rather than dropped, and offered under the form.
+  final List<_Carried> _carried = [];
   // The catalogue Work this form was prefilled from, if any. It is not a
   // "possible duplicate" — it is the book the reader just told us this is, so
   // offering it back under "Already in the catalogue?" was noise (owner
@@ -377,54 +385,133 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// already answers a question keeps its answer. What this rescues is the
   /// common case — a stub entry with no cover, no blurb, no page count, and a
   /// reader standing there with the book and two fresh photographs of it.
+  ///
+  /// Empty-only used to mean *silently* empty-only, and that was the other
+  /// half of the 5 Sep 2026 report: the reader's copy said one title and the
+  /// entry said another (with a typo), so the captured title was dropped with
+  /// no trace, and clearing the field and re-running the extraction was the
+  /// only way to see it again. A value the entry already answers is now
+  /// collected into [_carried] and offered instead — the catalogue still wins
+  /// by default, but the reader can see what their copy said and take it in
+  /// one tap.
   void _applySeed() {
     final seed = widget.seed;
     if (seed == null || seed.isEmpty) return;
     var filled = false;
-    void text(TextEditingController c, Object? value) {
-      if (value == null || c.text.trim().isNotEmpty) return;
+    // Only an entry that already has answers can disagree with this copy;
+    // in create mode the form is empty and every seeded value simply lands.
+    final canDisagree = widget.initialWork != null;
+    void offer(
+      String label,
+      String mine,
+      String? theirs,
+      VoidCallback apply, {
+      bool photo = false,
+    }) {
+      if (!canDisagree || mine.trim().isEmpty || mine.trim() == (theirs ?? '').trim()) return;
+      _carried.add(
+        _Carried(label: label, mine: mine.trim(), theirs: theirs, apply: apply, photo: photo),
+      );
+    }
+
+    void text(TextEditingController c, Object? value, {String? label}) {
+      if (value == null) return;
+      if (c.text.trim().isNotEmpty) {
+        if (label != null) {
+          final was = c.text;
+          offer(label, '$value', was, () => c.text = '$value');
+        }
+        return;
+      }
       c.text = '$value';
       filled = true;
     }
 
-    _coverUrl ??= seed['cover_url'] as String?;
-    _backCoverUrl ??= seed['back_cover_url'] as String?;
+    final seededTitle = seed['title'] as String?;
+    if (seededTitle != null) {
+      offer('title', seededTitle, _title.text, () => _title.text = seededTitle.trim());
+    }
+    final seededFront = seed['cover_url'] as String?;
+    if (_coverUrl == null) {
+      _coverUrl = seededFront;
+    } else if (seededFront != null && seededFront != _coverUrl) {
+      offer('cover_front', seededFront, null, () => _coverUrl = seededFront, photo: true);
+    }
+    final seededBack = seed['back_cover_url'] as String?;
+    if (_backCoverUrl == null) {
+      _backCoverUrl = seededBack;
+    } else if (seededBack != null && seededBack != _backCoverUrl) {
+      offer('cover_back', seededBack, null, () => _backCoverUrl = seededBack, photo: true);
+    }
     filled |= _coverUrl != _initialCoverUrl || _backCoverUrl != _initialBackCoverUrl;
-    text(_description, seed['description']);
-    text(_isbn, seed['isbn']);
-    text(_pages, seed['page_count']);
-    if (_format == null && seed['format'] != null) {
-      _format = seed['format'] as String?;
+    text(_description, seed['description'], label: 'description');
+    text(_isbn, seed['isbn'], label: 'isbn');
+    text(_pages, seed['page_count'], label: 'pages');
+    final seededFormat = seed['format'] as String?;
+    if (_format == null && seededFormat != null) {
+      _format = seededFormat;
       filled = true;
+    } else {
+      offer('format', seededFormat ?? '', _format, () => _format = seededFormat);
     }
-    if (_language == null && seed['language'] != null) {
-      _language = seed['language'] as String?;
+    final seededLanguage = seed['language'] as String?;
+    if (_language == null && seededLanguage != null) {
+      _language = seededLanguage;
       filled = true;
+    } else {
+      offer('language', seededLanguage ?? '', _language, () => _language = seededLanguage);
     }
-    if (_form == null && seed['form'] != null) {
-      _form = seed['form'] as String?;
+    final seededForm = seed['form'] as String?;
+    if (_form == null && seededForm != null) {
+      _form = seededForm;
       filled = true;
+    } else {
+      offer('form', seededForm ?? '', _form, () => _form = seededForm);
     }
-    if (_publisher == null && seed['publisher'] != null) {
-      _publisher = Map<String, dynamic>.from(seed['publisher'] as Map);
+    final seededPublisher = seed['publisher'] as Map?;
+    if (_publisher == null && seededPublisher != null) {
+      _publisher = Map<String, dynamic>.from(seededPublisher);
       filled = true;
+    } else if (seededPublisher != null) {
+      offer(
+        'publisher',
+        seededPublisher['name'] as String? ?? '',
+        _publisher?['name'] as String?,
+        () => _publisher = Map<String, dynamic>.from(seededPublisher),
+      );
     }
+    final seededSeriesPick = seed['series'] as Map?;
+    final seededSeriesName =
+        seededSeriesPick?['name'] as String? ?? seed['series_name'] as String?;
     if (!_hasSeries) {
-      final pick = seed['series'] as Map?;
-      final name = pick?['name'] as String? ?? seed['series_name'] as String?;
-      if (name != null && name.isNotEmpty) {
-        _seriesPick = pick == null ? null : Map<String, dynamic>.from(pick);
-        _series.text = name;
+      if (seededSeriesName != null && seededSeriesName.isNotEmpty) {
+        _seriesPick =
+            seededSeriesPick == null ? null : Map<String, dynamic>.from(seededSeriesPick);
+        _series.text = seededSeriesName;
         _hasSeries = true;
         text(_seriesNumber, seed['series_number']);
         filled = true;
       }
+    } else if (seededSeriesName != null) {
+      offer('series', seededSeriesName, _series.text, () {
+        _seriesPick =
+            seededSeriesPick == null ? null : Map<String, dynamic>.from(seededSeriesPick);
+        _series.text = seededSeriesName;
+      });
     }
     final genres = (seed['genre_names'] as List?)?.cast<String>() ?? const <String>[];
     if (_selectedGenres.isEmpty && genres.isNotEmpty) {
       _selectedGenres.addAll(genres);
       _customGenreList.addAll(genres.where((g) => !_commonGenres.contains(g)));
       filled = true;
+    } else {
+      // Genres are a set, not an answer — the offer adds what's missing rather
+      // than replacing what the catalogue has.
+      final extra = genres.where((g) => !_selectedGenres.contains(g)).toList();
+      offer('genres', extra.join(', '), null, () {
+        _selectedGenres.addAll(extra);
+        _customGenreList.addAll(extra.where((g) => !_commonGenres.contains(g)));
+      });
     }
     final authors = (seed['author_names'] as List?)?.cast<String>() ?? const <String>[];
     if (_authors.isEmpty && authors.isNotEmpty) {
@@ -432,9 +519,16 @@ class _BookFormState extends ConsumerState<_BookForm> {
         for (final name in authors) {'name': name},
       ]);
       filled = true;
+    } else if (authors.isNotEmpty) {
+      final held = [for (final a in _authors) a['name'] as String].join(', ');
+      offer('authors', authors.join(', '), held, () {
+        _authors
+          ..clear()
+          ..addAll([for (final name in authors) {'name': name}]);
+      });
     }
-    if (filled) {
-      _prefillSource = 'seed';
+    if (filled || _carried.isNotEmpty) {
+      if (filled) _prefillSource = 'seed';
       _detailsExpanded = true;
     }
   }
@@ -770,31 +864,82 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// original and keep typing), the same story in another literary form — the
   /// screenplay, the play (→ its own book, prefilled), or a genuinely
   /// different book (→ dismiss the match).
-  Future<void> _openFork(Map<String, dynamic> work) async {
+  ///
+  /// One of those answers is not the reader's to give, though, and the sheet
+  /// used to ask it anyway. The similar panel's rows are *summaries* carrying
+  /// one representative edition, so this resolves the full Work first and
+  /// reads the form's ISBN against every printing on it: a number the entry
+  /// does not hold means the reader is holding a printing the catalogue does
+  /// not have, and "add my covers and details" is then structurally wrong —
+  /// every field it carries is edition-level and would land on somebody else's
+  /// row (owner report, 5 Sep 2026).
+  Future<void> _openFork(Map<String, dynamic> summary) async {
+    final id = summary['id'] as String;
+    setState(() => _forkBusyId = id);
+    // Best-effort: offline, the summary is all we have and the sheet falls
+    // back to asking the way it always did.
+    Map<String, dynamic>? full;
+    try {
+      full = await ref.read(apiClientProvider).getWork(id);
+    } catch (_) {
+      // Nothing to add — `standing` stays unknown below.
+    }
+    if (!mounted) return;
+    setState(() => _forkBusyId = null);
+    // An API deployed behind this app, or a body that isn't a Work, is not a
+    // resolution — fall back to the summary and ask the way we always did.
+    final resolved = full != null && full['id'] != null ? full : null;
+    final work = resolved ?? summary;
+    final verdict = resolved == null
+        ? (standing: IsbnStanding.unknown, edition: null)
+        : isbnStandingIn(resolved, _isbn.text);
+
     final choice = await showModalBottomSheet<String>(
       context: context,
       // Seven answers do not fit a half-screen sheet on a phone, and the
       // default cap clips rather than scrolls — the last option was simply
       // unreachable (owner report, 5 Sep 2026). Every other sheet in this
       // file already sets this; this one was the exception.
+      // Seven answers, a book row and sometimes a note above them do not fit a
+      // phone at the default half-screen cap — the sheet's own answers scroll
+      // (see _ForkSheet), but only if it is allowed past that cap first.
       isScrollControlled: true,
       backgroundColor: AppColors.paper,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) =>
-          _ForkSheet(work: work, hasCaptured: _hasCapturedDetails, duplicateCount: _similar.length),
+      builder: (ctx) => _ForkSheet(
+        work: work,
+        hasCaptured: _hasCapturedDetails,
+        duplicateCount: _similar.length,
+        standing: verdict.standing,
+        isbn: _isbn.text.trim(),
+      ),
     );
     if (choice == null || !mounted) return;
     switch (choice) {
       case 'shelf':
-        await _forkAddToShelf(work);
+        await _forkAddToShelf(work, resolved: resolved != null);
       case 'improve':
-        _forkImproveEntry(work);
+        // Which printing the captured details belong to is settled, not
+        // guessed: the one carrying this ISBN, or — when nothing identifies
+        // one — the reader's own answer.
+        var editionId = verdict.edition?['id'] as String?;
+        if (editionId == null) {
+          final editions = editionsOf(work);
+          if (editions.length > 1) {
+            final picked = await chooseEdition(context, editions);
+            if (picked == null || !mounted) return;
+            editionId = picked['id'] as String?;
+          } else {
+            editionId = editions.firstOrNull?['id'] as String?;
+          }
+        }
+        _forkImproveEntry(work, editionId: editionId);
       case 'merge':
         await _forkMergeDuplicates(work);
       case 'form':
-        await _forkDifferentForm(work);
+        await _forkDifferentForm(work, resolved: resolved != null);
       case 'edition':
         final added = await context.push<Map<String, dynamic>>(
           Routes.catalogAddEdition,
@@ -845,7 +990,9 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// the usual answer, but a typed blurb, ISBN or page count counts too.
   bool get _hasCapturedDetails {
     final captured = _capturedFields();
-    return captured.keys.any((k) => k != 'author_names') ||
+    // A title alone is not something to carry — every entry already has one,
+    // and offering "add what I have" for it would be noise.
+    return captured.keys.any((k) => k != 'author_names' && k != 'title') ||
         (captured['author_names'] as List).isNotEmpty;
   }
 
@@ -854,7 +1001,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
     final isbn = _isbn.text.trim();
     final series = _series.text.trim();
     final description = _description.text.trim();
+    final title = _title.text.trim();
     return {
+      // Carried for the *offer* on the other side, never applied on its own:
+      // a title is the shared catalogue's, and this copy only gets to say what
+      // it reads. AddEditionScreen ignores it — a printing has no title.
+      if (title.isNotEmpty) 'title': title,
       if (_coverUrl != null) 'cover_url': _coverUrl,
       if (_backCoverUrl != null) 'back_cover_url': _backCoverUrl,
       if (description.isNotEmpty) 'description': description,
@@ -966,14 +1118,19 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// different thing to have an opinion about. What it does share is carried
   /// over so nothing is retyped, and then the one field that actually differs
   /// is asked for.
-  Future<void> _forkDifferentForm(Map<String, dynamic> summary) async {
+  Future<void> _forkDifferentForm(
+    Map<String, dynamic> summary, {
+    bool resolved = false,
+  }) async {
     // The similar panel is a list of summaries — genres and language live on
     // the full Work. Best-effort: a failed fetch just carries less.
     Map<String, dynamic> work = summary;
-    try {
-      work = await ref.read(apiClientProvider).getWork(summary['id'] as String);
-    } catch (_) {
-      // Offline or a hiccup — the summary's authors are still worth carrying.
+    if (!resolved) {
+      try {
+        work = await ref.read(apiClientProvider).getWork(summary['id'] as String);
+      } catch (_) {
+        // Offline or a hiccup — the summary's authors are still worth carrying.
+      }
     }
     if (!mounted) return;
     setState(() {
@@ -1014,10 +1171,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
   /// Which printing, though, is the reader's to answer when the catalogue
   /// holds more than one: they differ in page count, and a wrong one makes
   /// every progress figure lie.
-  Future<void> _forkAddToShelf(Map<String, dynamic> summary) async {
+  Future<void> _forkAddToShelf(Map<String, dynamic> summary, {bool resolved = false}) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final work = await ref.read(apiClientProvider).getWork(summary['id'] as String);
+      final work = resolved
+          ? summary
+          : await ref.read(apiClientProvider).getWork(summary['id'] as String);
       if (!mounted) return;
       final edition = await chooseEdition(context, editionsOf(work));
       if (edition == null || !mounted) return;
@@ -1229,19 +1388,22 @@ class _BookFormState extends ConsumerState<_BookForm> {
   Future<bool> _fillFromPhotos({String? backUrl}) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    // Read before the awaits: the blurb lands frames later, and a `ref` read
+    // after an await is a read on a widget that may be gone.
+    final api = ref.read(apiClientProvider);
     setState(() => _extracting = true);
+
+    // Both halves leave together, so the blurb is already being transcribed
+    // while the reader reads the title.
+    final parts = startCoverExtract(
+      api,
+      frontUrl: _isOwnUpload(_coverUrl) ? _coverUrl : null,
+      backUrl: backUrl ?? (_isOwnUpload(_backCoverUrl) ? _backCoverUrl : null),
+    );
+
+    var filled = false;
     try {
-      final fields = await ref
-          .read(apiClientProvider)
-          .extractFromCovers(
-            frontUrl: _isOwnUpload(_coverUrl) ? _coverUrl : null,
-            backUrl: backUrl ?? (_isOwnUpload(_backCoverUrl) ? _backCoverUrl : null),
-          );
-      if (!mounted) return true;
-      if (!_applyExtracted(fields)) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractNothing)));
-      }
-      return true;
+      filled = _applyExtracted(await parts.identity);
     } on DioException catch (err) {
       final data = err.response?.data;
       final code = data is Map ? data['code'] : null;
@@ -1257,8 +1419,20 @@ class _BookFormState extends ConsumerState<_BookForm> {
       messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractFailed)));
       return false;
     } finally {
+      // Dropped as soon as the identity fields are in — the reader is not kept
+      // waiting behind a blurb they can watch arrive.
       if (mounted) setState(() => _extracting = false);
     }
+
+    // …and the blurb behind them. Never throws (see startCoverExtract).
+    if (!mounted) return true;
+    if (_applyExtracted(await parts.description)) filled = true;
+    // Said only once both halves have settled: a read that found no title but
+    // did find a blurb has not "found nothing".
+    if (mounted && !filled) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractNothing)));
+    }
+    return true;
   }
 
   /// "Read the back": get the blurb (and the printed literary form —
@@ -2079,6 +2253,20 @@ class _BookFormState extends ConsumerState<_BookForm> {
               onDismiss: () => setState(() => _prefillSource = null),
             ),
           ],
+          // What this copy said where the entry already had its own answer.
+          // The catalogue keeps its answer until the reader says otherwise —
+          // but they can see it, which is the whole difference.
+          if (_carried.isNotEmpty) ...[
+            SizedBox(height: 10),
+            _CarriedPanel(
+              items: List.unmodifiable(_carried),
+              onUse: (item) => setState(() {
+                item.apply();
+                _carried.remove(item);
+              }),
+              onDismiss: () => setState(_carried.clear),
+            ),
+          ],
           SizedBox(height: 14),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2148,6 +2336,7 @@ class _BookFormState extends ConsumerState<_BookForm> {
             SizedBox(height: 8),
             _SimilarWorksPanel(
               works: _similar,
+              busyId: _forkBusyId,
               onDismiss: () => setState(() {
                 _similarDismissed = true;
                 _similarDismissedQuery = _title.text.trim().toLowerCase();
@@ -2573,6 +2762,171 @@ class _EditReviewBanner extends StatelessWidget {
 
 /// The dismissible gold provenance banner — shown after a barcode scan or a
 /// cover-photo read prefilled the form, so prefilled data is announced.
+/// One thing the reader's copy said that the catalogue entry already answers
+/// differently — offered, never applied on its own.
+///
+/// The seed's rule stands (an entry that answers a question keeps its answer),
+/// but a *silently* dropped value left the reader clearing fields and
+/// re-running the extraction to find out what their book actually said (owner
+/// report, 5 Sep 2026).
+class _Carried {
+  const _Carried({
+    required this.label,
+    required this.mine,
+    required this.theirs,
+    required this.apply,
+    this.photo = false,
+  });
+
+  /// Which field this is — a key the panel turns into a localised name.
+  final String label;
+
+  /// What this copy says. For [photo] rows it is an image URL, not prose.
+  final String mine;
+
+  /// What the entry says, when it says anything.
+  final String? theirs;
+
+  /// Take this copy's answer. Called inside the form's own `setState`.
+  final VoidCallback apply;
+
+  final bool photo;
+}
+
+/// "From your copy" — every captured value the entry already answers, each
+/// with what it says now, and a tap to take this copy's instead.
+class _CarriedPanel extends StatelessWidget {
+  const _CarriedPanel({required this.items, required this.onUse, required this.onDismiss});
+
+  final List<_Carried> items;
+  final void Function(_Carried item) onUse;
+  final VoidCallback onDismiss;
+
+  String _name(AppLocalizations l10n, String label) => switch (label) {
+        'title' => l10n.carriedFieldTitle,
+        'authors' => l10n.carriedFieldAuthors,
+        'description' => l10n.carriedFieldDescription,
+        'isbn' => l10n.carriedFieldIsbn,
+        'pages' => l10n.carriedFieldPages,
+        'format' => l10n.carriedFieldFormat,
+        'language' => l10n.carriedFieldLanguage,
+        'form' => l10n.carriedFieldType,
+        'publisher' => l10n.carriedFieldPublisher,
+        'series' => l10n.carriedFieldSeries,
+        'genres' => l10n.carriedFieldGenres,
+        'cover_front' => l10n.carriedFieldCoverFront,
+        _ => l10n.carriedFieldCoverBack,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: EdgeInsets.fromLTRB(12, 8, 8, 10),
+      decoration: BoxDecoration(
+        color: AppColors.paperDeep,
+        borderRadius: BorderRadius.circular(12),
+        // Uniform border — a thicker accent side here would throw at paint
+        // time and draw a blank box (CLAUDE.md, 21 Jul 2026).
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.compare_arrows, size: 14, color: AppColors.gold),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.carriedHeader,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: onDismiss,
+                child: Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.close, size: 16, color: AppColors.inkSoft),
+                ),
+              ),
+            ],
+          ),
+          Text(
+            l10n.carriedHelp,
+            style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.25),
+          ),
+          SizedBox(height: 6),
+          for (final item in items)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (item.photo) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image.network(
+                        item.mine,
+                        width: 26,
+                        height: 38,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => SizedBox(width: 26, height: 38),
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _name(l10n, item.label).toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: .7,
+                            color: AppColors.inkSoft,
+                          ),
+                        ),
+                        SizedBox(height: 1),
+                        Text(
+                          item.photo ? l10n.carriedYourPhoto : item.mine,
+                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                        ),
+                        if (item.theirs != null && item.theirs!.trim().isNotEmpty)
+                          Text(
+                            l10n.carriedEntrySays(item.theirs!.trim()),
+                            style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft),
+                          ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () => onUse(item),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: AppColors.oxblood,
+                      textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                    child: Text(l10n.carriedUse),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PrefillBanner extends StatelessWidget {
   const _PrefillBanner({required this.message, required this.onDismiss});
 
@@ -2614,11 +2968,21 @@ class _PrefillBanner extends StatelessWidget {
 /// the title being typed. A soft paperDeep well — no dialog, no focus steal —
 /// with compact tappable rows and an ✕ that dismisses it for this form.
 class _SimilarWorksPanel extends StatelessWidget {
-  const _SimilarWorksPanel({required this.works, required this.onDismiss, required this.onPick});
+  const _SimilarWorksPanel({
+    required this.works,
+    required this.onDismiss,
+    required this.onPick,
+    this.busyId,
+  });
 
   final List<Map<String, dynamic>> works;
   final VoidCallback onDismiss;
   final void Function(Map<String, dynamic> work) onPick;
+
+  /// The row whose printings are being fetched. Tapping a row now costs a
+  /// round trip before the sheet can open, and a tap that does nothing for
+  /// half a second reads as a broken row.
+  final String? busyId;
 
   @override
   Widget build(BuildContext context) {
@@ -2657,7 +3021,13 @@ class _SimilarWorksPanel extends StatelessWidget {
             style: TextStyle(fontSize: 10.5, color: AppColors.inkSoft, height: 1.25),
           ),
           SizedBox(height: 8),
-          for (final work in works) _SimilarWorkRow(work: work, onTap: () => onPick(work)),
+          for (final work in works)
+            _SimilarWorkRow(
+              work: work,
+              busy: busyId != null && busyId == work['id'],
+              // One at a time: a second fetch would race the first's sheet.
+              onTap: busyId == null ? () => onPick(work) : null,
+            ),
         ],
       ),
     );
@@ -2665,10 +3035,11 @@ class _SimilarWorksPanel extends StatelessWidget {
 }
 
 class _SimilarWorkRow extends StatelessWidget {
-  const _SimilarWorkRow({required this.work, required this.onTap});
+  const _SimilarWorkRow({required this.work, required this.onTap, this.busy = false});
 
   final Map<String, dynamic> work;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -2715,7 +3086,14 @@ class _SimilarWorkRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
+            if (busy)
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+              )
+            else
+              Icon(Icons.chevron_right, size: 16, color: AppColors.inkSoft),
           ],
         ),
       ),
@@ -3247,8 +3625,52 @@ class _TranslatorField extends StatelessWidget {
 /// M1 — "Kitabi already has this book. So what are you adding?" The four-way
 /// fork, phrased in the reader's words; pops one of
 /// 'shelf' | 'edition' | 'translation' | 'different'.
+/// The one-line "here is what we already worked out" note on the fork sheet.
+/// Gold well, gold ink — the same voice the prefill banner uses for "this was
+/// filled in for you", because it is the same kind of statement.
+class _ForkNote extends StatelessWidget {
+  const _ForkNote({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.goldSoft,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 14, color: AppColors.goldInk),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+                color: AppColors.goldInk,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ForkSheet extends StatelessWidget {
-  const _ForkSheet({required this.work, required this.hasCaptured, this.duplicateCount = 0});
+  const _ForkSheet({
+    required this.work,
+    required this.hasCaptured,
+    this.duplicateCount = 0,
+    this.standing = IsbnStanding.unknown,
+    this.isbn = '',
+  });
 
   final Map<String, dynamic> work;
 
@@ -3261,6 +3683,14 @@ class _ForkSheet extends StatelessWidget {
   /// matched entry — the difference between "improve this entry" being the
   /// right answer and being noise.
   final bool hasCaptured;
+
+  /// Where the form's ISBN stands against this entry's printings. On
+  /// [IsbnStanding.newPrinting] the sheet stops offering "add my covers and
+  /// details": the number in the reader's hand is not one this entry holds, so
+  /// every captured field describes a printing that does not exist yet, and
+  /// writing them onto an existing edition would overwrite a shared row.
+  final IsbnStanding standing;
+  final String isbn;
 
   @override
   Widget build(BuildContext context) {
@@ -3381,6 +3811,10 @@ class _ForkSheet extends StatelessWidget {
                 ),
               ],
             ),
+            if (standing == IsbnStanding.newPrinting) ...[
+              SizedBox(height: 10),
+              _ForkNote(text: l10n.forkNewIsbnNote),
+            ],
             SizedBox(height: 12),
             Text(
               l10n.forkQuestion.toUpperCase(),
@@ -3400,16 +3834,40 @@ class _ForkSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    option(value: 'shelf', title: l10n.forkOwnThis, accent: AppColors.moss),
-                    // Offered only when there is something to carry over — otherwise
-                    // it is "I own this one" with extra steps.
-                    if (hasCaptured)
+                    // A number this entry does not hold answers the question
+                    // for the reader: they are describing a printing the
+                    // catalogue has never seen. It leads, it says why, and
+                    // "add my covers and details" — which would write this
+                    // printing's cover, pages and ISBN onto another one — is
+                    // not on the sheet at all.
+                    if (standing == IsbnStanding.newPrinting) ...[
                       option(
-                        value: 'improve',
-                        title: l10n.forkImproveThis,
-                        help: l10n.forkImproveThisHelp,
-                        accent: AppColors.moss,
+                        value: 'edition',
+                        title: l10n.forkDifferentPrinting,
+                        help: isbn.isEmpty
+                            ? l10n.forkDifferentPrintingHelp
+                            : l10n.forkNewIsbnHelp(isbn),
+                        accent: AppColors.gold,
                       ),
+                      option(value: 'shelf', title: l10n.forkOwnThis, accent: AppColors.moss),
+                    ] else ...[
+                      option(value: 'shelf', title: l10n.forkOwnThis, accent: AppColors.moss),
+                      // Offered only when there is something to carry over — otherwise
+                      // it is "I own this one" with extra steps.
+                      if (hasCaptured)
+                        option(
+                          value: 'improve',
+                          title: l10n.forkImproveThis,
+                          help: l10n.forkImproveThisHelp,
+                          accent: AppColors.moss,
+                        ),
+                      option(
+                        value: 'edition',
+                        title: l10n.forkDifferentPrinting,
+                        help: l10n.forkDifferentPrintingHelp,
+                        accent: AppColors.gold,
+                      ),
+                    ],
                     // Only with something to merge *with*. One match is a match; several
                     // near-identical ones are a title that got typed wrong more than
                     // once, which is a different problem and needs a different answer.
@@ -3420,12 +3878,6 @@ class _ForkSheet extends StatelessWidget {
                         help: l10n.forkSameBookTwiceHelp(duplicateCount),
                         accent: AppColors.oxblood,
                       ),
-                    option(
-                      value: 'edition',
-                      title: l10n.forkDifferentPrinting,
-                      help: l10n.forkDifferentPrintingHelp,
-                      accent: AppColors.gold,
-                    ),
                     option(
                       value: 'translation',
                       title: l10n.forkTranslation,

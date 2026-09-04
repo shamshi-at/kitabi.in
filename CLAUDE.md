@@ -1121,6 +1121,41 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   initialism ("എൻ ബി എസ്" → National Book Stall) or a pen name (Beypore Sultan →
   Vaikom Muhammad Basheer). Two of the new tests passed against the unfixed code
   until they were rewritten that way.
+- **A question the code can answer must not be put to the reader as a label.**
+  The duplicate fork asked "so what are you adding?" and offered "This is it —
+  add my covers and details" beside "Mine's a different printing". Both read
+  true of a book the catalogue already has, and the reader picked the first —
+  but every field that fork carries is *edition*-level (cover, page count,
+  ISBN, format, publisher), so on a different printing it lands on somebody
+  else's row: the edit form resolved its edition as `editions.first`, the
+  representative that 13 Aug already established is never an answer. The
+  scanned ISBN settled it the whole time and nothing read it. `isbnStandingIn`
+  (`work_editions.dart`) now judges the form's number against every printing
+  the entry holds, and on a number the entry doesn't carry the improve door is
+  *removed*, not merely demoted — an option that cannot be right should not be
+  on the sheet. Deliberately conservative: "new printing" needs a positive
+  signal (some catalogued printing carrying a *different* number), because a
+  stub whose editions have no ISBNs may well be this very printing, and
+  improving that stub in place is the case the fork was built for. Two
+  corollaries. The similar panel's rows are `WorkSummaryOut` — one
+  representative edition — so the sheet has to resolve the full Work before it
+  can ask an honest question; a sheet built from a summary is a sheet built
+  from a guess. And a *pick* must name what it picked: `_forkImproveEntry` now
+  carries an `editionId` through the route, and the form falls back to the
+  first edition only when the entry has one.
+- **"Fills only empty fields" is a good rule and a bad silence.** The same
+  report's second half (5 Sep 2026): the reader's covers said one title, the
+  catalogue said another *with a typo in it*, and the seed's empty-only rule
+  dropped the captured title and author with no trace — clearing both fields
+  and re-running the cover extraction was the only way to see what their own
+  book said. The rule is right (the shared catalogue's existing answer beats
+  one copy's) and it was enforced by *discarding the evidence*, which is what
+  made it unarguable. `_applySeed` now collects every value the entry already
+  answers differently into a "From your copy" panel — what your copy says, what
+  the entry says, and a tap to take it. Nothing is applied without that tap, so
+  the catalogue still wins by default; the reader can just see the choice they
+  were previously making blind. Genres are the one row that *adds* rather than
+  replaces, because a genre set is not an answer.
 
 ## Open decisions
 

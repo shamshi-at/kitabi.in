@@ -6646,11 +6646,131 @@ abstract class AppLocalizations {
   /// **'Same story, different form — its own book'**
   String get forkDifferentFormHelp;
 
+  /// Note on the fork sheet when the form's ISBN matches none of the matched work's printings
+  ///
+  /// In en, this message translates to:
+  /// **'The ISBN you scanned isn\'t on this entry, so you\'re holding a printing Kitabi doesn\'t have yet.'**
+  String get forkNewIsbnNote;
+
+  /// Helper under the different-printing fork option when the form's ISBN is new to the entry
+  ///
+  /// In en, this message translates to:
+  /// **'ISBN {isbn} is new here — your covers and page count go on it'**
+  String forkNewIsbnHelp(String isbn);
+
   /// Fork option: dismiss the match and continue the add
   ///
   /// In en, this message translates to:
   /// **'Different book, same title — keep typing'**
   String get forkDifferentBook;
+
+  /// Header of the panel listing captured values the entry already answers differently
+  ///
+  /// In en, this message translates to:
+  /// **'From your copy'**
+  String get carriedHeader;
+
+  /// Helper under the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'This entry already answers these. Nothing changes unless you take it.'**
+  String get carriedHelp;
+
+  /// Button taking this copy's value for one field
+  ///
+  /// In en, this message translates to:
+  /// **'Use'**
+  String get carriedUse;
+
+  /// The catalogue entry's current value, under the reader's captured one
+  ///
+  /// In en, this message translates to:
+  /// **'Entry says: {value}'**
+  String carriedEntrySays(String value);
+
+  /// Stands in for a cover URL in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'The photo you took'**
+  String get carriedYourPhoto;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get carriedFieldTitle;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Author'**
+  String get carriedFieldAuthors;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get carriedFieldDescription;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'ISBN'**
+  String get carriedFieldIsbn;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Pages'**
+  String get carriedFieldPages;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get carriedFieldFormat;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get carriedFieldLanguage;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get carriedFieldType;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Publisher'**
+  String get carriedFieldPublisher;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get carriedFieldSeries;
+
+  /// Field name in the From-your-copy panel — genres are added, not replaced
+  ///
+  /// In en, this message translates to:
+  /// **'Genres to add'**
+  String get carriedFieldGenres;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Front cover'**
+  String get carriedFieldCoverFront;
+
+  /// Field name in the From-your-copy panel
+  ///
+  /// In en, this message translates to:
+  /// **'Back cover'**
+  String get carriedFieldCoverBack;
 
   /// Title of the sheet asking which edition to put on the shelf when a work has several
   ///

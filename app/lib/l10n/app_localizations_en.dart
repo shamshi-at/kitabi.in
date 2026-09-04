@@ -4101,7 +4101,73 @@ class AppLocalizationsEn extends AppLocalizations {
       'Same story, different form — its own book';
 
   @override
+  String get forkNewIsbnNote =>
+      'The ISBN you scanned isn\'t on this entry, so you\'re holding a printing Kitabi doesn\'t have yet.';
+
+  @override
+  String forkNewIsbnHelp(String isbn) {
+    return 'ISBN $isbn is new here — your covers and page count go on it';
+  }
+
+  @override
   String get forkDifferentBook => 'Different book, same title — keep typing';
+
+  @override
+  String get carriedHeader => 'From your copy';
+
+  @override
+  String get carriedHelp =>
+      'This entry already answers these. Nothing changes unless you take it.';
+
+  @override
+  String get carriedUse => 'Use';
+
+  @override
+  String carriedEntrySays(String value) {
+    return 'Entry says: $value';
+  }
+
+  @override
+  String get carriedYourPhoto => 'The photo you took';
+
+  @override
+  String get carriedFieldTitle => 'Title';
+
+  @override
+  String get carriedFieldAuthors => 'Author';
+
+  @override
+  String get carriedFieldDescription => 'Description';
+
+  @override
+  String get carriedFieldIsbn => 'ISBN';
+
+  @override
+  String get carriedFieldPages => 'Pages';
+
+  @override
+  String get carriedFieldFormat => 'Format';
+
+  @override
+  String get carriedFieldLanguage => 'Language';
+
+  @override
+  String get carriedFieldType => 'Type';
+
+  @override
+  String get carriedFieldPublisher => 'Publisher';
+
+  @override
+  String get carriedFieldSeries => 'Series';
+
+  @override
+  String get carriedFieldGenres => 'Genres to add';
+
+  @override
+  String get carriedFieldCoverFront => 'Front cover';
+
+  @override
+  String get carriedFieldCoverBack => 'Back cover';
 
   @override
   String get editionPickTitle => 'Which printing is yours?';

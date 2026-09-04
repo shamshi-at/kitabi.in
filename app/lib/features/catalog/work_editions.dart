@@ -45,3 +45,62 @@ String editionLabel(Map<String, dynamic> edition) {
     if (format != null && format.isNotEmpty) format,
   ].join(' · ');
 }
+
+/// An ISBN reduced to what actually identifies it: digits and a trailing X.
+/// Readers type hyphens, scanners don't, and OpenLibrary is inconsistent — so
+/// two spellings of one number must never read as two printings.
+String? normalizeIsbn(String? raw) {
+  if (raw == null) return null;
+  final cleaned = raw.toUpperCase().replaceAll(RegExp(r'[^0-9X]'), '');
+  return cleaned.isEmpty ? null : cleaned;
+}
+
+/// Where the number on the add form stands against the printings a matched
+/// Work already holds. See [isbnStandingIn].
+enum IsbnStanding {
+  /// Nothing to compare: no ISBN on the form, or no printing on the entry
+  /// carries one. A bare stub is the common case, and improving it in place is
+  /// exactly right.
+  unknown,
+
+  /// The entry already holds this exact number — the reader is looking at
+  /// their own printing. Details captured here belong on *that* edition.
+  samePrinting,
+
+  /// The entry holds printings and none of them is this number. The reader is
+  /// holding a printing the catalogue does not have.
+  newPrinting,
+}
+
+/// Read [isbn] against [work]'s printings.
+///
+/// This is the question the duplicate fork has to answer before it offers the
+/// reader anything, and it used to be left to the reader's reading of a label.
+/// "This is it — add my covers and details" is true of the *book* and false of
+/// the *printing*: everything that fork carries (cover, page count, ISBN,
+/// format, publisher) is edition-level, so on a different printing it lands on
+/// somebody else's row and quietly corrupts it (owner report, 5 Sep 2026).
+///
+/// [newPrinting] is deliberately conservative. It needs a positive signal —
+/// at least one catalogued printing carrying a *different* number — because an
+/// entry whose editions have no ISBNs at all may well be this very printing,
+/// never given its number. An ISBN that got here has already been looked up
+/// and not found, so it cannot be a silent duplicate of anything.
+({IsbnStanding standing, Map<String, dynamic>? edition}) isbnStandingIn(
+  Map<String, dynamic> work,
+  String? isbn,
+) {
+  final wanted = normalizeIsbn(isbn);
+  if (wanted == null) return (standing: IsbnStanding.unknown, edition: null);
+  var sawAnyIsbn = false;
+  for (final edition in editionsOf(work)) {
+    final held = normalizeIsbn(edition['isbn'] as String?);
+    if (held == null) continue;
+    sawAnyIsbn = true;
+    if (held == wanted) return (standing: IsbnStanding.samePrinting, edition: edition);
+  }
+  return (
+    standing: sawAnyIsbn ? IsbnStanding.newPrinting : IsbnStanding.unknown,
+    edition: null,
+  );
+}
