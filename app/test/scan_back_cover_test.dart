@@ -35,11 +35,20 @@ class _Fake extends ApiClient {
   String? extractedBack;
 
   @override
-  Future<Map<String, dynamic>> extractFromCovers({String? frontUrl, String? backUrl}) async {
+  Future<Map<String, dynamic>> extractFromCovers({
+    String? frontUrl,
+    String? backUrl,
+    String? part,
+  }) async {
+    // The read now leaves as two calls. Only the identity half carries both
+    // photos, so recording the blurb call's single URL here would erase what
+    // the screen actually asked to read — and these tests are about which
+    // photo the scan sends.
+    if (part == 'description') return {'description': _blurb};
     extractCalls++;
     extractedFront = frontUrl;
     extractedBack = backUrl;
-    return {'description': _blurb};
+    return const {};
   }
 }
 

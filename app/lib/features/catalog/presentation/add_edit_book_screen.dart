@@ -896,13 +896,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
 
     final choice = await showModalBottomSheet<String>(
       context: context,
-      // Seven answers do not fit a half-screen sheet on a phone, and the
-      // default cap clips rather than scrolls — the last option was simply
-      // unreachable (owner report, 5 Sep 2026). Every other sheet in this
-      // file already sets this; this one was the exception.
       // Seven answers, a book row and sometimes a note above them do not fit a
-      // phone at the default half-screen cap — the sheet's own answers scroll
-      // (see _ForkSheet), but only if it is allowed past that cap first.
+      // half-screen sheet on a phone, and the default cap clips rather than
+      // scrolls — the last option was simply unreachable (owner report,
+      // 5 Sep 2026). The answers scroll inside _ForkSheet, but only once the
+      // sheet is allowed past that cap. Every other sheet in this file already
+      // sets this; this one was the exception.
       isScrollControlled: true,
       backgroundColor: AppColors.paper,
       shape: const RoundedRectangleBorder(
