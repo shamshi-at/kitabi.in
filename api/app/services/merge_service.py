@@ -40,6 +40,11 @@ from app.services.search_rank import normalize
 EXACT = "exact"
 WORD_ORDER = "word_order"
 SPELLING = "spelling"
+# Two spellings of one name that the word-set keys walk straight past, because
+# they disagree about where the *words* are. Both are one matcher (see
+# `_key_loose`); which one a cluster gets told it is depends on what bridged it.
+SPACING = "spacing"
+INITIALISM = "initialism"
 
 MODELS = {"authors": Author, "publishers": Publisher, "series": Series}
 
@@ -72,6 +77,63 @@ def _key_spelling(fold: str | None) -> str:
     """Word set of the spelling-folded form — catches accent and
     transliteration variants ("Kālaccuvaṭu" / "Kalaccuvatu")."""
     return " ".join(sorted(set(normalize(fold).split())))
+
+
+# How each English letter is written when it is *read aloud* in an Indic script
+# and romanised back. A house with an initialism gets catalogued three ways —
+# "DC Books" from the spine, "Ḍi Si Buks" from a transliterating cataloguer, and
+# "ഡിസി ബുക്സ്" from the Malayalam cover — and no key built on letters can bridge
+# them, because they share almost none (owner report, 5 Sep 2026).
+#
+# Consonants only, deliberately. A vowel's spoken form is a genuine
+# disagreement between transcribers (A is "e" or "ei", I is "ai" or "i"), and a
+# map that guesses would fold names that are not the same. Leaving them out
+# also gives the "is this an initialism at all?" test for free: a token holding
+# a vowel is a word, not a run of initials.
+_LETTER_SOUND = {
+    "b": "bi", "c": "si", "d": "di", "f": "ef", "g": "ji", "h": "ech",
+    "j": "je", "k": "ke", "l": "el", "m": "em", "n": "en", "p": "pi",
+    "q": "kyu", "r": "ar", "s": "es", "t": "ti", "v": "vi", "w": "dablyu",
+    "x": "eks", "y": "vai", "z": "sed",
+}  # fmt: skip
+
+# "DC" and "CICC" are initialisms; a longer consonant run is far likelier to be
+# a fold artefact than a house's initials, and expanding it invents a match.
+_INITIALISM_LEN = range(2, 6)
+
+
+def _expand_initialism(token: str) -> str:
+    """ "dc" → "disi". Anything that is not a short, all-consonant run is left
+    exactly as it is."""
+    if len(token) not in _INITIALISM_LEN:
+        return token
+    if any(ch not in _LETTER_SOUND for ch in token):
+        return token
+    return "".join(_LETTER_SOUND[ch] for ch in token)
+
+
+def reads_as_initials(fold: str | None) -> bool:
+    """Did anything in this name actually expand? Decides which reason a cluster
+    is labelled with, so a proposal can be argued with rather than trusted."""
+    parts = normalize(fold).split()
+    return any(_expand_initialism(p) != p for p in parts)
+
+
+def _key_loose(fold: str | None) -> str:
+    """The folded name with its initials read aloud and its spaces taken out.
+
+    One key doing two jobs, because the second subsumes the first: dropping
+    spaces alone bridges "Ḍi Si Buks" and "ഡിസി ബുക്സ്" (di si buks / disi buks
+    → disibuks), and expanding initials first brings "DC Books" (dc buks →
+    disibuks) into the same cluster. Shipping them as two matchers would mean
+    the weaker one claiming the pair before the stronger one could offer all
+    three — `find_candidates` marks a row seen once it is claimed.
+
+    Deliberately still conservative: "DC Books Kottayam" keys differently and
+    stays its own house, and "Ḍi. Vi. Ke. Mūrti" — which sits in the same search
+    — never comes near.
+    """
+    return "".join(_expand_initialism(p) for p in normalize(fold).split())
 
 
 async def _counts(db: AsyncSession, kind: str, ids: list[uuid.UUID]) -> dict[uuid.UUID, int]:
@@ -168,6 +230,10 @@ async def find_candidates(db: AsyncSession, kind: str) -> list[Candidate]:
         (EXACT, lambda r: _key_exact(r.name)),
         (WORD_ORDER, lambda r: _key_word_order(r.name)),
         (SPELLING, lambda r: _key_spelling(r.name_fold)),
+        # Last, and the loosest: the word-set keys above all assume the two
+        # spellings agree about where the words are, and an initialism is
+        # exactly the case where they do not.
+        (SPACING, lambda r: _key_loose(r.name_fold)),
     ):
         groups: dict[str, list] = defaultdict(list)
         for row in rows:
@@ -196,7 +262,14 @@ async def find_candidates(db: AsyncSession, kind: str) -> list[Candidate]:
             out.append(
                 Candidate(
                     kind=kind,
-                    reason=reason,
+                    # The loose key covers two different findings; say which one
+                    # this cluster actually is, so a wrong proposal is
+                    # diagnosable instead of mysterious.
+                    reason=(
+                        INITIALISM
+                        if reason == SPACING and any(reads_as_initials(r.name_fold) for r in group)
+                        else reason
+                    ),
                     survivor_id=survivor.id,
                     survivor_name=survivor.name,
                     losers=[(r.id, r.name) for r in losers],

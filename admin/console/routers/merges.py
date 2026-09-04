@@ -46,6 +46,8 @@ _LABEL = {
     "word_order": "Same words, different order",
     "spelling": "Same name, different spelling",
     "exact": "Identical name",
+    "spacing": "Same name, different spacing",
+    "initialism": "Initials read aloud",
 }
 
 
