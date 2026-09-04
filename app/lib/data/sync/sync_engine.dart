@@ -293,6 +293,15 @@ class SyncEngine {
             lastSyncedAt: companion.lastSyncedAt,
           ),
         );
+      case 'reads':
+        await db.readsDao.patch(
+          entityId,
+          ReadsCompanion(
+            deletedAt: companion.deletedAt,
+            syncStatus: companion.syncStatus,
+            lastSyncedAt: companion.lastSyncedAt,
+          ),
+        );
       case 'reading_notes':
         await db.readingNotesDao.patch(
           entityId,
@@ -365,6 +374,15 @@ class SyncEngine {
         await db.readingSessionsDao.patch(
           entityId,
           ReadingSessionsCompanion(
+            syncStatus: common.syncStatus,
+            lastSyncedAt: common.lastSyncedAt,
+            serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
+          ),
+        );
+      case 'reads':
+        await db.readsDao.patch(
+          entityId,
+          ReadsCompanion(
             syncStatus: common.syncStatus,
             lastSyncedAt: common.lastSyncedAt,
             serverSeq: serverSeq != null ? Value(serverSeq) : Value.absent(),
@@ -525,6 +543,32 @@ class SyncEngine {
                 pageStart: Value(d['page_start'] as int?),
                 pageEnd: Value(d['page_end'] as int?),
                 autoStopped: Value(d['auto_stopped'] as bool? ?? false),
+                // Absent, never null — the same rule `session_id` below is
+                // written under. A null here means "this row has not been
+                // stamped with its pass yet" (an older app version pushed it,
+                // or the server backfill has not reached it), never "clear the
+                // pass". Nothing in the app un-stamps a read.
+                readId: d['read_id'] == null
+                    ? const Value.absent()
+                    : Value(d['read_id'] as String),
+              ),
+            );
+      case 'reads':
+        await db.into(db.reads).insertOnConflictUpdate(
+              ReadsCompanion(
+                id: Value(d['id'] as String),
+                userId: Value(d['user_id'] as String),
+                createdAt: Value(ts('created_at')!),
+                updatedAt: Value(ts('updated_at')!),
+                deletedAt: synced.deletedAt,
+                syncStatus: synced.syncStatus,
+                lastSyncedAt: synced.lastSyncedAt,
+                serverSeq: synced.serverSeq,
+                libraryEntryId: Value(d['library_entry_id'] as String),
+                status: Value(d['status'] as String? ?? 'reading'),
+                startDate: Value(ts('start_date')),
+                finishDate: Value(ts('finish_date')),
+                currentPage: Value(d['current_page'] as int?),
               ),
             );
       case 'reading_notes':
@@ -558,6 +602,14 @@ class SyncEngine {
                 body: Value(d['body'] as String),
                 pageStart: Value(d['page_start'] as int?),
                 pageEnd: Value(d['page_end'] as int?),
+                // Absent, never null — the same rule `session_id` below is
+                // written under. A null here means "this row has not been
+                // stamped with its pass yet" (an older app version pushed it,
+                // or the server backfill has not reached it), never "clear the
+                // pass". Nothing in the app un-stamps a read.
+                readId: d['read_id'] == null
+                    ? const Value.absent()
+                    : Value(d['read_id'] as String),
               ),
             );
       case 'activity_log_entries':

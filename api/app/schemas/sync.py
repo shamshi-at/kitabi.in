@@ -126,6 +126,9 @@ class ReadingSessionCreate(BaseModel):
     page_start: int | None = None
     page_end: int | None = None
     auto_stopped: bool = False
+    # The pass this sitting belongs to. Nullable for the same reason as on a
+    # note: back-filled rows and older app versions both arrive without it.
+    read_id: uuid.UUID | None = None
 
 
 class ReadingSessionUpdate(BaseModel):
@@ -140,6 +143,32 @@ class ReadingSessionUpdate(BaseModel):
     # Sent by the reader's own correction of an auto-stopped sitting's ended_at
     # / page_end — never re-set to true from the client.
     auto_stopped: bool | None = None
+    read_id: uuid.UUID | None = None
+
+
+class ReadCreate(BaseModel):
+    """One pass through a book (CLAUDE.md rule 19).
+
+    No `ordinal`: position is derived by ordering an entry's reads on
+    `start_date`, so two devices that begin a re-read offline converge instead
+    of both writing "third". Dates, not datetimes — a read begins and ends on a
+    day, and a `date` field only accepts a datetime string whose time part is
+    zero (the 16 Jul 2026 lesson), so the wire format is YYYY-MM-DD.
+    """
+
+    id: uuid.UUID
+    library_entry_id: uuid.UUID
+    status: str = "reading"
+    start_date: date | None = None
+    finish_date: date | None = None
+    current_page: int | None = Field(default=None, ge=0)
+
+
+class ReadUpdate(BaseModel):
+    status: str | None = None
+    start_date: date | None = None
+    finish_date: date | None = None
+    current_page: int | None = Field(default=None, ge=0)
 
 
 class ReadingNoteCreate(BaseModel):
@@ -147,6 +176,10 @@ class ReadingNoteCreate(BaseModel):
     library_entry_id: uuid.UUID
     # Optional: a note doesn't need a sitting ("lent to mom, she folds pages").
     session_id: uuid.UUID | None = None
+    # The pass this thought belongs to. Nullable because rows written before
+    # 29 Aug 2026 are stamped by the backfill, and because an app version that
+    # predates reads pushes without it.
+    read_id: uuid.UUID | None = None
     body: str
     # A passage carries both; a moment carries only page_start; a thought
     # about the book carries neither.
@@ -157,6 +190,7 @@ class ReadingNoteCreate(BaseModel):
 class ReadingNoteUpdate(BaseModel):
     body: str | None = None
     session_id: uuid.UUID | None = None
+    read_id: uuid.UUID | None = None
     page_start: int | None = Field(default=None, ge=1)
     page_end: int | None = Field(default=None, ge=1)
 

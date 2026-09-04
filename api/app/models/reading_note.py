@@ -40,3 +40,8 @@ class ReadingNote(SyncableMixin, Base):
     body: Mapped[str] = mapped_column(String, nullable=False)
     page_start: Mapped[int | None] = mapped_column(Integer, default=None)
     page_end: Mapped[int | None] = mapped_column(Integer, default=None)
+    #: The pass this belongs to ([Read]). Nullable: rows written before
+    #: 29 Aug 2026 are stamped by migration 000048's backfill, and an app
+    #: version that predates reads pushes without it. A null therefore means
+    #: "not stamped yet", never "belongs to no pass".
+    read_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("reads.id"), default=None)

@@ -24,6 +24,7 @@ from app.models import (
     LibraryEntryTag,
     PersonalTag,
     Rating,
+    Read,
     ReadingNote,
     ReadingSession,
     Review,
@@ -40,10 +41,12 @@ from app.schemas.sync import (
     PersonalTagUpdate,
     RatingCreate,
     RatingUpdate,
+    ReadCreate,
     ReadingNoteCreate,
     ReadingNoteUpdate,
     ReadingSessionCreate,
     ReadingSessionUpdate,
+    ReadUpdate,
     ReviewCreate,
     ReviewUpdate,
     SyncChange,
@@ -67,6 +70,7 @@ ENTITIES: dict[str, tuple[type, type[BaseModel], type[BaseModel]]] = {
     "lending_records": (LendingRecord, LendingRecordCreate, LendingRecordUpdate),
     "reading_sessions": (ReadingSession, ReadingSessionCreate, ReadingSessionUpdate),
     "reading_notes": (ReadingNote, ReadingNoteCreate, ReadingNoteUpdate),
+    "reads": (Read, ReadCreate, ReadUpdate),
 }
 # Pull also serves activity_log_entries, which the client never pushes.
 PULL_MODELS: dict[str, type] = {
@@ -175,7 +179,7 @@ async def _refs_owned(db: AsyncSession, user_id: uuid.UUID, entity: str, data: d
     """Referenced Layer-2 rows must belong to the pusher. The FK constraint only
     proves the row *exists* — without this check a crafted create could hang a
     lending record or tag assignment off another user's library entry/tag."""
-    if entity in ("lending_records", "reading_sessions", "reading_notes"):
+    if entity in ("lending_records", "reading_sessions", "reading_notes", "reads"):
         entry_id = data.get("library_entry_id")
         if entry_id is not None:
             entry = await db.get(LibraryEntry, entry_id)
@@ -188,6 +192,14 @@ async def _refs_owned(db: AsyncSession, user_id: uuid.UUID, entity: str, data: d
         if entity == "reading_notes" and session_id is not None:
             sitting = await db.get(ReadingSession, session_id)
             if sitting is None or sitting.user_id != user_id:
+                return False
+        # …and a sitting or a note names the *pass* it belongs to. Third
+        # Layer-2 reference, same rule: the FK proves the read exists, not
+        # whose reading it was.
+        read_id = data.get("read_id")
+        if entity in ("reading_sessions", "reading_notes") and read_id is not None:
+            read = await db.get(Read, read_id)
+            if read is None or read.user_id != user_id:
                 return False
     elif entity == "library_entry_tags":
         entry_id = data.get("library_entry_id")

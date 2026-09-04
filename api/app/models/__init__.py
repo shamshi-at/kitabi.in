@@ -80,6 +80,7 @@ from app.models.promotion import (
 )
 from app.models.publisher import Publisher
 from app.models.rating import Rating
+from app.models.read import Read
 from app.models.reading_note import ReadingNote
 from app.models.reading_session import ReadingSession
 from app.models.rec_cache import RecCache
@@ -113,9 +114,10 @@ __all__ = [
     "work_translators",
     "LibraryEntry",
     "Rating",
-    "RecCache",
+    "Read",
     "ReadingNote",
     "ReadingSession",
+    "RecCache",
     "Review",
     "PersonalTag",
     "LibraryEntryTag",

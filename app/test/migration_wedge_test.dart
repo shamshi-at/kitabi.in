@@ -115,7 +115,11 @@ void main() {
           .customSelect('PRAGMA user_version')
           .getSingle()
           .then((row) => row.read<int>('user_version'));
-      expect(version, 13, reason: 'the healing run stamps the current version');
+      expect(
+        version,
+        db.schemaVersion,
+        reason: 'the healing run stamps the current version',
+      );
 
       // The steps the failed run never reached have now been applied.
       final promos = await db.promotionsDao
@@ -163,7 +167,7 @@ void main() {
           .customSelect('PRAGMA user_version')
           .getSingle()
           .then((row) => row.read<int>('user_version'));
-      expect(version, 13);
+      expect(version, a.schemaVersion);
       await a.close();
       await b.close();
     },

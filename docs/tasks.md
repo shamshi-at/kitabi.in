@@ -1462,26 +1462,41 @@ Owner request, 29 Aug 2026. Design drawn and chosen in
 sitting logged against a library entry between now and then is one more row to backfill
 and guess a pass for. R2–R4 are the dormant UI and can follow whenever.
 
-### R1 — Schema (do this early; it is the expensive half)
+### R1 — Schema (do this early; it is the expensive half) ✅ 29 Aug 2026
 
-- [ ] `reads` — `library_entry_id`, `ordinal`, `start_date`, `finish_date`,
-      `current_page`, `status`, plus the syncable columns (rule 10). RLS enabled, zero
-      policies (rule 11)
-- [ ] `reading_sessions.read_id` and `reading_notes.read_id`, nullable at first so the
-      backfill has somewhere to land
-- [ ] **Backfill, one read per existing entry**: ordinal 1, dates copied across, its
-      sittings and notes adopted. An entry with a finish date but no sittings becomes
-      the honest "no timings kept" row drawn in 1b — that state exists precisely so
-      back-filled history doesn't look broken
-- [ ] `ordinal` is **derived on read, never stored as a bare counter** — two devices
-      starting a re-read offline would both write "third"
-- [ ] Drift migration + the matching Alembic migration in the same commit; guarded and
-      idempotent, oldest-first, and tested with `doubleQuotedStringLiterals = false`
-      (the 25 Aug wedge — a green `flutter test` on a Mac is not evidence about device
-      sqlite)
-- [ ] The entry keeps `start_date`/`finish_date`/`current_page` as a **mirror of the
-      current read**, so the four progress surfaces, the timer, the Live Activity and
-      the public web pages are untouched (rule 19)
+- [x] `reads` — `library_entry_id`, `status`, `start_date`, `finish_date`,
+      `current_page`, plus the syncable columns (rule 10). RLS enabled, zero
+      policies (rule 11), verified against the live table
+- [x] **No `ordinal` column.** Written as one in the plan and dropped while
+      building: "second read" is a *position*, and a stored position is exactly
+      the counter two offline devices would both write. `ReadsDao` orders on
+      `startDate` → `createdAt` → rowid instead, so every device derives the
+      same answer without agreeing on a number
+- [x] `reading_sessions.read_id` and `reading_notes.read_id`, nullable, on both
+      the Drift and SQLAlchemy sides
+- [x] **Backfill lives server-side only** (migration `000048`): one read per
+      entry with evidence of reading — a date, a page, or a sitting — with its
+      status mapped onto the pass and its sittings and notes adopted. An entry
+      nobody has opened gets nothing. Every row written or touched draws a fresh
+      `server_seq`, so it arrives on devices by the ordinary pull. The client
+      back-fills *nothing*: doing both would mint two ids for one pass
+- [x] Drift v13 → v14 (`createTable` + two guarded `addColumn`s — additive, no
+      `TableMigration` rebuild) and Alembic `000048` in the same commit
+- [x] The entry keeps `start_date`/`finish_date`/`current_page` as a mirror of
+      the current read — nothing existing reads differently (rule 19)
+- [x] Sync wiring both ways: `reads` in `ENTITIES`/`PULL_MODELS` and in all
+      three client switches; `_refs_owned` proves a `read_id` belongs to the
+      pusher, the third Layer-2 reference to need it
+- [x] `read_id` arrives from a pull as `Value.absent()`, never `Value(null)` —
+      the 15 Aug rule. A null means "not stamped yet", and nothing un-stamps
+- [x] `reads` classified in the account wipe, ordered after its children and
+      before its parent
+- [x] Tests: `test_reads_backfill.py` runs the migration's **real** SQL against
+      seeded rows (not a copy of it); `reads_migration_test.dart` upgrades a
+      real v13 file with history on it and asserts the history survives, with
+      `doubleQuotedStringLiterals = false` so the host matches device sqlite.
+      The re-run guard was verified by removing it and watching the test fail
+      with `duplicate column name`
 
 ### R2 — The two behaviours that change with it
 

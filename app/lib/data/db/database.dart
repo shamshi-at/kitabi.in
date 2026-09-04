@@ -22,6 +22,7 @@ part 'database.g.dart';
     Ratings,
     ReadingSessions,
     ReadingNotes,
+    Reads,
     Reviews,
     PersonalTags,
     LibraryEntryTags,
@@ -40,6 +41,7 @@ part 'database.g.dart';
     RatingsDao,
     ReadingSessionsDao,
     ReadingNotesDao,
+    ReadsDao,
     ReviewsDao,
     TagsDao,
     LendingRecordsDao,
@@ -59,7 +61,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   /// Whether [table] already has [column] — consulted before every
   /// `addColumn` in [migration]. Column-adds are the one step SQLite cannot
@@ -266,6 +268,23 @@ class AppDatabase extends _$AppDatabase {
         readingSessions,
         readingSessions.autoStopped,
       );
+    }
+    if (from < 14) {
+      // A read becomes a record (29 Aug 2026, CLAUDE.md rule 19) — the table
+      // plus the two columns that stamp a sitting and a note with the pass
+      // they belong to. All three are additive, so nothing existing changes
+      // shape and no TableMigration rebuild is involved (the step that wedged
+      // devices at v12 — see _hasColumn's doc).
+      //
+      // **Nothing is back-filled here.** The server's own migration writes one
+      // read per entry that has reading history and stamps the existing
+      // sittings and notes with it, bumping `server_seq` above any cursor a
+      // device can already hold, so those rows arrive by the ordinary pull —
+      // the same division of labour the v5 borrowed-books step used. Doing it
+      // on both sides would mint two ids for one pass and sync both.
+      await m.createTable(reads);
+      await _addColumnIfMissing(m, readingSessions, readingSessions.readId);
+      await _addColumnIfMissing(m, readingNotes, readingNotes.readId);
     }
   }
 

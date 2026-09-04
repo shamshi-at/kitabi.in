@@ -35,3 +35,8 @@ class ReadingSession(SyncableMixin, Base):
     #: not when the reader actually put the book down, so the client offers a
     #: correction affordance wherever this is set.
     auto_stopped: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    #: The pass this belongs to ([Read]). Nullable: rows written before
+    #: 29 Aug 2026 are stamped by migration 000048's backfill, and an app
+    #: version that predates reads pushes without it. A null therefore means
+    #: "not stamped yet", never "belongs to no pass".
+    read_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("reads.id"), default=None)

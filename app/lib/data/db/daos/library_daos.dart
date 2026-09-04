@@ -133,6 +133,71 @@ class RatingsDao extends DatabaseAccessor<AppDatabase> with _$RatingsDaoMixin {
       (update(ratings)..where((t) => t.id.equals(id))).write(patch);
 }
 
+/// Reads — one row per pass through a book (CLAUDE.md rule 19).
+///
+/// Dormant as of 29 Aug 2026: the rows arrive from the server's backfill and
+/// sync like any other Layer-2 entity, but nothing in the app writes a *new*
+/// pass until Phase R3. What exists here is what the sync engine and the
+/// eventual UI both need — a live list per book, and the position derivation
+/// that replaces a stored ordinal.
+@DriftAccessor(tables: [Reads])
+class ReadsDao extends DatabaseAccessor<AppDatabase> with _$ReadsDaoMixin {
+  ReadsDao(super.db);
+
+  /// Every live pass through one book, **oldest first** — first read first,
+  /// which is the order the UI numbers them in.
+  ///
+  /// Ordered on `startDate` with `createdAt` as the fallback and rowid as the
+  /// final tiebreak: a back-filled first read may have no start date at all,
+  /// and drift stores DateTime as Unix *seconds*, so two rows can tie. This
+  /// ordering is the whole reason [Reads] has no `ordinal` column — position
+  /// is computed the same way on every device, so two devices that start a
+  /// re-read offline converge instead of both claiming the same number.
+  Stream<List<Read>> watchForEntry(String libraryEntryId) => (select(reads)
+        ..where((t) => t.libraryEntryId.equals(libraryEntryId) & t.deletedAt.isNull())
+        ..orderBy([
+          (t) => OrderingTerm.asc(t.startDate),
+          (t) => OrderingTerm.asc(t.createdAt),
+          (t) => OrderingTerm.asc(t.rowId),
+        ]))
+      .watch();
+
+  /// The same set, read once — for the paths that must not depend on a stream
+  /// having emitted (the 19 Jul 2026 lesson).
+  Future<List<Read>> forEntry(String libraryEntryId) => (select(reads)
+        ..where((t) => t.libraryEntryId.equals(libraryEntryId) & t.deletedAt.isNull())
+        ..orderBy([
+          (t) => OrderingTerm.asc(t.startDate),
+          (t) => OrderingTerm.asc(t.createdAt),
+          (t) => OrderingTerm.asc(t.rowId),
+        ]))
+      .get();
+
+  /// How many times this book has been read through — finished passes only.
+  /// Derived, never stored, so it cannot disagree with the rows beneath it.
+  Future<int> finishedCount(String libraryEntryId) async {
+    final rows = await forEntry(libraryEntryId);
+    return rows.where((r) => r.status == 'read').length;
+  }
+
+  /// The pass currently open on this book, if any.
+  Future<Read?> currentFor(String libraryEntryId) async {
+    final rows = await forEntry(libraryEntryId);
+    for (final r in rows.reversed) {
+      if (r.status != 'read') return r;
+    }
+    return null;
+  }
+
+  Future<Read?> getById(String id) =>
+      (select(reads)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<void> insertOne(ReadsCompanion row) => into(reads).insert(row);
+
+  Future<void> patch(String id, ReadsCompanion patch) =>
+      (update(reads)..where((t) => t.id.equals(id))).write(patch);
+}
+
 @DriftAccessor(tables: [ReadingNotes])
 class ReadingNotesDao extends DatabaseAccessor<AppDatabase> with _$ReadingNotesDaoMixin {
   ReadingNotesDao(super.db);

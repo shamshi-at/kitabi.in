@@ -50,12 +50,46 @@ class Ratings extends Table with SyncColumns {
   IntColumn get value => integer()();
 }
 
+/// One pass through a book — the first time you read it, and every time after
+/// (CLAUDE.md rule 19: a read is a record, not a counter).
+///
+/// This is rule 14's shape applied to reading itself. A book read three times
+/// has three beginnings, three endings, three paces and three sets of
+/// thoughts, and [LibraryEntries] has exactly one `startDate`, one
+/// `finishDate` and one `currentPage` to hold them. Those columns stay
+/// where they are as a **mirror of the current read**, so every existing
+/// reader of them — the four progress surfaces, the timer, the Live Activity,
+/// the public web pages — is untouched by this table's arrival.
+///
+/// **There is deliberately no `ordinal` column.** "Second read" is a position,
+/// and a stored position is a counter two offline devices would both write:
+/// begin a re-read on each with no signal and both write "third". Position is
+/// derived instead, by ordering an entry's reads on `startDate` (falling back
+/// to `createdAt`, which every row has) — so the devices converge on the same
+/// answer without having to agree on a number.
+///
+/// [status] mirrors the entry's vocabulary for the pass itself: 'reading',
+/// 'read', or 'stopped'. Dormant as of 29 Aug 2026 — the rows exist and sync,
+/// but nothing writes a *new* one until Phase R3 builds the UI.
+class Reads extends Table with SyncColumns {
+  TextColumn get libraryEntryId => text()();
+  TextColumn get status => text().withDefault(Constant('reading'))();
+  DateTimeColumn get startDate => dateTime().nullable()();
+  DateTimeColumn get finishDate => dateTime().nullable()();
+  IntColumn get currentPage => integer().nullable()();
+}
+
 /// A timed start-to-stop reading session against a library entry (a specific
 /// owned copy — progress already lives on LibraryEntries, this is the timed
 /// log). Only ever enqueued for sync once stopped; the live "timer running"
 /// state itself is device-local (KeyValues), never a row here until it ends.
 class ReadingSessions extends Table with SyncColumns {
   TextColumn get libraryEntryId => text()();
+
+  /// The pass this sitting belongs to ([Reads]). Nullable: rows written before
+  /// 29 Aug 2026 are stamped by the server's backfill, and a client that has
+  /// the column before that row arrives must not treat the gap as an error.
+  TextColumn get readId => text().nullable()();
   DateTimeColumn get startedAt => dateTime()();
   DateTimeColumn get endedAt => dateTime()();
   IntColumn get durationSeconds => integer()();
@@ -81,6 +115,12 @@ class ReadingSessions extends Table with SyncColumns {
 class ReadingNotes extends Table with SyncColumns {
   TextColumn get libraryEntryId => text()();
   TextColumn get sessionId => text().nullable()();
+
+  /// The pass this thought belongs to ([Reads]) — nullable for the same reason
+  /// as on a sitting. A note written at twenty about a book re-read at forty
+  /// is not a note about the later read, and this column is what keeps the two
+  /// from being shown as one journal.
+  TextColumn get readId => text().nullable()();
   TextColumn get body => text()();
   IntColumn get pageStart => integer().nullable()();
   IntColumn get pageEnd => integer().nullable()();

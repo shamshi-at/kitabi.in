@@ -37,6 +37,7 @@ from app.models.profile import Profile
 from app.models.promotion import Promotion, PromotionContent, PromotionEvent
 from app.models.publisher import Publisher
 from app.models.rating import Rating
+from app.models.read import Read
 from app.models.reading_note import ReadingNote
 from app.models.reading_session import ReadingSession
 from app.models.rec_cache import RecCache
@@ -88,9 +89,16 @@ async def _seed(db, user_id: uuid.UUID) -> dict:
     db.add(entry)
     await db.flush()
 
+    # The pass those sittings belong to — reader data like everything else
+    # here, and the parent of both reading_sessions and reading_notes.
+    read = Read(user_id=user_id, library_entry_id=entry.id, status="reading")
+    db.add(read)
+    await db.flush()
+
     session = ReadingSession(
         user_id=user_id,
         library_entry_id=entry.id,
+        read_id=read.id,
         started_at=now - timedelta(hours=1),
         ended_at=now,
         duration_seconds=3600,
@@ -110,6 +118,7 @@ async def _seed(db, user_id: uuid.UUID) -> dict:
                 user_id=user_id,
                 library_entry_id=entry.id,
                 session_id=session.id,
+                read_id=read.id,
                 body="The sea is a character.",
             ),
             LibraryEntryTag(user_id=user_id, library_entry_id=entry.id, tag_id=tag.id),

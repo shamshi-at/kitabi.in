@@ -58,7 +58,9 @@ USER_TABLES: tuple[str, ...] = (
     "library_entry_tags",  # → library_entries, personal_tags
     "active_reading_sessions",  # the live sitting; one row per reader
     "reading_notes",  # → library_entries, reading_sessions
-    "reading_sessions",  # → library_entries
+    "reading_sessions",  # → library_entries, reads
+    # After its children (sittings and notes point at it), before its parent.
+    "reads",  # → library_entries
     "lending_records",  # → library_entries, editions
     "personal_tags",
     "library_entries",  # → editions (kept)
