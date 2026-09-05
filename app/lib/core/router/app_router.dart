@@ -43,6 +43,35 @@ import '../../features/profile/providers/profile_providers.dart';
 import '../auth/auth_providers.dart';
 import 'shell_scaffold.dart';
 
+/// The boot-gate locations: where a reader stands while the app decides
+/// whether they may come in. Splash, sign-in, welcome and the language picker.
+bool isBootGateLocation(String loc) =>
+    loc == Routes.splash ||
+    loc == Routes.signIn ||
+    loc == Routes.welcome ||
+    loc == Routes.languages;
+
+/// Whether a boot provider's state should hold the reader on the splash.
+///
+/// Loading with no value yet → hold (cold start). With [holdOnUnprovenError],
+/// an error with no value ever → hold too (the bootstrap gate, 13 Aug 2026 —
+/// walking past it produced an inescapable 404). Loading **with** a previous
+/// value → hold only while the reader is still [atGate]: that is the sign-in
+/// hand-off, where the previous value belongs to the signed-out run and must
+/// not be read as final. Anywhere else it is a background re-run — both boot
+/// providers re-run on every auth event, token refreshes included — and an
+/// established reader keeps the value they have rather than being flashed
+/// back to the splash and out to Home (owner report, 6 Sep 2026).
+bool holdsOnSplash(
+  AsyncValue<Object?> state, {
+  required bool atGate,
+  bool holdOnUnprovenError = false,
+}) {
+  if (state.isLoading && (!state.hasValue || atGate)) return true;
+  if (holdOnUnprovenError && state.hasError && !state.hasValue) return true;
+  return false;
+}
+
 /// Route names as constants (CLAUDE.md convention).
 abstract final class Routes {
   static const splash = '/';
@@ -337,8 +366,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       // `!bootstrap.hasValue` matters: once a session has bootstrapped, a later
       // background re-run that errors (a token refresh during a tunnel) must not
       // yank a reader out of the app and back to the splash.
+      //
+      // `atGate` (6 Sep 2026): both this provider and `meProvider` re-run on
+      // *every* `authStateProvider` event — a routine token refresh included —
+      // and for the seconds that re-run takes they read as loading while
+      // carrying their previous value. Any navigation in that window (a pop,
+      // a push, the book pager closing) used to be redirected here, and from
+      // here to Home: the reader saw the splash flash and lost the whole
+      // stack they were standing on (owner report, 6 Sep 2026, while swiping
+      // through a shelf). The hold is for the cold start and the sign-in
+      // hand-off — the reader is *at a gate* then. An established reader on
+      // an in-app location keeps the value they already have.
+      final atGate = isBootGateLocation(loc);
       final bootstrap = ref.read(bootstrapProvider);
-      if (bootstrap.isLoading || (bootstrap.hasError && !bootstrap.hasValue)) {
+      if (holdsOnSplash(bootstrap, atGate: atGate, holdOnUnprovenError: true)) {
         return loc == Routes.splash ? null : Routes.splash;
       }
 
@@ -356,7 +397,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // bootstrap above) so a background re-fetch never reads a stale/empty
       // cached value as final and flashes the language picker.
       final me = ref.read(meProvider);
-      if (me.isLoading) {
+      if (holdsOnSplash(me, atGate: atGate)) {
         return loc == Routes.splash ? null : Routes.splash;
       }
       // A fetch failure (a network hiccup right at cold start — e.g. the
@@ -372,10 +413,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
       }
 
-      if (loc == Routes.splash ||
-          loc == Routes.signIn ||
-          loc == Routes.welcome ||
-          loc == Routes.languages) {
+      if (atGate) {
         // A cold-start push tap / app link waited out the boot — honour it now
         // instead of landing on home.
         final target = pendingExternalTarget;

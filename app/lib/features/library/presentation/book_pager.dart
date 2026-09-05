@@ -86,6 +86,12 @@ class _BookPagerState extends State<BookPager> {
 
   bool _onScroll(ScrollNotification n) {
     if (_closing) return false;
+    // Only the PageView's own scrolling. Every book page beneath it is a
+    // vertical ListView whose notifications bubble up through this listener
+    // too, and on iOS a pull past the *top* of a page bounced with exactly the
+    // shape the edge rule looks for — so reading a page could close it
+    // (6 Sep 2026). Depth 0 is the nearest scrollable: the pager itself.
+    if (n.depth != 0 || n.metrics.axis != Axis.horizontal) return false;
     if (n is ScrollEndNotification ||
         (n is UserScrollNotification && n.direction == ScrollDirection.idle)) {
       _edgePull = 0;

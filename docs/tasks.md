@@ -726,6 +726,16 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       and a snackbar, and `share_card_capture_test.dart` mocks the share channel to
       assert a PNG file is what leaves — plus a source guard, since a debug-mode
       harness can never reproduce the release failure itself
+- [x] **The boot gates no longer flash an established reader to the splash**
+      (6 Sep 2026) — `bootstrapProvider` and `meProvider` re-run on every auth event
+      (token refreshes included) and read as loading with their previous value; any
+      navigation in that window was redirected to splash, then Home, dumping the
+      stack (seen while swiping a shelf). `holdsOnSplash(state, atGate:)` in
+      `app_router.dart` is the one rule now: loading-with-a-value holds only at a
+      gate location. `bootstrap_gate_test.dart` imports it instead of a local copy.
+      Same fix: the pager ignores the book page's own vertical scroll
+      notifications (depth 0 only), so a pull past the top of a page no longer
+      closes it
 
 ## Phase 7 — Recommendations & share
 

@@ -1213,6 +1213,23 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   error through `FlutterError` and tell the reader what happened, or the
   fallback becomes the feature and nobody knows.
 
+- **A `NotificationListener` hears every scrollable beneath it, not only the
+  one it was written for — and a boot gate that holds on `isLoading` holds on
+  every background re-run.** Two bugs behind one report (owner, 6 Sep 2026:
+  swiping the book pager "shows the splash and goes back to Home"). The pager's
+  edge-pull rule listened for overscroll and got the book page's *vertical*
+  ListView bouncing at its top, so reading a page could close it — filter on
+  `notification.depth == 0` (and the axis) for the scrollable you mean. And
+  closing the page ran the router's redirect, which sent any navigation to the
+  splash while `meProvider`/`bootstrapProvider` were mid-re-run — which is
+  every token refresh, since both `ref.watch(authStateProvider.future)`.
+  Riverpod reports that re-run as loading *with the previous value*, and
+  `.isLoading` alone can't tell "cold start" from "refresh"; the location can:
+  `holdsOnSplash(state, atGate:)` holds on loading-with-a-value only while the
+  reader is still at a boot-gate screen. Corollary: `bootstrap_gate_test.dart`
+  had its own copy of the gate rule and stayed green while the real one
+  misbehaved — a test of a rule imports the rule.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

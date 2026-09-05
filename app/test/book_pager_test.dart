@@ -206,6 +206,27 @@ void main() {
       await flushTree(tester);
     });
 
+    testWidgets('a vertical pull on the page is reading, not leaving', (tester) async {
+      // The page beneath the pager is a vertical ListView; its overscroll
+      // bubbles through the pager's listener. On iOS a pull past the top
+      // bounces with the same shape as an edge pull — it must not close.
+      for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+        debugDefaultTargetPlatformOverride = platform;
+        try {
+          final router = await open(tester, at: 2);
+          await tester.drag(find.byType(BookDetailScreen), const Offset(0, 300));
+          await settle(tester);
+          await tester.drag(find.byType(BookDetailScreen), const Offset(0, -900));
+          await settle(tester);
+          expect(location(router), '/book/${_w[2]}/${_e[2]}', reason: '$platform');
+          expect(find.text('Gamma Book'), findsWidgets);
+          await flushTree(tester);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      }
+    });
+
     testWidgets('closes on iOS too, where the ends bounce instead of clamping',
         (tester) async {
       // Bouncing physics report the pull through the position itself rather

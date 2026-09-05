@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kitabi/core/auth/auth_providers.dart';
+import 'package:kitabi/core/router/app_router.dart';
 import 'package:kitabi/core/auth/auth_service.dart';
 import 'package:kitabi/data/api/api_client.dart';
 import 'package:kitabi/data/db/database.dart';
@@ -26,28 +27,60 @@ class _UnreachableApi extends ApiClient {
 /// PATCH /me that could only 404, and nothing ever called bootstrap again —
 /// a one-way door into an error, restart or not (owner report, 13 Aug 2026).
 ///
-/// These pin the rule the router now follows, in isolation from the real
-/// router's auth/onboarding gates: **never walk past a bootstrap that has never
-/// succeeded — but never yank an established session back either.**
-bool holdsOnSplash(AsyncValue<void> bootstrap) =>
-    bootstrap.isLoading || (bootstrap.hasError && !bootstrap.hasValue);
+/// These pin the rule the router follows — `holdsOnSplash`, imported from the
+/// router rather than copied here (a copy passed while the real gate flashed
+/// readers to the splash, 6 Sep 2026) — in isolation from the auth/onboarding
+/// gates: **never walk past a bootstrap that has never succeeded — but never
+/// yank an established session back either.**
+bool _bootstrapHolds(AsyncValue<void> bootstrap, {bool atGate = true}) =>
+    holdsOnSplash(bootstrap, atGate: atGate, holdOnUnprovenError: true);
 
 void main() {
   group('the splash gate', () {
     test('holds while the bootstrap is still resolving', () {
-      expect(holdsOnSplash(const AsyncLoading<void>()), isTrue);
+      expect(_bootstrapHolds(const AsyncLoading<void>()), isTrue);
+      expect(_bootstrapHolds(const AsyncLoading<void>(), atGate: false), isTrue,
+          reason: 'no value ever means a cold start, wherever the URL says we are');
     });
 
     test('holds when the bootstrap failed and never succeeded', () {
       expect(
-        holdsOnSplash(AsyncError<void>(Exception('network'), StackTrace.empty)),
+        _bootstrapHolds(AsyncError<void>(Exception('network'), StackTrace.empty)),
         isTrue,
         reason: 'walking past this is what produced an inescapable 404',
       );
     });
 
     test('lets a successful bootstrap through', () {
-      expect(holdsOnSplash(const AsyncData<void>(null)), isFalse);
+      expect(_bootstrapHolds(const AsyncData<void>(null)), isFalse);
+    });
+
+    test('a background re-run holds only while the reader is still at a gate', () {
+      // Every auth event — a token refresh included — re-runs the boot
+      // providers, which then read as loading *with* their previous value.
+      final rerun = const AsyncLoading<void>().copyWithPrevious(const AsyncData<void>(null));
+      expect(_bootstrapHolds(rerun, atGate: true), isTrue,
+          reason: 'the sign-in hand-off: the previous value is the signed-out run');
+      expect(_bootstrapHolds(rerun, atGate: false), isFalse,
+          reason: 'an established reader mid-app must not be flashed to the splash');
+      // The profile gate: same shape, and never holds on an error at all.
+      final meRerun = const AsyncLoading<Map<String, dynamic>>()
+          .copyWithPrevious(const AsyncData<Map<String, dynamic>>({'preferred_languages': ['ml']}));
+      expect(holdsOnSplash(meRerun, atGate: false), isFalse);
+      expect(holdsOnSplash(meRerun, atGate: true), isTrue);
+      expect(
+        holdsOnSplash(AsyncError<Map<String, dynamic>>(Exception('x'), StackTrace.empty),
+            atGate: true),
+        isFalse,
+      );
+    });
+
+    test('the gate locations are the four boot screens and nothing else', () {
+      for (final loc in [Routes.splash, Routes.signIn, Routes.welcome, Routes.languages]) {
+        expect(isBootGateLocation(loc), isTrue, reason: loc);
+      }
+      expect(isBootGateLocation(Routes.home), isFalse);
+      expect(isBootGateLocation(Routes.bookDetailPath('w', 'e')), isFalse);
     });
 
     test('does NOT yank an established session back to the splash', () {
@@ -55,7 +88,7 @@ void main() {
       // refresh in a tunnel. The reader keeps using the app.
       final refreshFailed = AsyncError<void>(Exception('tunnel'), StackTrace.empty)
           .copyWithPrevious(const AsyncData<void>(null));
-      expect(holdsOnSplash(refreshFailed), isFalse);
+      expect(_bootstrapHolds(refreshFailed), isFalse);
     });
   });
 
@@ -133,7 +166,7 @@ void main() {
             builder: (context, ref, _) {
               final bootstrap = ref.watch(bootstrapProvider);
               return Scaffold(
-                body: holdsOnSplash(bootstrap) && bootstrap.hasError
+                body: _bootstrapHolds(bootstrap) && bootstrap.hasError
                     ? OutlinedButton(onPressed: () {}, child: const Text('Retry'))
                     : const Text('Home'),
               );
