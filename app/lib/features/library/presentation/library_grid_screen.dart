@@ -21,6 +21,7 @@ import '../providers/library_providers.dart';
 import '../reading_status.dart';
 import 'library_filter_sheet.dart';
 import 'shelf_sheets.dart';
+import '../book_browse_context.dart';
 
 /// S5 — the personal library. Two faces on one screen (owner pick, 17 Jul
 /// 2026): the covers-first grid, and a *shelves* view — every reading status,
@@ -419,6 +420,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
             final filtered = _sorted(all
                 .where((h) => _filter.matches(h, shelvesOf: shelvesOf, pace: pace))
                 .toList());
+            final browse = BookBrowseContext.fromHits(filtered);
             final sortedShelves = [...shelves]
               ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
@@ -540,6 +542,10 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                               // section.
                               (context, index) => _LibraryGridItem(
                                 hit: filtered[index],
+                                // The grid as the reader sees it — sorted,
+                                // filtered, this shelf — so the book page can
+                                // swipe to the neighbours they were looking at.
+                                browse: browse,
                                 // The estimate only rides the cover when the
                                 // reader asked a time question — otherwise the
                                 // shelf grows a number nobody asked for.
@@ -1089,9 +1095,13 @@ class _NewShelfTile extends StatelessWidget {
 }
 
 class _LibraryGridItem extends ConsumerWidget {
-  const _LibraryGridItem({required this.hit, this.estimate});
+  const _LibraryGridItem({required this.hit, required this.browse, this.estimate});
 
   final LibraryHit hit;
+
+  /// The list this cover is part of, handed to the book page so swiping
+  /// walks the same shelf in the same order.
+  final BookBrowseContext browse;
 
   /// Seconds left in this book at the reader's pace — set only while a
   /// time-to-finish filter is on, so the ordering and the tag answer the same
@@ -1129,7 +1139,10 @@ class _LibraryGridItem extends ConsumerWidget {
         : null;
 
     return GestureDetector(
-      onTap: () => context.push(Routes.bookDetailPath(book.workId, book.editionId)),
+      onTap: () => context.push(
+        Routes.bookDetailPath(book.workId, book.editionId),
+        extra: browse,
+      ),
       child: ShelfCover(
         title: book.title,
         author: book.authorNames,

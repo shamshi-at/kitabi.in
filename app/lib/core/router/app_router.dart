@@ -24,7 +24,7 @@ import '../../features/import_books/presentation/import_screen.dart';
 import '../../features/insights/presentation/finished_books_screen.dart';
 import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/lending/presentation/lending_ledger_screen.dart';
-import '../../features/library/presentation/book_detail_screen.dart';
+import '../../features/library/presentation/book_pager.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
 import '../../features/library/presentation/reading_timer_screen.dart';
 import '../../features/library/presentation/review_editor_screen.dart';
@@ -691,10 +691,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.bookDetail,
         name: 'book-detail',
-        builder: (context, state) => BookDetailScreen(
-          workId: state.pathParameters['workId']!,
-          editionId: state.pathParameters['editionId']!,
-        ),
+        // Plain page, or the swipeable pager when `extra` names the shelf the
+        // book was opened from — see `buildBookRoute`.
+        builder: buildBookRoute,
       ),
       GoRoute(
         path: Routes.readingTimer,

@@ -696,6 +696,22 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       ordinary way out, so stopping is never blocked. Marks the book Read,
       stamps the finish date, and settles the last page — all through one
       `markBookFinished`, which the book page's status row now uses too
+- [x] **Swipe the book page through its shelf** (6 Sep 2026) — a book opened from
+      the library grid (all books, an open shelf, any filter/sort) or the Insights
+      finished list carries the list it came from as the route's `extra`
+      (`BookBrowseContext`); the page is then a `PageView` of book pages
+      (`book_pager.dart`): left for the next, right for the previous, and a pull
+      past either end closes the page back to the shelf. A book opened on its own
+      (share link, notification, Home, catalogue) is the plain page — the list is
+      a hint, never a dependency. `book_pager_test.dart` drives it under both the
+      clamping (Android) and bouncing (iOS) physics
+- [x] **The review nudge survives a mid-read rating** (6 Sep 2026) — "silent once a
+      rating or review exists" was hiding the finished-reading sheet from anyone
+      who rated the book before finishing it, which read as "the timer doesn't
+      ask". Now silent only once a *review* exists; a rated book gets the sheet
+      with its stars already lit and a subtitle that says so. The existence check
+      fails open, and the sheet scrolls instead of overflowing on a short screen.
+      `timer_finish_review_prompt_test.dart` drives the real timer end to end
 
 ## Phase 7 — Recommendations & share
 

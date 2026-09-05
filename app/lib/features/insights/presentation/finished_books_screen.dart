@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../library/book_browse_context.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
@@ -156,8 +157,12 @@ class FinishedBooksScreen extends ConsumerWidget {
                 hit: hit,
                 rating: ratings[hit.book.workId],
                 finishedOn: finishedOn(hit),
-                onTap: () =>
-                    context.push(Routes.bookDetailPath(hit.book.workId, hit.book.editionId)),
+                onTap: () => context.push(
+                  Routes.bookDetailPath(hit.book.workId, hit.book.editionId),
+                  // The finished list, newest first, so the page swipes
+                  // through it the way the library grid does.
+                  extra: BookBrowseContext.fromHits(finished),
+                ),
               ),
         ],
       ),
