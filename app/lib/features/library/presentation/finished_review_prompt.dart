@@ -6,6 +6,7 @@ import '../../../core/haptics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/sheet_grabber.dart';
+import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
@@ -30,8 +31,17 @@ import '../providers/library_providers.dart';
 /// all of them (the 19 Jul and 31 Jul 2026 lessons).
 ///
 /// Silent when there is nothing to gain by asking: no work to attach a review
-/// to, or a rating or review already recorded. Never irritate a reader who has
-/// already said their piece.
+/// to, or a *review* already written. Never irritate a reader who has already
+/// said their piece — but a star rating alone is not their piece. It used to
+/// count as one, and that made the nudge vanish for exactly the readers most
+/// likely to write: anyone who rates a book while still reading it (owner
+/// report, 6 Sep 2026 — "Marked as Read" from the timer's wax-seal face, and
+/// no question followed). A rated, unreviewed book now gets the sheet with its
+/// stars already lit, and the ask is the words.
+///
+/// The existence check fails *open*: it exists to avoid nagging, so a lookup
+/// that throws (a duplicated rating row from a two-device sync, say) must not
+/// take the whole moment with it. Better one extra ask than a finish in silence.
 /// [workId] and the three display fields are what the *caller* already knows.
 /// The book page holds all four (the work id is in its own route), and the
 /// catalog mirror is the fallback for the surfaces that hold only an entry id
@@ -59,11 +69,18 @@ Future<void> maybePromptForReview(
 
   // Repositories directly, not the autoDispose providers' `.future` — a read
   // without a listener can be disposed before it resolves.
-  final reviewsRepo = await container.read(reviewsRepositoryProvider.future);
-  final ratingsRepo = await container.read(ratingsRepositoryProvider.future);
-  final review = await reviewsRepo.watchForWork(work).first;
-  final rating = await ratingsRepo.watchForWork(work).first;
-  if (review != null || rating != null) return;
+  Rating? rating;
+  try {
+    final reviewsRepo = await container.read(reviewsRepositoryProvider.future);
+    final ratingsRepo = await container.read(ratingsRepositoryProvider.future);
+    final review = await reviewsRepo.watchForWork(work).first;
+    if (review != null) return;
+    rating = await ratingsRepo.watchForWork(work).first;
+  } catch (_) {
+    // Fail open — see the doc comment. Nothing to do with the error itself:
+    // the sheet's own rating row reads the repositories again and will show
+    // the same trouble to the reader if it is real.
+  }
   if (!context.mounted) return;
 
   await showModalBottomSheet<void>(
@@ -74,6 +91,7 @@ Future<void> maybePromptForReview(
     ),
     builder: (_) => FinishedReviewSheet(
       workId: work,
+      initialStars: rating?.value,
       // The `extra` the review editor route needs to show which book it is
       // about — it renders a cover, so a missing one is a blank editor, not a
       // crash.
@@ -90,23 +108,33 @@ Future<void> maybePromptForReview(
 /// there (and syncs before refreshing the hero's aggregate, same as the
 /// review card's own rating row); "Write a review" goes deeper into the full
 /// editor; "Not now" dismisses without friction. Never re-shown once a
-/// rating or review exists for this work (see [maybePromptForReview]).
+/// review exists for this work (see [maybePromptForReview]); a rating given
+/// earlier arrives as [initialStars].
 ///
 /// A bottom sheet, not a snackbar — a snackbar times out mid-decision and its
 /// one line can't carry a star row, so tapping a star straight away was never
 /// possible.
 class FinishedReviewSheet extends ConsumerStatefulWidget {
-  const FinishedReviewSheet({super.key, required this.workId, required this.reviewExtra});
+  const FinishedReviewSheet({
+    super.key,
+    required this.workId,
+    required this.reviewExtra,
+    this.initialStars,
+  });
 
   final String workId;
   final Map<String, dynamic> reviewExtra;
+
+  /// A rating the reader gave before finishing — lit from the start, so the
+  /// sheet asks for words rather than pretending the stars are still open.
+  final int? initialStars;
 
   @override
   ConsumerState<FinishedReviewSheet> createState() => _FinishedReviewSheetState();
 }
 
 class _FinishedReviewSheetState extends ConsumerState<FinishedReviewSheet> {
-  int _stars = 0;
+  late int _stars = widget.initialStars ?? 0;
   bool _saving = false;
 
   Future<void> _rate(int value) async {
@@ -126,8 +154,12 @@ class _FinishedReviewSheetState extends ConsumerState<FinishedReviewSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final rated = widget.initialStars;
     return SafeArea(
-      child: Padding(
+      // Scrolls rather than overflows: a modal sheet is capped at nine
+      // sixteenths of the screen, and on a short screen (or with a keyboard
+      // up underneath) the fixed column ran 29px past it.
+      child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(24, 12, 24, 22),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -148,7 +180,9 @@ class _FinishedReviewSheetState extends ConsumerState<FinishedReviewSheet> {
             ),
             SizedBox(height: 6),
             Text(
-              l10n.reviewFinishedSubtitle,
+              rated == null
+                  ? l10n.reviewFinishedSubtitle
+                  : l10n.reviewFinishedSubtitleRated('★' * rated),
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5, height: 1.4),
             ),

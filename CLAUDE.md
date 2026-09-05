@@ -1184,6 +1184,19 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   were previously making blind. Genres are the one row that *adds* rather than
   replaces, because a genre set is not an answer.
 
+- **A suppression rule has to be checked against the thing it suppresses.**
+  The finished-reading nudge went silent once "a rating or review" existed —
+  written when the sheet's whole job was the stars, and never revisited when
+  "Write a review" became its primary button. A reader who rates a book halfway
+  through (the common case for anyone who rates at all) then finished it in
+  silence from every door at once, and the report read as "the timer doesn't
+  ask" (owner, 6 Sep 2026) — the 3 Sep fix that wired every door was correct
+  and invisible. Two things to do when a prompt "doesn't show": prove the door
+  with a test through the real screen *before* touching it (the timer test
+  passed unchanged, which is what pointed at the rule), and read the silence
+  rule as a claim — "has the reader already said their piece?" — and ask
+  whether the evidence it checks actually says that. A rating is not a review.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

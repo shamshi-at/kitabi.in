@@ -1522,6 +1522,12 @@ abstract class AppLocalizations {
   /// **'How was it? Tap a star to rate, or write a few words.'**
   String get reviewFinishedSubtitle;
 
+  /// Subtitle under the finished-reading popup's title when the reader already rated the book before finishing it
+  ///
+  /// In en, this message translates to:
+  /// **'You rated it {stars} while reading. Change it, or write a few words about the whole book.'**
+  String reviewFinishedSubtitleRated(String stars);
+
   /// Primary button on the finished-reading popup that opens the full review editor
   ///
   /// In en, this message translates to:

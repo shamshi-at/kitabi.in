@@ -818,6 +818,8 @@
   "@reviewFinishedTitle": {"description": "Title of the popup shown after marking a book as read, inviting a rating/review"},
   "reviewFinishedSubtitle": "How was it? Tap a star to rate, or write a few words.",
   "@reviewFinishedSubtitle": {"description": "Subtitle under the finished-reading popup's title"},
+  "reviewFinishedSubtitleRated": "You rated it {stars} while reading. Change it, or write a few words about the whole book.",
+  "@reviewFinishedSubtitleRated": {"description": "Subtitle under the finished-reading popup's title when the reader already rated the book before finishing it", "placeholders": {"stars": {"type": "String", "example": "★★★★"}}},
   "reviewFinishedAction": "Write a review",
   "@reviewFinishedAction": {"description": "Primary button on the finished-reading popup that opens the full review editor"},
   "reviewFinishedSkip": "Not now",

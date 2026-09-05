@@ -362,7 +362,9 @@ void main() {
     await settle(tester);
     expect(find.text('Rate & review'), findsOneWidget);
 
-    // Rate the book, then re-mark read — no prompt the second time.
+    // Rate the book, then re-mark read — a rating alone still asks for the
+    // words, with the stars already lit (owner report, 6 Sep 2026: a book
+    // rated mid-read was finished in silence).
     await tester.runAsync(() async {
       final ratings = RatingsRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
       await ratings.setRating(_workId, 5);
@@ -373,6 +375,22 @@ void main() {
     // mid-flight here — its exiting tree briefly overlaps the status card's
     // hit-test region — so give it real time to fully finish before the next
     // tap, same reasoning as the snackbar wait this replaced.
+    await tester.pump(const Duration(milliseconds: 500));
+    await settle(tester);
+    await changeStatus('Reading');
+    await changeStatus('Read');
+
+    expect(find.text('You finished it!'), findsOneWidget);
+    expect(find.textContaining('You rated it ★★★★★'), findsOneWidget);
+    await tester.tap(find.text('Not now'));
+    await settle(tester);
+
+    // Write the review, then re-mark read — the reader has said their piece,
+    // so no prompt the third time.
+    await tester.runAsync(() async {
+      final reviews = ReviewsRepository(db, const SessionContext(userId: 'u1', deviceId: 'd1'));
+      await reviews.upsert(_workId, body: 'Said my piece.', visible: true);
+    });
     await tester.pump(const Duration(milliseconds: 500));
     await settle(tester);
     await changeStatus('Reading');

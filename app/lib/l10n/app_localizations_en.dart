@@ -888,6 +888,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'How was it? Tap a star to rate, or write a few words.';
 
   @override
+  String reviewFinishedSubtitleRated(String stars) {
+    return 'You rated it $stars while reading. Change it, or write a few words about the whole book.';
+  }
+
+  @override
   String get reviewFinishedAction => 'Write a review';
 
   @override
