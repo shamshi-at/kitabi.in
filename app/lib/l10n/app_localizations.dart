@@ -5866,6 +5866,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open the share sheet. Try again.'**
   String get shareFailed;
 
+  /// Snackbar shown when a share card image could not be captured and only its caption/link was handed to the share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t render the card, so the text was shared instead.'**
+  String get shareCardFallback;
+
   /// Title of the period-card share sheet
   ///
   /// In en, this message translates to:

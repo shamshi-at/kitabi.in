@@ -19,9 +19,16 @@ import '../../../core/widgets/net_image.dart';
 /// image the reader watched being composed must be the thing that arrives;
 /// the words ride the clipboard, one paste away.
 ///
-/// Falls back to sharing [text] alone if the capture fails. Shared by all
-/// three card sheets (period / book / entity) so the behaviour stays
-/// identical.
+/// Falls back to sharing [text] alone if the capture fails — and *says so*.
+/// The fallback used to be silent, and that silence hid a bug for two release
+/// cycles: the readiness check read `RenderObject.debugNeedsPaint`, whose
+/// value is assigned only inside an `assert`, so in a **release** build the
+/// getter throws `LateInitializationError` on every call. Every card share
+/// on every reader's phone went down the text-only branch, while debug runs
+/// and the whole widget suite rasterised happily (owner report, 6 Sep 2026 —
+/// "only the text is getting shared", the second time in the same words).
+/// Shared by all three card sheets (period / book / entity) so the behaviour
+/// stays identical.
 Future<void> captureAndShareCard({
   required BuildContext context,
   required GlobalKey cardKey,
@@ -32,29 +39,8 @@ Future<void> captureAndShareCard({
   final messenger = ScaffoldMessenger.of(context);
   final origin = _originRect(context);
   try {
-    // Let the current frame finish painting before we rasterise — capturing
-    // mid-paint is the usual cause of a blank/failed card grab on device.
-    await WidgetsBinding.instance.endOfFrame;
-    final boundary = cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null || boundary.debugNeedsPaint) {
-      throw StateError('share card not ready');
-    }
-    // Scale the capture off the preview's *logical* size so the output is at
-    // least [targetWidthPx] wide — the Story preview is ~168 logical px, and
-    // a fixed 3x ratio shipped a 504px image to a 1080×1920 Instagram story
-    // (ux-review 2026-07-28). Floor of 3x so small previews never regress.
-    final logicalWidth = boundary.size.width;
-    final pixelRatio = logicalWidth > 0 ? math.max(3.0, targetWidthPx / logicalWidth) : 3.0;
-    final image = await boundary.toImage(pixelRatio: pixelRatio);
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    if (bytes == null) {
-      throw StateError('could not encode card');
-    }
-    final file = XFile.fromData(
-      bytes.buffer.asUint8List(),
-      name: 'kitabi.png',
-      mimeType: 'image/png',
-    );
+    final png = await captureCardPng(cardKey, targetWidthPx: targetWidthPx);
+    final file = XFile.fromData(png, name: 'kitabi.png', mimeType: 'image/png');
     // Clipboard first, share second — copying after the share sheet opens is
     // exactly when iOS may suspend us. Best-effort: a clipboard hiccup must
     // not cost the reader the share itself.
@@ -65,13 +51,54 @@ Future<void> captureAndShareCard({
       } catch (_) {}
     }
     await Share.shareXFiles([file], sharePositionOrigin: origin);
-  } catch (_) {
-    // If the image capture/share fails for any reason, still share the link.
+  } catch (err, stack) {
+    // If the image capture/share fails for any reason, still share the text —
+    // but never quietly: a fallback nobody can see is a bug nobody reports.
+    FlutterError.reportError(FlutterErrorDetails(
+      exception: err,
+      stack: stack,
+      library: 'kitabi share',
+      context: ErrorDescription('capturing a share card'),
+    ));
+    messenger.showSnackBar(SnackBar(content: Text(l10n.shareCardFallback)));
     try {
       await Share.share(text, sharePositionOrigin: origin);
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.shareFailed)));
     }
+  }
+}
+
+/// Rasterise the `RepaintBoundary` behind [cardKey] to PNG bytes, at least
+/// [targetWidthPx] wide. Throws when the boundary isn't in the tree or the
+/// image can't be encoded. Split from the share so a test can prove the
+/// capture itself — the half that broke — without a share plugin.
+///
+/// Deliberately reads **no `debug*` getter**: in a release build
+/// `debugNeedsPaint` throws rather than answering (see [captureAndShareCard]),
+/// and every other `debug*` on `RenderObject` is a debug-mode-only contract
+/// too. Readiness is `endOfFrame` plus an attached, laid-out boundary.
+Future<Uint8List> captureCardPng(GlobalKey cardKey, {double targetWidthPx = 1080}) async {
+  // Let the current frame finish painting before we rasterise — capturing
+  // mid-paint is the usual cause of a blank/failed card grab on device.
+  await WidgetsBinding.instance.endOfFrame;
+  final boundary = cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+  if (boundary == null || !boundary.attached || !boundary.hasSize) {
+    throw StateError('share card not ready');
+  }
+  // Scale the capture off the preview's *logical* size so the output is at
+  // least [targetWidthPx] wide — the Story preview is ~168 logical px, and
+  // a fixed 3x ratio shipped a 504px image to a 1080×1920 Instagram story
+  // (ux-review 2026-07-28). Floor of 3x so small previews never regress.
+  final logicalWidth = boundary.size.width;
+  final pixelRatio = logicalWidth > 0 ? math.max(3.0, targetWidthPx / logicalWidth) : 3.0;
+  final image = await boundary.toImage(pixelRatio: pixelRatio);
+  try {
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (bytes == null) throw StateError('could not encode card');
+    return bytes.buffer.asUint8List();
+  } finally {
+    image.dispose();
   }
 }
 

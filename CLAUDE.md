@@ -1197,6 +1197,22 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   rule as a claim — "has the reader already said their piece?" — and ask
   whether the evidence it checks actually says that. A rating is not a review.
 
+- **`debug*` getters on render objects are debug-mode contracts — in a release
+  build some of them *throw* rather than answer.** `RenderObject.debugNeedsPaint`
+  is `late bool result; assert(() { result = _needsPaint; return true; }());
+  return result;` — the assert body never runs in release, so the getter dies
+  with `LateInitializationError` on every call. `captureAndShareCard` used it as
+  a readiness check, inside a `try` whose fallback shared the caption as text,
+  so every share card on every reader's phone left as words while every debug
+  run and the whole widget suite rasterised fine (owner report, 6 Sep 2026 —
+  the *second* "only the text is getting shared", after the 26 Aug fix had
+  correctly stopped passing text alongside the image). Two rules: nothing on a
+  production code path reads a `debug*` member (`share_card_capture_test.dart`
+  greps the capture file for exactly that, because a debug-mode test cannot
+  fail the way the phone does), and a fallback must be *visible* — report the
+  error through `FlutterError` and tell the reader what happened, or the
+  fallback becomes the feature and nobody knows.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

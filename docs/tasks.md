@@ -718,6 +718,14 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       spinner + one line inside the empty field (`FormTextField.loading`) and the
       scan link disabled until that call settles. `blurb_loader_test.dart` holds
       the call open on a completer to look at the gap
+- [x] **Share cards ship as images in release builds** (6 Sep 2026) — every card
+      share (period / book / entity) fell to the text-only fallback on real phones:
+      `captureAndShareCard` gated on `RenderObject.debugNeedsPaint`, which throws in
+      release, and the fallback was silent. Capture is `captureCardPng` now (no
+      `debug*` getter, image disposed), the fallback reports through `FlutterError`
+      and a snackbar, and `share_card_capture_test.dart` mocks the share channel to
+      assert a PNG file is what leaves — plus a source guard, since a debug-mode
+      harness can never reproduce the release failure itself
 
 ## Phase 7 — Recommendations & share
 

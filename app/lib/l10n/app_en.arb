@@ -3039,6 +3039,8 @@
   "shareTextOnClipboard": "Caption copied — paste it alongside the card.",
   "@shareTextOnClipboard": {"description": "Snackbar when sharing a card: the image goes to the share sheet, the caption/link rides the clipboard (WhatsApp drops one of the two when handed both)"},
   "shareFailed": "Couldn't open the share sheet. Try again.",
+  "shareCardFallback": "Couldn't render the card, so the text was shared instead.",
+  "@shareCardFallback": {"description": "Snackbar shown when a share card image could not be captured and only its caption/link was handed to the share sheet"},
   "@shareFailed": {"description": "Snackbar when the OS share sheet fails to open"},
 
   "insightsShareSheetTitle": "Share your reading",

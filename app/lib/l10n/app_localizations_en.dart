@@ -3599,6 +3599,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareFailed => 'Couldn\'t open the share sheet. Try again.';
 
   @override
+  String get shareCardFallback =>
+      'Couldn\'t render the card, so the text was shared instead.';
+
+  @override
   String get insightsShareSheetTitle => 'Share your reading';
 
   @override
