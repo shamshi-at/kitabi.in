@@ -712,6 +712,12 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       with its stars already lit and a subtitle that says so. The existence check
       fails open, and the sheet scrolls instead of overflowing on a short screen.
       `timer_finish_review_prompt_test.dart` drives the real timer end to end
+- [x] **A loader inside the Description field while the blurb is still coming**
+      (6 Sep 2026) — the identity half of a cover read lands in a second and the
+      overlay drops, but the blurb can take ten more; `_readingBlurb` keeps a
+      spinner + one line inside the empty field (`FormTextField.loading`) and the
+      scan link disabled until that call settles. `blurb_loader_test.dart` holds
+      the call open on a completer to look at the gap
 
 ## Phase 7 — Recommendations & share
 
