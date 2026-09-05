@@ -234,6 +234,15 @@ class _BookFormState extends ConsumerState<_BookForm> {
   bool _scanning = false;
   bool _extracting = false;
 
+  /// The blurb half of a cover read is still in flight. Distinct from
+  /// [_extracting], which is dropped the moment the identity fields land so
+  /// the reader isn't held behind a paragraph — but with nothing left on
+  /// screen to say the paragraph was still coming, an empty Description read
+  /// as "found nothing" for the ten or so seconds a Malayalam blurb takes
+  /// (owner request, 6 Sep 2026). This keeps a loader inside the field until
+  /// that call settles, one way or the other.
+  bool _readingBlurb = false;
+
   // The genre vocabulary behind the row (M10/M11). `_readerGenres` is the
   // reader's own, commonest first, read from their shelves; `_catalogueGenres`
   // is every genre in the catalogue with its work count. Both load in the
@@ -1390,7 +1399,10 @@ class _BookFormState extends ConsumerState<_BookForm> {
     // Read before the awaits: the blurb lands frames later, and a `ref` read
     // after an await is a read on a widget that may be gone.
     final api = ref.read(apiClientProvider);
-    setState(() => _extracting = true);
+    setState(() {
+      _extracting = true;
+      _readingBlurb = true;
+    });
 
     // Both halves leave together, so the blurb is already being transcribed
     // while the reader reads the title.
@@ -1413,9 +1425,13 @@ class _BookFormState extends ConsumerState<_BookForm> {
           ),
         ),
       );
+      // The blurb is not applied after a failed identity read, so its loader
+      // must not outlive the read either.
+      if (mounted) setState(() => _readingBlurb = false);
       return false;
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.formExtractFailed)));
+      if (mounted) setState(() => _readingBlurb = false);
       return false;
     } finally {
       // Dropped as soon as the identity fields are in — the reader is not kept
@@ -1425,7 +1441,12 @@ class _BookFormState extends ConsumerState<_BookForm> {
 
     // …and the blurb behind them. Never throws (see startCoverExtract).
     if (!mounted) return true;
-    if (_applyExtracted(await parts.description)) filled = true;
+    final blurb = await parts.description;
+    if (!mounted) return true;
+    // Cleared in the same frame the text lands, so the loader never sits over
+    // the paragraph it was waiting for — and cleared on an empty answer too.
+    setState(() => _readingBlurb = false);
+    if (_applyExtracted(blurb)) filled = true;
     // Said only once both halves have settled: a read that found no title but
     // did find a blurb has not "found nothing".
     if (mounted && !filled) {
@@ -2647,18 +2668,21 @@ class _BookFormState extends ConsumerState<_BookForm> {
                           maxLines: 4,
                           helper: l10n.formDescriptionHelp,
                           expandable: true,
+                          loading: _readingBlurb,
                           // Read the blurb (and the printed type) straight off
                           // the back cover — a link beside the field it fills,
                           // not a button lost among the covers.
                           labelAction: InkWell(
-                            onTap: (_extracting || _uploadingBack) ? null : _scanBackCover,
+                            onTap: (_extracting || _uploadingBack || _readingBlurb)
+                                ? null
+                                : _scanBackCover,
                             borderRadius: BorderRadius.circular(6),
                             child: Padding(
                               padding: EdgeInsets.fromLTRB(8, 2, 4, 2),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  (_extracting || _uploadingBack)
+                                  (_extracting || _uploadingBack || _readingBlurb)
                                       ? SizedBox(
                                           width: 12,
                                           height: 12,

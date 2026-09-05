@@ -2923,6 +2923,8 @@
   "formFillFromPhotos": "Fill in from photos",
   "@formFillFromPhotos": {"description": "Button under the cover slots: read title/author/publisher/blurb off the photographed covers and prefill the empty fields"},
   "formScanBackCover": "Scan back cover",
+  "formBlurbReading": "Reading the blurb from your cover…",
+  "@formBlurbReading": {"description": "Shown inside the empty Description field while the back-cover text is still being transcribed by the extraction call"},
   "@formScanBackCover": {"description": "Button under the cover slots: photograph the book's back cover to read its blurb (description) and type, and prefill the empty fields"},
   "formSimilarHeader": "Already in the catalogue?",
   "@formSimilarHeader": {"description": "Header of the quiet duplicate-suggestions panel under the title field on the add-book form"},

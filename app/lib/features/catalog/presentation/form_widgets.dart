@@ -283,10 +283,19 @@ class FormTextField extends StatelessWidget {
     this.expandable = false,
     this.labelAction,
     this.focusNode,
+    this.loading = false,
   });
 
   final String label;
   final TextEditingController controller;
+
+  /// Something is on its way into this field — the Description while the
+  /// back-cover blurb is still being transcribed. While the field is empty a
+  /// quiet spinner and a line sit inside it, so the reader knows the wait is
+  /// the network and not a form that found nothing (owner request,
+  /// 6 Sep 2026). Typed text is never covered: once there is anything in the
+  /// field the indicator steps aside.
+  final bool loading;
 
   /// So a caller can put the cursor here — "Create another" reopens the form
   /// at the top with the title waiting, rather than leaving the reader to
@@ -368,28 +377,40 @@ class FormTextField extends StatelessWidget {
           ],
         ),
         SizedBox(height: 4),
-        TextFormField(
-          textCapitalization: TextCapitalization.sentences,
-          controller: controller,
-          focusNode: focusNode,
-          validator: validator,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: fillColor ?? AppColors.card,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppColors.line),
+        Stack(
+          children: [
+            TextFormField(
+              textCapitalization: TextCapitalization.sentences,
+              controller: controller,
+              focusNode: focusNode,
+              validator: validator,
+              keyboardType: keyboardType,
+              maxLines: maxLines,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+              decoration: InputDecoration(
+                isDense: true,
+                filled: true,
+                fillColor: fillColor ?? AppColors.card,
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.line),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.line),
+                ),
+              ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: AppColors.line),
-            ),
-          ),
+            if (loading && controller.text.isEmpty)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Center(
+                    child: FieldLoadingNotice(label: l10n.formBlurbReading),
+                  ),
+                ),
+              ),
+          ],
         ),
         if (helper != null)
           Padding(
@@ -399,6 +420,34 @@ class FormTextField extends StatelessWidget {
               style: TextStyle(fontSize: 11, color: AppColors.inkSoft, height: 1.25),
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// The "still on its way" notice a [FormTextField] shows inside itself while
+/// [FormTextField.loading] holds and nothing has been typed: a small oxblood
+/// spinner and one quiet line. Its own widget so a test can find it by type.
+class FieldLoadingNotice extends StatelessWidget {
+  const FieldLoadingNotice({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.oxblood),
+        ),
+        SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: AppColors.inkSoft, fontStyle: FontStyle.italic),
+        ),
       ],
     );
   }

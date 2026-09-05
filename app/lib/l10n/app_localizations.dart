@@ -5590,6 +5590,12 @@ abstract class AppLocalizations {
   /// **'Scan back cover'**
   String get formScanBackCover;
 
+  /// Shown inside the empty Description field while the back-cover text is still being transcribed by the extraction call
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the blurb from your cover…'**
+  String get formBlurbReading;
+
   /// Header of the quiet duplicate-suggestions panel under the title field on the add-book form
   ///
   /// In en, this message translates to:

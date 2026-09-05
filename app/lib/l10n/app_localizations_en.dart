@@ -3444,6 +3444,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formScanBackCover => 'Scan back cover';
 
   @override
+  String get formBlurbReading => 'Reading the blurb from your cover…';
+
+  @override
   String get formSimilarHeader => 'Already in the catalogue?';
 
   @override
