@@ -209,14 +209,23 @@ async def find_candidates(db: AsyncSession, kind: str) -> list[Candidate]:
     approving one merge would keep re-proposing it forever.
     """
     model = MODELS[kind]
+    # Only the columns the matchers and pick_survivor read, as plain rows — not
+    # ORM instances. This runs hourly over every author and publisher
+    # (merge_exact job), and a full author row is ~700 bytes of bio, image URL
+    # and search columns against ~120 for these four; Supabase meters the
+    # bytes out, and the difference was a steady 20 MB a day for nothing
+    # (7 Sep 2026). Plain rows rather than `load_only` because a partially
+    # loaded instance would sit in the session's identity map, and the
+    # `merge()` that follows would get *that* back from `db.get` and trip
+    # MissingGreenlet on the first deferred column it carries over.
     rows = list(
         (
             await db.execute(
-                select(model).where(model.deleted_at.is_(None), model.merged_into_id.is_(None))
+                select(model.id, model.name, model.name_fold, model.created_at).where(
+                    model.deleted_at.is_(None), model.merged_into_id.is_(None)
+                )
             )
-        )
-        .scalars()
-        .all()
+        ).all()
     )
     counts = await _counts(db, kind, [r.id for r in rows])
     dismissed = await _dismissed_pairs(db, kind)

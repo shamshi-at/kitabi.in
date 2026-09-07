@@ -109,6 +109,17 @@ def database_url() -> str:
         subprocess.run(["docker", "rm", "-f", CONTAINER], capture_output=True)
 
 
+@pytest.fixture(autouse=True)
+def _fresh_ttl_cache():
+    """The public pages are memoised process-wide (app/core/ttl_cache.py);
+    a test that seeds a book must not be served the previous test's page."""
+    from app.core import ttl_cache
+
+    ttl_cache.clear()
+    yield
+    ttl_cache.clear()
+
+
 @pytest.fixture
 async def db_sessionmaker(database_url):
     engine = create_async_engine(database_url, poolclass=NullPool)

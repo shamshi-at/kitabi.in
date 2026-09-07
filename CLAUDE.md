@@ -1229,6 +1229,26 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   reader is still at a boot-gate screen. Corollary: `bootstrap_gate_test.dart`
   had its own copy of the gate rule and stayed green while the real one
   misbehaved — a test of a rule imports the rule.
+- **A quota is the one limit that reports itself a billing cycle late, and the
+  obvious suspect is usually the wrong one — measure before cutting.** Supabase
+  egress ran to 5.75 GB of 5 GB (7 Sep 2026). The nightly `pg_dump` and the
+  covers bucket were the first two guesses; `pg_stat_statements` on production
+  answered in a minute: the dump moves ~3 MB (the 30 MB database is indexes),
+  the bucket's object lookups numbered ~17,000 in two months, and the API had
+  made 5 million calls. Every render of the public home/browse/hub pages ran
+  the same facet counts and page queries — ~3,700 renders a day, because
+  faceted browse is combinatorial and `noindex, follow` stops indexing, not
+  fetching. Three corollaries. **A per-device or per-data-centre cache bounds
+  that device's cost, never the origin's**: the app's disk cache, the edge's
+  Cache API and Cloudflare's free-tier eviction all sat in front of a metered
+  origin and none of them capped what it sent — the bound has to live where
+  the meter is (`app/core/ttl_cache.py`, one computation per key per TTL).
+  **`select(model)` is a row's every column**: the hourly merge job read four
+  fields off ~700-byte author rows, 25 MB a day; selecting those columns as
+  plain rows fixed it (`load_only` did not — the partial instances sat in the
+  identity map and the following `merge()` tripped `MissingGreenlet`). And
+  **"reduce the backup" would have cost restore granularity for under 2% of
+  the overage** — the first fix reached for was the one the numbers ruled out.
 
 ## Open decisions
 

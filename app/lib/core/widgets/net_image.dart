@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:kitabi/core/widgets/image_proxy.dart';
 
 /// One disk cache for every remote image in the app (covers, portraits,
 /// logos). `Image.network` only has the in-memory cache, so covers scrolled
@@ -16,6 +17,12 @@ final kitabiImageCache = CacheManager(
 );
 
 /// Drop-in for `Image.network` that reads/writes [kitabiImageCache].
+///
+/// Bucket and OpenLibrary URLs are fetched through kitabi.in's edge cache
+/// ([proxiedImageUrl]) so a cover costs Supabase egress once per edge, not once
+/// per install. The rewrite happens here, at the one place every remote image
+/// passes through, and nowhere else — the URL a caller holds stays the
+/// original.
 Widget netImage(
   String url, {
   double? width,
@@ -25,7 +32,7 @@ Widget netImage(
   Widget Function(BuildContext, Object, StackTrace?)? errorBuilder,
 }) {
   return CachedNetworkImage(
-    imageUrl: url,
+    imageUrl: proxiedImageUrl(url),
     cacheManager: kitabiImageCache,
     width: width,
     height: height,
@@ -54,4 +61,4 @@ Widget netImage(
 /// Drop-in for `NetworkImage` (avatars via `foregroundImage`,
 /// `DecorationImage`, `precacheImage`) backed by the same disk cache.
 ImageProvider netImageProvider(String url) =>
-    CachedNetworkImageProvider(url, cacheManager: kitabiImageCache);
+    CachedNetworkImageProvider(proxiedImageUrl(url), cacheManager: kitabiImageCache);

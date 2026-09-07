@@ -8,6 +8,13 @@
 // fix. Proxying puts them on our origin, behind Cloudflare's cache, fetched
 // from the source at most once per edge location per month.
 //
+// Since 7 Sep 2026 the mobile app fetches every remote image through here as
+// well (`app/lib/core/widgets/image_proxy.dart`), because the Supabase bucket
+// meters every byte out and each fresh install used to pull the whole catalogue
+// of covers from it. That makes this function part of the app's critical path:
+// its allowlist and the app's must agree, and only GET is answered — the app
+// only ever issues GET.
+//
 // ⚠️ THE ALLOWLIST IS THE WHOLE SECURITY MODEL. An image proxy that will fetch
 // any URL is an open proxy: it launders traffic through our domain, lets
 // someone serve arbitrary bytes from kitabi.in, and turns the edge into an

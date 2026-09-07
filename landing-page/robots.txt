@@ -32,6 +32,16 @@
 
 User-agent: *
 Allow: /
+# Faceted browse and search are `noindex, follow` already — they explode
+# combinatorially and the hubs (/genre/…, /language/…, /translations) are the
+# canonical entry points, all in the sitemaps. noindex does not stop the
+# fetching, though: a crawler still renders every filter combination to read
+# the tag, then follows the chips into the next one. That walk was ~3,700
+# origin renders a day, each a set of Supabase queries whose bytes out are
+# metered (7 Sep 2026). Bare /browse and /search stay open; only the
+# parameterised forms are closed.
+Disallow: /browse?
+Disallow: /search?
 
 Sitemap: https://kitabi.in/sitemap.xml
 Sitemap: https://kitabi.in/sitemaps/index.xml

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/haptics.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/image_proxy.dart';
 import '../../../core/widgets/net_image.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/database.dart';
@@ -246,7 +247,7 @@ class _PromoImage extends StatelessWidget {
       height: 132,
       width: double.infinity,
       child: CachedNetworkImage(
-        imageUrl: promo.imageUrl!,
+        imageUrl: proxiedImageUrl(promo.imageUrl!),
         fit: BoxFit.cover,
         // No grey box on failure: an image that 404s months after the campaign
         // was written must degrade to the text shape, not to a hole.

@@ -14,6 +14,7 @@ from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core import ttl_cache
 from app.core.config import get_settings
 from app.models import (
     Author,
@@ -509,7 +510,25 @@ async def series_page(db: AsyncSession, key: str) -> P.SeriesPage | None:
 # --------------------------------------------------------------------------
 
 
+# How long a facet count or a rendered page payload may be served from memory
+# (app/core/ttl_cache.py). Ten minutes: every render of home, browse and the
+# hubs used to run these against Supabase, ~3,700 times a day, and the bytes
+# out are what the free tier meters. A catalogue edit is on the site within
+# this plus the edge's own window.
+FACET_TTL = 600
+PAGE_TTL = 600
+# Every key this module writes starts with this, so a write path that wants
+# the public site fresh immediately can `ttl_cache.invalidate_prefix(PUBLIC_CACHE_PREFIX)`.
+PUBLIC_CACHE_PREFIX = "public:"
+
+
 async def _counts(db: AsyncSession) -> tuple[int, int, int]:
+    return await ttl_cache.get_or_compute(
+        f"{PUBLIC_CACHE_PREFIX}counts", FACET_TTL, lambda: _counts_uncached(db)
+    )
+
+
+async def _counts_uncached(db: AsyncSession) -> tuple[int, int, int]:
     async def n(model: type) -> int:
         return int(
             await db.scalar(
@@ -522,6 +541,12 @@ async def _counts(db: AsyncSession) -> tuple[int, int, int]:
 
 
 async def _language_counts(db: AsyncSession) -> list[P.LanguageCount]:
+    return await ttl_cache.get_or_compute(
+        f"{PUBLIC_CACHE_PREFIX}language_counts", FACET_TTL, lambda: _language_counts_uncached(db)
+    )
+
+
+async def _language_counts_uncached(db: AsyncSession) -> list[P.LanguageCount]:
     rows = (
         await db.execute(
             select(Work.language, func.count())
@@ -537,6 +562,12 @@ async def _language_counts(db: AsyncSession) -> list[P.LanguageCount]:
 
 
 async def _genre_counts(db: AsyncSession) -> list[P.GenreCount]:
+    return await ttl_cache.get_or_compute(
+        f"{PUBLIC_CACHE_PREFIX}genre_counts", FACET_TTL, lambda: _genre_counts_uncached(db)
+    )
+
+
+async def _genre_counts_uncached(db: AsyncSession) -> list[P.GenreCount]:
     rows = await catalog_service.catalog_genres(db)
     return [
         P.GenreCount(name=name, slug=slug_service.slugify(name) or name.lower(), count=count)
@@ -545,6 +576,12 @@ async def _genre_counts(db: AsyncSession) -> list[P.GenreCount]:
 
 
 async def _form_counts(db: AsyncSession) -> list[P.GenreCount]:
+    return await ttl_cache.get_or_compute(
+        f"{PUBLIC_CACHE_PREFIX}form_counts", FACET_TTL, lambda: _form_counts_uncached(db)
+    )
+
+
+async def _form_counts_uncached(db: AsyncSession) -> list[P.GenreCount]:
     rows = (
         await db.execute(
             select(Work.form, func.count())
@@ -586,6 +623,12 @@ async def _translation_pairs(db: AsyncSession, limit: int = 4) -> list[P.Transla
 
 
 async def home_page(db: AsyncSession) -> P.HomePage:
+    return await ttl_cache.get_or_compute(
+        f"{PUBLIC_CACHE_PREFIX}home", PAGE_TTL, lambda: _home_page(db)
+    )
+
+
+async def _home_page(db: AsyncSession) -> P.HomePage:
     recent = await catalog_service.browse_works(db, 8, 0, sort="year_desc")
     top = list(
         (
@@ -637,6 +680,22 @@ async def _match_name(db: AsyncSession, options: list, slug: str) -> str | None:
 
 
 async def hub_page(
+    db: AsyncSession,
+    kind: str,
+    slug: str,
+    *,
+    form_slug: str | None = None,
+    page: int = 1,
+    per_page: int = 24,
+) -> P.HubPage | None:
+    return await ttl_cache.get_or_compute(
+        f"{PUBLIC_CACHE_PREFIX}hub:{kind}:{slug}:{form_slug}:{page}:{per_page}",
+        PAGE_TTL,
+        lambda: _hub_page(db, kind, slug, form_slug=form_slug, page=page, per_page=per_page),
+    )
+
+
+async def _hub_page(
     db: AsyncSession,
     kind: str,
     slug: str,
@@ -714,6 +773,37 @@ async def count_works(
 
 
 async def browse_page(
+    db: AsyncSession,
+    *,
+    languages: list[str] | None = None,
+    form: str | None = None,
+    genre: str | None = None,
+    length: str | None = None,
+    sort: str = "title",
+    page: int = 1,
+    per_page: int = 24,
+) -> P.BrowsePage:
+    key = (
+        f"{PUBLIC_CACHE_PREFIX}browse:{','.join(sorted(languages or []))}:{form}:{genre}:"
+        f"{length}:{sort}:{page}:{per_page}"
+    )
+    return await ttl_cache.get_or_compute(
+        key,
+        PAGE_TTL,
+        lambda: _browse_page(
+            db,
+            languages=languages,
+            form=form,
+            genre=genre,
+            length=length,
+            sort=sort,
+            page=page,
+            per_page=per_page,
+        ),
+    )
+
+
+async def _browse_page(
     db: AsyncSession,
     *,
     languages: list[str] | None = None,
