@@ -15,6 +15,8 @@ import 'package:kitabi/features/library/providers/reading_timer_providers.dart';
 import 'package:kitabi/features/library/presentation/session_page_entry.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
+import 'support/pump_until.dart';
+
 const _editionId = '44444444-4444-4444-4444-444444444444';
 
 /// The API as it behaves on a real phone: taking the sitting off the account
@@ -115,13 +117,19 @@ void main() {
         routerConfig: router,
       ),
     ));
-    await settle();
+    await pumpUntilFound(tester, find.text('open the timer'));
     await tester.tap(find.text('open the timer'));
-    await settle();
-    expect(find.text('Stop & log'), findsOneWidget);
+    await pumpUntilFound(tester, find.text('Stop & log'), reason: 'the timer to open');
 
     await tester.tap(find.text('Stop & log'));
-    await settle();
+    // Waited for, not counted out: the stop publishes to the reader's other
+    // devices first, and a fixed frame budget that clears that round trip here
+    // does not clear it on a slower machine (app-ci, red from 5 Sep 2026).
+    await pumpUntilFound(
+      tester,
+      find.byType(SessionPageEntry),
+      reason: 'the wax-seal face, which is where the page question lives',
+    );
 
     // Assert on the router, not on rendering: a popped route stays in the tree
     // while its transition plays, so `find.byType` still turns the screen up

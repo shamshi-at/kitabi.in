@@ -15,6 +15,8 @@ import 'package:kitabi/features/library/presentation/reading_timer_screen.dart';
 import 'package:kitabi/features/library/providers/reading_timer_providers.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
+import 'support/pump_until.dart';
+
 const _editionId = '66666666-6666-6666-6666-666666666666';
 
 class _SlowApi extends ApiClient {
@@ -106,15 +108,16 @@ void main() {
         routerConfig: router,
       ),
     ));
-    await _settle(tester);
+    await pumpUntilFound(tester, find.text('Stop & log'),
+        reason: 'the notification to open the timer');
 
-    expect(find.text('Stop & log'), findsOneWidget, reason: 'the notification opens the timer');
     await tester.tap(find.text('Stop & log'));
-    await _settle(tester);
-    expect(find.textContaining('I finished the book'), findsOneWidget);
+    await pumpUntilFound(tester, find.textContaining('I finished the book'),
+        reason: 'the wax-seal face');
 
     await tester.tap(find.textContaining('I finished the book'));
-    await _settle(tester);
+    await pumpUntilFound(tester, find.byType(FinishedReviewSheet),
+        reason: 'the review nudge');
 
     // The timer has been left — by `go`, since there was nothing to pop.
     expect(
@@ -129,13 +132,6 @@ void main() {
     expect(find.byType(FinishedReviewSheet), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
-    await _settle(tester);
+    await drainPendingTimers(tester);
   });
-}
-
-Future<void> _settle(WidgetTester tester) async {
-  for (var i = 0; i < 14; i++) {
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
-    await tester.pump(const Duration(milliseconds: 30));
-  }
 }

@@ -15,6 +15,8 @@ import 'package:kitabi/features/library/providers/reading_timer_providers.dart';
 import 'package:kitabi/features/share/presentation/period_share_card.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
+import 'support/pump_until.dart';
+
 const _editionId = '55555555-5555-5555-5555-555555555555';
 
 /// The daily card's new door (8 Sep 2026).
@@ -64,13 +66,6 @@ void main() {
     ]);
     addTearDown(container.dispose);
 
-    Future<void> settle([int frames = 10]) async {
-      for (var i = 0; i < frames; i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
-        await tester.pump(const Duration(milliseconds: 30));
-      }
-    }
-
     final router = GoRouter(
       initialLocation: '/stub',
       routes: [
@@ -104,18 +99,17 @@ void main() {
         routerConfig: router,
       ),
     ));
-    await settle();
+    await pumpUntilFound(tester, find.text('open the timer'));
     await tester.tap(find.text('open the timer'));
-    await settle();
+    await pumpUntilFound(tester, find.text('Stop & log'), reason: 'the timer to open');
     await tester.tap(find.text('Stop & log'));
-    await settle();
 
     // The door is on the face the reader is standing on.
     final door = find.text("Share today's reading");
-    expect(door, findsOneWidget);
+    await pumpUntilFound(tester, door, reason: "today's share door on the wax-seal face");
 
     await tester.tap(door);
-    await settle(14);
+    await pumpUntilFound(tester, find.byType(PeriodShareCard), reason: 'the share sheet');
 
     // ...and it opens the day's card, not an empty sheet. The sitting was
     // logged a moment ago, so the day is never "nothing to send" here.

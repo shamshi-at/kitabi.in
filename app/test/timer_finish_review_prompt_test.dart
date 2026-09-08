@@ -15,6 +15,8 @@ import 'package:kitabi/features/library/presentation/reading_timer_screen.dart';
 import 'package:kitabi/features/library/providers/reading_timer_providers.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 
+import 'support/pump_until.dart';
+
 const _editionId = '44444444-4444-4444-4444-444444444444';
 
 /// The API as it behaves on a real phone: taking the sitting off the account
@@ -113,14 +115,16 @@ void main() {
         routerConfig: router,
       ),
     ));
-    await _settle(tester);
+    await pumpUntilFound(tester, find.text('open the timer'));
     await tester.tap(find.text('open the timer'));
-    await _settle(tester);
-    expect(find.text('Stop & log'), findsOneWidget);
+    await pumpUntilFound(tester, find.text('Stop & log'), reason: 'the timer to open');
 
     await tester.tap(find.text('Stop & log'));
-    await _settle(tester);
-    expect(find.textContaining('I finished the book'), findsOneWidget);
+    await pumpUntilFound(
+      tester,
+      find.textContaining('I finished the book'),
+      reason: 'the wax-seal face',
+    );
 
     return (db: db, container: container, router: router, entryId: entryId!);
   }
@@ -136,7 +140,8 @@ void main() {
     final t = await openTimer(tester, currentPage: 100);
 
     await tester.tap(find.textContaining('I finished the book'));
-    await _settle(tester);
+    await pumpUntilFound(tester, find.byType(FinishedReviewSheet),
+        reason: 'the review nudge');
 
     // The timer has been left…
     expect(
@@ -172,7 +177,8 @@ void main() {
     await tester.enterText(field, '212');
     await _settle(tester);
     await tester.tap(find.text('Done'));
-    await _settle(tester);
+    await pumpUntilFound(tester, find.byType(FinishedReviewSheet),
+        reason: 'the review nudge');
 
     final entry = await tester.runAsync(() => t.db.libraryEntriesDao.getById(t.entryId));
     expect(entry!.status, 'read');
@@ -204,7 +210,8 @@ void main() {
     );
 
     await tester.tap(find.textContaining('I finished the book'));
-    await _settle(tester);
+    await pumpUntilFound(tester, find.byType(FinishedReviewSheet),
+        reason: 'the review nudge');
 
     expect(find.byType(FinishedReviewSheet), findsOneWidget);
     expect(find.text('You finished it!'), findsOneWidget);
@@ -235,11 +242,22 @@ void main() {
     );
 
     await tester.tap(find.textContaining('I finished the book'));
-    await _settle(tester);
+    // An *absence* can't be waited for, so wait for the thing that happens
+    // either way — the timer being left — and only then assert the silence.
+    // On the router, not on a finder: the route beneath a push stays in the
+    // tree, so `find.text('open the timer')` matches before anything has
+    // happened and the wait returns instantly (the same trap this file's other
+    // case names).
+    await pumpUntil(
+      tester,
+      () => t.router.routerDelegate.currentConfiguration.matches.last.matchedLocation == '/stub',
+      reason: 'the timer to be left behind',
+    );
 
     final entry = await tester.runAsync(() => t.db.libraryEntriesDao.getById(t.entryId));
     expect(entry!.status, 'read');
-    expect(find.byType(FinishedReviewSheet), findsNothing);
+    expect(find.byType(FinishedReviewSheet), findsNothing,
+        reason: 'a reader who has already said their piece is not asked again');
 
     await tester.pumpWidget(const SizedBox());
     await _settle(tester);
