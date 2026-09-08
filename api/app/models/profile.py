@@ -4,7 +4,7 @@ auth.users.id; cross-user and online-only, so not a syncable Layer-2 table."""
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -62,3 +62,24 @@ class Profile(Base):
     promotions_opt_out: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default="false"
     )
+
+    # "Anyone with the link can see this window of my reading" — the gate on
+    # /reader/<handle>/recap/<key> (8 Sep 2026). Its own flag rather than a
+    # reuse of `library_visible`: that one defaults false, so gating on it
+    # would leave the feature dead for almost everybody, and gating on nothing
+    # would publish a reader's month because they tapped Share. Off until the
+    # reader turns it on, and revocable from the profile screen — sharing a
+    # picture and publishing a page are two different acts of consent.
+    recaps_visible: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
+
+    # Minutes east of UTC on the device that last talked to us. Windows in this
+    # app are *local* calendar days (the app computes them in local time and
+    # names them in the recap key), the database stores UTC, and without the
+    # offset a late-night sitting lands in the wrong day on the shared page
+    # while sitting in the right one on the card the reader sent. Deliberately
+    # a fixed offset and not an IANA zone: it is exact for IST, wrong by an
+    # hour at a window edge for readers who observe DST, and an IANA name
+    # would cost a new dependency for that hour (rule 8).
+    utc_offset_minutes: Mapped[int | None] = mapped_column(Integer, default=None)

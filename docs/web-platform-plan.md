@@ -182,6 +182,7 @@ is SEO, spend the migration.
 | `/translations/<slug>` | A translation group as one page | ✅ | W9 |
 | `/list/<slug>` | Editorial list | ✅ | **W10** |
 | `/reader/<username>` | Public reader profile | ✅ if opted-in | W12 |
+| `/reader/<username>/recap/<key>` | **Shared reading recap** — a window of one reader's reading, the page behind a share card | ❌ `noindex` **+ robots Disallow** | — |
 | `/browse?…` | Faceted browse | ❌ `noindex, follow` | W6b |
 | `/search?q=` | Search results | ❌ `noindex, follow` | **W2** |
 | `/isbn/<isbn>` | **ISBN address** — either form | 301 → `/book/<slug>` | — |
@@ -192,6 +193,23 @@ Facet combinations explode; only the canonical hubs (`/genre/x`,
 `/browse` is `noindex, follow` so crawlers still walk the links without
 indexing 4,000 near-duplicate filter pages. This is the single most common way
 catalog sites get themselves demoted.
+
+**Recaps are the one family that gets a robots `Disallow` rather than only a
+`noindex`** (added 8 Sep 2026 with the feature). Two reasons, and the second is
+the one that matters: a page one reader sent to their friends does not belong in
+a search index at all, and `<key>` is an *infinite* key space — every day, week,
+month, year and trailing window since 2000. `noindex` stops indexing, not
+fetching, and a crawler walking a combinatorial space is exactly what turned a
+3 MB catalogue into 5.75 GB of metered egress in a billing cycle (§11, 7 Sep
+2026). The API's key parser is strict for the same reason: six shapes, bounded
+years, everything else 404s, so the answerable space is finite by construction.
+
+The link is **derived**, not minted — `kitabi.in/reader/<handle>/recap/<key>`
+follows from the reader's handle and the window, so the app can print it on a
+card with no network at all. That makes it guessable, so the protection is a
+gate and not the URL: `profiles.recaps_visible`, off by default, its own flag
+beside `profile_visible` and `library_visible` (rule 16). Sharing a picture and
+publishing a page are two different acts of consent.
 
 ### 4.3 Keeping the old URLs alive
 

@@ -186,6 +186,29 @@ async def reader(username: str, db: DbSession, response: Response) -> P.ReaderPa
     return result
 
 
+@router.get("/reader/{username}/recap/{key}", response_model=P.ReaderRecapPage)
+async def reader_recap(
+    username: str, key: str, db: DbSession, response: Response
+) -> P.ReaderRecapPage:
+    """A window of one reader's reading — the page a shared card links to.
+
+    404s identically for every reason: no such handle, a private profile, a
+    reader who hasn't turned recaps on, or a key that doesn't parse. The link
+    is derived rather than tokenised (it has to be, so the app can print it on
+    the card offline), which makes it guessable — so the gate does the work,
+    not the obscurity of the URL.
+
+    Short cache with a long stale window like every other public page. This one
+    also has to stay cheap for a second reason: `<key>` is an infinite family
+    of URLs, so the page is `noindex` and robots.txt disallows the path, since
+    noindex stops indexing and not fetching (7 Sep 2026)."""
+    page = await public_service.reader_recap(db, username, key)
+    if page is None:
+        raise _not_found("Reader")
+    _cached(response, _CACHE_SHORT)
+    return page
+
+
 @router.get("/people/{kind}", response_model=P.PeoplePage)
 async def people(
     kind: str,

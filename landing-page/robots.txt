@@ -42,6 +42,13 @@ Allow: /
 # parameterised forms are closed.
 Disallow: /browse?
 Disallow: /search?
+# Shared reading recaps. Not secret — the gate is a per-reader visibility flag,
+# not the URL — but a page one reader sent to their friends is not a page that
+# belongs in a search index, and `/recap/<key>` is an infinite family of URLs
+# (every day, week, month and trailing window since 2000). The pages are
+# `noindex` already; this is the half that stops the *fetching*, which is the
+# half that costs money (7 Sep 2026).
+Disallow: /reader/*/recap/
 
 Sitemap: https://kitabi.in/sitemap.xml
 Sitemap: https://kitabi.in/sitemaps/index.xml

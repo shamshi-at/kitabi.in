@@ -5,7 +5,7 @@ import re
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # 3–20 chars, lowercase letters/digits/underscore, must start with a letter.
 _USERNAME_RE = re.compile(r"^[a-z][a-z0-9_]{2,19}$")
@@ -33,6 +33,10 @@ class ProfileOut(BaseModel):
     profile_visible: bool
     library_visible: bool
     reviews_visible_default: bool
+    # "Anyone with the link can see this window of my reading" — the gate on
+    # the shared recap pages. Default false: sharing the card is one act of
+    # consent, publishing a page at a guessable URL is another.
+    recaps_visible: bool = False
     # "Show promotions from Kitabi" inverted — false means show them (the
     # default). Stored as an opt-*out* so an absent/legacy row means shown.
     promotions_opt_out: bool = False
@@ -56,8 +60,13 @@ class ProfileUpdate(BaseModel):
     profile_visible: bool | None = None
     library_visible: bool | None = None
     reviews_visible_default: bool | None = None
+    recaps_visible: bool | None = None
     promotions_opt_out: bool | None = None
     preferred_languages: list[str] | None = None
+    # Minutes east of UTC, sent by the app so the server can cut a recap on the
+    # reader's own calendar days rather than on UTC's. Bounded to the real
+    # range so a garbled value can't shift a window by days.
+    utc_offset_minutes: int | None = Field(default=None, ge=-1080, le=1080)
 
     @field_validator("username")
     @classmethod

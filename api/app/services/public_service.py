@@ -9,8 +9,9 @@ decisions about the catalog rather than about a page, it belongs one layer down.
 from __future__ import annotations
 
 import uuid
+from datetime import date, timedelta
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Date, Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -24,6 +25,7 @@ from app.models import (
     Profile,
     Publisher,
     Rating,
+    ReadingSession,
     Review,
     Series,
     Work,
@@ -35,6 +37,7 @@ from app.services import (
 )
 from app.services import (
     catalog_service,
+    recap_service,
     review_service,
     scoring_service,
     search_rank,
@@ -1104,6 +1107,145 @@ async def reader_page(db: AsyncSession, username: str) -> P.ReaderPage | None:
             for r in written
         ],
     )
+
+
+async def reader_recap(db: AsyncSession, username: str, key: str) -> P.ReaderRecapPage | None:
+    """One reader's window of reading, as a public page — the destination of the
+    link a share card carries (owner request, 8 Sep 2026).
+
+    Returns None for every reason equally: no such handle, a private profile,
+    recaps not published, a key that doesn't parse. A visitor cannot tell which,
+    which is the same rule `reader_page` follows and for the same reason.
+
+    Its own visibility flag rather than `library_visible`: sharing a picture and
+    publishing a page at a derivable URL are two different acts of consent, and
+    `library_visible` defaults false, so gating on it would leave the feature
+    dead for almost every reader.
+    """
+    parsed = recap_service.parse_recap_key(key)
+    if parsed is None:
+        return None
+    start, end, kind = parsed
+
+    profile = (
+        (
+            await db.execute(
+                select(Profile).where(
+                    func.lower(Profile.username) == username.lower(),
+                    Profile.profile_visible.is_(True),
+                    Profile.recaps_visible.is_(True),
+                    Profile.deleted_at.is_(None),
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if profile is None:
+        return None
+
+    offset = profile.utc_offset_minutes
+    # Only the *open-ended* window is clamped to the reader's today: nobody has
+    # read tomorrow, and `all`'s nominal end in 2100 would make every "days in
+    # the window" figure nonsense. A named window keeps its own dates — a month
+    # shared on the 8th is still "1–30 September", and clamping it would both
+    # retitle the page and 404 a window that hasn't started yet.
+    if kind == "all":
+        end = min(end, recap_service.local_today(offset) + timedelta(days=1))
+    if end <= start:
+        return None
+    start_at, end_at = recap_service.window_bounds(start, end, offset)
+
+    in_window = (
+        ReadingSession.user_id == profile.id,
+        ReadingSession.deleted_at.is_(None),
+        ReadingSession.started_at >= start_at,
+        ReadingSession.started_at < end_at,
+    )
+
+    # Aggregated in SQL, never by loading the rows: a year of sittings is a few
+    # thousand of them and Supabase meters every byte that leaves (7 Sep 2026).
+    # The pages expression mirrors the app's `sessionPagesRead` exactly — a
+    # sitting that recorded no range, or one that ended where it began,
+    # contributes nothing rather than a negative.
+    gained = func.greatest(ReadingSession.page_end - ReadingSession.page_start, 0)
+    totals = (
+        await db.execute(
+            select(
+                func.coalesce(func.sum(ReadingSession.duration_seconds), 0),
+                func.count(ReadingSession.id),
+                func.coalesce(func.sum(gained), 0),
+            ).where(*in_window)
+        )
+    ).one()
+
+    # Seconds per *local* calendar day — one list the renderer reads as a
+    # calendar, as bars or as a single figure depending on the window.
+    local_day = func.date(
+        ReadingSession.started_at + func.make_interval(0, 0, 0, 0, 0, offset or 0)
+    )
+    by_day = (
+        await db.execute(
+            select(local_day, func.sum(ReadingSession.duration_seconds))
+            .where(*in_window)
+            .group_by(local_day)
+        )
+    ).all()
+    seconds_by_day = {_as_date(row[0]).isoformat(): int(row[1] or 0) for row in by_day}
+
+    return P.ReaderRecapPage(
+        username=profile.username or username,
+        display_name=profile.full_name or profile.username or "A reader",
+        avatar_url=profile.avatar_url,
+        key=key.strip().lower(),
+        kind=kind,
+        start=start,
+        end=end - timedelta(days=1),
+        total_seconds=int(totals[0]),
+        sittings=int(totals[1]),
+        pages_read=int(totals[2]),
+        days_read=len([s for s in seconds_by_day.values() if s > 0]),
+        seconds_by_day=dict(sorted(seconds_by_day.items())),
+        books=await _cards(db, await _finished_in_window(db, profile.id, start, end)),
+    )
+
+
+def _as_date(value: object) -> date:
+    if isinstance(value, date) and not hasattr(value, "hour"):
+        return value
+    if hasattr(value, "date"):
+        return value.date()  # type: ignore[union-attr]
+    return date.fromisoformat(str(value))
+
+
+async def _finished_in_window(
+    db: AsyncSession, user_id: uuid.UUID, start: date, end: date
+) -> list[Work]:
+    """The books finished inside the window, newest first.
+
+    `finish_date` falling back to `updated_at` is not a nicety — it is the rule
+    the app itself counts by (`computePeriodSummary`, `computeInsights`, Home's
+    goal slip), because a book marked read with no explicit finish date (an
+    older row, a CSV import) would otherwise vanish from every window it could
+    belong to. A page that counted differently would contradict the card that
+    linked to it.
+    """
+    finished_on = func.coalesce(LibraryEntry.finish_date, func.cast(LibraryEntry.updated_at, Date))
+    stmt = (
+        _with_relations(select(Work))
+        .join(Edition, Edition.work_id == Work.id)
+        .join(LibraryEntry, LibraryEntry.edition_id == Edition.id)
+        .where(
+            LibraryEntry.user_id == user_id,
+            LibraryEntry.deleted_at.is_(None),
+            LibraryEntry.status == "read",
+            finished_on >= start,
+            finished_on < end,
+        )
+        .order_by(finished_on.desc())
+        .limit(60)
+    )
+    return list((await db.execute(stmt)).scalars().unique().all())
 
 
 # --------------------------------------------------------------------------

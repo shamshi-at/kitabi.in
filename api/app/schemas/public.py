@@ -327,6 +327,44 @@ class ReaderPage(BaseModel):
     reviews: list[ReaderReview] = []
 
 
+class ReaderRecapPage(BaseModel):
+    """One reader's window of reading, as a public page.
+
+    Rendered ONLY for a reader who has turned recaps on — a reader who hasn't
+    has no page at all, and gets the same 404 as a handle that was never
+    registered (rule 16, and the same indistinguishability `ReaderPage` keeps).
+
+    `seconds_by_day` is the window's shape, keyed by ISO date: the month page
+    reads it as a calendar, the week page as bars, a day as a single figure.
+    One list rather than three shapes, so the renderer picks a form and never
+    needs a second fetch.
+    """
+
+    username: str
+    display_name: str
+    avatar_url: str | None = None
+
+    # The key exactly as it resolved, for the canonical link.
+    key: str
+    # "day" | "week" | "month" | "year" | "trailing" | "all" — what to call the
+    # window in the heading, and which shape to draw.
+    kind: str
+    start: date
+    # The window's last day, inclusive: a page says "1–30 September", never
+    # "1 Sep to 1 Oct". The half-open range is a query detail.
+    end: date
+
+    total_seconds: int = 0
+    pages_read: int = 0
+    sittings: int = 0
+    days_read: int = 0
+    seconds_by_day: dict[str, int] = {}
+
+    # The books finished inside the window — the reason a recipient follows the
+    # link at all.
+    books: list[WorkCard] = []
+
+
 class PersonCard(Ref):
     """An author or publisher in a directory listing — the link, plus the one
     number that makes the row worth clicking."""

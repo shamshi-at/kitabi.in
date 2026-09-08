@@ -1221,3 +1221,85 @@ assert(
   }).status === 200,
   'data always wins — a resolved page renders',
 );
+
+// --------------------------------------------------------------------------
+// The shared reading recap — /reader/:username/recap/:key
+// --------------------------------------------------------------------------
+//
+// Fixtures written from `api/app/schemas/public.py` (ReaderRecapPage), never
+// from the renderer. A fixture copied off the field a renderer happens to read
+// tests nothing but that the code agrees with itself — which is how every
+// public review on the site shipped with its text missing while an assertion
+// literally named "the review text is in the HTML" passed (9 Aug 2026).
+
+var RECAP = {
+  username: 'shamshi',
+  display_name: 'Shamshi',
+  avatar_url: null,
+  key: '2026-09',
+  kind: 'month',
+  start: '2026-09-01',
+  end: '2026-09-30',
+  total_seconds: 15300,
+  pages_read: 307,
+  sittings: 9,
+  days_read: 6,
+  seconds_by_day: { '2026-09-01': 1800, '2026-09-03': 5400, '2026-09-06': 3600 },
+  books: [
+    { id: 'uuid-a', slug: 'aadujeevitham', title: 'Aadujeevitham',
+      authors: [{ id: 'a1', name: 'Benyamin', slug: 'benyamin' }] },
+    { id: 'uuid-k', slug: 'khasakkinte-itihasam', title: 'Khasakkinte Itihasam',
+      authors: [{ id: 'a2', name: 'O.V. Vijayan', slug: 'o-v-vijayan' }] },
+  ],
+};
+
+var recapDoc = String(renderRecap(RECAP).text());
+
+// The whole point of the link: the recipient sees which books, and can follow
+// them into the catalogue.
+assertIncludes(recapDoc, 'Aadujeevitham', 'the finished books are in the served HTML');
+assertIncludes(recapDoc, 'href="/book/aadujeevitham"', 'each book links into the catalogue');
+assertIncludes(recapDoc, 'September 2026', 'the window is named in words, not as a key');
+assertIncludes(recapDoc, '307', 'the pages figure is on the page');
+assertIncludes(recapDoc, '4h 15m', 'time read is formatted the way the card formats it');
+assertIncludes(recapDoc, 'href="/reader/shamshi"', 'the recap links back to the reader');
+
+// A page one reader sent to their friends is not a page for the index — and
+// `/recap/<key>` is an infinite family of URLs, which is the expensive half.
+assertIncludes(recapDoc, 'content="noindex, follow"', 'a recap is never indexable');
+assertIncludes(recapDoc, 'rel="canonical" href="https://kitabi.in/reader/shamshi/recap/2026-09"',
+  'the canonical is the key that was asked for');
+
+// The calendar is rendered server-side like everything else here — a shape that
+// needs JS to appear is a shape nobody sees.
+assertIncludes(recapDoc, 'class="rcal"', 'a month draws its calendar');
+assert(
+  (recapDoc.match(/class="rcd on/g) || []).length === 3,
+  'exactly the days that hold reading are lit',
+);
+// Sept 2026 starts on a Tuesday: two leading pad cells in a Sunday-first grid.
+assert(
+  (recapDoc.match(/class="rcd pad"/g) || []).length === 2,
+  'the month grid is padded so the weekdays line up',
+);
+
+// A year is too many cells to read as a grid; the numbers and the books carry
+// it instead. (The check that matters is that it renders at all.)
+var yearDoc = String(renderRecap(Object.assign({}, RECAP, {
+  key: '2026', kind: 'year', start: '2026-01-01', end: '2026-12-31',
+})).text());
+assertExcludes(yearDoc, 'class="rcal"', 'a year does not try to draw 365 cells');
+assertIncludes(yearDoc, 'Aadujeevitham', 'a year still lists its books');
+
+// A window with nothing finished is an honest quiet page, not a 404 and not a
+// page pretending otherwise.
+var emptyDoc = String(renderRecap(Object.assign({}, RECAP, {
+  books: [], pages_read: 0, total_seconds: 0, days_read: 0, seconds_by_day: {},
+})).text());
+assertIncludes(emptyDoc, 'No books were finished', 'an empty window says so');
+
+// Escaping, on the one field a reader controls.
+var xssDoc = String(renderRecap(Object.assign({}, RECAP, {
+  display_name: XSS, username: 'shamshi',
+})).text());
+assertExcludes(xssDoc, '<script>alert(1)</script>', 'a display name cannot inject markup');
