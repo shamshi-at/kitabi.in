@@ -104,6 +104,22 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// leave a *second* time — popping the book page out from under the reader.
   bool _leaving = false;
 
+  /// This screen is leaving by a path that has already done its saving.
+  ///
+  /// The `PopScope` below saves the page on the way out, because the back
+  /// gesture has no other chance to (16 Jul 2026) — but `_leave()` pops too,
+  /// and `Navigator.pop` invokes that same callback. So every Done and every
+  /// "I finished the book" fired a **second** `_savePage`, and with it a second
+  /// review prompt, racing the first — and doing it through a `ref` and a
+  /// `context` belonging to a widget already on its way to `dispose` (19 Jul
+  /// 2026's rule, broken by the screen against itself). Confirmed with a probe
+  /// on 8 Sep 2026: the pop callback runs on a plain Done.
+  ///
+  /// A flag of its own rather than reusing [_leaving], which answers "the
+  /// give-up guard has fired". One key answering two questions gives a wrong
+  /// answer to the newer one (15 Aug 2026).
+  bool _exitAlreadySaved = false;
+
   /// Null while the typed page is savable. A backwards page must not be
   /// written by Done *or* by the back gesture, which also saves.
   PageEntryError? _pageError;
@@ -385,6 +401,10 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// instead of stacking onto it. There is then nothing to pop, and a bare
   /// `pop()` left the reader stranded on the timer with no way out.
   void _leave() {
+    // Every caller of this has already saved (or had nothing to save), so the
+    // PopScope's back-gesture save must not run for the pop this is about to
+    // make — see [_exitAlreadySaved].
+    _exitAlreadySaved = true;
     if (context.canPop()) {
       context.pop();
     } else {
@@ -565,7 +585,8 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
       // data-loss path). The pop itself is never blocked; we just save on the
       // way out.
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) _savePageOnPop();
+        // Only the back gesture: `_leave()` pops too, and it saves first.
+        if (didPop && !_exitAlreadySaved) _savePageOnPop();
       },
       child: Scaffold(
         backgroundColor: AppColors.night,
