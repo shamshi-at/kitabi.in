@@ -27,6 +27,7 @@ class ShareSheetScaffold extends StatefulWidget {
     this.captionController,
     this.imageUrl,
     this.previewWidth,
+    this.onBeforeShare,
   });
 
   final String title;
@@ -61,6 +62,15 @@ class ShareSheetScaffold extends StatefulWidget {
   /// card size itself.
   final double? previewWidth;
 
+  /// Run just before the card is rasterised, and awaited.
+  ///
+  /// Exists for the recap link: sharing a card is what publishes it (owner
+  /// decision, 8 Sep 2026), so the flag has to be flipped *before* the capture
+  /// — the link is printed on the image and appended to the caption, and both
+  /// are read after this returns. The frame that follows is awaited too, so a
+  /// card the hook changed is repainted before it is grabbed.
+  final Future<void> Function()? onBeforeShare;
+
   @override
   State<ShareSheetScaffold> createState() => _ShareSheetScaffoldState();
 }
@@ -81,6 +91,15 @@ class _ShareSheetScaffoldState extends State<ShareSheetScaffold> {
   Future<void> _share() async {
     setState(() => _sharing = true);
     try {
+      final before = widget.onBeforeShare;
+      if (before != null) {
+        await before();
+        if (!mounted) return;
+        // The hook can change what the card says (the recap link), so let the
+        // frame it caused actually paint before rasterising it.
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return;
+      }
       // Never rasterise a card whose image hasn't decoded yet — wait for it,
       // bounded; on timeout the card ships with the typeset fallback.
       await ensureImageLoaded(context, widget.imageUrl);

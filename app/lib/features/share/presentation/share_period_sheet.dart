@@ -93,7 +93,9 @@ class _SharePeriodSheetState extends ConsumerState<_SharePeriodSheet> {
   late final _caption = TextEditingController(text: widget.initialCaption);
   late ShareCardFormat _format = widget.initialFormat;
   bool _nameBooks = true;
-  bool _publishing = false;
+  /// A publish attempt failed (offline). The link is then dropped from the
+  /// card and the caption rather than shared as a URL that would 404.
+  bool _publishFailed = false;
 
   /// The caption the reader has already edited must never be overwritten by
   /// the link arriving — appended once, and only to text they haven't touched
@@ -106,11 +108,45 @@ class _SharePeriodSheetState extends ConsumerState<_SharePeriodSheet> {
     super.dispose();
   }
 
-  /// The link this window would have, or null when the reader has no handle or
-  /// hasn't published their recaps.
+  /// The link this window will carry — shown as soon as the reader *has a
+  /// handle*, not only once their recaps are published.
+  ///
+  /// Sharing the card is what publishes them (owner decision, 8 Sep 2026: the
+  /// link was opt-in behind a button, so the first card shared had no link and
+  /// the recipient had nowhere to go). Consent is the act of sharing, which is
+  /// the act the reader is already performing — so the honest thing is to show
+  /// the exact URL, and what it will mean, *before* the Share button is tapped
+  /// rather than after.
   String? _linkFor(RecapIdentity? identity) {
-    if (identity == null || !identity.canLink) return null;
+    if (identity == null || identity.needsUsername || _publishFailed) return null;
     return recapShareUrl(identity.username!, widget.recapKey);
+  }
+
+  /// Publish the reader's recaps if this is their first shared card. Runs
+  /// before the capture, so the link is on the image and in the caption.
+  ///
+  /// A failure here is not a failed share: the card and its caption still go,
+  /// minus the link, and the reader is told why. A link that 404s because the
+  /// flag never reached the server would be worse than no link at all.
+  Future<void> _publishBeforeShare() async {
+    final identity = ref.read(recapIdentityProvider).valueOrNull;
+    if (identity == null || identity.needsUsername || identity.recapsVisible) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await publishRecaps(ref);
+      ref.invalidate(recapIdentityProvider);
+      await ref.read(recapIdentityProvider.future);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _publishFailed = true;
+        final link = recapShareUrl(identity.username!, widget.recapKey);
+        _caption.text = _caption.text.replaceAll(link, '').trimRight();
+        _captionWithLink = null;
+      });
+      messenger.showSnackBar(SnackBar(content: Text(l10n.shareRecapPublishFailed)));
+    }
   }
 
   /// Put the link into the caption, so the message that arrives carries it —
@@ -125,20 +161,6 @@ class _SharePeriodSheetState extends ConsumerState<_SharePeriodSheet> {
     final next = base.isEmpty ? link : '$base\n$link';
     _caption.text = next;
     _captionWithLink = next;
-  }
-
-  Future<void> _publish() async {
-    setState(() => _publishing = true);
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await publishRecaps(ref);
-      ref.invalidate(recapIdentityProvider);
-    } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.shareFailed)));
-    } finally {
-      if (mounted) setState(() => _publishing = false);
-    }
   }
 
   Future<void> _copyLink(String link) async {
@@ -178,10 +200,13 @@ class _SharePeriodSheetState extends ConsumerState<_SharePeriodSheet> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _syncCaption(link);
-        // A reader who has moved timezone would otherwise keep having their
-        // windows cut on the clock they published under. A no-op unless the
-        // offset actually changed, and only for readers who have a link at all.
-        syncUtcOffsetIfChanged(ref);
+        // Only for readers whose recaps are *already* published: a reader who
+        // has moved timezone would otherwise keep having their windows cut on
+        // the clock they published under. The unpublished case needs nothing
+        // here — `publishRecaps` sends the offset itself on the first share,
+        // and firing this on open would PATCH the server merely because
+        // somebody looked at the share sheet.
+        if (identity?.recapsVisible ?? false) syncUtcOffsetIfChanged(ref);
       });
     }
     return ShareSheetScaffold(
@@ -256,8 +281,6 @@ class _SharePeriodSheetState extends ConsumerState<_SharePeriodSheet> {
           _RecapLinkBlock(
             identity: identity,
             link: link,
-            publishing: _publishing,
-            onPublish: _publish,
             onCopy: () => _copyLink(link!),
             onClaimUsername: () {
               Navigator.of(context).pop();
@@ -284,6 +307,7 @@ class _SharePeriodSheetState extends ConsumerState<_SharePeriodSheet> {
       ),
       captionLabel: l10n.insightsShareCaptionLabel,
       captionController: _caption,
+      onBeforeShare: _publishBeforeShare,
       shareText: () => _caption.text,
       copyLabel: l10n.insightsShareCopyCaption,
       copyIcon: Icons.copy,
@@ -430,16 +454,12 @@ class _RecapLinkBlock extends StatelessWidget {
   const _RecapLinkBlock({
     required this.identity,
     required this.link,
-    required this.publishing,
-    required this.onPublish,
     required this.onCopy,
     required this.onClaimUsername,
   });
 
   final RecapIdentity? identity;
   final String? link;
-  final bool publishing;
-  final VoidCallback onPublish;
   final VoidCallback onCopy;
   final VoidCallback onClaimUsername;
 
@@ -451,6 +471,11 @@ class _RecapLinkBlock extends StatelessWidget {
     if (identity == null) return const SizedBox.shrink();
 
     if (link != null) {
+      // The URL, plainly, plus what it will mean. A reader who has not
+      // published yet sees the same row — sharing is what publishes it, so
+      // the sentence under it is the notice, shown before the Share button is
+      // tapped rather than as a snackbar after (8 Sep 2026).
+      final live = identity!.recapsVisible;
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
@@ -458,89 +483,68 @@ class _RecapLinkBlock extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: AppColors.line),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.link, size: 14, color: AppColors.gold),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.shareRecapLinkLabel,
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.1,
-                      color: AppColors.inkSoft,
-                    ),
+            Row(
+              children: [
+                Icon(Icons.link, size: 14, color: AppColors.gold),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.shareRecapLinkLabel,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.1,
+                          color: AppColors.inkSoft,
+                        ),
+                      ),
+                      Text(
+                        link!.replaceFirst(RegExp(r'^https?://'), ''),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
-                  Text(
-                    link!.replaceFirst(RegExp(r'^https?://'), ''),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.copy, size: 15, color: AppColors.inkSoft),
+                  tooltip: l10n.insightsShareCopyCaption,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onCopy,
+                ),
+              ],
             ),
-            IconButton(
-              icon: Icon(Icons.copy, size: 15, color: AppColors.inkSoft),
-              tooltip: l10n.insightsShareCopyCaption,
-              visualDensity: VisualDensity.compact,
-              onPressed: onCopy,
+            Text(
+              live ? l10n.shareRecapLinkHint : l10n.shareRecapLinkOnShare,
+              style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft, height: 1.3),
             ),
           ],
         ),
       );
     }
 
-    if (identity!.needsUsername) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton.icon(
-          onPressed: onClaimUsername,
-          icon: Icon(Icons.alternate_email, size: 15, color: AppColors.oxblood),
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.oxblood,
-            visualDensity: VisualDensity.compact,
-          ),
-          label: Text(
-            l10n.shareRecapNeedsUsername,
-            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
-          ),
+    // No handle — there is nothing to build a URL from, so the honest offer is
+    // to go and pick one rather than a link that cannot exist.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: onClaimUsername,
+        icon: Icon(Icons.alternate_email, size: 15, color: AppColors.oxblood),
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.oxblood,
+          visualDensity: VisualDensity.compact,
         ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextButton.icon(
-          onPressed: publishing ? null : onPublish,
-          icon: publishing
-              ? SizedBox(
-                  width: 13,
-                  height: 13,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.oxblood),
-                )
-              : Icon(Icons.add_link, size: 15, color: AppColors.oxblood),
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.oxblood,
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-          ),
-          label: Text(
-            l10n.shareRecapPublish,
-            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
-          ),
+        label: Text(
+          l10n.shareRecapNeedsUsername,
+          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
         ),
-        // What it means, said before it is done rather than after.
-        Text(
-          l10n.shareRecapLinkHint,
-          style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft, height: 1.3),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -5902,17 +5902,23 @@ abstract class AppLocalizations {
   /// **'Link on the card'**
   String get shareRecapLinkLabel;
 
-  /// What publishing a recap means, printed where the reader can see it every time
+  /// What a published recap link means, printed under it every time the sheet opens
   ///
   /// In en, this message translates to:
-  /// **'Anyone with this link can see this window of your reading.'**
+  /// **'Anyone with this link can see this window of your reading. Turn it off any time in Profile.'**
   String get shareRecapLinkHint;
 
-  /// Button that turns on shared reading recaps
+  /// Shown under the link before the first share, when sharing is what publishes it
   ///
   /// In en, this message translates to:
-  /// **'Add a link others can open'**
-  String get shareRecapPublish;
+  /// **'Sharing adds this link. Anyone with it can see this window — turn it off any time in Profile.'**
+  String get shareRecapLinkOnShare;
+
+  /// Snackbar when turning recaps on failed at share time (offline), so the link was left out
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t publish the link — the card was shared without it.'**
+  String get shareRecapPublishFailed;
 
   /// Shown instead of the link when the reader has no handle yet
   ///

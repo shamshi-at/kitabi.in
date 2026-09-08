@@ -3619,10 +3619,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareRecapLinkHint =>
-      'Anyone with this link can see this window of your reading.';
+      'Anyone with this link can see this window of your reading. Turn it off any time in Profile.';
 
   @override
-  String get shareRecapPublish => 'Add a link others can open';
+  String get shareRecapLinkOnShare =>
+      'Sharing adds this link. Anyone with it can see this window — turn it off any time in Profile.';
+
+  @override
+  String get shareRecapPublishFailed =>
+      'Couldn\'t publish the link — the card was shared without it.';
 
   @override
   String get shareRecapNeedsUsername => 'Pick a username to share a link';
