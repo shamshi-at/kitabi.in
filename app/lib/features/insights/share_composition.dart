@@ -16,12 +16,21 @@ class PeriodShare {
   const PeriodShare({
     required this.dataBuilder,
     required this.caption,
+    required this.recapKey,
     this.canNameBooks = false,
     this.initialFormat = ShareCardFormat.story,
   });
 
   final PeriodCardData Function(bool nameBooks) dataBuilder;
   final String caption;
+
+  /// This window's name in a shared link —
+  /// `kitabi.in/reader/{handle}/recap/{recapKey}`. Composed here because this
+  /// is the one place that holds the period, the range and the year together;
+  /// the sheet only decides whether
+  /// the reader *has* a link to print (a handle, and recaps published).
+  final String recapKey;
+
   final bool canNameBooks;
   final ShareCardFormat initialFormat;
 }
@@ -37,24 +46,25 @@ PeriodShare? composePeriodShare({
   DateTime? now,
 }) {
   final effectiveNow = now ?? DateTime.now();
+  final key = recapKeyFor(period, range, year: year);
   switch (period) {
     case InsightsPeriod.today:
       if (summary.totalSeconds == 0 && summary.sittingsCount == 0) return null;
-      return _today(l10n, summary, effectiveNow);
+      return _today(l10n, key, summary, effectiveNow);
     case InsightsPeriod.week:
       if (summary.totalSeconds == 0 && summary.booksFinishedCount == 0) return null;
-      return _week(l10n, range, summary, effectiveNow);
+      return _week(l10n, key, range, summary, effectiveNow);
     case InsightsPeriod.month:
       if (summary.sittingsCount == 0 && summary.booksFinishedCount == 0) return null;
-      return _month(l10n, range, summary, effectiveNow);
+      return _month(l10n, key, range, summary, effectiveNow);
     case InsightsPeriod.threeMonths:
     case InsightsPeriod.sixMonths:
       if (summary.totalSeconds == 0 && summary.booksFinishedCount == 0) return null;
-      return _stretch(l10n, period, range, summary, effectiveNow);
+      return _stretch(l10n, key, period, range, summary, effectiveNow);
     case InsightsPeriod.year:
       final stats = yearStats;
       if (stats == null || (stats.booksRead == 0 && summary.totalSeconds == 0)) return null;
-      return _year(l10n, summary, stats, year: year, paceDiff: paceDiff);
+      return _year(l10n, key, summary, stats, year: year, paceDiff: paceDiff);
   }
 }
 
@@ -65,7 +75,7 @@ String _rotate(List<String> pool, DateTime now) {
   return pool[dayOfYear % pool.length];
 }
 
-PeriodShare _today(AppLocalizations l10n, PeriodSummary summary, DateTime now) {
+PeriodShare _today(AppLocalizations l10n, String key, PeriodSummary summary, DateTime now) {
   final books = summary.booksInHand ?? const <BookInHand>[];
   final multiBook = books.length > 1;
   final duration = formatDuration(Duration(seconds: summary.totalSeconds));
@@ -90,6 +100,7 @@ PeriodShare _today(AppLocalizations l10n, PeriodSummary summary, DateTime now) {
 
   final streak = summary.streakDays ?? 0;
   return PeriodShare(
+    recapKey: key,
     canNameBooks: books.isNotEmpty,
     initialFormat: ShareCardFormat.slip,
     caption: '$duration, ${l10n.bookLogTotalPages(summary.pagesRead).toLowerCase()} '
@@ -105,7 +116,13 @@ PeriodShare _today(AppLocalizations l10n, PeriodSummary summary, DateTime now) {
   );
 }
 
-PeriodShare _week(AppLocalizations l10n, PeriodRange range, PeriodSummary summary, DateTime now) {
+PeriodShare _week(
+  AppLocalizations l10n,
+  String key,
+  PeriodRange range,
+  PeriodSummary summary,
+  DateTime now,
+) {
   final duration = formatDuration(Duration(seconds: summary.totalSeconds));
   final previous = summary.previousTotalSeconds;
   String? pill;
@@ -115,6 +132,7 @@ PeriodShare _week(AppLocalizations l10n, PeriodRange range, PeriodSummary summar
     pill = '$arrow ${l10n.insightsVsLastWeek(formatDuration(Duration(seconds: diff.abs())))}';
   }
   return PeriodShare(
+    recapKey: key,
     caption: '$duration, ${l10n.bookLogTotalPages(summary.pagesRead).toLowerCase()} '
         '${l10n.insightsShareCaptionSuffix}',
     dataBuilder: (_) => PeriodCardData(
@@ -134,7 +152,13 @@ PeriodShare _week(AppLocalizations l10n, PeriodRange range, PeriodSummary summar
   );
 }
 
-PeriodShare _month(AppLocalizations l10n, PeriodRange range, PeriodSummary summary, DateTime now) {
+PeriodShare _month(
+  AppLocalizations l10n,
+  String key,
+  PeriodRange range,
+  PeriodSummary summary,
+  DateTime now,
+) {
   final monthLabel = DateFormat.MMMM().format(range.start).toLowerCase();
   final (read, elapsed) = summary.daysReadOfElapsed;
   final finished = summary.booksFinishedCount;
@@ -145,6 +169,7 @@ PeriodShare _month(AppLocalizations l10n, PeriodRange range, PeriodSummary summa
   final heroLabel =
       finished > 0 ? l10n.insightsCardBooksDot(monthLabel) : l10n.insightsCardReadIn(monthLabel);
   return PeriodShare(
+    recapKey: key,
     caption: '${l10n.insightsBooksFinished(finished)}, '
         '${l10n.bookLogTotalPages(summary.pagesRead).toLowerCase()} '
         '${l10n.insightsShareCaptionSuffix}',
@@ -161,6 +186,7 @@ PeriodShare _month(AppLocalizations l10n, PeriodRange range, PeriodSummary summa
 
 PeriodShare _stretch(
   AppLocalizations l10n,
+  String key,
   InsightsPeriod period,
   PeriodRange range,
   PeriodSummary summary,
@@ -184,6 +210,7 @@ PeriodShare _stretch(
     pill = '$arrow ${l10n.insightsVsPrevStretch(formatDuration(Duration(seconds: diff.abs())))}';
   }
   return PeriodShare(
+    recapKey: key,
     caption: '${l10n.insightsBooksFinished(finished)}, '
         '${l10n.bookLogTotalPages(summary.pagesRead).toLowerCase()} '
         '${l10n.insightsShareCaptionSuffix}',
@@ -203,6 +230,7 @@ PeriodShare _stretch(
 
 PeriodShare _year(
   AppLocalizations l10n,
+  String key,
   PeriodSummary summary,
   InsightsStats stats, {
   int? year,
@@ -222,6 +250,7 @@ PeriodShare _year(
   if (paceDiff != null && paceDiff > 0) pill = l10n.insightsAhead(paceDiff);
   if (paceDiff != null && paceDiff < 0) pill = l10n.insightsBehind(-paceDiff);
   return PeriodShare(
+    recapKey: key,
     caption: '${l10n.insightsBooksFinished(stats.booksRead)}, '
         '${l10n.bookLogTotalPages(stats.pagesRead).toLowerCase()} '
         '${l10n.insightsShareCaptionSuffix}',

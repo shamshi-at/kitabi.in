@@ -785,6 +785,33 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       row, one downward glance each; In hand / Most read / Longest are tight name lines.
       Doors, long-press slips, sections, plates, seal all unchanged. Drawn as R1/R2/R3 in
       the mockups' "B, revised" area; R2 picked and built
+- [x] **Share cards: caption with the image, the whole month, a daily door, a month
+      switcher, and a link** (8 Sep 2026, owner report against Apple Books' reading card).
+      The caption ships on the same share call as the PNG again — the 26 Aug
+      caption-on-the-clipboard workaround was written against a capture that was already
+      throwing in every release build, and outlived the real fix (6 Sep) by two days.
+      `CardHeat` draws every week of the month, gives unread past days a visible tint, and
+      sizes itself from the box it is *given* rather than the width it asked for (which is
+      what wrapped the Square's calendar into two columns off the bottom of the card).
+      `shareTodaysReading` puts the daily card on the two surfaces that end a sitting — the
+      timer's wax-seal face and the quick-stop sheet — instead of only in Insights. The
+      Month chip gains the Year chip's sub-choice, over months that hold reading.
+- [x] **Shared reading recaps — `/reader/<handle>/recap/<key>`** (8 Sep 2026). The page a
+      share card links to: the window's numbers, its calendar, and the books finished in
+      it, each linking into the catalogue. Derived URL, not a token (`recapKeyFor` in the
+      app ↔ `recap_service.parse_recap_key` in the API, one fixture table in both suites),
+      so the app can print it on the card offline. Gated on a new `profiles.recaps_visible`
+      — its own flag, off by default, revocable from the profile screen: sharing a picture
+      and publishing a page are two different acts of consent. Migration `000052` also adds
+      `utc_offset_minutes`, so a window is cut on the reader's calendar days and a
+      late-night sitting doesn't land on a different day than the card that linked to it.
+      `noindex` **and** robots-disallowed: `<key>` is an infinite key space, and noindex
+      stops indexing, not fetching.
+- [ ] **Daily reading goal (minutes/day) with a ring** — deliberately *not* built with the
+      above. Apple's card is a daily-*goal* card ("0:15 of my 5-minute goal"); Kitabi's goal
+      is books-per-year, and the 8 Sep decision was doors to the existing Today card rather
+      than a second goal concept. Revisit only if readers ask for the daily target itself,
+      not for the card — the card already exists.
 
 ## Phase 8 — Platform & launch plumbing
 

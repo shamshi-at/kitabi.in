@@ -10,23 +10,29 @@ import '../../../l10n/app_localizations.dart';
 import '../../../core/widgets/net_image.dart';
 
 /// Rasterise the widget behind [cardKey] (a `RepaintBoundary`) to a PNG and
-/// hand it to the OS share sheet — **image only**. [text] (the caption, or
-/// the link on the book/entity cards) is put on the clipboard instead, with a
-/// snackbar saying so, because handing the share sheet both an image and text
-/// makes WhatsApp pick one and drop the other: iOS's extension keeps the text
-/// and discards the image (owner report, 26 Aug 2026 — "just the text is
-/// getting shared"), Android's keeps the image and discards the caption. An
-/// image the reader watched being composed must be the thing that arrives;
-/// the words ride the clipboard, one paste away.
+/// hand it to the OS share sheet **together with [text]** — the caption on a
+/// period card, the link on a book/entity one — so the message arrives the way
+/// Apple Books' reading card does: a picture with words under it, nothing for
+/// the reader to paste.
+///
+/// It used to share the image alone and put the caption on the clipboard, on
+/// the conclusion that WhatsApp drops one when handed both (26 Aug 2026 —
+/// "just the text is getting shared"). That conclusion was wrong, and the
+/// evidence was in the same file: the readiness check was
+/// `RenderObject.debugNeedsPaint`, whose value is assigned only inside an
+/// `assert`, so a **release** build threw `LateInitializationError` on every
+/// call and every share on every reader's phone went down the text-only
+/// *fallback* below. WhatsApp was never choosing; the capture was throwing.
+/// That was fixed on 6 Sep 2026 — after a second report in the same words —
+/// but the workaround written against the misdiagnosis outlived it, and the
+/// owner reported the clipboard step itself as the defect (8 Sep 2026).
+///
+/// The clipboard copy stays as belt-and-braces (a recipient app that ignores
+/// the text still leaves it one paste away) but is silent now: the snackbar
+/// announced a workaround that no longer describes what happens.
 ///
 /// Falls back to sharing [text] alone if the capture fails — and *says so*.
-/// The fallback used to be silent, and that silence hid a bug for two release
-/// cycles: the readiness check read `RenderObject.debugNeedsPaint`, whose
-/// value is assigned only inside an `assert`, so in a **release** build the
-/// getter throws `LateInitializationError` on every call. Every card share
-/// on every reader's phone went down the text-only branch, while debug runs
-/// and the whole widget suite rasterised happily (owner report, 6 Sep 2026 —
-/// "only the text is getting shared", the second time in the same words).
+/// A silent fallback is what hid the bug above for two release cycles.
 /// Shared by all three card sheets (period / book / entity) so the behaviour
 /// stays identical.
 Future<void> captureAndShareCard({
@@ -47,10 +53,9 @@ Future<void> captureAndShareCard({
     if (text.trim().isNotEmpty) {
       try {
         await Clipboard.setData(ClipboardData(text: text));
-        messenger.showSnackBar(SnackBar(content: Text(l10n.shareTextOnClipboard)));
       } catch (_) {}
     }
-    await Share.shareXFiles([file], sharePositionOrigin: origin);
+    await Share.shareXFiles([file], text: text, sharePositionOrigin: origin);
   } catch (err, stack) {
     // If the image capture/share fails for any reason, still share the text —
     // but never quietly: a fallback nobody can see is a bug nobody reports.

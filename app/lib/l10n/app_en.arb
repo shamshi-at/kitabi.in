@@ -96,6 +96,14 @@
   "@profileVisibilityLibraryDesc": {
     "description": "Visibility toggle description"
   },
+  "profileVisibilityRecapsTitle": "Reading recaps",
+  "@profileVisibilityRecapsTitle": {
+    "description": "Visibility toggle label — the shared /reader/<handle>/recap/<key> pages"
+  },
+  "profileVisibilityRecapsDesc": "Let a shared card's link open your window of reading",
+  "@profileVisibilityRecapsDesc": {
+    "description": "Visibility toggle description for shared reading recaps"
+  },
   "profileVisibilityReviewsTitle": "Reviews",
   "@profileVisibilityReviewsTitle": {
     "description": "Visibility toggle label"
@@ -3036,8 +3044,6 @@
       "url": {"type": "String"}
     }
   },
-  "shareTextOnClipboard": "Caption copied — paste it alongside the card.",
-  "@shareTextOnClipboard": {"description": "Snackbar when sharing a card: the image goes to the share sheet, the caption/link rides the clipboard (WhatsApp drops one of the two when handed both)"},
   "shareFailed": "Couldn't open the share sheet. Try again.",
   "shareCardFallback": "Couldn't render the card, so the text was shared instead.",
   "@shareCardFallback": {"description": "Snackbar shown when a share card image could not be captured and only its caption/link was handed to the share sheet"},
@@ -3049,6 +3055,22 @@
   "@insightsShareFormatStory": {"description": "Portrait aspect toggle on the period share sheet"},
   "insightsShareFormatSquare": "Square",
   "@insightsShareFormatSquare": {"description": "Square aspect toggle on the period share sheet"},
+  "shareRecapLinkLabel": "Link on the card",
+  "@shareRecapLinkLabel": {"description": "Eyebrow over the recap link shown in the period share sheet"},
+  "shareRecapLinkHint": "Anyone with this link can see this window of your reading.",
+  "@shareRecapLinkHint": {"description": "What publishing a recap means, printed where the reader can see it every time"},
+  "shareRecapPublish": "Add a link others can open",
+  "@shareRecapPublish": {"description": "Button that turns on shared reading recaps"},
+  "shareRecapNeedsUsername": "Pick a username to share a link",
+  "@shareRecapNeedsUsername": {"description": "Shown instead of the link when the reader has no handle yet"},
+  "shareRecapCopied": "Link copied",
+  "@shareRecapCopied": {"description": "Snackbar after copying the recap link"},
+  "shareTodayAction": "Share today's reading",
+  "@shareTodayAction": {"description": "Button on the end-of-sitting surfaces that opens the daily share card"},
+  "shareTodaySheetTitle": "Today's reading",
+  "@shareTodaySheetTitle": {"description": "Title of the share sheet when it was opened for the day rather than from Insights"},
+  "shareTodayNothingYet": "Nothing logged today yet.",
+  "@shareTodayNothingYet": {"description": "Snackbar when the daily share card is asked for on a day with no reading"},
   "insightsShareCaptionLabel": "Caption",
   "@insightsShareCaptionLabel": {"description": "Label above the editable caption field on the period share sheet"},
   "insightsShareCopyCaption": "Copy caption",
@@ -3078,8 +3100,6 @@
   "@insightsShareNameBooksHint": {"description": "Sub-line under the name-the-book toggle"},
   "insightsSharePrivacyLine": "Numbers, covers and titles only — never your notes or private reviews.",
   "@insightsSharePrivacyLine": {"description": "The privacy promise printed on every share sheet open"},
-  "insightsShareCaptionAsText": "Caption · copied when you send, paste it alongside",
-  "@insightsShareCaptionAsText": {"description": "Eyebrow over the share caption field — the caption rides the clipboard because share targets (WhatsApp) drop either the image or the text when handed both"},
   "insightsShareRowSheetTitle": "Send this line",
   "@insightsShareRowSheetTitle": {"description": "Title of the long-press row-slip share sheet"},
   "insightsRowSlipEyebrow": "From the ledger",

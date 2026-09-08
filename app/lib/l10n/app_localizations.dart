@@ -286,6 +286,18 @@ abstract class AppLocalizations {
   /// **'What\'s on your shelves'**
   String get profileVisibilityLibraryDesc;
 
+  /// Visibility toggle label — the shared /reader/<handle>/recap/<key> pages
+  ///
+  /// In en, this message translates to:
+  /// **'Reading recaps'**
+  String get profileVisibilityRecapsTitle;
+
+  /// Visibility toggle description for shared reading recaps
+  ///
+  /// In en, this message translates to:
+  /// **'Let a shared card\'s link open your window of reading'**
+  String get profileVisibilityRecapsDesc;
+
   /// Visibility toggle label
   ///
   /// In en, this message translates to:
@@ -5854,12 +5866,6 @@ abstract class AppLocalizations {
   /// **'{name} on Kitabi\n{url}'**
   String sharePublisherLinkText(String name, String url);
 
-  /// Snackbar when sharing a card: the image goes to the share sheet, the caption/link rides the clipboard (WhatsApp drops one of the two when handed both)
-  ///
-  /// In en, this message translates to:
-  /// **'Caption copied — paste it alongside the card.'**
-  String get shareTextOnClipboard;
-
   /// Snackbar when the OS share sheet fails to open
   ///
   /// In en, this message translates to:
@@ -5889,6 +5895,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Square'**
   String get insightsShareFormatSquare;
+
+  /// Eyebrow over the recap link shown in the period share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Link on the card'**
+  String get shareRecapLinkLabel;
+
+  /// What publishing a recap means, printed where the reader can see it every time
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone with this link can see this window of your reading.'**
+  String get shareRecapLinkHint;
+
+  /// Button that turns on shared reading recaps
+  ///
+  /// In en, this message translates to:
+  /// **'Add a link others can open'**
+  String get shareRecapPublish;
+
+  /// Shown instead of the link when the reader has no handle yet
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a username to share a link'**
+  String get shareRecapNeedsUsername;
+
+  /// Snackbar after copying the recap link
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get shareRecapCopied;
+
+  /// Button on the end-of-sitting surfaces that opens the daily share card
+  ///
+  /// In en, this message translates to:
+  /// **'Share today\'s reading'**
+  String get shareTodayAction;
+
+  /// Title of the share sheet when it was opened for the day rather than from Insights
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s reading'**
+  String get shareTodaySheetTitle;
+
+  /// Snackbar when the daily share card is asked for on a day with no reading
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing logged today yet.'**
+  String get shareTodayNothingYet;
 
   /// Label above the editable caption field on the period share sheet
   ///
@@ -5973,12 +6027,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Numbers, covers and titles only — never your notes or private reviews.'**
   String get insightsSharePrivacyLine;
-
-  /// Eyebrow over the share caption field — the caption rides the clipboard because share targets (WhatsApp) drop either the image or the text when handed both
-  ///
-  /// In en, this message translates to:
-  /// **'Caption · copied when you send, paste it alongside'**
-  String get insightsShareCaptionAsText;
 
   /// Title of the long-press row-slip share sheet
   ///

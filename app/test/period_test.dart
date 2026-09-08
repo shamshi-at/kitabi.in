@@ -32,6 +32,24 @@ void main() {
       expect(dec.end, DateTime(2027, 1, 1));
     });
 
+    test('month takes an explicit month, any date inside it', () {
+      // The reader can now look back at August the way they could already look
+      // back at 2025 (8 Sep 2026) — and the previous-window comparison has to
+      // follow the month they picked, not the one the clock is in.
+      final august = rangeFor(InsightsPeriod.month, now: now, month: DateTime(2026, 8, 17));
+      expect(august.start, DateTime(2026, 8, 1));
+      expect(august.end, DateTime(2026, 9, 1));
+      expect(previousRangeFor(InsightsPeriod.month, august).start, DateTime(2026, 7, 1));
+
+      // A month in a past year, and the year rollover from the other side.
+      final dec2025 = rangeFor(InsightsPeriod.month, now: now, month: DateTime(2025, 12, 31));
+      expect(dec2025.start, DateTime(2025, 12, 1));
+      expect(dec2025.end, DateTime(2026, 1, 1));
+
+      // Null still means the month `now` is in.
+      expect(rangeFor(InsightsPeriod.month, now: now).start, DateTime(2026, 7, 1));
+    });
+
     test('year takes an explicit calendar year', () {
       final r = rangeFor(InsightsPeriod.year, now: now, year: 2026);
       expect(r.start, DateTime(2026, 1, 1));

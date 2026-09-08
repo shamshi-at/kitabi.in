@@ -18,3 +18,15 @@ String bookShareUrl(String workId) => '$kShareBaseUrl/b/$workId';
 String authorShareUrl(String authorId) => '$kShareBaseUrl/a/$authorId';
 
 String publisherShareUrl(String publisherId) => '$kShareBaseUrl/p/$publisherId';
+
+/// A shared reading recap: `kitabi.in/reader/<handle>/recap/<key>`.
+///
+/// Named rather than tokenised (owner decision, 8 Sep 2026), which is what
+/// makes it derivable — see `recapKeyFor` for the key grammar. Two consequences
+/// worth holding on to. A reader with no handle has no recap link, so the share
+/// sheet has to offer them one rather than a dead URL. And this path is
+/// deliberately **not** claimed in `apple-app-site-association` or the Android
+/// manifest: the recipient of a recap is a stranger, and the whole point is
+/// that they land on a web page they can read, not a store listing.
+String recapShareUrl(String username, String key) =>
+    '$kShareBaseUrl/reader/${Uri.encodeComponent(username)}/recap/$key';

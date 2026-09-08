@@ -16,6 +16,7 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../share/share_today.dart';
 import '../providers/library_providers.dart';
 import '../mark_finished.dart';
 import '../providers/reading_timer_providers.dart';
@@ -1163,7 +1164,28 @@ class _LoggedFace extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  // The daily card's door at the moment it belongs to — the
+                  // reader has just put the book down (8 Sep 2026). Quiet, in
+                  // gold, under the day's own numbers: this is an offer, not a
+                  // step in stopping. Container, not `ref`: this face leaves
+                  // for the book page and the sheet must outlive it.
+                  const SizedBox(height: 10),
+                  TextButton.icon(
+                    onPressed: () => shareTodaysReading(
+                      context,
+                      ProviderScope.containerOf(context),
+                    ),
+                    icon: Icon(Icons.ios_share, size: 15, color: AppColors.gold),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.gold,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    label: Text(
+                      l10n.shareTodayAction,
+                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: SessionPageEntry(

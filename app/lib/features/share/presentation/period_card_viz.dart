@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../insights/period_summary.dart';
@@ -150,52 +152,128 @@ class CardBars extends StatelessWidget {
 }
 
 /// The month's calendar heat, bare cells — gold read days, deep oxblood heavy
-/// days, dashed future, ring on today. Trailing weeks that hold nothing but
-/// future days are cropped so a card sent mid-month doesn't lead with blank
-/// rows. Dates are deliberately absent here: a recipient reads the shape, and
-/// at slip scale a numeral is smear (dates are the page's affordance, B6).
+/// days, faint outlines for days still to come. Dates are deliberately absent
+/// here: a recipient reads the shape, and at slip scale a numeral is smear
+/// (dates are the page's affordance, B6).
+///
+/// **The whole month is drawn, always.** It used to crop every trailing week
+/// that held nothing but future days, so a card sent on the 8th showed two
+/// rows ending mid-week — which reads as a picture that got cut off, not as a
+/// month with most of it still ahead (owner report, 8 Sep 2026, against Apple
+/// Books' card). The other half of that report was contrast: an unread past
+/// day was `paperDeep` on `paper`, a difference of about 7/255, so the days
+/// that *had* reading floated with no grid behind them. Unread past days now
+/// take `line` — the same hairline the card's own rules are drawn in — and
+/// the future keeps a lighter outline, so past-unread and future-unread stay
+/// two visibly different things.
+///
+/// [width] and [maxHeight] are a *budget*, not a size: the cell is whichever
+/// of the two is binding, and the grid then takes only the room it needs.
+/// This is what makes a whole month safe to draw. The old version sized cells
+/// from the [width] it was *asked* for and laid them out in a `Wrap` — so on
+/// the Square, where the viz shares a row with the hero and actually receives
+/// about 60px, seven 11px cells could not fit and the month wrapped into two
+/// columns running off the bottom of the card. It was wrong before the crop
+/// came off too; the crop just kept the damage to 14 cells. Rows are explicit
+/// `Row`s of seven rather than a `Wrap`, so "a week is seven days" is
+/// structural and no float rounding can wrap a Sunday onto the next line.
+/// The month's cells cut into weeks of seven, oldest first — every week the
+/// month has, never a subset.
+///
+/// Pure and top-level for the reason `pushTapRoute` and `localNotificationRoute`
+/// are: *this* is where the bug was. It used to drop every trailing week that
+/// held only future days, and that decision is invisible in a widget test that
+/// merely renders — the card looks plausible either way. It is also the one
+/// thing about this calendar a host test can judge, since the metrics of the
+/// test font decide everything else.
+List<List<CalendarCell>> heatWeeks(List<CalendarCell> cells) => [
+      for (var i = 0; i < cells.length; i += 7) cells.sublist(i, math.min(i + 7, cells.length)),
+    ];
+
 class CardHeat extends StatelessWidget {
-  const CardHeat({super.key, required this.cells, this.width = 120});
+  const CardHeat({
+    super.key,
+    required this.cells,
+    this.width = 120,
+    this.maxHeight = 96,
+  });
 
   final List<CalendarCell> cells;
   final double width;
+  final double maxHeight;
+
+  static const _gap = 3.0;
 
   @override
   Widget build(BuildContext context) {
-    var visible = List.of(cells);
-    while (visible.length >= 7) {
-      final lastWeek = visible.sublist(visible.length - 7);
-      final allBlank = lastWeek.every((c) => c.date == null || c.isFuture);
-      if (!allBlank) break;
-      visible = visible.sublist(0, visible.length - 7);
-    }
-    final cell = (width - 6 * 3) / 7;
+    final weeks = heatWeeks(cells);
+    if (weeks.isEmpty) return const SizedBox.shrink();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available =
+            constraints.maxWidth.isFinite ? math.min(width, constraints.maxWidth) : width;
+        // The box actually offered wins over the budget asked for — inside an
+        // Expanded the calendar shrinks to the room left rather than pushing
+        // the closing line and the wordmark off the card, whatever the text
+        // above it happened to measure.
+        final budget =
+            constraints.maxHeight.isFinite ? math.min(maxHeight, constraints.maxHeight) : maxHeight;
+        final cell = math.max(
+          1.0,
+          math.min(
+            (available - 6 * _gap) / 7,
+            (budget - (weeks.length - 1) * _gap) / weeks.length,
+          ),
+        );
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final (i, week) in weeks.indexed) ...[
+              if (i > 0) const SizedBox(height: _gap),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final (j, c) in week.indexed) ...[
+                    if (j > 0) const SizedBox(width: _gap),
+                    _HeatCell(cell: c, size: cell),
+                  ],
+                ],
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _HeatCell extends StatelessWidget {
+  const _HeatCell({required this.cell, required this.size});
+
+  final CalendarCell cell;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
-      width: width,
-      child: Wrap(
-        spacing: 3,
-        runSpacing: 3,
-        children: [
-          for (final c in visible)
-            SizedBox(
-              width: cell,
-              height: cell,
-              child: c.date == null
-                  ? const SizedBox.shrink()
-                  : DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: c.isFuture
-                            ? Colors.transparent
-                            : c.isHeavy
-                                ? ShareCardPalette.oxblood
-                                : (c.isRead ? ShareCardPalette.gold : ShareCardPalette.paperDeep),
-                        borderRadius: BorderRadius.circular(2.5),
-                        border: c.isFuture ? Border.all(color: ShareCardPalette.line) : null,
-                      ),
-                    ),
+      width: size,
+      height: size,
+      child: cell.date == null
+          ? const SizedBox.shrink()
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                color: cell.isFuture
+                    ? Colors.transparent
+                    : cell.isHeavy
+                        ? ShareCardPalette.oxblood
+                        : (cell.isRead ? ShareCardPalette.gold : ShareCardPalette.line),
+                borderRadius: BorderRadius.circular(size * 0.22),
+                border: cell.isFuture
+                    ? Border.all(color: ShareCardPalette.line.withValues(alpha: 0.6))
+                    : null,
+              ),
             ),
-        ],
-      ),
     );
   }
 }

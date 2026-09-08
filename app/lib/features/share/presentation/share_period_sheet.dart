@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
+import '../../../core/share_links.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
+import '../recap_identity.dart';
 import 'period_card_data.dart';
 import 'period_share_card.dart';
 import 'share_sheet_scaffold.dart';
@@ -22,6 +27,7 @@ Future<void> showSharePeriodSheet(
   BuildContext context, {
   required PeriodCardData Function(bool nameBooks) dataBuilder,
   required String initialCaption,
+  required String recapKey,
   bool canNameBooks = false,
   ShareCardFormat initialFormat = ShareCardFormat.story,
   String? title,
@@ -36,6 +42,7 @@ Future<void> showSharePeriodSheet(
     builder: (_) => _SharePeriodSheet(
       dataBuilder: dataBuilder,
       initialCaption: initialCaption,
+      recapKey: recapKey,
       canNameBooks: canNameBooks,
       initialFormat: initialFormat,
       title: title,
@@ -61,10 +68,11 @@ Future<void> showRowSlipSheet(
   );
 }
 
-class _SharePeriodSheet extends StatefulWidget {
+class _SharePeriodSheet extends ConsumerStatefulWidget {
   const _SharePeriodSheet({
     required this.dataBuilder,
     required this.initialCaption,
+    required this.recapKey,
     required this.canNameBooks,
     required this.initialFormat,
     this.title,
@@ -72,23 +80,74 @@ class _SharePeriodSheet extends StatefulWidget {
 
   final PeriodCardData Function(bool nameBooks) dataBuilder;
   final String initialCaption;
+  final String recapKey;
   final bool canNameBooks;
   final ShareCardFormat initialFormat;
   final String? title;
 
   @override
-  State<_SharePeriodSheet> createState() => _SharePeriodSheetState();
+  ConsumerState<_SharePeriodSheet> createState() => _SharePeriodSheetState();
 }
 
-class _SharePeriodSheetState extends State<_SharePeriodSheet> {
+class _SharePeriodSheetState extends ConsumerState<_SharePeriodSheet> {
   late final _caption = TextEditingController(text: widget.initialCaption);
   late ShareCardFormat _format = widget.initialFormat;
   bool _nameBooks = true;
+  bool _publishing = false;
+
+  /// The caption the reader has already edited must never be overwritten by
+  /// the link arriving — appended once, and only to text they haven't touched
+  /// since.
+  String? _captionWithLink;
 
   @override
   void dispose() {
     _caption.dispose();
     super.dispose();
+  }
+
+  /// The link this window would have, or null when the reader has no handle or
+  /// hasn't published their recaps.
+  String? _linkFor(RecapIdentity? identity) {
+    if (identity == null || !identity.canLink) return null;
+    return recapShareUrl(identity.username!, widget.recapKey);
+  }
+
+  /// Put the link into the caption, so the message that arrives carries it —
+  /// the caption now ships *with* the image (8 Sep 2026), which is the whole
+  /// reason a link on a card is worth anything.
+  void _syncCaption(String? link) {
+    if (link == null) return;
+    if (_caption.text.contains(link)) return;
+    // Only if the reader hasn't edited it away from what we last wrote.
+    if (_captionWithLink != null && _caption.text != _captionWithLink) return;
+    final base = _caption.text.trim();
+    final next = base.isEmpty ? link : '$base\n$link';
+    _caption.text = next;
+    _captionWithLink = next;
+  }
+
+  Future<void> _publish() async {
+    setState(() => _publishing = true);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await publishRecaps(ref);
+      ref.invalidate(recapIdentityProvider);
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.shareFailed)));
+    } finally {
+      if (mounted) setState(() => _publishing = false);
+    }
+  }
+
+  Future<void> _copyLink(String link) async {
+    final l10n = AppLocalizations.of(context)!;
+    await Clipboard.setData(ClipboardData(text: link));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.shareRecapCopied)),
+    );
   }
 
   Future<void> _copyCaption() async {
@@ -110,6 +169,21 @@ class _SharePeriodSheetState extends State<_SharePeriodSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final identity = ref.watch(recapIdentityProvider).valueOrNull;
+    final link = _linkFor(identity);
+    // The caption is what actually reaches the recipient now that text ships
+    // with the image, so the link belongs in it — appended after the frame, not
+    // during build, because it writes to a controller.
+    if (link != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _syncCaption(link);
+        // A reader who has moved timezone would otherwise keep having their
+        // windows cut on the clock they published under. A no-op unless the
+        // offset actually changed, and only for readers who have a link at all.
+        syncUtcOffsetIfChanged(ref);
+      });
+    }
     return ShareSheetScaffold(
       title: widget.title ?? l10n.insightsShareSheetTitle,
       aboveCard: Row(
@@ -132,7 +206,13 @@ class _SharePeriodSheetState extends State<_SharePeriodSheet> {
         ],
       ),
       previewWidth: _previewWidth,
-      card: PeriodShareCard(data: widget.dataBuilder(_nameBooks), format: _format),
+      card: PeriodShareCard(
+        data: widget.dataBuilder(_nameBooks),
+        format: _format,
+        // Printed on the image itself, so a forwarded screenshot still leads
+        // somewhere. Without the scheme: nobody types "https://".
+        linkLine: link?.replaceFirst(RegExp(r'^https?://'), ''),
+      ),
       belowCard: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -173,6 +253,18 @@ class _SharePeriodSheetState extends State<_SharePeriodSheet> {
               ),
             ),
           const SizedBox(height: 8),
+          _RecapLinkBlock(
+            identity: identity,
+            link: link,
+            publishing: _publishing,
+            onPublish: _publish,
+            onCopy: () => _copyLink(link!),
+            onClaimUsername: () {
+              Navigator.of(context).pop();
+              context.push(Routes.profile);
+            },
+          ),
+          const SizedBox(height: 8),
           // The privacy line is not a setting — it's a promise, printed on
           // every open. Numbers, covers and titles only; never notes or
           // private reviews.
@@ -190,7 +282,7 @@ class _SharePeriodSheetState extends State<_SharePeriodSheet> {
           ),
         ],
       ),
-      captionLabel: l10n.insightsShareCaptionAsText,
+      captionLabel: l10n.insightsShareCaptionLabel,
       captionController: _caption,
       shareText: () => _caption.text,
       copyLabel: l10n.insightsShareCopyCaption,
@@ -249,7 +341,7 @@ class _RowSlipSheetState extends State<_RowSlipSheet> {
           ),
         ],
       ),
-      captionLabel: l10n.insightsShareCaptionAsText,
+      captionLabel: l10n.insightsShareCaptionLabel,
       captionController: _caption,
       shareText: () => _caption.text,
       copyLabel: l10n.insightsShareCopyCaption,
@@ -323,6 +415,132 @@ class _FormatChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The recap link, and the one decision behind it.
+///
+/// Three states, and the reason there are three: a shared recap is a *page* on
+/// kitabi.in, not a picture, so it needs the reader's own yes — and a reader
+/// with no handle has nothing to build a URL from. Nothing here happens by
+/// tapping Share; the link only exists once the reader has said so, and the
+/// switch that undoes it lives on the profile screen, not only in this sheet.
+class _RecapLinkBlock extends StatelessWidget {
+  const _RecapLinkBlock({
+    required this.identity,
+    required this.link,
+    required this.publishing,
+    required this.onPublish,
+    required this.onCopy,
+    required this.onClaimUsername,
+  });
+
+  final RecapIdentity? identity;
+  final String? link;
+  final bool publishing;
+  final VoidCallback onPublish;
+  final VoidCallback onCopy;
+  final VoidCallback onClaimUsername;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    // Still resolving, and offline it resolves from key_values rather than
+    // never — but until it has, showing nothing beats showing the wrong thing.
+    if (identity == null) return const SizedBox.shrink();
+
+    if (link != null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: AppColors.paper,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.link, size: 14, color: AppColors.gold),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.shareRecapLinkLabel,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.1,
+                      color: AppColors.inkSoft,
+                    ),
+                  ),
+                  Text(
+                    link!.replaceFirst(RegExp(r'^https?://'), ''),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.copy, size: 15, color: AppColors.inkSoft),
+              tooltip: l10n.insightsShareCopyCaption,
+              visualDensity: VisualDensity.compact,
+              onPressed: onCopy,
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (identity!.needsUsername) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: onClaimUsername,
+          icon: Icon(Icons.alternate_email, size: 15, color: AppColors.oxblood),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.oxblood,
+            visualDensity: VisualDensity.compact,
+          ),
+          label: Text(
+            l10n.shareRecapNeedsUsername,
+            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextButton.icon(
+          onPressed: publishing ? null : onPublish,
+          icon: publishing
+              ? SizedBox(
+                  width: 13,
+                  height: 13,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.oxblood),
+                )
+              : Icon(Icons.add_link, size: 15, color: AppColors.oxblood),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.oxblood,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+          ),
+          label: Text(
+            l10n.shareRecapPublish,
+            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+          ),
+        ),
+        // What it means, said before it is done rather than after.
+        Text(
+          l10n.shareRecapLinkHint,
+          style: TextStyle(fontSize: 9.5, color: AppColors.inkSoft, height: 1.3),
+        ),
+      ],
     );
   }
 }

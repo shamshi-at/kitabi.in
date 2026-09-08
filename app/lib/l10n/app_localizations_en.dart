@@ -111,6 +111,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileVisibilityLibraryDesc => 'What\'s on your shelves';
 
   @override
+  String get profileVisibilityRecapsTitle => 'Reading recaps';
+
+  @override
+  String get profileVisibilityRecapsDesc =>
+      'Let a shared card\'s link open your window of reading';
+
+  @override
   String get profileVisibilityReviewsTitle => 'Reviews';
 
   @override
@@ -3592,10 +3599,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get shareTextOnClipboard =>
-      'Caption copied — paste it alongside the card.';
-
-  @override
   String get shareFailed => 'Couldn\'t open the share sheet. Try again.';
 
   @override
@@ -3610,6 +3613,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightsShareFormatSquare => 'Square';
+
+  @override
+  String get shareRecapLinkLabel => 'Link on the card';
+
+  @override
+  String get shareRecapLinkHint =>
+      'Anyone with this link can see this window of your reading.';
+
+  @override
+  String get shareRecapPublish => 'Add a link others can open';
+
+  @override
+  String get shareRecapNeedsUsername => 'Pick a username to share a link';
+
+  @override
+  String get shareRecapCopied => 'Link copied';
+
+  @override
+  String get shareTodayAction => 'Share today\'s reading';
+
+  @override
+  String get shareTodaySheetTitle => 'Today\'s reading';
+
+  @override
+  String get shareTodayNothingYet => 'Nothing logged today yet.';
 
   @override
   String get insightsShareCaptionLabel => 'Caption';
@@ -3653,10 +3681,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get insightsSharePrivacyLine =>
       'Numbers, covers and titles only — never your notes or private reviews.';
-
-  @override
-  String get insightsShareCaptionAsText =>
-      'Caption · copied when you send, paste it alongside';
 
   @override
   String get insightsShareRowSheetTitle => 'Send this line';

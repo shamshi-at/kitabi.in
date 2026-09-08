@@ -54,6 +54,9 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
   InsightsPeriod _period = InsightsPeriod.today;
   // Only meaningful while _period is year; null means "all time".
   late int? _year = DateTime.now().year;
+  // Only meaningful while _period is month; null means this month. Held as the
+  // first of the month it names.
+  DateTime? _month;
 
   Future<void> _editGoal(int current) async {
     final l10n = AppLocalizations.of(context)!;
@@ -141,6 +144,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
       context,
       dataBuilder: share.dataBuilder,
       initialCaption: share.caption,
+      recapKey: share.recapKey,
       canNameBooks: share.canNameBooks,
       initialFormat: share.initialFormat,
     );
@@ -198,11 +202,27 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
               return _FreshInsights(goal: goal, onEditGoal: () => _editGoal(goal));
             }
 
-            final range = rangeFor(_period, year: _year);
+            final range = rangeFor(_period, year: _year, month: _month);
             final dataYears = <int>{
               thisYear,
               for (final h in hits)
                 if (h.entry.status == 'read') (h.entry.finishDate ?? h.entry.updatedAt).year,
+            }.toList()
+              ..sort((a, b) => b.compareTo(a));
+            // Months worth offering: any month the reader sat with a book, plus
+            // any month they finished one, plus this one. Sessions and not just
+            // finishes, because a month of steady reading with nothing finished
+            // is exactly the month whose calendar is worth looking back at.
+            final now = DateTime.now();
+            final dataMonths = <DateTime>{
+              DateTime(now.year, now.month),
+              if (sessions != null)
+                for (final s in sessions)
+                  if (s.deletedAt == null) DateTime(s.startedAt.year, s.startedAt.month),
+              for (final h in hits)
+                if (h.entry.status == 'read')
+                  DateTime((h.entry.finishDate ?? h.entry.updatedAt).year,
+                      (h.entry.finishDate ?? h.entry.updatedAt).month),
             }.toList()
               ..sort((a, b) => b.compareTo(a));
             final periodSummary = sessions == null
@@ -244,6 +264,9 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                       onYearSelected: (y) => setState(() => _year = y),
                       thisYear: thisYear,
                       years: dataYears,
+                      selectedMonth: _month,
+                      onMonthSelected: (m) => setState(() => _month = m),
+                      months: dataMonths,
                     ),
                     SizedBox(height: 16),
                     if (periodSummary == null)

@@ -10,6 +10,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../providers/library_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../share/share_today.dart';
 import 'session_log_row.dart';
 import 'session_notes_block.dart';
 import 'session_page_entry.dart';
@@ -256,6 +257,20 @@ class _StopSessionSheetState extends ConsumerState<_StopSessionSheet> {
                         style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                       ),
                     ],
+                  ),
+                ),
+                // The daily card's other end-of-sitting door. The quick stop
+                // and the wax-seal face are one moment reached two ways, and
+                // this file's history is mostly what happens when a feature
+                // lands on only one of them (19 Jul 2026). Beside the sitting's
+                // own numbers, where it can't compete with Save / Finish / Skip.
+                IconButton(
+                  icon: Icon(Icons.ios_share, size: 18, color: AppColors.gold),
+                  tooltip: l10n.shareTodayAction,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => shareTodaysReading(
+                    context,
+                    ProviderScope.containerOf(context),
                   ),
                 ),
               ],

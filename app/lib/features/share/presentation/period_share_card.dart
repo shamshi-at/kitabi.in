@@ -22,16 +22,29 @@ class PeriodShareCard extends StatelessWidget {
     super.key,
     required this.data,
     this.format = ShareCardFormat.story,
+    this.linkLine,
   });
 
   final PeriodCardData data;
   final ShareCardFormat format;
 
+  /// The recap link, printed under the wordmark on the roomier formats so a
+  /// forwarded *screenshot* still says where to go (8 Sep 2026). The caption
+  /// carries the real, tappable URL; this is the fallback for an image that
+  /// arrives without its words. Slip never prints it — at 6.5pt a full path is
+  /// smear, and "kitabi.in" alone still leads home.
+  ///
+  /// A presentation concern, not part of [PeriodCardData]: the card's data is
+  /// the reader's reading, and whether a link exists depends on their handle
+  /// and their visibility switch, which the sheet knows and the composer
+  /// doesn't.
+  final String? linkLine;
+
   @override
   Widget build(BuildContext context) {
     return switch (format) {
-      ShareCardFormat.story => _Story(data: data),
-      ShareCardFormat.square => _Square(data: data),
+      ShareCardFormat.story => _Story(data: data, linkLine: linkLine),
+      ShareCardFormat.square => _Square(data: data, linkLine: linkLine),
       ShareCardFormat.slip => _Slip(data: data),
     };
   }
@@ -201,7 +214,15 @@ class _Viz extends StatelessWidget {
       );
     }
     if (data.heatCells case final cells?) {
-      return CardHeat(cells: cells, width: small ? 84 : (mid ? 96 : 116));
+      // A whole month is up to six rows (8 Sep 2026 — the crop is gone), so
+      // the calendar needs a height budget as well as a width: on Story the
+      // width alone would make a 99px-tall grid and push the closing line and
+      // the wordmark off the card.
+      return CardHeat(
+        cells: cells,
+        width: small ? 84 : (mid ? 96 : 116),
+        maxHeight: small ? 60 : (mid ? 52 : 72),
+      );
     }
     if (data.trendBuckets case final trend?) {
       return CardTrend(buckets: trend, height: small ? 24 : (mid ? 34 : 40));
@@ -214,10 +235,11 @@ class _Viz extends StatelessWidget {
 }
 
 class _Wordmark extends StatelessWidget {
-  const _Wordmark({required this.withTagline, this.logoSize = 12});
+  const _Wordmark({required this.withTagline, this.logoSize = 12, this.linkLine});
 
   final bool withTagline;
   final double logoSize;
+  final String? linkLine;
 
   @override
   Widget build(BuildContext context) {
@@ -240,7 +262,19 @@ class _Wordmark extends StatelessWidget {
             ),
           ],
         ),
-        if (withTagline) ...[
+        if (linkLine != null && linkLine!.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            linkLine!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 6.5,
+              fontWeight: FontWeight.w600,
+              color: ShareCardPalette.goldInk,
+            ),
+          ),
+        ] else if (withTagline) ...[
           const SizedBox(height: 2),
           Text(
             l10n.shareTagline,
@@ -253,9 +287,10 @@ class _Wordmark extends StatelessWidget {
 }
 
 class _Story extends StatelessWidget {
-  const _Story({required this.data});
+  const _Story({required this.data, this.linkLine});
 
   final PeriodCardData data;
+  final String? linkLine;
 
   @override
   Widget build(BuildContext context) {
@@ -278,8 +313,14 @@ class _Story extends StatelessWidget {
                 style: const TextStyle(fontSize: 8.5, color: ShareCardPalette.inkSoft),
               ),
               const SizedBox(height: 14),
-              _Viz(data: data, format: ShareCardFormat.story),
-              const Spacer(),
+              // Expanded, not a fixed block followed by a Spacer: a whole
+              // month is six rows tall, and a viz sized off its own budget
+              // pushed the closing line and the wordmark off the bottom of
+              // the story (8 Sep 2026). Centred inside the space it's given,
+              // so a lamp row or a shelf sits exactly where it always did.
+              Expanded(
+                child: Center(child: _Viz(data: data, format: ShareCardFormat.story)),
+              ),
               Text(
                 data.closingLine,
                 textAlign: TextAlign.center,
@@ -295,7 +336,7 @@ class _Story extends StatelessWidget {
               const Spacer(),
               Container(width: 36, height: 1, color: ShareCardPalette.line),
               const SizedBox(height: 8),
-              const _Wordmark(withTagline: true),
+              _Wordmark(withTagline: true, linkLine: linkLine),
             ],
           ),
         ),
@@ -305,9 +346,10 @@ class _Story extends StatelessWidget {
 }
 
 class _Square extends StatelessWidget {
-  const _Square({required this.data});
+  const _Square({required this.data, this.linkLine});
 
   final PeriodCardData data;
+  final String? linkLine;
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +398,7 @@ class _Square extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              const _Wordmark(withTagline: false, logoSize: 10),
+              _Wordmark(withTagline: false, logoSize: 10, linkLine: linkLine),
             ],
           ),
         ),

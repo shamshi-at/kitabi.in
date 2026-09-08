@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
@@ -10,11 +11,16 @@ import '../period.dart';
 /// width, and a clipped last chip is the same "there's more" affordance the
 /// app already uses for overflowing ticker text.
 ///
-/// Year carries its own sub-choice (a specific calendar year, or all time) —
-/// [selectedYear] is only read while [selected] is [InsightsPeriod.year]. A
-/// plain tap on the chip selects *this* year immediately; the dropdown arrow
-/// opens the other choices, built from [years] (years that actually hold
-/// finished books) plus all time.
+/// Year and Month each carry their own sub-choice, and carry it the same way:
+/// a plain tap on the chip body means *this* year / *this* month, the dropdown
+/// arrow opens the others — [years] being years that hold finished books,
+/// [months] months that hold any reading at all. [selectedYear] is read only
+/// while [selected] is [InsightsPeriod.year], [selectedMonth] only while it is
+/// [InsightsPeriod.month].
+///
+/// Month got its arrow on 8 Sep 2026: the almanac could answer "how was 2025?"
+/// and not "how was August?", which is the question a reader who has just
+/// shared a month card asks next.
 class PeriodSelector extends StatelessWidget {
   const PeriodSelector({
     super.key,
@@ -24,6 +30,9 @@ class PeriodSelector extends StatelessWidget {
     required this.onYearSelected,
     required this.thisYear,
     required this.years,
+    required this.selectedMonth,
+    required this.onMonthSelected,
+    required this.months,
   });
 
   final InsightsPeriod selected;
@@ -35,13 +44,21 @@ class PeriodSelector extends StatelessWidget {
   /// Years with data, newest first — always contains [thisYear].
   final List<int> years;
 
+  /// The first of the month being shown; null means this month.
+  final DateTime? selectedMonth;
+  final ValueChanged<DateTime?> onMonthSelected;
+
+  /// Months with data, newest first, as first-of-month dates.
+  final List<DateTime> months;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final chips = <(InsightsPeriod, String)>[
       (InsightsPeriod.today, l10n.insightsPeriodToday),
       (InsightsPeriod.week, l10n.insightsPeriodWeek),
-      (InsightsPeriod.month, l10n.insightsPeriodMonth),
+    ];
+    final trailingChips = <(InsightsPeriod, String)>[
       (InsightsPeriod.threeMonths, l10n.insightsPeriod3Months),
       (InsightsPeriod.sixMonths, l10n.insightsPeriod6Months),
     ];
@@ -76,10 +93,42 @@ class PeriodSelector extends StatelessWidget {
                 onTap: () => onSelected(period),
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: _MonthChip(
+              label: l10n.insightsPeriodMonth,
+              selected: selected == InsightsPeriod.month,
+              selectedMonth: selectedMonth,
+              months: months,
+              onChanged: (month) {
+                onMonthSelected(month);
+                onSelected(InsightsPeriod.month);
+              },
+            ),
+          ),
+          for (final (period, label) in trailingChips)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: _PeriodChip(
+                label: label,
+                selected: selected == period,
+                onTap: () => onSelected(period),
+              ),
+            ),
         ],
       ),
     );
   }
+}
+
+/// How a month reads in the chip and its menu: "August" inside this year,
+/// "Aug 2025" outside it — the year is only worth the width when it isn't the
+/// obvious one.
+String monthChipLabel(DateTime month, {DateTime? now}) {
+  final n = now ?? DateTime.now();
+  return month.year == n.year
+      ? DateFormat.MMMM().format(month)
+      : DateFormat.yMMM().format(month);
 }
 
 class _PeriodChip extends StatelessWidget {
@@ -178,6 +227,73 @@ class _YearChip extends StatelessWidget {
               itemBuilder: (context) => [
                 for (final y in years) PopupMenuItem(value: (y,), child: Text('$y')),
                 PopupMenuItem(value: const (null,), child: Text(allTimeLabel)),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 7, 8, 7),
+                child: Icon(Icons.arrow_drop_down, size: 15, color: fg),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The Month chip: the body is a one-tap "this month" door; only the arrow
+/// opens the menu of months that hold reading. Same shape as [_YearChip] on
+/// purpose — two sub-choices that behave differently would be two things to
+/// learn.
+class _MonthChip extends StatelessWidget {
+  const _MonthChip({
+    required this.label,
+    required this.selected,
+    required this.selectedMonth,
+    required this.months,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool selected;
+  final DateTime? selectedMonth;
+  final List<DateTime> months;
+  final ValueChanged<DateTime?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = selected && selectedMonth != null ? monthChipLabel(selectedMonth!) : label;
+    final fg = selected ? AppColors.paper : AppColors.ink;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? AppColors.ink : AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: selected ? AppColors.ink : AppColors.line),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              onTap: () => onChanged(null),
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 7, 4, 7),
+                child: Text(
+                  text,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+                ),
+              ),
+            ),
+            PopupMenuButton<(DateTime,)>(
+              // Wrapped in a record for the same reason the year menu is: a
+              // bare value that could be null is dropped by onSelected.
+              tooltip: label,
+              onSelected: (choice) => onChanged(choice.$1),
+              itemBuilder: (context) => [
+                for (final month in months)
+                  PopupMenuItem(value: (month,), child: Text(monthChipLabel(month))),
               ],
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(0, 7, 8, 7),

@@ -132,7 +132,7 @@ void main() {
         reason: 'debugNeedsPaint threw LateInitializationError in release (6 Sep 2026)');
   });
 
-  testWidgets('Share on the sheet hands the OS a PNG file, never bare text', (tester) async {
+  testWidgets('Share on the sheet hands the OS a PNG file AND the caption', (tester) async {
     final channel = _ShareChannel()..install();
     addTearDown(channel.remove);
     tester.view.physicalSize = const Size(1200, 2400);
@@ -165,14 +165,19 @@ void main() {
     expect(methods, isNot(contains('share')), reason: 'text-only is the failure mode');
 
     final files = channel.calls.firstWhere((c) => c.method == 'shareFiles');
-    final paths = (files.arguments as Map)['paths'] as List;
+    final args = files.arguments as Map;
+    final paths = args['paths'] as List;
     expect(paths, hasLength(1));
     final shared = File(paths.single as String);
     expect(shared.existsSync(), isTrue);
     expect(shared.readAsBytesSync().sublist(0, 4), [0x89, 0x50, 0x4E, 0x47]);
 
-    // The words ride the clipboard, as the sheet promises.
-    expect(find.text('Caption copied — paste it alongside the card.'), findsOneWidget);
+    // ...and the caption goes on the SAME call, so the recipient gets a
+    // picture with words under it rather than a picture and an instruction to
+    // paste. The image alone is the 26 Aug workaround, written against a
+    // capture that was already throwing in release (8 Sep 2026).
+    expect(args['text'], 'My month in books');
+
     expect(
       find.text("Couldn't render the card, so the text was shared instead."),
       findsNothing,

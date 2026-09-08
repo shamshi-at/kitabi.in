@@ -1250,6 +1250,43 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   **"reduce the backup" would have cost restore granularity for under 2% of
   the overage** — the first fix reached for was the one the numbers ruled out.
 
+- **A workaround built on a misdiagnosis outlives the bug it was blamed on.**
+  On 26 Aug 2026 the owner reported "just the text is getting shared"; the fix
+  concluded that WhatsApp drops one of image+text when handed both, and moved
+  the caption to the clipboard with a snackbar telling the reader to paste it.
+  On 6 Sep the owner reported it *again, in the same words*, and the real cause
+  was found: the capture's readiness check read `RenderObject.debugNeedsPaint`,
+  whose value is assigned only inside an `assert`, so every release build threw
+  and every share on every phone took the text-only **fallback**. That check was
+  already there in `git show efd5d6b^` — WhatsApp was never choosing, and the
+  first diagnosis had been wrong all along. The real fix landed, the workaround
+  did not, and two days later the owner reported the clipboard step itself as the
+  defect (8 Sep 2026). Two rules. When a bug recurs in the same words, re-read
+  what the *previous* fix assumed before extending it — a second report of one
+  symptom is evidence the first diagnosis was wrong, not that the problem is
+  bigger. And when a root cause is finally found, go back and delete every
+  workaround that was built for it: a workaround left standing becomes the
+  feature, and its l10n strings and test assertions ("the words ride the
+  clipboard, as the sheet promises") harden the wrong behaviour into something
+  that reads like a decision.
+
+- **A viz that sizes itself from the width it was *asked* for breaks in the one
+  layout that can't give it.** The month card's calendar computed a cell from
+  its `width` parameter and laid the days out in a `Wrap`. On the Square, where
+  it shares a row with the hero and actually receives about 60px of the 96 it
+  asks for, seven cells could not fit and the month wrapped into two columns
+  running off the bottom of the card (8 Sep 2026). The bug predated the change
+  that exposed it — cropping the month to elapsed weeks had merely kept the
+  damage to 14 cells. Two fixes, both structural: read the box you are *given*
+  (`LayoutBuilder`, and honour `constraints.maxHeight` too, so a viz inside an
+  `Expanded` shrinks instead of pushing the wordmark off the card), and lay a
+  calendar out as explicit `Row`s of seven rather than a `Wrap`, so "a week is
+  seven days" cannot be undone by float rounding. Corollary for judging any of
+  this on a Mac: `flutter test`'s fallback font draws every glyph as a full em
+  box, so a card that overflows in the harness may be perfectly fine on a phone
+  and vice versa — assert on the *rule* (`heatWeeks`) and take the layout to a
+  device.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

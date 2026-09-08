@@ -77,6 +77,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     'profile_visible',
     'library_visible',
     'reviews_visible_default',
+    'recaps_visible',
     'promotions_opt_out',
   ];
 
@@ -299,6 +300,16 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                   subtitle: l10n.profileVisibilityReviewsDesc,
                   isPublic: _vis['reviews_visible_default']!,
                   onChanged: (v) => _toggle('reviews_visible_default', v),
+                ),
+                // Sharing a card is one act of consent; publishing a page at a
+                // link anyone can open is another. Its own switch for that
+                // reason, and revocable here rather than only in the sheet that
+                // offered it (8 Sep 2026).
+                _VisibilityRow(
+                  title: l10n.profileVisibilityRecapsTitle,
+                  subtitle: l10n.profileVisibilityRecapsDesc,
+                  isPublic: _vis['recaps_visible']!,
+                  onChanged: (v) => _toggle('recaps_visible', v),
                 ),
               ],
             ),
