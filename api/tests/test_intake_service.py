@@ -377,3 +377,67 @@ async def test_re_promoting_a_reverted_book_hits_the_soft_deleted_isbn(session):
         select(func.count()).select_from(Work).where(Work.deleted_at.is_(None))
     )
     assert live == 0, "no second Work for an ISBN the catalogue already holds"
+
+
+# --------------------------------------------------------------------------
+# `already_catalogued` — the rule the preview script and the job must share
+# --------------------------------------------------------------------------
+
+
+async def test_already_catalogued_is_none_for_a_book_we_do_not_have(session):
+    assert await intake_service.already_catalogued(session, candidate()) is None
+
+
+async def test_already_catalogued_matches_on_the_same_upstream_record(session):
+    session.add(Work(title="Seeded", external_source="openlibrary", external_id="/works/OL1W"))
+    await session.commit()
+    found = await intake_service.already_catalogued(session, candidate("/works/OL1W"))
+    assert found is not None
+
+
+async def test_already_catalogued_matches_on_isbn_from_a_different_upstream_record(session):
+    """OpenLibrary carries duplicate work keys for popular books, so provenance
+    alone would let the second one through."""
+    await intake_service.record(session, [candidate("/works/FIRST")], source=SOURCE)
+    await intake_service.promote(session, limit=1)
+
+    found = await intake_service.already_catalogued(session, candidate("/works/SECOND"))
+    assert found is not None
+
+
+async def test_already_catalogued_recognises_the_other_isbn_spelling(session):
+    """The catalogue may hold the ISBN-10 off an older printing while the
+    candidate carries the 13 — two spellings of one printing."""
+    await intake_service.record(session, [candidate()], source=SOURCE)
+    await intake_service.promote(session, limit=1)
+    edition = (await session.execute(select(Edition))).scalar_one()
+    edition.isbn = "0060977493"  # the ISBN-10 of the same book
+    await session.commit()
+
+    found = await intake_service.already_catalogued(
+        session, candidate("/works/OTHER", isbn="9780060977498")
+    )
+    assert found is not None
+
+
+async def test_already_catalogued_ignores_a_soft_deleted_book(session):
+    """A reverted book is gone as far as readers are concerned, so the preview
+    must not report it as "already have" — the promotion path has its own guard
+    for the number the deleted row still occupies."""
+    await intake_service.record(session, [candidate()], source=SOURCE)
+    await intake_service.promote(session, limit=1)
+    row = (await session.execute(select(CatalogIntake))).scalar_one()
+    await intake_service.revert(session, [row.id])
+
+    assert await intake_service.already_catalogued(session, candidate()) is None
+
+
+async def test_already_catalogued_writes_nothing(session):
+    """It is called from a read-only session in `scripts/preview_intake.py`."""
+    session.add(Work(title="Seeded", external_source="openlibrary", external_id="/works/OL1W"))
+    await session.commit()
+    before = await catalogue_size(session)
+    for _ in range(3):
+        await intake_service.already_catalogued(session, candidate())
+    assert await catalogue_size(session) == before
+    assert await session.scalar(select(func.count()).select_from(CatalogIntake)) == 0

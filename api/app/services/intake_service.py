@@ -48,9 +48,11 @@ from app.models.catalog_intake import (
     STATE_PROMOTED,
     STATE_REJECTED,
 )
+from app.models.edition import Edition
 from app.models.work import Work
 from app.schemas.catalog import WorkCreate
 from app.services import catalog_service, intake_gate
+from app.services import isbn as isbn_util
 from app.services.intake_gate import Candidate
 
 logger = logging.getLogger(__name__)
@@ -198,6 +200,48 @@ async def _work_by_provenance(
     ).scalar_one_or_none()
 
 
+async def already_catalogued(db: AsyncSession, candidate: Candidate) -> uuid.UUID | None:
+    """The book this candidate already is, if the catalogue holds it.
+
+    Two questions, because neither alone is enough:
+
+    - **Same upstream record?** The `etl/` bulk load stamped 1,428 works with
+      `openlibrary` + the OL work key. A second *printing* of one of them
+      carries a different, unclaimed ISBN, so an ISBN check would pass it and
+      we would publish a duplicate Work for a book already here.
+    - **Same ISBN?** Two upstream records can name one printing — OpenLibrary
+      itself carries duplicate work keys for popular books. Matched on
+      `isbn.variants()`, so an ISBN-10 stored on an older printing is
+      recognised when the candidate carries the 13.
+
+    Read-only, which is what lets `scripts/preview_intake.py` ask exactly the
+    question tonight's run will ask without writing anything. Promotion still
+    keeps `create_work_with_edition`'s own guard behind this one: that catches
+    the two cases a pre-check cannot — a soft-deleted row still occupying the
+    number, and a reader adding the same printing in the same second.
+    """
+    by_provenance = await _work_by_provenance(db, *candidate.provenance)
+    if by_provenance is not None:
+        return by_provenance
+
+    forms = isbn_util.variants(candidate.isbn) if candidate.isbn else None
+    if not forms:
+        return None
+    return (
+        await db.execute(
+            select(Edition.work_id)
+            .join(Work, Work.id == Edition.work_id)
+            .where(
+                Edition.isbn.in_(forms),
+                Edition.deleted_at.is_(None),
+                Work.deleted_at.is_(None),
+            )
+            .order_by(Edition.created_at, Edition.id)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+
 async def _due(db: AsyncSession, limit: int) -> Sequence[CatalogIntake]:
     return (
         (
@@ -242,17 +286,13 @@ async def promote(db: AsyncSession, *, limit: int) -> dict[str, int]:
             counts["regressed"] = counts.get("regressed", 0) + 1
             continue
 
-        # Did an earlier seed already publish this upstream record? The
-        # `etl/` bulk load stamped 1,428 works with `openlibrary` + the OL
-        # work key, and the ISBN guard cannot see that: a second *printing* of
-        # a catalogued book carries a different, unclaimed ISBN, so it would
-        # pass and we would publish a duplicate Work for a book already here.
-        # Provenance is the only thing that recognises it.
-        existing_id = await _work_by_provenance(db, *screened.candidate.provenance)
+        # The same question `scripts/preview_intake.py` asks, so a preview and
+        # the run it previews cannot disagree.
+        existing_id = await already_catalogued(db, screened.candidate)
         if existing_id is not None:
             row.state = STATE_DUPLICATE
             row.work_id = existing_id
-            row.note = "already in the catalogue from the same upstream record"
+            row.note = "already in the catalogue"
             await db.commit()
             counts[STATE_DUPLICATE] = counts.get(STATE_DUPLICATE, 0) + 1
             continue

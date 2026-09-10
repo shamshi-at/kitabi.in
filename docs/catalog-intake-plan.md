@@ -331,6 +331,21 @@ unless `CATALOG_INTAKE_ENABLED=1`**. Verified end-to-end against live
 OpenLibrary into the dev database: 47 discovered, **0 catalogue rows written by
 discovery**, 10 promoted with valid ISBNs, real publishers, slugs and covers.
 
+**Seeing a night before allowing one:** `api/scripts/preview_intake.py` runs
+the real adapters against the real sources, screens through the real gate and
+asks the real database which books it already holds — then prints exactly what
+tonight would create. It writes nothing (the session is opened
+`postgresql_readonly`, verified to have Postgres itself refuse an INSERT) and
+has no `--apply`, because promoting is the job's business and its switch is the
+Dockerfile flag. Point it at **production**: a preview against an empty dev
+database cannot tell you which books you already have, and that is most of what
+separates a useful night from a wasted one.
+
+```bash
+DATABASE_URL="$(grep '^DATABASE_URL=' api/.env | cut -d= -f2-)" \
+  api/.venv/bin/python api/scripts/preview_intake.py
+```
+
 Three defects the live run found that mocked tests could not, all now pinned by
 regression tests: the work-level cover fallback was dead code (`cover_i` was
 never among the fields requested); `publisher:"Juggernaut Books"` matches an

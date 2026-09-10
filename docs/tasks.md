@@ -1295,6 +1295,12 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
       Verified end-to-end against live OpenLibrary into the dev DB: 47 discovered,
       0 catalogue rows written by discovery, 10 promoted with valid ISBNs, real
       publishers and slugs.
+  - `scripts/preview_intake.py` shows a night's worth before one is allowed to
+    happen — real adapters, real gate, real catalogue, **zero writes** (the
+    session is `postgresql_readonly`, and Postgres was verified to refuse an
+    INSERT through it). No `--apply`: the switch is the Dockerfile flag.
+    `intake_service.already_catalogued` is the one duplicate rule it shares
+    with the job, so a preview and the run it previews cannot disagree.
   - Three bugs the live run found that the mocks could not: the work-level cover
     fallback was dead code (`cover_i` was never requested); `publisher:"Juggernaut
     Books"` matches an *Australian* press and shelved a YA novel under an
