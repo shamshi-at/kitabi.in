@@ -22,6 +22,7 @@ LOCK_BACKFILL_SLUGS = 1003
 LOCK_BACKFILL_COVERS = 1004
 LOCK_MERGE_EXACT = 1005
 LOCK_BACKFILL_SERIES = 1006
+LOCK_CATALOG_INTAKE = 1007
 
 
 @asynccontextmanager
@@ -45,6 +46,7 @@ def start() -> None:
     from app.jobs.backfill_covers import backfill_covers
     from app.jobs.backfill_series_search import backfill_series_search
     from app.jobs.backfill_slugs import backfill_slugs
+    from app.jobs.catalog_intake import catalog_intake
     from app.jobs.keep_warm import keep_warm
     from app.jobs.merge_exact import merge_exact_duplicates
 
@@ -102,6 +104,26 @@ def start() -> None:
         id="backfill_series_search",
         replace_existing=True,
         next_run_time=datetime.now(UTC) + timedelta(minutes=4),
+    )
+    # Daily catalogue intake (docs/catalog-intake-plan.md), 02:30 UTC — 08:00
+    # in Kerala, so a night's additions are there when readers wake up, and
+    # well clear of the nightly backup window.
+    #
+    # `cron`, not `interval`: an interval job re-runs from boot, and this
+    # service redeploys on every push to main, so an interval of 24h would
+    # fire on each deploy. A daily budget that resets whenever someone ships
+    # is not a budget. The job is dormant unless CATALOG_INTAKE_ENABLED is
+    # set, so registering it here creates nothing on its own.
+    scheduler.add_job(
+        catalog_intake,
+        "cron",
+        hour=2,
+        minute=30,
+        id="catalog_intake",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+        max_instances=1,
     )
     scheduler.start()
 

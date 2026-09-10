@@ -102,6 +102,10 @@ KEPT_TABLES: tuple[str, ...] = (
     "work_genres",
     "work_translators",
     "merge_dismissals",
+    # Catalogue machinery, not reader data: the staging queue the daily intake
+    # promotes from, and the receipts saying which books it created. Wiping it
+    # would make the pipeline re-promote everything it has already published.
+    "catalog_intake",
     "admin_users",
     "admin_recovery_codes",
     "admin_auth_tokens",

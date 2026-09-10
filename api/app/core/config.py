@@ -39,6 +39,27 @@ class Settings(BaseSettings):
     # Console.
     indexnow_enabled: bool = False
 
+    # Daily catalogue intake (docs/catalog-intake-plan.md). The job discovers
+    # candidate books, screens them against the completeness gate, and promotes
+    # the complete ones — unattended, every night.
+    #
+    # OFF by default, and this is the important half. Merging the pipeline to
+    # main must not start creating catalogue rows: a developer running the API
+    # on a laptop, a test database, a preview deploy — none of them should
+    # publish books. Production opts in via `ENV CATALOG_INTAKE_ENABLED=1` in
+    # api/Dockerfile, declared in the repo rather than a dashboard so the one
+    # place that publishes is readable from a checkout (the same shape as
+    # INDEXNOW_ENABLED and ALLOW_PROD_MIGRATION).
+    catalog_intake_enabled: bool = False
+    # Books promoted per run. The ceiling on how fast the catalogue can grow,
+    # and therefore the ceiling on how much a mistake in a source adapter can
+    # cost before anyone looks. 50/day drains the Malayalam backlog in about
+    # two months, which is also a reasonable "new in catalogue" feed.
+    catalog_intake_daily_limit: int = 50
+    # Candidates each seed contributes per discovery pass. Discovery writes
+    # only to `catalog_intake`, so this bounds crawling, never publishing.
+    catalog_intake_per_seed: int = 50
+
     # Version gate: the app sends `X-App-Version`; anything older than this gets
     # a 426 with an update payload (CLAUDE.md — the update-gate). Bump when a
     # release must be forced.

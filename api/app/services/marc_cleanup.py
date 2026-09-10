@@ -282,8 +282,28 @@ def clean_work(
     flags = _bracket_flags(title.strip())
 
     new_title = _normalize(title, rules)
-    new_title = _unquote(new_title, rules)
-    new_title = _strip_dangling(new_title, rules)
+    # Unquote and strip-dangling can each *unmask* work for the other, so one
+    # pass in a fixed order does not finish the job: `"Mukajjiya kanasugaḷu" /`
+    # is not quote-wrapped until the dangling ` /` comes off, and by then
+    # `_unquote` has already had its turn — the row comes out still quoted and
+    # a second run of the whole cleanup fixes it.
+    #
+    # That is the failure the etl README names ("a cleanup that only settles on
+    # the second run is one nobody can tell is finished", 31 Aug 2026, found
+    # when re-planning after an apply caught `Govt. Central Press, 1974.`).
+    # Iterating to a fixed point here is what makes one pass mean finished —
+    # which the intake gate depends on, since it cleans a record once, at the
+    # door, with nobody coming back to re-plan it.
+    #
+    # Bounded rather than `while True`: two rules that undid each other would
+    # otherwise hang the caller. Three is generous — the deepest real cascade
+    # observed is two.
+    for _ in range(3):
+        before = new_title
+        new_title = _unquote(new_title, rules)
+        new_title = _strip_dangling(new_title, rules)
+        if new_title == before:
+            break
 
     split_off: str | None = None
     if not (subtitle or "").strip():
@@ -312,7 +332,12 @@ def clean_work(
     return Fix(
         title=new_title,
         subtitle=new_subtitle,
-        rules=[] if unchanged else rules,
+        # De-duplicated, order kept. The fixed-point loop above can fire one
+        # rule on two iterations, and `rules` is not just a log: it is written
+        # into plan and receipt files that are filtered on exact lists
+        # (`jq 'select(.rules != ["nfc"])'`), so a repeat would quietly drop a
+        # row out of a reviewer's filter.
+        rules=[] if unchanged else list(dict.fromkeys(rules)),
         flags=flags,
     )
 

@@ -1273,6 +1273,59 @@ out of the sitemap until a work actually carries a genre.
 
 ### W5 — Catalogue depth (parallel, and never really finished)
 
+**Daily catalogue intake** — [docs/catalog-intake-plan.md](catalog-intake-plan.md).
+The seed stops being a thing a human runs from a laptop with a 9 GB download and
+becomes a nightly job. The rule it exists to enforce (owner, 9 Sep 2026): a
+record is complete — title, author, publisher, cover, **checksum-valid ISBN** —
+or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
+1,428 rows and must never be needed by anything this creates.
+
+- [x] **P1 — the intake spine** (11 Sep 2026). `catalog_intake` staging table
+      (migration 000053, RLS on, zero policies); `services/intake_gate` — pure,
+      53 tests — screening five required fields plus language, cleaning MARC
+      punctuation *at the door* via `marc_cleanup`, and separating **missing**
+      (another source may fill it) from **fatal** (a supplied heading is not a
+      book, and un-bracketing it would only make it look legitimate);
+      `services/intake_service` promoting through
+      `catalog_service.create_work_with_edition`, so translit columns, slugs and
+      publisher canonicalisation are inherited rather than backfilled the way
+      `etl/04_load.sql` needs `06`; `services/intake_openlibrary` (Indian-English
+      seeds); `jobs/catalog_intake` on a 02:30 UTC cron under an advisory lock.
+      **Dormant unless `CATALOG_INTAKE_ENABLED=1`** — merging it creates nothing.
+      Verified end-to-end against live OpenLibrary into the dev DB: 47 discovered,
+      0 catalogue rows written by discovery, 10 promoted with valid ISBNs, real
+      publishers and slugs.
+  - Three bugs the live run found that the mocks could not: the work-level cover
+    fallback was dead code (`cover_i` was never requested); `publisher:"Juggernaut
+    Books"` matches an *Australian* press and shelved a YA novel under an
+    Indian-English seed, so a publisher seed now requires the house to actually be
+    named; and OL returns names like `Juggernaut Books Pty,` — a trailing comma is
+    never load-bearing even though an internal one usually is.
+  - Also fixed in shared code: `marc_cleanup.clean_work` now iterates to a fixed
+    point. `"Mukajjiya kanasugaḷu" /` needed **two** passes — stripping the
+    dangling ` /` re-exposes quotes `_unquote` has already gone past — which is
+    the "a cleanup that only settles on the second run is one nobody can tell is
+    finished" trap the etl README already names. One pass now means finished,
+    which is what a door-time gate depends on.
+- [ ] **P2 — covers.** Resize on ingest (~600 KB → ~50 KB) and the allowlist
+      change in *both* the Worker and `image_proxy.dart`. Blocked on the owner's
+      storage call (plan §4). Also where the held queue gets resolved: 24 of 47
+      live candidates are waiting on a cover.
+- [ ] **P3 — Mathrubhumi adapter** (Malayalam, ~3,300 books at 87.5% valid ISBN,
+      50% with back covers — a field the catalogue has never been able to fill).
+- [ ] **P4 — DC Books**, for Malayalam breadth. LookaBook is *not* the answer:
+      15.6% of its product pages carry an ISBN, so it would deposit rejects. Its
+      use is as a discovery list. Needs the owner conversation or its SPA's own
+      endpoints.
+- [ ] **P5 — selection quality** for Indian English: prize and bestseller seeds,
+      author expansion.
+- [ ] **P6 — retire the repair scripts.** The acceptance test for the whole plan:
+      re-plan `09_marc_cleanup.py` after a month of intake and get **0 changes**
+      against every row the job created. Asserted directly in
+      `test_intake_gate.py::test_what_the_gate_lets_through_needs_no_second_pass`
+      rather than only waited for.
+
+
 - [ ] **Merge duplicate authors** — `Basheer, Vaikom Muhammad` and `Vokom M. Basheer` are
       live right now as two rows for one person. Two rows = two thin pages competing.
       **Prerequisite for indexing author pages at all**

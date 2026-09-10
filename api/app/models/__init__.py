@@ -29,6 +29,16 @@ from app.models.author_claim import (
     AuthorClaim,
 )
 from app.models.base import Base, CatalogMixin, SyncableMixin
+from app.models.catalog_intake import (
+    STATE_COMPLETE,
+    STATE_DISCOVERED,
+    STATE_DUPLICATE,
+    STATE_INCOMPLETE,
+    STATE_PROMOTED,
+    STATE_REJECTED,
+    STATES,
+    CatalogIntake,
+)
 from app.models.conflict_history import ConflictHistory
 from app.models.connection import Connection
 from app.models.device_token import DeviceToken
@@ -180,4 +190,12 @@ __all__ = [
     "EVENT_IMPRESSION",
     "EVENT_CLICK",
     "EVENT_DISMISS",
+    "CatalogIntake",
+    "STATES",
+    "STATE_DISCOVERED",
+    "STATE_COMPLETE",
+    "STATE_INCOMPLETE",
+    "STATE_REJECTED",
+    "STATE_DUPLICATE",
+    "STATE_PROMOTED",
 ]
