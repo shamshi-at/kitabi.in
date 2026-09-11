@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../../../core/notifications/reading_live_activity.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/repositories.dart';
 import '../../../data/repositories/repository_providers.dart';
+import '../../../data/sync/note_session_links.dart';
 import '../../../data/sync/sync_providers.dart';
 import 'active_session_sync.dart';
 import 'library_providers.dart';
@@ -69,8 +71,14 @@ const activeSessionMirroredKey = 'active_session_mirrored_id';
 /// whole design exists to avoid — that device logs it itself.
 const activeSessionAdoptedKey = 'active_session_adopted_id';
 
-/// The id of a sitting this device has stopped and logged, but has not yet
-/// managed to take off the account.
+/// The id of a sitting this device has ended — logged, or deliberately
+/// discarded — but has not yet managed to take off the account.
+///
+/// "Ended", not "logged": a discarded sitting writes no row at all, and the
+/// account still has to be told the timer is off. Every reader of this key
+/// (`publishStop`, `pullAndApply`, `stopReadingSessionAndNotify`) only ever
+/// asks "does the server still hold a sitting we have finished with?", which
+/// is true of both, so widening it costs them nothing.
 ///
 /// Stopping is a local fact the moment it happens; publishing it is a network
 /// call that can simply fail — offline, or from a background isolate that
@@ -282,26 +290,49 @@ Future<LoggedSession?> stopAndLogActiveSession(
     autoStopped: autoStopped,
   );
 
-  // The sitting is over here; the account doesn't know yet. Recorded before
-  // anything that can fail so the note survives a stop that happens with no
-  // network at all — see [activeSessionPendingStopKey].
-  await db.keyValuesDao.setValue(activeSessionPendingStopKey, sessionId);
-  await db.keyValuesDao.deleteValue(activeSessionEntryKey);
-  await db.keyValuesDao.deleteValue(activeSessionStartedKey);
-  await db.keyValuesDao.deleteValue(activeSessionPageStartKey);
-  await db.keyValuesDao.deleteValue(activeSessionIdKey);
-  await db.keyValuesDao.deleteValue(activeSessionConfirmedKey);
-  // Cleared with the rest of them. Left behind, it told a later pull that a
-  // *new* sitting from another device was one this one had already adopted.
-  await db.keyValuesDao.deleteValue(activeSessionMirroredKey);
-  await db.keyValuesDao.deleteValue(activeSessionAdoptedKey);
+  await _closeSitting(db, entryId: entryId, pendingStopId: sessionId);
 
-  // Every stop path — manual, quick-stop, "No", or auto-stop — goes through
-  // here, so this is the one place that needs to cancel the check-in
+  return LoggedSession(
+    sessionId: sessionId,
+    libraryEntryId: entryId,
+    durationSeconds: durationSeconds,
+    pageStart: pageStart,
+  );
+}
+
+/// Everything the end of a sitting has to take down, whatever the reason for
+/// it: the `active_session_*` rows, the check-in notification, the enforcement
+/// task and the lock-screen clock.
+///
+/// Shared by [stopAndLogActiveSession] and [discardActiveSession] so the two
+/// can never disagree about what "over" means — they differ in exactly one
+/// thing, whether a `reading_sessions` row is written, and every stop surface
+/// this app has ever built has drifted from its sibling the moment they were
+/// written out separately.
+///
+/// [pendingStopId] is the sitting the account still believes is running. Null
+/// only for a sitting that never had an id at all; otherwise it is recorded
+/// **before** anything that can fail, so the note survives an end that happens
+/// with no network — see [activeSessionPendingStopKey].
+Future<void> _closeSitting(
+  AppDatabase db, {
+  required String entryId,
+  required String? pendingStopId,
+}) async {
+  if (pendingStopId != null) {
+    await db.keyValuesDao.setValue(activeSessionPendingStopKey, pendingStopId);
+  }
+  // Clears all seven rows, `mirrored` and `adopted` included: left behind,
+  // they told a later pull that a *new* sitting from another device was one
+  // this device had already adopted.
+  await clearLocalActiveSession(db);
+
+  // Every ending — manual, quick-stop, "No", auto-stop, discard — comes
+  // through here, so this is the one place that needs to cancel the check-in
   // notification and the enforcement task, instead of every call site
   // remembering to. Best-effort: a plugin channel that isn't ready (a
   // notification-less platform, a widget test with no platform channels
-  // mocked) must never stop the session from being logged correctly.
+  // mocked) must never stop the session from being filed correctly.
   //
   // **Three separate try blocks, not one.** They were one, and "best-effort"
   // then meant "the first of these that throws cancels the other two" — with
@@ -315,19 +346,71 @@ Future<LoggedSession?> stopAndLogActiveSession(
   try {
     await Workmanager().cancelByUniqueName(readingEnforcementTaskName(entryId));
   } catch (_) {}
-  // Belt and braces: the surface came down at the top of this function, long
-  // before any of the above could throw. Repeating it is idempotent and free,
-  // and it covers the one thing that can put it back in the meantime — a
+  // Belt and braces: the surface came down before the filing, long before any
+  // of the above could throw. Repeating it is idempotent and free, and it
+  // covers the one thing that can put it back in the meantime — a
   // `reconcile()` from a foreground resume landing while the key_values rows
   // above were still being cleared.
   await _endLiveSurface();
+}
 
-  return LoggedSession(
-    sessionId: sessionId,
-    libraryEntryId: entryId,
-    durationSeconds: durationSeconds,
-    pageStart: pageStart,
-  );
+/// Ends the running sitting **without logging it** — the reader started the
+/// clock and then didn't read (owner request, 12 Sep 2026). Returns whether
+/// there was anything to throw away.
+///
+/// Deliberately its own function rather than a `log: false` flag on
+/// [stopAndLogActiveSession]: "is this reading?" is the one question the two
+/// paths answer differently, and it is not the kind of question that should
+/// live behind a boolean parameter halfway down a function whose name promises
+/// a row. Everything they agree on is in [_closeSitting], which is what keeps
+/// them in step.
+///
+/// Takes no [SessionContext] because it writes nothing syncable: the sitting
+/// was never a row, so there is nothing to soft-delete and nothing to push.
+/// The one thing the account *does* know is that a timer is running, and that
+/// is retracted by the pending-stop note the same way a stop retracts it.
+Future<bool> discardActiveSession(AppDatabase db) async {
+  final entryId = await db.keyValuesDao.getValue(activeSessionEntryKey);
+  final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
+  if (entryId == null || startedRaw == null) {
+    // Nothing left to throw away — but something may still be *showing*, and
+    // a surface with nothing behind it is the one outcome worse than either
+    // (29 Aug 2026). Same early exit [stopAndLogActiveSession] makes.
+    await _endLiveSurface();
+    return false;
+  }
+  // Before the filing, not after it — the clock stops when the reader says it
+  // stops, and nothing below needs the surface (3 Sep 2026).
+  await _endLiveSurface();
+
+  final sessionId = await db.keyValuesDao.getValue(activeSessionIdKey);
+  if (sessionId != null) await _orphanSessionNotes(db, sessionId);
+  await _closeSitting(db, entryId: entryId, pendingStopId: sessionId);
+  return true;
+}
+
+/// Cut the notes written during a discarded sitting loose from it.
+///
+/// The notes themselves stay — they are the reader's, and a thought written
+/// down is not part of the timing being thrown away. What cannot stay is the
+/// *link*: the sitting will never be a `reading_sessions` row, so a note
+/// pointing at it points at nothing. Its pending link would wait forever
+/// (see [forgetNoteSessionLinks]) and its own `session_id` would name a
+/// sitting no query can resolve — which is how a note ends up invisible in
+/// both places, filed under a sitting that isn't in the log.
+///
+/// Local-only, deliberately: the link is withheld from the wire until the
+/// sitting is a row the server will accept, so for a sitting that never became
+/// one the server has never heard of it. There is nothing to retract.
+Future<void> _orphanSessionNotes(AppDatabase db, String sessionId) async {
+  final notes = await db.readingNotesDao.forSession(sessionId);
+  for (final note in notes) {
+    await db.readingNotesDao.patch(
+      note.id,
+      const ReadingNotesCompanion(sessionId: Value(null)),
+    );
+  }
+  await forgetNoteSessionLinks(db, sessionId: sessionId);
 }
 
 /// The sitting currently running on this device, read straight from storage.
@@ -369,7 +452,8 @@ Future<void> _endLiveSurface() async {
 /// restart (kill+reopen mid-session shouldn't lose the clock).
 class ActiveSessionController extends Notifier<ActiveSession?> {
   // Guards checkReadingTimerSafetyNet's DB-divergence check against racing a
-  // legitimate in-flight stop() (16 Jul 2026): stopAndLogActiveSession clears
+  // legitimate in-flight stop() — or discard(), which opens the identical
+  // window for the identical reason (16 Jul 2026): stopAndLogActiveSession clears
   // KeyValues in several awaited steps before this Notifier's own `state`
   // finally goes null, so a concurrent per-second tick could catch that
   // transient window and read it as "stopped elsewhere," nulling state (and
@@ -661,6 +745,52 @@ class ActiveSessionController extends Notifier<ActiveSession?> {
       // pending-stop note, and nothing on screen is waiting for its answer.
       unawaited(ref.read(activeSessionSyncProvider).publishStop());
       return logged;
+    } finally {
+      _stopping = false;
+    }
+  }
+
+  /// Throws the running sitting away: the clock stops, nothing is logged, and
+  /// the account is told the timer is off (owner request, 12 Sep 2026 — the
+  /// reader started the timer and then didn't read). Returns whether there was
+  /// a sitting to discard.
+  ///
+  /// Confirming is the *caller's* job, not this method's. A `Notifier` has no
+  /// `BuildContext` to ask with, and every screen-side rule this app has
+  /// learned about stop paths — capture your handles before the await, the
+  /// screen you are standing on may not survive the action — belongs to the
+  /// screen, not to the state.
+  Future<bool> discard() => _exclusive(_discard);
+
+  Future<bool> _discard() async {
+    await _hydration;
+    if (state == null) return false;
+    // A discard is a stop as far as the safety net is concerned: the whole
+    // point of [_stopping] is that `state` and key_values legitimately
+    // disagree for a moment, and they do so here for exactly the same reason.
+    _stopping = true;
+    // Cleared synchronously, before the first await — same rule as [_stop].
+    // The clock stops when the reader says it stops; everything after this is
+    // (un)filing, and nothing below reads it.
+    state = null;
+    try {
+      final db = ref.read(appDatabaseProvider);
+      final bool discarded;
+      try {
+        discarded = await discardActiveSession(db);
+      } catch (_) {
+        // The writes failed, so the sitting is still running in storage — and
+        // storage is the truth. Put in-memory state back in step with it
+        // rather than leaving a live sitting no surface will show.
+        await _hydrate();
+        return false;
+      }
+      // Only when something really was thrown away. `publishStop` deletes
+      // *whatever* the account currently holds, so making the call on a
+      // device that had nothing to discard would reach past this device and
+      // stop a sitting running on another one.
+      if (discarded) unawaited(ref.read(activeSessionSyncProvider).publishStop());
+      return discarded;
     } finally {
       _stopping = false;
     }

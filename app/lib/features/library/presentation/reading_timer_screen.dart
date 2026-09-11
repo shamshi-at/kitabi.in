@@ -17,6 +17,7 @@ import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../share/share_today.dart';
+import '../discard_session_flow.dart';
 import '../providers/library_providers.dart';
 import '../mark_finished.dart';
 import '../providers/reading_timer_providers.dart';
@@ -98,10 +99,17 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
   /// or it would throw a reader out of a sitting that is running fine.
   bool _sessionResolved = false;
 
-  /// The give-up guard has already fired. It lives in `build`, and this screen
-  /// keeps rebuilding for as long as the pop transition plays (the clock ticks
-  /// once a second until dispose), so without a latch a second frame would
-  /// leave a *second* time — popping the book page out from under the reader.
+  /// This screen is on its way out, so the give-up guard must not fire.
+  ///
+  /// Set by the guard itself — it lives in `build`, and this screen keeps
+  /// rebuilding for as long as the pop transition plays (the clock ticks once
+  /// a second until dispose), so without a latch a second frame would leave a
+  /// *second* time, popping the book page out from under the reader. And set
+  /// by [_discard], which leaves deliberately and clears the session on its
+  /// way: from `build`'s point of view that is indistinguishable from a
+  /// sitting stopped on another device, and it would answer by leaving again.
+  /// One question, one flag — a discard and the guard both mean "we are
+  /// already going".
   bool _leaving = false;
 
   /// This screen is leaving by a path that has already done its saving.
@@ -305,6 +313,44 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
       // if nothing was running the screen *should* be free to close.
       _stopping = false;
     }
+  }
+
+  /// Throw this sitting away — the clock ran but no reading happened (owner
+  /// request, 12 Sep 2026: the reader starts the timer, then can't read, and
+  /// doesn't want the sitting saved).
+  ///
+  /// The question, the discard and the snackbar are [discardSessionFlow],
+  /// shared with the mini-bar. What belongs to this screen alone is the
+  /// leaving — and the bracing that has to happen first.
+  Future<void> _discard() async {
+    if (_leaving) return;
+    // Storage first, like every other question this screen asks about the
+    // sitting: on a cold start into this route (a tap on the lock-screen
+    // clock) the Notifier is still reading, and an empty session there means
+    // "nobody has looked yet", not "there is nothing to throw away".
+    await ref.read(activeSessionProvider.notifier).hydrated;
+    if (!mounted) return;
+
+    var confirmed = false;
+    await discardSessionFlow(
+      context,
+      ref,
+      // Set synchronously between "yes" and the discard itself. The discard
+      // nulls the session, and this screen's build reads "no session for this
+      // book" as "stopped somewhere else" and leaves on its own — so without
+      // this the reader gets two exits for one tap, and the second one pops
+      // the book page out from under them. Not set any earlier: a reader who
+      // answers "Keep timing" must leave the guard armed.
+      onConfirmed: () {
+        confirmed = true;
+        _leaving = true;
+      },
+    );
+    // On `confirmed`, not on the flow's return value. A confirmed discard that
+    // found nothing left to throw away — the sitting ended on the other device
+    // while the dialog was open — is still a screen with nothing behind it,
+    // and [_leaving] has already disarmed the guard that would have noticed.
+    if (confirmed && mounted) _leave();
   }
 
   /// The book had no page count and the reader typed one on the way out.
@@ -600,6 +646,7 @@ class _ReadingTimerScreenState extends ConsumerState<ReadingTimerScreen>
                 onClose: _leave,
                 hand: _hand,
                 onStop: _stop,
+                onDiscard: _discard,
                 onNote: active == null ? null : () => _openFreshNote(active),
                 onShowNotes: active == null ? null : () => _openNotesList(active),
                 notes: sessionNotes,
@@ -638,6 +685,7 @@ class _RunningFace extends StatelessWidget {
     required this.onClose,
     required this.hand,
     required this.onStop,
+    required this.onDiscard,
     required this.onNote,
     required this.onShowNotes,
     required this.notes,
@@ -650,6 +698,15 @@ class _RunningFace extends StatelessWidget {
   final DateTime? startedAt;
   final AnimationController hand;
   final VoidCallback onStop;
+
+  /// Ends the sitting with nothing logged — asks first.
+  ///
+  /// Always present, like [onStop] and for the same reason: a control that
+  /// waits for the session to resolve appears a frame or two late on a cold
+  /// start and shifts the primary button out from under a thumb already on
+  /// its way down. It is the handler's job to know there is nothing running,
+  /// not this widget's.
+  final VoidCallback onDiscard;
 
   /// Leaving the timer — a pop when this route was pushed, Home when it was
   /// *navigated to* from outside and there is nothing beneath it. The session
@@ -703,180 +760,195 @@ class _RunningFace extends StatelessWidget {
               ),
             ],
           ),
+          // Centred when it fits, scrollable when it does not — read the box
+          // you are *given*, not the one the design was drawn at (8 Sep 2026).
+          // The cover, the 220px dial and the zone badge are a fixed slab of
+          // watch face, so on a short screen (a small phone, a large display
+          // font, a keyboard) this column simply cannot have what it wants,
+          // and a bare Center answers that with an overflow bar across the
+          // dial. Adding the discard button below was enough to push the
+          // 800x600 test harness over by 6px — the same squeeze a real short
+          // screen applies, which the button exposed rather than caused.
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    l10n.timerInProgress.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2,
-                      color: AppColors.nightGold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  if (title != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Always the cover frame — a cover-less book gets
-                          // the typeset fallback, not a bare title.
-                          TypesetCover(
-                            title: title!,
-                            author: author,
-                            coverUrl: coverUrl,
-                            width: 30,
-                            height: 44,
-                          ),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Text(
-                              title!,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontSize: 20,
-                              ),
-                            ),
-                          ),
-                        ],
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n.timerInProgress.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                          color: AppColors.nightGold,
+                        ),
                       ),
-                    ),
-                  const SizedBox(height: 28),
-                  SizedBox(
-                    width: 220,
-                    height: 220,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.nightGold.withValues(alpha: 0.28),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.nightGold.withValues(alpha: 0.16),
-                            ),
-                          ),
-                        ),
-                        for (var i = 0; i < 12; i++)
-                          Transform.rotate(
-                            angle: i * math.pi / 6,
-                            child: Align(
-                              alignment: const Alignment(0, -0.92),
-                              child: Container(
-                                width: 1.5,
-                                height: i % 3 == 0 ? 12 : 8,
-                                color: i % 3 == 0
-                                    ? AppColors.nightGold
-                                    : Colors.white.withValues(alpha: 0.35),
+                      const SizedBox(height: 10),
+                      if (title != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Always the cover frame — a cover-less book gets
+                              // the typeset fallback, not a bare title.
+                              TypesetCover(
+                                title: title!,
+                                author: author,
+                                coverUrl: coverUrl,
+                                width: 30,
+                                height: 44,
                               ),
-                            ),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  title!,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        AnimatedBuilder(
-                          animation: hand,
-                          builder: (context, _) => Transform.rotate(
-                            angle: hand.value * 2 * math.pi,
-                            child: Align(
-                              alignment: const Alignment(0, -0.75),
-                              child: Container(
-                                width: 2,
-                                height: 78,
-                                decoration: BoxDecoration(
-                                  color: AppColors.nightGold,
-                                  borderRadius: BorderRadius.circular(2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.nightGold.withValues(alpha: 0.7),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
+                        ),
+                      const SizedBox(height: 28),
+                      SizedBox(
+                        width: 220,
+                        height: 220,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.nightGold.withValues(alpha: 0.28),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.nightGold,
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              formatClock(elapsed),
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                            Container(
+                              margin: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.nightGold.withValues(alpha: 0.16),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              l10n.timerElapsed,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.white.withValues(alpha: 0.5),
+                            for (var i = 0; i < 12; i++)
+                              Transform.rotate(
+                                angle: i * math.pi / 6,
+                                child: Align(
+                                  alignment: const Alignment(0, -0.92),
+                                  child: Container(
+                                    width: 1.5,
+                                    height: i % 3 == 0 ? 12 : 8,
+                                    color: i % 3 == 0
+                                        ? AppColors.nightGold
+                                        : Colors.white.withValues(alpha: 0.35),
+                                  ),
+                                ),
                               ),
+                            AnimatedBuilder(
+                              animation: hand,
+                              builder: (context, _) => Transform.rotate(
+                                angle: hand.value * 2 * math.pi,
+                                child: Align(
+                                  alignment: const Alignment(0, -0.75),
+                                  child: Container(
+                                    width: 2,
+                                    height: 78,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.nightGold,
+                                      borderRadius: BorderRadius.circular(2),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.nightGold.withValues(alpha: 0.7),
+                                          blurRadius: 8,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.nightGold,
+                              ),
+                            ),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  formatClock(elapsed),
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  l10n.timerElapsed,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  AnimatedOpacity(
-                    opacity: inZone ? 1 : 0,
-                    duration: const Duration(milliseconds: 300),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 7,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.nightGold.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: AppColors.nightGold.withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const _Dot(),
-                          const SizedBox(width: 6),
-                          Text(
-                            l10n.timerInTheZone(elapsed.inMinutes),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.nightGold,
+                      const SizedBox(height: 24),
+                      AnimatedOpacity(
+                        opacity: inZone ? 1 : 0,
+                        duration: const Duration(milliseconds: 300),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.nightGold.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.nightGold.withValues(alpha: 0.35),
                             ),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const _Dot(),
+                              const SizedBox(width: 6),
+                              Text(
+                                l10n.timerInTheZone(elapsed.inMinutes),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.nightGold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -932,7 +1004,7 @@ class _RunningFace extends StatelessWidget {
               onShowAll: onShowNotes,
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 22),
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 6),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -950,6 +1022,28 @@ class _RunningFace extends StatelessWidget {
                   l10n.timerStopAndLog,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
+              ),
+            ),
+          ),
+          // The way out for a sitting that was never reading — quiet, below
+          // Stop & log and never beside it. A plain word rather than a red
+          // one: the dialog it opens is where the weight belongs, and a
+          // reader who mis-taps here loses nothing. Constant colours, like
+          // `_nightLine` and `_nightCard` above — this face is constant-dark,
+          // so a theme-aware token would be picked for a background it does
+          // not have (26 Jul 2026).
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TextButton(
+              onPressed: onDiscard,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.onDarkSoft,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                minimumSize: const Size(0, 40),
+              ),
+              child: Text(
+                l10n.timerDiscard,
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
               ),
             ),
           ),

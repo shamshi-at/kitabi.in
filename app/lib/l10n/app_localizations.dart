@@ -4186,6 +4186,48 @@ abstract class AppLocalizations {
   /// **'Stop & log'**
   String get timerStopAndLog;
 
+  /// Quiet button under Stop & log that throws the running session away without logging it
+  ///
+  /// In en, this message translates to:
+  /// **'Discard this sitting'**
+  String get timerDiscard;
+
+  /// Title of the confirmation dialog before a running session is thrown away
+  ///
+  /// In en, this message translates to:
+  /// **'Discard this sitting?'**
+  String get timerDiscardTitle;
+
+  /// Body of the discard confirmation — names what is being thrown away
+  ///
+  /// In en, this message translates to:
+  /// **'The {duration} on the clock won’t be logged, and this sitting won’t appear in your reading history.'**
+  String timerDiscardBody(String duration);
+
+  /// Second line of the discard confirmation, shown only when the sitting holds notes — they are not thrown away with it
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, one{The note you wrote stays on the book.} other{The {n} notes you wrote stay on the book.}}'**
+  String timerDiscardNotesKept(int n);
+
+  /// The cancel action on the discard confirmation — the clock keeps running
+  ///
+  /// In en, this message translates to:
+  /// **'Keep timing'**
+  String get timerDiscardKeep;
+
+  /// The confirming action on the discard confirmation
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get timerDiscardConfirm;
+
+  /// Snackbar after a running session is thrown away
+  ///
+  /// In en, this message translates to:
+  /// **'Sitting discarded — nothing was logged'**
+  String get timerDiscarded;
+
   /// Title on the wax-seal confirmation after a session is logged
   ///
   /// In en, this message translates to:

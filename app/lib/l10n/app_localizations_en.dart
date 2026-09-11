@@ -2506,6 +2506,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timerStopAndLog => 'Stop & log';
 
   @override
+  String get timerDiscard => 'Discard this sitting';
+
+  @override
+  String get timerDiscardTitle => 'Discard this sitting?';
+
+  @override
+  String timerDiscardBody(String duration) {
+    return 'The $duration on the clock won’t be logged, and this sitting won’t appear in your reading history.';
+  }
+
+  @override
+  String timerDiscardNotesKept(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'The $n notes you wrote stay on the book.',
+      one: 'The note you wrote stays on the book.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get timerDiscardKeep => 'Keep timing';
+
+  @override
+  String get timerDiscardConfirm => 'Discard';
+
+  @override
+  String get timerDiscarded => 'Sitting discarded — nothing was logged';
+
+  @override
   String timerLoggedTitle(int minutes) {
     String _temp0 = intl.Intl.pluralLogic(
       minutes,

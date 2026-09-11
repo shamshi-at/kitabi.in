@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/connections/connections_providers.dart';
 import '../../features/library/providers/reading_timer_providers.dart';
+import '../../features/library/discard_session_flow.dart';
 import '../../features/library/stop_session_flow.dart';
 import '../../l10n/app_localizations.dart';
 import '../format_duration.dart';
@@ -345,6 +346,40 @@ class _MiniTimerBarContentState extends ConsumerState<_MiniTimerBarContent> {
                       style: TextStyle(color: AppColors.gold, fontSize: 10),
                     ),
                   ],
+                ),
+              ),
+              // The way out for a sitting that was never reading — the same
+              // question the timer's watch face asks, through the same flow
+              // (owner request, 12 Sep 2026). It belongs here as much as
+              // there: a reader who left a timer running and has just
+              // reopened the app meets *this* bar first, and until now their
+              // only exit was to file a sitting that never happened and then
+              // go and delete the row from the book's reading log.
+              //
+              // An ✕ rather than a word, because this bar has room for a
+              // glyph and not a sentence — and the reading it invites here is
+              // the right one. On the timer face an ✕ was rejected for the
+              // close control precisely because it "read as cancel the
+              // sitting"; that is what this one does. Outlined and grey
+              // against the filled gold stop, so which is the primary control
+              // is never in question, and a mis-tap costs one dialog.
+              Semantics(
+                button: true,
+                label: AppLocalizations.of(context)!.timerDiscard,
+                child: GestureDetector(
+                  onTap: () => discardSessionFlow(context, ref),
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: 38,
+                    height: 44,
+                    child: Center(
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 19,
+                        color: AppColors.onDarkSoft,
+                      ),
+                    ),
+                  ),
                 ),
               ),
               Semantics(

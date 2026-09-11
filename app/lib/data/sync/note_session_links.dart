@@ -103,3 +103,27 @@ Future<Map<String, String>> _read(AppDatabase db) async {
     return {}; // corrupt — better to lose a link than to wedge every sync
   }
 }
+
+/// Forget every link that points at [sessionId] — the sitting was **discarded**
+/// rather than logged, so the `reading_sessions` row those links are waiting
+/// for is never coming.
+///
+/// Without this they are immortal: [publishPendingNoteLinks] keeps a link
+/// whose sitting hasn't reached this device yet, and "hasn't reached us" and
+/// "will never exist" look identical from here. Every drain from now until the
+/// install is wiped would re-check a row that was thrown away.
+Future<void> forgetNoteSessionLinks(
+  AppDatabase db, {
+  required String sessionId,
+}) async {
+  final links = await _read(db);
+  if (links.isEmpty) return;
+  final remaining = Map<String, String>.from(links)
+    ..removeWhere((_, value) => value == sessionId);
+  if (remaining.length == links.length) return;
+  if (remaining.isEmpty) {
+    await db.keyValuesDao.deleteValue(pendingNoteLinksKey);
+  } else {
+    await db.keyValuesDao.setValue(pendingNoteLinksKey, jsonEncode(remaining));
+  }
+}

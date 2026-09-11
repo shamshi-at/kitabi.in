@@ -2222,6 +2222,26 @@
   },
   "timerStopAndLog": "Stop & log",
   "@timerStopAndLog": {"description": "Button that stops the running session and logs it"},
+  "timerDiscard": "Discard this sitting",
+  "@timerDiscard": {"description": "Quiet button under Stop & log that throws the running session away without logging it"},
+  "timerDiscardTitle": "Discard this sitting?",
+  "@timerDiscardTitle": {"description": "Title of the confirmation dialog before a running session is thrown away"},
+  "timerDiscardBody": "The {duration} on the clock won\u2019t be logged, and this sitting won\u2019t appear in your reading history.",
+  "@timerDiscardBody": {
+    "description": "Body of the discard confirmation — names what is being thrown away",
+    "placeholders": {"duration": {"type": "String"}}
+  },
+  "timerDiscardNotesKept": "{n, plural, one{The note you wrote stays on the book.} other{The {n} notes you wrote stay on the book.}}",
+  "@timerDiscardNotesKept": {
+    "description": "Second line of the discard confirmation, shown only when the sitting holds notes — they are not thrown away with it",
+    "placeholders": {"n": {"type": "int"}}
+  },
+  "timerDiscardKeep": "Keep timing",
+  "@timerDiscardKeep": {"description": "The cancel action on the discard confirmation — the clock keeps running"},
+  "timerDiscardConfirm": "Discard",
+  "@timerDiscardConfirm": {"description": "The confirming action on the discard confirmation"},
+  "timerDiscarded": "Sitting discarded — nothing was logged",
+  "@timerDiscarded": {"description": "Snackbar after a running session is thrown away"},
   "timerLoggedTitle": "{minutes, plural, =0{Under a minute, logged} =1{1 minute, well spent} other{{minutes} minutes, well spent}}",
   "@timerLoggedTitle": {
     "description": "Title on the wax-seal confirmation after a session is logged",

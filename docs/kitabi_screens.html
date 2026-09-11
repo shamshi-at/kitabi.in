@@ -3008,9 +3008,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
               <span style="font-size:8px;background:#3A2F20;color:#CFC1A6;border-radius:99px;padding:2px 7px">2</span>
             </div>
           </div>
-          <div style="margin:16px 20px 18px">
+          <div style="margin:16px 20px 6px">
             <div style="background:#E3B14C;color:#17120C;border-radius:24px;padding:12px;text-align:center;font-size:11px;font-weight:700">▪ Stop &amp; log</div>
           </div>
+          <div style="text-align:center;margin-bottom:14px"><span style="font-size:9px;font-weight:600;color:#C9B891">Discard this sitting</span></div>
         </div>
       </div></div>
       <p class="cap"><b>N1 · Where a note begins</b> The affordance the rest of this area depends
@@ -3018,7 +3019,17 @@ body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink
       count (<b>2</b>) is doing real work — it's the only way to know the session already holds
       notes without opening anything, and it's what makes N3's "your 2 notes are already saved"
       believable rather than a promise. Quiet on purpose: the watch face's job is to be a clock,
-      and most sittings produce no notes at all.</p>
+      and most sittings produce no notes at all.<br><br><b>Discard this sitting</b> is the third
+      control, added 12 Sep 2026: a reader who starts the clock and then doesn't read has no
+      business filing the time, and until now the only way out was to stop and log a sitting that
+      never happened, then delete the row from the book's reading log. It sits <i>below</i> Stop
+      &amp; log in plain grey rather than beside it in red — the weight belongs in the
+      confirmation it opens, which names the time being thrown away and, when there are any,
+      promises the notes are not: a thought written down is not part of the timing. The
+      <b>mini-bar carries the same door</b> as a muted ✕ beside its gold stop — a reader who left
+      a timer running and has just reopened the app meets that bar before they meet this screen —
+      and both go through one <code>discardSessionFlow</code>, so the question cannot come to be
+      asked two different ways.</p>
     </div>
 
     <!-- N2. The note page -->
