@@ -696,6 +696,49 @@ class TagsRepository extends Repo {
     return id;
   }
 
+  /// Rename a shelf. The name *is* the shelf — nothing else on the row is the
+  /// reader's — so this is the whole of "edit". Every surface reads the name
+  /// from a stream over this table, so the rename lands everywhere at once.
+  Future<void> renameTag(String tagId, String name) async {
+    final cleaned = name.trim();
+    if (cleaned.isEmpty) return;
+    await db.tagsDao.patchTag(
+      tagId,
+      PersonalTagsCompanion(
+        name: Value(cleaned),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'personal_tags',
+      entityId: tagId,
+      opType: 'update',
+      data: {'name': cleaned},
+    );
+  }
+
+  /// Delete a shelf — the shelf, never the books on it. Every assignment to it
+  /// is unshelved first, each with its own op, so no row is left pointing at a
+  /// tag that no longer exists (a shelf tombstone doesn't cascade on either
+  /// side of the sync, and an orphaned assignment would keep a book "on" a
+  /// shelf that is gone). Soft delete throughout, per rule 3.
+  Future<void> deleteTag(String tagId) async {
+    final assignments = await db.tagsDao.watchAllAssignments().first;
+    for (final a in assignments) {
+      if (a.tagId == tagId) await unassign(a.id);
+    }
+    await db.tagsDao.patchTag(
+      tagId,
+      PersonalTagsCompanion(
+        deletedAt: Value(DateTime.now()),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: Value('pending'),
+      ),
+    );
+    await enqueue(entity: 'personal_tags', entityId: tagId, opType: 'delete', data: {});
+  }
+
   Future<void> assign(String libraryEntryId, String tagId) async {
     final id = _uuid.v4();
     await db.tagsDao.insertAssignment(

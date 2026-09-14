@@ -380,6 +380,221 @@ void main() {
     await flushTree(tester);
   });
 
+  // ── Renaming and deleting a shelf (owner request, 14 Sep 2026) ───────────
+  //
+  // A shelf you can make but never rename or throw away is a typo you live
+  // with forever. Both doors are exercised through the real screen: the ⋯ on
+  // the shelves wall, and the ⋯ on an open shelf's heading.
+
+  Future<List<SyncQueueData>> queued(WidgetTester tester) async =>
+      (await tester.runAsync(() => db.syncQueueDao.pending(limit: 100)))!;
+
+  testWidgets('the wall\'s shelf menu renames a shelf, live and queued for sync',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(wrap());
+    await settle(tester);
+    await tester.tap(find.text('Shelves'));
+    await settle(tester);
+
+    // Only the reader's own shelves carry the menu — the built-in ones
+    // (Reading, Read, Favourites…) are nobody's to rename.
+    expect(find.byIcon(Icons.more_horiz), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.more_horiz));
+    await settle(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Rename shelf'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+
+    // The field arrives prefilled, so fixing a name is one gesture.
+    expect(find.widgetWithText(TextField, 'Classics'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Malayalam classics');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Malayalam classics'), findsOneWidget);
+    expect(find.text('Classics'), findsNothing);
+
+    // …and it left as an update op, not just a local edit.
+    final ops = await queued(tester);
+    final rename = ops.where((o) => o.entity == 'personal_tags' && o.opType == 'update');
+    expect(rename.length, 1);
+    expect(rename.first.entityId, 'tag1');
+    expect(rename.first.payload, contains('Malayalam classics'));
+
+    await flushTree(tester);
+  });
+
+  testWidgets('a rename onto another shelf\'s name is refused, not merged', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() => db.tagsDao.insertTag(
+          PersonalTagsCompanion.insert(id: 'tag2', userId: 'u1', name: 'Loved'),
+        ));
+
+    await tester.pumpWidget(wrap());
+    await settle(tester);
+    await tester.tap(find.text('Shelves'));
+    await settle(tester);
+
+    // Open Classics' menu (two shelves now, so reach for its own tile).
+    await tester.tap(
+      find.descendant(of: find.byType(GestureDetector), matching: find.byIcon(Icons.more_horiz))
+          .first,
+    );
+    await settle(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rename shelf'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'loved');
+    await tester.pumpAndSettle();
+
+    // Two shelves becoming one is a decision the reader makes by moving books,
+    // never a side effect of an edit — so Save is closed off and says why.
+    expect(find.text('You already have a shelf with that name.'), findsOneWidget);
+    final save = tester.widget<TextButton>(find.widgetWithText(TextButton, 'Save'));
+    expect(save.onPressed, isNull);
+
+    await tester.tap(find.text('Cancel'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    final ops = await queued(tester);
+    expect(ops.where((o) => o.entity == 'personal_tags' && o.opType == 'update'), isEmpty);
+
+    await flushTree(tester);
+  });
+
+  testWidgets('deleting an open shelf takes the shelf, keeps its books, and leaves it',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(wrap());
+    await settle(tester);
+    await tester.tap(find.text('Shelves'));
+    await settle(tester);
+    await tester.tap(find.text('Classics'));
+    await settle(tester);
+    expect(find.text('1 book'), findsOneWidget); // standing on the shelf
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete shelf'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+
+    // The confirmation promises the books survive — "delete" beside a pile of
+    // covers reads as "delete the books" unless something says otherwise.
+    expect(find.text('Delete "Classics"?'), findsOneWidget);
+    expect(
+      find.text('The shelf goes. The 1 book on it stays in your library, just unshelved.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(TextButton, 'Delete shelf'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+
+    // The reader is off the dead shelf and back on the wall, which no longer
+    // lists it — nobody is left standing on a shelf that isn't there.
+    expect(find.text('My Library'), findsOneWidget);
+    expect(find.text('Classics'), findsNothing);
+
+    // The book is untouched; only the assignment went.
+    final entries = (await tester.runAsync(() => db.libraryEntriesDao.watchActive().first))!;
+    expect(entries.map((e) => e.id), contains('le-e2'));
+    expect(await tagsOf(tester, 'le-e2'), isEmpty);
+
+    // Both halves are queued: the shelf's tombstone and the unshelving.
+    final ops = await queued(tester);
+    expect(
+      ops.where((o) => o.entity == 'personal_tags' && o.opType == 'delete').map((o) => o.entityId),
+      contains('tag1'),
+    );
+    expect(
+      ops
+          .where((o) => o.entity == 'library_entry_tags' && o.opType == 'delete')
+          .map((o) => o.entityId),
+      contains('a1'),
+    );
+
+    await flushTree(tester);
+  });
+
+  testWidgets('renaming from an open shelf retitles the heading under the reader',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(wrap());
+    await settle(tester);
+    await tester.tap(find.text('Shelves'));
+    await settle(tester);
+    await tester.tap(find.text('Classics'));
+    await settle(tester);
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rename shelf'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Keepers');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+
+    // The heading reads the tag list, not the name snapshotted when the shelf
+    // was opened — so the reader isn't left standing under the old one.
+    expect(find.text('Keepers'), findsOneWidget);
+    expect(find.text('Classics'), findsNothing);
+    expect(find.text('1 book'), findsOneWidget); // still on the shelf, not bounced
+
+    await flushTree(tester);
+  });
+
+  testWidgets('a shelf deleted elsewhere closes the shelf the reader is standing on',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(wrap());
+    await settle(tester);
+    await tester.tap(find.text('Shelves'));
+    await settle(tester);
+    await tester.tap(find.text('Classics'));
+    await settle(tester);
+    expect(find.text('1 book'), findsOneWidget);
+
+    // What a pull from the reader's other device looks like: the tag row goes
+    // soft-deleted under an open shelf, with nothing on this screen involved.
+    await tester.runAsync(() => db.tagsDao.patchTag(
+          'tag1',
+          PersonalTagsCompanion(deletedAt: Value(DateTime.now())),
+        ));
+    await settle(tester);
+
+    expect(find.text('My Library'), findsOneWidget);
+    expect(find.text('Classics'), findsNothing);
+
+    await flushTree(tester);
+  });
+
   testWidgets('add-books nudges to the catalogue when the library has no match',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);

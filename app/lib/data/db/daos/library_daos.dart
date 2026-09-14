@@ -326,6 +326,9 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
 
   Future<void> insertTag(PersonalTagsCompanion row) => into(personalTags).insert(row);
 
+  Future<void> patchTag(String id, PersonalTagsCompanion patch) =>
+      (update(personalTags)..where((t) => t.id.equals(id))).write(patch);
+
   Future<void> insertAssignment(LibraryEntryTagsCompanion row) =>
       into(libraryEntryTags).insert(row);
 

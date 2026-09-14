@@ -366,6 +366,59 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
     return list;
   }
 
+  /// A shelf's own menu — rename or delete. The same sheet from the wall tile
+  /// and from an open shelf's heading, so the two doors can't drift apart. A
+  /// deletion needs no handling here: [_dropMissingShelf] notices the tag is
+  /// gone on the next build, which also covers one deleted on the reader's
+  /// other device.
+  Future<void> _shelfMenu({
+    required String tagId,
+    required String name,
+    required int bookCount,
+  }) async {
+    await showShelfActionsSheet(
+      context,
+      ref,
+      tagId: tagId,
+      shelfName: name,
+      bookCount: bookCount,
+    );
+  }
+
+  /// A shelf can vanish under the reader — deleted from the menu here, or on
+  /// their other device and pulled down. Neither the opened shelf nor the
+  /// shelf facet may outlive the tag it names, or the grid narrows to a row
+  /// that isn't there: an empty page with a dead shelf's name on it. Only acts
+  /// on a *loaded* tag list — an absent value means "not told yet", never
+  /// "deleted" (the same distinction `isOfflineError` draws).
+  void _dropMissingShelf(List<PersonalTag>? shelves) {
+    if (shelves == null) return;
+    final open = _openShelf?.tagId;
+    final facet = _filter.shelf;
+    if (open == null && facet == null) return;
+    bool gone(String? id) => id != null && !shelves.any((s) => s.id == id);
+    if (!gone(open) && !gone(facet)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (gone(_openShelf?.tagId)) {
+        _closeShelf();
+      } else if (gone(_filter.shelf)) {
+        setState(() => _filter = _withoutShelf(_filter));
+      }
+    });
+  }
+
+  /// [filter] minus its shelf facet — every other facet the reader chose
+  /// survives a shelf disappearing out from under it.
+  static LibraryFilter _withoutShelf(LibraryFilter filter) => LibraryFilter(
+        statuses: filter.statuses,
+        languages: filter.languages,
+        forms: filter.forms,
+        genres: filter.genres,
+        favouritesOnly: filter.favouritesOnly,
+        finish: filter.finish,
+      );
+
   Future<void> _newShelf() async {
     // The one shared dialog (shelf_sheets.dart) — it reuses an existing shelf
     // of the same name case-insensitively, so "classics" and "Classics" stay
@@ -412,6 +465,19 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
             // A deep-linked shelf (from a book's shelf card) opens as soon as
             // the tag list is available — the filter already narrows to it.
             _applyPendingShelf(shelves);
+            _dropMissingShelf(ref.watch(personalShelvesProvider).valueOrNull);
+
+            // The open shelf's name comes from the live tag list, never from
+            // the snapshot taken when it was opened — so a rename (from the
+            // menu here, or from the reader's other device) retitles the
+            // heading, the add-books sheet and the empty state at once.
+            final openTagId = _openShelf?.tagId;
+            var openShelfLabel = _openShelf?.label;
+            if (openTagId != null) {
+              for (final s in shelves) {
+                if (s.id == openTagId) openShelfLabel = s.name;
+              }
+            }
 
             final shelvesView = _openShelf == null && (_shelvesOverride ?? prefersShelves);
             // Watched, not read: the pace moves as sittings are logged, and a
@@ -460,7 +526,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                     slivers: [
                       SliverToBoxAdapter(
                         child: _Header(
-                          openShelf: _openShelf?.label,
+                          openShelf: openShelfLabel,
                           count: shelvesView ? all.length : filtered.length,
                           shelvesView: shelvesView,
                           showToggle: _openShelf == null && all.isNotEmpty,
@@ -468,11 +534,20 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                           onViewChanged: _setShelvesView,
                           // A visible "add books" on an open personal shelf, so
                           // filling it doesn't depend on finding the fab action.
-                          onAddBooks: _openShelf?.tagId != null
+                          onAddBooks: openTagId != null
                               ? () => showAddBooksToShelfSheet(
                                     context,
-                                    tagId: _openShelf!.tagId!,
-                                    shelfName: _openShelf!.label,
+                                    tagId: openTagId,
+                                    shelfName: openShelfLabel!,
+                                  )
+                              : null,
+                          // Rename/delete reachable from the shelf you're
+                          // standing on, not only from the wall behind you.
+                          onMore: openTagId != null
+                              ? () => _shelfMenu(
+                                    tagId: openTagId,
+                                    name: openShelfLabel!,
+                                    bookCount: filtered.length,
                                   )
                               : null,
                         ),
@@ -496,6 +571,11 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                           specs: _shelfSpecs(l10n, all, sortedShelves, shelvesOf),
                           onOpen: _openShelfTile,
                           onNewShelf: _newShelf,
+                          onShelfMenu: (spec) => _shelfMenu(
+                            tagId: spec.open.tagId!,
+                            name: spec.label,
+                            bookCount: spec.books.length,
+                          ),
                         )
                       else if (filtered.isEmpty)
                         SliverFillRemaining(
@@ -503,7 +583,7 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                           // An opened personal shelf with nothing on it isn't a
                           // dead end — offer to shelve books you already have,
                           // rather than the bare "no matches" the filter shows.
-                          child: _openShelf?.tagId != null
+                          child: openTagId != null
                               ? EmptyState(
                                   icon: Icons.library_add_outlined,
                                   title: l10n.libraryShelfEmptyTitle,
@@ -511,8 +591,8 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                                   action: ElevatedButton.icon(
                                     onPressed: () => showAddBooksToShelfSheet(
                                       context,
-                                      tagId: _openShelf!.tagId!,
-                                      shelfName: _openShelf!.label,
+                                      tagId: openTagId,
+                                      shelfName: openShelfLabel!,
                                     ),
                                     icon: Icon(Icons.add, size: 18),
                                     label: Text(l10n.libraryShelfAddBooks),
@@ -603,14 +683,14 @@ class _LibraryGridScreenState extends ConsumerState<LibraryGridScreen> {
                     ),
                     // On an open personal shelf, shelving more books is one tap
                     // from anywhere — not just from the empty state.
-                    if (_openShelf?.tagId != null)
+                    if (openTagId != null)
                       ExpandingFabAction(
                         icon: Icons.library_add_outlined,
                         label: l10n.libraryShelfAddBooksShort,
                         onPressed: () => showAddBooksToShelfSheet(
                           context,
-                          tagId: _openShelf!.tagId!,
-                          shelfName: _openShelf!.label,
+                          tagId: openTagId,
+                          shelfName: openShelfLabel!,
                         ),
                       ),
                     if (!shelvesView) ...[
@@ -707,6 +787,7 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.onViewChanged,
     this.onAddBooks,
+    this.onMore,
   });
 
   final String? openShelf;
@@ -718,6 +799,9 @@ class _Header extends StatelessWidget {
 
   /// When set (an open personal shelf), a visible "Add books" action.
   final VoidCallback? onAddBooks;
+
+  /// When set (an open personal shelf), the shelf's own rename/delete menu.
+  final VoidCallback? onMore;
 
   @override
   Widget build(BuildContext context) {
@@ -755,6 +839,12 @@ class _Header extends StatelessWidget {
                   l10n.libraryShelfAddBooksShort,
                   style: TextStyle(color: AppColors.oxblood, fontWeight: FontWeight.w700),
                 ),
+              ),
+            if (onMore != null)
+              IconButton(
+                icon: Icon(Icons.more_vert, color: AppColors.inkSoft),
+                tooltip: l10n.shelfOptionsTooltip,
+                onPressed: onMore,
               ),
           ],
         ),
@@ -841,11 +931,17 @@ class _ShelvesSliver extends StatelessWidget {
     required this.specs,
     required this.onOpen,
     required this.onNewShelf,
+    required this.onShelfMenu,
   });
 
   final List<_ShelfSpec> specs;
   final ValueChanged<_ShelfSpec> onOpen;
   final VoidCallback onNewShelf;
+
+  /// Rename/delete — offered on the reader's own shelves only. The built-in
+  /// ones (statuses, Favourites) aren't rows anybody made, so there is nothing
+  /// there to rename or delete.
+  final ValueChanged<_ShelfSpec> onShelfMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -892,7 +988,11 @@ class _ShelvesSliver extends StatelessWidget {
             ),
             delegate: SliverChildBuilderDelegate(
               (context, index) => index < custom.length
-                  ? _ShelfTile(spec: custom[index], onTap: () => onOpen(custom[index]))
+                  ? _ShelfTile(
+                      spec: custom[index],
+                      onTap: () => onOpen(custom[index]),
+                      onMore: () => onShelfMenu(custom[index]),
+                    )
                   : _NewShelfTile(onTap: onNewShelf),
               childCount: custom.length + 1,
             ),
@@ -929,10 +1029,15 @@ class _SectionLabel extends StatelessWidget {
 /// One shelf: its first few books fanned on a little ledge (a gold shelf
 /// line), the name, and a live count. A real bookcase in miniature.
 class _ShelfTile extends StatelessWidget {
-  const _ShelfTile({required this.spec, required this.onTap});
+  const _ShelfTile({required this.spec, required this.onTap, this.onMore});
 
   final _ShelfSpec spec;
   final VoidCallback onTap;
+
+  /// The shelf's own menu (rename/delete) — set on the reader's shelves, null
+  /// on the built-in ones. A visible ⋯ rather than a long press alone: a
+  /// gesture nobody can see is a feature nobody finds.
+  final VoidCallback? onMore;
 
   static const _angles = [-0.16, -0.04, 0.10];
 
@@ -943,6 +1048,7 @@ class _ShelfTile extends StatelessWidget {
     final status = spec.status;
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onMore,
       child: Stack(
         children: [
           Container(
@@ -1013,6 +1119,23 @@ class _ShelfTile extends StatelessWidget {
           ],
         ),
           ),
+          if (onMore != null)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Semantics(
+                button: true,
+                label: l10n.shelfOptionsTooltip,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onMore,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(Icons.more_horiz, size: 18, color: AppColors.inkSoft),
+                  ),
+                ),
+              ),
+            ),
           if (status != null)
             Positioned(
               top: 8,

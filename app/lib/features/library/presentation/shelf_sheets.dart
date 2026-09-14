@@ -481,3 +481,182 @@ class _MiniShelfChip extends StatelessWidget {
     );
   }
 }
+
+/// A shelf's own menu — rename or delete, the only two things a shelf itself
+/// can do. One copy, opened from the shelves wall (a tile's ⋯ or a long press)
+/// and from an open shelf's heading, so the doors can't drift apart the way
+/// the four progress surfaces once did.
+///
+/// Nothing is reported back about a deletion on purpose: the library screen
+/// notices a vanished tag reactively, which is the only shape that also covers
+/// a shelf deleted on the reader's other device and pulled down.
+Future<void> showShelfActionsSheet(
+  BuildContext context,
+  WidgetRef ref, {
+  required String tagId,
+  required String shelfName,
+  required int bookCount,
+}) async {
+  final l10n = AppLocalizations.of(context)!;
+  final action = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: AppColors.card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _sheetHeader(ctx, shelfName, l10n.libraryBookCount(bookCount)),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: Icon(Icons.drive_file_rename_outline, color: AppColors.ink),
+            title: Text(
+              l10n.shelfRename,
+              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.ink),
+            ),
+            onTap: () => Navigator.pop(ctx, 'rename'),
+          ),
+          ListTile(
+            leading: Icon(Icons.delete_outline, color: AppColors.oxblood),
+            title: Text(
+              l10n.shelfDelete,
+              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.oxblood),
+            ),
+            onTap: () => Navigator.pop(ctx, 'delete'),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+  if (action == null || !context.mounted) return;
+  if (action == 'rename') {
+    await _promptRenameShelf(context, ref, tagId: tagId, currentName: shelfName);
+  } else {
+    await _deleteShelf(context, ref, tagId: tagId, shelfName: shelfName, bookCount: bookCount);
+  }
+}
+
+/// Rename a shelf. Prefilled and selected, so the common case (fixing a typo,
+/// recasing) is one gesture. A name another shelf already holds is refused
+/// rather than merged: two shelves becoming one is a decision the reader
+/// should make by moving books, not a side effect of an edit.
+Future<void> _promptRenameShelf(
+  BuildContext context,
+  WidgetRef ref, {
+  required String tagId,
+  required String currentName,
+}) async {
+  // A direct query, not a provider that may be holding a cached list: the set
+  // this validates against has to be as fresh as the name being typed.
+  final repo = await ref.read(tagsRepositoryProvider.future);
+  final shelves = await repo.watchAll().first;
+  if (!context.mounted) return;
+  final taken = {
+    for (final t in shelves)
+      if (t.id != tagId) t.name.toLowerCase(),
+  };
+  final name = await showDialog<String>(
+    context: context,
+    builder: (ctx) => _RenameShelfDialog(initial: currentName, taken: taken),
+  );
+  final cleaned = name?.trim();
+  if (cleaned == null || cleaned.isEmpty || cleaned == currentName) return;
+  await repo.renameTag(tagId, cleaned);
+  Haptics.success();
+}
+
+/// Confirm, then delete — the shelf, never the books on it. The confirmation
+/// says so with the real count, because "delete" next to a pile of books reads
+/// as "delete the books" unless something says otherwise.
+Future<void> _deleteShelf(
+  BuildContext context,
+  WidgetRef ref, {
+  required String tagId,
+  required String shelfName,
+  required int bookCount,
+}) async {
+  final l10n = AppLocalizations.of(context)!;
+  final messenger = ScaffoldMessenger.of(context);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.card,
+      title: Text(l10n.shelfDeleteTitle(shelfName), style: const TextStyle(fontSize: 16)),
+      content: Text(l10n.shelfDeleteBody(bookCount)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.bookCancel)),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(l10n.shelfDelete, style: TextStyle(color: AppColors.oxblood)),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  final repo = await ref.read(tagsRepositoryProvider.future);
+  await repo.deleteTag(tagId);
+  Haptics.success();
+  messenger.showSnackBar(SnackBar(content: Text(l10n.shelfDeleted)));
+}
+
+/// The rename field. Stateful only so the duplicate warning can appear as the
+/// reader types rather than after they commit.
+class _RenameShelfDialog extends StatefulWidget {
+  const _RenameShelfDialog({required this.initial, required this.taken});
+
+  final String initial;
+
+  /// Lower-cased names of the reader's *other* shelves.
+  final Set<String> taken;
+
+  @override
+  State<_RenameShelfDialog> createState() => _RenameShelfDialogState();
+}
+
+class _RenameShelfDialogState extends State<_RenameShelfDialog> {
+  late final TextEditingController _controller = TextEditingController(text: widget.initial)
+    ..selection = TextSelection(baseOffset: 0, extentOffset: widget.initial.length);
+
+  late String _value = widget.initial;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _duplicate => widget.taken.contains(_value.trim().toLowerCase());
+
+  bool get _valid => _value.trim().isNotEmpty && !_duplicate;
+
+  void _submit() {
+    if (_valid) Navigator.pop(context, _value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      backgroundColor: AppColors.card,
+      title: Text(l10n.shelfRenameTitle, style: const TextStyle(fontSize: 16)),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: InputDecoration(
+          hintText: l10n.libraryNewShelfHint,
+          errorText: _duplicate ? l10n.shelfRenameDuplicate : null,
+        ),
+        onChanged: (v) => setState(() => _value = v),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.bookCancel)),
+        TextButton(onPressed: _valid ? _submit : null, child: Text(l10n.bookSave)),
+      ],
+    );
+  }
+}

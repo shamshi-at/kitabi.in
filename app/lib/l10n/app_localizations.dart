@@ -2872,6 +2872,60 @@ abstract class AppLocalizations {
   /// **'Add books'**
   String get libraryShelfAddBooksShort;
 
+  /// Title of the sheet holding a shelf's own rename/delete actions
+  ///
+  /// In en, this message translates to:
+  /// **'Shelf options'**
+  String get shelfActionsTitle;
+
+  /// Action that renames a personal shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Rename shelf'**
+  String get shelfRename;
+
+  /// Title of the rename-shelf dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Rename shelf'**
+  String get shelfRenameTitle;
+
+  /// Error shown when a rename would collide with another existing shelf
+  ///
+  /// In en, this message translates to:
+  /// **'You already have a shelf with that name.'**
+  String get shelfRenameDuplicate;
+
+  /// Action that deletes a personal shelf
+  ///
+  /// In en, this message translates to:
+  /// **'Delete shelf'**
+  String get shelfDelete;
+
+  /// Title of the delete-shelf confirmation
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{shelf}\"?'**
+  String shelfDeleteTitle(String shelf);
+
+  /// Body of the delete-shelf confirmation — reassures that the books survive
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{The shelf goes; nothing else changes.} one{The shelf goes. The 1 book on it stays in your library, just unshelved.} other{The shelf goes. The {count} books on it stay in your library, just unshelved.}}'**
+  String shelfDeleteBody(int count);
+
+  /// Confirmation shown after a shelf is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Shelf deleted'**
+  String get shelfDeleted;
+
+  /// Tooltip on the button that opens a shelf's rename/delete menu
+  ///
+  /// In en, this message translates to:
+  /// **'Shelf options'**
+  String get shelfOptionsTooltip;
+
   /// Hint in the search field on the add-books-to-shelf sheet
   ///
   /// In en, this message translates to:

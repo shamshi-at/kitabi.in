@@ -1717,6 +1717,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryShelfAddBooksShort => 'Add books';
 
   @override
+  String get shelfActionsTitle => 'Shelf options';
+
+  @override
+  String get shelfRename => 'Rename shelf';
+
+  @override
+  String get shelfRenameTitle => 'Rename shelf';
+
+  @override
+  String get shelfRenameDuplicate => 'You already have a shelf with that name.';
+
+  @override
+  String get shelfDelete => 'Delete shelf';
+
+  @override
+  String shelfDeleteTitle(String shelf) {
+    return 'Delete \"$shelf\"?';
+  }
+
+  @override
+  String shelfDeleteBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'The shelf goes. The $count books on it stay in your library, just unshelved.',
+      one:
+          'The shelf goes. The 1 book on it stays in your library, just unshelved.',
+      zero: 'The shelf goes; nothing else changes.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get shelfDeleted => 'Shelf deleted';
+
+  @override
+  String get shelfOptionsTooltip => 'Shelf options';
+
+  @override
   String get libraryAddBooksSearchHint => 'Search your library';
 
   @override

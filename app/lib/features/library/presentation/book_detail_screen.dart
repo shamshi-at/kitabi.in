@@ -3624,8 +3624,13 @@ class _ShelfSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final assignments = ref.watch(libraryTagsProvider(entry.id)).valueOrNull ?? const <LibraryEntryTag>[];
+    // The reactive stream, not the one-shot allTagsProvider: a shelf renamed
+    // or deleted from the library — a screen this one doesn't own, and which
+    // sits *above* this page in the stack when you tap through the card — must
+    // reach this card without every writer remembering to invalidate.
     final tagNames = {
-      for (final t in ref.watch(allTagsProvider).valueOrNull ?? const <PersonalTag>[]) t.id: t.name,
+      for (final t in ref.watch(personalShelvesProvider).valueOrNull ?? const <PersonalTag>[])
+        t.id: t.name,
     };
     // At most one shelf now; take the first assignment whose tag still exists.
     LibraryEntryTag? current;

@@ -736,6 +736,21 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       Same fix: the pager ignores the book page's own vertical scroll
       notifications (depth 0 only), so a pull past the top of a page no longer
       closes it
+- [x] **A shelf can be renamed and deleted** (14 Sep 2026, owner request) — a shelf
+      you can make but never rename was a typo you lived with forever. One sheet
+      (`showShelfActionsSheet` in `shelf_sheets.dart`) reached from both doors: the
+      ⋯ on a shelf tile (and a long press) on the shelves wall, and the ⋯ on an open
+      shelf's heading. Rename is prefilled and refuses another shelf's name rather
+      than merging silently — two shelves becoming one is a decision the reader makes
+      by moving books. Delete takes the shelf and **never the books**: each
+      assignment is unshelved with its own op, the confirmation says so with the
+      real count, and `TagsRepository.renameTag`/`deleteTag` queue the ordinary
+      `personal_tags` update/delete the server already accepts. The open shelf's
+      title now reads the live tag list instead of the snapshot taken when it was
+      opened, and `_dropMissingShelf` closes a shelf — or drops the filter facet —
+      whose tag has gone, so a delete on the reader's *other* device can't leave
+      them standing on a shelf that isn't there. The book page's shelf card moved
+      from the one-shot `allTagsProvider` to the reactive stream for the same reason
 
 ## Phase 7 — Recommendations & share
 
