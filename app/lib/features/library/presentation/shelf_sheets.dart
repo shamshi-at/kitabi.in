@@ -510,20 +510,18 @@ Future<void> showShelfActionsSheet(
         children: [
           _sheetHeader(ctx, shelfName, l10n.libraryBookCount(bookCount)),
           const SizedBox(height: 8),
+          // Oxblood icon + an unstyled title on both rows — the house action
+          // sheet (core/widgets/image_source_sheet.dart: camera / gallery /
+          // remove). A destructive row isn't coloured differently here; the
+          // confirmation dialog is where that weight belongs.
           ListTile(
-            leading: Icon(Icons.drive_file_rename_outline, color: AppColors.ink),
-            title: Text(
-              l10n.shelfRename,
-              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.ink),
-            ),
+            leading: Icon(Icons.drive_file_rename_outline, color: AppColors.oxblood),
+            title: Text(l10n.shelfRename),
             onTap: () => Navigator.pop(ctx, 'rename'),
           ),
           ListTile(
             leading: Icon(Icons.delete_outline, color: AppColors.oxblood),
-            title: Text(
-              l10n.shelfDelete,
-              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.oxblood),
-            ),
+            title: Text(l10n.shelfDelete),
             onTap: () => Navigator.pop(ctx, 'delete'),
           ),
           const SizedBox(height: 8),
