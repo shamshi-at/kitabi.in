@@ -305,6 +305,37 @@ Rows that fail sit in `catalog_intake` as `incomplete` with the failing
 predicate recorded. That queue is the honest measure of coverage, and it is where
 a second source (or a paid one, if we ever buy one) gets pointed.
 
+**Tightened 3 Oct 2026 — a real book number, and the name of one book.**
+Owner: *"I don't want any books which has no valid ISBN or name doesn't seem
+like a valid book."* The gate already required a checksum-valid ISBN and
+refused MARC headings; measured against nine storefront feeds and the live
+OpenLibrary adapter, that still let through things that are not books or are
+not named like one. Now also refused:
+
+- **Numbers that are not book numbers:** `979-0` (the ISMN range — sheet
+  music) and placeholders that pass the checksum (`978-1-234-56789-7`, a body
+  of one repeated digit).
+- **Names that are not titles** (`title_not_a_title`): punctuation only,
+  filler words (`untitled`, `test`), an ISBN or stock number in the title
+  column, markup, a URL, the publisher's own name — and what a shop adds to a
+  title: a format or edition label (`[Paperback]`, `(Tamil Edition)`), a
+  tagline after a pipe, a search-engine listing, display capitals.
+- **Products that are not one book** (`title_not_a_book`): combos, box sets,
+  `(Set)`, "3 Book Pack", gift cards, calendars and dated diaries.
+
+On ~2,750 real storefront titles the *not-a-book* rules refused 18, every one
+a true non-book. The *shop-styling* rules refuse far more, and that is the
+point of putting them here: **58 of 300 Mathrubhumi titles and 86 of 300 Olive
+titles pass as their feeds print them**, because both list in capitals. The
+gate refuses; the adapter (P3) is what must supply a properly written title,
+and a re-crawl re-screens the row. On the live OpenLibrary adapter the same
+rules refused 10 of 331 — `Annihilation of Caste [Paperback] Ambedkar, B. R.`,
+`FIRE AND BLOOD` — rows the old gate would have published.
+
+This applies to what the intake creates. A reader adding their own book is
+unchanged: an ISBN stays optional there, because older regional books
+genuinely have none.
+
 ### "Added by default"
 
 Per the ask, a complete record is **published live**, not held for review. That

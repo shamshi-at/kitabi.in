@@ -443,6 +443,30 @@ async def test_already_catalogued_writes_nothing(session):
     assert await session.scalar(select(func.count()).select_from(CatalogIntake)) == 0
 
 
+async def test_a_shop_bundle_or_a_placeholder_isbn_never_becomes_a_book(session):
+    """Owner, 3 Oct 2026: no book without a valid ISBN, and none whose name
+    is not a book's. Staged — so the queue shows what was turned away and why
+    — and never promoted."""
+    await intake_service.record(
+        session,
+        [
+            candidate("/works/COMBO", title="Madhavikutty 3 Book Combo"),
+            candidate("/works/DUMMY", isbn="9781234567897"),
+            candidate("/works/LABEL", title="Sapiens (Tamil Edition)", isbn="9780143039648"),
+        ],
+        source=SOURCE,
+    )
+    assert await intake_service.promote(session, limit=10) == {}
+    assert await catalogue_size(session) == (0, 0)
+
+    rows = {r.source_key: r for r in (await session.execute(select(CatalogIntake))).scalars()}
+    assert rows["/works/COMBO"].state == STATE_REJECTED
+    assert rows["/works/COMBO"].note == "refused: title_not_a_book"
+    assert rows["/works/LABEL"].state == STATE_REJECTED
+    assert rows["/works/DUMMY"].state == STATE_INCOMPLETE
+    assert rows["/works/DUMMY"].note == "waiting on: isbn_invalid"
+
+
 # --------------------------------------------------------------------------
 # covers — a book is published with a cover we own, or it waits (P2)
 # --------------------------------------------------------------------------

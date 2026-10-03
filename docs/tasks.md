@@ -1368,6 +1368,17 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
       endpoints.
 - [ ] **P5 — selection quality** for Indian English: prize and bestseller seeds,
       author expansion.
+- [x] **Gate tightened: a real book number, and the name of one book**
+      (3 Oct 2026, owner). Refuses `979-0` sheet-music numbers and placeholder
+      ISBNs; titles that are filler, a stock number, markup or the publisher's
+      name; shop styling (`[Paperback]`, `(Tamil Edition)`, a `|` tagline, an
+      SEO listing, display capitals); and products that are not one book
+      (combos, box sets, gift cards, calendars). HTML character references are
+      decoded at the door. Measured on ~2,750 storefront titles and the live
+      OpenLibrary adapter (plan §3). **Consequence for P3:** Mathrubhumi and
+      Olive list in capitals, so most of their titles are refused as printed —
+      the adapter has to supply a properly written title. Intake only; a
+      reader's own add-book form is unchanged.
 - [ ] **P6 — retire the repair scripts.** The acceptance test for the whole plan:
       re-plan `09_marc_cleanup.py` after a month of intake and get **0 changes**
       against every row the job created. Asserted directly in

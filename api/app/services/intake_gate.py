@@ -16,6 +16,16 @@ Two kinds of "no", and the difference matters:
   it would make it *look* more legitimate without making it more true
   (`services/marc_cleanup`'s own rule). These are never retried.
 
+**Two things are checked harder than the rest, because they are what make a
+row a *book*** (owner, 3 Oct 2026: *"I don't want any books which has no valid
+ISBN or name doesn't seem like a valid book"*). The number has to be a real
+book number — right checksum, a book prefix, and not a placeholder someone
+typed to get past a required field. And the title has to be the name of one
+book: not a blank or a filler word, not a SKU, not markup, and not a product a
+storefront happens to sell beside its books (a combo, a box set, a gift card).
+A publisher's feed is a shop's catalogue, and a shop sells things that are not
+books.
+
 **Cleaning happens here, not afterwards.** `marc_cleanup` already knows how to
 turn cataloguing punctuation into reader-facing text; running it at intake is
 what makes `etl/09_marc_cleanup.py` unnecessary for everything this pipeline
@@ -30,6 +40,7 @@ the catalogue already holds this ISBN is a database question and lives in
 
 from __future__ import annotations
 
+import html
 import re
 from dataclasses import dataclass, replace
 
@@ -64,6 +75,11 @@ MISSING_LANGUAGE = "language"
 INVALID_ISBN = "isbn_invalid"
 
 FATAL_TITLE_JUNK = "title_not_a_title"
+#: A real name, of something that is not one book: a bundle, a box set, a gift
+#: card. Separate from `title_not_a_title` because the two say different things
+#: about a source — one is feeding us junk, the other is a shop selling
+#: non-books, and only the second is expected.
+FATAL_NOT_A_BOOK = "title_not_a_book"
 FATAL_NAME_JUNK = "author_name_unusable"
 FATAL_OVERSIZE = "field_oversize"
 FATAL_COVER_SCHEME = "cover_not_https"
@@ -161,6 +177,153 @@ def _text(value: str | None) -> str | None:
     return cleaned or None
 
 
+#: A complete HTML character reference, semicolon included. `html.unescape`
+#: alone also expands legacy *unterminated* names — `&not`, `&copy`, `&reg` —
+#: which would turn `Why&nothing` into `Why¬hing`; only a terminated reference
+#: is unambiguous enough to rewrite unattended.
+_ENTITY = re.compile(r"&(?:#\d{1,7}|#[xX][0-9a-fA-F]{1,6}|[A-Za-z][A-Za-z0-9]{1,31});")
+
+
+def _plain(value: str | None) -> str | None:
+    """`_text`, with HTML character references decoded.
+
+    A storefront's JSON feed carries titles the way its pages print them:
+    `MARIYA&#8230;VERUM MARIA` (mbibooks.com, 3 Oct 2026), `Simon &amp;
+    Schuster`. Decoded here, once, rather than stored and shown to a reader.
+    """
+    cleaned = _text(value)
+    if cleaned is None or "&" not in cleaned:
+        return cleaned
+    return _text(_ENTITY.sub(lambda m: html.unescape(m.group(0)), cleaned))
+
+
+#: Words that fill a required field without naming anything. Whole-title
+#: matches only: "The Test" and "Book of Longing" are books, "test" and "book"
+#: are someone's form default.
+_PLACEHOLDER_TITLES = frozenset(
+    {
+        "untitled",
+        "unknown",
+        "no title",
+        "title",
+        "test",
+        "testing",
+        "sample",
+        "demo",
+        "n/a",
+        "na",
+        "none",
+        "null",
+        "tbd",
+        "tba",
+        "coming soon",
+        "book",
+        "new book",
+        "default title",
+        "product",
+    }
+)
+#: Tags, or a character reference that survived decoding.
+_MARKUP = re.compile(r"<[A-Za-z/!][^>]*>|&(?:#\d+|#[xX][0-9a-fA-F]+|[A-Za-z]{2,});")
+_URLISH = re.compile(r"https?://|\bwww\.", re.IGNORECASE)
+#: Six or more digits and nothing else (bar separators) is a stock number or an
+#: ISBN sitting in the wrong column. Shorter all-digit titles are left alone —
+#: `1984`, `2666` and `300` are books.
+_STOCK_NUMBER = re.compile(r"^[\d\s\-_/.#]*$")
+#: One character, repeated: `xxxxx`, `-----`, `.....`.
+_ONE_CHAR_REPEATED = re.compile(r"^(.)\1{3,}$", re.DOTALL)
+
+#: What a shop adds to a title that is not part of it — measured on nine
+#: publishers' storefront feeds, 3 Oct 2026. Each of these is a real book under
+#: a name no catalogue should print, so the row is refused and the *adapter*
+#: is what has to supply the clean title (a re-crawl re-screens it):
+#:
+#: - a format or edition label: `(Paperback)`, `GET EPIC SHIT DONE (Telugu
+#:   Edition)`. Under rule 17 that belongs to the Edition, never the Work.
+#: - a tagline after a pipe: `Musafir Cafe | Now a Netflix Series`. No title
+#:   contains a pipe.
+#: - a search-engine listing: `Booktopus Playtime Activity Book – Outer Space –
+#:   Learning Activity Books for Kids 4+ Years – Early Learning…`.
+_SHOP_LABEL = re.compile(
+    r"""
+      [(\[]\s*(?:paperback|hardcover|hardback|hb|pb|e-?book|audiobook)\s*[)\]]
+    | \b(?:hindi|tamil|telugu|malayalam|kannada|marathi|bengali|gujarati|punjabi
+          |odia|urdu|english|special|revised|illustrated|deluxe|collector'?s
+          |anniversary|kindle|paperback|hardcover|kids|young\s+readers?)
+      \s+edition\b
+    | \|
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+_SPACED_DASH = re.compile(r"\s[–—-]\s")
+#: Three or more ` – ` breaks is a product listing, not a title and subtitle.
+_LISTING_DASHES = 3
+#: A title set entirely in capitals is a shop's display style (`MARANAVAMSAM`,
+#: `IT ENDS WITH US`), and fixing it needs a judgement — which words are
+#: acronyms, which are small — that an unattended pass should not make. Below
+#: this many letters it is as likely an acronym that *is* the title: `SPQR`,
+#: `NW`, `QB VII`.
+_SHOUTING_MIN_LETTERS = 8
+
+#: Things a publisher's shop sells that are not one book. Deliberately narrow,
+#: and every alternative needs a digit or a second word, because the plain
+#: words are all real titles: *A Bundle of Joy*, Conrad's *A Set of Six*, *Pack
+#: of Lies*, *The Gift*. What it catches is what was actually in the feeds
+#: (`Shabnam Noorjahan Combo 2 Books`, olivepublications.in, 3 Oct 2026).
+_NOT_ONE_BOOK = re.compile(
+    r"""
+      \bcombo\b
+    | \bbox(?:ed)?[\s-]?set\b
+    | \bbooks?\s+set\b
+    | \bset\s+of\s+\d+\b
+    | \bpack\s+of\s+\d+\b
+    | \bbundle\s+(?:of\s+\d+|pack|offer|deal)\b
+    | \b(?:books?|combo|value)\s+bundle\b
+    | \b\d+[\s-]books?\s+(?:set|combo|pack|bundle|collection)\b
+    | \(\s*\d+\s*books?\s*\)
+    | \b(?:set|collection)\s+of\s+\d+\s+books\b
+    | \be?-?gift\s+(?:card|voucher|pack|hamper)\b
+    | \(\s*sets?\s*\)
+    | \b(?:wall|desk|table)\s+calendar\b
+    | \b(?:calendar|diary|planner)\s+20\d\d\b
+    | \b20\d\d\s+(?:calendar|diary|planner)\b
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+
+def _title_refusal(title: str, publisher: str | None) -> str | None:
+    """Why this cleaned title cannot be a book's, or None if it can.
+
+    Script-agnostic: "has a letter or a digit" is asked of Unicode, so a
+    Malayalam title is as much a title as a Latin one.
+    """
+    folded = " ".join(title.casefold().split())
+    if not any(ch.isalnum() for ch in title):
+        return FATAL_TITLE_JUNK  # punctuation only: "—", "???"
+    if folded in _PLACEHOLDER_TITLES or _ONE_CHAR_REPEATED.match(folded):
+        return FATAL_TITLE_JUNK
+    if _MARKUP.search(title) or _URLISH.search(title):
+        return FATAL_TITLE_JUNK
+    if _STOCK_NUMBER.match(title) and sum(ch.isdigit() for ch in title) >= 6:
+        return FATAL_TITLE_JUNK
+    if publisher and folded == " ".join(publisher.casefold().split()):
+        # The feed put the house's name in the title column.
+        return FATAL_TITLE_JUNK
+    if _NOT_ONE_BOOK.search(title):
+        # Asked before the shop-styling checks below: `GURU COMBO` is not a
+        # book however it is capitalised, and saying so is the useful verdict.
+        return FATAL_NOT_A_BOOK
+    if _SHOP_LABEL.search(title) or len(_SPACED_DASH.findall(title)) >= _LISTING_DASHES:
+        return FATAL_TITLE_JUNK
+    cased = [ch for ch in title if ch.isupper() or ch.islower()]
+    if len(cased) >= _SHOUTING_MIN_LETTERS and not any(ch.islower() for ch in cased):
+        # Scripts without case (Malayalam, Devanagari…) have no cased letters
+        # at all, so this never touches them.
+        return FATAL_TITLE_JUNK
+    return None
+
+
 #: Trailing separators a name should never end in. `marc_cleanup.clean_name`
 #: strips a terminal period and a MARC date suffix but deliberately not these,
 #: because a comma *inside* a publisher name is usually load-bearing (55 of
@@ -190,15 +353,32 @@ def _https(url: str | None) -> str | None:
 #: The only two prefixes the Bookland EAN range assigns to books. Everything
 #: else is some other GS1 product, whatever its check digit says.
 _ISBN13_PREFIXES = ("978", "979")
+#: …and one slice of 979 is not books either: `979-0` is the ISMN range, for
+#: printed music. A score has a valid check digit and a Bookland prefix and is
+#: still not a book.
+_ISMN_PREFIX = "9790"
+#: The number every example, form default and test fixture uses. It passes the
+#: checksum, which is exactly why it turns up in real feeds.
+_DUMMY_ISBNS = frozenset({"9781234567897"})
+
+
+def _placeholder_isbn(isbn13: str) -> bool:
+    """A number typed to satisfy a required field rather than to name a book:
+    the well-known dummy, or one whose whole body is a single repeated digit
+    (`978-0-00-000000-2`, `978-1-11-111111-6`)."""
+    return isbn13 in _DUMMY_ISBNS or len(set(isbn13[3:12])) == 1
 
 
 def _valid_isbn13(raw: str | None) -> str | None:
     """A genuine ISBN-13, or None. Stricter than `services/isbn` on purpose.
 
-    The mod-10 check digit is only one of the two things that make an ISBN-13
-    an ISBN. `9189376880780` — a real number off a real publisher's product
-    page (mbibooks.com, 9 Sep 2026) — passes the checksum by coincidence and is
-    still not an ISBN, because no `918` prefix exists. One in ten wrong numbers
+    The mod-10 check digit is only one of the things that make an ISBN-13 an
+    ISBN — the prefix has to be a book prefix (not `979-0`, which is sheet
+    music), and the number has to be one somebody was actually assigned rather
+    than a placeholder that happens to check out. `9189376880780` — a real
+    number off a real publisher's product page (mbibooks.com, 9 Sep 2026) —
+    passes the checksum by coincidence and is still not an ISBN, because no
+    `918` prefix exists. One in ten wrong numbers
     passes a mod-10 check, so on a pipeline that promotes unattended the
     checksum alone is not a gate.
 
@@ -210,6 +390,8 @@ def _valid_isbn13(raw: str | None) -> str | None:
     folded = isbn_util.to_isbn13(raw)
     if folded is None or not folded.startswith(_ISBN13_PREFIXES):
         return None
+    if folded.startswith(_ISMN_PREFIX) or _placeholder_isbn(folded):
+        return None
     return folded
 
 
@@ -219,9 +401,9 @@ def screen(candidate: Candidate) -> Screened:
     fatal: list[str] = []
 
     # --- title (and the subtitle a MARC title may be hiding) ---------------
-    raw_title = _text(candidate.title)
+    raw_title = _plain(candidate.title)
     title: str | None = None
-    subtitle = _text(candidate.subtitle)
+    subtitle = _plain(candidate.subtitle)
     if raw_title is None:
         missing.append(MISSING_TITLE)
     else:
@@ -234,6 +416,8 @@ def screen(candidate: Candidate) -> Screened:
             missing.append(MISSING_TITLE)
         elif len(title) > MAX_TITLE or (subtitle and len(subtitle) > MAX_SUBTITLE):
             fatal.append(FATAL_OVERSIZE)
+        elif refusal := _title_refusal(title, _plain(candidate.publisher)):
+            fatal.append(refusal)
 
     # --- authors ----------------------------------------------------------
     # Un-inversion is `review` risk in the cleanup script because it reorders a
@@ -243,7 +427,7 @@ def screen(candidate: Candidate) -> Screened:
     # `Basheer, Vaikom Muhammad` and needing the review pass anyway.
     authors: list[str] = []
     for raw in candidate.authors:
-        name = _text(raw)
+        name = _plain(raw)
         if name is None:
             continue
         fix = marc_cleanup.clean_name(name, uninvert=True)
@@ -263,8 +447,8 @@ def screen(candidate: Candidate) -> Screened:
 
     # --- publisher --------------------------------------------------------
     publisher_fix = (
-        marc_cleanup.clean_name(_text(candidate.publisher) or "")
-        if _text(candidate.publisher)
+        marc_cleanup.clean_name(_plain(candidate.publisher) or "")
+        if _plain(candidate.publisher)
         else None
     )
     publisher = _tidy_name(publisher_fix.name) if publisher_fix else None
