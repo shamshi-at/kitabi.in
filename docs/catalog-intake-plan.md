@@ -565,9 +565,10 @@ job created.
 2. **Approach DC Books about a feed + buy links.** Now the critical path for
    Malayalam breadth, not a nice-to-have — without it, "Malayalam" means one
    publisher's ~3,300 titles. Should start now; blocks P4, not P1–P3.
-3. **Daily promotion budget** — 50/day drains Mathrubhumi's ~3,300 in about 66
-   days. Faster fills the catalogue sooner and makes the "new in catalogue" feed
-   less interesting; slower stretches it. Recommendation: 50.
+3. ~~**Daily promotion budget**~~ — **150 a night since 4 Oct 2026** (owner).
+   At 50 the three storefronts' ~10,000 titles would have taken most of a year.
+   Product-page reads were raised with it (300 a night), because two of the
+   three shops are complete only once their page is read.
 4. ~~**Romanized publisher titles**~~ — **settled 3 Oct 2026 by what the
    source turned out to have.** Mathrubhumi's product pages carry the title in
    Malayalam, so there is no need to accept a romanization: the gate now holds

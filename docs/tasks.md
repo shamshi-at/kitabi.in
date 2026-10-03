@@ -1386,6 +1386,7 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
         read reliably: Roli, Olive, Seagull, Juggernaut (plan §5 says why not yet).
   - **Intake switched on 4 Oct 2026** (`ENV CATALOG_INTAKE_ENABLED=1` in
     `api/Dockerfile`). Undo a night with `scripts/revert_intake.py`.
+  - **Nightly limit 150** (4 Oct 2026, owner); product-page reads 300 a night.
   - [ ] Tick P2 and P3 after the first enabled night: check the Railway log
         for `intake: promoted {...}` and open a published book's cover on
         `covers.kitabi.in`.

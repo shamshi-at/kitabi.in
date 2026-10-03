@@ -53,9 +53,9 @@ class Settings(BaseSettings):
     catalog_intake_enabled: bool = False
     # Books promoted per run. The ceiling on how fast the catalogue can grow,
     # and therefore the ceiling on how much a mistake in a source adapter can
-    # cost before anyone looks. 50/day drains the Malayalam backlog in about
-    # two months, which is also a reasonable "new in catalogue" feed.
-    catalog_intake_daily_limit: int = 50
+    # cost before anyone looks. 150 since 4 Oct 2026 (owner): at 50 the three
+    # storefronts' ~10,000 titles would have taken most of a year.
+    catalog_intake_daily_limit: int = 150
     # Candidates each seed contributes per discovery pass. Discovery writes
     # only to `catalog_intake`, so this bounds crawling, never publishing.
     catalog_intake_per_seed: int = 50
@@ -66,8 +66,10 @@ class Settings(BaseSettings):
     catalog_intake_backlist_pages: int = 3
     # Product pages read per night to fill what a feed leaves out (ISBN,
     # author, the title in its own script). One request a second, so this is
-    # also roughly how many seconds the pass takes.
-    catalog_intake_enrich_limit: int = 150
+    # also roughly how many seconds the pass takes. Kept at twice the daily
+    # limit: two of the three shops are complete only once their page is read,
+    # so reading has to stay ahead of publishing or the limit is never reached.
+    catalog_intake_enrich_limit: int = 300
 
     # Version gate: the app sends `X-App-Version`; anything older than this gets
     # a 426 with an update payload (CLAUDE.md — the update-gate). Bump when a
