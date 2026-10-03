@@ -113,6 +113,10 @@ FRESH_KEY = "_fresh"
 #: otherwise find the row complete again on the next pass and send it straight
 #: back to `promote`.
 HOLD_KEY = "_hold"
+#: Set on a row that was promoted as another printing of a Work that already
+#: existed. Its `work_id` then names a book this pipeline did *not* create, and
+#: `revert` has to know that: undoing the printing must not take the book.
+PRINTING_KEY = "_printing"
 #: Written to `missing` for a held row. Stable — the console reads it.
 HELD_POSSIBLE_DUPLICATE = "possible_duplicate"
 
@@ -759,6 +763,7 @@ async def promote(
                 row.work_id = parent.id
                 row.edition_id = edition.id
                 row.promoted_at = datetime.now(UTC)
+                row.payload = {**row.payload, PRINTING_KEY: True}
                 row.note = "added as a printing of a book already in the catalogue"
                 await db.commit()
                 counts["printing"] = counts.get("printing", 0) + 1
@@ -820,21 +825,36 @@ async def _stamp_provenance(db: AsyncSession, work: Work, candidate: Candidate) 
 async def revert(db: AsyncSession, intake_ids: Iterable[uuid.UUID]) -> int:
     """Undo promotions this pipeline made — the receipt, read backwards.
 
-    Soft delete only (rule 3), and only rows this pipeline created: the intake
-    row's `work_id` is the proof of authorship. A reader may already have
-    shelved the book, which is exactly why the Work is soft-deleted rather than
-    removed — their library entry keeps pointing at something.
+    Soft delete only (rule 3), and only what this pipeline created. For a row
+    that published a book, that is the Work and its editions: the intake row's
+    `work_id` is the proof of authorship. For a row that was added as another
+    printing of a book already here, it is **that one Edition and nothing
+    else** — its `work_id` names a book somebody else created, with readers'
+    shelves and reviews on it, and undoing the printing must leave it standing.
+
+    A reader may already have shelved what is being undone, which is exactly
+    why it is soft-deleted rather than removed — their library entry keeps
+    pointing at something.
     """
     reverted = 0
     for intake_id in intake_ids:
         row = await db.get(CatalogIntake, intake_id)
         if row is None or row.state != STATE_PROMOTED or row.work_id is None:
             continue
-        work = await db.get(Work, row.work_id)
-        if work is not None and work.deleted_at is None:
-            work.deleted_at = datetime.now(UTC)
-            for edition in work.editions:
-                edition.deleted_at = work.deleted_at
+        now = datetime.now(UTC)
+        if (row.payload or {}).get(PRINTING_KEY):
+            edition = await db.get(Edition, row.edition_id) if row.edition_id else None
+            if edition is not None and edition.deleted_at is None:
+                edition.deleted_at = now
+            # No longer a printing of anything; if it is promoted again it is
+            # judged afresh.
+            row.payload = {k: v for k, v in row.payload.items() if k != PRINTING_KEY}
+        else:
+            work = await db.get(Work, row.work_id)
+            if work is not None and work.deleted_at is None:
+                work.deleted_at = now
+                for edition in work.editions:
+                    edition.deleted_at = now
         row.state = STATE_COMPLETE
         row.note = "reverted"
         row.promoted_at = None

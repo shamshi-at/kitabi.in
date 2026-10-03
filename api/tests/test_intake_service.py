@@ -975,3 +975,32 @@ async def test_a_night_of_new_releases_is_shared_between_the_sources(session):
         .all()
     )
     assert sorted(r.source for r in promoted) == ["shop_a", "shop_a", "shop_b", "shop_b"]
+
+
+async def test_undoing_a_printing_leaves_the_book_it_joined_standing(session):
+    """A printing row's `work_id` names a book this pipeline did not create —
+    possibly one with readers' shelves and reviews on it. Undoing the printing
+    takes that one edition and nothing else."""
+    await intake_service.record(session, [candidate("/works/HB")], source=SOURCE)
+    await intake_service.promote(session, limit=10)
+    await intake_service.record(
+        session, [candidate("/works/PB", isbn="9780143028109")], source=SOURCE
+    )
+    assert await intake_service.promote(session, limit=10) == {"printing": 1}
+    rows = {r.source_key: r for r in (await session.execute(select(CatalogIntake))).scalars()}
+    printing = rows["/works/PB"]
+
+    assert await intake_service.revert(session, [printing.id]) == 1
+
+    work = await session.get(Work, rows["/works/HB"].work_id)
+    await session.refresh(work)
+    assert work.deleted_at is None, "the book the printing joined must survive"
+    first = await session.get(Edition, rows["/works/HB"].edition_id)
+    second = await session.get(Edition, printing.edition_id)
+    await session.refresh(first)
+    await session.refresh(second)
+    assert first.deleted_at is None
+    assert second.deleted_at is not None
+    await session.refresh(printing)
+    assert printing.state == STATE_COMPLETE
+    assert intake_service.PRINTING_KEY not in printing.payload
