@@ -483,12 +483,55 @@ depends on and what the etl README already warned about.
 before the Work exists, so no book is ever live with a cover that does not load.
 *Done when:* a promoted book's cover is served from `covers.kitabi.in`.
 
-**P3 — Malayalam adapter.** Mathrubhumi Store API for discovery, product page for
-ISBN/author/publisher/pages, back covers into `back_cover_url` (50% of records
-have one — a feature the current catalogue has never been able to fill).
-Publisher resolution through `merge_service.canonical`. Politeness: ≤1 req/s,
-disk-cached, resumable, honouring `robots.txt` — the `07_language_seed.py`
-pacing code is the pattern and should be reused, not rewritten.
+**P3 — Storefront adapters.** 🟡 **Built 3 Oct 2026; runs when the intake is
+switched on.** Widened from "the Malayalam adapter" once OpenLibrary turned out
+to hold no new releases at all (§1): `services/intake_storefront` reads a
+publisher's WooCommerce Store API newest-first, and three shops are configured —
+**HarperCollins India** (5,178 titles), **Mathrubhumi** (3,764) and **Speaking
+Tiger** (999).
+
+- **Two passes.** `discover` stages every product on a feed page (one request
+  per hundred books); `enrich` reads the product page of rows the gate is
+  holding, once each, for what the feed lacks. What the page said is kept
+  apart from the feed's fields and laid back over them at every staging, so
+  the nightly re-crawl cannot undo it. No cursor table: every product is
+  staged, so a shop's row count *is* how deep its backlist crawl has got.
+- **New releases first.** A row first seen on a shop's newest page is marked
+  and promoted ahead of the backlog; otherwise this week's book waits behind
+  months of backlist at the daily limit.
+- **Mathrubhumi's pages carry the title in Malayalam.** The feed has
+  `SPINOSAURUS`; the page's `<h1>` has സ്പൈനോസോറസ്. 22 of 24 newest books came
+  out complete with a native title, author, ISBN, page count and both covers.
+- **A second printing joins its book.** The hardback and paperback are two
+  products; `promote` attaches the second as an Edition when title, language
+  and an author match (a shortened name — `Scott Fitzgerald` — counts). The
+  same title by a *different* author is held for a person rather than guessed.
+  Against production this found three real second printings in one preview
+  (`400 Days`, `The White Tiger`, `The Palace of Illusions`) that would
+  otherwise have been duplicate Works.
+- **An author we already have keeps the name we have them by.** A shop's
+  `Shakespeare William` or `Scott Fitzgerald` is credited to the existing
+  author row — same words in another order, or a shortened form that keeps the
+  surname, and only when exactly one author matches.
+- **A night is shared between the shops.** New releases take turns by source,
+  so the first fifty are not all one publisher's.
+- **Polite.** One request a second, identified, robots.txt read per shop and
+  asked per page; a product page is only ever fetched from the shop's own host.
+
+**What is held, and it is the main thing left to solve:** neither
+HarperCollins nor Speaking Tiger says who is author, translator or
+illustrator — they list every credited name the same way. One name is the
+author; several are staged as `contributors` and the book waits on
+`author_roles`. That is ~20% of both shops' newest pages. The prose on the
+page usually does say ("in Kalpana Kannabiran's English translation"), so the
+realistic resolver is the LLM the cover extractor already uses — a paid call,
+so it needs `llm_quota` and an owner decision before it is built.
+
+**Not configured, and why:** Niyogi (robots.txt disallows the feed), Roli
+(covers are 3D mock-ups; author strings carry ranks), Olive (fields are free
+text in capitals), Seagull and Juggernaut (Shopify, and the author is a URL
+slug or absent). Penguin India, Rupa, Hachette, Pan Macmillan, DC Books and
+Green Books expose no feed at all.
 
 **P4 — Malayalam breadth: DC Books.** *Not* LookaBook — it carries an ISBN on
 15.6% of pages, so as an intake source it would deposit rejects, and it cannot
@@ -520,9 +563,13 @@ job created.
 3. **Daily promotion budget** — 50/day drains Mathrubhumi's ~3,300 in about 66
    days. Faster fills the catalogue sooner and makes the "new in catalogue" feed
    less interesting; slower stretches it. Recommendation: 50.
-4. **Romanized publisher titles** — accept them as complete records now
-   (recommended), and treat native-script titles as a later enrichment pass; or
-   hold Malayalam intake until native titles can be sourced.
+4. ~~**Romanized publisher titles**~~ — **settled 3 Oct 2026 by what the
+   source turned out to have.** Mathrubhumi's product pages carry the title in
+   Malayalam, so there is no need to accept a romanization: the gate now holds
+   any book whose language is not written in Latin letters and whose title is
+   (`title_script`). This reverses the earlier recommendation, on the owner's
+   "name doesn't seem like a valid book" — and it is one rule in
+   `intake_gate`, easily relaxed if a later source only has romanized titles.
 5. **Confirm the reading of "no more adjustment records"** — this plan reads it
    as *"records must be born complete; no post-hoc repair passes"*, and that
    reading is what produced the gate in §3. If it meant something else, §3

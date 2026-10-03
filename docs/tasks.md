@@ -1360,8 +1360,31 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
   - Not done here: the 24 of 47 held candidates are OpenLibrary editions with
     *no* cover at all — this pipeline stores covers, it does not find them. A
     second cover source for a known ISBN is P3/P4 work.
-- [ ] **P3 — Mathrubhumi adapter** (Malayalam, ~3,300 books at 87.5% valid ISBN,
-      50% with back covers — a field the catalogue has never been able to fill).
+- [~] **P3 — storefront adapters** (3 Oct 2026). Built and tested; publishes
+      nothing until `CATALOG_INTAKE_ENABLED`. `services/intake_storefront`:
+      HarperCollins India (5,178 titles), Mathrubhumi (3,764), Speaking Tiger (999).
+  - Feed pass stages every product; page pass (`enrich`) reads one product
+    page per held row, once, for ISBN / author / language — and, on
+    Mathrubhumi, **the title in Malayalam**. Page facts are stored apart from
+    feed fields so the nightly re-crawl cannot overwrite them.
+  - New releases (first seen on a shop's newest page) are promoted ahead of
+    the backlog.
+  - A second printing is attached to its Work as an Edition; the same title by
+    a different author is held (`possible_duplicate`) instead of guessed.
+  - Gate additions: `author_roles` (several credited names, no stated roles)
+    and `title_script` (a non-Latin language under a Latin title).
+  - robots.txt honoured per shop and per page, one request a second, product
+    pages only from the shop's own host.
+  - `scripts/preview_intake.py` now previews the shops too. Read-only against
+    production, 3 Oct: 312 would be created, 3 real second printings found,
+    2 same-title rows held, 54 already in the catalogue.
+  - Tests use **real payloads** trimmed into `tests/fixtures/storefront/`.
+  - [ ] **Author roles.** ~20% of HarperCollins and Speaking Tiger's newest
+        books credit an author and a translator/illustrator identically and
+        are held. Needs a decision: resolve with the metered LLM, or by hand.
+  - [ ] More shops, each a `Store` + two small parsers once its author can be
+        read reliably: Roli, Olive, Seagull, Juggernaut (plan §5 says why not yet).
+  - [ ] Tick P3 after the first enabled night publishes from a shop.
 - [ ] **P4 — DC Books**, for Malayalam breadth. LookaBook is *not* the answer:
       15.6% of its product pages carry an ISBN, so it would deposit rejects. Its
       use is as a discovery list. Needs the owner conversation or its SPA's own

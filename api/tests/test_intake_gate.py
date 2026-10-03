@@ -24,10 +24,12 @@ from app.services.intake_gate import (
     FATAL_OVERSIZE,
     FATAL_TITLE_JUNK,
     INVALID_ISBN,
+    MISSING_AUTHOR_ROLES,
     MISSING_AUTHORS,
     MISSING_COVER,
     MISSING_ISBN,
     MISSING_LANGUAGE,
+    MISSING_NATIVE_TITLE,
     MISSING_PUBLISHER,
     MISSING_TITLE,
     Candidate,
@@ -394,6 +396,8 @@ def test_a_real_number_is_not_mistaken_for_a_placeholder(number):
         "Booktopus Playtime Activity Book – Outer Space – Learning Activity Books"
         " for Kids 4+ Years – Early Learning",
         # a shop's display capitals
+        "OTHELLO",
+        "HAMLET",
         "MARANAVAMSAM",
         "FIRE AND BLOOD",
         "IT ENDS WITH US",
@@ -507,3 +511,69 @@ def test_a_refused_name_is_refused_whatever_else_is_right():
     result = screen(candidate(title="Madhavikutty 3 Book Combo"))
     assert result.rejected
     assert result.missing == ()
+
+
+# --------------------------------------------------------------------------
+# what a storefront does and does not tell us (3 Oct 2026)
+# --------------------------------------------------------------------------
+
+
+def test_credited_names_with_no_stated_roles_are_not_authors():
+    """A shop lists the author, the translator and the illustrator the same
+    way. Nobody is named *as the author*, and that is what is reported."""
+    result = screen(candidate(authors=(), contributors=("Tsering Dondrup", "Christopher Peacock")))
+    assert result.missing == (MISSING_AUTHOR_ROLES,)
+    assert result.candidate.authors == ()
+    assert result.candidate.contributors == ("Tsering Dondrup", "Christopher Peacock")
+
+
+def test_a_named_author_is_enough_whoever_else_is_credited():
+    assert screen(candidate(contributors=("Someone Else",))).ok
+
+
+@pytest.mark.parametrize(
+    ("language", "title"),
+    [
+        ("Malayalam", "Spinosaurus"),
+        ("Malayalam", "Dylan Thomasinte Panthu"),
+        ("Hindi", "Somnath Ke Yoddha: Chol Ke Sher"),
+        ("Tamil", "Ponniyin Selvan"),
+    ],
+)
+def test_a_romanized_title_is_not_the_books_name(language, title):
+    """The defect `etl/10_title_restore.py` exists to repair, refused at the
+    door instead. Missing, not fatal: the same shop's product page often has
+    the real one."""
+    result = screen(candidate(language=language, title=title))
+    assert not result.ok and not result.rejected
+    assert result.missing == (MISSING_NATIVE_TITLE,)
+
+
+@pytest.mark.parametrize(
+    ("language", "title"),
+    [
+        ("Malayalam", "സ്പൈനോസോറസ്"),
+        ("Malayalam", "എം.ടി: കാലത്തിന്റെ കാൽപ്പാടുകൾ"),  # Latin punctuation, Malayalam letters
+        ("Hindi", "सोमनाथ के योद्धा"),
+        ("English", "The God of Small Things"),
+        ("English", "ചെമ്മീൻ"),  # no opinion about what an English record may be titled
+        ("Klingon", "tlhIngan Hol"),  # nor about a language we have no script for
+    ],
+)
+def test_a_title_in_its_own_script_passes(language, title):
+    assert screen(candidate(language=language, title=title)).ok
+
+
+def test_the_fields_a_storefront_adds_survive_the_round_trip_through_jsonb():
+    original = candidate(
+        format="Paperback",
+        contributors=("A", "B"),
+        source_url="https://speakingtigerbooks.com/product/x/",
+    )
+    restored = Candidate.from_payload(original.to_payload())
+    assert restored == original
+    assert isinstance(restored.contributors, tuple)
+
+
+def test_an_http_source_url_is_dropped_rather_than_followed_later():
+    assert screen(candidate(source_url="http://example.com/x")).candidate.source_url is None

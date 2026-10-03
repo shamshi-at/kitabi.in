@@ -69,6 +69,19 @@ MISSING_PUBLISHER = "publisher"
 MISSING_ISBN = "isbn"
 MISSING_COVER = "cover_url"
 MISSING_LANGUAGE = "language"
+#: The source credits several people and does not say who did what. A
+#: storefront lists a translator and an illustrator in the same row as the
+#: author (measured on harpercollins.co.in and speakingtigerbooks.com, 3 Oct
+#: 2026 — a third of one sample), and recording them all as authors is wrong
+#: data rather than missing data. Distinct from `authors` so the queue reads
+#: "someone has to say who wrote this", not "nobody is named".
+MISSING_AUTHOR_ROLES = "author_roles"
+#: The title is in Latin letters and the book's language is not written in
+#: them. `SPINOSAURUS` for സ്പൈനോസോറസ് is a shop's romanization, not the name
+#: on the cover — the defect `etl/10_title_restore.py` exists to repair, on 83%
+#: of the first seed. Missing rather than fatal: the same source's product page,
+#: or another source, often has the real one.
+MISSING_NATIVE_TITLE = "title_script"
 #: An ISBN was supplied and is not one. Distinct from `isbn` so the queue can
 #: tell "this source has no number for it" from "this source has a bad one" —
 #: the second is worth reporting upstream, the first is just a gap.
@@ -112,6 +125,17 @@ class Candidate:
     page_count: int | None = None
     first_publish_year: int | None = None
     back_cover_url: str | None = None
+    #: paperback / hardcover / … — the printing's, as the source words it.
+    #: `schemas.catalog.normalize_edition_format` folds the spelling on the way
+    #: into the catalogue, exactly as it does for a reader's own entry.
+    format: str | None = None
+    #: People the source credits without saying how — see `MISSING_AUTHOR_ROLES`.
+    #: Kept so the queue can show a human the names they are choosing between;
+    #: never written to the catalogue.
+    contributors: tuple[str, ...] = ()
+    #: The page this record was read from, when the source has one per book.
+    #: It is where enrichment goes for the fields a feed leaves out.
+    source_url: str | None = None
     #: Catalogue provenance — what goes into `works.external_source` /
     #: `works.external_id`. Deliberately separate from `source`/`source_key`,
     #: which name the *adapter* that found the book. Several adapters can read
@@ -143,6 +167,9 @@ class Candidate:
             "page_count": self.page_count,
             "first_publish_year": self.first_publish_year,
             "back_cover_url": self.back_cover_url,
+            "format": self.format,
+            "contributors": list(self.contributors),
+            "source_url": self.source_url,
             "external_source": self.external_source,
             "external_id": self.external_id,
         }
@@ -151,6 +178,7 @@ class Candidate:
     def from_payload(cls, payload: dict) -> Candidate:
         data = dict(payload)
         data["authors"] = tuple(data.get("authors") or ())
+        data["contributors"] = tuple(data.get("contributors") or ())
         known = cls.__dataclass_fields__.keys()
         return cls(**{k: v for k, v in data.items() if k in known})
 
@@ -262,8 +290,9 @@ _LISTING_DASHES = 3
 #: `IT ENDS WITH US`), and fixing it needs a judgement — which words are
 #: acronyms, which are small — that an unattended pass should not make. Below
 #: this many letters it is as likely an acronym that *is* the title: `SPQR`,
-#: `NW`, `QB VII`.
-_SHOUTING_MIN_LETTERS = 8
+#: `NW`, `QB VII`. Six, not eight: `OTHELLO` and `HAMLET` reached the first
+#: preview of a real night at eight (harpercollins.co.in, 4 Oct 2026).
+SHOUTING_MIN_LETTERS = 6
 
 #: Things a publisher's shop sells that are not one book. Deliberately narrow,
 #: and every alternative needs a digit or a second word, because the plain
@@ -292,6 +321,43 @@ _NOT_ONE_BOOK = re.compile(
 )
 
 
+#: Languages that are not written in Latin letters, and the Unicode block each
+#: one is written in. Keyed on the folded language name the catalogue stores.
+_SCRIPTS: dict[str, tuple[int, int]] = {
+    "malayalam": (0x0D00, 0x0D7F),
+    "hindi": (0x0900, 0x097F),
+    "marathi": (0x0900, 0x097F),
+    "sanskrit": (0x0900, 0x097F),
+    "nepali": (0x0900, 0x097F),
+    "konkani": (0x0900, 0x097F),
+    "bengali": (0x0980, 0x09FF),
+    "assamese": (0x0980, 0x09FF),
+    "punjabi": (0x0A00, 0x0A7F),
+    "gujarati": (0x0A80, 0x0AFF),
+    "odia": (0x0B00, 0x0B7F),
+    "tamil": (0x0B80, 0x0BFF),
+    "telugu": (0x0C00, 0x0C7F),
+    "kannada": (0x0C80, 0x0CFF),
+    "urdu": (0x0600, 0x06FF),
+    "arabic": (0x0600, 0x06FF),
+}
+
+
+def _in_own_script(title: str, language: str | None) -> bool:
+    """Whether a title is written the way its language is.
+
+    True for any language not in `_SCRIPTS` (English, and everything we have no
+    opinion about), and for a title with at least one letter from the right
+    block — `എം.ടി: കാലത്തിന്റെ കാൽപ്പാടുകൾ` carries Latin punctuation and is
+    still plainly Malayalam.
+    """
+    block = _SCRIPTS.get((language or "").strip().casefold())
+    if block is None:
+        return True
+    low, high = block
+    return any(low <= ord(ch) <= high for ch in title)
+
+
 def _title_refusal(title: str, publisher: str | None) -> str | None:
     """Why this cleaned title cannot be a book's, or None if it can.
 
@@ -317,7 +383,7 @@ def _title_refusal(title: str, publisher: str | None) -> str | None:
     if _SHOP_LABEL.search(title) or len(_SPACED_DASH.findall(title)) >= _LISTING_DASHES:
         return FATAL_TITLE_JUNK
     cased = [ch for ch in title if ch.isupper() or ch.islower()]
-    if len(cased) >= _SHOUTING_MIN_LETTERS and not any(ch.islower() for ch in cased):
+    if len(cased) >= SHOUTING_MIN_LETTERS and not any(ch.islower() for ch in cased):
         # Scripts without case (Malayalam, Devanagari…) have no cased letters
         # at all, so this never touches them.
         return FATAL_TITLE_JUNK
@@ -442,8 +508,11 @@ def screen(candidate: Candidate) -> Screened:
             continue
         if cleaned not in authors:
             authors.append(cleaned)
+    contributors = tuple(
+        dict.fromkeys(name for raw in candidate.contributors if (name := _tidy_name(_plain(raw))))
+    )
     if not authors:
-        missing.append(MISSING_AUTHORS)
+        missing.append(MISSING_AUTHOR_ROLES if contributors else MISSING_AUTHORS)
 
     # --- publisher --------------------------------------------------------
     publisher_fix = (
@@ -498,6 +567,8 @@ def screen(candidate: Candidate) -> Screened:
     language = _text(candidate.language)
     if language is None:
         missing.append(MISSING_LANGUAGE)
+    elif title is not None and not _in_own_script(title, language):
+        missing.append(MISSING_NATIVE_TITLE)
 
     page_count = candidate.page_count
     if page_count is not None and not (0 < page_count <= MAX_PAGE_COUNT):
@@ -513,6 +584,9 @@ def screen(candidate: Candidate) -> Screened:
         cover_url=cover_url,
         language=language,
         back_cover_url=_https(candidate.back_cover_url),
+        contributors=contributors,
+        format=_text(candidate.format),
+        source_url=_https(candidate.source_url),
         page_count=page_count,
         description=_text(candidate.description),
     )

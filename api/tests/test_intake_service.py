@@ -186,7 +186,12 @@ async def test_promotion_is_resumable_rather_than_repeating(session):
     not re-publish what it already did."""
     await intake_service.record(
         session,
-        [candidate("/works/A"), candidate("/works/B", isbn="9780143028109")],
+        [
+            candidate("/works/A"),
+            # A different book — the same title and author would make this a
+            # second printing of A, which is its own test further down.
+            candidate("/works/B", title="The Ministry of Utmost Happiness", isbn="9780143028109"),
+        ],
         source=SOURCE,
     )
     await intake_service.promote(session, limit=1)
@@ -705,3 +710,268 @@ async def test_a_cover_already_in_our_bucket_is_not_fetched_again(session, monke
     assert counts == {STATE_PROMOTED: 1}
     edition = await session.get(Edition, (await only_row(session)).edition_id)
     assert edition.cover_url == ours
+
+
+# --------------------------------------------------------------------------
+# a re-crawl, a book's own page, and new releases (storefronts, 3 Oct 2026)
+# --------------------------------------------------------------------------
+
+
+async def test_a_blank_in_tonights_crawl_does_not_erase_last_nights_answer(session):
+    """A shop drops a cover while it re-uploads it; a feed page comes back
+    without the attribute it carried yesterday. "Not told" is not "no longer
+    true"."""
+    await intake_service.record(session, [candidate(page_count=320)], source=SOURCE)
+    await intake_service.record(
+        session, [candidate(cover_url=None, page_count=None)], source=SOURCE
+    )
+    row = await only_row(session)
+    assert row.state == STATE_COMPLETE
+    assert row.payload["cover_url"] == "https://covers.openlibrary.org/b/id/1-L.jpg"
+    assert row.payload["page_count"] == 320
+
+
+async def test_a_changed_value_in_tonights_crawl_does_replace_the_old_one(session):
+    await intake_service.record(session, [candidate(page_count=320)], source=SOURCE)
+    await intake_service.record(session, [candidate(page_count=336)], source=SOURCE)
+    assert (await only_row(session)).payload["page_count"] == 336
+
+
+async def test_what_the_page_said_outranks_the_feed_and_survives_rescreening(session):
+    await intake_service.record(
+        session, [candidate(title="Spinosaurus", authors=(), isbn=None)], source=SOURCE
+    )
+    row = await only_row(session)
+    state = intake_service.apply_page_facts(
+        row, {"title": "The Real Title", "authors": ["Arundhati Roy"], "isbn": "9780060977498"}
+    )
+    await session.commit()
+    assert state == STATE_COMPLETE
+
+    # The nightly crawl again, then the nightly re-screen.
+    await intake_service.record(
+        session, [candidate(title="Spinosaurus", authors=(), isbn=None)], source=SOURCE
+    )
+    await intake_service.rescreen_incomplete(session)
+
+    row = await only_row(session)
+    assert row.state == STATE_COMPLETE
+    assert row.payload["title"] == "The Real Title"
+    assert row.payload["authors"] == ["Arundhati Roy"]
+    assert row.payload[intake_service.PAGE_READ_KEY] is True
+
+
+async def test_new_releases_are_published_ahead_of_the_backlog(session):
+    """Owner, 3 Oct 2026: "new release should be there in our db". Without
+    this a book out this week waits behind every backlist title staged before
+    it — months, at the daily limit."""
+    # Two nights' backlist, then tonight's newest page.
+    await intake_service.record(
+        session,
+        [candidate("/works/OLD1", title="Backlist One", isbn="9780143028109")],
+        source=SOURCE,
+    )
+    await intake_service.record(
+        session,
+        [candidate("/works/OLD2", title="Backlist Two", isbn="9780140283297")],
+        source=SOURCE,
+    )
+    await intake_service.record(
+        session, [candidate("/works/NEW", title="Out This Week")], source=SOURCE, fresh=True
+    )
+
+    assert await intake_service.promote(session, limit=1) == {STATE_PROMOTED: 1}
+    titles = [w.title for w in (await session.execute(select(Work))).scalars()]
+    assert titles == ["Out This Week"]
+
+    # …and the backlog still drains, in the order it was found.
+    await intake_service.promote(session, limit=1)
+    titles = {w.title for w in (await session.execute(select(Work))).scalars()}
+    assert titles == {"Out This Week", "Backlist One"}
+
+
+async def test_seeing_a_staged_book_on_the_newest_page_does_not_make_it_new(session):
+    await intake_service.record(session, [candidate(isbn=None)], source=SOURCE)
+    await intake_service.record(session, [candidate()], source=SOURCE, fresh=True)
+    assert intake_service.FRESH_KEY not in (await only_row(session)).payload
+
+
+async def test_a_second_printing_is_added_to_the_book_not_published_as_another(session):
+    """A storefront lists the hardback and the paperback as two products. Two
+    Works for one book is rule 17 broken at the door."""
+    await intake_service.record(
+        session,
+        [
+            candidate("/works/HB", format="Hardback"),
+            candidate("/works/PB", isbn="9780143028109", format="Paperback", page_count=340),
+        ],
+        source=SOURCE,
+    )
+    counts = await intake_service.promote(session, limit=10)
+
+    assert counts == {STATE_PROMOTED: 1, "printing": 1}
+    assert await catalogue_size(session) == (1, 2)
+    rows = {r.source_key: r for r in (await session.execute(select(CatalogIntake))).scalars()}
+    assert rows["/works/PB"].state == STATE_PROMOTED
+    assert rows["/works/PB"].work_id == rows["/works/HB"].work_id
+    assert rows["/works/PB"].edition_id != rows["/works/HB"].edition_id
+    editions = (await session.execute(select(Edition))).scalars().all()
+    # …each keeping its own format, folded to the catalogue's spelling.
+    assert {e.format for e in editions} == {"Hardcover", "Paperback"}
+
+
+async def test_a_shortened_author_name_is_still_the_same_author(session):
+    """`Scott Fitzgerald` for `F. Scott Fitzgerald` — a real row,
+    harpercollins.co.in, 3 Oct 2026."""
+    await intake_service.record(
+        session,
+        [
+            candidate("/works/A", title="The Great Gatsby", authors=("F. Scott Fitzgerald",)),
+            candidate(
+                "/works/B",
+                title="The Great Gatsby",
+                authors=("Scott Fitzgerald",),
+                isbn="9780143028109",
+            ),
+        ],
+        source=SOURCE,
+    )
+    assert await intake_service.promote(session, limit=10) == {STATE_PROMOTED: 1, "printing": 1}
+    assert await session.scalar(select(func.count()).select_from(Author)) == 1
+
+
+async def test_the_same_title_by_someone_else_is_held_for_a_person(session):
+    """It may be our book under a differently spelled author, or a different
+    book that shares a title. Both wrong guesses leave a record someone has to
+    repair, so the job makes neither — and fetches no cover for it."""
+    await intake_service.record(session, [candidate("/works/A")], source=SOURCE)
+    await intake_service.promote(session, limit=10)
+    await intake_service.record(
+        session,
+        [candidate("/works/B", authors=("Somebody Else",), isbn="9780143028109")],
+        source=SOURCE,
+    )
+
+    counts = await intake_service.promote(session, limit=10, covers=no_fetch_expected())
+
+    assert counts == {"held_duplicate": 1}
+    assert await catalogue_size(session) == (1, 1)
+    rows = {r.source_key: r for r in (await session.execute(select(CatalogIntake))).scalars()}
+    held = rows["/works/B"]
+    assert held.state == STATE_INCOMPLETE
+    assert held.missing == [intake_service.HELD_POSSIBLE_DUPLICATE]
+    assert str(rows["/works/A"].work_id) in held.note
+
+    # And it stays held: the nightly crawl and re-screen do not release it.
+    await intake_service.record(
+        session,
+        [candidate("/works/B", authors=("Somebody Else",), isbn="9780143028109")],
+        source=SOURCE,
+    )
+    await intake_service.rescreen_incomplete(session)
+    assert await intake_service.promote(session, limit=10, covers=no_fetch_expected()) == {}
+    await session.refresh(held)
+    assert held.state == STATE_INCOMPLETE
+
+
+async def test_the_same_title_in_another_language_is_its_own_book(session):
+    """A translation is a Work of its own, not a printing of the original."""
+    await intake_service.record(
+        session,
+        [
+            candidate("/works/EN"),
+            candidate("/works/FR", language="French", isbn="9780143028109"),
+        ],
+        source=SOURCE,
+    )
+    assert await intake_service.promote(session, limit=10) == {STATE_PROMOTED: 2}
+    assert await catalogue_size(session) == (2, 2)
+
+
+async def _author(session, name: str) -> Author:
+    author = Author(name=name)
+    session.add(author)
+    await session.commit()
+    return author
+
+
+@pytest.mark.parametrize(
+    "as_the_shop_wrote_it",
+    ["Shakespeare William", "SHAKESPEARE, William", "William Shakespeare."],
+)
+async def test_an_author_we_already_have_is_credited_under_the_name_we_have(
+    session, as_the_shop_wrote_it
+):
+    """`Shakespeare William` was in the first preview of a real night
+    (harpercollins.co.in, 4 Oct 2026). Published as written it is a second
+    author row, and a second author page, for someone the catalogue holds."""
+    known = await _author(session, "William Shakespeare")
+    await intake_service.record(
+        session,
+        [candidate(title="Othello", authors=(as_the_shop_wrote_it,))],
+        source=SOURCE,
+    )
+    assert await intake_service.promote(session, limit=10) == {STATE_PROMOTED: 1}
+
+    work = (await session.execute(select(Work))).scalar_one()
+    assert [a.id for a in work.authors] == [known.id]
+    assert await session.scalar(select(func.count()).select_from(Author)) == 1
+
+
+async def test_a_shortened_name_is_credited_to_the_full_one(session):
+    known = await _author(session, "F. Scott Fitzgerald")
+    await intake_service.record(
+        session,
+        [candidate(title="Tender Is the Night", authors=("Scott Fitzgerald",))],
+        source=SOURCE,
+    )
+    await intake_service.promote(session, limit=10)
+    work = (await session.execute(select(Work))).scalar_one()
+    assert [a.id for a in work.authors] == [known.id]
+
+
+async def test_a_name_that_could_be_two_people_is_left_as_the_source_wrote_it(session):
+    """Two existing authors match; choosing between them is a person's call."""
+    await _author(session, "Anita Desai")
+    await _author(session, "Anita K. Desai")
+    assert await intake_service.catalogue_spelling(session, "Desai Anita") == "Anita Desai"
+    assert await intake_service.catalogue_spelling(session, "A. Desai") == "A. Desai"
+    await _author(session, "Desai Anita K")
+    # "K Anita Desai" now reorders to two different rows.
+    assert await intake_service.catalogue_spelling(session, "K Anita Desai") == "K Anita Desai"
+
+
+async def test_an_unknown_or_single_word_name_is_not_touched(session):
+    await _author(session, "Osho")
+    assert await intake_service.catalogue_spelling(session, "Osho") == "Osho"
+    assert await intake_service.catalogue_spelling(session, "Someone New") == "Someone New"
+
+
+async def test_a_night_of_new_releases_is_shared_between_the_sources(session):
+    """Every shop's newest page is staged in the same minute. Without taking
+    turns, the shop read last fills the night and the first fifty books are
+    all from one publisher."""
+    isbns = iter(
+        ["9780060977498", "9780143039648", "9780140283297", "9780679722649", "9780099578512"]
+        + ["9780143031031", "9780007350834", "9780143028109"]
+    )
+    for source, count in (("shop_a", 5), ("shop_b", 3)):
+        await intake_service.record(
+            session,
+            [
+                candidate(
+                    f"{source}/{n}", source=source, title=f"{source} book {n}", isbn=next(isbns)
+                )
+                for n in range(count)
+            ],
+            source=source,
+            fresh=True,
+        )
+
+    assert await intake_service.promote(session, limit=4) == {STATE_PROMOTED: 4}
+    promoted = (
+        (await session.execute(select(CatalogIntake).where(CatalogIntake.state == STATE_PROMOTED)))
+        .scalars()
+        .all()
+    )
+    assert sorted(r.source for r in promoted) == ["shop_a", "shop_a", "shop_b", "shop_b"]

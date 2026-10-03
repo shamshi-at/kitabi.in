@@ -59,6 +59,15 @@ class Settings(BaseSettings):
     # Candidates each seed contributes per discovery pass. Discovery writes
     # only to `catalog_intake`, so this bounds crawling, never publishing.
     catalog_intake_per_seed: int = 50
+    # Publishers' storefronts (services/intake_storefront.py). Each night reads
+    # every shop's newest page, then this many further pages of its backlist —
+    # a hundred books a page, one request each. Staging only: it bounds
+    # crawling, never publishing.
+    catalog_intake_backlist_pages: int = 3
+    # Product pages read per night to fill what a feed leaves out (ISBN,
+    # author, the title in its own script). One request a second, so this is
+    # also roughly how many seconds the pass takes.
+    catalog_intake_enrich_limit: int = 150
 
     # Version gate: the app sends `X-App-Version`; anything older than this gets
     # a 426 with an update payload (CLAUDE.md — the update-gate). Bump when a

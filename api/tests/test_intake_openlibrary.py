@@ -348,6 +348,9 @@ async def test_an_enabled_night_publishes_a_book_whose_cover_is_in_our_bucket(
     monkeypatch.setattr(intake_job, "get_settings", lambda: settings)
     monkeypatch.setattr("app.services.intake_service.get_settings", lambda: settings)
     monkeypatch.setattr(intake_job, "SessionLocal", db_sessionmaker)
+    # This night is about the OpenLibrary path; the storefronts have their own
+    # (test_intake_storefront.py).
+    monkeypatch.setattr("app.services.intake_storefront.STORES", ())
 
     original = io.BytesIO()
     Image.effect_noise((1200, 1800), 64).convert("RGB").save(original, "JPEG", quality=95)

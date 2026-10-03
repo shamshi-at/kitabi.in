@@ -42,6 +42,7 @@ the same dead link does not walk it straight back into the queue.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from collections.abc import Iterable, Sequence
 from dataclasses import replace
@@ -52,7 +53,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.models import CatalogIntake
+from app.models import Author, CatalogIntake
 from app.models.catalog_intake import (
     STATE_COMPLETE,
     STATE_DUPLICATE,
@@ -62,10 +63,11 @@ from app.models.catalog_intake import (
 )
 from app.models.edition import Edition
 from app.models.work import Work
-from app.schemas.catalog import WorkCreate
+from app.schemas.catalog import EditionCreate, WorkCreate
 from app.services import catalog_service, cover_ingest, intake_gate
 from app.services import isbn as isbn_util
 from app.services.intake_gate import Candidate
+from app.services.translit import fold
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +94,28 @@ _DEAD_COVERS_KEPT = 5
 
 NOTE_NO_COVER_STORAGE = "waiting on cover storage: R2 is not configured"
 
+#: What a book's own product page said, kept apart from what the feed says and
+#: laid over it every time the row is staged. A storefront is crawled twice: a
+#: feed that lists everything thinly, and a page per book that has the ISBN,
+#: the author and — on mbibooks.com — the title in Malayalam where the feed has
+#: only a romanization. The feed is re-read every night; without this, tonight's
+#: thin row would overwrite last night's complete one.
+PAGE_FACTS_KEY = "_page"
+#: Set once a row's page has been read, whatever it yielded, so a page is
+#: fetched once and not every night it stays incomplete.
+PAGE_READ_KEY = "_page_read"
+#: Marks a row first seen on a store's newest page — a new release, which is
+#: published ahead of the backlog (owner, 3 Oct 2026: "new release should be
+#: there in our db").
+FRESH_KEY = "_fresh"
+#: A reason this row must not be published until a person has looked at it.
+#: Sticky, like the dead-cover list and for the same reason: the gate would
+#: otherwise find the row complete again on the next pass and send it straight
+#: back to `promote`.
+HOLD_KEY = "_hold"
+#: Written to `missing` for a held row. Stable — the console reads it.
+HELD_POSSIBLE_DUPLICATE = "possible_duplicate"
+
 
 def _state_for(screened: intake_gate.Screened) -> str:
     if screened.rejected:
@@ -103,17 +127,66 @@ def _dead_covers(row: CatalogIntake) -> list[str]:
     return list((row.payload or {}).get(DEAD_COVERS_KEY) or ())
 
 
+_EMPTY = (None, "", ())
+
+
+def _blank_never_erases(existing: dict | None, incoming: Candidate) -> Candidate:
+    """What the source says now, over what it said before.
+
+    A field the source leaves out tonight is "not told", not "no longer true":
+    a storefront drops a cover while it re-uploads it, a feed page comes back
+    without the attribute it carried yesterday. The same rule the sync engine
+    learned the hard way (CLAUDE.md, 15 Aug 2026) — an incoming null must not
+    overwrite an answer.
+    """
+    if not existing or "source_key" not in existing:
+        # Nothing staged yet — at most this module's own notes on a new row.
+        return incoming
+    before = Candidate.from_payload(existing)
+    kept = {
+        name: getattr(before, name)
+        for name in Candidate.__dataclass_fields__
+        if getattr(incoming, name) in _EMPTY and getattr(before, name) not in _EMPTY
+    }
+    return replace(incoming, **kept) if kept else incoming
+
+
+def _with_page_facts(candidate: Candidate, facts: dict | None) -> Candidate:
+    """Lay what the book's own page said over what the feed says."""
+    if not facts:
+        return candidate
+    known = Candidate.__dataclass_fields__
+    over = {
+        name: tuple(value) if name in ("authors", "contributors") else value
+        for name, value in facts.items()
+        if name in known and value not in (None, "", [], ())
+    }
+    return replace(candidate, **over) if over else candidate
+
+
 def _stage(row: CatalogIntake, candidate: Candidate) -> str:
     """Screen `candidate` and write the verdict onto `row`; returns the state.
 
     The one place a row's state, payload, gaps and note are set from the gate,
-    so discovery and re-screening cannot come to disagree about a rule — and
-    the rule that needs that most is this one: a cover URL `promote` already
-    found unusable is withheld from the gate, whichever path offers it again.
-    Without that, a source that keeps listing a dead image would make its book
-    `complete` every night and cost a fetch and a promotion slot every night.
+    so discovery, enrichment and re-screening cannot come to disagree about a
+    rule. Three of them live here because every path has to honour them:
+
+    - a blank in tonight's crawl never erases last night's answer;
+    - what the book's own page said outranks what the feed says;
+    - a cover URL `promote` already found unusable is withheld, whichever path
+      offers it again — otherwise a source that keeps listing a dead image
+      makes its book `complete`, and costs a fetch and a promotion slot, every
+      night.
     """
+    book = row.payload or {}
+    # This module's own notes on the row (underscored) ride through untouched.
+    kept = {key: value for key, value in book.items() if key.startswith("_")}
+
     dead = _dead_covers(row)
+    if candidate.cover_url and candidate.cover_url.strip() in dead:
+        candidate = replace(candidate, cover_url=None)
+    candidate = _blank_never_erases(book, candidate)
+    candidate = _with_page_facts(candidate, kept.get(PAGE_FACTS_KEY))
     if candidate.cover_url and candidate.cover_url.strip() in dead:
         candidate = replace(candidate, cover_url=None)
 
@@ -122,8 +195,7 @@ def _stage(row: CatalogIntake, candidate: Candidate) -> str:
     row.state = state
     row.isbn = screened.candidate.isbn
     payload = screened.candidate.to_payload()
-    if dead:
-        payload[DEAD_COVERS_KEY] = dead
+    payload.update(kept)
     row.payload = payload
     row.missing = list(screened.fatal or screened.missing) or None
     note = _note_for(screened)
@@ -131,12 +203,26 @@ def _stage(row: CatalogIntake, candidate: Candidate) -> str:
         # Say which kind of "no cover" this is: the queue should not read as
         # though the source never had one.
         note = f"{note} (the cover this source offered is unusable)"
+    if state == STATE_COMPLETE and kept.get(HOLD_KEY):
+        # Nothing is missing from the record; what is missing is a decision.
+        state = row.state = STATE_INCOMPLETE
+        row.missing = [HELD_POSSIBLE_DUPLICATE]
+        note = str(kept[HOLD_KEY])
     row.note = note
     return state
 
 
+#: Rows looked up per query when staging. A storefront feed page is a hundred
+#: candidates; one round trip for the page instead of one per book.
+_LOOKUP_CHUNK = 200
+
+
 async def record(
-    db: AsyncSession, candidates: Iterable[Candidate], *, source: str
+    db: AsyncSession,
+    candidates: Iterable[Candidate],
+    *,
+    source: str,
+    fresh: bool = False,
 ) -> dict[str, int]:
     """Screen candidates and stage them. Touches no catalogue table.
 
@@ -145,21 +231,34 @@ async def record(
     strictly alone — re-discovering a book we published is not a reason to
     reconsider it, and rewriting its payload would make the receipt describe
     something other than what was created.
-    """
-    counts: dict[str, int] = {}
-    for candidate in candidates:
-        row = (
-            await db.execute(
-                select(CatalogIntake).where(
-                    CatalogIntake.source == source,
-                    CatalogIntake.source_key == candidate.source_key,
-                )
-            )
-        ).scalar_one_or_none()
 
+    `fresh` says these came off a source's *newest* listing: a row created by
+    such a pass is marked a new release and promoted ahead of the backlog. Only
+    on creation — a book already staged does not become new by being seen
+    again.
+    """
+    batch = list(candidates)
+    existing: dict[str, CatalogIntake] = {}
+    keys = list(dict.fromkeys(c.source_key for c in batch))
+    for start in range(0, len(keys), _LOOKUP_CHUNK):
+        rows = await db.execute(
+            select(CatalogIntake).where(
+                CatalogIntake.source == source,
+                CatalogIntake.source_key.in_(keys[start : start + _LOOKUP_CHUNK]),
+            )
+        )
+        existing.update({row.source_key: row for row in rows.scalars()})
+
+    counts: dict[str, int] = {}
+    for candidate in batch:
+        row = existing.get(candidate.source_key)
         if row is None:
             row = CatalogIntake(source=source, source_key=candidate.source_key)
+            if fresh:
+                row.payload = {FRESH_KEY: True}
             db.add(row)
+            # The same book twice in one batch updates the row just made.
+            existing[candidate.source_key] = row
         elif row.state == STATE_PROMOTED:
             counts["already_promoted"] = counts.get("already_promoted", 0) + 1
             continue
@@ -169,6 +268,16 @@ async def record(
 
     await db.commit()
     return counts
+
+
+def apply_page_facts(row: CatalogIntake, facts: dict) -> str:
+    """Record what a row's own product page said and re-stage it.
+
+    Called by `intake_storefront.enrich`. The page is marked read whatever it
+    yielded: a page with nothing on it is still a page we need not fetch again.
+    """
+    row.payload = {**(row.payload or {}), PAGE_FACTS_KEY: facts, PAGE_READ_KEY: True}
+    return _stage(row, Candidate.from_payload(row.payload))
 
 
 def _note_for(screened: intake_gate.Screened) -> str | None:
@@ -219,9 +328,146 @@ def _work_create(candidate: Candidate) -> WorkCreate:
         publisher_name=candidate.publisher,
         isbn=candidate.isbn,
         page_count=candidate.page_count,
+        format=candidate.format,
         cover_url=candidate.cover_url,
         back_cover_url=candidate.back_cover_url,
     )
+
+
+def _edition_create(candidate: Candidate) -> EditionCreate:
+    """The same candidate, as another printing of a Work that already exists."""
+    return EditionCreate(
+        publisher_name=candidate.publisher,
+        isbn=candidate.isbn,
+        language=candidate.language,
+        page_count=candidate.page_count,
+        format=candidate.format,
+        cover_url=candidate.cover_url,
+        back_cover_url=candidate.back_cover_url,
+        # Work-level, and only ever fills a gap (see `create_edition`).
+        description=candidate.description,
+        first_publish_year=candidate.first_publish_year,
+    )
+
+
+_PUNCTUATION = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+def _strict(text: str | None) -> str:
+    """Case, spacing and punctuation folded away; nothing else. Deliberately
+    not `translit.fold`, which is a *search* skeleton and merges spellings."""
+    return " ".join(_PUNCTUATION.sub(" ", (text or "").casefold()).split())
+
+
+def _same_person(a: str, b: str) -> bool:
+    """Two spellings of one name: equal once punctuation and case are folded,
+    or one a shortened form of the other that keeps the surname — a shop's
+    `Scott Fitzgerald` for `F. Scott Fitzgerald`. Deliberately not fuzzier
+    than that: `K R Meera` and `Meera K R` are left for a person to pair."""
+    x, y = _strict(a).split(), _strict(b).split()
+    if not x or not y:
+        return False
+    if x == y:
+        return True
+    short, long = (x, y) if len(x) <= len(y) else (y, x)
+    return len(short) >= 2 and short[-1] == long[-1] and set(short) <= set(long)
+
+
+async def catalogue_spelling(db: AsyncSession, name: str) -> str:
+    """The catalogue's own spelling of this person, when it already has them.
+
+    A shop's spelling of a name is not the catalogue's. The first preview of a
+    real night (4 Oct 2026) offered `Shakespeare William`, `Scott Fitzgerald`
+    and `Chesterton G K`; published as written, each is a second author row
+    for someone we already hold, and a second, thinner author page. So a name
+    that is plainly an existing author's — the same words in another order, or
+    a shortened form that keeps the surname — is replaced by the name on the
+    row we have.
+
+    Only when exactly one author matches. Two candidates is a question for a
+    person, and the name goes through as the source wrote it.
+    """
+    words = _strict(name).split()
+    if len(words) < 2:
+        return name
+    anchor = max(words, key=len)
+    if len(anchor) < 3:
+        return name
+    known = (
+        (
+            await db.execute(
+                select(Author.name)
+                .where(Author.deleted_at.is_(None), Author.name.ilike(f"%{anchor}%"))
+                .limit(200)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    matches = {
+        other
+        for other in known
+        if sorted(_strict(other).split()) == sorted(words) or _same_person(name, other)
+    }
+    if any(_strict(other) == _strict(name) for other in matches):
+        return name  # already spelled the catalogue's way, give or take a full stop
+    return matches.pop() if len(matches) == 1 else name
+
+
+async def find_work(db: AsyncSession, candidate: Candidate) -> tuple[Work | None, bool]:
+    """A Work already carrying this candidate's title, and whether it is the
+    same book: `(work, True)` — another printing of it; `(work, False)` — the
+    same title by someone else; `(None, False)` — nothing like it here.
+
+    A storefront lists the hardback and the paperback as two products with two
+    ISBNs, and each would otherwise become its own Work — two thin pages for
+    one book, which is rule 17 broken at the door. So a printing is attached
+    to the Work it belongs to. Matched narrowly on purpose: the same title,
+    the same subtitle when both have one, the same language, and an author in
+    common. A wrong attach puts one book's printing on another's page.
+
+    The middle answer matters as much. `The Great Gatsby` by `Scott
+    Fitzgerald` (a real row, harpercollins.co.in, 3 Oct 2026) may be the book
+    we hold by a differently spelled author, or a different book that shares
+    a title. An unattended job cannot tell, and both wrong guesses leave a
+    record someone has to repair — so the caller holds it for a person.
+    """
+    key = fold(candidate.title)
+    if not key or not candidate.authors:
+        return None, False
+    works = (
+        (
+            await db.execute(
+                select(Work)
+                .where(
+                    Work.title_fold == key,
+                    Work.deleted_at.is_(None),
+                    Work.merged_into_id.is_(None),
+                )
+                .order_by(Work.created_at, Work.id)
+                .limit(20)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    title = _strict(candidate.title)
+    namesake: Work | None = None
+    for work in works:
+        if _strict(work.title) != title:
+            continue
+        if work.subtitle and candidate.subtitle:
+            if _strict(work.subtitle) != _strict(candidate.subtitle):
+                continue
+        if work.language and candidate.language:
+            if work.language.casefold() != candidate.language.casefold():
+                continue  # a translation is its own Work
+        if any(
+            _same_person(mine, theirs.name) for mine in candidate.authors for theirs in work.authors
+        ):
+            return work, True
+        namesake = namesake or work
+    return namesake, False
 
 
 def _isbn_conflict_work_id(exc: HTTPException) -> uuid.UUID | None:
@@ -293,22 +539,73 @@ async def already_catalogued(db: AsyncSession, candidate: Candidate) -> uuid.UUI
     ).scalar_one_or_none()
 
 
+#: How many times the nightly limit of new releases to look at when sharing
+#: the night between sources.
+_FRESH_SOURCES_WINDOW = 4
+
+
+def _taking_turns(rows: Sequence[CatalogIntake], limit: int) -> list[CatalogIntake]:
+    """Up to `limit` rows, one source at a time.
+
+    Every shop's newest page is staged within the same minute, so "newest
+    first" alone means whichever shop was read last fills the whole night — on
+    the first night, fifty books from one publisher and none in Malayalam.
+    Sources take turns instead; within a source the order is kept.
+    """
+    queues: dict[str, list[CatalogIntake]] = {}
+    for row in rows:
+        queues.setdefault(row.source, []).append(row)
+    taken: list[CatalogIntake] = []
+    while queues and len(taken) < limit:
+        for source in list(queues):
+            taken.append(queues[source].pop(0))
+            if not queues[source]:
+                del queues[source]
+            if len(taken) >= limit:
+                break
+    return taken
+
+
 async def _due(db: AsyncSession, limit: int) -> Sequence[CatalogIntake]:
-    return (
+    """Tonight's candidates: new releases first, then the backlog in the order
+    it was found.
+
+    Without the first half a book published this week waits behind every
+    backlist title staged before it — months, at the daily limit. The newest
+    of the new go first, so a busy week never pushes this week's books out by
+    last week's.
+    """
+    ready = (CatalogIntake.state == STATE_COMPLETE, CatalogIntake.attempts < MAX_ATTEMPTS)
+    is_fresh = CatalogIntake.payload.has_key(FRESH_KEY)  # noqa: W601 — JSONB `?`, not dict
+    newest = (
         (
             await db.execute(
                 select(CatalogIntake)
-                .where(
-                    CatalogIntake.state == STATE_COMPLETE,
-                    CatalogIntake.attempts < MAX_ATTEMPTS,
-                )
-                .order_by(CatalogIntake.first_seen_at, CatalogIntake.id)
-                .limit(limit)
+                .where(*ready, is_fresh)
+                .order_by(CatalogIntake.first_seen_at.desc(), CatalogIntake.id)
+                # Wider than the limit, so there is something to take turns over.
+                .limit(limit * _FRESH_SOURCES_WINDOW)
             )
         )
         .scalars()
         .all()
     )
+    fresh = _taking_turns(newest, limit)
+    if len(fresh) >= limit:
+        return fresh
+    backlog = (
+        (
+            await db.execute(
+                select(CatalogIntake)
+                .where(*ready, ~is_fresh)
+                .order_by(CatalogIntake.first_seen_at, CatalogIntake.id)
+                .limit(limit - len(fresh))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [*fresh, *backlog]
 
 
 async def _own_covers(
@@ -390,6 +687,33 @@ async def promote(
             counts[STATE_DUPLICATE] = counts.get(STATE_DUPLICATE, 0) + 1
             continue
 
+        # Credit the author the catalogue already has, under the name it has
+        # them by, rather than adding a second row for a shop's spelling.
+        named = replace(
+            screened.candidate,
+            authors=tuple(
+                dict.fromkeys(
+                    [await catalogue_spelling(db, name) for name in screened.candidate.authors]
+                )
+            ),
+        )
+        screened = replace(screened, candidate=named)
+
+        # Another printing of a book we hold is added to that book; the same
+        # title by a different author is not ours to call either way. Asked
+        # before the cover is fetched, so a held row costs nothing.
+        parent, same_book = await find_work(db, screened.candidate)
+        if parent is not None and not same_book:
+            row.payload = {
+                **row.payload,
+                HOLD_KEY: f"held: same title as a book already in the catalogue ({parent.id})"
+                " by a different author",
+            }
+            _stage(row, screened.candidate)
+            await db.commit()
+            counts["held_duplicate"] = counts.get("held_duplicate", 0) + 1
+            continue
+
         # After the duplicate check, so a book we already hold never costs a
         # fetch or leaves an object in the bucket; before creation, so no book
         # is ever live pointing at a cover that turned out not to load.
@@ -427,6 +751,18 @@ async def promote(
         cover_failures = 0
 
         try:
+            if parent is not None:
+                edition = await catalog_service.create_edition(
+                    db, parent, _edition_create(publishable)
+                )
+                row.state = STATE_PROMOTED
+                row.work_id = parent.id
+                row.edition_id = edition.id
+                row.promoted_at = datetime.now(UTC)
+                row.note = "added as a printing of a book already in the catalogue"
+                await db.commit()
+                counts["printing"] = counts.get("printing", 0) + 1
+                continue
             work = await catalog_service.create_work_with_edition(
                 db, _work_create(publishable), created_by=None
             )
