@@ -129,6 +129,9 @@ class Candidate:
     #: `schemas.catalog.normalize_edition_format` folds the spelling on the way
     #: into the catalogue, exactly as it does for a reader's own entry.
     format: str | None = None
+    #: Who translated it, when that is known. Goes to the Work's translators;
+    #: never a reason to hold a book.
+    translators: tuple[str, ...] = ()
     #: People the source credits without saying how — see `MISSING_AUTHOR_ROLES`.
     #: Kept so the queue can show a human the names they are choosing between;
     #: never written to the catalogue.
@@ -168,6 +171,7 @@ class Candidate:
             "first_publish_year": self.first_publish_year,
             "back_cover_url": self.back_cover_url,
             "format": self.format,
+            "translators": list(self.translators),
             "contributors": list(self.contributors),
             "source_url": self.source_url,
             "external_source": self.external_source,
@@ -179,6 +183,7 @@ class Candidate:
         data = dict(payload)
         data["authors"] = tuple(data.get("authors") or ())
         data["contributors"] = tuple(data.get("contributors") or ())
+        data["translators"] = tuple(data.get("translators") or ())
         known = cls.__dataclass_fields__.keys()
         return cls(**{k: v for k, v in data.items() if k in known})
 
@@ -513,6 +518,13 @@ def screen(candidate: Candidate) -> Screened:
     )
     if not authors:
         missing.append(MISSING_AUTHOR_ROLES if contributors else MISSING_AUTHORS)
+    translators = tuple(
+        dict.fromkeys(
+            name
+            for raw in candidate.translators
+            if (name := _tidy_name(_plain(raw))) and name not in authors
+        )
+    )
 
     # --- publisher --------------------------------------------------------
     publisher_fix = (
@@ -585,6 +597,7 @@ def screen(candidate: Candidate) -> Screened:
         language=language,
         back_cover_url=_https(candidate.back_cover_url),
         contributors=contributors,
+        translators=translators,
         format=_text(candidate.format),
         source_url=_https(candidate.source_url),
         page_count=page_count,

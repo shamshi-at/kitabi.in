@@ -113,6 +113,11 @@ FRESH_KEY = "_fresh"
 #: otherwise find the row complete again on the next pass and send it straight
 #: back to `promote`.
 HOLD_KEY = "_hold"
+#: What `author_roles` was told about a row's credits: `asked` once it has
+#: been asked (a paid call is not repeated nightly), `resolved` when the answer
+#: stood up — the authors and translators to publish under — and `answer`, the
+#: model's reply as given, for whoever reviews a row that did not resolve.
+ROLES_KEY = "_roles"
 #: Set on a row that was promoted as another printing of a Work that already
 #: existed. Its `work_id` then names a book this pipeline did *not* create, and
 #: `revert` has to know that: undoing the printing must not take the book.
@@ -161,7 +166,7 @@ def _with_page_facts(candidate: Candidate, facts: dict | None) -> Candidate:
         return candidate
     known = Candidate.__dataclass_fields__
     over = {
-        name: tuple(value) if name in ("authors", "contributors") else value
+        name: tuple(value) if name in ("authors", "contributors", "translators") else value
         for name, value in facts.items()
         if name in known and value not in (None, "", [], ())
     }
@@ -191,6 +196,9 @@ def _stage(row: CatalogIntake, candidate: Candidate) -> str:
         candidate = replace(candidate, cover_url=None)
     candidate = _blank_never_erases(book, candidate)
     candidate = _with_page_facts(candidate, kept.get(PAGE_FACTS_KEY))
+    # …and who-did-what, once resolved, outranks both: it is the one thing
+    # neither the feed nor the page states.
+    candidate = _with_page_facts(candidate, (kept.get(ROLES_KEY) or {}).get("resolved"))
     if candidate.cover_url and candidate.cover_url.strip() in dead:
         candidate = replace(candidate, cover_url=None)
 
@@ -207,6 +215,8 @@ def _stage(row: CatalogIntake, candidate: Candidate) -> str:
         # Say which kind of "no cover" this is: the queue should not read as
         # though the source never had one.
         note = f"{note} (the cover this source offered is unusable)"
+    if kept.get(ROLES_KEY) and intake_gate.MISSING_AUTHOR_ROLES in screened.missing:
+        note = f"{note} (asked; the publisher's text does not say who did what)"
     if state == STATE_COMPLETE and kept.get(HOLD_KEY):
         # Nothing is missing from the record; what is missing is a decision.
         state = row.state = STATE_INCOMPLETE
@@ -274,6 +284,19 @@ async def record(
     return counts
 
 
+def apply_roles(row: CatalogIntake, *, resolved: dict | None, answer: object) -> str:
+    """Record what `author_roles` was told about this row and re-stage it.
+
+    `resolved` is None when the answer did not stand up; the row is still
+    marked asked, so the same question is not paid for again tomorrow.
+    """
+    roles: dict = {"asked": True, "answer": answer}
+    if resolved:
+        roles["resolved"] = resolved
+    row.payload = {**(row.payload or {}), ROLES_KEY: roles}
+    return _stage(row, Candidate.from_payload(row.payload))
+
+
 def apply_page_facts(row: CatalogIntake, facts: dict) -> str:
     """Record what a row's own product page said and re-stage it.
 
@@ -329,6 +352,7 @@ def _work_create(candidate: Candidate) -> WorkCreate:
         language=candidate.language,
         first_publish_year=candidate.first_publish_year,
         author_names=list(candidate.authors),
+        translator_names=list(candidate.translators),
         publisher_name=candidate.publisher,
         isbn=candidate.isbn,
         page_count=candidate.page_count,

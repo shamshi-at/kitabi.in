@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     # limit: two of the three shops are complete only once their page is read,
     # so reading has to stay ahead of publishing or the limit is never reached.
     catalog_intake_enrich_limit: int = 300
+    # Held books whose credits the LLM is asked about per night
+    # (services/author_roles.py). A paid call each, so this is a spend limit as
+    # much as a pace; `llm_daily_quota_author_roles` is the hard ceiling.
+    catalog_intake_roles_limit: int = 60
 
     # Version gate: the app sends `X-App-Version`; anything older than this gets
     # a 426 with an update payload (CLAUDE.md — the update-gate). Bump when a
@@ -90,6 +94,13 @@ class Settings(BaseSettings):
     # 8 Jul 2026), Sonnet reads them. Still pennies per call given how rarely
     # this path runs.
     extraction_model: str = "claude-sonnet-5"
+    # Deciding who wrote and who translated a book from the publisher's own
+    # blurb and biographies (services/author_roles.py). The most capable model
+    # because the failure this guards against is a *wrong* credit on a public
+    # page, and the volume is small: roughly a fifth of two shops' books, once.
+    # The request is shaped for this model generation (effort, structured
+    # output, refusal fallbacks) — check all three before pointing it elsewhere.
+    author_roles_model: str = "claude-opus-5-5"
 
     # Daily spend limits for the two endpoints that cost real money. Auth on
     # them means "any signed-in reader", so without a ceiling the cap on the
@@ -102,6 +113,9 @@ class Settings(BaseSettings):
     # knows (a reader bulk-adding a shelf might genuinely photograph dozens).
     llm_daily_quota_recommendations: int = 20
     llm_daily_quota_cover_extract: int = 40
+    # Not per reader: the whole intake job's ceiling for one UTC day, whatever
+    # `catalog_intake_roles_limit` or a restarted run would otherwise spend.
+    llm_daily_quota_author_roles: int = 100
     # The circuit breaker: total paid calls across ALL readers in one UTC day.
     # This is the number that actually bounds the bill — the per-reader caps
     # only stop one account from being the whole problem.

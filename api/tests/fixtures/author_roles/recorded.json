@@ -1,0 +1,335 @@
+[
+ {
+  "shop": "speakingtiger",
+  "title": "Those Boyhood Years",
+  "names": [
+   "Niladri R. Chatterjee",
+   "Shibram Chakraborty"
+  ],
+  "blurb": "‘Boyhood is suffused with hope and hormones, where young freedom fighters are intoxicated by male beauty while school boys navigate the boundaries between love and lust. […] n invaluable addition to India’s LGBTQ+ archive anyway, but Niladri Chatterjee’s joyful translation is a ruddy good read.’—Sandip Roy\n\nShibram Chakraborty was one of Bengal’s most prolific and beloved humourists and novelists. However, his debut novel, Chhele Boyoshe , a tender exploration of love between two […] tories with the thrill of chases and shadowy conspiracies.\n\nChakraborty writes with astonishing openness of the hugs, caresses and kisses shared by the boys, and their bold proclamations of love, even as he reflects",
+  "bios": {},
+  "answer": {
+   "credits": [
+    {
+     "name": "Niladri R. Chatterjee",
+     "role": "translator",
+     "evidence": "Niladri Chatterjee’s joyful translation is a ruddy good read."
+    },
+    {
+     "name": "Shibram Chakraborty",
+     "role": "author",
+     "evidence": "Chakraborty writes with astonishing openness of the hugs, caresses and kisses shared by the boys"
+    }
+   ]
+  },
+  "resolved": {
+   "authors": [
+    "Shibram Chakraborty"
+   ],
+   "translators": [
+    "Niladri R. Chatterjee"
+   ]
+  }
+ },
+ {
+  "shop": "speakingtiger",
+  "title": "The Red Wind Howls",
+  "names": [
+   "Christopher Peacock",
+   "Tsering Dondrup"
+  ],
+  "blurb": "‘Part Gulag Archipelago , part One Hundred Years of Solitude , The Red Wind Howls …[is an] urgent, tragic, and vital testimony for the Tibetan people.’—Woeser, […] of Forbidden Memory: Tibet During the Cultural Revolution\n\n‘This is Tsering D?ndrup’s boldest and most meticulously researched novel yet. Capturing the complex and tragic existence of Tibet under C",
+  "bios": {},
+  "answer": {
+   "credits": [
+    {
+     "name": "Christopher Peacock",
+     "role": "unknown",
+     "evidence": ""
+    },
+    {
+     "name": "Tsering Dondrup",
+     "role": "author",
+     "evidence": "This is Tsering D?ndrup’s boldest and most meticulously researched novel yet."
+    }
+   ]
+  },
+  "resolved": null
+ },
+ {
+  "shop": "speakingtiger",
+  "title": "Diary of an Unseen Witness",
+  "names": [
+   "Ampassayya Naveen",
+   "Kalpana Kannabiran"
+  ],
+  "blurb": "When the Emergency descends upon India in 1975, Srinivasa Rao is an ordinary Telugu lecturer in an ordinary college in Andhra Pradesh, whose greatest loyalties are to his family and the routines of everyday life. […] s about justice, freedom and the cost of remaining silent.\n\nAmpasayya Naveen’s landmark novel, Cheekati Rojulu , was first published in Telugu in 1978, soon after the Emergency ended. In Kalpana Kannabiran’s compelling English translation, Srinivasa Rao’s story crosses languages and generations, i",
+  "bios": {},
+  "answer": {
+   "credits": [
+    {
+     "name": "Ampassayya Naveen",
+     "role": "author",
+     "evidence": "Ampasayya Naveen’s landmark novel, Cheekati Rojulu"
+    },
+    {
+     "name": "Kalpana Kannabiran",
+     "role": "translator",
+     "evidence": "In Kalpana Kannabiran’s compelling English translation"
+    }
+   ]
+  },
+  "resolved": {
+   "authors": [
+    "Ampassayya Naveen"
+   ],
+   "translators": [
+    "Kalpana Kannabiran"
+   ]
+  }
+ },
+ {
+  "shop": "speakingtiger",
+  "title": "Aaji vs Daar-ji",
+  "names": [
+   "Mamta Nainy",
+   "Shubhshree Mathur"
+  ],
+  "blurb": "Binni says her Aaji can fly across the sky, outrun a tiger and race a comet.",
+  "bios": {},
+  "answer": {
+   "credits": [
+    {
+     "name": "Mamta Nainy",
+     "role": "unknown",
+     "evidence": ""
+    },
+    {
+     "name": "Shubhshree Mathur",
+     "role": "unknown",
+     "evidence": ""
+    }
+   ]
+  },
+  "resolved": null
+ },
+ {
+  "shop": "speakingtiger",
+  "title": "The Forest of Snow",
+  "names": [
+   "Ramananda Bharati",
+   "Somdatta Mandal"
+  ],
+  "blurb": "In 1898, the wandering saint Swami Ramananda Bharati set out from the Garhwal Himalayas towards one of the most remote and revered destinations in the world: Mount Kailash and Manas Sarovar in Tibet. […] es, alongside the hardships of life at the edge of empire.\n\nBharati writes vividly of Bhutia traders preparing for their annual caravans into Tibet, highland co",
+  "bios": {},
+  "answer": {
+   "credits": [
+    {
+     "name": "Ramananda Bharati",
+     "role": "author",
+     "evidence": "Bharati writes vividly of Bhutia traders"
+    },
+    {
+     "name": "Somdatta Mandal",
+     "role": "unknown",
+     "evidence": ""
+    }
+   ]
+  },
+  "resolved": null
+ },
+ {
+  "shop": "speakingtiger",
+  "title": "The COVID Spectrum",
+  "names": [
+   "Kanchana Mahadevan",
+   "Meher Bhoot",
+   "Rajesh Kharat",
+   "Satishchandra Kumar"
+  ],
+  "blurb": "The COVID Spectrum brings together a diverse range of essays from five continents on the pandemic that plunged the world into an unprecedented crisis.",
+  "bios": {},
+  "answer": {
+   "credits": [
+    {
+     "name": "Kanchana Mahadevan",
+     "role": "unknown",
+     "evidence": ""
+    },
+    {
+     "name": "Meher Bhoot",
+     "role": "unknown",
+     "evidence": ""
+    },
+    {
+     "name": "Rajesh Kharat",
+     "role": "unknown",
+     "evidence": ""
+    },
+    {
+     "name": "Satishchandra Kumar",
+     "role": "unknown",
+     "evidence": ""
+    }
+   ]
+  },
+  "resolved": null
+ },
+ {
+  "shop": "harpercollins_in",
+  "title": "Dynasties Of Devotion",
+  "names": [
+   "Deepa Mandlik",
+   "Aboli Mandlik"
+  ],
+  "blurb": "For centuries, temples have functioned not just as places of worship but also social and cultural centres, offering both a connection to the divine and entertai […] e as respite from everyday life. In Dynasties of Devotion , Deepa Mandlik explores seven ancient temples across India and Cambodia, meticulously examines historical contexts and mythological",
+  "bios": {
+   "Deepa Mandlik": "Deepa Mandlik has been a prolific and versatile Marathi writer for over a decade.",
+   "Aboli Mandlik": "Aboli Mandlik, translator of Dynasties of Devotion, brings to life the fascinating world of seven iconic temples, from the grandeur of Brihadeeswara Temple to t"
+  },
+  "answer": {
+   "credits": [
+    {
+     "name": "Deepa Mandlik",
+     "role": "author",
+     "evidence": "Deepa Mandlik explores seven ancient temples across India and Cambodia"
+    },
+    {
+     "name": "Aboli Mandlik",
+     "role": "translator",
+     "evidence": "Aboli Mandlik, translator of Dynasties of Devotion"
+    }
+   ]
+  },
+  "resolved": {
+   "authors": [
+    "Deepa Mandlik"
+   ],
+   "translators": [
+    "Aboli Mandlik"
+   ]
+  }
+ },
+ {
+  "shop": "harpercollins_in",
+  "title": "The House of Awadh",
+  "names": [
+   "Aletta André",
+   "Abhimanyu Kumar"
+  ],
+  "blurb": "In Delhi’s Ridge Forest lies Malcha Mahal, which was home to a family cloaked in mystery: Begum Wilayat Mahal and her children, Princess Sakina and Prince Ali Raza-self-proclaimed descendants of the House of Awadh. […] n cross-border reportage, archives and intimate interviews, Aletta Andre and Abhimanyu Kumar explore the family’s audacious claims as they bring to life an ambitious woman and her sensitive",
+  "bios": {
+   "Aletta André": "Aletta André is a Dutch historian and journalist, who has covered South Asia for Dutch and international media since 2009.",
+   "Abhimanyu Kumar": "Abhimanyu Kumar is an Indian poet and journalist with a wide experience covering politics, arts, culture and minority issues. […] on Milan and the Sea was published by Red River in 2017. He translated Australian poet Robert Wood's poetry collection Redgate ,"
+  },
+  "answer": {
+   "credits": [
+    {
+     "name": "Aletta André",
+     "role": "author",
+     "evidence": "Aletta Andre and Abhimanyu Kumar explore the family’s audacious claims"
+    },
+    {
+     "name": "Abhimanyu Kumar",
+     "role": "author",
+     "evidence": "Aletta Andre and Abhimanyu Kumar explore the family’s audacious claims"
+    }
+   ]
+  },
+  "resolved": {
+   "authors": [
+    "Aletta André",
+    "Abhimanyu Kumar"
+   ],
+   "translators": []
+  }
+ },
+ {
+  "shop": "harpercollins_in",
+  "title": "Song of the Asunam",
+  "names": [
+   "C.G. Salamander",
+   "Rajiv Eipe"
+  ],
+  "blurb": "A modern fable of an adventurous boy and a magical music-loving beast.\n\nWhen an Asunam, with rainbow scales and sharp talons, descends on his sleepy village, Vetri is thrilled.",
+  "bios": {
+   "C.G. Salamander": "C.G. Salamander is a writer and editor who splits his time between Chennai and the Netherlands. He",
+   "Rajiv Eipe": "Rajiv Eipe is an animator and illustrator. He has worked on children's books with various publishers a"
+  },
+  "answer": {
+   "credits": [
+    {
+     "name": "C.G. Salamander",
+     "role": "author",
+     "evidence": "C.G. Salamander is a writer and editor"
+    },
+    {
+     "name": "Rajiv Eipe",
+     "role": "illustrator",
+     "evidence": "Rajiv Eipe is an animator and illustrator."
+    }
+   ]
+  },
+  "resolved": {
+   "authors": [
+    "C.G. Salamander"
+   ],
+   "translators": []
+  }
+ },
+ {
+  "shop": "harpercollins_in",
+  "title": "Desi Disruptors: Timeless Lessons from Iconic Indian Brands",
+  "names": [
+   "Vispy Doctor",
+   "Vikrant Pande"
+  ],
+  "blurb": "What makes a balm feel like a mother’s touch?\n\nHow did a packet of noodles become India’s comfort food?\n\nHow did a brand name become synonymous with a cure for",
+  "bios": {
+   "Vispy Doctor": "Vispy Doctor refers to himself as being ‘terminally curious’.",
+   "Vikrant Pande": "Vikrant Pande has translated twelve Marathi bestsellers into English. His translation of Girish Kuber’s book Tatayan ( The Tatas: How a Family […] is a bestseller and has received excellent reviews. He has translated and written original pieces for Storytel, an audio book c"
+  },
+  "answer": {
+   "credits": [
+    {
+     "name": "Vispy Doctor",
+     "role": "unknown",
+     "evidence": ""
+    },
+    {
+     "name": "Vikrant Pande",
+     "role": "unknown",
+     "evidence": ""
+    }
+   ]
+  },
+  "resolved": null
+ },
+ {
+  "shop": "harpercollins_in",
+  "title": "Gita: The Battle Of The Worlds",
+  "names": [
+   "Sonal Patel",
+   "Jemma Wayne-Kattan"
+  ],
+  "blurb": "Inspired by the Bhagavad Gita, this exciting adventure brings one of the world’s greatest spiritual stories to life for today’s children.",
+  "bios": {
+   "Sonal Patel": "Sonal Patel is a British-Indian mother with strong cultural roots."
+  },
+  "answer": {
+   "credits": [
+    {
+     "name": "Sonal Patel",
+     "role": "unknown",
+     "evidence": ""
+    },
+    {
+     "name": "Jemma Wayne-Kattan",
+     "role": "unknown",
+     "evidence": ""
+    }
+   ]
+  },
+  "resolved": null
+ }
+]

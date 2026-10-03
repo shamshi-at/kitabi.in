@@ -12,6 +12,9 @@ Four steps, deliberately in this order and deliberately separable:
    candidates to `catalog_intake` and touches no catalogue table.
 1b. **enrich** — for rows a storefront's feed left incomplete, read that
    book's own page for the ISBN, the author and the title in its own script.
+1c. **author roles** — for books a shop credits to several people without
+   saying who did what, ask the LLM and keep only an answer that checks out
+   against the publisher's own text (`services/author_roles`). Paid, metered.
 2. **rescreen** — re-run the gate over rows held as `incomplete`, so a gate
    fix releases what it was holding without re-crawling anything.
 3. **promote** — turn at most `catalog_intake_daily_limit` complete candidates
@@ -38,7 +41,13 @@ import httpx
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.jobs.scheduler import LOCK_CATALOG_INTAKE, advisory_lock
-from app.services import cover_ingest, intake_openlibrary, intake_service, intake_storefront
+from app.services import (
+    author_roles,
+    cover_ingest,
+    intake_openlibrary,
+    intake_service,
+    intake_storefront,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +91,7 @@ async def catalog_intake(client: httpx.AsyncClient | None = None) -> None:
                     logger.info("intake: staged %s", staged)
 
                 await _storefronts(session, client, settings)
+                await _author_roles(session, client, settings)
 
                 released = await intake_service.rescreen_incomplete(session)
                 if released.get("complete"):
@@ -156,3 +166,18 @@ async def _storefronts(session, client: httpx.AsyncClient, settings) -> None:
         return
     if enriched:
         logger.info("intake: product pages read %s", enriched)
+
+
+async def _author_roles(session, client: httpx.AsyncClient, settings) -> None:
+    """Resolve who wrote and who translated the books held for it. A failure
+    here leaves those books held and costs nothing else."""
+    try:
+        resolved = await author_roles.resolve_held(
+            session, client, settings, limit=settings.catalog_intake_roles_limit
+        )
+    except Exception:  # noqa: BLE001 — never the reason a night publishes nothing
+        logger.exception("intake: resolving author roles failed")
+        await session.rollback()
+        return
+    if resolved:
+        logger.info("intake: author roles %s", resolved)

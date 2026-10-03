@@ -277,6 +277,13 @@ _HC_BYLINE = re.compile(r'<div class="hc-book-author-under-title[^"]*">(.*?)</di
 _HC_AUTHOR = re.compile(
     r'<a[^>]+href="https://harpercollins\.co\.in/author/[^"]*"[^>]*>(.*?)</a>', re.S
 )
+_HC_BIO = re.compile(
+    r'<h3 class="hc-author-name[^"]*">\s*<a[^>]*>(.*?)</a>\s*</h3>\s*'
+    r'<div class="hc-author-bio">(.*?)</div>',
+    re.S,
+)
+#: A biography is a paragraph. Enough to say "translator of…", not a CV.
+_MAX_BIO = 1500
 _HC_PAGES = re.compile(r"Pages:\s*(\d{1,5})\s*<")
 _HC_LANGUAGE = re.compile(r"Language:\s*<span>\s*([^<]+?)\s*</span>")
 
@@ -301,6 +308,12 @@ def _harpercollins_page(page: str) -> dict:
     byline = _HC_BYLINE.search(page)
     if byline:
         facts.update(_credit([_text(name) for name in _HC_AUTHOR.findall(byline.group(1))]))
+    # Not a field of the book: the page's "About the author" paragraphs, kept
+    # because they are usually the only place a translator is called one
+    # (`author_roles` reads them). Ignored by everything else.
+    bios = {_text(name): _text(bio)[:_MAX_BIO] for name, bio in _HC_BIO.findall(page)}
+    if bios := {name: bio for name, bio in bios.items() if name and bio}:
+        facts["bios"] = bios
     if pages := _HC_PAGES.search(page):
         facts["page_count"] = int(pages.group(1))
     if language := _HC_LANGUAGE.search(page):

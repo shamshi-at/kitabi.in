@@ -518,14 +518,18 @@ Tiger** (999).
 - **Polite.** One request a second, identified, robots.txt read per shop and
   asked per page; a product page is only ever fetched from the shop's own host.
 
-**What is held, and it is the main thing left to solve:** neither
-HarperCollins nor Speaking Tiger says who is author, translator or
-illustrator — they list every credited name the same way. One name is the
-author; several are staged as `contributors` and the book waits on
-`author_roles`. That is ~20% of both shops' newest pages. The prose on the
-page usually does say ("in Kalpana Kannabiran's English translation"), so the
-realistic resolver is the LLM the cover extractor already uses — a paid call,
-so it needs `llm_quota` and an owner decision before it is built.
+**Who did what.** Neither HarperCollins nor Speaking Tiger says who is author,
+translator or illustrator — they list every credited name the same way. One
+name is the author; several are staged as `contributors` and the book waits on
+`author_roles` (~20% of both shops' newest pages). The prose on the page
+usually does say ("in Kalpana Kannabiran's English translation"), so since
+4 Oct 2026 `services/author_roles` asks the LLM — and uses the answer only when
+plain string matching can verify every role against the publisher's own text
+(a quote that is really there, about that person, saying the right thing).
+One unknown holds the book. On eleven real held books: five resolved, all
+correct; six held, including one where the model named a translator as an
+author. Under a cent a book, metered, asked once. What it cannot resolve —
+roughly half — still waits for a person, with the model's reply on the row.
 
 **Not configured, and why:** Niyogi (robots.txt disallows the feed), Roli
 (covers are 3D mock-ups; author strings carry ranks), Olive (fields are free

@@ -144,6 +144,17 @@ def test_a_harpercollins_byline_of_two_is_held_for_roles():
     assert result.candidate.contributors == ("Deepa Mandlik", "Aboli Mandlik")
 
 
+def test_the_page_keeps_each_credited_persons_biography():
+    """The byline does not say who translated the book; the "About the author"
+    paragraph underneath usually does. It is kept for `author_roles` to read
+    and is not a field of the book."""
+    facts = sf.HARPERCOLLINS_IN.from_page(page("harpercollins_dynasties"))
+    assert set(facts["bios"]) == {"Deepa Mandlik", "Aboli Mandlik"}
+    assert "translator of Dynasties of Devotion" in facts["bios"]["Aboli Mandlik"]
+    # …and laying the page over the feed row ignores it: there is no such field.
+    assert not hasattr(with_page(hc("Dynasties"), facts).candidate, "bios")
+
+
 def test_a_hindi_edition_under_a_latin_title_is_held():
     """The shop lists its Hindi books under romanized names. The book's title
     is in Devanagari; this is not it."""

@@ -1379,14 +1379,20 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
     production, 3 Oct: 312 would be created, 3 real second printings found,
     2 same-title rows held, 54 already in the catalogue.
   - Tests use **real payloads** trimmed into `tests/fixtures/storefront/`.
-  - [ ] **Author roles.** ~20% of HarperCollins and Speaking Tiger's newest
-        books credit an author and a translator/illustrator identically and
-        are held. Needs a decision: resolve with the metered LLM, or by hand.
+  - [x] **Author roles — resolved by the LLM, verified by string matching**
+        (4 Oct 2026, owner). `services/author_roles`: asks `claude-opus-5-5`
+        who did what from the publisher's blurb and biographies, and uses the
+        answer only if every role has a quote that is really in that text, is
+        about that person and says the right thing. One unknown holds the
+        book. Live on 11 real held books: 5 resolved (all correct), 6 held.
+        Under a cent a book, metered (`FEATURE_AUTHOR_ROLES`, ≤100/day), asked
+        once per book. Books it cannot resolve stay held for a person, with
+        the model's reply on the row.
+  - **Nightly limit 150** (4 Oct 2026, owner); product-page reads 300 a night.
   - [ ] More shops, each a `Store` + two small parsers once its author can be
         read reliably: Roli, Olive, Seagull, Juggernaut (plan §5 says why not yet).
   - **Intake switched on 4 Oct 2026** (`ENV CATALOG_INTAKE_ENABLED=1` in
     `api/Dockerfile`). Undo a night with `scripts/revert_intake.py`.
-  - **Nightly limit 150** (4 Oct 2026, owner); product-page reads 300 a night.
   - [ ] Tick P2 and P3 after the first enabled night: check the Railway log
         for `intake: promoted {...}` and open a published book's cover on
         `covers.kitabi.in`.

@@ -32,7 +32,12 @@ from app.models.base import Base
 # silently open a brand-new, uncapped bucket instead of failing.
 FEATURE_RECOMMENDATIONS = "recommendations"
 FEATURE_COVER_EXTRACT = "cover_extract"
-LLM_FEATURES = (FEATURE_RECOMMENDATIONS, FEATURE_COVER_EXTRACT)
+# Not a reader's request: the nightly intake asking who wrote and who
+# translated a book whose shop credits both the same way
+# (services/author_roles.py). Metered here all the same — it spends the same
+# money, and it counts towards the same global breaker.
+FEATURE_AUTHOR_ROLES = "author_roles"
+LLM_FEATURES = (FEATURE_RECOMMENDATIONS, FEATURE_COVER_EXTRACT, FEATURE_AUTHOR_ROLES)
 
 
 class LlmUsage(Base):

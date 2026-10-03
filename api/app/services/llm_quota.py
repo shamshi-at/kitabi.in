@@ -34,7 +34,13 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.models import FEATURE_COVER_EXTRACT, FEATURE_RECOMMENDATIONS, LLM_FEATURES, LlmUsage
+from app.models import (
+    FEATURE_AUTHOR_ROLES,
+    FEATURE_COVER_EXTRACT,
+    FEATURE_RECOMMENDATIONS,
+    LLM_FEATURES,
+    LlmUsage,
+)
 
 # The unique constraint the upsert conflicts on. Named explicitly (rather than
 # inferred from columns) so a migration that renames it fails loudly here
@@ -60,6 +66,8 @@ def quota_for(settings: Settings, feature: str) -> int:
         return settings.llm_daily_quota_recommendations
     if feature == FEATURE_COVER_EXTRACT:
         return settings.llm_daily_quota_cover_extract
+    if feature == FEATURE_AUTHOR_ROLES:
+        return settings.llm_daily_quota_author_roles
     raise ValueError(f"unknown LLM feature: {feature}")
 
 

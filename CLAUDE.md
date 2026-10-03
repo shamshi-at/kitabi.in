@@ -290,7 +290,9 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   2026 — `ENV CATALOG_INTAKE_ENABLED=1` in `api/Dockerfile`). At 02:30 UTC the
   API process stages what OpenLibrary and three publishers' storefronts list and
   publishes up to `catalog_intake_daily_limit` (150) books as public pages, with
-  nobody watching. So **a push to `main` that touches `services/intake_*`,
+  nobody watching. It also spends money: books a shop credits to several people
+  without roles are put to the LLM (`services/author_roles.py`, metered as
+  `FEATURE_AUTHOR_ROLES`, ≤100 calls a day). So **a push to `main` that touches `services/intake_*`,
   `cover_ingest` or the gate changes what is published tonight** — read a
   night first with `api/scripts/preview_intake.py` (read-only, point it at
   production). The way back is `api/scripts/revert_intake.py --since <date>`

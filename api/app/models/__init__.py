@@ -48,6 +48,7 @@ from app.models.lending_record import LendingRecord
 from app.models.library_entry import LibraryEntry
 from app.models.library_entry_tag import LibraryEntryTag
 from app.models.llm_usage import (
+    FEATURE_AUTHOR_ROLES,
     FEATURE_COVER_EXTRACT,
     FEATURE_RECOMMENDATIONS,
     LLM_FEATURES,
@@ -144,6 +145,7 @@ __all__ = [
     "LLM_FEATURES",
     "FEATURE_RECOMMENDATIONS",
     "FEATURE_COVER_EXTRACT",
+    "FEATURE_AUTHOR_ROLES",
     "AdminUser",
     "AdminRecoveryCode",
     "AdminSession",
