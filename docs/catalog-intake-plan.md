@@ -555,6 +555,11 @@ job created.
 
 ## 6. Open decisions for the owner
 
+**The intake was switched on 4 Oct 2026** (`ENV CATALOG_INTAKE_ENABLED=1` in
+`api/Dockerfile`). See a night before it happens with
+`scripts/preview_intake.py`; undo one with `scripts/revert_intake.py --since
+<date>` (a dry run until `--apply`); stop it by deleting the `ENV` line.
+
 1. ~~**Cover storage — A, B or C** (§4).~~ **Decided 3 Oct 2026: C, Cloudflare
    R2.** Remaining owner action is the one-time setup listed in §4.
 2. **Approach DC Books about a feed + buy links.** Now the critical path for

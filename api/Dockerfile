@@ -34,17 +34,16 @@ ENV ALLOW_PROD_MIGRATION=1
 # else, so a laptop never announces pages. See app/services/indexnow.py.
 ENV INDEXNOW_ENABLED=1
 
-# Daily catalogue intake (docs/catalog-intake-plan.md) is deliberately NOT
-# enabled here yet. Turning it on is one line —
+# Daily catalogue intake (docs/catalog-intake-plan.md): ON, by owner decision,
+# 4 Oct 2026. Every night at 02:30 UTC the job stages what OpenLibrary and the
+# publishers' storefronts list, and publishes up to
+# `catalog_intake_daily_limit` complete books as public pages — unattended.
 #
-#     ENV CATALOG_INTAKE_ENABLED=1
-#
-# — and it is an owner decision, not a deployment detail: it starts creating
-# public book pages unattended, every night, at `catalog_intake_daily_limit` a
-# run. The pipeline, its gate and its tests are shipped and dormant; the flag
-# is the switch. When it goes on, this is where it goes, for the same reason
-# the two above are here — the deployed behaviour should be readable from a
-# git checkout rather than a dashboard.
+# Declared here rather than in the Railway dashboard for the same reason as
+# the two above: the deployed behaviour should be readable from a git checkout.
+# To stop it, delete this line and push — the job goes dormant and nothing it
+# published is touched. To undo a night, api/scripts/revert_intake.py.
+ENV CATALOG_INTAKE_ENABLED=1
 
 # Railway injects PORT; default to 8000 locally.
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

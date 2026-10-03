@@ -1384,7 +1384,11 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
         are held. Needs a decision: resolve with the metered LLM, or by hand.
   - [ ] More shops, each a `Store` + two small parsers once its author can be
         read reliably: Roli, Olive, Seagull, Juggernaut (plan §5 says why not yet).
-  - [ ] Tick P3 after the first enabled night publishes from a shop.
+  - **Intake switched on 4 Oct 2026** (`ENV CATALOG_INTAKE_ENABLED=1` in
+    `api/Dockerfile`). Undo a night with `scripts/revert_intake.py`.
+  - [ ] Tick P2 and P3 after the first enabled night: check the Railway log
+        for `intake: promoted {...}` and open a published book's cover on
+        `covers.kitabi.in`.
 - [ ] **P4 — DC Books**, for Malayalam breadth. LookaBook is *not* the answer:
       15.6% of its product pages carry an ISBN, so it would deposit rejects. Its
       use is as a discovery list. Needs the owner conversation or its SPA's own

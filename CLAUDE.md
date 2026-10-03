@@ -286,6 +286,17 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   from a checkout. **Never delete that line**: without it the boot migration is
   refused, the CMD fails, the health check fails, and Railway restart-loops
   production. `tests/test_migration_guard.py` asserts it is still there.
+  **The nightly catalogue intake is ON in production** (owner decision, 4 Oct
+  2026 — `ENV CATALOG_INTAKE_ENABLED=1` in `api/Dockerfile`). At 02:30 UTC the
+  API process stages what OpenLibrary and three publishers' storefronts list and
+  publishes up to `catalog_intake_daily_limit` (50) books as public pages, with
+  nobody watching. So **a push to `main` that touches `services/intake_*`,
+  `cover_ingest` or the gate changes what is published tonight** — read a
+  night first with `api/scripts/preview_intake.py` (read-only, point it at
+  production). The way back is `api/scripts/revert_intake.py --since <date>`
+  (a dry run until `--apply`), and deleting that `ENV` line stops the job
+  without touching what it made. Plan and status:
+  [docs/catalog-intake-plan.md](docs/catalog-intake-plan.md).
 - **app:** no pipeline; releases are built locally (see [docs/build.md](docs/build.md)).
 
 ## Lessons imported from rupee-diary ("things that have bitten us")
