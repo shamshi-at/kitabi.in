@@ -9,6 +9,9 @@ import { authorPath, bookPath, html, joinDot, num, plural, raw, seg } from './ht
 // Hosts the cover proxy will serve. Kept in step with functions/img/c.js — a
 // URL the renderer proxies but the proxy refuses renders as a broken image, and
 // one it passes through unproxied is a third-party origin on the critical path.
+// The one host that is ours and still passes through is covers.kitabi.in (the
+// intake's R2 bucket): it is already on Cloudflare's edge, so there is nothing
+// for the proxy to add — see the note beside the allowlist in img/c.js.
 const PROXYABLE = /^https:\/\/(covers\.openlibrary\.org|[a-z0-9-]+\.supabase\.co)\//;
 
 /**

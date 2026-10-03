@@ -23,8 +23,14 @@
 // anything else is refused before a fetch is attempted — not after.
 
 // covers.openlibrary.org — the catalogue's imported covers.
-// <project>.supabase.co — the `covers` bucket readers upload their own into
-//   (CLAUDE.md: that bucket, never a second store).
+// <project>.supabase.co — the `covers` bucket readers upload their own into.
+//
+// covers.kitabi.in is deliberately NOT here. That is the R2 bucket the
+// catalogue intake stores its covers in (api/app/services/cover_ingest.py,
+// 3 Oct 2026), and it is already what this function exists to provide: our own
+// origin, on Cloudflare's edge, with no egress meter behind it. Proxying it
+// would spend a Function invocation per cover to fetch from Cloudflare into
+// Cloudflare. The renderer and the app pass those URLs through untouched.
 const ALLOWED_HOSTS = [/^covers\.openlibrary\.org$/, /^[a-z0-9-]+\.supabase\.co$/];
 
 // A cover is an image. Anything else coming back from an allowed host is a

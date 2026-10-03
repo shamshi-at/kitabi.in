@@ -955,6 +955,17 @@ assert(
   'an unexpected host passes through rather than rendering as a broken image',
 );
 assert(coverSrc(null) === null, 'no cover URL stays no cover URL');
+// The intake's covers live in R2 behind covers.kitabi.in — already our origin
+// on Cloudflare's edge. Routing them through /img/c would cost a Function
+// invocation each to fetch from Cloudflare into Cloudflare.
+assert(
+  coverSrc('https://covers.kitabi.in/catalog/0123abcd.jpg') === 'https://covers.kitabi.in/catalog/0123abcd.jpg',
+  'a cover in our R2 bucket is served straight from its own origin, not proxied',
+);
+assert(
+  allowedSource('https://covers.kitabi.in/catalog/0123abcd.jpg') === null,
+  '…and the proxy does not need to, and will not, fetch it',
+);
 
 // allowedSource is what stands between this and an open proxy.
 assert(allowedSource('https://covers.openlibrary.org/b/id/1-L.jpg') !== null, 'OpenLibrary is allowed');

@@ -24,7 +24,7 @@ from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.jobs.scheduler import LOCK_BACKFILL_COVERS, advisory_lock
 from app.models import Edition
-from app.services import cover_storage
+from app.services import cover_storage, r2_client
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,12 @@ async def backfill_covers(client: httpx.AsyncClient | None = None) -> None:
                 return
 
             base = settings.supabase_url.rstrip("/")
+            # Covers the intake already put in R2 (`services/cover_ingest`) are
+            # ours too. Without this they read as "hotlinked from somewhere
+            # else" and this job would quietly copy every one of them back into
+            # the Supabase bucket they were moved to R2 to stay out of.
+            r2_base = r2_client.public_base(settings)
+            not_in_r2 = [Edition.cover_url.not_like(f"{r2_base}/%")] if r2_base else []
             rows = (
                 (
                     await session.execute(
@@ -68,6 +74,7 @@ async def backfill_covers(client: httpx.AsyncClient | None = None) -> None:
                         .where(
                             Edition.cover_url.is_not(None),
                             Edition.deleted_at.is_(None),
+                            *not_in_r2,
                             # Anything not already ours. Cheap to evaluate and
                             # what makes re-running a no-op once the backlog is
                             # cleared.

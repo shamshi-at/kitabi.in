@@ -118,6 +118,27 @@ class Settings(BaseSettings):
     # not enough; Storage writes need the service role.
     supabase_service_role_key: str = ""
 
+    # Cloudflare R2 — where the catalogue *intake* keeps the covers it ingests
+    # (services/cover_ingest.py; owner decision 3 Oct 2026, plan §4 option C).
+    # Reader uploads, portraits and logos stay in the Supabase bucket above;
+    # this is a second store on purpose, because ~12,000 intake covers do not
+    # fit Supabase's 1 GB / metered-egress free tier and R2 charges no egress.
+    #
+    # A bucket of its own, NOT the backup bucket: this one is public by design
+    # and that one must never be. The token should be scoped to this bucket
+    # alone (Object Read & Write), so the API cannot read a database dump.
+    #
+    # Optional and dormant when unset, like recs and push (rule 8): without all
+    # five the intake promotes only covers the edge proxy already serves and
+    # makes no R2 call. `r2_covers_public_url` is the bucket's public origin —
+    # its custom domain, e.g. https://covers.kitabi.in — and is what ends up in
+    # `editions.cover_url`.
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_covers_bucket: str = ""
+    r2_covers_public_url: str = ""
+
     # Push notifications (FCM HTTP v1). Optional, opt-in like recs (rule 8): the
     # owner pastes a Firebase Admin service-account JSON here (one string). Unset
     # → push is dormant and every notify call is a no-op, no external request.

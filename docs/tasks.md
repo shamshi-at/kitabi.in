@@ -1328,10 +1328,38 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
     the "a cleanup that only settles on the second run is one nobody can tell is
     finished" trap the etl README already names. One pass now means finished,
     which is what a door-time gate depends on.
-- [ ] **P2 — covers.** Resize on ingest (~600 KB → ~50 KB) and the allowlist
-      change in *both* the Worker and `image_proxy.dart`. Blocked on the owner's
-      storage call (plan §4). Also where the held queue gets resolved: 24 of 47
-      live candidates are waiting on a cover.
+- [~] **P2 — covers** (3 Oct 2026). Owner's storage call: **Cloudflare R2**
+      (plan §4 option C). Built and tested; **not yet live** — see the last
+      bullet.
+  - `services/cover_ingest` — fetch (vetted URL, vetted redirects, 12 MB cap) →
+    normalise (800px, JPEG q80, never enlarged; refuses anything under 200px,
+    banner-shaped or undecodable) → store under a content-addressed key.
+    `services/r2_client` — SigV4 `PUT` over httpx, pinned to AWS's published
+    example signature. Adds `pillow` (a dependency, not a bill or credential).
+  - `intake_service.promote` ingests after the duplicate check and before the
+    Work exists. Gone → back to `incomplete`, dead URL remembered so the
+    re-crawl cannot loop it; transient → an attempt, and five in a row end the
+    run; back-cover failure never holds a book. Without R2 configured, a cover
+    on a host the proxy does not serve waits rather than being hotlinked.
+  - `jobs/backfill_covers` leaves R2 covers alone (it would have copied them
+    back into Supabase).
+  - **No allowlist change, by decision:** `covers.kitabi.in` is already our
+    origin on Cloudflare's edge, so the web and the app fetch it directly —
+    pinned in `cases.js` and `image_proxy_test.dart`.
+  - Verified against a local signature-checking S3 server with real covers:
+    Mathrubhumi 348 KB → 79 KB at 512×800. Budget ~80 KB a cover, not ~50.
+  - [x] **Owner setup, verified live (3 Oct 2026):** bucket, custom domain,
+        bucket-scoped token and the five `R2_*` variables on Railway.
+        `scripts/check_cover_storage.py` (run with `railway run`) put a real
+        cover through the production bucket — settings ok, stored, and served
+        back from `https://covers.kitabi.in/catalog/…` as a 22 KB JPEG with the
+        `immutable` header.
+  - [ ] **Remaining before P2 is ticked:** the code is deployed and one book is
+        actually *promoted* with its cover in R2 — which needs
+        `CATALOG_INTAKE_ENABLED`, a separate owner decision.
+  - Not done here: the 24 of 47 held candidates are OpenLibrary editions with
+    *no* cover at all — this pipeline stores covers, it does not find them. A
+    second cover source for a known ISBN is P3/P4 work.
 - [ ] **P3 — Mathrubhumi adapter** (Malayalam, ~3,300 books at 87.5% valid ISBN,
       50% with back covers — a field the catalogue has never been able to fill).
 - [ ] **P4 — DC Books**, for Malayalam breadth. LookaBook is *not* the answer:

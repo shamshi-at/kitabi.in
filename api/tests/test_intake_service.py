@@ -441,3 +441,243 @@ async def test_already_catalogued_writes_nothing(session):
         await intake_service.already_catalogued(session, candidate())
     assert await catalogue_size(session) == before
     assert await session.scalar(select(func.count()).select_from(CatalogIntake)) == 0
+
+
+# --------------------------------------------------------------------------
+# covers — a book is published with a cover we own, or it waits (P2)
+# --------------------------------------------------------------------------
+
+from app.core.config import get_settings  # noqa: E402
+from app.services.cover_ingest import Ingested  # noqa: E402
+
+R2 = "https://covers.kitabi.in"
+PUBLISHER_COVER = "https://www.mbibooks.com/wp-content/uploads/front.jpg"
+PUBLISHER_BACK = "https://www.mbibooks.com/wp-content/uploads/back.jpg"
+
+
+def fake_covers(outcomes: dict[str, Ingested] | None = None):
+    """Stands in for `cover_ingest.ingester(...)`: every URL is "stored" unless
+    `outcomes` says otherwise. `.calls` is every URL it was asked for."""
+    calls: list[str] = []
+
+    async def run(url: str) -> Ingested:
+        calls.append(url)
+        if outcomes and url in outcomes:
+            return outcomes[url]
+        return Ingested(url=f"{R2}/catalog/{url.rsplit('/', 1)[-1]}")
+
+    run.calls = calls
+    return run
+
+
+def no_fetch_expected():
+    async def run(url: str) -> Ingested:
+        raise AssertionError(f"this cover must not be fetched: {url}")
+
+    return run
+
+
+async def only_row(session) -> CatalogIntake:
+    return (await session.execute(select(CatalogIntake))).scalar_one()
+
+
+async def test_a_promoted_book_points_at_our_copy_of_its_cover(session):
+    await intake_service.record(session, [candidate(cover_url=PUBLISHER_COVER)], source=SOURCE)
+    covers = fake_covers()
+    counts = await intake_service.promote(session, limit=10, covers=covers)
+
+    assert counts == {STATE_PROMOTED: 1}
+    row = await only_row(session)
+    edition = await session.get(Edition, row.edition_id)
+    assert edition.cover_url == f"{R2}/catalog/front.jpg"
+    assert covers.calls == [PUBLISHER_COVER]
+    # The payload stays what the source said: it is the record a re-crawl is
+    # compared against, not a description of what we stored.
+    assert row.payload["cover_url"] == PUBLISHER_COVER
+
+
+async def test_an_openlibrary_cover_is_brought_home_too_once_there_is_storage(session):
+    """With storage configured nothing is left hotlinked — the plan's "done
+    when" is a promoted book served from our own bucket."""
+    await intake_service.record(session, [candidate()], source=SOURCE)
+    await intake_service.promote(session, limit=10, covers=fake_covers())
+    edition = await session.get(Edition, (await only_row(session)).edition_id)
+    assert edition.cover_url.startswith(f"{R2}/catalog/")
+
+
+async def test_the_back_cover_is_ingested_alongside_the_front(session):
+    await intake_service.record(
+        session,
+        [candidate(cover_url=PUBLISHER_COVER, back_cover_url=PUBLISHER_BACK)],
+        source=SOURCE,
+    )
+    await intake_service.promote(session, limit=10, covers=fake_covers())
+    edition = await session.get(Edition, (await only_row(session)).edition_id)
+    assert edition.cover_url == f"{R2}/catalog/front.jpg"
+    assert edition.back_cover_url == f"{R2}/catalog/back.jpg"
+
+
+@pytest.mark.parametrize("verdict", [Ingested(gone=True), Ingested()], ids=["gone", "transient"])
+async def test_a_back_cover_that_fails_never_holds_the_book(session, verdict):
+    """A back cover is a bonus. Most books in the catalogue have none."""
+    await intake_service.record(
+        session,
+        [candidate(cover_url=PUBLISHER_COVER, back_cover_url=PUBLISHER_BACK)],
+        source=SOURCE,
+    )
+    counts = await intake_service.promote(
+        session, limit=10, covers=fake_covers({PUBLISHER_BACK: verdict})
+    )
+    assert counts == {STATE_PROMOTED: 1}
+    edition = await session.get(Edition, (await only_row(session)).edition_id)
+    assert edition.cover_url == f"{R2}/catalog/front.jpg"
+    assert edition.back_cover_url is None
+
+
+async def test_an_unusable_cover_sends_the_candidate_back_and_creates_nothing(session):
+    await intake_service.record(session, [candidate(cover_url=PUBLISHER_COVER)], source=SOURCE)
+    counts = await intake_service.promote(
+        session,
+        limit=10,
+        covers=fake_covers({PUBLISHER_COVER: Ingested(gone=True, reason="too small")}),
+    )
+
+    assert counts == {"cover_unusable": 1}
+    assert await catalogue_size(session) == (0, 0)
+    row = await only_row(session)
+    assert row.state == STATE_INCOMPLETE
+    assert row.missing == ["cover_url"]
+    assert "too small" in row.note
+    assert row.attempts == 0  # nothing transient happened; this is a verdict
+
+
+async def test_a_dead_cover_is_not_walked_back_into_the_queue_by_the_next_crawl(session):
+    """The loop this exists to prevent: the source still lists the same dead
+    image tomorrow, the gate sees a cover again, and the book costs a fetch and
+    a promotion slot every night, forever."""
+    dead = fake_covers({PUBLISHER_COVER: Ingested(gone=True, reason="404")})
+    await intake_service.record(session, [candidate(cover_url=PUBLISHER_COVER)], source=SOURCE)
+    await intake_service.promote(session, limit=10, covers=dead)
+    assert dead.calls == [PUBLISHER_COVER]
+
+    # The nightly job, again: re-crawl (same URL), re-screen, promote.
+    await intake_service.record(session, [candidate(cover_url=PUBLISHER_COVER)], source=SOURCE)
+    await intake_service.rescreen_incomplete(session)
+    counts = await intake_service.promote(session, limit=10, covers=dead)
+
+    assert counts == {}
+    assert dead.calls == [PUBLISHER_COVER]  # not asked for a second time
+    row = await only_row(session)
+    assert row.state == STATE_INCOMPLETE
+    assert "unusable" in row.note
+
+
+async def test_a_new_cover_from_the_source_releases_a_book_held_for_a_dead_one(session):
+    """ "Missing" means another source — or the same one, later — may fill it."""
+    replacement = "https://www.mbibooks.com/wp-content/uploads/front-v2.jpg"
+    covers = fake_covers({PUBLISHER_COVER: Ingested(gone=True, reason="404")})
+    await intake_service.record(session, [candidate(cover_url=PUBLISHER_COVER)], source=SOURCE)
+    await intake_service.promote(session, limit=10, covers=covers)
+
+    await intake_service.record(session, [candidate(cover_url=replacement)], source=SOURCE)
+    counts = await intake_service.promote(session, limit=10, covers=covers)
+
+    assert counts == {STATE_PROMOTED: 1}
+    edition = await session.get(Edition, (await only_row(session)).edition_id)
+    assert edition.cover_url == f"{R2}/catalog/front-v2.jpg"
+
+
+async def test_a_cover_we_could_not_fetch_tonight_is_tried_again_tomorrow(session):
+    await intake_service.record(session, [candidate(cover_url=PUBLISHER_COVER)], source=SOURCE)
+    counts = await intake_service.promote(
+        session, limit=10, covers=fake_covers({PUBLISHER_COVER: Ingested(reason="timeout")})
+    )
+
+    assert counts == {"cover_retry": 1}
+    assert await catalogue_size(session) == (0, 0)
+    row = await only_row(session)
+    assert row.state == STATE_COMPLETE  # still due
+    assert row.attempts == 1
+    assert row.payload["cover_url"] == PUBLISHER_COVER  # and still has its cover
+
+    assert await intake_service.promote(session, limit=10, covers=fake_covers()) == {
+        STATE_PROMOTED: 1
+    }
+
+
+async def test_a_source_that_is_down_ends_the_run_instead_of_charging_every_row(session):
+    """Five in a row is an outage, not five bad covers. Pushing on would spend
+    an attempt on every remaining book for something that is not its fault."""
+    books = [
+        candidate(f"/works/OL{n}W", isbn=isbn, cover_url=f"https://www.mbibooks.com/{n}.jpg")
+        for n, isbn in enumerate(
+            [
+                "9780060977498",
+                "9780143039648",
+                "9780140283297",
+                "9780679722649",
+                "9780099578512",
+                "9780143031031",
+                "9780007350834",
+            ]
+        )
+    ]
+    await intake_service.record(session, books, source=SOURCE)
+    down = fake_covers({c.cover_url: Ingested(reason="timeout") for c in books})
+
+    counts = await intake_service.promote(session, limit=10, covers=down)
+
+    assert counts == {"cover_retry": intake_service.MAX_CONSECUTIVE_COVER_FAILURES}
+    rows = (await session.execute(select(CatalogIntake))).scalars().all()
+    assert sorted(r.attempts for r in rows) == [0, 0, 1, 1, 1, 1, 1]
+
+
+async def test_without_storage_a_publisher_cover_waits_rather_than_being_hotlinked(session):
+    """No R2 keys must not mean "publish it pointing at the publisher's site":
+    that is a host the edge proxy and the app have never been told about, at
+    ~600 KB an image."""
+    await intake_service.record(session, [candidate(cover_url=PUBLISHER_COVER)], source=SOURCE)
+    counts = await intake_service.promote(session, limit=10, covers=None)
+
+    assert counts == {"held": 1}
+    assert await catalogue_size(session) == (0, 0)
+    row = await only_row(session)
+    assert row.state == STATE_COMPLETE  # nothing is wrong with the book
+    assert row.attempts == 0  # and waiting on our configuration costs it nothing
+    assert row.note == intake_service.NOTE_NO_COVER_STORAGE
+
+    # The moment storage exists, the same row goes through.
+    assert await intake_service.promote(session, limit=10, covers=fake_covers()) == {
+        STATE_PROMOTED: 1
+    }
+
+
+async def test_without_storage_an_unservable_back_cover_is_dropped_not_hotlinked(session):
+    await intake_service.record(session, [candidate(back_cover_url=PUBLISHER_BACK)], source=SOURCE)
+    assert await intake_service.promote(session, limit=10) == {STATE_PROMOTED: 1}
+    edition = await session.get(Edition, (await only_row(session)).edition_id)
+    assert edition.cover_url == "https://covers.openlibrary.org/b/id/1-L.jpg"
+    assert edition.back_cover_url is None
+
+
+async def test_a_book_we_already_hold_never_costs_a_cover_fetch(session):
+    """The duplicate check runs first, so re-discovering the catalogue does not
+    re-download it or leave orphans in the bucket."""
+    await intake_service.record(session, [candidate()], source=SOURCE)
+    await intake_service.promote(session, limit=10)
+    await intake_service.record(session, [candidate("/works/OL2W")], source=SOURCE)
+
+    counts = await intake_service.promote(session, limit=10, covers=no_fetch_expected())
+    assert counts == {STATE_DUPLICATE: 1}
+
+
+async def test_a_cover_already_in_our_bucket_is_not_fetched_again(session, monkeypatch):
+    settings = get_settings().model_copy(update={"r2_covers_public_url": R2})
+    monkeypatch.setattr("app.services.intake_service.get_settings", lambda: settings)
+    ours = f"{R2}/catalog/abc.jpg"
+    await intake_service.record(session, [candidate(cover_url=ours)], source=SOURCE)
+
+    counts = await intake_service.promote(session, limit=10, covers=no_fetch_expected())
+    assert counts == {STATE_PROMOTED: 1}
+    edition = await session.get(Edition, (await only_row(session)).edition_id)
+    assert edition.cover_url == ours

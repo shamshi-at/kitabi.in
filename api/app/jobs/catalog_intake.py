@@ -11,7 +11,8 @@ Three steps, deliberately in this order and deliberately separable:
 2. **rescreen** — re-run the gate over rows held as `incomplete`, so a gate
    fix releases what it was holding without re-crawling anything.
 3. **promote** — turn at most `catalog_intake_daily_limit` complete candidates
-   into books.
+   into books, each with its cover fetched, shrunk and stored in our own R2
+   bucket first (`services/cover_ingest`).
 
 **Dormant unless `CATALOG_INTAKE_ENABLED` is set** (rule 8's shape, applied to
 writes rather than to spend): with the flag off the job returns before making
@@ -33,7 +34,7 @@ import httpx
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.jobs.scheduler import LOCK_CATALOG_INTAKE, advisory_lock
-from app.services import intake_openlibrary, intake_service
+from app.services import cover_ingest, intake_openlibrary, intake_service
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +77,17 @@ async def catalog_intake(client: httpx.AsyncClient | None = None) -> None:
                 if released.get("complete"):
                     logger.info("intake: rescreen released %s", released["complete"])
 
+                covers = cover_ingest.ingester(client, settings)
+                if covers is None:
+                    # Not an error — a dev box has no bucket — but in
+                    # production it means every cover from a publisher's own
+                    # site is being held, and that should be findable.
+                    logger.warning(
+                        "intake: R2 cover storage is not configured — only covers "
+                        "the edge proxy already serves will be promoted"
+                    )
                 promoted = await intake_service.promote(
-                    session, limit=settings.catalog_intake_daily_limit
+                    session, limit=settings.catalog_intake_daily_limit, covers=covers
                 )
                 if promoted:
                     logger.info("intake: promoted %s", promoted)

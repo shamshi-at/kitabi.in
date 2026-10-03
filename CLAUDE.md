@@ -1302,10 +1302,23 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   author portraits (`authors/…`) and publisher logos (`publishers/…`), and
   `extraction_service` only accepts cover URLs from that bucket. The admin console
   writes to the same bucket (`admin/console/assets.py`, `campaigns/…` for promo
-  artwork) with a service-role key. **Use this bucket for any new image feature** —
-  a second store means a second credential and a second thing to reason about
-  (this stale line is what sent the promotions work briefly down an R2 path,
-  31 Jul 2026). R2 stays what it is: the encrypted-backup target.
+  artwork) with a service-role key. **Use this bucket for any new image a reader or
+  an operator uploads** — a second store means a second credential and a second
+  thing to reason about (this stale line is what sent the promotions work briefly
+  down an R2 path, 31 Jul 2026).
+  **One deliberate exception, owner decision 3 Oct 2026: the covers the catalogue
+  *intake* ingests live in Cloudflare R2**, in a public bucket of their own served
+  at `covers.kitabi.in` (`api/app/services/cover_ingest.py` + `r2_client.py`). The
+  rule above was written when the catalogue held 772 covers; the intake's backlog
+  is ~12,000, which does not fit Supabase's 1 GB of storage or its egress meter
+  (already exceeded once, 7 Sep 2026), and R2 charges no egress. The second
+  credential is the accepted cost. Two things keep it one decision rather than a
+  drift: nothing but the intake writes there, and **it is never the backup
+  bucket** — that one is private, this one is public, and the API's R2 token must
+  be scoped to the covers bucket alone. `covers.kitabi.in` is intentionally absent
+  from the image proxy's allowlist (`functions/img/c.js`, `image_proxy.dart`): it
+  is already our origin on Cloudflare's edge, so the web and the app fetch it
+  directly.
 
 (Resolved: design tokens & mockups — `docs/kitabi_screens.html` + `docs/screen-design.md`,
 2 Jul 2026. `app/lib/core/theme/app_theme.dart` still carries the old landing-page

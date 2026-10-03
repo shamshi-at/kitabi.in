@@ -27,6 +27,16 @@ That last one does double duty here. `create_work_with_edition` already
 refuses an ISBN the catalogue holds, and the 409 it raises *names the work it
 found*. So duplicate detection is not reimplemented — it is that refusal,
 caught and recorded.
+
+**A book is published with a cover we own, or it waits** (P2, 3 Oct 2026).
+`promote` hands each candidate's cover to `cover_ingest` — fetched, shrunk to
+~50 KB and stored in our R2 bucket — *before* the Work exists, and the edition
+is created pointing at that copy. The alternative, publishing with the
+source's URL and bringing the image home afterwards, is how the first seed
+worked (`jobs/backfill_covers`), and it means a book can be live with a cover
+that 404s. A candidate whose cover turns out to be unusable goes back to
+`incomplete` and remembers which URL it was, so the nightly re-crawl offering
+the same dead link does not walk it straight back into the queue.
 """
 
 from __future__ import annotations
@@ -34,12 +44,14 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Iterable, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models import CatalogIntake
 from app.models.catalog_intake import (
     STATE_COMPLETE,
@@ -51,7 +63,7 @@ from app.models.catalog_intake import (
 from app.models.edition import Edition
 from app.models.work import Work
 from app.schemas.catalog import WorkCreate
-from app.services import catalog_service, intake_gate
+from app.services import catalog_service, cover_ingest, intake_gate
 from app.services import isbn as isbn_util
 from app.services.intake_gate import Candidate
 
@@ -63,11 +75,64 @@ logger = logging.getLogger(__name__)
 #: five attempts, and the same outcome: it stops and becomes visible.
 MAX_ATTEMPTS = 3
 
+#: Consecutive "could not fetch the cover right now" outcomes that end a
+#: promotion run early. A run of them is a source that is down or throttling
+#: us, and pushing on would charge every remaining row an attempt for an
+#: outage that is not its fault — `backfill_covers` backs off the same way.
+MAX_CONSECUTIVE_COVER_FAILURES = 5
+
+#: Where a row remembers cover URLs `promote` found unusable. It lives in the
+#: payload, beside what the source said, because that is the one thing a
+#: re-crawl is compared against — and it is underscored because it is this
+#: module's bookkeeping, not a field of the book (`Candidate.from_payload`
+#: ignores it).
+DEAD_COVERS_KEY = "_dead_cover_urls"
+#: A book whose source cycles through bad images should not grow without bound.
+_DEAD_COVERS_KEPT = 5
+
+NOTE_NO_COVER_STORAGE = "waiting on cover storage: R2 is not configured"
+
 
 def _state_for(screened: intake_gate.Screened) -> str:
     if screened.rejected:
         return STATE_REJECTED
     return STATE_COMPLETE if screened.ok else STATE_INCOMPLETE
+
+
+def _dead_covers(row: CatalogIntake) -> list[str]:
+    return list((row.payload or {}).get(DEAD_COVERS_KEY) or ())
+
+
+def _stage(row: CatalogIntake, candidate: Candidate) -> str:
+    """Screen `candidate` and write the verdict onto `row`; returns the state.
+
+    The one place a row's state, payload, gaps and note are set from the gate,
+    so discovery and re-screening cannot come to disagree about a rule — and
+    the rule that needs that most is this one: a cover URL `promote` already
+    found unusable is withheld from the gate, whichever path offers it again.
+    Without that, a source that keeps listing a dead image would make its book
+    `complete` every night and cost a fetch and a promotion slot every night.
+    """
+    dead = _dead_covers(row)
+    if candidate.cover_url and candidate.cover_url.strip() in dead:
+        candidate = replace(candidate, cover_url=None)
+
+    screened = intake_gate.screen(candidate)
+    state = _state_for(screened)
+    row.state = state
+    row.isbn = screened.candidate.isbn
+    payload = screened.candidate.to_payload()
+    if dead:
+        payload[DEAD_COVERS_KEY] = dead
+    row.payload = payload
+    row.missing = list(screened.fatal or screened.missing) or None
+    note = _note_for(screened)
+    if dead and intake_gate.MISSING_COVER in screened.missing:
+        # Say which kind of "no cover" this is: the queue should not read as
+        # though the source never had one.
+        note = f"{note} (the cover this source offered is unusable)"
+    row.note = note
+    return state
 
 
 async def record(
@@ -83,10 +148,6 @@ async def record(
     """
     counts: dict[str, int] = {}
     for candidate in candidates:
-        screened = intake_gate.screen(candidate)
-        cleaned = screened.candidate
-        state = _state_for(screened)
-
         row = (
             await db.execute(
                 select(CatalogIntake).where(
@@ -103,11 +164,7 @@ async def record(
             counts["already_promoted"] = counts.get("already_promoted", 0) + 1
             continue
 
-        row.state = state
-        row.isbn = cleaned.isbn
-        row.payload = cleaned.to_payload()
-        row.missing = list(screened.fatal or screened.missing) or None
-        row.note = _note_for(screened)
+        state = _stage(row, candidate)
         counts[state] = counts.get(state, 0) + 1
 
     await db.commit()
@@ -144,13 +201,7 @@ async def rescreen_incomplete(db: AsyncSession, *, limit: int = 500) -> dict[str
     )
     counts: dict[str, int] = {}
     for row in rows:
-        screened = intake_gate.screen(Candidate.from_payload(row.payload))
-        state = _state_for(screened)
-        row.state = state
-        row.isbn = screened.candidate.isbn
-        row.payload = screened.candidate.to_payload()
-        row.missing = list(screened.fatal or screened.missing) or None
-        row.note = _note_for(screened)
+        state = _stage(row, Candidate.from_payload(row.payload))
         counts[state] = counts.get(state, 0) + 1
     await db.commit()
     return counts
@@ -260,7 +311,44 @@ async def _due(db: AsyncSession, limit: int) -> Sequence[CatalogIntake]:
     )
 
 
-async def promote(db: AsyncSession, *, limit: int) -> dict[str, int]:
+async def _own_covers(
+    candidate: Candidate, covers: cover_ingest.Ingester | None
+) -> tuple[Candidate | None, cover_ingest.Ingested | None]:
+    """The candidate carrying covers we may publish, or why there is none.
+
+    - `(candidate, None)` — ready; its cover URLs are ones every client serves.
+    - `(None, verdict)` — the front cover could not be ingested, and
+      `verdict.gone` says whether asking again could help.
+    - `(None, None)` — the cover sits on a host nothing has been told about
+      and there is no storage configured to bring it home, so the book waits.
+
+    The back cover is a bonus and is never a reason to hold a book: if it
+    cannot be ingested the book is published without one, which is how most
+    books in the catalogue already are.
+    """
+    settings = get_settings()
+    front, back = candidate.cover_url, candidate.back_cover_url
+
+    if covers is None:
+        if not cover_ingest.servable_as_is(settings, front):
+            return None, None
+        if back and not cover_ingest.servable_as_is(settings, back):
+            back = None
+        return replace(candidate, back_cover_url=back), None
+
+    if not cover_ingest.is_ours(settings, front):
+        verdict = await covers(front)
+        if verdict.url is None:
+            return None, verdict
+        front = verdict.url
+    if back and not cover_ingest.is_ours(settings, back):
+        back = (await covers(back)).url
+    return replace(candidate, cover_url=front, back_cover_url=back), None
+
+
+async def promote(
+    db: AsyncSession, *, limit: int, covers: cover_ingest.Ingester | None = None
+) -> dict[str, int]:
     """Turn up to `limit` complete candidates into catalogue books.
 
     One book per transaction (`create_work_with_edition` commits), so a failure
@@ -269,8 +357,13 @@ async def promote(db: AsyncSession, *, limit: int) -> dict[str, int]:
     before moving on, so an interrupted run (a Railway redeploy mid-batch, say)
     resumes rather than repeating: the rows it finished are no longer
     `complete`.
+
+    `covers` is `cover_ingest.ingester(...)` — None when R2 is not configured,
+    in which case only a cover the edge proxy already serves is published
+    as-is and everything else waits (see `_own_covers`).
     """
     counts: dict[str, int] = {}
+    cover_failures = 0
     for row in await _due(db, limit):
         candidate = Candidate.from_payload(row.payload)
 
@@ -297,9 +390,45 @@ async def promote(db: AsyncSession, *, limit: int) -> dict[str, int]:
             counts[STATE_DUPLICATE] = counts.get(STATE_DUPLICATE, 0) + 1
             continue
 
+        # After the duplicate check, so a book we already hold never costs a
+        # fetch or leaves an object in the bucket; before creation, so no book
+        # is ever live pointing at a cover that turned out not to load.
+        publishable, failure = await _own_covers(screened.candidate, covers)
+        if publishable is None:
+            if failure is None:
+                row.note = NOTE_NO_COVER_STORAGE
+                counts["held"] = counts.get("held", 0) + 1
+            elif failure.gone:
+                dead = [*_dead_covers(row), screened.candidate.cover_url][-_DEAD_COVERS_KEPT:]
+                row.payload = {**row.payload, "cover_url": None, DEAD_COVERS_KEY: dead}
+                row.state = STATE_INCOMPLETE
+                row.missing = [intake_gate.MISSING_COVER]
+                row.note = f"cover unusable: {failure.reason}"
+                counts["cover_unusable"] = counts.get("cover_unusable", 0) + 1
+                cover_failures = 0
+                logger.info(
+                    "intake: unusable cover for %s (%s): %s",
+                    row.source_key,
+                    failure.reason,
+                    screened.candidate.cover_url,
+                )
+            else:
+                row.attempts += 1
+                row.note = f"cover not fetched: {failure.reason}"
+                counts["cover_retry"] = counts.get("cover_retry", 0) + 1
+                cover_failures += 1
+            await db.commit()
+            if cover_failures >= MAX_CONSECUTIVE_COVER_FAILURES:
+                logger.info(
+                    "intake: %s consecutive cover failures — stopping this run", cover_failures
+                )
+                break
+            continue
+        cover_failures = 0
+
         try:
             work = await catalog_service.create_work_with_edition(
-                db, _work_create(screened.candidate), created_by=None
+                db, _work_create(publishable), created_by=None
             )
         except HTTPException as exc:
             duplicate_of = _isbn_conflict_work_id(exc)

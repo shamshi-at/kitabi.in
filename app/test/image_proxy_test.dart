@@ -45,6 +45,14 @@ void main() {
     }
   });
 
+  test('a cover in our R2 bucket is fetched straight from its own origin', () {
+    // The intake's covers (covers.kitabi.in) are already on Cloudflare's edge
+    // with no egress meter — the reason the proxy exists does not apply, and
+    // the proxy's allowlist does not include the host.
+    const r2 = 'https://covers.kitabi.in/catalog/0123abcd.jpg';
+    expect(proxiedImageUrl(r2), r2);
+  });
+
   test('a URL already on the proxy is not proxied twice', () {
     final once = proxiedImageUrl(bucket);
     expect(proxiedImageUrl(once), once);

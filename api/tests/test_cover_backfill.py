@@ -243,6 +243,31 @@ async def test_the_job_does_nothing_without_a_key(db_sessionmaker, monkeypatch):
         await job.backfill_covers(client=c)
 
 
+async def test_the_job_leaves_a_cover_already_in_r2_alone(db_sessionmaker, monkeypatch):
+    """The intake stores its covers in R2 (`services/cover_ingest`). To this
+    job's original filter those read as "not in the Supabase bucket, so
+    hotlinked" — and it would have copied every one of them back into the
+    bucket they were put in R2 to stay out of."""
+    from app.jobs import backfill_covers as job
+
+    settings = _settings(r2_covers_public_url="https://covers.kitabi.in/")
+    monkeypatch.setattr("app.jobs.backfill_covers.get_settings", lambda: settings)
+    monkeypatch.setattr(job.asyncio, "sleep", lambda _: _noop())
+
+    def explode(request):
+        raise AssertionError("an R2 cover is already ours — nothing to fetch")
+
+    in_r2 = "https://covers.kitabi.in/catalog/0123456789abcdef.jpg"
+    async with db_sessionmaker() as db:
+        edition = await _edition(db, in_r2)
+        monkeypatch.setattr("app.jobs.backfill_covers.SessionLocal", db_sessionmaker)
+        async with _client(explode) as c:
+            await job.backfill_covers(client=c)
+        await db.refresh(edition)
+
+    assert edition.cover_url == in_r2
+
+
 async def _noop():
     return None
 

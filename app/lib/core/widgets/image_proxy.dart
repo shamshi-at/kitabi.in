@@ -27,6 +27,11 @@ final RegExp _proxyable =
 ///
 /// Anything not on the allowlist is passed through untouched rather than
 /// dropped — a cover from an unexpected host is still a cover.
+///
+/// That includes `covers.kitabi.in`, on purpose: it is the R2 bucket the
+/// catalogue intake stores its covers in (`api/app/services/cover_ingest.py`),
+/// which is already our own origin on Cloudflare's edge with no egress meter
+/// behind it. The proxy has nothing to add to it and does not allow it.
 String proxiedImageUrl(String url, {String base = kShareBaseUrl}) {
   if (!_proxyable.hasMatch(url)) return url;
   return '$base/img/c?u=${Uri.encodeComponent(url)}';

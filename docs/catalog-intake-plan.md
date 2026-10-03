@@ -63,6 +63,57 @@ already works.
 expansion finds no equivalent publisher feeds, or (b) we need author biographies
 and subject headings at scale.
 
+### Measured again, 3 Oct 2026 — new releases, and ISBNdb revisited
+
+The owner's requirement sharpened: *new releases must be in the catalogue*. Two
+measurements change what the sources above are good for.
+
+**OpenLibrary is a backlist source only.** Editions it lists by publish year:
+
+| Publisher | 2024 | 2025 | 2026 |
+|---|---:|---:|---:|
+| Penguin Random House India | 2 | 3 | 0 |
+| HarperCollins India | 0 | 7 | 0 |
+| Rupa Publications | 9 | 4 | 1 |
+| Westland | 38 | 10 | 8 |
+| Juggernaut | 1 | 16 | 4 |
+| Mathrubhumi Books | 0 | 0 | 0 |
+
+So the 98.3% figure above is true of the *older head* and says nothing about
+this year's books. New releases have to come from the publishers' own sites.
+
+**Many of those sites expose an open, newest-first product feed** (WooCommerce
+Store API or Shopify `products.json`), which means one generic adapter per
+storefront type rather than one per publisher. Newest 40 products of each:
+
+| Publisher | Storefront | Titles | Valid ISBN in feed | Cover |
+|---|---|---:|---:|---:|
+| HarperCollins India | Woo | 5,178 | 40/40 | 35/40 |
+| Mathrubhumi Books | Woo | 3,764 | 0/40 (on the product page) | 40/40 |
+| Olive Publications (Malayalam) | Woo | 1,510 | 1/40 (product page) | 40/40 |
+| Speaking Tiger | Woo | 999 | 0/40 (product page) | 40/40 |
+| Roli Books | Woo | 512 | 36/40 | 40/40 |
+| Juggernaut | Shopify | — | 0/40 (product page) | 40/40 |
+| Seagull Books | Shopify | — | 40/40 | 40/40 |
+
+Niyogi (112) and Hind Yugm (19, Hindi) are open too. **No open feed or sitemap
+found:** Rupa, Hachette India, Pan Macmillan India, DC Books, Green Books,
+Manjul. Penguin India and Aleph have sitemaps (Penguin's with `lastmod`), so a
+page-by-page adapter is possible there.
+
+**ISBNdb, looked at properly** (API spec v2.8.0 and its terms, at the owner's
+request). Still no for seeding, for three reasons the September note did not
+have: its terms let a subscriber store data only "with a current subscription
+(data must be deleted if the subscription expires or is cancelled)", which
+makes every seeded row a rental; the API has no browse-by-language endpoint and
+its updates feed is Premium-only, unfiltered and ISBN-only; and its Malayalam
+records are library-romanized (`Ātrēyakaṃ nōval` by `Ār Rājaśr̲ī`) — of 7
+recent Mathrubhumi ISBNs it held 3, OpenLibrary 0. Two uses remain worth a
+free-trial measurement: a second fallback for ISBN scans OpenLibrary misses,
+and `/publisher/{name}?publishedFrom=` for the closed houses above. Scan misses
+are not recorded today, so log them first — without that there is no
+denominator to judge a trial against.
+
 ---
 
 ## 2. Sources
@@ -301,7 +352,47 @@ Three options:
 | **B. Resize, then Supabase bucket** — Pillow, longest edge 800px, JPEG q80 → ~50 KB | ~250 MB | metered, but the app already proxies through the edge | full | adds Pillow (a dependency, not a bill or credential) |
 | **C. Cloudflare R2** — 10 GB free, **zero egress fees** | fits easily | free | full | R2 already exists as the backup target, but CLAUDE.md explicitly says covers go in the Supabase bucket, "never a second store" |
 
-**Recommendation: B.** It keeps the single-store rule CLAUDE.md asks for, keeps
+**Decided 3 Oct 2026: C — Cloudflare R2.** The owner chose it once §1's source
+list grew: the open storefront feeds measured that day (below) put the backlog
+near 12,000 titles, past the ~10,000 line this section already named as where C
+becomes the honest answer. Built as `services/cover_ingest` + `r2_client`; the
+single-store line in CLAUDE.md now records the exception. Measured on real
+covers, a normalised cover is **~80 KB**, not ~50 (Mathrubhumi: 348 KB at
+1059×1654 → 79 KB at 512×800), so budget ~1 GB for 12,000 — a tenth of R2's
+free 10 GB.
+
+One thing this changes from the table above: **no allowlist edit is needed.**
+The bucket is served from its own custom domain (`covers.kitabi.in`), which is
+already our origin on Cloudflare's edge with no egress meter, so the web and the
+app fetch it directly rather than through `/img/c`.
+
+**Owner setup (once), in the Cloudflare dashboard and Railway:**
+
+1. R2 → create a bucket, e.g. `kitabi-covers`. A new bucket — not the backup one,
+   which must stay private.
+2. Bucket → Settings → Custom Domains → connect `covers.kitabi.in`.
+3. R2 → Manage API Tokens → create a token with **Object Read & Write**, scoped
+   to that bucket only. Note the Access Key ID and Secret Access Key.
+4. Railway → `kitabi-api` → Variables: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+   `R2_SECRET_ACCESS_KEY`, `R2_COVERS_BUCKET=kitabi-covers`,
+   `R2_COVERS_PUBLIC_URL=https://covers.kitabi.in`.
+
+Until all five are set the pipeline is dormant: the intake promotes only covers
+the edge proxy already serves and holds the rest.
+
+**Done and verified, 3 Oct 2026.** To check it again at any time — it prints
+whether each setting is present and well-formed (never its value), uploads one
+real cover through the same code the job uses, and fetches it back from the
+public domain:
+
+```bash
+cd api && railway run .venv/bin/python scripts/check_cover_storage.py
+```
+
+A variable added in the Railway dashboard is only *staged* until **Deploy** is
+pressed; until then `railway run` reports all five as missing.
+
+*The original recommendation, kept for the reasoning:* **B.** It keeps the single-store rule CLAUDE.md asks for, keeps
 ownership (which was a deliberate decision, not an accident), and 250 MB is
 survivable. Resizing is required either way — storing 600 KB covers unresized is
 not a real option at any destination. **C is the honest answer if Malayalam
@@ -356,9 +447,10 @@ because stripping the dangling ` /` re-exposes quotes `_unquote` has already
 gone past. It iterates to a fixed point now, which is what a door-time gate
 depends on and what the etl README already warned about.
 
-**P2 — Cover pipeline.** Resize-on-ingest, the allowlist changes in both the
-Worker and `image_proxy.dart`, and reuse of `cover_storage`. *Done when:* a
-promoted book's cover is served from our own bucket at ~50 KB.
+**P2 — Cover pipeline.** 🟡 **Built 3 Oct 2026; live once the owner's R2 setup
+(§4) is done.** Fetch → normalise (800px JPEG) → store in R2, run by `promote`
+before the Work exists, so no book is ever live with a cover that does not load.
+*Done when:* a promoted book's cover is served from `covers.kitabi.in`.
 
 **P3 — Malayalam adapter.** Mathrubhumi Store API for discovery, product page for
 ISBN/author/publisher/pages, back covers into `back_cover_url` (50% of records
@@ -389,7 +481,8 @@ job created.
 
 ## 6. Open decisions for the owner
 
-1. **Cover storage — A, B or C** (§4). Blocks P2. Recommendation: B.
+1. ~~**Cover storage — A, B or C** (§4).~~ **Decided 3 Oct 2026: C, Cloudflare
+   R2.** Remaining owner action is the one-time setup listed in §4.
 2. **Approach DC Books about a feed + buy links.** Now the critical path for
    Malayalam breadth, not a nice-to-have — without it, "Malayalam" means one
    publisher's ~3,300 titles. Should start now; blocks P4, not P1–P3.

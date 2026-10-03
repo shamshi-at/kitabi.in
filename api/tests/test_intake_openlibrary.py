@@ -315,3 +315,67 @@ async def test_a_subject_seed_still_accepts_any_publisher():
     async with _client(docs=[doc(publisher=("Some Small Press",))]) as client:
         found = await intake_openlibrary.discover(client, seeds=("subject:india",))
     assert found[0].publisher == "Some Small Press"
+
+
+# --------------------------------------------------------------------------
+# an enabled night, end to end — the cover goes to our bucket first (P2)
+# --------------------------------------------------------------------------
+
+
+async def test_an_enabled_night_publishes_a_book_whose_cover_is_in_our_bucket(
+    db_sessionmaker, monkeypatch
+):
+    """The plan's "done when" for the cover pipeline, through the real job:
+    discovery, the gate, the fetch, the resize, the upload and the promotion,
+    with only the three remote hosts stubbed."""
+    import io
+
+    from PIL import Image
+    from sqlalchemy import select
+
+    from app.models import Edition
+
+    settings = get_settings().model_copy(
+        update={
+            "catalog_intake_enabled": True,
+            "r2_account_id": "acct123",
+            "r2_access_key_id": "AKID",
+            "r2_secret_access_key": "SECRET",
+            "r2_covers_bucket": "kitabi-covers",
+            "r2_covers_public_url": "https://covers.kitabi.in",
+        }
+    )
+    monkeypatch.setattr(intake_job, "get_settings", lambda: settings)
+    monkeypatch.setattr("app.services.intake_service.get_settings", lambda: settings)
+    monkeypatch.setattr(intake_job, "SessionLocal", db_sessionmaker)
+
+    original = io.BytesIO()
+    Image.effect_noise((1200, 1800), 64).convert("RGB").save(original, "JPEG", quality=95)
+    uploads: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        host = request.url.host
+        if host == "openlibrary.org":
+            return httpx.Response(200, json={"docs": [doc()]})
+        if host == "covers.openlibrary.org":
+            return httpx.Response(
+                200, content=original.getvalue(), headers={"content-type": "image/jpeg"}
+            )
+        if host == "acct123.r2.cloudflarestorage.com":
+            uploads.append(request)
+            return httpx.Response(200)
+        raise AssertionError(f"the job reached a host nobody expected: {host}")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        await intake_job.catalog_intake(client)
+
+    async with db_sessionmaker() as db:
+        edition = (await db.execute(select(Edition))).scalar_one()
+
+    (upload,) = uploads
+    assert edition.cover_url == (
+        "https://covers.kitabi.in/" + upload.url.path.removeprefix("/kitabi-covers/")
+    )
+    stored = Image.open(io.BytesIO(upload.content))
+    assert stored.format == "JPEG" and max(stored.size) == 800
+    assert len(upload.content) < len(original.getvalue()) / 4
