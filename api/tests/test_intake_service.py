@@ -1052,3 +1052,45 @@ async def test_undoing_one_book_leaves_an_author_who_has_another(session):
 
     author = (await session.execute(select(Author))).scalar_one()
     assert author.deleted_at is None, "still the author of the book that was kept"
+
+
+async def test_an_author_two_undone_books_shared_is_retired_with_the_second(session):
+    """`BOOKTOPUS`, 4 Oct 2026: the row was made for the first of two books
+    and shared by the second. Looked at one book at a time it survived both —
+    while the first was undone the second still named it, and it had not been
+    made for the second."""
+    for key, title, isbn in (
+        ("/works/ONE", "My First Shapes", "9780060977498"),
+        ("/works/TWO", "My First Colours", "9780143028109"),
+    ):
+        # Two nights: the author row is made with the first book only.
+        await intake_service.record(
+            session, [candidate(key, title=title, isbn=isbn, authors=("A Brand",))], source=SOURCE
+        )
+        await intake_service.promote(session, limit=10)
+    rows = (await session.execute(select(CatalogIntake))).scalars().all()
+
+    await intake_service.revert(session, [row.id for row in rows])
+
+    author = (await session.execute(select(Author))).scalar_one()
+    assert author.deleted_at is not None
+
+
+async def test_the_shared_author_goes_even_when_the_books_are_undone_on_different_days(session):
+    for key, title, isbn in (
+        ("/works/ONE", "My First Shapes", "9780060977498"),
+        ("/works/TWO", "My First Colours", "9780143028109"),
+    ):
+        await intake_service.record(
+            session, [candidate(key, title=title, isbn=isbn, authors=("A Brand",))], source=SOURCE
+        )
+        await intake_service.promote(session, limit=10)
+    rows = {r.source_key: r for r in (await session.execute(select(CatalogIntake))).scalars()}
+
+    await intake_service.revert(session, [rows["/works/ONE"].id])
+    author = (await session.execute(select(Author))).scalar_one()
+    assert author.deleted_at is None, "the second book still names them"
+
+    await intake_service.revert(session, [rows["/works/TWO"].id])
+    await session.refresh(author)
+    assert author.deleted_at is not None

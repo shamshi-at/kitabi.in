@@ -45,13 +45,46 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.core.config import get_settings  # noqa: E402
 from app.core.db import _engine_kwargs, _normalize  # noqa: E402
-from app.models import CatalogIntake  # noqa: E402
+from app.models import CatalogIntake, Work  # noqa: E402
 from app.models.catalog_intake import STATE_PROMOTED  # noqa: E402
 from app.services import intake_service  # noqa: E402
 
 
 def _day(value: str) -> datetime:
     return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=UTC)
+
+
+async def _sweep_authors(session: AsyncSession, args: argparse.Namespace) -> int:
+    """Author rows that books already undone in this window left with nothing."""
+    works = (
+        (
+            await session.execute(
+                select(Work)
+                .join(CatalogIntake, CatalogIntake.work_id == Work.id)
+                .where(Work.deleted_at.is_not(None), Work.deleted_at >= args.since)
+            )
+        )
+        .scalars()
+        .unique()
+        .all()
+    )
+    print(f"{len(works)} undone book(s) in the window.")
+    retired = await intake_service.retire_orphaned_authors(session, works)
+    names = sorted(
+        person.name
+        for work in works
+        for person in (*work.authors, *work.translators)
+        if person in session.dirty
+    )
+    for name in dict.fromkeys(names):
+        print(f"  would retire: {name}" if not args.apply else f"  retired: {name}")
+    if args.apply:
+        await session.commit()
+        print(f"Retired: {retired}.")
+    else:
+        await session.rollback()
+        print(f"{retired} author row(s) would be retired. Add --apply to do it.")
+    return 0
 
 
 async def main() -> int:
@@ -65,6 +98,12 @@ async def main() -> int:
         default=[],
         help="only books whose title contains this (case-insensitive; repeatable)",
     )
+    parser.add_argument(
+        "--sweep-authors",
+        action="store_true",
+        help="instead of undoing: retire author rows left with no books by books "
+        "already undone in this window (also needs --apply)",
+    )
     parser.add_argument("--apply", action="store_true", help="actually undo them")
     args = parser.parse_args()
 
@@ -75,6 +114,8 @@ async def main() -> int:
     engine = create_async_engine(url, **_engine_kwargs(url), echo=False)
     try:
         async with AsyncSession(engine) as session:
+            if args.sweep_authors:
+                return await _sweep_authors(session, args)
             query = select(CatalogIntake).where(
                 CatalogIntake.state == STATE_PROMOTED, CatalogIntake.promoted_at >= args.since
             )

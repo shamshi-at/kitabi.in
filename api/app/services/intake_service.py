@@ -851,35 +851,49 @@ async def _stamp_provenance(db: AsyncSession, work: Work, candidate: Candidate) 
 _SAME_PROMOTION = timedelta(seconds=2)
 
 
-async def _retire_authors_made_for(db: AsyncSession, work: Work, now: datetime) -> None:
-    """Soft-delete the author rows a promotion created, when nothing else is
-    credited to them.
+async def _credits(db: AsyncSession, person: Author, *, live: bool) -> list[datetime]:
+    """When each book crediting `person` was created — the live ones, or the
+    soft-deleted ones."""
+    stamps: list[datetime] = []
+    for link in (work_authors, work_translators):
+        gone = Work.deleted_at.is_(None) if live else Work.deleted_at.is_not(None)
+        rows = await db.execute(
+            select(Work.created_at)
+            .join(link, link.c.work_id == Work.id)
+            .where(link.c.author_id == person.id, gone)
+        )
+        stamps.extend(rows.scalars())
+    return stamps
+
+
+async def retire_orphaned_authors(db: AsyncSession, works: Iterable[Work]) -> int:
+    """Soft-delete the author rows that undone books leave with nothing.
 
     Undoing `Classic Dark Stories` by `Various` should not leave an author
-    page called "Various" behind with no books on it. Only a row that was
-    created *with* this Work — an author the catalogue already had is left
-    exactly as it was — and only one no other live book names.
+    page called "Various" behind with no books on it. A row is retired only if
+    both things are true:
+
+    - **no live book names them** any more; and
+    - **the row was made for a book that has since been undone** — it was
+      created in the same breath as one of them. An author the catalogue
+      already had before these books is left exactly as it was.
+
+    Asked of the person's whole history rather than of the one book in hand,
+    because one author row can be made for the first of two books and shared
+    by the second: undoing both, in either order or on different days, has to
+    end with the row gone (`BOOKTOPUS`, 4 Oct 2026 — the first version of
+    this looked at each book alone and left it standing).
     """
-    for person in {*work.authors, *work.translators}:
-        if person.deleted_at is not None:
+    people = {person.id: person for work in works for person in (*work.authors, *work.translators)}
+    retired = 0
+    for person in people.values():
+        if person.deleted_at is not None or await _credits(db, person, live=True):
             continue
-        if abs(person.created_at - work.created_at) > _SAME_PROMOTION:
-            continue  # the catalogue had this author before this book
-        credited_elsewhere = False
-        for link in (work_authors, work_translators):
-            other = await db.scalar(
-                select(Work.id)
-                .join(link, link.c.work_id == Work.id)
-                .where(
-                    link.c.author_id == person.id,
-                    Work.id != work.id,
-                    Work.deleted_at.is_(None),
-                )
-                .limit(1)
-            )
-            credited_elsewhere = credited_elsewhere or other is not None
-        if not credited_elsewhere:
-            person.deleted_at = now
+        undone = await _credits(db, person, live=False)
+        if any(abs(person.created_at - made) <= _SAME_PROMOTION for made in undone):
+            person.deleted_at = datetime.now(UTC)
+            retired += 1
+    return retired
 
 
 async def revert(db: AsyncSession, intake_ids: Iterable[uuid.UUID]) -> int:
@@ -897,6 +911,7 @@ async def revert(db: AsyncSession, intake_ids: Iterable[uuid.UUID]) -> int:
     pointing at something.
     """
     reverted = 0
+    undone: list[Work] = []
     for intake_id in intake_ids:
         row = await db.get(CatalogIntake, intake_id)
         if row is None or row.state != STATE_PROMOTED or row.work_id is None:
@@ -915,11 +930,14 @@ async def revert(db: AsyncSession, intake_ids: Iterable[uuid.UUID]) -> int:
                 work.deleted_at = now
                 for edition in work.editions:
                     edition.deleted_at = now
-                await db.flush()
-                await _retire_authors_made_for(db, work, now)
+                undone.append(work)
         row.state = STATE_COMPLETE
         row.note = "reverted"
         row.promoted_at = None
         reverted += 1
+    # Once every book in the batch is gone, so an author two of them shared is
+    # judged against all of them.
+    await db.flush()
+    await retire_orphaned_authors(db, undone)
     await db.commit()
     return reverted
