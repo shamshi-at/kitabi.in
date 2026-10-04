@@ -7,7 +7,7 @@ asyncpg==0.30.0
 alembic==1.14.0
 pydantic==2.10.4
 pydantic-settings==2.7.0
-PyJWT[crypto]==2.13.0  # >=2.13.0: clears 7 CVEs on the auth path (key-confusion, alg allow-list bypass, jku SSRF, kid refetch) — none exploitable in our config (HS* not in the allow-list; JWKS is Supabase-fixed), but this is the auth library, kept current deliberately (post-launch audit, 31 Aug 2026)
+PyJWT[crypto]==2.15.1  # the auth library, kept current deliberately. >=2.15.0 clears the 13 advisories published against 2.13.0 (4 Oct 2026). Three reached us: a forged token with a deeply nested payload or header was a 500 instead of a 401 (PYSEC-2026-4141, -4142), and a token naming an unknown key id re-fetched the Supabase key set on every request (PYSEC-2026-4140). The rest need an HMAC algorithm in the allow-list or an attacker-controlled key source, and we have neither. tests/test_jwt_verification.py runs the real library and fails on 2.13.0. Note 2.14+ refuses redirects when fetching the key set and waits 30s between forced refreshes for an unknown key id — checked against the live endpoint, which answers 200 directly.
 httpx==0.28.1
 # Cover ingest (app/services/cover_ingest.py): every cover the catalogue intake
 # stores is decoded, shrunk to 800px and re-encoded here first. A dependency,

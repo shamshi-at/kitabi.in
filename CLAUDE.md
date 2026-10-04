@@ -1316,6 +1316,26 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   `last-modified` means the new image is serving. A poisoned address is fixed
   by bumping the version again, not by waiting it out.
 
+- **Nothing here stops a deploy when CI is red, so a red CI is only seen by
+  someone who looks — and for a day nobody did.** `api-ci` failed on five
+  consecutive pushes (3–4 Oct 2026) at the `pip-audit` step: 13 advisories
+  against the pinned PyJWT. Railway builds from the push, the tests *before*
+  the audit step passed, and the API was healthy, so every signal anyone was
+  watching said "fine"; it surfaced only because a later check happened to
+  list recent runs. After any push that touches `api/` or `admin/`, read the
+  run's result (`gh run list --branch main --limit 3`) before calling the work
+  done — "deployed and healthy" and "CI green" are different facts. Second
+  half, and the reason the advisories were hard to triage: **the one function
+  that decides who a request is had no test.** The `client` fixture overrides
+  `get_current_user` and `test_suspension.py` patches `jwt.decode` away, so
+  1,300 green tests said nothing about whether a token is checked. Three of
+  the thirteen did reach us (a nested-JSON payload or header was a 500, not a
+  401; an unknown key id re-fetched the key set on every request) and nothing
+  could have told us — one of them against its own advisory, which said the
+  token was too big for a request header; measure, don't take the scope note. `tests/test_jwt_verification.py` runs the real library against a key set
+  served on localhost — when a dependency *is* the security boundary, a test
+  has to cross it with nothing stubbed but the network.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential
