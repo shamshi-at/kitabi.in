@@ -1,6 +1,7 @@
 """FastAPI app factory: mounts routers, the version gate, CORS, structured
 errors, and the APScheduler lifespan (keep-warm / notify jobs)."""
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -31,8 +32,27 @@ from app.core.version_gate import VersionGateMiddleware
 from app.jobs import scheduler
 
 
+def _show_app_logs() -> None:
+    """Let this application's own INFO lines reach the log.
+
+    uvicorn configures its loggers and nobody else's, so everything under
+    `app.*` inherited the root logger's WARNING and every `logger.info` in the
+    jobs was dropped. The first unattended night of the catalogue intake
+    (4 Oct 2026) published 150 books and left not one line saying so; what it
+    had done had to be read back out of the database.
+    """
+    log = logging.getLogger("app")
+    if not log.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s: %(message)s"))
+        log.addHandler(handler)
+    log.setLevel(logging.INFO)
+    log.propagate = False
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    _show_app_logs()
     if get_settings().scheduler_enabled:
         scheduler.start()
     yield
