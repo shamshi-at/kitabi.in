@@ -562,6 +562,12 @@ TOPICS: tuple[Topic, ...] = (
                 (
                     "Open a book to edit its details, set its series, add a buy link to an "
                     "edition, or delete it. Everything you change is logged.",
+                    "**Covers** are at the bottom of a book's page, one row per edition, front "
+                    "and back. Choose a file or paste a link to an image — a phone photo or a big "
+                    "scan is fine, Kitabi shrinks it and keeps its own copy. **Swap** fixes a "
+                    "front and back that are the wrong way round. To undo any cover change, find "
+                    "it in the [audit log](/audit?q=edition.cover&period=all) and paste the "
+                    "“was …” link back into the link box.",
                     "**Delete** is a soft delete — the book stops appearing but is not destroyed. "
                     "Kitabi refuses to delete a book that readers have shelved, rated or "
                     "reviewed, and tells you so. That refusal is correct: deleting it would take "

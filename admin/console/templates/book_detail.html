@@ -124,7 +124,7 @@
           <td class="m">{% if e.publisher %}<a href="/catalog/publishers/{{ e.publisher.id }}">{{ e.publisher.name }}</a>{% else %}—{% endif %}</td>
           <td class="m">{{ e.language or '—' }}</td>
           <td>{{ e.page_count or '—' }}</td>
-          <td>{% if e.cover_url %}<a href="{{ e.cover_url }}" target="_blank" rel="noopener">view</a>{% else %}<span class="pill mute">none</span>{% endif %}</td>
+          <td><a href="#covers-{{ e.id }}" title="Change this edition's covers">{% if e.cover_url %}<img class="covmini" src="{{ e.cover_url }}" alt="Front cover" loading="lazy">{% else %}<span class="pill mute">none</span>{% endif %}</a></td>
           <td>
             <form method="post" action="/catalog/works/{{ w.id }}/editions/{{ e.id }}/amazon-link"
                   style="display:flex;gap:4px;align-items:center;margin:0">
@@ -142,5 +142,72 @@
       field empty and save to go back to the generated link. Books without a saved link keep
       getting the dynamic one; the affiliate tag is appended either way.</div>
   </div>
+</div>
+
+{# Covers — one row per edition (rule 17: a cover belongs to the printing, not
+   the work). Each side takes a file or a pasted link; the server normalises it
+   to an 800px JPEG in our own bucket (assets.store_cover), so nothing here can
+   leave the catalogue pointing at somebody else's server. #}
+<div class="card" id="covers" style="margin-top:14px;scroll-margin-top:80px">
+  <div class="worklist-head"><div><span class="lbl">Covers</span>
+    <b>{{ w.editions | length }} edition{{ '' if w.editions | length == 1 else 's' }}</b></div></div>
+  {% if not uploads_on %}
+  <div class="note warn" style="margin-top:8px">{{ uploads_why }}. You can still remove or swap
+    covers, and paste back a link that is already ours (from the audit log) — but a new file or an
+    outside link needs uploads switched on.</div>
+  {% endif %}
+  {% for e in w.editions %}
+  <div class="covrow" id="covers-{{ e.id }}">
+    <div class="covhead">
+      <b class="mono">{{ e.isbn or 'No ISBN' }}</b>
+      <span class="m">{% if e.publisher %}{{ e.publisher.name }} · {% endif %}{{ e.language or '—' }}{% if e.page_count %} · {{ e.page_count }} pp{% endif %}{% if e.format %} · {{ e.format }}{% endif %}</span>
+      {% if e.cover_url or e.back_cover_url %}
+      <form method="post" action="/catalog/works/{{ w.id }}/editions/{{ e.id }}/cover/swap" style="margin-left:auto"
+        onsubmit="return confirm('Swap the front and back covers of this edition?')">
+        <button class="btn s" title="Front and back are the wrong way round">⇄ Swap front and back</button></form>
+      {% endif %}
+    </div>
+    <div class="covsides">
+      {% for side, column, label in [('front', 'cover_url', 'Front'), ('back', 'back_cover_url', 'Back')] %}
+      {% set current = e[column] %}
+      <div class="covside">
+        <a class="covimg {% if not current %}none{% endif %}" {% if current %}href="{{ current }}" target="_blank" rel="noopener" title="Open full size"{% endif %}>
+          {% if current %}<img src="{{ current }}" alt="{{ label }} cover" loading="lazy" data-cover-img>
+          {% else %}<span>{{ 'No front cover — the app and website draw a typeset one' if side == 'front' else 'No back cover' }}</span><img alt="" hidden data-cover-img>{% endif %}
+        </a>
+        <div class="covform">
+          <div class="lbl">{{ label }}</div>
+          <form method="post" enctype="multipart/form-data"
+            action="/catalog/works/{{ w.id }}/editions/{{ e.id }}/cover">
+            <input type="hidden" name="side" value="{{ side }}">
+            <label class="covpick">
+              <input type="file" name="file" accept="image/jpeg,image/png,image/webp,image/gif" data-cover-file
+                {% if not uploads_on %}disabled{% endif %}>
+            </label>
+            <div class="covor">or paste a link to an image</div>
+            <input class="search" type="url" name="url" placeholder="https://…" aria-label="{{ label }} cover image link">
+            <div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">
+              <button class="btn s p">{{ 'Replace' if current else 'Add' }} {{ label|lower }} cover</button>
+            </div>
+          </form>
+          {% if current %}
+          <form method="post" action="/catalog/works/{{ w.id }}/editions/{{ e.id }}/cover/remove" style="margin-top:6px"
+            onsubmit="return confirm('Remove the {{ label|lower }} cover of this edition?{{ ' Readers will see the typeset cover instead.' if side == 'front' else '' }}')">
+            <input type="hidden" name="side" value="{{ side }}">
+            <button class="btn s d">Remove</button></form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="m" style="padding:14px 0">This book has no editions, so there is nothing to put a cover on.</div>
+  {% endfor %}
+  <div class="note" style="margin-top:12px">Every picture is shrunk to 800px and saved as a JPEG in
+    Kitabi’s own storage — a phone photo or a large scan is fine. It must be roughly book-shaped and at
+    least 200px on its longest side. A pasted link is copied, not linked to. Every change is in the
+    <a href="/audit?q=edition.cover&amp;period=all">audit log</a> with the link of the picture it
+    replaced: paste that link back here to undo.</div>
 </div>
 {% endblock %}

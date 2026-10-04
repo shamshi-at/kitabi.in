@@ -681,6 +681,8 @@ async def book_detail(
             **footprint,
             "adder": adder,
             "amazon_links": amazon_links,
+            "uploads_on": assets.configured(),
+            "uploads_why": "" if assets.configured() else assets.why_not_configured(),
             "series_q": series_q,
             "series_matches": [
                 {"s": s, "count": series_counts.get(s.id, 0)} for s in series_matches
@@ -927,6 +929,204 @@ async def set_edition_amazon_link(
         "ok",
         "Amazon link saved." if url else "Amazon link cleared — back to the generated one.",
     )
+    return resp
+
+
+# ---------------------------------------------------------------------------
+# Covers — the front and back picture of one edition.
+#
+# Rule 17: a cover belongs to the Edition, so it is edited per printing, never
+# on the Work. Every change goes through `assets` (normalised to an 800px JPEG
+# and stored in our own bucket — see `assets.store_cover`), and every change is
+# audited with the URL it replaced, so any of them is undone by pasting that
+# URL back into the link field. The website and the app read the new cover on
+# their next fetch; the web's page cache holds a book page for a few minutes.
+# ---------------------------------------------------------------------------
+
+COVER_SIDES = {"front": ("cover_url", "Front cover"), "back": ("back_cover_url", "Back cover")}
+
+
+def _edition_label(edition: Edition) -> str:
+    bits = [edition.isbn or "no ISBN"]
+    if edition.publisher is not None:
+        bits.append(edition.publisher.name)
+    if edition.page_count:
+        bits.append(f"{edition.page_count} pp")
+    return " · ".join(bits)
+
+
+async def _cover_target(
+    db: DbSession, work_id: uuid.UUID, edition_id: uuid.UUID
+) -> tuple[Work | None, Edition | None]:
+    work = await db.get(Work, work_id)
+    edition = await db.get(Edition, edition_id)
+    if (
+        work is None
+        or work.deleted_at is not None
+        or edition is None
+        or edition.work_id != work_id
+        or edition.deleted_at is not None
+    ):
+        return None, None
+    return work, edition
+
+
+async def _audit_cover(
+    db: DbSession,
+    request: Request,
+    admin,  # noqa: ANN001 — AdminUser
+    action: str,
+    work: Work,
+    edition: Edition,
+    summary: str,
+) -> None:
+    await security.audit(
+        db,
+        action,
+        admin_id=admin.id,
+        # The work, not the edition: an edition has no page of its own, and
+        # the audit log links a work target straight to the book page.
+        target_type="work",
+        target_id=str(work.id),
+        summary=f"{work.title} ({_edition_label(edition)}) · {summary}",
+        ip=client_ip(request),
+    )
+
+
+@router.post("/works/{work_id}/editions/{edition_id}/cover")
+async def set_edition_cover(  # noqa: PLR0913
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    work_id: uuid.UUID,
+    edition_id: uuid.UUID,
+    side: Annotated[str, Form()] = "front",
+    url: Annotated[str, Form()] = "",
+    file: UploadFile | None = None,
+) -> RedirectResponse:
+    """Give one side of an edition a new cover — from a file, or from a link.
+
+    A chosen file wins over a pasted link, so a form left holding an old link
+    still does what the operator just picked."""
+    resp = RedirectResponse(f"/catalog/works/{work_id}#covers", status_code=303)
+    if side not in COVER_SIDES:
+        set_flash(resp, "err", "Unknown cover side.")
+        return resp
+    column, label = COVER_SIDES[side]
+    work, edition = await _cover_target(db, work_id, edition_id)
+    if edition is None:
+        set_flash(resp, "err", "That edition isn't on this book any more.")
+        return resp
+    try:
+        if file is not None and file.filename:
+            new_url = await assets.store_cover(await file.read())
+        else:
+            new_url = await assets.cover_from_url(url)
+    except assets.UploadError as exc:
+        set_flash(resp, "err", f"{label} not changed — {exc}")
+        return resp
+
+    previous = getattr(edition, column)
+    if previous == new_url:
+        set_flash(resp, "ok", f"{label} is already that picture — nothing changed.")
+        return resp
+    setattr(edition, column, new_url)
+    edition.updated_at = datetime.now(UTC)
+    await db.commit()
+    cache.invalidate_catalog()  # "Editions with no cover" may have just changed
+    await _audit_cover(
+        db,
+        request,
+        admin,
+        f"edition.cover.{side}.set",
+        work,
+        edition,
+        f"{label.lower()} → {new_url} · was {previous or 'none'}",
+    )
+    set_flash(
+        resp,
+        "ok",
+        f"{label} saved. The website shows it within a few minutes; the old one's link is in "
+        "the audit log if you need it back.",
+    )
+    return resp
+
+
+@router.post("/works/{work_id}/editions/{edition_id}/cover/remove")
+async def remove_edition_cover(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    work_id: uuid.UUID,
+    edition_id: uuid.UUID,
+    side: Annotated[str, Form()] = "front",
+) -> RedirectResponse:
+    """Take one side's picture off. A front with none falls back to the typeset
+    cover the app and the website draw from the title and author. The stored
+    object stays in the bucket; its URL goes into the audit log."""
+    resp = RedirectResponse(f"/catalog/works/{work_id}#covers", status_code=303)
+    if side not in COVER_SIDES:
+        set_flash(resp, "err", "Unknown cover side.")
+        return resp
+    column, label = COVER_SIDES[side]
+    work, edition = await _cover_target(db, work_id, edition_id)
+    if edition is None:
+        set_flash(resp, "err", "That edition isn't on this book any more.")
+        return resp
+    previous = getattr(edition, column)
+    if not previous:
+        set_flash(resp, "err", f"There was no {label.lower()} to remove.")
+        return resp
+    setattr(edition, column, None)
+    edition.updated_at = datetime.now(UTC)
+    await db.commit()
+    cache.invalidate_catalog()
+    await _audit_cover(
+        db,
+        request,
+        admin,
+        f"edition.cover.{side}.remove",
+        work,
+        edition,
+        f"{label.lower()} removed · was {previous}",
+    )
+    set_flash(resp, "ok", f"{label} removed. Its link is in the audit log if it was a mistake.")
+    return resp
+
+
+@router.post("/works/{work_id}/editions/{edition_id}/cover/swap")
+async def swap_edition_covers(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    work_id: uuid.UUID,
+    edition_id: uuid.UUID,
+) -> RedirectResponse:
+    """Front and back the wrong way round — the usual mistake when a reader
+    photographs both sides of their copy. One click, no re-upload."""
+    resp = RedirectResponse(f"/catalog/works/{work_id}#covers", status_code=303)
+    work, edition = await _cover_target(db, work_id, edition_id)
+    if edition is None:
+        set_flash(resp, "err", "That edition isn't on this book any more.")
+        return resp
+    if not edition.cover_url and not edition.back_cover_url:
+        set_flash(resp, "err", "This edition has no covers to swap.")
+        return resp
+    front, back = edition.cover_url, edition.back_cover_url
+    edition.cover_url, edition.back_cover_url = back, front
+    edition.updated_at = datetime.now(UTC)
+    await db.commit()
+    cache.invalidate_catalog()
+    await _audit_cover(
+        db,
+        request,
+        admin,
+        "edition.cover.swap",
+        work,
+        edition,
+        f"front ↔ back · front was {front or 'none'} · back was {back or 'none'}",
+    )
+    set_flash(resp, "ok", "Front and back swapped.")
     return resp
 
 

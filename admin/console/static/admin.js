@@ -692,3 +692,26 @@ if ("serviceWorker" in navigator) {
     load(a.closest("tr[data-more]"));
   });
 })();
+
+// Cover picker preview (book_detail.html #covers) — show the chosen file in the
+// cover's own frame before it is saved, so the operator sees what they picked
+// rather than a file name. Nothing is uploaded until the form is submitted.
+(function () {
+  document.addEventListener("change", (e) => {
+    const input = e.target.closest("input[data-cover-file]");
+    if (!input) return;
+    const side = input.closest(".covside");
+    const img = side && side.querySelector("[data-cover-img]");
+    const file = input.files && input.files[0];
+    if (!img || !file || !file.type.startsWith("image/")) return;
+    if (img.dataset.preview) URL.revokeObjectURL(img.dataset.preview);
+    img.dataset.preview = URL.createObjectURL(file);
+    img.src = img.dataset.preview;
+    img.hidden = false;
+    const frame = img.closest(".covimg");
+    if (frame) {
+      frame.classList.remove("none");
+      frame.querySelectorAll("span").forEach((s) => (s.hidden = true));
+    }
+  });
+})();
