@@ -247,6 +247,11 @@ class HubPage(BaseModel):
     total: int = 0
     page: int = 1
     per_page: int = 24
+    # The order `works` is actually in. Echoed rather than assumed: the site
+    # marks the active sort from this, so a site deployed ahead of the API
+    # shows "A–Z" selected over an A–Z list instead of claiming an order the
+    # reply does not have.
+    sort: str = "title"
     languages: list[LanguageCount] = []
     forms: list[GenreCount] = []
     genres: list[GenreCount] = []

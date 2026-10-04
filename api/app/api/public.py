@@ -29,6 +29,10 @@ router = APIRouter(prefix="/public", tags=["public"])
 _CACHE = {"Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400"}
 _CACHE_SHORT = {"Cache-Control": "public, s-maxage=60, stale-while-revalidate=3600"}
 
+# The orders a list of books can be put in — one vocabulary for /browse and the
+# hubs, so "Just added" means the same thing on both (catalog_service.browse_works).
+_WORK_SORT = "^(title|year_desc|year_asc|author|rating|added)$"
+
 
 def _not_found(what: str) -> HTTPException:
     return HTTPException(
@@ -103,13 +107,14 @@ async def hub(
     db: DbSession,
     response: Response,
     form: str | None = Query(default=None),
+    sort: str = Query(default="title", pattern=_WORK_SORT),
     page: int = Query(default=1, ge=1, le=500),
 ) -> P.HubPage:
     """Genre, language and form hubs are one template with a different filter —
     the mockups draw them as one page and so does this."""
     if kind not in {"genre", "language", "form"}:
         raise _not_found("Hub")
-    result = await public_service.hub_page(db, kind, slug, form_slug=form, page=page)
+    result = await public_service.hub_page(db, kind, slug, form_slug=form, page=page, sort=sort)
     if result is None:
         raise _not_found("Hub")
     _cached(response, _CACHE)
@@ -124,7 +129,7 @@ async def browse(
     form: str | None = Query(default=None),
     genre: str | None = Query(default=None),
     length: str | None = Query(default=None, pattern="^(short|medium|long)$"),
-    sort: str = Query(default="title", pattern="^(title|year_desc|year_asc|author|rating|added)$"),
+    sort: str = Query(default="title", pattern=_WORK_SORT),
     page: int = Query(default=1, ge=1, le=500),
 ) -> P.BrowsePage:
     _cached(response, _CACHE_SHORT)

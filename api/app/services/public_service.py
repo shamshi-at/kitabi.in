@@ -690,11 +690,14 @@ async def hub_page(
     form_slug: str | None = None,
     page: int = 1,
     per_page: int = 24,
+    sort: str = "title",
 ) -> P.HubPage | None:
     return await ttl_cache.get_or_compute(
-        f"{PUBLIC_CACHE_PREFIX}hub:{kind}:{slug}:{form_slug}:{page}:{per_page}",
+        f"{PUBLIC_CACHE_PREFIX}hub:{kind}:{slug}:{form_slug}:{sort}:{page}:{per_page}",
         PAGE_TTL,
-        lambda: _hub_page(db, kind, slug, form_slug=form_slug, page=page, per_page=per_page),
+        lambda: _hub_page(
+            db, kind, slug, form_slug=form_slug, page=page, per_page=per_page, sort=sort
+        ),
     )
 
 
@@ -706,6 +709,7 @@ async def _hub_page(
     form_slug: str | None = None,
     page: int = 1,
     per_page: int = 24,
+    sort: str = "title",
 ) -> P.HubPage | None:
     languages = await _language_counts(db)
     genres = await _genre_counts(db)
@@ -726,7 +730,7 @@ async def _hub_page(
 
     total = await count_works(db, **filters)
     offset = (page - 1) * per_page
-    works = await catalog_service.browse_works(db, per_page, offset, sort="title", **filters)
+    works = await catalog_service.browse_works(db, per_page, offset, sort=sort, **filters)
     start_here = (
         await catalog_service.browse_works(db, 6, 0, sort="year_desc", **filters)
         if page == 1
@@ -743,6 +747,7 @@ async def _hub_page(
         total=total,
         page=page,
         per_page=per_page,
+        sort=sort,
         languages=languages,
         forms=forms,
         genres=genres,

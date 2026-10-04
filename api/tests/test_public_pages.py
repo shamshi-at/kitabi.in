@@ -220,6 +220,58 @@ async def test_home_prefers_a_featured_book_that_will_actually_look_good(db_sess
         assert page.featured.title == "Complete"
 
 
+async def test_a_hub_can_be_put_in_another_order(db_sessionmaker):
+    """The language page was A–Z only, which buries what was added last night
+    under every title starting with a vowel (owner request, 4 Oct 2026)."""
+    async with db_sessionmaker() as db:
+        for n, title in enumerate(["Chemmeen", "Aadujeevitham", "Balyakalasakhi"]):
+            work, _ = await _seed_book(db, title=title, language="Malayalam")
+            # Arrival order is the order of this list, a minute apart.
+            work.created_at = datetime(2026, 10, 1, 12, n, tzinfo=UTC)
+        await db.commit()
+
+        default = await public_service.hub_page(db, "language", "malayalam")
+        assert [w.title for w in default.works] == ["Aadujeevitham", "Balyakalasakhi", "Chemmeen"]
+        assert default.sort == "title"
+
+        added = await public_service.hub_page(db, "language", "malayalam", sort="added")
+        assert [w.title for w in added.works] == ["Balyakalasakhi", "Aadujeevitham", "Chemmeen"]
+        # The reply names the order it is in — the site marks the active sort
+        # from this, not from what it asked for.
+        assert added.sort == "added"
+        assert added.total == default.total == 3
+
+
+async def test_a_hubs_orders_are_cached_apart(db_sessionmaker):
+    """Two orders of one hub are two pages. Sharing a cache entry would serve
+    whichever was asked for first under both addresses."""
+    async with db_sessionmaker() as db:
+        # Alphabetical order and arrival order disagree: the later arrival is
+        # the later title, so "newest first" is the alphabet backwards.
+        for n, title in enumerate(["Aadujeevitham", "Chemmeen"]):
+            work, _ = await _seed_book(db, title=title, language="Malayalam")
+            work.created_at = datetime(2026, 10, 1, 12, n, tzinfo=UTC)
+        await db.commit()
+
+        by_title = await public_service.hub_page(db, "language", "malayalam")
+        by_arrival = await public_service.hub_page(db, "language", "malayalam", sort="added")
+        assert [w.title for w in by_title.works] == ["Aadujeevitham", "Chemmeen"]
+        assert [w.title for w in by_arrival.works] == ["Chemmeen", "Aadujeevitham"]
+        again = await public_service.hub_page(db, "language", "malayalam", sort="added")
+        assert again is by_arrival
+
+
+async def test_a_hub_refuses_an_order_it_does_not_know(unauthenticated_client, db_sessionmaker):
+    async with db_sessionmaker() as db:
+        await _seed_book(db, title="Chemmeen", language="Malayalam")
+        await db.commit()
+    known = await unauthenticated_client.get("/public/hub/language/malayalam?sort=rating")
+    assert known.status_code == 200
+    assert known.json()["sort"] == "rating"
+    unknown = await unauthenticated_client.get("/public/hub/language/malayalam?sort=shelved")
+    assert unknown.status_code == 422
+
+
 async def test_browse_reports_a_total_so_pages_can_be_walked(db_sessionmaker):
     async with db_sessionmaker() as db:
         for i in range(5):
