@@ -1300,6 +1300,22 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   and vice versa — assert on the *rule* (`heatWeeks`) and take the layout to a
   device.
 
+- **A versioned asset URL must not be requested before the build that serves it
+  is live — the edge caches whatever answers first.** After pushing the console
+  with `admin.css?v=33`, the deploy check polled that exact URL to watch the new
+  stylesheet arrive. The *old* build answered the first request, Cloudflare
+  cached the old file under the new address for its `max-age` (four hours), and
+  every later poll — and every browser — got the stale copy while the origin was
+  serving the right one: the new screens would have drawn their covers unstyled,
+  at full size (4 Oct 2026; caught because the check never went green, fixed by
+  bumping to `v=34`). `cf-cache-status: HIT` with an `age` older than the deploy
+  is the tell. The version in the query string is only a promise while nothing
+  asks for it early — a browser can't, because the old HTML names the old
+  version; a script can. Probe a deploy with something uncached: `/healthz`, or
+  the asset under a throwaway query (`?probe=<timestamp>`), where a newer
+  `last-modified` means the new image is serving. A poisoned address is fixed
+  by bumping the version again, not by waiting it out.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential
