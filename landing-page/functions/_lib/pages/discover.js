@@ -198,7 +198,7 @@ const LENGTHS = [
 // The door label wants just the word; the popover rows keep the page counts.
 const LENGTH_WORD = { short: 'Short', medium: 'Medium', long: 'Long' };
 
-const BROWSE_SORTS = [
+export const BROWSE_SORTS = [
   ['title', 'A–Z'],
   ['rating', 'Top rated'],
   ['added', 'Just added'],
@@ -392,7 +392,26 @@ export function renderHub(data) {
   const isLanguage = data.kind === 'language';
   const base = `/${data.kind}/${seg(data.slug)}`;
   const path = data.form ? `${base}/${seg(data.form.toLowerCase())}` : base;
-  const hrefFor = (p) => (p === 1 ? path : `${path}?page=${p}`);
+
+  // The order the API says the books are in — not the one the address asked
+  // for. A site deployed ahead of the API gets a reply with no `sort` and an
+  // A–Z list; marking "Just added" over that would be a lie on screen.
+  const sort = BROWSE_SORTS.some(([key]) => key === data.sort) ? data.sort : 'title';
+  const sorted = sort !== 'title';
+  // `sort` before `page`, always: robots.txt closes `/language/*?sort=` to
+  // crawlers, and that pattern only holds if the key leads the query string.
+  const hrefFor = (p, s = sort) => {
+    const q = new URLSearchParams();
+    if (s && s !== 'title') q.set('sort', s);
+    if (p > 1) q.set('page', String(p));
+    const qs = q.toString();
+    return qs ? `${path}?${qs}` : path;
+  };
+  // A re-sorted hub is the same books in another order: it points at the plain
+  // hub and stays out of the index, so six orderings never compete with the
+  // page they are views of. The default order keeps self-canonical pages.
+  const canonical = sorted ? path : hrefFor(data.page);
+  const showStart = Boolean(data.start_here?.length) && data.page === 1 && !sorted;
 
   const heading = data.form ? `${data.name} ${data.form.toLowerCase()}` : data.name;
   const intro = HUB_INTROS[data.slug];
@@ -433,11 +452,19 @@ export function renderHub(data) {
     </div>
 
     <div class="wrap">
-      ${data.start_here?.length && data.page === 1
+      ${showStart
         ? section('Start here', bookStrip(data.start_here, { priorityFirst: true }))
         : ''}
       <section class="sec">
         <div class="toolbar">
+          <span class="seg">
+            ${BROWSE_SORTS.map(
+              ([key, label]) => html`<a${mark(sort === key)}${key === 'title'
+                ? ''
+                : raw(' rel="nofollow"')}
+                href="${hrefFor(1, key)}">${label}</a>`,
+            )}
+          </span>
           ${!isLanguage
             ? (data.languages || [])
                 .slice(0, 6)
@@ -445,8 +472,8 @@ export function renderHub(data) {
             : ''}
           <span class="cnt">Showing ${num(first)}–${num(last)} of ${num(data.total)}</span>
         </div>
-        ${bookStrip(data.works, { priorityFirst: !data.start_here?.length })}
-        ${pager(data.page, data.total, data.per_page, hrefFor)}
+        ${bookStrip(data.works, { priorityFirst: !showStart })}
+        ${pager(data.page, data.total, data.per_page, (p) => hrefFor(p))}
       </section>
       ${appBand()}
     </div>
@@ -460,12 +487,14 @@ export function renderHub(data) {
       160,
     ),
     // Each page self-canonicals. NEVER canonicalise page 2 back to page 1 —
-    // that de-indexes the deep catalogue, which is most of it.
-    canonical: hrefFor(data.page),
+    // that de-indexes the deep catalogue, which is most of it. (A re-sorted
+    // view is the exception, and it is noindex: see `canonical` above.)
+    canonical,
+    indexable: !sorted,
     body,
     nav: isLanguage ? 'languages' : 'books',
     jsonLd: [
-      ld.collectionPage(heading, intro, hrefFor(data.page)),
+      ld.collectionPage(heading, intro, canonical),
       ld.breadcrumbList(crumbs),
       ...(data.works?.length ? [ld.itemList(data.works, heading)] : []),
     ],

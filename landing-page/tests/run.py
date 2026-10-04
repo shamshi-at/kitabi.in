@@ -127,6 +127,9 @@ class URL {
     this.hash = m[8] || '';
     this.href = String(input);
   }
+  // Lazy, because URLSearchParams is declared below. The handlers read the
+  // query through this (`hubApiPath`), and the real runtime has it.
+  get searchParams() { return new URLSearchParams(this.search); }
   toString() { return this.href; }
 }
 

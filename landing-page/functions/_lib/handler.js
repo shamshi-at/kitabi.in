@@ -7,7 +7,7 @@
 import { cached, fetchPage } from './api.js';
 import { notFound, unavailable } from './layout.js';
 import { LIST_BY_SLUG, LISTS } from './lists.js';
-import { renderIndex, renderPeople } from './pages/discover.js';
+import { BROWSE_SORTS, renderIndex, renderPeople } from './pages/discover.js';
 import { renderList, renderListIndex, renderTranslationIndex } from './pages/more.js';
 
 /**
@@ -121,12 +121,29 @@ export function serveBrowse(context, render) {
   });
 }
 
-/** /genre/:slug, /language/:slug, /language/:slug/:form */
-export function serveHub(context, kind, slug, render, { form = null } = {}) {
-  const url = new URL(context.request.url);
+/**
+ * The API address for a hub page — pure, so the allow-list is tested.
+ *
+ * `sort` is passed on only when it is one of the orders the site offers.
+ * Anything else is dropped rather than forwarded: the API answers an unknown
+ * order with a 422, which `fetchPage` reads as "unreachable" and the reader
+ * would see as a 503 — a typo in the address bar must not look like an outage.
+ * A dropped sort is the default order, which is also the honest reply.
+ */
+export function hubApiPath(requestUrl, kind, slug, form = null) {
+  const url = new URL(requestUrl);
   const params = new URLSearchParams({ page: String(pageParam(url)) });
   if (form) params.set('form', form);
-  const path = `/public/hub/${kind}/${encodeURIComponent(slug)}?${params.toString()}`;
+  const sort = url.searchParams.get('sort');
+  if (sort && sort !== 'title' && BROWSE_SORTS.some(([key]) => key === sort)) {
+    params.set('sort', sort);
+  }
+  return `/public/hub/${kind}/${encodeURIComponent(slug)}?${params.toString()}`;
+}
+
+/** /genre/:slug, /language/:slug, /language/:slug/:form — `?sort=&page=` */
+export function serveHub(context, kind, slug, render, { form = null } = {}) {
+  const path = hubApiPath(context.request.url, kind, slug, form);
   return servePage(context, path, render, { what: kind });
 }
 

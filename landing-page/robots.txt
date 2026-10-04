@@ -42,6 +42,12 @@ Allow: /
 # parameterised forms are closed.
 Disallow: /browse?
 Disallow: /search?
+# A hub in another order (/language/malayalam?sort=added) is the same books
+# again, six times over, on every page of every hub. The plain hubs and their
+# ?page= pages stay open — that is the deep catalogue. The site always writes
+# `sort` first in the query string, which is what lets these two lines match.
+Disallow: /language/*?sort=
+Disallow: /genre/*?sort=
 # Shared reading recaps. Not secret — the gate is a per-reader visibility flag,
 # not the URL — but a page one reader sent to their friends is not a page that
 # belongs in a search index, and `/recap/<key>` is an infinite family of URLs

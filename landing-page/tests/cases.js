@@ -645,6 +645,91 @@ assertIncludes(hub2, 'canonical" href="https://kitabi.in/language/malayalam?page
   'page 2 canonicals to itself, never back to page 1');
 assertIncludes(hub2, 'page 2', 'page 2 has its own title');
 
+// --------------------------------------------------------------------------
+// A hub in another order (owner request, 4 Oct 2026). The fixture is HubPage
+// as api/app/schemas/public.py declares it — `sort` is the order the API says
+// the books are in, and it is what the page marks, not what the address asked.
+// --------------------------------------------------------------------------
+
+var HUB = { kind: 'language', name: 'Malayalam', slug: 'malayalam', form: null,
+            works: [{ id: 'w', slug: 'chemmeen', title: 'Chemmeen', authors: [] }],
+            start_here: [{ id: 's', slug: 'kayar', title: 'Kayar', authors: [] }],
+            total: 183, page: 1, per_page: 24, sort: 'title',
+            languages: [], forms: [], genres: [] };
+
+var hubSortBar = String(renderHub(HUB).text());
+['A–Z', 'Top rated', 'Just added', 'Newest', 'Oldest', 'By author'].forEach(function (label) {
+  assertIncludes(hubSortBar, '>' + label + '</a>', 'the hub offers "' + label + '"');
+});
+assertIncludes(hubSortBar, '<a aria-current="true"\n                href="/language/malayalam">A–Z</a>',
+  'A–Z is marked on the default order, and its link is the plain hub');
+assertIncludes(hubSortBar, 'rel="nofollow"\n                href="/language/malayalam?sort=added">Just added</a>',
+  'another order is a real link, and one a crawler is asked not to walk');
+assert(hubSortBar.split('rel="nofollow"').length - 1 === 5,
+  'five of the six orders are nofollow — the default is the canonical hub itself');
+assertExcludes(hubSortBar, 'aria-current=&quot;', 'the active mark is a real attribute, not escaped text');
+assertExcludes(hubSortBar, 'rel=&quot;', '…and so is nofollow');
+assertIncludes(hubSortBar, 'Start here', 'the default view keeps its "Start here" shelf');
+
+var hubAdded = String(renderHub(Object.assign({}, HUB, { sort: 'added', page: 2 })).text());
+assertIncludes(hubAdded, 'rel="nofollow"\n                href="/language/malayalam?sort=added">Just added</a>',
+  'the sort control always links page 1 of an order');
+assertIncludes(hubAdded, '<a aria-current="true" rel="nofollow"', 'the order in use is the one marked');
+assertExcludes(hubAdded, '<a aria-current="true"\n                href="/language/malayalam">A–Z</a>',
+  '…and A–Z is not');
+assertIncludes(hubAdded, 'href="/language/malayalam?sort=added&amp;page=3" rel="next"',
+  'paging stays inside the order — and `sort` leads the query, which robots.txt relies on');
+assertIncludes(hubAdded, 'href="/language/malayalam?sort=added" rel="prev"',
+  'page 1 of an order has no page parameter');
+assertIncludes(hubAdded, 'content="noindex, follow"',
+  'a re-sorted hub is the same books again: kept out of the index');
+assertIncludes(hubAdded, 'canonical" href="https://kitabi.in/language/malayalam"',
+  '…and it points at the plain hub');
+assertExcludes(hubAdded, 'Start here', 'a reader who chose an order is not shown a second shelf above it');
+
+var hubAddedP1 = String(renderHub(Object.assign({}, HUB, { sort: 'added' })).text());
+assertExcludes(hubAddedP1, 'Start here', 'no "Start here" on page 1 of another order either');
+
+// The site can be deployed ahead of the API. An old API ignores ?sort= and
+// replies with no `sort` and an A–Z list — the page must say A–Z.
+var oldApi = Object.assign({}, HUB);
+delete oldApi.sort;
+var hubOldApi = String(renderHub(oldApi).text());
+assertIncludes(hubOldApi, '<a aria-current="true"\n                href="/language/malayalam">A–Z</a>',
+  'a reply that names no order is shown as A–Z, whatever the address said');
+assertIncludes(hubOldApi, 'content="index, follow"', '…and is the plain, indexable hub');
+var hubJunk = String(renderHub(Object.assign({}, HUB, { sort: '"><script>' })).text());
+assertIncludes(hubJunk, '<a aria-current="true"\n                href="/language/malayalam">A–Z</a>',
+  'an order the site does not offer falls back to A–Z');
+
+var formHub = String(renderHub(Object.assign({}, HUB, { form: 'Novel', sort: 'rating' })).text());
+assertIncludes(formHub, 'href="/language/malayalam/novel?sort=added"',
+  'a language+form hub sorts inside itself');
+assertIncludes(formHub, 'canonical" href="https://kitabi.in/language/malayalam/novel"',
+  '…and canonicals to its own plain address');
+
+// What the handler asks the API for. Pure, so the allow-list is tested.
+assert(
+  hubApiPath('https://kitabi.in/language/malayalam?sort=added&page=3', 'language', 'malayalam') ===
+    '/public/hub/language/malayalam?page=3&sort=added',
+  'a known order is passed to the API',
+);
+assert(
+  hubApiPath('https://kitabi.in/language/malayalam?sort=shelved', 'language', 'malayalam') ===
+    '/public/hub/language/malayalam?page=1',
+  'an unknown order is dropped — the API would 422, which reads as an outage',
+);
+assert(
+  hubApiPath('https://kitabi.in/language/malayalam?sort=title', 'language', 'malayalam') ===
+    '/public/hub/language/malayalam?page=1',
+  'the default order is not sent — one cache entry for the plain hub, not two',
+);
+assert(
+  hubApiPath('https://kitabi.in/language/malayalam/novel?sort=rating', 'language', 'malayalam', 'novel') ===
+    '/public/hub/language/malayalam?page=1&form=novel&sort=rating',
+  'the form rides along with the order',
+);
+
 var browseDoc = String(
   renderBrowse({ works: [], total: 0, page: 1, per_page: 24, languages: [], forms: [], genres: [] }).text(),
 );
