@@ -31,7 +31,7 @@
         <div class="m mono">{{ r.s.name_translit or '' }}
           · <a href="/catalog/series/{{ r.s.id }}">open ↗</a></div>
       </td>
-      <td>{% if r.count %}<b>{{ r.count }}</b>{% else %}<span class="pill mute">empty</span>{% endif %}</td>
+      <td>{% if r.count %}<a class="num" href="/catalog/series/{{ r.s.id }}">{{ r.count }}</a>{% else %}<span class="pill mute">empty</span>{% endif %}</td>
       <td class="m">{{ r.s.primary_language or '—' }}</td>
       <td style="text-align:right"><a class="btn s" href="/catalog/series/{{ r.s.id }}">Manage</a></td>
     </tr>

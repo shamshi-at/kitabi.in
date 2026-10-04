@@ -187,10 +187,12 @@ TOPICS: tuple[Topic, ...] = (
                     "minute**. Under it: how many different books that is, and how long the "
                     "longest sitting has been going. It refreshes by itself every twenty "
                     "seconds — you never need to reload the page.",
-                    "It deliberately does not say *who* is reading *what*. The console never "
-                    "opens a reader's shelf or reading progress, and a live list of names would "
-                    "be exactly that with a nicer frame around it. The count is what tells you "
-                    "the service is alive.",
+                    "The panel itself names nobody. **Click it** to see who is reading what — "
+                    "which reader, which book, and for how long. A sitting that has been running "
+                    "for hours is marked **stale?**: usually a timer nobody stopped.",
+                    "Opening that list is written to the [audit log](/audit) under your name, "
+                    "because it is a reader's private reading. The same is true of every list "
+                    "that shows a reader's own data.",
                     "This is the one number that is genuinely live. Everything else on the page "
                     "is counted up to a few minutes ago.",
                 ),
@@ -207,18 +209,23 @@ TOPICS: tuple[Topic, ...] = (
                     "early in the Indian morning these will look small; that is the clock, not a "
                     "problem.",
                     "**Minutes read today** — all reading time logged by everyone today, added up.",
+                    "**Click any tile** to see the rows behind its number — the new readers, the "
+                    "books shelved, the sittings that make up the minutes. The list always adds up "
+                    "to the number you clicked.",
                 ),
             ),
             Section(
                 "trends",
                 "Trends and the growth chart",
                 (
-                    "The four cards under **Trends** count the last 7, 28 or 90 days — you choose "
-                    "with the buttons. Under each number is the change against the period before "
-                    "it, so “▲ 12 (30%)” on the 28-day view means twelve more than the previous "
-                    "28 days.",
-                    "The chart below draws the same four things per day. Hover anywhere on it and "
-                    "the day's figures appear. The shaded line is new readers.",
+                    "The four cards under **Trends** count the last 24 hours, 7, 28 or 90 days — "
+                    "you choose with the buttons. Under each number is the change against the "
+                    "period before it, so “▲ 12 (30%)” on the 28-day view means twelve more than "
+                    "the previous 28 days. Click a card to list what it counted.",
+                    "The chart below draws the same four things per day — or per hour, on the "
+                    "24-hour view. Hover anywhere on it and that day's figures appear; **click** "
+                    "and you get that day's rows, opened on whichever of the four moved most. The "
+                    "shaded line is new readers.",
                     "A flat line is not necessarily bad — Kitabi is small, and single-digit days "
                     "are normal. What matters is the direction over weeks.",
                 ),
@@ -541,9 +548,12 @@ TOPICS: tuple[Topic, ...] = (
                     "The search box at the top of every page searches everything at once — books, "
                     "authors, publishers, readers — and understands typos and both scripts, so "
                     "“chemmeen” finds “ചെമ്മീൻ”. Press `/` anywhere to jump into it.",
-                    "The catalogue page's own filters narrow by language, type and what is "
-                    "missing. The “missing a cover / description / ISBN” counts are the best "
-                    "to-do list in the console.",
+                    "The catalogue page lists every work, newest first, and keeps loading as you "
+                    "scroll. Its filters narrow by language, type and what is missing. The "
+                    "“missing a cover / description / ISBN” counts are the best to-do list in "
+                    "the console.",
+                    "Every number in the list opens what it counts: **Editions** the book's "
+                    "printings, **Shelved**, **Ratings** and **Reviews** the readers behind them.",
                 ),
             ),
             Section(
@@ -634,12 +644,14 @@ TOPICS: tuple[Topic, ...] = (
                 "seeing",
                 "What you can and cannot see",
                 (
-                    "You can see what they have already made public — their name, handle, whether "
-                    "their profile and library are public — plus counts of what they have "
-                    "contributed, when they last used the app, and what kind of phone they use.",
-                    "You **cannot** see their shelf, their private notes, their reading progress, "
-                    "or reviews they haven't published. Not “you shouldn't” — the console has no "
-                    "screen that shows them.",
+                    "Everything. The right-hand card counts every kind of thing on the account — "
+                    "their shelf, books finished, reading sittings, notes, reviews (public and "
+                    "private), ratings, lending, connections, what they added to the catalogue — "
+                    "and each row opens the full list.",
+                    "The lists marked 🔒 are the reader's private data. Opening one writes a line "
+                    "to the [audit log](/audit) with your name, the reader and what you opened. "
+                    "Look when there is a reason to — a support request, a report, something that "
+                    "looks wrong — and not otherwise. The log is how that is kept honest.",
                 ),
             ),
             Section(
@@ -878,7 +890,8 @@ TOPICS: tuple[Topic, ...] = (
                     "A reader owns an edition.",
                     "**Catalogue** — the shared list of books, authors, publishers and series that "
                     "everyone sees.",
-                    "**Library** — one reader's private shelf. You cannot see inside it.",
+                    "**Library** — one reader's private shelf. You can open it from their page; "
+                    "doing so is recorded in the audit log.",
                     "**Entry** — one book on one reader's shelf.",
                     "**Sitting / session** — one stretch of reading, timed in the app.",
                     "**Claim** — a reader saying “this author is me”.",

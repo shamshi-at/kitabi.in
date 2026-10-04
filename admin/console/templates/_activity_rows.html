@@ -1,0 +1,116 @@
+{# The rows of one /activity list, and the "more" sentinel after them. Rendered
+   inside activity.html on the first load and on its own for every scrolled
+   page (admin.js swaps the sentinel for the next batch), so the two can never
+   draw a row differently. `context` hides the column that would only repeat
+   the page's own subject: a reader's list doesn't name the reader on every
+   row, a book's list doesn't name the book. #}
+{% import "_links.html" as L with context %}
+{% set show_reader = context != 'reader' %}
+{% set show_book = context != 'work' %}
+{% set STATUS = {'pending': 'Not started', 'reading': 'Reading', 'read': 'Read', 'dnf': 'Did not finish'} %}
+{% macro when(at) -%}<td class="m mono" style="white-space:nowrap;text-align:right">{{ at.strftime('%-d %b %Y, %H:%M') if at else '—' }}</td>{%- endmacro %}
+{% macro reader_cell(r) -%}{% if context != 'reader' %}<td>{{ L.reader(r.reader_id, r.reader) }}</td>{% endif %}{%- endmacro %}
+{% macro book_cell(r) -%}{% if context != 'work' %}<td>{{ L.work(r.work_id, r.title) }}</td>{% endif %}{%- endmacro %}
+{% macro day(d) -%}{{ d.strftime('%-d %b %Y') if d else '—' }}{%- endmacro %}
+
+{% for r in rows %}
+{% if kind == 'readers' %}
+<tr><td>{{ L.reader(r.reader_id, r.reader) }}
+    <div class="m">{% if r.reader.username %}@{{ r.reader.username }} · {% endif %}{{ r.reader.email }}</div></td>
+  <td>{% if r.reader.suspended_at %}<span class="pill no">Suspended</span>{% else %}<span class="pill ok">Active</span>{% endif %}
+    {% if r.reader.profile_visible %}<span class="pill info">Public profile</span>{% endif %}</td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'active' %}
+<tr><td>{{ L.reader(r.reader_id, r.reader) }}{% if r.reader %}<div class="m">{{ r.reader.email }}</div>{% endif %}</td>
+  <td><b>{{ "{:,}".format(r.ops) }}</b> <span class="m">change{{ '' if r.ops == 1 else 's' }} synced</span></td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'now' %}
+<tr>{{ reader_cell(r) }}{{ book_cell(r) }}
+  <td><b>{{ "{:,}".format(r.minutes) }} min</b>
+    {% if r.minutes > 180 %}<span class="pill pend" title="Longer than any sitting the app lets run — likely a timer nobody stopped">stale?</span>{% endif %}</td>
+  <td class="m">{% if r.s.page_start %}from p. {{ r.s.page_start }}{% else %}—{% endif %}</td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind in ('shelved', 'finished') %}
+{% set e = r.e %}{% set ed = r.edition %}
+<tr>{{ reader_cell(r) }}
+  {% if show_book %}<td>{{ L.work(r.work_id, r.title) }}
+    <div class="m">{{ e.ownership }}{% if ed.format %} · {{ ed.format }}{% endif %}{% if ed.page_count %} · {{ ed.page_count }} pp{% endif %}{% if ed.isbn %} · <span class="mono">{{ ed.isbn }}</span>{% endif %}{% if e.is_favorite %} · ★ favourite{% endif %}</div>
+    {% if r.tags %}<div style="margin-top:3px">{% for t in r.tags %}<span class="pill mute">{{ t }}</span> {% endfor %}</div>{% endif %}
+    {% if e.notes %}<div class="m" style="font-style:italic;margin-top:3px">“{{ e.notes }}”</div>{% endif %}</td>
+  {% else %}<td class="m">{{ e.ownership }}{% if e.is_favorite %} · ★{% endif %}{% if r.tags %} · {{ r.tags|join(', ') }}{% endif %}</td>{% endif %}
+  <td><span class="pill {{ 'ok' if e.status == 'read' else ('info' if e.status == 'reading' else 'mute') }}">{{ STATUS.get(e.status, e.status) }}</span>
+    {% if e.current_page %}<div class="m">p. {{ e.current_page }}{% if ed.page_count %} of {{ ed.page_count }}{% endif %}</div>{% endif %}</td>
+  <td class="m">{% if e.start_date %}started {{ day(e.start_date) }}{% endif %}{% if e.start_date and e.finish_date %}<br>{% endif %}{% if e.finish_date %}finished {{ day(e.finish_date) }}{% endif %}{% if not e.start_date and not e.finish_date %}—{% endif %}</td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'sittings' %}
+{% set s = r.x %}
+<tr>{{ reader_cell(r) }}{{ book_cell(r) }}
+  <td><b>{{ r.minutes }} min</b>{% if s.auto_stopped %} <span class="pill mute" title="Stopped by the app, not the reader">auto-stopped</span>{% endif %}</td>
+  <td class="m">{% if s.page_start and s.page_end %}p. {{ s.page_start }} → {{ s.page_end }}{% elif s.page_end %}ended on p. {{ s.page_end }}{% else %}—{% endif %}</td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'notes' %}
+{% set n = r.x %}
+<tr>{{ book_cell(r) }}
+  <td style="max-width:520px;white-space:pre-wrap">{{ n.body }}
+    {% if n.page_start %}<div class="m">p. {{ n.page_start }}{% if n.page_end and n.page_end != n.page_start %}–{{ n.page_end }}{% endif %}</div>{% endif %}</td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'reviews' %}
+<tr>{{ reader_cell(r) }}{% if show_book %}<td>{{ L.subject(r.subject) }}</td>{% endif %}
+  <td style="max-width:520px">{% if r.x.visible %}<span class="pill ok">Public</span>{% else %}<span class="pill mute">Private</span>{% endif %}
+    <div style="margin-top:4px;white-space:pre-wrap">{{ r.x.body }}</div></td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'ratings' %}
+<tr>{{ reader_cell(r) }}{% if show_book %}<td>{{ L.subject(r.subject) }}</td>{% endif %}
+  <td style="color:var(--gold);letter-spacing:1px" title="{{ r.x.value }} of 5">{{ '★' * r.x.value }}<span style="color:var(--line)">{{ '★' * (5 - r.x.value) }}</span></td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'lending' %}
+{% set l = r.x %}
+<tr>{{ book_cell(r) }}
+  <td>{% if l.direction == 'borrowed' %}<span class="pill info">Borrowed from</span>{% else %}<span class="pill gold">Lent to</span>{% endif %}
+    {% if l.borrower_user_id %}{{ L.reader(l.borrower_user_id, r.other, l.borrower_name) }}{% else %}{{ l.borrower_name }}{% endif %}
+    {% if l.note %}<div class="m" style="font-style:italic">“{{ l.note }}”</div>{% endif %}</td>
+  <td class="m">on {{ day(l.lent_date) }}{% if l.due_date %}<br>due {{ day(l.due_date) }}{% endif %}</td>
+  <td>{% if l.returned_date %}<span class="pill ok">Returned {{ day(l.returned_date) }}</span>{% else %}<span class="pill pend">Out</span>{% endif %}</td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'works' %}
+{% set w = r.x %}
+<tr><td>{{ L.work(w.id, w.title) }}
+    <div class="m">{% for a in w.authors %}{{ L.author(a.id, a.pen_name or a.name) }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}
+      {% if w.language %} · {{ w.language }}{% endif %}{% if w.form %} · {{ w.form }}{% endif %}</div></td>
+  {% if show_reader %}<td>{% if r.adder_id %}{{ L.reader(r.adder_id, r.adder) }}{% else %}<span class="m">Imported</span>{% endif %}</td>{% endif %}
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'authors' %}
+{% set a = r.x %}
+<tr><td>{{ L.author(a.id, a.name) }}
+    <div class="m mono">{{ a.name_translit or '' }}{% if a.primary_language %} · {{ a.primary_language }}{% endif %}</div></td>
+  {% if show_reader %}<td>{% if r.adder_id %}{{ L.reader(r.adder_id, r.adder) }}{% else %}<span class="m">Imported</span>{% endif %}</td>{% endif %}
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'connections' %}
+{% set c = r.x %}
+<tr><td>{{ L.reader(r.other_id, r.other) }}</td>
+  <td class="m">{{ 'They asked' if not r.sent else 'Asked them' }}</td>
+  <td><span class="pill {{ 'ok' if c.status == 'accepted' else ('no' if c.status in ('blocked', 'denied') else 'pend') }}">{{ c.status }}</span></td>
+  {{ when(r.at) }}</tr>
+
+{% elif kind == 'log' %}
+{% set x = r.x %}
+<tr><td><span class="pill info">{{ x.event_type }}</span></td>
+  <td class="m">{{ x.entity_type }}{% if x.entity_type in ('work', 'works') %} · {{ L.work(x.entity_id, 'open') }}{% endif %}</td>
+  <td class="m mono" style="font-size:11px;max-width:420px;overflow-wrap:anywhere">{{ r.payload }}</td>
+  {{ when(r.at) }}</tr>
+{% endif %}
+{% endfor %}
+{% if next_url %}
+<tr class="more" data-more="{{ next_url }}"><td colspan="9"><a class="btn s" href="{{ next_url }}" data-no-loader>Load more</a></td></tr>
+{% endif %}

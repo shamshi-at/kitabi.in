@@ -9,7 +9,7 @@
     <div class="lbl">Publisher</div>
     <table style="margin-top:6px">
       <tr><td>Primary language</td><td style="text-align:right">{{ p.primary_language or '—' }}</td></tr>
-      <tr><td>Works in catalog</td><td style="text-align:right"><b>{{ works | length }}</b></td></tr>
+      <tr><td>Works in catalog</td><td style="text-align:right"><a class="num" href="#works">{{ works_total }}</a></td></tr>
       <tr><td>Source</td><td style="text-align:right">{{ p.external_source or 'reader-added' }}</td></tr>
     </table>
     <div class="lbl" style="margin-top:16px">Logo</div>
@@ -53,7 +53,7 @@
     <div class="note" style="margin-top:12px">Publisher id <span class="mono">{{ p.id }}</span></div>
   </div>
   <div class="card">
-    <div class="lbl">Works ({{ works|length }}{% if lang %} of {{ works_total }}{% endif %})</div>
+    <div class="lbl" id="works" style="scroll-margin-top:80px">Works ({{ works|length }}{% if lang %} of {{ works_total }}{% endif %})</div>
     {% include "_lang_filter.html" %}
     <div class="tbl" style="margin-top:8px;border:none">
       <table>

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% import "_links.html" as L with context %}
+{% block title %}{{ this.label }} · Kitabi Admin{% endblock %}
+{% block heading %}{% if subject_reader %}{{ subject_reader_name }}{% elif subject_work %}{{ subject_work.title }}{% else %}{{ this.label }}{% endif %}{% endblock %}
+{% block subheading %}{% if subject_reader %}Everything on this account · {{ subject_reader.email }}{% elif subject_work %}Readers of this book{% else %}{{ window_label }}{% endif %}{% endblock %}
+{% block topactions %}
+{% if subject_reader %}<a class="btn s" href="/readers/{{ subject_reader.id }}">← Reader</a>
+{% elif subject_work %}{% if admin.role in ['editor', 'super_admin'] %}<a class="btn s" href="/catalog/works/{{ subject_work.id }}">← Book</a>{% endif %}
+{% else %}<a class="btn s" href="/">← Dashboard</a>{% endif %}
+{% endblock %}
+{% block content %}
+
+{# What is listed: one tab per kind that makes sense here, each with its count
+   under the same window — so switching tabs never changes the question, only
+   which answer you are looking at. #}
+<nav class="tabs" aria-label="What to list">
+  {% for k in kinds %}
+  <a class="tab {% if k.key == kind %}on{% endif %}" href="{{ tab_links[k.key] }}"
+    {% if k.key == kind %}aria-current="page"{% endif %}>{{ k.label }}
+    <b>{{ "{:,}".format(tab_counts[k.key]) }}</b>{% if k.private %}<i title="Private to the reader — opening it is audited">🔒</i>{% endif %}</a>
+  {% endfor %}
+</nav>
+
+<div class="rangebar" style="margin-top:12px">
+  <div><span class="lbl">Window</span>
+    <b style="font-size:13px">{{ window_label }}</b>{% if not this.windowed %} <span class="m">— “{{ this.label }}” is a live state, so the window doesn’t narrow it</span>{% endif %}</div>
+  <div class="rangepick" style="flex-wrap:wrap">
+    {% if explicit_window %}<a class="btn s on" href="{{ window_links['all'] }}" title="Clear this window">{{ window_label }} ✕</a>{% endif %}
+    {% for key, label in windows.items() %}
+    <a class="btn s {% if range_key == key %}on{% endif %}" href="{{ window_links[key] }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if this.private %}
+<div class="note warn" style="margin:4px 0 12px">This list is a reader’s private data. Opening it has
+been written to the <a href="/audit?q=privacy.view&period=1">audit log</a> under your name.</div>
+{% endif %}
+
+<div class="worklist-head" style="margin-top:6px">
+  <div><span class="lbl">Showing</span>
+    <b>{{ this.label }} · {{ "{:,}".format(tab_counts[kind]) }}</b>
+    {% if minutes is not none %}<span class="m">· {{ "{:,}".format(minutes) }} minutes read in all</span>{% endif %}</div>
+  <span class="m" style="font-size:11.5px;color:var(--ink-soft)">{{ 'Longest-running first' if kind == 'now' else ('Most recently active first' if kind == 'active' else 'Newest first') }}</span>
+</div>
+
+{% set R = context != 'reader' %}
+{% set B = context != 'work' %}
+<div class="tbl" style="margin-top:10px">
+  <table>
+    <tr>
+    {% if kind == 'readers' %}<th>Reader</th><th>Account</th><th style="text-align:right">Joined</th>
+    {% elif kind == 'active' %}<th>Reader</th><th>Activity</th><th style="text-align:right">Last sync</th>
+    {% elif kind == 'now' %}{% if R %}<th>Reader</th>{% endif %}{% if B %}<th>Book</th>{% endif %}<th>Running for</th><th>Page</th><th style="text-align:right">Started</th>
+    {% elif kind in ('shelved', 'finished') %}{% if R %}<th>Reader</th>{% endif %}<th>{{ 'Book' if B else 'Copy' }}</th><th>Status</th><th>Dates</th><th style="text-align:right">Shelved</th>
+    {% elif kind == 'sittings' %}{% if R %}<th>Reader</th>{% endif %}{% if B %}<th>Book</th>{% endif %}<th>Length</th><th>Pages</th><th style="text-align:right">Started</th>
+    {% elif kind == 'notes' %}{% if B %}<th>Book</th>{% endif %}<th>Note</th><th style="text-align:right">Written</th>
+    {% elif kind == 'reviews' %}{% if R %}<th>Reader</th>{% endif %}{% if B %}<th>On</th>{% endif %}<th>Review</th><th style="text-align:right">Written</th>
+    {% elif kind == 'ratings' %}{% if R %}<th>Reader</th>{% endif %}{% if B %}<th>On</th>{% endif %}<th>Rating</th><th style="text-align:right">Rated</th>
+    {% elif kind == 'lending' %}{% if B %}<th>Book</th>{% endif %}<th>With</th><th>Dates</th><th>State</th><th style="text-align:right">Recorded</th>
+    {% elif kind == 'works' %}<th>Work</th>{% if R %}<th>Added by</th>{% endif %}<th style="text-align:right">Added</th>
+    {% elif kind == 'authors' %}<th>Author</th>{% if R %}<th>Added by</th>{% endif %}<th style="text-align:right">Added</th>
+    {% elif kind == 'connections' %}<th>With</th><th>Who asked</th><th>Status</th><th style="text-align:right">Since</th>
+    {% elif kind == 'log' %}<th>Event</th><th>On</th><th>Detail</th><th style="text-align:right">When</th>
+    {% endif %}
+    </tr>
+    {% include "_activity_rows.html" %}
+    {% if not rows %}<tr><td colspan="9" class="m" style="text-align:center;padding:26px">
+      Nothing here{% if this.windowed and range_key != 'all' %} in this window — try <a href="{{ window_links['all'] }}">all time</a>{% endif %}.</td></tr>{% endif %}
+  </table>
+</div>
+{% endblock %}

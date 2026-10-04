@@ -8,6 +8,7 @@ is editor+ only, and is audited. It reuses the API's merge_preview / merge_works
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated
+from urllib.parse import urlencode
 
 from app.services import buy_links as buy_links_service  # noqa: E402
 from app.services import (
@@ -20,7 +21,7 @@ from sqlalchemy import Text, cast, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from .. import assets, cache, queries, security
+from .. import assets, cache, insights, queries, security
 from ..deps import CurrentAdmin, DbSession, RequireEditor, client_ip
 from ..flash import pop_flash, set_flash
 from ..models_ref import (
@@ -382,7 +383,7 @@ async def _work_rows(db: DbSession, works: list) -> list[dict]:
                 )
             ).all()
         )
-    return [
+    rows = [
         {
             "w": w,
             "author": ", ".join(a.name for a in w.authors) if w.authors else "—",
@@ -390,9 +391,13 @@ async def _work_rows(db: DbSession, works: list) -> list[dict]:
             "shelved": int(shelved_counts.get(w.id, 0)),
             "ratings": int(reader_counts["ratings"].get(w.id, 0)),
             "reviews": int(reader_counts["reviews"].get(w.id, 0)),
+            "adder_id": w.created_by_user_id,
         }
         for w in works
     ]
+    # Who added each — one query for the page, "Imported" for the bulk seed.
+    await insights.attach_adders(db, rows)
+    return rows
 
 
 # The quality-gap worklists the dashboard health bars and the catalog gap card
@@ -405,25 +410,35 @@ GAP_LABELS = {
 }
 
 
-def _gap_stmt(gap: str):  # noqa: ANN201 — SQLAlchemy Select
-    base = select(Work).options(selectinload(Work.authors)).where(Work.deleted_at.is_(None))
+def _gap_cond(gap: str):  # noqa: ANN201 — SQLAlchemy boolean expression
     if gap == "no_desc":
-        return base.where(Work.description.is_(None))
+        return Work.description.is_(None)
     if gap == "no_cover":
-        return base.where(
-            Work.id.in_(
-                select(Edition.work_id).where(
-                    Edition.deleted_at.is_(None), Edition.cover_url.is_(None)
-                )
-            )
+        return Work.id.in_(
+            select(Edition.work_id).where(Edition.deleted_at.is_(None), Edition.cover_url.is_(None))
         )
     if gap == "no_isbn":
-        return base.where(
-            Work.id.in_(
-                select(Edition.work_id).where(Edition.deleted_at.is_(None), Edition.isbn.is_(None))
-            )
+        return Work.id.in_(
+            select(Edition.work_id).where(Edition.deleted_at.is_(None), Edition.isbn.is_(None))
         )
     return None
+
+
+# Pages of the scrolling works list (catalog.html → _catalog_rows.html).
+PAGE_SIZE = 50
+
+
+def _list_order(sort: str) -> tuple:
+    """SQL ordering for the works list — the same keys `_sort_works` applies to a
+    search result in Python. Every key ends on `Work.id` so a page boundary
+    between two equal rows can't show one of them twice or not at all."""
+    if sort == "title":
+        return (Work.title.asc(), Work.id)
+    if sort == "year_desc":
+        return (Work.first_publish_year.desc().nulls_last(), Work.title.asc(), Work.id)
+    if sort == "year_asc":
+        return (Work.first_publish_year.asc().nulls_last(), Work.title.asc(), Work.id)
+    return (Work.created_at.desc(), Work.id)
 
 
 async def _adder_name(db: DbSession, user_id: uuid.UUID) -> str:
@@ -432,10 +447,10 @@ async def _adder_name(db: DbSession, user_id: uuid.UUID) -> str:
 
 
 SORT_LABELS = {
-    "title": "Title A–Z",
-    "year_desc": "Newest first",
-    "year_asc": "Oldest first",
     "added": "Recently added",
+    "title": "Title A–Z",
+    "year_desc": "Published — newest first",
+    "year_asc": "Published — oldest first",
 }
 
 
@@ -496,7 +511,7 @@ def _sort_works(works: list, sort: str) -> list:
 
 
 @router.get("")
-async def catalog(
+async def catalog(  # noqa: C901, PLR0912
     request: Request,
     admin: RequireEditor,
     db: DbSession,
@@ -507,66 +522,80 @@ async def catalog(
     lang: str = Query(default=""),
     form: str = Query(default=""),
     sort: str = Query(default=""),
+    page: int = Query(default=1, ge=1),
 ) -> HTMLResponse:
+    """The works list. With a search it is a relevance-ranked answer; without
+    one it is the whole catalogue — newest first unless told otherwise — that
+    keeps loading as you scroll, narrowed by any worklist, contributor,
+    language or Type. Every narrowing is SQL, so the count in the heading and
+    the rows under it are the same question."""
     q = q.strip()
     lang = lang.strip()
     form = form.strip()
     sort = sort if sort in SORT_LABELS else ""
-    filter_label = None
-    browsed = False  # True when browse_works already applied lang/form/sort in SQL
+    gap = gap if gap in GAP_LABELS else ""
+    total = None
+    next_url = None
 
-    if added_by is not None:
-        works = list(
-            (
-                await db.execute(
-                    select(Work)
-                    .options(selectinload(Work.authors))
-                    .where(Work.created_by_user_id == added_by, Work.deleted_at.is_(None))
-                    .order_by(Work.title.asc())
-                    .limit(300)
-                )
-            )
-            .scalars()
-            .all()
-        )
-        filter_label = f"Works added by {await _adder_name(db, added_by)}"
-    elif gap in GAP_LABELS:
-        works = list(
-            (await db.execute(_gap_stmt(gap).order_by(Work.title.asc()).limit(300))).scalars().all()
-        )
-        filter_label = GAP_LABELS[gap]
-    elif q:
+    if q:
+        # Search keeps its relevance order (and its own cap); language / Type /
+        # sort are post-filters over the handful of matches.
         works = await catalog_service.search_local(db, q)
-    elif lang or form or sort:
-        # Pure browse — no text query, but the reader has picked a filter. Push
-        # language / Type / sort into SQL so the 300 cap is applied to the right
-        # rows, not the first 300 alphabetically.
-        works = await catalog_service.browse_works(
-            db,
-            300,
-            0,
-            languages=[lang] if lang else None,
-            form=form or None,
-            sort=sort or "title",
-        )
-        browsed = True
-        picked = " · ".join(p for p in (lang, form, SORT_LABELS.get(sort)) if p)
-        filter_label = f"Browsing catalog — {picked}" if picked else "Browsing catalog"
-    else:
-        works = []
-
-    # Language / Type as post-filters for the search / gap / added_by lists
-    # (browse already applied them in SQL). Lists here are capped at 300, so a
-    # Python pass is cheap and keeps one filter vocabulary across every mode.
-    if not browsed:
         if lang:
             works = [w for w in works if w.language == lang]
         if form:
             works = [w for w in works if w.form == form]
         if sort:
             works = _sort_works(works, sort)
+        filter_label = None
+    else:
+        conds = [Work.deleted_at.is_(None)]
+        if added_by is not None:
+            conds.append(Work.created_by_user_id == added_by)
+        if gap:
+            conds.append(_gap_cond(gap))
+        if lang:
+            conds.append(Work.language == lang)
+        if form:
+            conds.append(Work.form == form)
+        total = int(await db.scalar(select(func.count()).select_from(Work).where(*conds)) or 0)
+        works = list(
+            (
+                await db.execute(
+                    select(Work)
+                    .options(selectinload(Work.authors))
+                    .where(*conds)
+                    .order_by(*_list_order(sort or "added"))
+                    .offset((page - 1) * PAGE_SIZE)
+                    .limit(PAGE_SIZE)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if page * PAGE_SIZE < total:
+            params = [(k, v) for k, v in request.query_params.multi_items() if k != "page"]
+            next_url = f"/catalog?{urlencode([*params, ('page', str(page + 1))])}"
+        if added_by is not None:
+            filter_label = f"Works added by {await _adder_name(db, added_by)}"
+        elif gap:
+            filter_label = GAP_LABELS[gap]
+        else:
+            filter_label = "All works"
+        picked = " · ".join(p for p in (lang, form) if p)
+        if picked:
+            filter_label = f"{filter_label} — {picked}"
 
     rows = await _work_rows(db, works)
+
+    # The next page of the scrolling list: rows only.
+    if request.headers.get("x-requested-with") == "fetch":
+        return templates.TemplateResponse(
+            request,
+            "_catalog_rows.html",
+            {"admin": admin, "rows": rows, "next_url": next_url, "gap": gap},
+        )
+
     gaps = await _gap_counts(db)
     badges = await queries.nav_badges(db)
     flash = pop_flash(request)
@@ -579,6 +608,8 @@ async def catalog(
             "badges": badges,
             "q": q,
             "rows": rows,
+            "total": total,
+            "next_url": next_url,
             "gaps": gaps,
             "gap": gap,
             "added_by": added_by,
@@ -628,24 +659,12 @@ async def book_detail(
         )
         for e in work.editions
     }
-    ratings = int(
-        await db.scalar(select(func.count()).select_from(Rating).where(Rating.work_id == work_id))
-        or 0
-    )
-    reviews = int(
-        await db.scalar(select(func.count()).select_from(Review).where(Review.work_id == work_id))
-        or 0
-    )
-    shelved = int(
-        await db.scalar(
-            select(func.count())
-            .select_from(LibraryEntry)
-            .where(
-                LibraryEntry.edition_id.in_(select(Edition.id).where(Edition.work_id == work_id))
-            )
-        )
-        or 0
-    )
+    # Live rows only — the same counts the delete guard judges by and the
+    # /activity lists these numbers open, so the page, the guard and the list
+    # agree. (These used to count soft-deleted rows too: an un-rated book said
+    # "readers depend on this" while the guard would have let it go.)
+    footprint = await _work_footprint(db, work_id)
+    adder = await db.get(Profile, work.created_by_user_id) if work.created_by_user_id else None
     series_q = series_q.strip()
     series_matches = await catalog_service.search_series(db, series_q, limit=8) if series_q else []
     series_counts = await catalog_service.series_book_counts(db, [s.id for s in series_matches])
@@ -659,9 +678,8 @@ async def book_detail(
             "active": "catalog",
             "badges": badges,
             "w": work,
-            "ratings": ratings,
-            "reviews": reviews,
-            "shelved": shelved,
+            **footprint,
+            "adder": adder,
             "amazon_links": amazon_links,
             "series_q": series_q,
             "series_matches": [
@@ -1175,6 +1193,7 @@ async def author_detail(
     linked = None
     if author.linked_user_id is not None:
         linked = await db.get(Profile, author.linked_user_id)
+    adder = await db.get(Profile, author.created_by_user_id) if author.created_by_user_id else None
     pending_claims = int(
         await db.scalar(
             select(func.count())
@@ -1199,6 +1218,7 @@ async def author_detail(
             "work_langs": work_langs,
             "lang": lang.strip(),
             "linked": linked,
+            "adder": adder,
             "pending_claims": pending_claims,
             "kind": "authors",
             "merge_q": merge_q,

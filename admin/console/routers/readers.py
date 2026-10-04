@@ -1,7 +1,13 @@
-"""Readers — support, not surveillance. Find an account, see the identity it has
-already made public plus aggregate contribution counts, and act when it
-misbehaves. It never shows a reader's private shelf, notes or unpublished
-reviews. Suspend (any admin) sets profiles.suspended_at, which the API's auth
+"""Readers — find an account, see everything on it, and act when it misbehaves.
+
+The reader page counts every kind of thing an account holds — public
+contributions and private Layer-2 data alike — and each count opens its rows
+on /activity. Until 4 Oct 2026 the private half was totals only ("support, not
+surveillance"); the owner decided operators should be able to open a reader's
+whole account, so they can, and **every opening of a private list is written to
+the audit log** with the admin, the reader and what was opened (see
+`routers/activity.py`, which is the only place those rows are rendered).
+Suspend (any admin) sets profiles.suspended_at, which the API's auth
 dependency enforces — a suspended reader is locked out until unsuspended, with
 their data intact. Hard account deletion is intentionally NOT a console button:
 a real erasure across Layer-2 tables + Supabase Auth is a separate, deliberate
@@ -22,7 +28,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, or_, select
 
-from .. import queries, security
+from .. import activity, queries, security
 from ..deps import CurrentAdmin, DbSession, client_ip
 from ..flash import pop_flash, set_flash
 from ..models_ref import DeviceToken, Profile, SyncOp
@@ -168,6 +174,10 @@ async def reader_detail(
         set_flash(resp, "err", "No such reader.")
         return resp
     score = await scoring_service.compute_score(db, reader_id)
+    # Every kind on the account, counted with the same queries the lists use —
+    # so "Books shelved 12" opens exactly twelve rows.
+    scope = activity.Scope(reader_id=reader_id)
+    items = await activity.counts(db, scope)
     platforms = (
         await db.execute(
             select(DeviceToken.platform, func.count())
@@ -186,6 +196,9 @@ async def reader_detail(
             "badges": badges,
             "p": profile,
             "score": score,
+            "kinds": activity.kinds_for("reader"),
+            "items": items,
+            "minutes": await activity.minutes(db, scope),
             "last_seen": await _last_seen(db, reader_id),
             "platforms": [(p or "unknown", int(n)) for p, n in platforms],
             "flash": flash,

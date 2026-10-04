@@ -58,22 +58,26 @@
   </label>
   <label>Sort
     <select name="sort" onchange="this.form.requestSubmit()">
-      <option value="">{{ 'Relevance' if q else 'Default' }}</option>
-      {% for key, lbl in sort_options.items() %}<option value="{{ key }}"{% if key == sort %} selected{% endif %}>{{ lbl }}</option>{% endfor %}
+      {% if q %}<option value="">Relevance</option>{% endif %}
+      {% for key, lbl in sort_options.items() %}<option value="{{ key }}"{% if key == sort or (not q and not sort and loop.first) %} selected{% endif %}>{{ lbl }}</option>{% endfor %}
     </select>
   </label>
   <noscript><button class="btn s">Apply</button></noscript>
   {% if lang or form or sort %}<a class="btn s ghost" href="{{ base }}">Clear filters</a>{% endif %}
 </form>
 
-{% if filter_label %}
 <div class="worklist-head">
-  <div><span class="lbl">Worklist</span>
-    <b>{{ filter_label }}</b> · {{ rows | length }} shown{% if rows | length == 300 %} (first 300){% endif %}</div>
-  <a class="btn s" href="/catalog">← Back to catalog</a>
+  {% if q %}
+  <div><span class="lbl">Search</span>
+    <b>{{ rows | length }} match{{ '' if rows | length == 1 else 'es' }} for “{{ q }}”</b></div>
+  <a class="btn s" href="/catalog">← All works</a>
+  {% else %}
+  <div><span class="lbl">{{ 'Worklist' if gap or added_by else 'Catalog' }}</span>
+    <b>{{ filter_label }}</b> · {{ "{:,}".format(total) }} work{{ '' if total == 1 else 's' }}
+    <span class="m">· {{ sort_options[sort or 'added']|lower }}{% if next_url %} · scroll for more{% endif %}</span></div>
+  {% if gap or added_by %}<a class="btn s" href="/catalog">← All works</a>{% endif %}
+  {% endif %}
 </div>
-{% endif %}
-{% if q or filter_label %}
 <form id="bulkform" data-bulklist method="post" action="/catalog/works/delete">
   <input type="hidden" name="confirm" value="DELETE">
   <input type="hidden" name="back" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
@@ -82,35 +86,16 @@
     <table>
       <tr>
         <th style="width:34px"><input type="checkbox" data-selall aria-label="Select all"></th>
-        <th style="width:36%">Title</th><th>Author</th><th>Editions</th><th>Shelved</th>
+        <th style="width:32%">Title</th><th>Author</th><th>Added</th><th>Editions</th><th>Shelved</th>
         <th>Ratings</th><th>Reviews</th></tr>
-      {% for r in rows %}
-      <tr>
-        <td><input type="checkbox" class="rowchk" name="ids" value="{{ r.w.id }}"
-          data-name="{{ r.w.title }}"
-          data-sub="{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}"
-          data-count="{{ r.shelved or 0 }}"
-          aria-label="Select {{ r.w.title }}"></td>
-        <td><button type="button" class="peek t" data-peek="/catalog/peek/works/{{ r.w.id }}">{{ r.w.title }}</button>
-          <div class="m mono">{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}
-            · <a href="/catalog/works/{{ r.w.id }}">open ↗</a></div></td>
-        <td class="m">{{ r.author }}</td>
-        <td>{{ r.editions }}</td>
-        <td>{{ r.shelved }}</td>
-        <td>{{ r.ratings or 0 }}</td>
-        <td>{{ r.reviews or 0 }}</td>
-      </tr>
-      {% endfor %}
-      {% if not rows %}<tr><td colspan="7" class="m" style="text-align:center;padding:24px">
-        {% if q %}No matches for “{{ q }}”.{% else %}Nothing here — this gap is clear.{% endif %}</td></tr>{% endif %}
+      {% include "_catalog_rows.html" %}
+      {% if not rows %}<tr><td colspan="8" class="m" style="text-align:center;padding:24px">
+        {% if q %}No matches for “{{ q }}”.{% elif gap %}Nothing here — this gap is clear.{% else %}No works match these filters.{% endif %}</td></tr>{% endif %}
     </table>
   </div>
 </form>
 {% with kind = "works", unit = "editions", deletable = True %}{% include "_bulk_merge.html" %}{% endwith %}
 <p class="cap" style="margin-top:8px;font-size:11.5px;color:var(--ink-soft)">Tick rows, then
 <b>Merge</b> to fold duplicate books into one — any number at once — or <b>Delete</b> the junk.
-Merge keeps readers; delete is for rows nobody has.</p>
-{% else %}
-<div class="note">Search a title or author above, pick a <b>language</b> or <b>Type</b> to browse, or open a quality-gap worklist.</div>
-{% endif %}
+Merge keeps readers; delete is for rows nobody has. Every number opens what it counts.</p>
 {% endblock %}

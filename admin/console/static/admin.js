@@ -637,3 +637,58 @@ if ("serviceWorker" in navigator) {
   });
   start();
 })();
+
+// Scrolling lists — a table whose last row is `tr[data-more]` keeps loading as
+// you reach the bottom. The sentinel's URL is the same page with page=N+1; asked
+// with X-Requested-With it answers with just the next rows (and the next
+// sentinel, if there is one), which replace this sentinel in place.
+//
+// Progressive enhancement: the sentinel holds a real "Load more" link, so with
+// no JS (or no IntersectionObserver) it is plain paging; a click on it loads in
+// place too. After a batch lands, a `change` is dispatched so the bulk-select
+// bar re-counts — a ticked "select all" must not silently claim rows that
+// arrived after it was ticked.
+(function () {
+  if (!document.querySelector("tr[data-more]")) return;
+
+  async function load(row) {
+    if (!row || row.dataset.busy) return;
+    row.dataset.busy = "1";
+    row.classList.add("loading");
+    if (io) io.unobserve(row);
+    try {
+      const res = await fetch(row.dataset.more, { headers: { "X-Requested-With": "fetch" } });
+      if (!res.ok) throw new Error(res.status);
+      const tpl = document.createElement("template");
+      tpl.innerHTML = await res.text();
+      const parent = row.parentNode;
+      row.replaceWith(tpl.content);
+      parent.dispatchEvent(new Event("change", { bubbles: true }));
+      parent.querySelectorAll("tr[data-more]").forEach(watch);
+    } catch (_) {
+      // Leave the link in place — a click retries, and a blip isn't fatal.
+      delete row.dataset.busy;
+      row.classList.remove("loading");
+    }
+  }
+
+  const io =
+    "IntersectionObserver" in window
+      ? new IntersectionObserver(
+          (entries) => entries.forEach((e) => e.isIntersecting && load(e.target)),
+          { rootMargin: "600px 0px" }
+        )
+      : null;
+
+  function watch(row) {
+    if (io) io.observe(row);
+  }
+
+  document.querySelectorAll("tr[data-more]").forEach(watch);
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("tr[data-more] a");
+    if (!a || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    load(a.closest("tr[data-more]"));
+  });
+})();

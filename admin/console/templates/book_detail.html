@@ -12,12 +12,15 @@
         {% for a in w.authors %}<a href="/catalog/authors/{{ a.id }}">{{ a.pen_name or a.name }}</a>{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</td></tr>
       {% if w.translators %}<tr><td>Translators</td><td style="text-align:right">
         {% for t in w.translators %}<a href="/catalog/authors/{{ t.id }}">{{ t.name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>{% endif %}
-      <tr><td>Language</td><td style="text-align:right">{{ w.language or '—' }}</td></tr>
-      <tr><td>Type (form)</td><td style="text-align:right">{{ w.form or '—' }}</td></tr>
+      <tr><td>Language</td><td style="text-align:right">{% if w.language %}<a href="/catalog?lang={{ w.language|urlencode }}" title="Every work in {{ w.language }}">{{ w.language }}</a>{% else %}—{% endif %}</td></tr>
+      <tr><td>Type (form)</td><td style="text-align:right">{% if w.form %}<a href="/catalog?form={{ w.form|urlencode }}" title="Every {{ w.form }}">{{ w.form }}</a>{% else %}—{% endif %}</td></tr>
       <tr><td>Genres</td><td style="text-align:right">{{ w.genres | map(attribute='name') | join(', ') if w.genres else '—' }}</td></tr>
-      <tr><td>Shelved by readers</td><td style="text-align:right"><b>{{ shelved }}</b></td></tr>
-      <tr><td>Ratings / reviews</td><td style="text-align:right"><b>{{ ratings }}</b> / <b>{{ reviews }}</b></td></tr>
+      <tr><td>Shelved by readers</td><td style="text-align:right"><a class="num" href="/activity/shelved?work={{ w.id }}">{{ shelved }}</a></td></tr>
+      <tr><td>Ratings / reviews</td><td style="text-align:right"><a class="num" href="/activity/ratings?work={{ w.id }}">{{ ratings }}</a> / <a class="num" href="/activity/reviews?work={{ w.id }}">{{ reviews }}</a></td></tr>
+      <tr><td>Reading sittings</td><td style="text-align:right"><a href="/activity/sittings?work={{ w.id }}">open</a> · <a href="/activity/now?work={{ w.id }}">reading now</a></td></tr>
       <tr><td>Source</td><td style="text-align:right">{{ w.external_source or 'reader-added' }}</td></tr>
+      <tr><td>Added</td><td style="text-align:right">{{ w.created_at.strftime('%-d %b %Y') if w.created_at else '—' }}
+        {% if adder %}by <a href="/readers/{{ adder.id }}">{{ adder.full_name or ('@' ~ adder.username if adder.username else adder.email) }}</a>{% endif %}</td></tr>
     </table>
     <div class="lbl" style="margin-top:14px">Description</div>
     <p style="margin-top:6px;font-size:13px;line-height:1.6;color:{{ 'var(--ink)' if w.description else 'var(--ink-soft)' }}">
@@ -111,7 +114,7 @@
     <div class="note" style="margin-top:10px">Work id <span class="mono">{{ w.id }}</span></div>
   </div>
   <div class="card">
-    <div class="lbl">Editions ({{ w.editions | length }})</div>
+    <div class="lbl" id="editions" style="scroll-margin-top:80px">Editions ({{ w.editions | length }})</div>
     <div class="tbl" style="margin-top:8px;border:none">
       <table>
         <tr><th>ISBN</th><th>Publisher</th><th>Lang</th><th>Pages</th><th>Cover</th><th>Amazon link</th></tr>

@@ -1,0 +1,68 @@
+{# Links to the console's records, written once.
+
+   Every name on every screen should open the thing it names. Which kind of
+   "open" depends on the role: the catalogue pages are editor+, so a moderator
+   gets the peek popup (moderator-visible, see routers/catalog.py) instead of a
+   link that would bounce them to the dashboard. Import with context so the
+   macros can read `admin`:
+
+     {% import "_links.html" as L with context %}
+     {{ L.reader(row.reader_id, row.reader) }}
+#}
+
+{% macro reader_name(p) -%}
+{% if p %}{{ p.full_name or ('@' ~ p.username if p.username else p.email) }}{% else %}deleted account{% endif %}
+{%- endmacro %}
+
+{% macro reader(id, p=none, label=none) -%}
+{% set text = label or reader_name(p) %}
+{%- if id and (p is not none or label) -%}<a href="/readers/{{ id }}">{{ text }}</a>
+{%- else -%}<span class="m">{{ text }}</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro work(id, title) -%}
+{% if not id %}{{ title or '—' }}
+{%- elif admin.role in ['editor', 'super_admin'] %}<a href="/catalog/works/{{ id }}">{{ title }}</a>
+{%- else %}<button type="button" class="peek" data-peek="/catalog/peek/works/{{ id }}">{{ title }}</button>{% endif %}
+{%- endmacro %}
+
+{% macro author(id, name) -%}
+{% if not id %}{{ name or '—' }}
+{%- elif admin.role in ['editor', 'super_admin'] %}<a href="/catalog/authors/{{ id }}">{{ name }}</a>
+{%- else %}<button type="button" class="peek" data-peek="/catalog/peek/authors/{{ id }}">{{ name }}</button>{% endif %}
+{%- endmacro %}
+
+{% macro publisher(id, name) -%}
+{% if not id %}{{ name or '—' }}
+{%- elif admin.role in ['editor', 'super_admin'] %}<a href="/catalog/publishers/{{ id }}">{{ name }}</a>
+{%- else %}<button type="button" class="peek" data-peek="/catalog/peek/publishers/{{ id }}">{{ name }}</button>{% endif %}
+{%- endmacro %}
+
+{% macro series(id, name) -%}
+{% if not id %}{{ name or '—' }}
+{%- elif admin.role in ['editor', 'super_admin'] %}<a href="/catalog/series/{{ id }}">{{ name }}</a>
+{%- else %}<button type="button" class="peek" data-peek="/catalog/peek/series/{{ id }}">{{ name }}</button>{% endif %}
+{%- endmacro %}
+
+{# A catalogue subject of either shape — a review or rating is on a work or on a
+   whole series. #}
+{% macro subject(s) -%}
+{% if not s %}<span class="m">—</span>
+{%- elif s.kind == 'series' %}{{ series(s.id, s.name) }} <span class="pill info">series</span>
+{%- else %}{{ work(s.id, s.name) }}{% endif %}
+{%- endmacro %}
+
+{# An audit-log target, as a link to the record when there is one to open. The
+   catalogue's own audit lines use plural kinds ("works"); the rest singular. #}
+{% macro target(type, id, label) -%}
+{% set t = (type or '')|lower %}
+{%- if not id %}{{ label }}
+{%- elif t == 'reader' %}<a href="/readers/{{ id }}">{{ label }}</a>
+{%- elif t in ('work', 'works') %}{{ work(id, label) }}
+{%- elif t in ('author', 'authors') %}{{ author(id, label) }}
+{%- elif t in ('publisher', 'publishers') %}{{ publisher(id, label) }}
+{%- elif t == 'series' %}{{ series(id, label) }}
+{%- elif t == 'promotion' and admin.role in ['editor', 'super_admin'] %}<a href="/promotions/{{ id }}">{{ label }}</a>
+{%- elif t == 'admin' %}<a href="/audit?who={{ id }}&period=all">{{ label }}</a>
+{%- else %}{{ label }}{% endif %}
+{%- endmacro %}

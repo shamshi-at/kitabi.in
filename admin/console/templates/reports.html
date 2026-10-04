@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_links.html" as L with context %}
 {% block title %}Reported content · Kitabi Admin{% endblock %}
 {% block heading %}Reported content{% endblock %}
 {% block subheading %}{{ items | length }} open{% endblock %}
@@ -16,7 +17,7 @@
   <div class="mod">
     <div class="hd">
       {% if it.reasons %}<span class="pill no">{{ it.reasons | join(', ') }}</span>{% else %}<span class="pill no">Reported</span>{% endif %}
-      <b>Review by {{ it.author }}</b>
+      <b>Review by {{ L.reader(it.review.user_id, none, it.author) }}</b>
       <span style="font-size:11.5px;color:var(--ink-soft)">flagged by {{ it.count }} reader{{ 's' if it.count != 1 }}</span>
       {% if it.subject %}<span class="m">on
         <button type="button" class="peek" data-peek="/catalog/peek/{{ it.subject.kind }}/{{ it.subject.id }}">{{ it.subject.name }}</button>

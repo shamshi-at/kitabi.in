@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_links.html" as L with context %}
 {% block title %}Author claims · Kitabi Admin{% endblock %}
 {% block heading %}Author claims{% endblock %}
 {% block subheading %}{{ items | length }} pending · {{ decided }} decided all time{% endblock %}
@@ -16,7 +17,7 @@
   <div class="mod">
     <div class="hd">
       {% if it.rivals > 1 %}<span class="pill no">Contested</span>{% else %}<span class="pill pend">Pending</span>{% endif %}
-      <b>{{ it.author.name }}</b>
+      <b>{{ L.author(it.author.id, it.author.name) }}</b>
       {% if it.already_linked %}<span class="pill mute" style="margin-left:auto">Already linked</span>{% endif %}
     </div>
     <div class="bd">
@@ -28,7 +29,7 @@
         <div>
           <div class="lbl">Claimed by</div>
           {% if it.profile %}
-          <div style="margin-top:6px;font-size:13px"><b>{{ it.profile.full_name or 'Unnamed reader' }}</b>
+          <div style="margin-top:6px;font-size:13px"><b><a href="/readers/{{ it.profile.id }}">{{ it.profile.full_name or 'Unnamed reader' }}</a></b>
             {% if it.profile.username %}· @{{ it.profile.username }}{% endif %}</div>
           <div class="m" style="font-size:11.5px;margin-top:3px">
             {{ it.profile.email }} · joined {{ it.profile.created_at.strftime('%b %Y') }}
@@ -44,7 +45,7 @@
         <div>
           <div class="lbl">Author record</div>
           <div class="card" style="margin-top:6px;padding:11px">
-            <div style="font-size:13px;font-weight:600">{{ it.author.name }}</div>
+            <div style="font-size:13px;font-weight:600">{{ L.author(it.author.id, it.author.name) }}</div>
             <div class="m" style="font-size:11.5px;margin-top:3px">
               {% if it.author.primary_language %}{{ it.author.primary_language }} · {% endif %}
               {% if it.already_linked %}linked{% else %}currently unclaimed{% endif %}</div>

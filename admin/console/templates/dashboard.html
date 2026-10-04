@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% import "_links.html" as L with context %}
 {% block title %}Dashboard · Kitabi Admin{% endblock %}
 {% block heading %}Dashboard{% endblock %}
-{% block subheading %}Live view of Kitabi — right now, and the last {{ growth.days }} days{% endblock %}
+{% block subheading %}Live view of Kitabi — right now, and the last {{ growth.label }}{% endblock %}
 {% block topactions %}
 <a class="btn s" href="/handbook/dashboard" title="What every number on this page means">? Help</a>
 {% endblock %}
@@ -14,8 +15,8 @@
 <div class="rangebar">
   <div class="lbl">Trends</div>
   <div class="rangepick">
-    {% for key, days in ranges.items() %}
-    <a class="btn s {% if range_key == key %}on{% endif %}" href="/?range={{ key }}">{{ days }} days</a>
+    {% for key, r in ranges.items() %}
+    <a class="btn s {% if range_key == key %}on{% endif %}" href="/?range={{ key }}">{{ r.label }}</a>
     {% endfor %}
   </div>
 </div>
@@ -23,12 +24,12 @@
 <div class="kpis kpis4">
   {% for key, label, colour in series %}
   {% set d = growth.deltas[key] %}
-  <div class="kpi trend">
+  <a class="kpi trend" href="/activity/{{ key }}?range={{ range_key }}" title="List the {{ label|lower }} of the last {{ growth.label }}">
     <div class="k">{{ label }}</div>
     <div class="v">{{ "{:,}".format(growth.totals[key]) }}</div>
     <div class="delta {% if d.up %}up{% elif d.down %}down{% endif %}">
       {% if d.flat %}no change{% else %}{{ '▲' if d.up else '▼' }} {{ d.diff|abs }}{% if d.pct is not none %} ({{ d.pct|abs }}%){% endif %}{% endif %}
-      <s>vs previous {{ growth.days }}d</s>
+      <s>vs previous {{ growth.short }}</s>
     </div>
     {% set c = growth.charts[key] %}
     <svg class="sparkline" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
@@ -36,16 +37,17 @@
       <path d="{{ c.line }}" fill="none" stroke="{{ colour }}" stroke-width="1.6"
         vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
     </svg>
-  </div>
+  </a>
   {% endfor %}
 </div>
 
 {# ---- The big chart. Plain SVG, geometry computed server-side in
-       insights.spark() — no chart library, no build step. Each day carries a
-       <title> so hovering names the day and the number with no JavaScript. ---- #}
+       insights.spark() — no chart library, no build step. Each column carries a
+       title so hovering names the bucket and its numbers with no JavaScript, and
+       is a link to that bucket's rows (opening on the series that moved most). ---- #}
 <div class="card chartcard">
   <div class="worklist-head">
-    <div><span class="lbl">Growth</span><b>Daily arrivals, last {{ growth.days }} days</b></div>
+    <div><span class="lbl">Growth</span><b>{{ 'Hourly' if growth.unit == 'hour' else 'Daily' }} arrivals, last {{ growth.label }}</b></div>
     <div class="legend">
       {% for key, label, colour in series %}
       <span><i style="background:{{ colour }}"></i>{{ label }}</span>
@@ -54,7 +56,7 @@
   </div>
   <div class="chartwrap">
     <svg class="bigchart" viewBox="0 0 100 34" preserveAspectRatio="none" role="img"
-      aria-label="Daily arrivals over the last {{ growth.days }} days">
+      aria-label="Arrivals over the last {{ growth.label }}">
       {% for key, label, colour in series %}
       {# Shared scale, not each series against its own maximum — otherwise a day
          with 59 shelvings and a day with 16 reviews both touch the ceiling. #}
@@ -66,7 +68,10 @@
     </svg>
     <div class="hoverbars">
       {% for label in growth.labels %}
-      <div class="hb" title="{{ label }} — {% for key, slabel, colour in series %}{{ slabel }} {{ growth.series[key][loop.index0] }}{% if not loop.last %} · {% endif %}{% endfor %}"></div>
+      {% set b = growth.buckets[loop.index0] %}
+      {% set i = loop.index0 %}
+      <a class="hb" href="/activity/{{ b.kind }}?from={{ b['from'] }}&amp;to={{ b.to }}"
+        title="{{ label }} — {% for key, slabel, colour in series %}{{ slabel }} {{ growth.series[key][i] }}{% if not loop.last %} · {% endif %}{% endfor %} · click to list"></a>
       {% endfor %}
     </div>
   </div>
@@ -82,10 +87,10 @@
   <a class="kpi" href="/catalog"><div class="v">{{ "{:,}".format(stats.works) }}</div><div class="k">Works</div></a>
   <a class="kpi" href="/catalog/authors"><div class="v">{{ "{:,}".format(stats.authors) }}</div><div class="k">Authors</div></a>
   {% else %}
-  <div class="kpi"><div class="v">{{ "{:,}".format(stats.works) }}</div><div class="k">Works</div></div>
-  <div class="kpi"><div class="v">{{ "{:,}".format(stats.authors) }}</div><div class="k">Authors</div></div>
+  <a class="kpi" href="/activity/works?range=all"><div class="v">{{ "{:,}".format(stats.works) }}</div><div class="k">Works</div></a>
+  <a class="kpi" href="/activity/authors?range=all"><div class="v">{{ "{:,}".format(stats.authors) }}</div><div class="k">Authors</div></a>
   {% endif %}
-  <div class="kpi"><div class="v">{{ "{:,}".format(stats.shelved) }}</div><div class="k">Books shelved</div></div>
+  <a class="kpi" href="/activity/shelved?range=all"><div class="v">{{ "{:,}".format(stats.shelved) }}</div><div class="k">Books shelved</div></a>
   <a class="kpi" href="/moderation/claims"><div class="v">{{ stats.waiting }}</div><div class="k">Awaiting review</div></a>
 </div>
 
@@ -107,7 +112,7 @@
         <td style="text-align:right"><a class="btn s" href="/moderation/merges">Open</a></td></tr>
       {% if admin.role in ['editor', 'super_admin'] %}
       <tr><td class="t">New in catalog</td>
-        <td style="text-align:right"><span class="pill info">{{ growth.totals.works + growth.totals.authors }} in {{ growth.days }}d</span></td>
+        <td style="text-align:right"><a href="/activity/works?range={{ range_key }}"><span class="pill info">{{ growth.totals.works + growth.totals.authors }} in {{ growth.short }}</span></a></td>
         <td style="text-align:right"><a class="btn s" href="/moderation/incoming">Open</a></td></tr>
       {% endif %}
     </table>
@@ -134,7 +139,7 @@
         <div class="bar"><i style="width:{{ stats.health.isbn_pct }}%;background:var(--moss)"></i></div></div>
       {% endif %}
     </div>
-    <div class="note" style="margin-top:12px">{{ "{:,}".format(stats.works) }} works · {{ "{:,}".format(stats.editions) }} editions in the catalog.</div>
+    <div class="note" style="margin-top:12px">{% if admin.role in ['editor', 'super_admin'] %}<a href="/catalog">{{ "{:,}".format(stats.works) }} works</a>{% else %}<a href="/activity/works?range=all">{{ "{:,}".format(stats.works) }} works</a>{% endif %} · {{ "{:,}".format(stats.editions) }} editions in the catalog.</div>
   </div>
 </div>
 
@@ -155,11 +160,11 @@
   <div class="card">
     <div class="worklist-head"><div><span class="lbl">Newest in the catalog</span></div>
       {% if admin.role in ['editor', 'super_admin'] %}<a class="btn s" href="/moderation/incoming">Review all</a>{% endif %}</div>
-    <table class="linkrows feed" style="margin-top:6px">
+    <table class="feed" style="margin-top:6px">
       {% for r in additions %}
       <tr><td><span class="pill mute">{{ r.label }}</span>
-          {% if admin.role in ['editor', 'super_admin'] %}<a href="{{ r.href }}">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}
-          <div class="m">added by {{ r.adder_label }}</div></td>
+          {% if r.kind == 'work' %}{{ L.work(r.id, r.name) }}{% elif r.kind == 'author' %}{{ L.author(r.id, r.name) }}{% else %}{{ L.publisher(r.id, r.name) }}{% endif %}
+          <div class="m">added by {% if r.adder_id %}{{ L.reader(r.adder_id, none, r.adder_label) }}{% else %}{{ r.adder_label }}{% endif %}</div></td>
         <td style="text-align:right" class="m">{{ r.created_at.strftime('%-d %b, %H:%M') }}</td></tr>
       {% endfor %}
       {% if not additions %}<tr><td class="m" style="padding:14px 0">Nothing added yet.</td></tr>{% endif %}

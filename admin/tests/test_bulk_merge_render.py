@@ -12,6 +12,7 @@ rows, so stubs are the whole context.
 """
 
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -36,6 +37,9 @@ class _Row:
         self.linked_user_id = None
         self.first_publish_year = 2008
         self.authors = []
+        self.language = "Malayalam"
+        self.form = "Novel"
+        self.created_at = datetime(2026, 10, 4, 8, 0, tzinfo=UTC)
 
 
 class _URL:
@@ -123,7 +127,16 @@ def test_the_works_list_keeps_delete_beside_merge():
     """Two verbs of very different sharpness on one bar — delete is for rows
     nobody has, merge is for rows readers do."""
     rows = [
-        {"w": r, "author": "O. V. Vijayan", "editions": 1, "shelved": 7, "ratings": 5, "reviews": 2}
+        {
+            "w": r,
+            "author": "O. V. Vijayan",
+            "editions": 1,
+            "shelved": 7,
+            "ratings": 5,
+            "reviews": 2,
+            "adder_id": None,
+            "adder_label": "Imported",
+        }
         for r in DC
     ]
     html = (
@@ -132,6 +145,8 @@ def test_the_works_list_keeps_delete_beside_merge():
         .render(
             **{**_base_ctx(), "active": "catalog"},
             rows=rows,
+            total=None,
+            next_url=None,
             q="dharmapuranam",
             gap=None,
             gap_label=None,

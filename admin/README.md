@@ -101,9 +101,12 @@ DB sessions + lockout + audit); the email sign-in flows (forgot-password OTP,
 passwordless magic link, email invites — via Resend, dormant until configured);
 in-portal + forced password change; a global command-search (actions / books /
 authors / publishers / readers); the dashboard; the three moderation queues
-(author claims, suggested edits, reported content); catalog ops (search /
-book·author·publisher pages / duplicate merge / quality gaps); reader support
-(search / detail / suspend); admin-user management; and the audit log.
+(author claims, suggested edits, reported content); catalog ops (the whole
+catalogue newest-first as a scrolling list / book·author·publisher pages /
+duplicate merge / quality gaps); reader support (search / every item on the
+account / suspend); a drill-down list behind every number (`/activity`); admin-user
+management; and the audit log. Opening any of a reader's private data writes a
+`privacy.view` line to the audit log (owner decision, 4 Oct 2026).
 
 **Deferred:** promotional/marketing email (separate provider + consent, its own
 project), and reader-facing report/notification triggers that would feed the

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from typing import NamedTuple
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,9 +35,28 @@ from .models_ref import (
     Work,
 )
 
-# The windows the dashboard offers. Value is the number of days shown.
-RANGES = {"7": 7, "28": 28, "90": 90}
+
+class Range(NamedTuple):
+    """One window the dashboard offers: how many buckets, of what size."""
+
+    buckets: int
+    unit: str  # "day" | "hour"
+    label: str  # "7 days" — headings
+    short: str  # "7d" — the "vs previous" line
+
+
+# The windows the dashboard offers, in the order the picker shows them. The
+# 24-hour view buckets by hour: a day-bucketed "last 24 hours" is one or two
+# bars, which is a number pretending to be a chart.
+RANGES = {
+    "24h": Range(24, "hour", "24 hours", "24h"),
+    "7": Range(7, "day", "7 days", "7d"),
+    "28": Range(28, "day", "28 days", "28d"),
+    "90": Range(90, "day", "90 days", "90d"),
+}
 DEFAULT_RANGE = "28"
+
+_STEP = {"day": timedelta(days=1), "hour": timedelta(hours=1)}
 
 # The series drawn on the growth chart, in the order the legend lists them.
 SERIES = (
@@ -52,30 +72,83 @@ def _utc_day(col):  # noqa: ANN001, ANN202 — SQLAlchemy column expression
     return func.date(func.timezone("UTC", col))
 
 
-async def _daily(db: AsyncSession, column, since: date, *conds) -> dict[date, int]:  # noqa: ANN001
-    """`{day: count}` for rows whose `column` falls on or after `since`."""
-    day = _utc_day(column)
+def _utc_hour(col):  # noqa: ANN001, ANN202 — SQLAlchemy column expression
+    """The UTC hour a timestamptz falls in, as a naive `datetime` (UTC)."""
+    return func.date_trunc("hour", func.timezone("UTC", col))
+
+
+async def _bucketed(
+    db: AsyncSession, column, since: datetime, unit: str, *conds
+) -> dict:  # noqa: ANN001
+    """`{bucket: count}` for rows whose `column` falls on or after `since`.
+    A bucket is a `date` for daily windows and a naive UTC `datetime` (top of
+    the hour) for hourly ones — the same shapes `bucket_axis` produces."""
+    bucket = _utc_hour(column) if unit == "hour" else _utc_day(column)
     rows = (
         await db.execute(
-            select(day.label("d"), func.count())
+            select(bucket.label("b"), func.count())
             .where(column >= since, *conds)
-            .group_by(day)
-            .order_by(day)
+            .group_by(bucket)
+            .order_by(bucket)
         )
     ).all()
     return {r[0]: int(r[1]) for r in rows}
 
 
-def _fill(buckets: dict[date, int], days: list[date]) -> list[int]:
-    """A dense list aligned to `days` — a day with no rows is a real zero, not a
-    gap. A chart that skips empty days lies about the shape of the curve."""
-    return [int(buckets.get(d, 0)) for d in days]
+def _fill(buckets: dict, axis: list) -> list[int]:
+    """A dense list aligned to `axis` — a bucket with no rows is a real zero,
+    not a gap. A chart that skips empty days lies about the shape of the curve."""
+    return [int(buckets.get(b, 0)) for b in axis]
 
 
 def day_axis(days: int, today: date | None = None) -> list[date]:
     """The `days` calendar days ending today (inclusive), oldest first."""
     today = today or datetime.now(UTC).date()
     return [today - timedelta(days=n) for n in range(days - 1, -1, -1)]
+
+
+def hour_axis(hours: int, now: datetime | None = None) -> list[datetime]:
+    """The `hours` clock hours ending with the current one (inclusive), oldest
+    first, as naive UTC datetimes — the shape `date_trunc('hour', …)` returns."""
+    now = (now or datetime.now(UTC)).astimezone(UTC).replace(tzinfo=None)
+    top = now.replace(minute=0, second=0, microsecond=0)
+    return [top - timedelta(hours=n) for n in range(hours - 1, -1, -1)]
+
+
+def bucket_axis(rng: Range, now: datetime | None = None) -> list:
+    if rng.unit == "hour":
+        return hour_axis(rng.buckets, now)
+    return day_axis(rng.buckets, (now or datetime.now(UTC)).astimezone(UTC).date())
+
+
+def bucket_start(bucket: date | datetime) -> datetime:
+    """The aware UTC instant a bucket begins — midnight for a day, the top of the
+    hour for an hour. `datetime` is checked first: it is a subclass of `date`."""
+    if isinstance(bucket, datetime):
+        return bucket.replace(tzinfo=UTC)
+    return datetime(bucket.year, bucket.month, bucket.day, tzinfo=UTC)
+
+
+def bucket_label(bucket: date | datetime) -> str:
+    if isinstance(bucket, datetime):
+        return bucket.strftime("%-d %b, %H:00")
+    return bucket.strftime("%-d %b")
+
+
+def window_start(range_key: str, now: datetime | None = None) -> datetime | None:
+    """Where a named window begins, as an aware UTC instant — or None for "all".
+
+    The drill-down lists use this rather than their own arithmetic so that the
+    rows a click opens add up to the number that was clicked: "7 days" means the
+    seven calendar days the trend card summed (today included), not "now minus
+    168 hours", and "today" is the same UTC midnight the today tiles count from.
+    """
+    now = now or datetime.now(UTC)
+    if range_key == "today":
+        return bucket_start(now.astimezone(UTC).date())
+    if range_key in RANGES:
+        return bucket_start(bucket_axis(RANGES[range_key], now)[0])
+    return None
 
 
 def delta(current: int, previous: int) -> dict:
@@ -126,22 +199,26 @@ def spark(
     return {"line": line, "area": area, "points": pts, "max": ceiling}
 
 
-async def growth(db: AsyncSession, days: int) -> dict:
-    """Per-day arrivals over the last `days` days, plus the same figure for the
+async def growth(db: AsyncSession, range_key: str) -> dict:
+    """Per-bucket arrivals over the chosen window, plus the same figure for the
     window before it so every KPI can carry a direction.
 
-    Cached for 3 minutes: it is ~8 grouped counts, and a growth curve that is
-    three minutes stale is still the same curve.
+    Cached for 3 minutes (one minute for the hourly view, where three minutes is
+    a twentieth of a bucket): it is ~8 grouped counts, and a growth curve that
+    is three minutes stale is still the same curve.
     """
-    return await cache.get_or_compute(f"growth:{days}", 180, lambda: _growth(db, days))
+    ttl = 60 if RANGES[range_key].unit == "hour" else 180
+    return await cache.get_or_compute(f"growth:{range_key}", ttl, lambda: _growth(db, range_key))
 
 
-async def _growth(db: AsyncSession, days: int) -> dict:
-    axis = day_axis(days)
+async def _growth(db: AsyncSession, range_key: str) -> dict:
+    rng = RANGES[range_key]
+    axis = bucket_axis(rng)
+    first = bucket_start(axis[0])
+    step = _STEP[rng.unit]
     # Two windows: the one shown, and the one immediately before it (same
     # length) which the deltas compare against.
-    since = axis[0] - timedelta(days=days)
-    prev_start, prev_end = since, axis[0]
+    since = first - step * rng.buckets
 
     live = LibraryEntry.deleted_at.is_(None)
     sources = {
@@ -158,15 +235,19 @@ async def _growth(db: AsyncSession, days: int) -> dict:
     totals: dict[str, int] = {}
     prev: dict[str, int] = {}
     for key, (column, conds) in sources.items():
-        buckets = await _daily(db, column, since, *conds)
+        buckets = await _bucketed(db, column, since, rng.unit, *conds)
         series[key] = _fill(buckets, axis)
         totals[key] = sum(series[key])
-        prev[key] = sum(v for d, v in buckets.items() if prev_start <= d < prev_end)
+        prev[key] = sum(v for b, v in buckets.items() if bucket_start(b) < first)
 
     return {
-        "days": days,
-        "axis": [d.isoformat() for d in axis],
-        "labels": [d.strftime("%-d %b") for d in axis],
+        "range": range_key,
+        "unit": rng.unit,
+        "label": rng.label,
+        "short": rng.short,
+        "axis": [bucket_start(b).isoformat() for b in axis],
+        "labels": [bucket_label(b) for b in axis],
+        "buckets": chart_buckets(axis, series, step),
         "series": series,
         "totals": totals,
         "deltas": {k: delta(totals[k], prev[k]) for k in totals},
@@ -179,6 +260,23 @@ async def _growth(db: AsyncSession, days: int) -> dict:
             for k, v in series.items()
         },
     }
+
+
+def _iso(at: datetime) -> str:
+    return at.astimezone(UTC).strftime("%Y-%m-%dT%H:%MZ")
+
+
+def chart_buckets(axis: list, series: dict[str, list[int]], step: timedelta) -> list[dict]:
+    """One clickable column per bucket on the growth chart: its window, and the
+    charted series that moved most in it — the list a click on that column opens
+    first. A quiet bucket opens new readers, the chart's own first series."""
+    out = []
+    for i, b in enumerate(axis):
+        start = bucket_start(b)
+        values = {key: series[key][i] for key, _, _ in SERIES}
+        top = max(values, key=lambda k: values[k]) if any(values.values()) else SERIES[0][0]
+        out.append({"from": _iso(start), "to": _iso(start + step), "kind": top})
+    return out
 
 
 async def pulse(db: AsyncSession) -> dict:
@@ -240,17 +338,14 @@ async def _pulse(db: AsyncSession) -> dict:
 
 
 async def reading_now_shape(db: AsyncSession) -> dict:
-    """Aggregate context for the live count — never *who*.
+    """Aggregate context for the live count — how many sittings, across how many
+    different books, and how long the longest has been going.
 
-    This deliberately does not name the readers or the books. The console's
-    standing promise (see `routers/readers.py`) is that it never opens a
-    reader's private shelf, notes or reading progress, and "Anaya is 40 minutes
-    into Chemmeen right now" is exactly that, dressed as a dashboard. The count
-    is what makes the panel live; the names would only make it surveillance.
-
-    So: how many sittings, across how many different books, and how long the
-    longest has been going — all of which describe the service rather than a
-    person.
+    The panel itself still names nobody: it is on screen whenever the dashboard
+    is, refreshing every twenty seconds, and a wall of names nobody asked to see
+    is not what a glance at the front page is for. *Who* is reading *what* is one
+    click away at /activity/now — a deliberate act that is written to the audit
+    log (owner decision, 4 Oct 2026; see `routers/activity.py`).
     """
     rows = (
         await db.execute(

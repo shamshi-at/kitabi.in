@@ -36,7 +36,7 @@
     <tr><th>Reader</th><th>Joined</th><th>Public</th><th>Status</th><th></th></tr>
     {% for p in rows %}
     <tr>
-      <td><div class="t">{{ p.full_name or 'Unnamed reader' }}</div>
+      <td><a class="t" href="/readers/{{ p.id }}" style="text-decoration:none">{{ p.full_name or 'Unnamed reader' }}</a>
         <div class="m">{% if p.username %}@{{ p.username }} · {% endif %}{{ p.email }}</div></td>
       <td class="m">{{ p.created_at.strftime('%-d %b %Y') }}</td>
       <td>{% if p.profile_visible %}<span class="pill info">Profile</span>{% else %}<span class="pill mute">Private</span>{% endif %}</td>

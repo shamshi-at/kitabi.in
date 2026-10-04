@@ -709,9 +709,11 @@ td .m{color:var(--ink-soft);font-size:11.5px}
 <!-- ================= 7 · READERS ================= -->
 <div class="area" id="readers">
   <div class="ah"><span class="an">7 · People</span><h2>Readers</h2></div>
-  <p class="desc">Support, not surveillance. An admin can find an account, see what it has contributed, and
-  act when it misbehaves — but a reader's <i>library</i> is private data and the console shows only what a
-  reader has already made public, plus counts. That restraint is a deliberate line, not an oversight.</p>
+  <p class="desc">An admin can find an account, see everything on it, and act when it misbehaves. Until
+  4 Oct 2026 a reader's <i>library</i> was off limits — the console showed only what a reader had made public,
+  plus counts. <b>The owner reversed that</b>: an operator can now open a reader's shelf, sittings, notes,
+  lending and private reviews from their page, and <b>every such view is written to the audit log</b> with the
+  admin, the reader and what was opened. The audit line is the price of the access, not a courtesy.</p>
 
   <div class="win">
     <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i>
@@ -1020,8 +1022,10 @@ td .m{color:var(--ink-soft);font-size:11.5px}
 
     <h4>What the console must never do</h4>
     <ul>
-      <li>Show a reader's private shelf, notes or unpublished reviews. It reads what another reader could
-      see, plus aggregate counts. Support does not require voyeurism.</li>
+      <li>Show a reader's private shelf, notes or unpublished reviews <b>without writing an audit line</b>.
+      (Until 4 Oct 2026 this said "show them at all"; the owner chose access with an audit trail instead.
+      The line is written by the server on the page load, in <code>routers/activity.py</code>, so no template
+      can render private rows without it.)</li>
       <li>Hard-delete anything except an admin's own session. Hiding and merging are soft, reversible and logged.</li>
       <li>Let an admin act on their own account in a way that could lock everyone out — no self-revoke, no
       self-demote, and the last super admin cannot be removed.</li>

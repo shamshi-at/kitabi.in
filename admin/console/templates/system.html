@@ -76,7 +76,7 @@
         {% if on %}<span class="pill ok">on</span>{% else %}<span class="pill mute">off</span>{% endif %}</td></tr>
       {% endfor %}
       <tr><td>Reader devices syncing (24h)</td>
-        <td style="text-align:right"><b>{{ "{:,}".format(sync_ops_24h) }}</b> changes</td></tr>
+        <td style="text-align:right"><a class="num" href="/activity/active?range=24h" title="Who synced, and how much">{{ "{:,}".format(sync_ops_24h) }}</a> changes</td></tr>
     </table>
     <div class="note" style="margin-top:11px"><b>Off</b> means a feature was never switched on, not
     that it has broken. Turning one on is a developer change.</div>

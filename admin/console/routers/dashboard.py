@@ -35,7 +35,7 @@ async def dashboard(
 ) -> HTMLResponse:
     range_ = range_ if range_ in insights.RANGES else insights.DEFAULT_RANGE
     stats = await queries.dashboard_stats(db)
-    growth = await insights.growth(db, insights.RANGES[range_])
+    growth = await insights.growth(db, range_)
     denied = request.query_params.get("denied")
     flash = {"kind": "err", "text": "You don't have access to that section."} if denied else None
     return templates.TemplateResponse(

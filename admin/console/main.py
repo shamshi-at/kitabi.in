@@ -16,6 +16,7 @@ from .deps import RedirectException
 from .noindex import NoIndexMiddleware, robots
 from .routers import (
     account,
+    activity,
     admins,
     audit,
     auth,
@@ -74,6 +75,7 @@ async def _redirect(_: Request, exc: RedirectException) -> RedirectResponse:
 
 app.include_router(auth.router)
 app.include_router(dashboard.router)
+app.include_router(activity.router)
 app.include_router(claims.router)
 app.include_router(merges.router)
 app.include_router(edits.router)

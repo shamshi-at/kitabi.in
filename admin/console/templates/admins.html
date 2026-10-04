@@ -17,7 +17,7 @@
     <tr><th>Admin</th><th>Role</th><th>2FA</th><th>Last sign-in</th><th>Status</th><th></th></tr>
     {% for a in admins %}
     <tr>
-      <td><div class="t">{{ a.email.split('@')[0] }}</div><div class="m">{{ a.email }}</div></td>
+      <td><a class="t" href="/audit?who={{ a.id }}&amp;period=all" style="text-decoration:none" title="Everything {{ a.email }} has done">{{ a.email.split('@')[0] }}</a><div class="m">{{ a.email }}</div></td>
       <td>
         <form method="post" action="/admins/{{ a.id }}/role" style="display:inline-flex;gap:6px;align-items:center">
           <select name="role" style="padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit">
@@ -27,7 +27,7 @@
         </form>
       </td>
       <td>{% if a.totp_enrolled_at %}<span class="pill ok">Enrolled</span>{% else %}<span class="pill no">Not enrolled</span>{% endif %}</td>
-      <td class="m">{% if a.last_sign_in_at %}{{ a.last_sign_in_at.strftime('%d %b, %H:%M') }}{% else %}never{% endif %}</td>
+      <td class="m">{% if a.last_sign_in_at %}<a href="/audit?who={{ a.id }}&amp;period=all">{{ a.last_sign_in_at.strftime('%d %b, %H:%M') }}</a>{% else %}never{% endif %}</td>
       <td>{% if a.is_active %}<span class="pill ok">Active</span>{% else %}<span class="pill mute">Revoked</span>{% endif %}</td>
       <td style="text-align:right">
         {% if a.id == admin.id %}<span class="m">you</span>

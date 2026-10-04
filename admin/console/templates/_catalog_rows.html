@@ -1,0 +1,29 @@
+{# The rows of the works list, and the "more" sentinel after them. Rendered
+   inside catalog.html on the first load and on its own for every scrolled page
+   (admin.js swaps the sentinel for the next batch). Every count opens its rows:
+   editions on the book page, shelved / ratings / reviews on /activity. #}
+{% import "_links.html" as L with context %}
+{% for r in rows %}
+<tr>
+  <td><input type="checkbox" class="rowchk" name="ids" value="{{ r.w.id }}"
+    data-name="{{ r.w.title }}"
+    data-sub="{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}"
+    data-count="{{ r.shelved or 0 }}"
+    aria-label="Select {{ r.w.title }}"></td>
+  <td><button type="button" class="peek t" data-peek="/catalog/peek/works/{{ r.w.id }}">{{ r.w.title }}</button>
+    <div class="m mono">{{ r.w.title_translit or '' }}{% if r.w.first_publish_year %} · {{ r.w.first_publish_year }}{% endif %}
+      {% if r.w.language %} · <a href="/catalog?lang={{ r.w.language|urlencode }}">{{ r.w.language }}</a>{% endif %}
+      {% if r.w.form %} · <a href="/catalog?form={{ r.w.form|urlencode }}">{{ r.w.form }}</a>{% endif %}
+      · <a href="/catalog/works/{{ r.w.id }}{% if gap == 'no_cover' %}#covers{% endif %}">{{ 'add a cover ↗' if gap == 'no_cover' else 'open ↗' }}</a></div></td>
+  <td class="m">{% for a in r.w.authors %}{{ L.author(a.id, a.pen_name or a.name) }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</td>
+  <td class="m" style="white-space:nowrap">{{ r.w.created_at.strftime('%-d %b %Y') if r.w.created_at else '—' }}
+    <div>{% if r.adder_id %}{{ L.reader(r.adder_id, none, r.adder_label) }}{% else %}{{ r.adder_label }}{% endif %}</div></td>
+  <td><a class="num" href="/catalog/works/{{ r.w.id }}#editions">{{ r.editions }}</a></td>
+  <td><a class="num" href="/activity/shelved?work={{ r.w.id }}">{{ r.shelved }}</a></td>
+  <td><a class="num" href="/activity/ratings?work={{ r.w.id }}">{{ r.ratings or 0 }}</a></td>
+  <td><a class="num" href="/activity/reviews?work={{ r.w.id }}">{{ r.reviews or 0 }}</a></td>
+</tr>
+{% endfor %}
+{% if next_url %}
+<tr class="more" data-more="{{ next_url }}"><td colspan="8"><a class="btn s" href="{{ next_url }}" data-no-loader>Load more</a></td></tr>
+{% endif %}

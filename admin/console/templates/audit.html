@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_links.html" as L with context %}
 {% block title %}Audit log · Kitabi Admin{% endblock %}
 {% block heading %}Audit log{% endblock %}
 {% block subheading %}Append-only · newest first{% endblock %}
@@ -36,14 +37,14 @@
     {% for r in rows %}
     <tr>
       <td class="m mono">{{ r.created_at.strftime('%d %b %H:%M:%S') }}</td>
-      <td class="m">{% if r.admin_id %}{% set em = admins.get(r.admin_id) %}{% if em %}<span title="{{ em }}">{{ em.split('@')[0] }}</span>{% else %}<span class="mono" title="account removed">{{ (r.admin_id | string)[:8] }}</span>{% endif %}{% else %}—{% endif %}</td>
+      <td class="m">{% if r.admin_id %}{% set em = admins.get(r.admin_id) %}<a href="/audit?who={{ r.admin_id }}&amp;period={{ period }}" title="Only {{ em or 'this admin' }}’s entries">{% if em %}{{ em.split('@')[0] }}{% else %}<span class="mono">{{ (r.admin_id | string)[:8] }}</span>{% endif %}</a>{% else %}—{% endif %}</td>
       <td>
         {% set cls = 'ok' if r.action.startswith('claim.approve') or r.action == 'auth.success'
           else ('no' if 'fail' in r.action or 'reject' in r.action or 'revoke' in r.action or 'hide' in r.action
           else ('gold' if r.action.startswith('admin.') else 'info')) %}
-        <span class="pill {{ cls }}">{{ r.action }}</span>
+        <a href="/audit?q={{ r.action|urlencode }}&amp;period={{ period }}{% if who %}&amp;who={{ who }}{% endif %}" title="Only “{{ r.action }}” entries" style="text-decoration:none"><span class="pill {{ cls }}">{{ r.action }}</span></a>
       </td>
-      <td class="m">{% if r.target_type %}{{ r.target_type }}{% if r.target_id %} · {{ (r.target_id)[:12] }}{% endif %}{% else %}—{% endif %}</td>
+      <td class="m">{% if r.target_type %}{{ r.target_type }}{% if r.target_id %} · {{ L.target(r.target_type, r.target_id, (r.target_id)[:12]) }}{% endif %}{% else %}—{% endif %}</td>
       <td class="m">{{ r.summary or '' }}{% if r.ip %} <span style="color:#b3a68d">· {{ r.ip }}</span>{% endif %}</td>
     </tr>
     {% endfor %}

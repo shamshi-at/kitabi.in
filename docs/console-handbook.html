@@ -222,7 +222,7 @@ h3{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:500;
 <section class="sec" id="dashboard-live">
 <h3>The dark panel: right now</h3>
 <p>The big number is how many people have a reading timer running <b>this minute</b>. Under it: how many different books that is, and how long the longest sitting has been going. It refreshes by itself every twenty seconds — you never need to reload the page.</p>
-<p>It deliberately does not say *who* is reading *what*. The console never opens a reader&#x27;s shelf or reading progress, and a live list of names would be exactly that with a nicer frame around it. The count is what tells you the service is alive.</p>
+<p>The panel itself names nobody. <b>Click it</b> to see who is reading what — which reader, which book, and for how long. Opening that list is written to the audit log under your name, because it is a reader&#x27;s private reading.</p>
 <p>This is the one number that is genuinely live. Everything else on the page is counted up to a few minutes ago.</p>
 </section>
 <section class="sec" id="dashboard-today">
@@ -477,7 +477,7 @@ h3{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:500;
 <section class="sec" id="readers-seeing">
 <h3>What you can and cannot see</h3>
 <p>You can see what they have already made public — their name, handle, whether their profile and library are public — plus counts of what they have contributed, when they last used the app, and what kind of phone they use.</p>
-<p>You <b>cannot</b> see their shelf, their private notes, their reading progress, or reviews they haven&#x27;t published. Not “you shouldn&#x27;t” — the console has no screen that shows them.</p>
+<p>Everything on the account is counted on their page, and each count opens its list. The lists marked 🔒 are the reader&#x27;s private data; opening one writes a line to the audit log with your name, the reader and what you opened. Look when there is a reason to, and not otherwise.</p>
 </section>
 <section class="sec" id="readers-hide-profile">
 <h3>Hide public profile — the gentle action</h3>
@@ -617,7 +617,7 @@ h3{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:500;
 <p><b>Work</b> — a book as an idea. Ratings and reviews attach here.</p>
 <p><b>Edition</b> — one printing of a work. Cover, ISBN and page count attach here. A reader owns an edition.</p>
 <p><b>Catalogue</b> — the shared list of books, authors, publishers and series that everyone sees.</p>
-<p><b>Library</b> — one reader&#x27;s private shelf. You cannot see inside it.</p>
+<p><b>Library</b> — one reader&#x27;s private shelf. You can open it from their page; doing so is recorded in the audit log.</p>
 <p><b>Entry</b> — one book on one reader&#x27;s shelf.</p>
 <p><b>Sitting / session</b> — one stretch of reading, timed in the app.</p>
 <p><b>Claim</b> — a reader saying “this author is me”.</p>

@@ -19,7 +19,7 @@
         data-count="{{ counts.get(p.id, 0) }}" aria-label="Select {{ p.name }}"></td>
       <td><a class="t" href="/catalog/publishers/{{ p.id }}" style="text-decoration:none">{{ p.name }}</a>
         <div class="m mono">{{ p.name_translit or '' }}</div></td>
-      <td>{{ counts.get(p.id, 0) }}</td>
+      <td><a class="num" href="/catalog/publishers/{{ p.id }}#works">{{ counts.get(p.id, 0) }}</a></td>
       <td class="m">{{ p.primary_language or '—' }}</td>
       <td class="mono" style="font-size:10.5px;color:var(--ink-soft)">{{ p.id }}</td>
     </tr>
