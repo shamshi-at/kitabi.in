@@ -701,5 +701,11 @@ table.feed td{vertical-align:top}
 .covthumb{width:38px;height:57px;object-fit:cover;border-radius:3px;display:block;
   background:var(--paper-deep);border:1px solid var(--line)}
 .covthumb.none{display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink-soft)}
+/* A publisher's logo is shown whole, not cropped to a book's shape. */
+.covthumb.fit{object-fit:contain}
+/* A button that is an icon (the book page's Share). The label that replaces
+   the icon after a copy sits in the same box, so the bar does not jump. */
+.btn.icon{display:inline-flex;align-items:center;gap:5px;vertical-align:middle}
+.btn.icon svg{display:block;flex:none}
 .daynum{font-family:'Fraunces',serif;font-size:21px;font-weight:500}
 .bar{display:inline-block;height:7px;border-radius:4px;background:var(--gold);vertical-align:middle;margin-right:7px}

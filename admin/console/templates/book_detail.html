@@ -2,7 +2,17 @@
 {% block title %}{{ w.title }} · Kitabi Admin{% endblock %}
 {% block heading %}{{ w.title }}{% endblock %}
 {% block subheading %}{{ w.title_translit or '' }}{% if w.first_publish_year %} · {{ w.first_publish_year }}{% endif %}{% endblock %}
-{% block topactions %}<a class="btn s" href="/catalog" data-back>← Catalog</a>{% endblock %}
+{% block topactions %}
+{# Share the book's PUBLIC page — the link a reader would be sent, never this
+   console's own address. The slug URL when the book has one; otherwise the
+   /b/<id> share link, which the site redirects to wherever the book lives.
+   (This page is never rendered for a deleted book — the router 404s first.) #}
+<button type="button" class="btn s icon"
+  data-share="https://kitabi.in/{{ 'book/' ~ w.slug if w.slug else 'b/' ~ w.id }}"
+  data-share-title="{{ w.title }}"
+  title="Share this book's page on kitabi.in" aria-label="Share this book's page on kitabi.in"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span data-share-label>Share</span></button>
+<a class="btn s" href="/catalog" data-back>← Catalog</a>
+{% endblock %}
 {% block content %}
 <div class="split">
   <div class="card">

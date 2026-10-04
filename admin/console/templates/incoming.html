@@ -36,9 +36,14 @@ log with your name, and hides the row from the default view.</div>
 
 <div class="tbl" style="margin-top:12px">
   <table>
-    <tr><th>What</th><th>Added by</th><th>When</th><th></th></tr>
+    <tr><th></th><th>What</th><th>Added by</th><th>When</th><th></th></tr>
     {% for r in rows %}
     <tr>
+      {# The picture that came with the row — a book's cover, an author's
+         portrait, a publisher's logo. A book with none says so: the site draws
+         a typeset cover for it. #}
+      <td style="width:46px">{% if r.image %}<a href="{{ r.href }}" tabindex="-1"><img class="covthumb{{ ' fit' if r.kind == 'publisher' }}" src="{{ r.image }}" alt="" loading="lazy"></a>
+        {% elif r.kind in ('work', 'edition') %}<span class="covthumb none" title="No cover">none</span>{% endif %}</td>
       <td><span class="pill mute">{{ r.label }}</span>
         <a href="{{ r.href }}">{{ r.name }}</a>
         {% if r.reviewed %}<span class="pill ok">reviewed</span>{% endif %}</td>
@@ -54,7 +59,7 @@ log with your name, and hides the row from the default view.</div>
     </tr>
     {% endfor %}
     {% if not rows %}
-    <tr><td colspan="4" class="m" style="text-align:center;padding:26px">
+    <tr><td colspan="5" class="m" style="text-align:center;padding:26px">
       Nothing new in this period{% if show != 'all' %} that hasn't been reviewed{% endif %}.</td></tr>
     {% endif %}
   </table>

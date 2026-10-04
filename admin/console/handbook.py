@@ -300,6 +300,9 @@ TOPICS: tuple[Topic, ...] = (
                     "**An author who is really a publisher**, or a publisher that is really a "
                     "series. Easy honest mistakes on a small phone screen.",
                     "**Anything offensive** in a title, name or description.",
+                    "**A picture that is wrong** — every row shows the cover, portrait or "
+                    "logo that came with it. A book marked **none** has no cover; that is "
+                    "allowed, and the website draws one from the title.",
                     "**A real book you have never heard of** — that is not a problem. Kitabi "
                     "exists for regional and translated books nobody else catalogues.",
                 ),

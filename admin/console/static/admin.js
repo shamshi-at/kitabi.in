@@ -715,3 +715,46 @@ if ("serviceWorker" in navigator) {
     }
   });
 })();
+
+// Share a public page (book_detail.html's top bar) — `data-share` carries the
+// kitabi.in address, never the console's own.
+//
+// The system share sheet where the browser has one: the console is installed
+// as an app on phones, and that is where "send this book to someone" happens.
+// Everywhere else the link is copied, and the button says so for a moment —
+// a copy that confirms nothing reads as a button that did nothing. A share
+// sheet the operator closes is a decision, not a failure, so it does not fall
+// through to copying behind their back.
+(function () {
+  function say(btn, text) {
+    const label = btn.querySelector("[data-share-label]");
+    if (!label) return;
+    if (!label.dataset.was) label.dataset.was = label.textContent;
+    label.textContent = text;
+    clearTimeout(btn._shareTimer);
+    btn._shareTimer = setTimeout(() => (label.textContent = label.dataset.was), 1800);
+  }
+
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-share]");
+    if (!btn) return;
+    const url = btn.dataset.share;
+    const title = btn.dataset.shareTitle || document.title;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+        return;
+      } catch (err) {
+        if (err && err.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      say(btn, "Link copied ✓");
+    } catch (_) {
+      // No clipboard access (an insecure origin, a refused permission): hand
+      // over the link in a box it can be copied from by hand.
+      window.prompt("Copy this link", url);
+    }
+  });
+})();

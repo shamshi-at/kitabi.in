@@ -55,6 +55,12 @@ KINDS = {
     "edition": ("Edition", Edition, None, None, "/catalog/works/"),
 }
 
+# The picture that came with each kind, shown beside its row: a wrong or
+# obscene cover is caught by looking, not by reading a title. A work has no
+# picture of its own (rule 17 — the cover belongs to the Edition), so its
+# thumbnail is resolved separately, by `_work_covers`.
+IMAGE_COLUMNS = {"author": Author.image_url, "publisher": Publisher.logo_url}
+
 
 def _since(window: str) -> datetime:
     return datetime.now(UTC) - timedelta(days=WINDOWS.get(window, WINDOWS[DEFAULT_WINDOW]))
@@ -86,6 +92,7 @@ async def _editions_since(db: DbSession, since: datetime, limit: int) -> list[di
                 Edition.created_at,
                 Work.title,
                 Work.created_by_user_id,
+                Edition.cover_url,
             )
             .join(Work, Work.id == Edition.work_id)
             .where(Edition.deleted_at.is_(None), Edition.created_at >= since)
@@ -102,9 +109,43 @@ async def _editions_since(db: DbSession, since: datetime, limit: int) -> list[di
             "created_at": created,
             "adder_id": adder,
             "href": f"/catalog/works/{work_id}",
+            "image": cover,
         }
-        for row_id, work_id, isbn, created, title, adder in rows
+        for row_id, work_id, isbn, created, title, adder, cover in rows
     ]
+
+
+def first_cover_per_work(rows: list[tuple]) -> dict:
+    """`(work_id, cover_url)` rows, oldest edition first → one cover per work.
+
+    The same pick as the API's `catalog_service.cover_edition` — the oldest
+    edition that has a cover — so the thumbnail here is the cover the public
+    book page shows, not merely *a* cover of the book. Pure, so that rule is
+    tested without a database.
+    """
+    covers: dict = {}
+    for work_id, cover in rows:
+        if cover:
+            covers.setdefault(work_id, cover)
+    return covers
+
+
+async def _work_covers(db: DbSession, work_ids: list) -> dict:
+    """The display cover of each of `work_ids`. One query, not one per row."""
+    if not work_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(Edition.work_id, Edition.cover_url)
+            .where(
+                Edition.work_id.in_(work_ids),
+                Edition.deleted_at.is_(None),
+                Edition.cover_url.is_not(None),
+            )
+            .order_by(Edition.created_at, Edition.id)
+        )
+    ).all()
+    return first_cover_per_work([tuple(r) for r in rows])
 
 
 async def _feed(db: DbSession, window: str, kind: str, unreviewed_only: bool) -> list[dict]:
@@ -124,15 +165,16 @@ async def _feed(db: DbSession, window: str, kind: str, unreviewed_only: bool) ->
             # column, so every new one is shown.
             conds.append(adder_col.is_not(None))
         adder_select = adder_col if adder_col is not None else cast(None, String)
+        image_select = IMAGE_COLUMNS.get(key, cast(None, String))
         found = (
             await db.execute(
-                select(model.id, name_col, model.created_at, adder_select)
+                select(model.id, name_col, model.created_at, adder_select, image_select)
                 .where(*conds)
                 .order_by(model.created_at.desc())
                 .limit(limit)
             )
         ).all()
-        for row_id, name, created, adder in found:
+        for row_id, name, created, adder, image in found:
             rows.append(
                 {
                     "kind": key,
@@ -142,10 +184,16 @@ async def _feed(db: DbSession, window: str, kind: str, unreviewed_only: bool) ->
                     "created_at": created,
                     "adder_id": adder,
                     "href": f"{href}{row_id}",
+                    "image": image,
                 }
             )
     rows.sort(key=lambda r: r["created_at"], reverse=True)
     rows = rows[:limit]
+    # After the cut to `limit`, so covers are fetched only for rows on screen.
+    covers = await _work_covers(db, [r["id"] for r in rows if r["kind"] == "work"])
+    for r in rows:
+        if r["kind"] == "work":
+            r["image"] = covers.get(r["id"])
     await insights.attach_adders(db, rows)
     reviewed = await _reviewed_ids(db, [str(r["id"]) for r in rows])
     for r in rows:
