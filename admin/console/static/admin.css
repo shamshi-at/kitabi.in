@@ -695,3 +695,11 @@ table.feed td{vertical-align:top}
 .mg-reassure{font-size:11.5px;color:var(--ink-soft);line-height:1.5;padding:12px 18px;
   background:var(--paper-deep);margin:0}
 .mg-foot{padding:13px 18px;display:flex;gap:9px;align-items:center}
+
+/* Nightly intake: a book-sized thumbnail in a table row, and a day row that is
+   one big link. */
+.covthumb{width:38px;height:57px;object-fit:cover;border-radius:3px;display:block;
+  background:var(--paper-deep);border:1px solid var(--line)}
+.covthumb.none{display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink-soft)}
+.daynum{font-family:'Fraunces',serif;font-size:21px;font-weight:500}
+.bar{display:inline-block;height:7px;border-radius:4px;background:var(--gold);vertical-align:middle;margin-right:7px}

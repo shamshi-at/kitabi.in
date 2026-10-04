@@ -104,7 +104,9 @@ authors / publishers / readers); the dashboard; the three moderation queues
 (author claims, suggested edits, reported content); catalog ops (the whole
 catalogue newest-first as a scrolling list / book·author·publisher pages /
 duplicate merge / quality gaps); reader support (search / every item on the
-account / suspend); a drill-down list behind every number (`/activity`); admin-user
+account / suspend); a drill-down list behind every number (`/activity`); what the
+nightly catalogue intake published, night by night and book by book (`/intake`);
+admin-user
 management; and the audit log. Opening any of a reader's private data writes a
 `privacy.view` line to the audit log (owner decision, 4 Oct 2026).
 

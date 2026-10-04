@@ -319,6 +319,75 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        slug="intake",
+        title="Nightly intake",
+        summary="What the automatic nightly job added to the catalogue, and how to check it.",
+        role="editor",
+        screen="/intake",
+        sections=(
+            Section(
+                "what",
+                "What this is",
+                (
+                    "Every night at 02:30 UTC (08:00 in Kerala) Kitabi reads the newest books "
+                    "on publishers' own websites — and older ones from OpenLibrary — and adds "
+                    "up to 150 of them to the catalogue by itself. Nobody presses a button, and "
+                    "the books are on the public website as soon as the job finishes.",
+                    "This screen is where you see what it did. Look at it in the morning the way "
+                    "you would look at [New in catalog](/moderation/incoming) for what readers "
+                    "added.",
+                ),
+            ),
+            Section(
+                "numbers",
+                "Reading the numbers",
+                (
+                    "**Published** — books added that night. **Found** — books the job saw for "
+                    "the first time that night, whether or not they were published.",
+                    "**Ready for coming nights** — complete books queued behind the nightly "
+                    "limit. New releases go first; the rest follow in the order they were found.",
+                    "**Waiting on something** — real books missing something the job insists "
+                    "on: an author, a cover, a valid ISBN, or a title in the book's own script. "
+                    "They are published automatically once the missing piece turns up.",
+                    "**Refused** — things a publisher's shop sells that are not one book: "
+                    "combos, box sets, gift cards, or a listing whose name is not a title.",
+                ),
+            ),
+            Section(
+                "checking",
+                "Checking a night",
+                (),
+                steps=(
+                    "Click the night, or **See the books**.",
+                    "Scan the covers and titles. You are looking for the same things as in "
+                    "[New in catalog](/moderation/incoming): a name that is not a book's name, "
+                    "an author who is really a brand, a book filed under the wrong language.",
+                    "Click a title to open the book's own page and fix it there — rename it, "
+                    "correct the author, or delete it.",
+                    "Use **From** to look at one publisher at a time.",
+                ),
+            ),
+            Section(
+                "undo",
+                "If a night published something wrong",
+                (
+                    "One wrong book: open it and fix or delete it, like any other book.",
+                    "A whole batch — a publisher's site changed and a night came out wrong: "
+                    "ask whoever runs the server to undo it with `scripts/revert_intake.py`. "
+                    "It removes the books that night published and leaves everything else "
+                    "alone. Books undone this way leave the night's list and its count, so "
+                    "a night that published 150 can read 142 afterwards.",
+                    "A book you delete by hand stays on its night's list, with a **removed** "
+                    "mark, so the list still shows what the job did.",
+                    "A book marked **printing** was not added as a new book: it is another "
+                    "printing (a paperback, a new edition) of a book the catalogue already had.",
+                ),
+                warn="A book the job removed does not come back by itself. If it was removed by "
+                "mistake, add it again by hand.",
+            ),
+        ),
+    ),
+    Topic(
         slug="images",
         title="Uploaded images",
         summary="Cover photos and portraits readers upload — the fastest way to get hurt.",

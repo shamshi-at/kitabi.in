@@ -574,6 +574,9 @@ Two measurements that change the forecast:
 - **Mathrubhumi's older pages mostly lack a Malayalam title.** 74 of the first
   208 pages read are held for `title_script`; the newest listings nearly all
   have one. Its ~3,700 titles will not all arrive under this rule.
+  **Owner decision, 4 Oct 2026: keep them held** — a smaller Malayalam shelf
+  under real titles over a larger one under romanizations. Nothing to build;
+  the count is on the console's Nightly intake screen.
 - **Author roles resolve about a quarter of the time** (17 of 60), not the
   ~45% of the eleven-book test.
 

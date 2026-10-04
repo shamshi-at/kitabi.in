@@ -1402,9 +1402,19 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
         beside an "author" and re-judges stored answers nightly. Revert takes
         `--title` and retires orphaned author rows. The jobs' INFO lines now
         reach the log.
-  - [ ] **Mathrubhumi's older pages have only a romanized title** — 74 of the
-        first 208 pages read are held for `title_script`. Owner decision:
-        accept those, or find the Malayalam title another way.
+  - [x] **Mathrubhumi's older pages have only a romanized title** — 74 of the
+        first 208 pages read are held for `title_script`. **Owner decision,
+        4 Oct 2026: keep them held.** A Malayalam book does not go out under a
+        Latin-letter title; those rows wait until a source gives the title in
+        Malayalam (or a person adds the book by hand). No code change — this
+        is what the gate already does. They are counted on the console's
+        Nightly intake screen under "Title is not in the book's own script".
+  - [x] **A screen for what each night published** — `admin.kitabi.in/intake`
+        (`admin/console/routers/intake.py`): one row per night with the count
+        and each shop's share, what the queue still holds and why, and a
+        click through to that night's books — cover, title, author, ISBN,
+        with links to the book's console page and its public page. Read-only,
+        editors and up. `admin/tests/test_intake.py`.
 - [ ] **P4 — DC Books**, for Malayalam breadth. LookaBook is *not* the answer:
       15.6% of its product pages carry an ISBN, so it would deposit rejects. Its
       use is as a discovery list. Needs the owner conversation or its SPA's own

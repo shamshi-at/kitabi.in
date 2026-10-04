@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Nightly intake · Kitabi Admin{% endblock %}
+{% block heading %}Nightly intake{% endblock %}
+{% block subheading %}What the 02:30 UTC job added to the catalogue, night by night{% endblock %}
+{% block topactions %}
+<a class="btn s" href="/handbook/intake" title="How to use this screen">? Help</a>
+{% endblock %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="v">{{ "{:,}".format(queue.published) }}</div><div class="k">Published so far</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(queue.ready) }}</div><div class="k">Ready for coming nights</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(queue.held) }}</div><div class="k">Waiting on something</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(queue.refused) }}</div><div class="k">Refused — not a book</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(queue.duplicate) }}</div><div class="k">Already in the catalogue</div></div>
+</div>
+
+<div class="tbl" style="margin-top:14px">
+  <table>
+    <tr><th>Night</th><th>Published</th>
+      {% for s in sources %}<th style="text-align:right">{{ source_label(s) }}</th>{% endfor %}
+      <th style="text-align:right" title="Books the crawl saw for the first time that night, published or not">Found</th><th></th></tr>
+    {% for d in days %}
+    <tr>
+      <td><a href="/intake/{{ d.day.isoformat() }}"><b>{{ d.day.strftime('%a %-d %b %Y') }}</b></a></td>
+      <td>{% if d.published %}<span class="bar" style="width:{{ [d.share, 4]|max }}px"></span><span class="daynum">{{ "{:,}".format(d.published) }}</span>
+        {% else %}<span class="m">none</span>{% endif %}</td>
+      {% for s in sources %}<td class="m" style="text-align:right">{{ d.by_source.get(s, 0) or '—' }}</td>{% endfor %}
+      <td class="m" style="text-align:right">{{ "{:,}".format(d.found) if d.found else '—' }}</td>
+      <td style="text-align:right">{% if d.published %}<a class="btn s" href="/intake/{{ d.day.isoformat() }}">See the books</a>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    {% if not days %}
+    <tr><td colspan="{{ 4 + sources|length }}" class="m" style="text-align:center;padding:26px">
+      The intake has not published anything yet.</td></tr>
+    {% endif %}
+  </table>
+</div>
+
+<div class="split3" style="margin-top:14px">
+  <div class="card">
+    <div class="lbl">What the waiting books are waiting for</div>
+    <table style="margin-top:8px">
+      {% for w in queue.waiting %}
+      <tr><td class="t">{{ w.label }}</td><td style="text-align:right">{{ "{:,}".format(w.count) }}</td></tr>
+      {% endfor %}
+      {% if not queue.waiting %}<tr><td class="m">Nothing is waiting.</td></tr>{% endif %}
+    </table>
+    <div class="m" style="margin-top:8px">A book waiting on two things is counted under both.
+      Most “no author” and “language not known” rows are simply books whose page has not been read yet.</div>
+  </div>
+  <div class="card">
+    <div class="lbl">If a night published something wrong</div>
+    <div class="m" style="margin-top:8px;line-height:1.6">Open the night, find the book and fix it on its
+      own page — or remove a batch with the undo script. Both are explained in
+      <a href="/handbook/intake#undo">the handbook</a>.</div>
+  </div>
+</div>
+{% endblock %}

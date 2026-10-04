@@ -26,6 +26,7 @@ from .routers import (
     edits,
     handbook,
     incoming,
+    intake,
     merges,
     promotions,
     readers,
@@ -80,6 +81,7 @@ app.include_router(claims.router)
 app.include_router(merges.router)
 app.include_router(edits.router)
 app.include_router(incoming.router)
+app.include_router(intake.router)
 app.include_router(reports.router)
 app.include_router(promotions.router)
 app.include_router(catalog.router)

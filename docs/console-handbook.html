@@ -152,6 +152,7 @@ h3{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:500;
 <li><a href="#start">Start here</a></li>
 <li><a href="#dashboard">The dashboard</a></li>
 <li><a href="#incoming">New in catalog</a><em>Editor and above</em></li>
+<li><a href="#intake">Nightly intake</a><em>Editor and above</em></li>
 <li><a href="#images">Uploaded images</a><em>Editor and above</em></li>
 <li><a href="#reports">Reported content</a></li>
 <li><a href="#claims">Author claims</a></li>
@@ -283,6 +284,44 @@ h3{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:500;
 <h3>What the tick means</h3>
 <p><b>Reviewed ✓</b> records that you looked, with your name and the time, in the <a href="https://admin.kitabi.in/audit">audit log</a>. It does not approve anything or change the record — the book was already public. It only stops two people reading the same rows.</p>
 <p>Publishers and editions show no contributor. That is not missing data being hidden from you: Kitabi never recorded who created those two kinds. Books and authors do show who added them.</p>
+</section>
+</article>
+<article class="topic" id="intake">
+<div class="topic-head">
+<h2>Nightly intake</h2>
+<p class="summary">What the automatic nightly job added to the catalogue, and how to check it.</p>
+<div class="meta">
+<span class="chip role">Editor and above</span>
+<a class="chip screen" href="https://admin.kitabi.in/intake"><code>/intake</code> open</a>
+</div></div>
+<section class="sec" id="intake-what">
+<h3>What this is</h3>
+<p>Every night at 02:30 UTC (08:00 in Kerala) Kitabi reads the newest books on publishers&#x27; own websites — and older ones from OpenLibrary — and adds up to 150 of them to the catalogue by itself. Nobody presses a button, and the books are on the public website as soon as the job finishes.</p>
+<p>This screen is where you see what it did. Look at it in the morning the way you would look at <a href="https://admin.kitabi.in/moderation/incoming">New in catalog</a> for what readers added.</p>
+</section>
+<section class="sec" id="intake-numbers">
+<h3>Reading the numbers</h3>
+<p><b>Published</b> — books added that night. <b>Found</b> — books the job saw for the first time that night, whether or not they were published.</p>
+<p><b>Ready for coming nights</b> — complete books queued behind the nightly limit. New releases go first; the rest follow in the order they were found.</p>
+<p><b>Waiting on something</b> — real books missing something the job insists on: an author, a cover, a valid ISBN, or a title in the book&#x27;s own script. They are published automatically once the missing piece turns up.</p>
+<p><b>Refused</b> — things a publisher&#x27;s shop sells that are not one book: combos, box sets, gift cards, or a listing whose name is not a title.</p>
+</section>
+<section class="sec" id="intake-checking">
+<h3>Checking a night</h3>
+<ol class="steps">
+<li>Click the night, or <b>See the books</b>.</li>
+<li>Scan the covers and titles. You are looking for the same things as in <a href="https://admin.kitabi.in/moderation/incoming">New in catalog</a>: a name that is not a book&#x27;s name, an author who is really a brand, a book filed under the wrong language.</li>
+<li>Click a title to open the book&#x27;s own page and fix it there — rename it, correct the author, or delete it.</li>
+<li>Use <b>From</b> to look at one publisher at a time.</li>
+</ol>
+</section>
+<section class="sec" id="intake-undo">
+<h3>If a night published something wrong</h3>
+<p>One wrong book: open it and fix or delete it, like any other book.</p>
+<p>A whole batch — a publisher&#x27;s site changed and a night came out wrong: ask whoever runs the server to undo it with <code>scripts/revert_intake.py</code>. It removes the books that night published and leaves everything else alone. Books undone this way leave the night&#x27;s list and its count, so a night that published 150 can read 142 afterwards.</p>
+<p>A book you delete by hand stays on its night&#x27;s list, with a <b>removed</b> mark, so the list still shows what the job did.</p>
+<p>A book marked <b>printing</b> was not added as a new book: it is another printing (a paperback, a new edition) of a book the catalogue already had.</p>
+<aside class="warn"><b>Careful</b><p>A book the job removed does not come back by itself. If it was removed by mistake, add it again by hand.</p></aside>
 </section>
 </article>
 <article class="topic" id="images">
