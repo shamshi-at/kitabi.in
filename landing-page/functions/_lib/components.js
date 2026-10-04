@@ -121,9 +121,14 @@ export function bookCard(work, { priority = false } = {}) {
   </a>`;
 }
 
-export function bookStrip(works, { priorityFirst = false } = {}) {
+/**
+ * A grid of books. `list: true` marks it as the page's paged list — the one
+ * the pager below it walks — so the scroll enhancement (_lib/scroll.js) knows
+ * which grid to append the next page's books to. A page has at most one.
+ */
+export function bookStrip(works, { priorityFirst = false, list = false } = {}) {
   if (!works?.length) return '';
-  return html`<div class="strip">
+  return html`<div class="strip"${list ? raw(' data-list') : ''}>
     ${works.map((w, i) => bookCard(w, { priority: priorityFirst && i === 0 }))}
   </div>`;
 }
@@ -156,6 +161,11 @@ export function breadcrumb(items) {
  * Every page is a real link, so a crawler can walk the whole catalogue. Each
  * page self-canonicals with its own title elsewhere — never canonicalise page 2
  * back to page 1, which de-indexes the deep catalogue, i.e. most of it.
+ *
+ * This is also what a reader gets with JavaScript off or broken. With it on,
+ * _lib/scroll.js reads `rel="next"` from here and keeps the list coming as the
+ * reader scrolls — the links stay in the HTML either way, so the enhancement
+ * can never be the only way to reach page 2.
  */
 export function pager(page, total, perPage, hrefFor) {
   const pages = Math.ceil(total / perPage);
@@ -176,7 +186,7 @@ export function pager(page, total, perPage, hrefFor) {
     last = n;
   }
   if (page < pages) out.push(html`<a href="${hrefFor(page + 1)}" rel="next">Next ›</a>`);
-  return html`<nav class="pager" aria-label="Pagination">${out}</nav>`;
+  return html`<nav class="pager" aria-label="Pagination" data-pager>${out}</nav>`;
 }
 
 /** A person/organisation avatar that degrades to an initial. */

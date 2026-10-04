@@ -1238,6 +1238,20 @@ cost, never secrecy.
       slug against the live API and fails if a list would 404. The first draft was
       curated against the canon rather than the catalogue and every entry was silently
       skipped, which is why that check exists
+- [x] **A hub can be put in another order** (owner request, 4 Oct 2026) — the same
+      six orders browse has (A–Z, Top rated, Just added, Newest, Oldest, By author) on
+      every language, genre and language+form hub: `GET /public/hub/…?sort=`, echoed
+      in the reply so the page marks the order it actually got. A re-sorted hub is
+      `noindex`, canonical to the plain hub, linked `nofollow`, and closed in
+      `robots.txt` — the default order's pages stay the indexable deep catalogue.
+      "Popularity" is the ratings-based *Top rated*; shelf counts are deliberately
+      not used (libraries are private by default, and with few readers an order by
+      shelf count would show what individual readers own).
+- [x] **Lists keep coming as you scroll; a button jumps to the top or the end**
+      (owner request, 4 Oct 2026) — `landing-page/functions/_lib/scroll.js`, on browse,
+      the hubs, the author/publisher directories and a book's reviews. Progressive
+      enhancement: the numbered pager is still in the HTML. Checked in a browser
+      against the dev database, desktop and phone width.
 - [ ] Done when: every indexable page is ≤3 clicks from home
 
 ### W4 — Indexation

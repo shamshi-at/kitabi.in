@@ -349,7 +349,7 @@ export function renderBrowse(data, { query = {} } = {}) {
       <h1 class="serif" style="font-size:30px;font-weight:600;margin-top:14px">Browse the catalogue</h1>
       ${toolbar}
       ${data.works?.length
-        ? html`${bookStrip(data.works, { priorityFirst: true })}${pager(
+        ? html`${bookStrip(data.works, { priorityFirst: true, list: true })}${pager(
             data.page,
             data.total,
             data.per_page,
@@ -472,7 +472,7 @@ export function renderHub(data) {
             : ''}
           <span class="cnt">Showing ${num(first)}–${num(last)} of ${num(data.total)}</span>
         </div>
-        ${bookStrip(data.works, { priorityFirst: !showStart })}
+        ${bookStrip(data.works, { priorityFirst: !showStart, list: true })}
         ${pager(data.page, data.total, data.per_page, (p) => hrefFor(p))}
       </section>
       ${appBand()}
@@ -603,7 +603,7 @@ export function renderPeople(data) {
         : ''}
 
       ${data.people?.length
-        ? html`<div class="people">
+        ? html`<div class="people" data-list>
               ${data.people.map(
                 (p) => html`<a class="person"
                   href="/${isAuthors ? 'author' : 'publisher'}/${seg(p.slug || p.id)}">

@@ -379,7 +379,7 @@ export function renderReviews(data) {
         : ''}
 
       ${data.reviews?.length
-        ? html`${data.reviews.map(
+        ? html`<div data-list>${data.reviews.map(
             (r) => html`<article class="rev">
               <div class="rhd">
                 ${avatar({ name: r.reviewer?.display_name || 'A reader' }, { className: 'av' })}
@@ -397,7 +397,7 @@ export function renderReviews(data) {
               </div>
               ${r.body ? html`<p class="rt">“${r.body}”</p>` : ''}
             </article>`,
-          )}
+          )}</div>
           ${pager(data.page, data.total, data.per_page, hrefFor)}`
         : html`<div class="thin">
             <div class="fl">❦</div>

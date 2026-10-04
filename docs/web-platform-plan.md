@@ -401,6 +401,13 @@ Not "make it fast" — a budget, enforced.
 6. **No JS on the critical path.** Search typeahead, the cover lightbox, and the
    rating histogram tooltip are ~4 KB, `defer`, and every one of them degrades to
    a working plain-HTML behaviour.
+   Since 4 Oct 2026 the same rule covers the **continuous list**
+   (`_lib/scroll.js`, ~3 KB inline): the server still renders one page with a
+   real pager; the script reads `rel="next"` from it, fetches that same URL
+   (same edge-cache entry) as the reader nears the end, and appends the items.
+   It fetches nothing before the reader's first scroll, so a crawler rendering
+   in a tall window sees page 1 as page 1. The address follows the batch on
+   screen, and a jump button reaches the footer by pausing the loading.
 7. **Preconnect to nothing.** After (2) and (5) there are no third-party origins
    left. That is the point.
 
@@ -513,6 +520,11 @@ must not be able to spend a third party's quota on our behalf (§11).
 - Pagination: each page self-canonical with a unique title
   (*"Malayalam novels — page 2 of 14"*); never canonicalize page 2 to page 1
   (it de-indexes the deep catalog).
+- A hub in another order (`/language/malayalam?sort=added`, 4 Oct 2026) is the
+  exception: the same books again, so it is `noindex`, canonical to the plain
+  hub, its links are `nofollow`, and `robots.txt` closes `/language/*?sort=` and
+  `/genre/*?sort=` — which works because the site always writes `sort` first
+  in the query string.
 - `/search` and `/browse?…` are `noindex, follow` and `Disallow`ed for
   aggressive crawlers in `robots.txt`, but stay linked so equity flows.
 - Sitemaps extend beyond works/authors/publishers to **series, genres,

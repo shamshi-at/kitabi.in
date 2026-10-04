@@ -388,6 +388,28 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
   font-size:12.5px;font-weight:600;color:var(--ink-soft)}
 .pager a.on{background:var(--oxblood);border-color:var(--oxblood);color:#F6F0E3}
 .pager .el{color:var(--ink-soft);font-size:12px;padding:0 4px}
+/* The continuous list (4 Oct 2026). With JavaScript the numbered pager is
+   replaced by this: the next page arrives as the reader scrolls, and the
+   line under the button says how much is shown. The pager stays in the HTML
+   — it is what a crawler walks and what a reader without JS uses — so the
+   mockups draw both: this, and the pager dimmed beneath it. */
+.scm{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:26px}
+.scm-more{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:9px 18px;
+  font-size:12.5px;font-weight:600;color:var(--ink)}
+.scm-st{font-size:12px;color:var(--ink-soft)}
+.pager.nojs{opacity:.4;margin-top:12px}
+/* The jump button: one floating circle, bottom right, pointing where the
+   reader's last scroll was heading — up offers the top, down the end. */
+.jmp{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;
+  border-radius:50%;background:var(--oxblood);color:#F6F0E3;font-size:19px;
+  box-shadow:0 8px 22px rgba(43,33,24,.28)}
+.jmpnote{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:14px;
+  font-size:11.5px;color:var(--ink-soft)}
+/* The hub's sort: the same segmented control browse has. */
+.hseg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+.hseg span{padding:7px 12px;font-size:11.5px;font-weight:600;color:var(--ink-soft);border-right:1px solid var(--line)}
+.hseg span:last-child{border-right:0}
+.hseg span.on{background:var(--oxblood);color:#F6F0E3}
 
 /* author page */
 .ahero{display:grid;grid-template-columns:180px 1fr 250px;gap:34px;margin-top:22px;align-items:start}
@@ -1206,7 +1228,8 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
             <a class="bk"><div class="cv c5"><div class="ct"><div class="t">Anubhavangal</div></div></div><div class="bt">Anubhavangal</div><div class="ba">1971 · Memoir</div><div class="brt">★ 4.0 <span>· 18</span></div></a>
             <a class="bk"><div class="cv c3"><div class="ct"><div class="t">Chukku</div></div></div><div class="bt">Chukku</div><div class="ba">1961 · Short stories</div><div class="brt">★ 3.8 <span>· 11</span></div></a>
           </div>
-          <div class="pager"><a>‹</a><a class="on">1</a><a>2</a><a>3</a><a>4</a><span class="el">…</span><a>5</a><a>›</a></div>
+          <div class="scm"><span class="scm-more">Show more</span><span class="scm-st">More arrive as you scroll</span></div>
+          <div class="pager nojs" title="Without JavaScript, and what a crawler walks"><a>‹</a><a class="on">1</a><a>2</a><a>3</a><a>4</a><span class="el">…</span><a>5</a><a>›</a></div>
         </div>
 
         <div class="sec">
@@ -1321,7 +1344,8 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
             <a class="bk"><div class="cv c2"><div class="ct"><div class="t">Manju</div></div></div><div class="bt">Manju</div><div class="ba">M. T. Vasudevan Nair</div></a>
             <a class="bk"><div class="cv c5"><div class="ct"><div class="t">Sundarikalum Sundaranmarum</div></div></div><div class="bt">Sundarikalum…</div><div class="ba">Uroob</div></a>
           </div>
-          <div class="pager"><a>‹</a><a class="on">1</a><a>2</a><a>3</a><span class="el">…</span><a>27</a><a>›</a></div>
+          <div class="scm"><span class="scm-more">Show more</span><span class="scm-st">More arrive as you scroll</span></div>
+          <div class="pager nojs" title="Without JavaScript, and what a crawler walks"><a>‹</a><a class="on">1</a><a>2</a><a>3</a><span class="el">…</span><a>27</a><a>›</a></div>
         </div>
       </div>
       <div class="sfoot"><div class="sfoot-in">
@@ -1406,10 +1430,11 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 
         <div class="sec">
           <div class="toolbar">
+            <span class="hseg"><span class="on">A–Z</span><span>Top rated</span><span>Just added</span><span>Newest</span><span>Oldest</span><span>By author</span></span>
             <span class="chip on">All</span><span class="chip">Malayalam 96</span><span class="chip">Bengali 34</span>
             <span class="chip">Tamil 28</span><span class="chip">Hindi 21</span><span class="chip">Kannada 14</span>
             <span class="chip">Has a translation 61</span>
-            <span class="cnt">Showing <b>1–24</b> of 212 · Sort: highest rated ▾</span>
+            <span class="cnt">Showing <b>1–24</b> of 212</span>
           </div>
           <div class="strip">
             <a class="bk"><div class="cv c7"><div class="ct"><div class="t">Khasakkinte Ithihasam</div></div></div><div class="bt">Khasakkinte Ithihasam</div><div class="ba">O. V. Vijayan</div><div class="brt">★ 4.7 <span>· 189</span></div></a>
@@ -1421,7 +1446,9 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
             <a class="bk"><div class="cv c5"><div class="ct"><div class="t">Samskara</div></div></div><div class="bt">Samskara</div><div class="ba">U. R. Ananthamurthy</div><div class="brt">★ 4.4 <span>· 88</span></div></a>
             <a class="bk"><div class="cv c2"><div class="ct"><div class="t">Naalukettu</div></div></div><div class="bt">Naalukettu</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.4 <span>· 132</span></div></a>
           </div>
-          <div class="pager"><a>‹ Previous</a><a class="on">1</a><a>2</a><a>3</a><a>4</a><span class="el">…</span><a>9</a><a>Next ›</a></div>
+          <div class="scm"><span class="scm-more">Show more</span><span class="scm-st">More arrive as you scroll</span></div>
+          <div class="pager nojs" title="Without JavaScript, and what a crawler walks"><a>‹ Previous</a><a class="on">1</a><a>2</a><a>3</a><a>4</a><span class="el">…</span><a>9</a><a>Next ›</a></div>
+          <div class="jmpnote">Floating, bottom right, while scrolling: <span class="jmp">↑</span> after scrolling up, <span class="jmp">↓</span> after scrolling down (to the footer — it pauses the loading)</div>
         </div>
 
         <div class="sec">
@@ -1557,7 +1584,8 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
             <a class="bk"><div class="cv c2"><div class="ct"><div class="t ml">നാലുകെട്ട്</div></div></div><div class="bt">Naalukettu</div><div class="ba">M. T. Vasudevan Nair</div><div class="brt">★ 4.4</div></a>
             <a class="bk"><div class="cv c5"><div class="ct"><div class="t ml">ഒരു ദേശത്തിന്റെ കഥ</div></div></div><div class="bt">Oru Desathinte Katha</div><div class="ba">S. K. Pottekkatt</div><div class="brt">★ 4.5</div></a>
           </div>
-          <div class="pager"><a>‹ Previous</a><a class="on">1</a><a>2</a><a>3</a><span class="el">…</span><a>18</a><a>Next ›</a></div>
+          <div class="scm"><span class="scm-more">Show more</span><span class="scm-st">More arrive as you scroll</span></div>
+          <div class="pager nojs" title="Without JavaScript, and what a crawler walks"><a>‹ Previous</a><a class="on">1</a><a>2</a><a>3</a><span class="el">…</span><a>18</a><a>Next ›</a></div>
         </div>
       </div>
       <div class="sfoot"><div class="sfoot-in">
@@ -1878,7 +1906,8 @@ code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
             <div class="rt">“Held up less well than I wanted it to. The women are written from outside.
               Still the best doorway into Thakazhi.”</div>
           </div>
-          <div class="pager"><a class="on">1</a><a>2</a><a>3</a><a>Next ›</a></div>
+          <div class="scm"><span class="scm-more">Show more</span><span class="scm-st">More arrive as you scroll</span></div>
+          <div class="pager nojs" title="Without JavaScript, and what a crawler walks"><a class="on">1</a><a>2</a><a>3</a><a>Next ›</a></div>
         </div>
       </div></div>
     </div>

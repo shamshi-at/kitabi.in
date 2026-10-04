@@ -730,6 +730,59 @@ assert(
   'the form rides along with the order',
 );
 
+// --------------------------------------------------------------------------
+// The continuous list (_lib/scroll.js). The script cannot run here — there is
+// no DOM — so what is pinned is the contract between it and the markup: the
+// hooks it looks for are the hooks the renderers emit, the pager it reads is
+// still a pager of real links, and a page has exactly one paged list.
+// --------------------------------------------------------------------------
+
+var pagerHtml = String(pager(2, 240, 24, href));
+assertIncludes(pagerHtml, '<nav class="pager" aria-label="Pagination" data-pager>',
+  'the pager carries the hook the script reads');
+assertIncludes(pagerHtml, 'rel="next"', '…and the next link it follows');
+assertIncludes(pagerHtml, 'rel="prev"', '…and the previous link it offers a reader who arrives mid-list');
+assertIncludes(SCROLL_JS, "'nav[data-pager]'", 'the script looks for the hook the pager emits');
+assertIncludes(SCROLL_JS, "'[data-list]'", '…and for the list hook');
+assertIncludes(SCROLL_JS, "'a[rel=\"next\"]'", '…and reads the next page from rel="next"');
+assertExcludes(SCROLL_JS, '`', 'no backtick inside the inlined script — it lives in a template literal');
+assertExcludes(SCROLL_JS, '</script', 'the inlined script cannot close its own tag');
+
+assertIncludes(String(bookStrip([{ id: 'w', title: 'T', authors: [] }], { list: true })),
+  '<div class="strip" data-list>', 'a paged grid is marked');
+assertExcludes(String(bookStrip([{ id: 'w', title: 'T', authors: [] }])), 'data-list',
+  'a shelf that is not the paged list is not');
+
+function count(haystack, needle) { return haystack.split(needle).length - 1; }
+assert(count(hubSortBar, ' data-list') === 1,
+  'a hub has ONE paged list — "Start here" is a shelf, and appending page 2 to it would be wrong');
+assertIncludes(hubSortBar, '<nav class="pager" aria-label="Pagination" data-pager>',
+  'the hub has the pager under it');
+
+var browseList = String(
+  renderBrowse({ works: [{ id: 'w', slug: 'chemmeen', title: 'Chemmeen', authors: [] }],
+                 total: 1600, page: 3, per_page: 24, languages: [], forms: [], genres: [] }).text(),
+);
+assert(count(browseList, ' data-list') === 1, 'browse marks its grid');
+assertIncludes(browseList, 'href="/browse?page=4" rel="next"', 'browse still links the next page');
+assertIncludes(browseList, 'Showing 49–72 of 1,600',
+  'the count is "first–last of total" — the script keeps the first and takes the last from the next page');
+
+var peopleList = String(
+  renderPeople({ kind: 'authors', sort: 'books', language: null, page: 1, per_page: 48, total: 400,
+                 people: [{ id: 'a', slug: 'basheer', name: 'Basheer', work_count: 12 }],
+                 languages: [] }).text(),
+);
+assert(count(peopleList, ' data-list') === 1, 'the directories mark their grid');
+assertIncludes(peopleList, '<div class="people" data-list>', '…on the grid itself');
+
+assert(count(hubSortBar, 'function startFeed(){') === 1, 'the scroll script is inlined once');
+assertIncludes(hubSortBar, '.jmp{', '…and the jump button\'s styles with it');
+assertIncludes(hubSortBar, '.scm{', '…and the continuous list\'s');
+var bookDoc = String(renderHub(Object.assign({}, HUB, { total: 1 })).text());
+assertExcludes(bookDoc, '<nav class="pager"',
+  'a list that fits on one page has no pager, so the script leaves it alone');
+
 var browseDoc = String(
   renderBrowse({ works: [], total: 0, page: 1, per_page: 24, languages: [], forms: [], genres: [] }).text(),
 );

@@ -1,4 +1,5 @@
-// Search typeahead — the site's ONLY JavaScript, and entirely optional.
+// Search typeahead — one of the site's two scripts (the other is _lib/scroll.js),
+// and entirely optional.
 //
 // Progressive enhancement in the strict sense: the search form is a plain GET
 // that already works with JS disabled, blocked or failed. This attaches to it
