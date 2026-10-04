@@ -8,6 +8,7 @@ leaves a receipt for everything it did publish.
 """
 
 import uuid
+from datetime import timedelta
 
 import pytest
 from sqlalchemy import func, select
@@ -1004,3 +1005,50 @@ async def test_undoing_a_printing_leaves_the_book_it_joined_standing(session):
     await session.refresh(printing)
     assert printing.state == STATE_COMPLETE
     assert intake_service.PRINTING_KEY not in printing.payload
+
+
+async def test_undoing_a_book_takes_the_author_row_made_for_it(session):
+    """Undoing `Classic Dark Stories` by `Various` should not leave an author
+    page called "Various" behind with nothing on it."""
+    await intake_service.record(
+        session, [candidate(authors=("Made For This Book",))], source=SOURCE
+    )
+    await intake_service.promote(session, limit=10)
+    row = await only_row(session)
+
+    await intake_service.revert(session, [row.id])
+
+    author = (await session.execute(select(Author))).scalar_one()
+    assert author.deleted_at is not None
+
+
+async def test_undoing_a_book_leaves_an_author_the_catalogue_already_had(session):
+    known = await _author(session, "Arundhati Roy")
+    # Not written in the same breath as the book.
+    known.created_at = known.created_at - timedelta(days=30)
+    await session.commit()
+    await intake_service.record(session, [candidate()], source=SOURCE)
+    await intake_service.promote(session, limit=10)
+
+    await intake_service.revert(session, [(await only_row(session)).id])
+
+    await session.refresh(known)
+    assert known.deleted_at is None
+
+
+async def test_undoing_one_book_leaves_an_author_who_has_another(session):
+    await intake_service.record(
+        session,
+        [
+            candidate("/works/ONE"),
+            candidate("/works/TWO", title="The Ministry of Utmost Happiness", isbn="9780143028109"),
+        ],
+        source=SOURCE,
+    )
+    await intake_service.promote(session, limit=10)
+    rows = {r.source_key: r for r in (await session.execute(select(CatalogIntake))).scalars()}
+
+    await intake_service.revert(session, [rows["/works/ONE"].id])
+
+    author = (await session.execute(select(Author))).scalar_one()
+    assert author.deleted_at is None, "still the author of the book that was kept"

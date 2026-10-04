@@ -46,7 +46,7 @@ import re
 import uuid
 from collections.abc import Iterable, Sequence
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -62,7 +62,7 @@ from app.models.catalog_intake import (
     STATE_REJECTED,
 )
 from app.models.edition import Edition
-from app.models.work import Work
+from app.models.work import Work, work_authors, work_translators
 from app.schemas.catalog import EditionCreate, WorkCreate
 from app.services import catalog_service, cover_ingest, intake_gate
 from app.services import isbn as isbn_util
@@ -846,6 +846,42 @@ async def _stamp_provenance(db: AsyncSession, work: Work, candidate: Candidate) 
         logger.warning("intake: could not stamp provenance on %s", work.id)
 
 
+#: How far apart an author row and the Work it was created for can be. They
+#: are written in one transaction, so in practice this is zero.
+_SAME_PROMOTION = timedelta(seconds=2)
+
+
+async def _retire_authors_made_for(db: AsyncSession, work: Work, now: datetime) -> None:
+    """Soft-delete the author rows a promotion created, when nothing else is
+    credited to them.
+
+    Undoing `Classic Dark Stories` by `Various` should not leave an author
+    page called "Various" behind with no books on it. Only a row that was
+    created *with* this Work — an author the catalogue already had is left
+    exactly as it was — and only one no other live book names.
+    """
+    for person in {*work.authors, *work.translators}:
+        if person.deleted_at is not None:
+            continue
+        if abs(person.created_at - work.created_at) > _SAME_PROMOTION:
+            continue  # the catalogue had this author before this book
+        credited_elsewhere = False
+        for link in (work_authors, work_translators):
+            other = await db.scalar(
+                select(Work.id)
+                .join(link, link.c.work_id == Work.id)
+                .where(
+                    link.c.author_id == person.id,
+                    Work.id != work.id,
+                    Work.deleted_at.is_(None),
+                )
+                .limit(1)
+            )
+            credited_elsewhere = credited_elsewhere or other is not None
+        if not credited_elsewhere:
+            person.deleted_at = now
+
+
 async def revert(db: AsyncSession, intake_ids: Iterable[uuid.UUID]) -> int:
     """Undo promotions this pipeline made — the receipt, read backwards.
 
@@ -879,6 +915,8 @@ async def revert(db: AsyncSession, intake_ids: Iterable[uuid.UUID]) -> int:
                 work.deleted_at = now
                 for edition in work.editions:
                     edition.deleted_at = now
+                await db.flush()
+                await _retire_authors_made_for(db, work, now)
         row.state = STATE_COMPLETE
         row.note = "reverted"
         row.promoted_at = None

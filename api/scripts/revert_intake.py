@@ -14,9 +14,13 @@ undone and writes nothing.
     # undo one shop's books from that night
     … scripts/revert_intake.py --since 2026-10-05 --source harpercollins_in --apply
 
+    # undo particular books: titles containing any of these (repeatable)
+    … scripts/revert_intake.py --since 2026-10-05 --title "Booktopus" --title "Burnt Sugar"
+
 What undoing means: the books are soft-deleted (rule 3) — they leave the
 catalogue, search and the public site, and a reader who already shelved one
-keeps their entry. A row that was added as another *printing* of an existing
+keeps their entry. An author row that was created for an undone book, and that
+no other book names, goes with it. A row that was added as another *printing* of an existing
 book loses only that printing. Undone rows are not published again: the ISBN
 stays claimed by the soft-deleted edition, so the next night records them as
 duplicates.
@@ -55,6 +59,12 @@ async def main() -> int:
     parser.add_argument("--since", type=_day, required=True, help="UTC date, YYYY-MM-DD")
     parser.add_argument("--until", type=_day, help="UTC date, exclusive (default: now)")
     parser.add_argument("--source", help="only this adapter, e.g. mathrubhumi")
+    parser.add_argument(
+        "--title",
+        action="append",
+        default=[],
+        help="only books whose title contains this (case-insensitive; repeatable)",
+    )
     parser.add_argument("--apply", action="store_true", help="actually undo them")
     args = parser.parse_args()
 
@@ -75,6 +85,13 @@ async def main() -> int:
             rows = (
                 (await session.execute(query.order_by(CatalogIntake.promoted_at))).scalars().all()
             )
+            if args.title:
+                wanted = [t.casefold() for t in args.title]
+                rows = [
+                    row
+                    for row in rows
+                    if any(t in str((row.payload or {}).get("title")).casefold() for t in wanted)
+                ]
 
             for row in rows:
                 payload = row.payload or {}
