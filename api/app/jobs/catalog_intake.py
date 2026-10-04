@@ -172,6 +172,11 @@ async def _author_roles(session, client: httpx.AsyncClient, settings) -> None:
     """Resolve who wrote and who translated the books held for it. A failure
     here leaves those books held and costs nothing else."""
     try:
+        # Stored answers first, under tonight's rules — free, and it is what
+        # stops a book resolved under an older rule from being published.
+        rejudged = await author_roles.rejudge(session)
+        if rejudged:
+            logger.info("intake: author roles re-judged %s", rejudged)
         resolved = await author_roles.resolve_held(
             session, client, settings, limit=settings.catalog_intake_roles_limit
         )

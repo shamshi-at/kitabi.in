@@ -67,7 +67,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import CatalogIntake
 from app.models.catalog_intake import STATE_INCOMPLETE
 from app.services import intake_service
-from app.services.intake_gate import SHOUTING_MIN_LETTERS, Candidate
+from app.services.intake_gate import SHOUTING_MIN_LETTERS, Candidate, is_shop_label
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +180,25 @@ def decase(title: str, *, always: bool = False) -> str:
     return " ".join(out)
 
 
+_TITLE_BREAK = re.compile(r"(\s[–—|-]\s|:\s)")
+
+
+def without_tagline(title: str) -> str:
+    """A title with the shop's selling line cut off the end.
+
+    `Burnt Sugar – Shortlisted for the 2020 Booker Prize` is the book *Burnt
+    Sugar* (published under the long form on the first night, 4 Oct 2026).
+    Trailing parts are dropped for as long as the last one reads as a shop's
+    words, or follows a pipe — no title has one. A subtitle that is just a
+    subtitle (`Thriving: The Path to Mental Mastery`) is not touched, and
+    neither is one that sits in front of a tagline.
+    """
+    parts = _TITLE_BREAK.split(title)  # text, separator, text, separator, …
+    while len(parts) >= 3 and ("|" in parts[-2] or is_shop_label(parts[-1])):
+        parts = parts[:-2]
+    return "".join(parts).strip()
+
+
 def name_case(name: str) -> str:
     """A person's name a shop set in capitals: `HAFIZ MOHAMAD N.P` →
     `Hafiz Mohamad N.P`, `KURUP K K N` → `Kurup K K N`. Initials stay as they
@@ -248,7 +267,7 @@ def _base(product: dict, store: Store, **fields) -> Candidate:
 
 
 def _speaking_tiger_feed(product: dict, store: Store) -> Candidate:
-    title = decase(html.unescape(product.get("name") or ""))
+    title = without_tagline(decase(html.unescape(product.get("name") or "")))
     images = _images(product)
     return _base(
         product,
@@ -296,7 +315,7 @@ def _harpercollins_feed(product: dict, store: Store) -> Candidate:
     return _base(
         product,
         store,
-        title=decase(title),
+        title=without_tagline(decase(title)),
         isbn=(product.get("sku") or "").strip() or None,
         publisher=store.publisher,
         cover_url=images[0] if images else None,

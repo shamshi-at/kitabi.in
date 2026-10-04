@@ -633,3 +633,43 @@ async def test_a_night_reads_the_newest_page_then_the_book_pages_then_publishes(
     # The combo was staged, refused, and never looked at again.
     assert rows["840420"].state == STATE_REJECTED
     assert sum(1 for s in seen if s.startswith("www.mbibooks.com/product/")) == 1
+
+
+# --------------------------------------------------------------------------
+# a shop's selling line, cut off the title (first night, 4 Oct 2026)
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("listed", "title"),
+    [
+        ("Burnt Sugar – Shortlisted for the 2020 Booker Prize", "Burnt Sugar"),
+        (
+            "Not Safe for Work: A contemporary romance novel from the bestselling author of Hello",
+            "Not Safe for Work",
+        ),
+        (
+            "Showtime!: A Rita Ferreira Thriller | From the author of Bhendi Bazaar",
+            "Showtime!: A Rita Ferreira Thriller",
+        ),
+        # A subtitle that is only a subtitle is left exactly as it is.
+        ("Thriving: The Path to Mental Mastery and Peak Performance", None),
+        ("Blind Fury – A Kutta Kadam Thriller", None),
+        ("The Bestseller She Wrote", None),
+    ],
+)
+def test_a_selling_line_is_cut_off_the_title(listed, title):
+    assert sf.without_tagline(listed) == (title or listed)
+
+
+def test_the_harpercollins_parser_publishes_the_book_under_its_own_name():
+    """`Burnt Sugar – Shortlisted for the 2020 Booker Prize` went out under
+    that name. The gate now refuses it; the adapter is what makes sure the
+    book is not lost with it."""
+    product = {
+        **row("harpercollins", "Thriving"),
+        "name": "Burnt Sugar &#8211; Shortlisted for the 2020 Booker Prize",
+    }
+    candidate = sf.HARPERCOLLINS_IN.from_feed(product, sf.HARPERCOLLINS_IN)
+    assert candidate.title == "Burnt Sugar"
+    assert not screen(candidate).rejected

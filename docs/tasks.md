@@ -1328,7 +1328,7 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
     the "a cleanup that only settles on the second run is one nobody can tell is
     finished" trap the etl README already names. One pass now means finished,
     which is what a door-time gate depends on.
-- [~] **P2 — covers** (3 Oct 2026). Owner's storage call: **Cloudflare R2**
+- [x] **P2 — covers** (3 Oct 2026; live 4 Oct). Owner's storage call: **Cloudflare R2**
       (plan §4 option C). Built and tested; **not yet live** — see the last
       bullet.
   - `services/cover_ingest` — fetch (vetted URL, vetted redirects, 12 MB cap) →
@@ -1354,14 +1354,13 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
         cover through the production bucket — settings ok, stored, and served
         back from `https://covers.kitabi.in/catalog/…` as a 22 KB JPEG with the
         `immutable` header.
-  - [ ] **Remaining before P2 is ticked:** the code is deployed and one book is
-        actually *promoted* with its cover in R2 — which needs
-        `CATALOG_INTAKE_ENABLED`, a separate owner decision.
+  - [x] **First real promotions, 4 Oct 2026:** 150 books published with their
+        covers in R2 (40 with back covers); a public page and both its covers
+        checked by hand.
   - Not done here: the 24 of 47 held candidates are OpenLibrary editions with
     *no* cover at all — this pipeline stores covers, it does not find them. A
     second cover source for a known ISBN is P3/P4 work.
-- [~] **P3 — storefront adapters** (3 Oct 2026). Built and tested; publishes
-      nothing until `CATALOG_INTAKE_ENABLED`. `services/intake_storefront`:
+- [x] **P3 — storefront adapters** (3 Oct 2026; live 4 Oct). `services/intake_storefront`:
       HarperCollins India (5,178 titles), Mathrubhumi (3,764), Speaking Tiger (999).
   - Feed pass stages every product; page pass (`enrich`) reads one product
     page per held row, once, for ISBN / author / language — and, on
@@ -1393,9 +1392,19 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
         read reliably: Roli, Olive, Seagull, Juggernaut (plan §5 says why not yet).
   - **Intake switched on 4 Oct 2026** (`ENV CATALOG_INTAKE_ENABLED=1` in
     `api/Dockerfile`). Undo a night with `scripts/revert_intake.py`.
-  - [ ] Tick P2 and P3 after the first enabled night: check the Railway log
-        for `intake: promoted {...}` and open a published book's cover on
-        `covers.kitabi.in`.
+  - [x] **First enabled night, 4 Oct 2026:** 150 published (HarperCollins 51,
+        Mathrubhumi 47, Speaking Tiger 52), every cover on `covers.kitabi.in`,
+        no failed row. P2 and P3 are done.
+  - [x] **What that night got wrong, fixed the same day:** eight of the 150
+        were undone and each became a gate rule — brand/bracketed author names,
+        `Various`, selling lines in titles (also cut by the adapters), volume
+        sets, Hindi titles labelled English. `author_roles` holds an editor
+        beside an "author" and re-judges stored answers nightly. Revert takes
+        `--title` and retires orphaned author rows. The jobs' INFO lines now
+        reach the log.
+  - [ ] **Mathrubhumi's older pages have only a romanized title** — 74 of the
+        first 208 pages read are held for `title_script`. Owner decision:
+        accept those, or find the Malayalam title another way.
 - [ ] **P4 — DC Books**, for Malayalam breadth. LookaBook is *not* the answer:
       15.6% of its product pages carry an ISBN, so it would deposit rejects. Its
       use is as a discovery list. Needs the owner conversation or its SPA's own

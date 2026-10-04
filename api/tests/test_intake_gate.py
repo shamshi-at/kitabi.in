@@ -577,3 +577,119 @@ def test_the_fields_a_storefront_adds_survive_the_round_trip_through_jsonb():
 
 def test_an_http_source_url_is_dropped_rather_than_followed_later():
     assert screen(candidate(source_url="http://example.com/x")).candidate.source_url is None
+
+
+# --------------------------------------------------------------------------
+# what the first unattended night published that it should not have
+# (4 Oct 2026 — 8 of 150; every refused example below is one of them, or its
+# neighbour in the same feed)
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Burnt Sugar – Shortlisted for the 2020 Booker Prize",
+        "Not Safe for Work: A contemporary romance novel from the bestselling author of Hello",
+        "The Long Road: Winner of the JCB Prize",
+        "Showtime!: From the author of Bhendi Bazaar",
+        "Quiet Days – The #1 Bestseller",
+    ],
+)
+def test_a_selling_line_in_the_title_is_not_part_of_the_title(title):
+    result = screen(candidate(title=title))
+    assert result.fatal == (FATAL_TITLE_JUNK,), title
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "The Bestseller She Wrote",  # a novel by Ravi Subramanian
+        "How to Write a Bestseller",
+        "The Winner Stands Alone",
+        "The Shortlist",
+        "Blind Fury – A Kutta Kadam Thriller",  # says what it is, not how well it sold
+        "The Author of Himself",
+    ],
+)
+def test_a_title_that_merely_mentions_selling_or_winning_still_passes(title):
+    assert screen(candidate(title=title)).ok, title
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["വാല്മീകി രാമായണം (VOL-1 & 2)", "Valmeeki Ramayanam Vol 1 and 2", "Don Quixote 2 Volumes"],
+)
+def test_a_set_of_volumes_sold_as_one_product_is_not_one_book(title):
+    assert screen(candidate(title=title)).fatal == (FATAL_NOT_A_BOOK,)
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["The Perfect Master Volume II", "Collected Works Volume 2", "Gita Darshan I", "Vol de nuit"],
+)
+def test_one_volume_of_a_work_is_a_book(title):
+    assert screen(candidate(title=title)).ok, title
+
+
+def test_various_is_nobody():
+    """A shop's word for "there is no single author". The book waits for one
+    rather than getting an author page called Various."""
+    result = screen(candidate(authors=("Various",)))
+    assert not result.rejected
+    assert result.missing == (MISSING_AUTHORS,)
+    assert result.candidate.authors == ()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "BOOKTOPUS",
+        "LINCOLN PEIRCE",
+        "Dr Justin O'Brien (Swami Jaidev Bharati)",
+        "Ruskin Bond [ed.]",
+    ],
+)
+def test_a_credit_that_is_not_a_persons_name_is_refused(name):
+    """A brand in capitals, a shouted name, a name with a second name in
+    brackets: each would become a wrong author page."""
+    assert screen(candidate(authors=(name,))).fatal == (FATAL_NAME_JUNK,), name
+
+
+@pytest.mark.parametrize(
+    "name", ["INTACH", "UNESCO", "Osho", "H P Lovecraft", "B.C. Dutt", "K.V.M"]
+)
+def test_an_organisation_or_initials_in_capitals_is_a_name(name):
+    """One short word in capitals is how the organisation is written — and
+    organisations do write books."""
+    assert screen(candidate(authors=(name,))).ok, name
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Raghav Katha: Valmiki Ramayan par adharit",  # published as English, 4 Oct 2026
+        "Hazirjavabi Ki Kahaniyan",
+        "Dh One: Cricket aur Jeevan ki bayangi",
+    ],
+)
+def test_a_hindi_title_in_latin_letters_is_not_an_english_books_title(title):
+    """HarperCollins India lists some Hindi books as English. The label is
+    wrong; the title gives it away."""
+    result = screen(candidate(title=title, language="English"))
+    assert not result.rejected
+    assert result.missing == (MISSING_NATIVE_TITLE,), title
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Ka: Stories of the Mind and Gods of India",
+        "Par for the Course",
+        "Katha: Short Stories by Indian Women",
+        "Ek Tha Tiger",
+        "The God of Small Things",
+    ],
+)
+def test_one_hindi_word_does_not_make_a_title_hindi(title):
+    assert screen(candidate(title=title, language="English")).ok, title

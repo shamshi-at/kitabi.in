@@ -557,6 +557,26 @@ job created.
 
 ---
 
+### The first night — 4 Oct 2026
+
+1,607 rows staged, **150 published** (HarperCollins 51, Mathrubhumi 47,
+Speaking Tiger 52; OpenLibrary 0, because new releases go first), in 21
+minutes, with no failed row. 45 Malayalam books under Malayalam titles; every
+cover in R2; 60 author-role questions, 17 resolved.
+
+Eight of the 150 were undone and each became a rule (§3's gate, tightened the
+same day): brand or bracketed author names, `Various`, selling lines in
+titles, volume sets, and Hindi titles a shop labels English. Replayed over the
+night's own rows the new gate refuses exactly those eight.
+
+Two measurements that change the forecast:
+
+- **Mathrubhumi's older pages mostly lack a Malayalam title.** 74 of the first
+  208 pages read are held for `title_script`; the newest listings nearly all
+  have one. Its ~3,700 titles will not all arrive under this rule.
+- **Author roles resolve about a quarter of the time** (17 of 60), not the
+  ~45% of the eleven-book test.
+
 ## 6. Open decisions for the owner
 
 **The intake was switched on 4 Oct 2026** (`ENV CATALOG_INTAKE_ENABLED=1` in

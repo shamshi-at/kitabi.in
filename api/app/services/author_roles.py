@@ -51,7 +51,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.models import FEATURE_AUTHOR_ROLES, CatalogIntake
-from app.models.catalog_intake import STATE_INCOMPLETE
+from app.models.catalog_intake import STATE_COMPLETE, STATE_INCOMPLETE
 from app.services import intake_gate, intake_service, llm_quota
 from app.services.anthropic_client import ANTHROPIC_URL, headers, reply_text
 
@@ -272,6 +272,13 @@ def judge(
     if set(roles) != set(names):
         return None  # somebody was left out
 
+    if AUTHOR in roles.values() and EDITOR in roles.values():
+        # An edited volume beside somebody called its author: on the first
+        # night that was `Gems of Urdu Literature`, where the "author" had
+        # written a different book and this one's editor would have been
+        # dropped. Who the book is filed under is a person's call.
+        return None
+
     authors = tuple(n for n in names if roles[n] == AUTHOR)
     if not authors:
         # An anthology has editors and no single author; a catalogue files it
@@ -344,6 +351,49 @@ async def ask(
 # --------------------------------------------------------------------------
 # The nightly pass
 # --------------------------------------------------------------------------
+
+
+async def rejudge(db: AsyncSession) -> dict[str, int]:
+    """Put every stored answer through `judge` again, as it is now.
+
+    The model's reply is kept on the row, so a rule added to `judge` applies to
+    books already asked about — without asking, or paying, again. Unpublished
+    rows only: a book that is already live is undone with the revert script,
+    not quietly re-credited.
+    """
+    rows = (
+        (
+            await db.execute(
+                select(CatalogIntake).where(
+                    CatalogIntake.payload.has_key(intake_service.ROLES_KEY),  # noqa: W601
+                    CatalogIntake.state.in_([STATE_INCOMPLETE, STATE_COMPLETE]),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    counts: dict[str, int] = {}
+    for row in rows:
+        payload = row.payload or {}
+        roles = payload.get(intake_service.ROLES_KEY) or {}
+        answer = roles.get("answer")
+        if not isinstance(answer, dict):
+            continue
+        names = tuple(payload.get("contributors") or ())
+        page = payload.get(intake_service.PAGE_FACTS_KEY) or {}
+        bios = {n: b for n, b in (page.get("bios") or {}).items() if n in names and b}
+        verdict = judge(answer, names, payload.get("description") or "", bios)
+        now = verdict.as_facts() if verdict else None
+        if now == roles.get("resolved"):
+            continue
+        # Whatever the old verdict put in the author fields goes with it.
+        row.payload = {**payload, "authors": [], "translators": []}
+        intake_service.apply_roles(row, resolved=now, answer=answer)
+        key = "now_resolved" if now else "no_longer_resolved"
+        counts[key] = counts.get(key, 0) + 1
+    await db.commit()
+    return counts
 
 
 async def resolve_held(

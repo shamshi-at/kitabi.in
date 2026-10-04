@@ -513,3 +513,76 @@ async def test_a_book_with_no_publisher_text_is_not_asked_about(session):
     async with _client(explode) as client:
         counts = await author_roles.resolve_held(session, client, _settings(), limit=10)
     assert counts == {"nothing_to_read": 1}
+
+
+# --------------------------------------------------------------------------
+# what the first night got wrong, and applying a new rule to old answers
+# --------------------------------------------------------------------------
+
+
+def test_an_edited_volume_beside_an_author_is_a_persons_call():
+    """The one wrong answer of the first night (`Gems of Urdu Literature`,
+    4 Oct 2026): the editor was rightly called the editor, and the other name
+    was called the author on the strength of a *different* book he had written
+    — so the book would have been filed under the wrong person and its editor
+    dropped. Every quote was real; the combination is what cannot be trusted."""
+    names = ("Meena Pillai", "Arun Das")
+    blurb = (
+        "Edited by Meena Pillai, this is a selection of forty short stories. "
+        "Arun Das's best-loved novel, River Road, made his name."
+    )
+    answer = credits(
+        ("Meena Pillai", "editor", "Edited by Meena Pillai"),
+        ("Arun Das", "author", "Arun Das's best-loved novel, River Road"),
+    )
+    assert judge(answer, names, blurb, {}) is None
+
+
+async def test_a_new_rule_is_applied_to_answers_already_given(session):
+    """The reply is kept on the row, so tightening `judge` reaches books that
+    were resolved under the old rules — before they are published, and without
+    paying to ask again."""
+    names = ("Meena Pillai", "Arun Das")
+    blurb = (
+        "Edited by Meena Pillai, this is a selection of forty short stories. "
+        "Arun Das's best-loved novel, River Road, made his name."
+    )
+    answer = credits(
+        ("Meena Pillai", "editor", "Edited by Meena Pillai"),
+        ("Arun Das", "author", "Arun Das's best-loved novel, River Road"),
+    )
+    case = {"title": "Forty Stories", "names": list(names), "blurb": blurb}
+    (row,) = await stage(session, held(case))
+    # As the first night left it: resolved, and waiting to be published.
+    intake_service.apply_roles(
+        row, resolved={"authors": ["Arun Das"], "translators": []}, answer=answer
+    )
+    await session.commit()
+    assert row.state == STATE_COMPLETE
+
+    counts = await author_roles.rejudge(session)
+
+    assert counts == {"no_longer_resolved": 1}
+    await session.refresh(row)
+    assert row.state == STATE_INCOMPLETE
+    assert row.payload["authors"] == []
+    assert row.missing == [intake_gate.MISSING_AUTHOR_ROLES]
+    assert await intake_service.promote(session, limit=10) == {}
+
+    def explode(request):
+        raise AssertionError("re-judging must not ask, or pay, again")
+
+    async with _client(explode) as client:
+        assert await author_roles.resolve_held(session, client, _settings(), limit=10) == {}
+
+
+async def test_rejudging_leaves_a_sound_answer_alone(session):
+    case = recorded("Diary of an Unseen Witness")
+    (row,) = await stage(session, held(case))
+    async with _client(counting(lambda q: case["answer"])) as client:
+        await author_roles.resolve_held(session, client, _settings(), limit=10)
+
+    assert await author_roles.rejudge(session) == {}
+    await session.refresh(row)
+    assert row.state == STATE_COMPLETE
+    assert row.payload["translators"] == ["Kalpana Kannabiran"]

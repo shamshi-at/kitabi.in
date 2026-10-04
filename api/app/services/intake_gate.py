@@ -102,6 +102,13 @@ FATAL_COVER_SCHEME = "cover_not_https"
 _FATAL_TITLE_FLAGS = frozenset({marc_cleanup.BRACKETED_TITLE, marc_cleanup.UNBALANCED_BRACKET})
 _FATAL_NAME_FLAGS = frozenset({marc_cleanup.MULTI_COMMA_NAME, marc_cleanup.UNBALANCED_BRACKET})
 
+#: Words a shop puts where an author belongs when there is not one. They name
+#: nobody, so the book has no author as far as this gate is concerned — and
+#: waits, rather than getting an author page called "Various".
+_NOBODY = frozenset(
+    {"various", "various authors", "multiple authors", "unknown", "n/a", "na", "none", "author"}
+)
+
 
 @dataclass(frozen=True)
 class Candidate:
@@ -275,11 +282,19 @@ _ONE_CHAR_REPEATED = re.compile(r"^(.)\1{3,}$", re.DOTALL)
 #:   Edition)`. Under rule 17 that belongs to the Edition, never the Work.
 #: - a tagline after a pipe: `Musafir Cafe | Now a Netflix Series`. No title
 #:   contains a pipe.
+#: - a tagline in the title's own clothes: `Burnt Sugar – Shortlisted for the
+#:   2020 Booker Prize` was published that way on the first night (4 Oct 2026).
 #: - a search-engine listing: `Booktopus Playtime Activity Book – Outer Space –
 #:   Learning Activity Books for Kids 4+ Years – Early Learning…`.
 _SHOP_LABEL = re.compile(
     r"""
       [(\[]\s*(?:paperback|hardcover|hardback|hb|pb|e-?book|audiobook)\s*[)\]]
+    | \b(?:short|long)listed\s+for\b
+    | \bwinner\s+of\s+the\b
+    | \bbest-?selling\s+(?:author|writer|book|novel|series)\b
+    | (?:\b(?:international|national|no\.?\s*1)|\#\s?1)\s+best-?seller\b
+    | \bfrom\s+the\s+(?:author|creator|writer)s?\s+of\b
+    | \bnow\s+a\s+(?:major\s+)?(?:motion\s+picture|film|netflix|tv|web)\b
     | \b(?:hindi|tamil|telugu|malayalam|kannada|marathi|bengali|gujarati|punjabi
           |odia|urdu|english|special|revised|illustrated|deluxe|collector'?s
           |anniversary|kindle|paperback|hardcover|kids|young\s+readers?)
@@ -288,6 +303,14 @@ _SHOP_LABEL = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
+
+
+def is_shop_label(text: str) -> bool:
+    """Whether `text` reads as something a shop wrote, not part of a title.
+    Adapters use it to cut a tagline off before the gate ever sees it."""
+    return bool(_SHOP_LABEL.search(text))
+
+
 _SPACED_DASH = re.compile(r"\s[–—-]\s")
 #: Three or more ` – ` breaks is a product listing, not a title and subtitle.
 _LISTING_DASHES = 3
@@ -318,6 +341,8 @@ _NOT_ONE_BOOK = re.compile(
     | \b(?:set|collection)\s+of\s+\d+\s+books\b
     | \be?-?gift\s+(?:card|voucher|pack|hamper)\b
     | \(\s*sets?\s*\)
+    | \bvol(?:ume)?s?[\s.\-]*\d+\s*(?:&|and|,|to|-|–)\s*\d+\b
+    | \b\d+\s+volumes\b
     | \b(?:wall|desk|table)\s+calendar\b
     | \b(?:calendar|diary|planner)\s+20\d\d\b
     | \b20\d\d\s+(?:calendar|diary|planner)\b
@@ -348,6 +373,23 @@ _SCRIPTS: dict[str, tuple[int, int]] = {
 }
 
 
+#: Words that mark a title as Hindi written in Latin letters. HarperCollins
+#: India lists some Hindi books as `English` under exactly such titles —
+#: `Raghav Katha: Valmiki Ramayan par adharit` was published as an English
+#: book on the first night (4 Oct 2026). Mostly function words, because those
+#: are what an English title almost never contains two of.
+_HINDI_WORDS = frozenset(
+    "ki ke ka ko aur par mein se hai hain ne ek kahani kahaniyan katha gatha bhaag adharit".split()
+)
+
+
+def _reads_as_hindi(title: str) -> bool:
+    """Two or more distinct Hindi words. One is not enough: `Ka`, `Par` and
+    `Katha` each turn up alone in real English titles."""
+    words = set(re.findall(r"[a-z]+", title.casefold()))
+    return len(words & _HINDI_WORDS) >= 2
+
+
 def _in_own_script(title: str, language: str | None) -> bool:
     """Whether a title is written the way its language is.
 
@@ -356,7 +398,12 @@ def _in_own_script(title: str, language: str | None) -> bool:
     block — `എം.ടി: കാലത്തിന്റെ കാൽപ്പാടുകൾ` carries Latin punctuation and is
     still plainly Malayalam.
     """
-    block = _SCRIPTS.get((language or "").strip().casefold())
+    folded = (language or "").strip().casefold()
+    if folded == "english":
+        # The label can be wrong: a Hindi title in Latin letters is not an
+        # English book's title, whatever the shop's language field says.
+        return not _reads_as_hindi(title)
+    block = _SCRIPTS.get(folded)
     if block is None:
         return True
     low, high = block
@@ -407,6 +454,25 @@ _TRAILING_JUNK = re.compile(r"[\s,;:/=\-]+$")
 def _tidy_name(name: str | None) -> str | None:
     cleaned = _text(name)
     return _text(_TRAILING_JUNK.sub("", cleaned)) if cleaned else None
+
+
+def _name_is_not_a_name(name: str) -> bool:
+    """A credit that would make a wrong author page. Both were published on
+    the first night (4 Oct 2026):
+
+    - a brand in capitals — `BOOKTOPUS`. The same test as a shouted title; an
+      adapter for a shop that lists people in capitals un-shouts them first.
+    - a name carrying a second name in brackets — `Dr Justin O'Brien (Swami
+      Jaidev Bharati)`. Which of the two the catalogue should file him under
+      is a person's call, not a string operation.
+    """
+    cased = [ch for ch in name if ch.isupper() or ch.islower()]
+    shouted = len(cased) >= SHOUTING_MIN_LETTERS and not any(ch.islower() for ch in cased)
+    # One short word in capitals is an organisation that really is written
+    # that way — INTACH, UNESCO — and it does write books.
+    if shouted and len(name.split()) == 1 and len(cased) < 8:
+        shouted = False
+    return shouted or any(ch in name for ch in "()[]")
 
 
 def _https(url: str | None) -> str | None:
@@ -506,10 +572,13 @@ def screen(candidate: Candidate) -> Screened:
             fatal.append(FATAL_NAME_JUNK)
             continue
         cleaned = _tidy_name(fix.name)
-        if cleaned is None:
+        if cleaned is None or cleaned.casefold() in _NOBODY:
             continue
         if len(cleaned) > MAX_NAME:
             fatal.append(FATAL_OVERSIZE)
+            continue
+        if _name_is_not_a_name(cleaned):
+            fatal.append(FATAL_NAME_JUNK)
             continue
         if cleaned not in authors:
             authors.append(cleaned)
