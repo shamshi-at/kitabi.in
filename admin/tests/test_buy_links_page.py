@@ -407,3 +407,12 @@ def test_copying_says_what_it_did_including_when_it_could_not():
     assert '"Cover image copied"' in js
     assert "its link was copied instead" in js, "a failed picture copy is not reported as a success"
     assert '"image/png"' in js
+
+
+def test_the_console_has_the_jump_button_on_every_page():
+    js, css = _script(), (STATIC / "admin.css").read_text()
+    assert 'jmp.className = "jmp"' in js
+    assert '"Back to the top"' in js and '"Jump to the end of the page"' in js
+    assert ".jmp{" in css and ".toast{" in css
+    base = (STATIC.parent / "templates" / "base.html").read_text()
+    assert "admin.js?v=" in base

@@ -744,6 +744,16 @@ table.feed td{vertical-align:top}
   opacity:0;visibility:hidden;pointer-events:none}
 .toast.on{opacity:1;visibility:visible;transform:translate(-50%,0)}
 .toast.err{background:var(--oxblood)}
+
+/* ---- The jump button: top when scrolling up, end when scrolling down ------
+   The lists here are long and the menu is at the top of them (owner, 5 Oct
+   2026). Same behaviour as the public site's (landing-page/_lib/scroll.js). */
+.jmp{position:fixed;right:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:100;
+  width:44px;height:44px;border-radius:50%;border:1px solid var(--oxblood);background:var(--oxblood);
+  color:#F6F0E3;font-size:19px;line-height:1;cursor:pointer;padding:0;
+  box-shadow:0 8px 22px rgba(43,33,24,.28);opacity:0;visibility:hidden;transform:translateY(8px)}
+.jmp.on{opacity:1;visibility:visible;transform:none}
+.jmp:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 @media (prefers-reduced-motion:no-preference){
-  .toast{transition:opacity .18s, transform .18s, visibility .18s}
+  .toast,.jmp{transition:opacity .18s, transform .18s, visibility .18s}
 }

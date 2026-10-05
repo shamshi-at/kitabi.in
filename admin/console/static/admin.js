@@ -968,3 +968,75 @@ window.kitabiToast = (function () {
     if (row) stop(row, null);
   });
 })();
+
+// The jump button — one floating circle that follows the last scroll: up
+// offers the top (where the menu is), down offers the end. Only on a page more
+// than two screens long, and it fades after a few idle seconds so it does not
+// sit on a row's Save button. The same behaviour as the public site's
+// (landing-page/functions/_lib/scroll.js).
+(function () {
+  const root = document.documentElement;
+  const calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const jmp = document.createElement("button");
+  jmp.type = "button";
+  jmp.className = "jmp";
+  document.body.appendChild(jmp);
+  let lastY = window.pageYOffset || 0;
+  let dir = 0;
+  let timer = null;
+  let ticking = false;
+
+  const hide = () => jmp.classList.remove("on");
+
+  function idle() {
+    if (jmp.matches(":hover,:focus")) {
+      timer = setTimeout(idle, 1500);
+      return;
+    }
+    hide();
+  }
+
+  function point() {
+    const y = window.pageYOffset || 0;
+    const vh = window.innerHeight;
+    const h = root.scrollHeight;
+    if (Math.abs(y - lastY) > 6) {
+      dir = y > lastY ? 1 : -1;
+      lastY = y;
+    }
+    let show = false;
+    if (h > vh * 2) {
+      if (dir < 0) show = y > vh;
+      else if (dir > 0) show = h - vh - y > vh;
+    }
+    if (!show) return hide();
+    const up = dir < 0;
+    jmp.dataset.dir = up ? "up" : "down";
+    jmp.textContent = up ? "↑" : "↓";
+    const label = up ? "Back to the top" : "Jump to the end of the page";
+    jmp.setAttribute("aria-label", label);
+    jmp.title = label;
+    jmp.classList.add("on");
+    clearTimeout(timer);
+    timer = setTimeout(idle, 3500);
+  }
+
+  jmp.addEventListener("click", () => {
+    const up = jmp.dataset.dir === "up";
+    window.scrollTo({ top: up ? 0 : root.scrollHeight, behavior: calm ? "auto" : "smooth" });
+    hide();
+  });
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        point();
+      });
+    },
+    { passive: true }
+  );
+})();
