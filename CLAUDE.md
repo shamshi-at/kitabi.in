@@ -1380,6 +1380,22 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   before anything is fetched), and a settled row is not reopened by the next
   crawl. When writing an undo, follow the undone thing one cycle forward.
 
+- **The site's test harness concatenates the modules, so a name a file uses
+  without importing it is simply in scope there — and undefined in
+  production.** The buy-click hooks used `h()` in `pages/book.js`, which
+  imports `html`, `raw` and nine others from `html.js` but not `h`. All 434
+  assertions were green; as a real ES module on Cloudflare the page would have
+  thrown `h is not defined` on **every book page with a buy button** (caught
+  5 Oct 2026 by reading the import list, before anything shipped). `run.py`
+  strips every `import` and joins the files into one program — that is what
+  lets it run with nothing installed, and it is also exactly why it cannot see
+  this. `tests/modules.mjs` now loads every file under `functions/` as a real
+  module and renders one page of each kind through its real entry point; with
+  the import removed again it fails with the production error while the old
+  harness still passes. It needs node, so on a Mac without it the check is
+  skipped out loud and CI is where it is enforced. Rule: a harness that
+  flattens module boundaries needs a second check that keeps them.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

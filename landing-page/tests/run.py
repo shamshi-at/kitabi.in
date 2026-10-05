@@ -276,6 +276,35 @@ def main() -> int:
         )
         return 1
     print(f"{result['passes']} assertions passed")
+    return check_real_modules()
+
+
+def check_real_modules() -> int:
+    """Load the functions as real ES modules and render one page of each kind.
+
+    The harness above concatenates the files, so a name a module uses without
+    importing it is in scope there and broken in production (tests/modules.mjs
+    has the story). node only: JavaScriptCore via osascript has no module
+    loader, so on a Mac without node this is skipped — out loud — and CI,
+    whose runners ship node, is where it is enforced.
+    """
+    if not shutil.which("node"):
+        print("real-module check SKIPPED: node is not installed here (CI runs it)")
+        return 0
+    proc = subprocess.run(
+        ["node", str(Path(__file__).parent / "modules.mjs")], capture_output=True, text=True
+    )
+    try:
+        result = json.loads(proc.stdout.strip().splitlines()[-1])
+    except (json.JSONDecodeError, IndexError):
+        print("real-module check failed to run:\n" + (proc.stderr or proc.stdout), file=sys.stderr)
+        return 2
+    for failure in result["failures"]:
+        print(f"  FAIL  {failure}")
+    if result["failures"]:
+        print(f"\n{len(result['failures'])} module check(s) failed")
+        return 1
+    print(f"{result['checks']} modules load and render as real ES modules")
     return 0
 
 
