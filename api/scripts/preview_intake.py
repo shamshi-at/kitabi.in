@@ -152,6 +152,7 @@ async def main() -> int:
     printings: list[Candidate] = []
     namesakes: list[Candidate] = []
     already: list[tuple[Candidate, object]] = []
+    removed: list[tuple[Candidate, object]] = []
     held: list[intake_gate.Screened] = []
     refused: list[intake_gate.Screened] = []
 
@@ -170,6 +171,12 @@ async def main() -> int:
                     existing = await intake_service.already_catalogued(session, screened.candidate)
                     if existing is not None:
                         already.append((screened.candidate, existing))
+                        continue
+                    # A book that was in the catalogue and was taken out is not
+                    # put back — `promote` asks this at the same point.
+                    gone = await intake_service.removed_earlier(session, screened.candidate)
+                    if gone is not None:
+                        removed.append((screened.candidate, gone))
                         continue
                     # The same steps `promote` takes, so the preview and the
                     # run it previews cannot disagree: the catalogue's own
@@ -201,6 +208,9 @@ async def main() -> int:
     print(f"  would create   {len(would_create):4}   ({len(tonight)} tonight, at the budget)")
     print(f"  new printings  {len(printings):4}   added to a book already in the catalogue")
     print(f"  already have   {len(already):4}")
+    print(
+        f"  removed before {len(removed):4}   was in the catalogue and was taken out — not re-added"
+    )
     print(f"  for a person   {len(namesakes):4}   same title as a book we hold, different author")
     print(f"  held           {len(held):4}   waiting for a field another source may supply")
     print(f"  refused        {len(refused):4}   not a book, or not fixable")

@@ -386,6 +386,164 @@ async def test_re_promoting_a_reverted_book_hits_the_soft_deleted_isbn(session):
 
 
 # --------------------------------------------------------------------------
+# One row must not end the night (5 Oct 2026: 1 book published, 1,070 ready)
+# --------------------------------------------------------------------------
+
+
+def _isbn13(stem: str) -> str:
+    """A valid ISBN-13 from its first twelve digits — the gate checks the sum."""
+    total = sum(int(d) * (3 if i % 2 else 1) for i, d in enumerate(stem))
+    return stem + str((10 - total % 10) % 10)
+
+
+async def _undo_one_then_queue_two(session) -> None:
+    """The night of 5 Oct, in miniature: a book that was published and undone,
+    back in the queue with its ISBN still held by the removed edition, and two
+    ordinary books behind it."""
+    await intake_service.record(session, [candidate()], source=SOURCE)
+    await intake_service.promote(session, limit=10)
+    undone = (await session.execute(select(CatalogIntake))).scalar_one()
+    await intake_service.revert(session, [undone.id])
+    await intake_service.record(
+        session,
+        [
+            candidate("/works/OL2W", title="Chemmeen", isbn="9788171302055"),
+            candidate("/works/OL3W", title="Aadujeevitham", isbn="9788184231175"),
+        ],
+        source=SOURCE,
+    )
+
+
+async def test_an_undone_book_in_the_queue_does_not_stop_the_books_behind_it(session):
+    """What happened: the undone book's ISBN conflict rolled the session back,
+    a rollback expires every loaded row, and the next row's first attribute
+    read was a lazy load with nowhere to run — `MissingGreenlet`, and the job
+    died two seconds into publishing with 148 books still to go."""
+    await _undo_one_then_queue_two(session)
+
+    counts = await intake_service.promote(session, limit=10)
+
+    assert counts.get(STATE_PROMOTED) == 2, counts
+    live = (
+        (await session.execute(select(Work.title).where(Work.deleted_at.is_(None)))).scalars().all()
+    )
+    assert sorted(live) == ["Aadujeevitham", "Chemmeen"]
+
+
+async def test_a_removed_books_number_is_recognised_before_anything_is_fetched(session):
+    """A book taken out of the catalogue — undone, or deleted by an operator —
+    is not the intake's to put back. It is recognised by its ISBN before the
+    cover is fetched, and the row says why in words a person can act on."""
+    await _undo_one_then_queue_two(session)
+    fetched = []
+
+    async def covers(url):  # noqa: ANN001, ANN202
+        fetched.append(url)
+        return intake_service.cover_ingest.Ingested(url=f"https://covers.kitabi.in/{len(fetched)}")
+
+    counts = await intake_service.promote(session, limit=10, covers=covers)
+
+    assert counts.get("removed_earlier") == 1, counts
+    undone = (
+        await session.execute(
+            select(CatalogIntake).where(CatalogIntake.source_key == "/works/OL1W")
+        )
+    ).scalar_one()
+    await session.refresh(undone)
+    assert undone.state == STATE_DUPLICATE
+    assert "removed from the catalogue" in undone.note
+    assert undone.work_id is not None, "the row names the removed book, so it can be found"
+    assert len(fetched) == 2, "no cover was fetched for the book that could never be created"
+
+
+async def test_a_settled_row_is_not_reopened_by_the_next_crawl(session):
+    """The shops' newest pages are re-read every night. A row already judged
+    "the catalogue has this" or "this was removed" must stay judged, or it is
+    re-queued and re-judged nightly — and until this fix, re-crashed nightly."""
+    await _undo_one_then_queue_two(session)
+    await intake_service.promote(session, limit=10)
+
+    counts = await intake_service.record(session, [candidate()], source=SOURCE)
+
+    assert counts == {"already_settled": 1}
+    undone = (
+        await session.execute(
+            select(CatalogIntake).where(CatalogIntake.source_key == "/works/OL1W")
+        )
+    ).scalar_one()
+    assert undone.state == STATE_DUPLICATE
+    assert await intake_service.promote(session, limit=10) == {}
+
+
+async def test_a_row_that_blows_up_is_counted_and_the_run_goes_on(session, monkeypatch):
+    """The general form of the same promise: an unattended job that publishes
+    150 books cannot have its night decided by its worst row."""
+    await intake_service.record(
+        session,
+        [
+            candidate("/works/OL1W", title="Chemmeen", isbn="9788171302055"),
+            candidate("/works/OL2W", title="Kayar", isbn="9788126412808"),
+            candidate("/works/OL3W", title="Aadujeevitham", isbn="9788184231175"),
+        ],
+        source=SOURCE,
+    )
+    real = intake_service.catalog_service.create_work_with_edition
+
+    async def flaky(db, payload, **kw):  # noqa: ANN001, ANN202
+        if payload.title == "Kayar":
+            raise RuntimeError("something nobody planned for")
+        return await real(db, payload, **kw)
+
+    monkeypatch.setattr(intake_service.catalog_service, "create_work_with_edition", flaky)
+
+    counts = await intake_service.promote(session, limit=10)
+
+    assert counts.get(STATE_PROMOTED) == 2, counts
+    assert counts.get("error") == 1, counts
+    kayar = (
+        await session.execute(
+            select(CatalogIntake).where(CatalogIntake.source_key == "/works/OL2W")
+        )
+    ).scalar_one()
+    await session.refresh(kayar)
+    assert kayar.state == STATE_COMPLETE, "it is still owed a try"
+    assert kayar.attempts == 1, "but each failure is counted, so it cannot be retried forever"
+    assert "RuntimeError" in kayar.note
+
+
+async def test_a_run_of_unplanned_failures_ends_the_run(session, monkeypatch):
+    """Five in a row is not five bad rows, it is something wrong with tonight —
+    the database, a deploy — and the remaining rows should not each be charged
+    an attempt for it."""
+    await intake_service.record(
+        session,
+        [
+            candidate(f"/works/OL{n}W", title=f"Book {n}", isbn=_isbn13(f"978817130{n:03d}"))
+            for n in range(1, 9)
+        ],
+        source=SOURCE,
+    )
+
+    async def broken(db, payload, **kw):  # noqa: ANN001, ANN202
+        raise RuntimeError("the database went away")
+
+    monkeypatch.setattr(intake_service.catalog_service, "create_work_with_edition", broken)
+
+    due = await session.scalar(
+        select(func.count()).select_from(CatalogIntake).where(CatalogIntake.state == STATE_COMPLETE)
+    )
+    assert due == 8, "the fixture must be eight publishable books, or this proves nothing"
+
+    counts = await intake_service.promote(session, limit=10)
+
+    assert counts == {"error": intake_service.MAX_CONSECUTIVE_ERRORS}
+    charged = await session.scalar(
+        select(func.count()).select_from(CatalogIntake).where(CatalogIntake.attempts > 0)
+    )
+    assert charged == intake_service.MAX_CONSECUTIVE_ERRORS
+
+
+# --------------------------------------------------------------------------
 # `already_catalogued` — the rule the preview script and the job must share
 # --------------------------------------------------------------------------
 

@@ -49,7 +49,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -82,6 +82,17 @@ MAX_ATTEMPTS = 3
 #: us, and pushing on would charge every remaining row an attempt for an
 #: outage that is not its fault — `backfill_covers` backs off the same way.
 MAX_CONSECUTIVE_COVER_FAILURES = 5
+
+#: Consecutive rows that failed in a way nobody planned for before a promotion
+#: run gives up. One such row is that row's problem and the run goes on; five
+#: in a row is tonight's problem — the database, a deploy mid-run — and the
+#: rest of the batch should not each be charged an attempt for it.
+MAX_CONSECUTIVE_ERRORS = 5
+
+#: Written on a candidate whose ISBN belongs to a book that was in the
+#: catalogue and was taken out — undone with `revert`, or deleted by an
+#: operator. Not the intake's to put back.
+NOTE_REMOVED = "this ISBN was removed from the catalogue earlier — not added again"
 
 #: Where a row remembers cover URLs `promote` found unusable. It lives in the
 #: payload, beside what the source said, because that is the one thing a
@@ -275,6 +286,13 @@ async def record(
             existing[candidate.source_key] = row
         elif row.state == STATE_PROMOTED:
             counts["already_promoted"] = counts.get("already_promoted", 0) + 1
+            continue
+        elif row.state == STATE_DUPLICATE:
+            # Judged already: the catalogue has this book, or had it and it
+            # was removed. The shops' newest pages are re-read every night, and
+            # re-staging here would put the row back to `complete` to be
+            # queued, fetched and judged again — every night, for ever.
+            counts["already_settled"] = counts.get("already_settled", 0) + 1
             continue
 
         state = _stage(row, candidate)
@@ -594,6 +612,34 @@ def _taking_turns(rows: Sequence[CatalogIntake], limit: int) -> list[CatalogInta
     return taken
 
 
+async def removed_earlier(db: AsyncSession, candidate: Candidate) -> uuid.UUID | None:
+    """The book this candidate's ISBN *used* to be, if it was taken out.
+
+    `editions_isbn_key` is a plain unique index, so a soft-deleted edition
+    still occupies its number: creating the book again can only fail. And it
+    should not be tried — a book that was undone with `revert`, or deleted in
+    the console, was removed by a person, and a nightly job that quietly puts
+    it back is the opposite of what they asked for.
+
+    Asked after `already_catalogued` (a live book wins) and before anything is
+    fetched. Read-only, so `scripts/preview_intake.py` asks it too.
+    """
+    forms = isbn_util.variants(candidate.isbn) if candidate.isbn else None
+    if not forms:
+        return None
+    return (
+        await db.execute(
+            select(Edition.work_id)
+            .join(Work, Work.id == Edition.work_id)
+            .where(
+                Edition.isbn.in_(forms),
+                or_(Edition.deleted_at.is_not(None), Work.deleted_at.is_not(None)),
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+
 async def _due(db: AsyncSession, limit: int) -> Sequence[CatalogIntake]:
     """Tonight's candidates: new releases first, then the backlog in the order
     it was found.
@@ -677,164 +723,245 @@ async def promote(
     """Turn up to `limit` complete candidates into catalogue books.
 
     One book per transaction (`create_work_with_edition` commits), so a failure
-    on the fourth leaves the first three published and the rest untouched —
-    never a half-written book. Every outcome is written back onto the candidate
-    before moving on, so an interrupted run (a Railway redeploy mid-batch, say)
-    resumes rather than repeating: the rows it finished are no longer
-    `complete`.
+    on the fourth leaves the first three published — never a half-written
+    book. Every outcome is written back onto the candidate before moving on, so
+    an interrupted run (a Railway redeploy mid-batch, say) resumes rather than
+    repeating: the rows it finished are no longer `complete`.
+
+    **One row cannot end the run.** On 5 Oct 2026 it did: the second row of the
+    night was a book that had been undone, its ISBN conflict rolled the session
+    back, and a rollback *expires every object the session holds* — so the
+    third row's first attribute read was a lazy load with nowhere to run
+    (`MissingGreenlet`), and the job died having published one book with 1,070
+    ready. Hence the two things below that look like ceremony: the batch is
+    carried as ids and each row is loaded when its turn comes, and every row
+    runs inside a guard that counts an unplanned failure and moves on.
 
     `covers` is `cover_ingest.ingester(...)` — None when R2 is not configured,
     in which case only a cover the edge proxy already serves is published
     as-is and everything else waits (see `_own_covers`).
     """
     counts: dict[str, int] = {}
-    cover_failures = 0
-    for row in await _due(db, limit):
-        candidate = Candidate.from_payload(row.payload)
-
-        # The gate again, on the row we are about to publish. It has already
-        # passed once, but that was possibly weeks and certainly one deploy
-        # ago, and this is the last moment before a public page exists.
-        screened = intake_gate.screen(candidate)
-        if not screened.ok:
-            row.state = _state_for(screened)
-            row.missing = list(screened.fatal or screened.missing) or None
-            row.note = _note_for(screened)
-            await db.commit()
-            counts["regressed"] = counts.get("regressed", 0) + 1
-            continue
-
-        # The same question `scripts/preview_intake.py` asks, so a preview and
-        # the run it previews cannot disagree.
-        existing_id = await already_catalogued(db, screened.candidate)
-        if existing_id is not None:
-            row.state = STATE_DUPLICATE
-            row.work_id = existing_id
-            row.note = "already in the catalogue"
-            await db.commit()
-            counts[STATE_DUPLICATE] = counts.get(STATE_DUPLICATE, 0) + 1
-            continue
-
-        # Credit the author the catalogue already has, under the name it has
-        # them by, rather than adding a second row for a shop's spelling.
-        named = replace(
-            screened.candidate,
-            authors=tuple(
-                dict.fromkeys(
-                    [await catalogue_spelling(db, name) for name in screened.candidate.authors]
-                )
-            ),
-        )
-        screened = replace(screened, candidate=named)
-
-        # Another printing of a book we hold is added to that book; the same
-        # title by a different author is not ours to call either way. Asked
-        # before the cover is fetched, so a held row costs nothing.
-        parent, same_book = await find_work(db, screened.candidate)
-        if parent is not None and not same_book:
-            row.payload = {
-                **row.payload,
-                HOLD_KEY: f"held: same title as a book already in the catalogue ({parent.id})"
-                " by a different author",
-            }
-            _stage(row, screened.candidate)
-            await db.commit()
-            counts["held_duplicate"] = counts.get("held_duplicate", 0) + 1
-            continue
-
-        # After the duplicate check, so a book we already hold never costs a
-        # fetch or leaves an object in the bucket; before creation, so no book
-        # is ever live pointing at a cover that turned out not to load.
-        publishable, failure = await _own_covers(screened.candidate, covers)
-        if publishable is None:
-            if failure is None:
-                row.note = NOTE_NO_COVER_STORAGE
-                counts["held"] = counts.get("held", 0) + 1
-            elif failure.gone:
-                dead = [*_dead_covers(row), screened.candidate.cover_url][-_DEAD_COVERS_KEPT:]
-                row.payload = {**row.payload, "cover_url": None, DEAD_COVERS_KEY: dead}
-                row.state = STATE_INCOMPLETE
-                row.missing = [intake_gate.MISSING_COVER]
-                row.note = f"cover unusable: {failure.reason}"
-                counts["cover_unusable"] = counts.get("cover_unusable", 0) + 1
-                cover_failures = 0
-                logger.info(
-                    "intake: unusable cover for %s (%s): %s",
-                    row.source_key,
-                    failure.reason,
-                    screened.candidate.cover_url,
-                )
-            else:
-                row.attempts += 1
-                row.note = f"cover not fetched: {failure.reason}"
-                counts["cover_retry"] = counts.get("cover_retry", 0) + 1
-                cover_failures += 1
-            await db.commit()
-            if cover_failures >= MAX_CONSECUTIVE_COVER_FAILURES:
-                logger.info(
-                    "intake: %s consecutive cover failures — stopping this run", cover_failures
+    run = _Run()
+    for row_id in [row.id for row in await _due(db, limit)]:
+        try:
+            row = await db.get(CatalogIntake, row_id)
+            if row is None or row.state != STATE_COMPLETE:
+                continue
+            stop = await _promote_one(db, row, covers, counts, run)
+        except Exception as exc:  # noqa: BLE001 — one row must not end the night
+            logger.exception("intake: promoting %s failed in a way nobody planned for", row_id)
+            await _charge_unplanned(db, row_id, exc)
+            counts["error"] = counts.get("error", 0) + 1
+            run.errors += 1
+            if run.errors >= MAX_CONSECUTIVE_ERRORS:
+                logger.error(
+                    "intake: %s unplanned failures in a row — stopping this run", run.errors
                 )
                 break
             continue
-        cover_failures = 0
-
-        try:
-            if parent is not None:
-                edition = await catalog_service.create_edition(
-                    db, parent, _edition_create(publishable)
-                )
-                row.state = STATE_PROMOTED
-                row.work_id = parent.id
-                row.edition_id = edition.id
-                row.promoted_at = datetime.now(UTC)
-                row.payload = {**row.payload, PRINTING_KEY: True}
-                row.note = "added as a printing of a book already in the catalogue"
-                await db.commit()
-                counts["printing"] = counts.get("printing", 0) + 1
-                continue
-            work = await catalog_service.create_work_with_edition(
-                db, _work_create(publishable), created_by=None
-            )
-        except HTTPException as exc:
-            duplicate_of = _isbn_conflict_work_id(exc)
-            if duplicate_of is None and exc.status_code != 409:
-                # Something other than "already catalogued" — count the attempt
-                # and let it come round again.
-                row.attempts += 1
-                row.note = f"promote failed: {exc.status_code}"
-                await db.commit()
-                counts["failed"] = counts.get("failed", 0) + 1
-                logger.warning("intake: promote failed for %s: %s", row.source_key, exc.detail)
-                continue
-            row.state = STATE_DUPLICATE
-            row.work_id = duplicate_of
-            row.note = "already in the catalogue with this ISBN"
-            await db.commit()
-            counts[STATE_DUPLICATE] = counts.get(STATE_DUPLICATE, 0) + 1
-            continue
-
-        row.state = STATE_PROMOTED
-        row.work_id = work.id
-        # Index 0 is safe here in a way it is not elsewhere (13 Aug 2026): we
-        # created this Work a line ago and it has exactly one printing.
-        row.edition_id = work.editions[0].id if work.editions else None
-        row.promoted_at = datetime.now(UTC)
-        row.note = None
-        # The receipt commits on its own, BEFORE provenance. They were one
-        # commit at first, which quietly made the less important write able to
-        # lose the more important one: a rollback would have left a published
-        # book whose candidate still read `complete`, due for promotion again.
-        await db.commit()
-        # Provenance is set after the fact because `WorkCreate` deliberately
-        # does not carry it: `POST /catalog/works` is reader-facing, and a
-        # field that says "this came from OpenLibrary" must not be settable by
-        # whoever is posting. Best-effort — losing it costs this book's
-        # recognition on a future run, which the ISBN guard still catches, and
-        # that is not worth widening a public schema for.
-        await _stamp_provenance(db, work, screened.candidate)
-        counts[STATE_PROMOTED] = counts.get(STATE_PROMOTED, 0) + 1
+        run.errors = 0
+        if stop:
+            break
 
     return counts
+
+
+class _Run:
+    """What a promotion run carries from one row to the next."""
+
+    __slots__ = ("cover_failures", "errors")
+
+    def __init__(self) -> None:
+        self.cover_failures = 0
+        self.errors = 0
+
+
+async def _charge_unplanned(db: AsyncSession, row_id: uuid.UUID, exc: Exception) -> None:
+    """Record an unplanned failure on its row, from a clean session.
+
+    The attempt is what keeps a row that fails every night from being first in
+    line every night: `_due` skips a row at `MAX_ATTEMPTS`. Best-effort — if
+    even this cannot be written, the run still goes on to the next row.
+    """
+    try:
+        await db.rollback()
+        row = await db.get(CatalogIntake, row_id)
+        if row is not None and row.state == STATE_COMPLETE:
+            row.attempts += 1
+            row.note = f"promote crashed: {type(exc).__name__}"
+            await db.commit()
+    except Exception:  # noqa: BLE001 — recording the failure must not become one
+        logger.exception("intake: could not record the failure on %s", row_id)
+        try:
+            await db.rollback()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+async def _promote_one(
+    db: AsyncSession,
+    row: CatalogIntake,
+    covers: cover_ingest.Ingester | None,
+    counts: dict[str, int],
+    run: _Run,
+) -> bool:
+    """Take one due candidate as far as it goes. True means "stop the run"."""
+    candidate = Candidate.from_payload(row.payload)
+
+    # The gate again, on the row we are about to publish. It has already
+    # passed once, but that was possibly weeks and certainly one deploy
+    # ago, and this is the last moment before a public page exists.
+    screened = intake_gate.screen(candidate)
+    if not screened.ok:
+        row.state = _state_for(screened)
+        row.missing = list(screened.fatal or screened.missing) or None
+        row.note = _note_for(screened)
+        await db.commit()
+        counts["regressed"] = counts.get("regressed", 0) + 1
+        return False
+
+    # The same question `scripts/preview_intake.py` asks, so a preview and
+    # the run it previews cannot disagree.
+    existing_id = await already_catalogued(db, screened.candidate)
+    if existing_id is not None:
+        row.state = STATE_DUPLICATE
+        row.work_id = existing_id
+        row.note = "already in the catalogue"
+        await db.commit()
+        counts[STATE_DUPLICATE] = counts.get(STATE_DUPLICATE, 0) + 1
+        return False
+
+    removed_id = await removed_earlier(db, screened.candidate)
+    if removed_id is not None:
+        row.state = STATE_DUPLICATE
+        row.work_id = removed_id
+        row.note = NOTE_REMOVED
+        await db.commit()
+        counts["removed_earlier"] = counts.get("removed_earlier", 0) + 1
+        return False
+
+    # Credit the author the catalogue already has, under the name it has
+    # them by, rather than adding a second row for a shop's spelling.
+    named = replace(
+        screened.candidate,
+        authors=tuple(
+            dict.fromkeys(
+                [await catalogue_spelling(db, name) for name in screened.candidate.authors]
+            )
+        ),
+    )
+    screened = replace(screened, candidate=named)
+
+    # Another printing of a book we hold is added to that book; the same
+    # title by a different author is not ours to call either way. Asked
+    # before the cover is fetched, so a held row costs nothing.
+    parent, same_book = await find_work(db, screened.candidate)
+    if parent is not None and not same_book:
+        row.payload = {
+            **row.payload,
+            HOLD_KEY: f"held: same title as a book already in the catalogue ({parent.id})"
+            " by a different author",
+        }
+        _stage(row, screened.candidate)
+        await db.commit()
+        counts["held_duplicate"] = counts.get("held_duplicate", 0) + 1
+        return False
+
+    # After the duplicate check, so a book we already hold never costs a
+    # fetch or leaves an object in the bucket; before creation, so no book
+    # is ever live pointing at a cover that turned out not to load.
+    publishable, failure = await _own_covers(screened.candidate, covers)
+    if publishable is None:
+        if failure is None:
+            row.note = NOTE_NO_COVER_STORAGE
+            counts["held"] = counts.get("held", 0) + 1
+        elif failure.gone:
+            dead = [*_dead_covers(row), screened.candidate.cover_url][-_DEAD_COVERS_KEPT:]
+            row.payload = {**row.payload, "cover_url": None, DEAD_COVERS_KEY: dead}
+            row.state = STATE_INCOMPLETE
+            row.missing = [intake_gate.MISSING_COVER]
+            row.note = f"cover unusable: {failure.reason}"
+            counts["cover_unusable"] = counts.get("cover_unusable", 0) + 1
+            run.cover_failures = 0
+            logger.info(
+                "intake: unusable cover for %s (%s): %s",
+                row.source_key,
+                failure.reason,
+                screened.candidate.cover_url,
+            )
+        else:
+            row.attempts += 1
+            row.note = f"cover not fetched: {failure.reason}"
+            counts["cover_retry"] = counts.get("cover_retry", 0) + 1
+            run.cover_failures += 1
+        await db.commit()
+        if run.cover_failures >= MAX_CONSECUTIVE_COVER_FAILURES:
+            logger.info(
+                "intake: %s consecutive cover failures — stopping this run", run.cover_failures
+            )
+            return True
+        return False
+    run.cover_failures = 0
+
+    try:
+        if parent is not None:
+            edition = await catalog_service.create_edition(db, parent, _edition_create(publishable))
+            row.state = STATE_PROMOTED
+            row.work_id = parent.id
+            row.edition_id = edition.id
+            row.promoted_at = datetime.now(UTC)
+            row.payload = {**row.payload, PRINTING_KEY: True}
+            row.note = "added as a printing of a book already in the catalogue"
+            await db.commit()
+            counts["printing"] = counts.get("printing", 0) + 1
+            return False
+        work = await catalog_service.create_work_with_edition(
+            db, _work_create(publishable), created_by=None
+        )
+    except HTTPException as exc:
+        # The ISBN guard rolls the session back before it raises, and a
+        # rollback expires this row with everything else. Load it again here,
+        # where there is somewhere for the query to run, before reading it.
+        await db.refresh(row)
+        duplicate_of = _isbn_conflict_work_id(exc)
+        if duplicate_of is None and exc.status_code != 409:
+            # Something other than "already catalogued" — count the attempt
+            # and let it come round again.
+            row.attempts += 1
+            row.note = f"promote failed: {exc.status_code}"
+            await db.commit()
+            counts["failed"] = counts.get("failed", 0) + 1
+            logger.warning("intake: promote failed for %s: %s", row.source_key, exc.detail)
+            return False
+        row.state = STATE_DUPLICATE
+        row.work_id = duplicate_of
+        row.note = "already in the catalogue with this ISBN"
+        await db.commit()
+        counts[STATE_DUPLICATE] = counts.get(STATE_DUPLICATE, 0) + 1
+        return False
+
+    row.state = STATE_PROMOTED
+    row.work_id = work.id
+    # Index 0 is safe here in a way it is not elsewhere (13 Aug 2026): we
+    # created this Work a line ago and it has exactly one printing.
+    row.edition_id = work.editions[0].id if work.editions else None
+    row.promoted_at = datetime.now(UTC)
+    row.note = None
+    # The receipt commits on its own, BEFORE provenance. They were one
+    # commit at first, which quietly made the less important write able to
+    # lose the more important one: a rollback would have left a published
+    # book whose candidate still read `complete`, due for promotion again.
+    await db.commit()
+    # Provenance is set after the fact because `WorkCreate` deliberately
+    # does not carry it: `POST /catalog/works` is reader-facing, and a
+    # field that says "this came from OpenLibrary" must not be settable by
+    # whoever is posting. Best-effort — losing it costs this book's
+    # recognition on a future run, which the ISBN guard still catches, and
+    # that is not worth widening a public schema for.
+    await _stamp_provenance(db, work, screened.candidate)
+    counts[STATE_PROMOTED] = counts.get(STATE_PROMOTED, 0) + 1
+    return False
 
 
 async def _stamp_provenance(db: AsyncSession, work: Work, candidate: Candidate) -> None:

@@ -1423,6 +1423,10 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
         Malayalam (or a person adds the book by hand). No code change — this
         is what the gate already does. They are counted on the console's
         Nightly intake screen under "Title is not in the book's own script".
+  - [x] **One row cannot end a night** (5 Oct 2026 — the second night published 1
+        book with 1,070 ready). `promote` carries ids and guards every row; a book
+        that was removed is recognised by its ISBN and not re-added; a settled row
+        is not reopened by the next crawl; the console says when a run stops early.
   - [x] **A screen for what each night published** — `admin.kitabi.in/intake`
         (`admin/console/routers/intake.py`): one row per night with the count
         and each shop's share, what the queue still holds and why, and a

@@ -580,6 +580,17 @@ Two measurements that change the forecast:
 - **Author roles resolve about a quarter of the time** (17 of 60), not the
   ~45% of the eleven-book test.
 
+**The second night (5 Oct 2026) published one book.** Not a source problem
+and not the gate: the run crashed two seconds into publishing, on the row after
+an undone book (see STATUS.md, 5 Oct). Fixed the same day — one row can no
+longer end a run, a removed book is not re-added, and the console reports a
+night that stops early. The 600 rows found that night and the 149 that should
+have gone out are in the queue; nothing was lost. One thing that night made
+visible and that is *not* changed: the backlog is taken strictly in the order
+it was found, so after the new releases the next ~270 backlist books are all
+OpenLibrary's — the shops' backlists (Mathrubhumi 237, Speaking Tiger 425,
+HarperCollins 79 ready) wait behind them rather than taking turns.
+
 ## 6. Open decisions for the owner
 
 **The intake was switched on 4 Oct 2026** (`ENV CATALOG_INTAKE_ENABLED=1` in

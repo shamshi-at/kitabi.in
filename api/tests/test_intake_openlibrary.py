@@ -229,6 +229,70 @@ async def test_the_job_is_dormant_unless_explicitly_enabled(monkeypatch):
     assert called is False, "a dormant job must make no request at all"
 
 
+async def test_a_catch_up_publishes_what_is_ready_and_crawls_nothing(db_sessionmaker, monkeypatch):
+    """The morning after a run that stopped early (5 Oct 2026). The books are
+    already found and queued; publishing them must not read a single source
+    again or ask the LLM anything — only fetch the covers it is about to own."""
+    settings = get_settings().model_copy(update={"catalog_intake_enabled": True})
+    monkeypatch.setattr(intake_job, "get_settings", lambda: settings)
+    monkeypatch.setattr("app.services.intake_service.get_settings", lambda: settings)
+    monkeypatch.setattr(intake_job, "SessionLocal", db_sessionmaker)
+
+    from sqlalchemy import func, select  # noqa: PLC0415
+
+    from app.models import Work  # noqa: PLC0415
+    from app.services import intake_service  # noqa: PLC0415
+    from app.services.intake_gate import Candidate  # noqa: PLC0415
+
+    def ready(n: int, isbn: str) -> Candidate:
+        return Candidate(
+            source="openlibrary_en",
+            source_key=f"/works/OL{n}W",
+            external_source="openlibrary",
+            external_id=f"/works/OL{n}W",
+            title=f"The Ready Book {n}",
+            authors=("Arundhati Roy",),
+            publisher="HarperCollins India",
+            isbn=isbn,
+            cover_url=f"https://covers.openlibrary.org/b/id/{n}-L.jpg",
+            language="English",
+        )
+
+    async with db_sessionmaker() as db:
+        await intake_service.record(
+            db,
+            [ready(1, "9780060977498"), ready(2, "9788171302055"), ready(3, "9788184231175")],
+            source="openlibrary_en",
+        )
+
+    reached = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        reached.append(request.url.host)
+        raise AssertionError(f"a catch-up reached {request.url.host}")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        counts = await intake_job.catch_up(2, client)
+
+    assert counts == {"promoted": 2}, "it publishes up to the number asked for"
+    assert reached == [], "nothing was crawled and nobody was asked anything"
+    async with db_sessionmaker() as db:
+        assert await db.scalar(select(func.count()).select_from(Work)) == 2
+
+
+async def test_a_catch_up_is_dormant_where_the_intake_is(monkeypatch):
+    """`api/.env` on a developer's machine points at production. Running the
+    module there must publish nothing — the same switch as the nightly job."""
+    settings = get_settings().model_copy(update={"catalog_intake_enabled": False})
+    monkeypatch.setattr(intake_job, "get_settings", lambda: settings)
+
+    def session():  # noqa: ANN202
+        raise AssertionError("a dormant catch-up must not open a database session")
+
+    monkeypatch.setattr(intake_job, "SessionLocal", session)
+    assert await intake_job.catch_up() is None
+
+
 def test_the_default_is_off():
     assert get_settings().catalog_intake_enabled is False
 

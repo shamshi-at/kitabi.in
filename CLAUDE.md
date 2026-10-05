@@ -297,7 +297,10 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   night first with `api/scripts/preview_intake.py` (read-only, point it at
   production). The way back is `api/scripts/revert_intake.py --since <date>`
   (a dry run until `--apply`), and deleting that `ENV` line stops the job
-  without touching what it made. Plan and status:
+  without touching what it made. After a night that stopped early (the
+  console's Nightly intake screen says so), `railway ssh -- sh -c 'cd /srv &&
+  python -m app.jobs.catalog_intake'` publishes what is already ready —
+  it crawls nothing, asks the LLM nothing, and takes the job's own lock. Plan and status:
   [docs/catalog-intake-plan.md](docs/catalog-intake-plan.md).
 - **app:** no pipeline; releases are built locally (see [docs/build.md](docs/build.md)).
 
@@ -1335,6 +1338,36 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   token was too big for a request header; measure, don't take the scope note. `tests/test_jwt_verification.py` runs the real library against a key set
   served on localhost — when a dependency *is* the security boundary, a test
   has to cross it with nothing stubbed but the network.
+
+- **A rollback expires every object the session holds — so a batch that walks
+  a list of ORM rows dies on the row *after* the one that failed, and the
+  failure it dies of looks nothing like the cause.** The nightly intake
+  published one book on 5 Oct 2026 with 1,070 ready. Its second row was a book
+  undone the day before; the soft-deleted edition still held the ISBN, the
+  catalogue's guard rolled back and raised a 409, and `promote` handled that
+  correctly — then read `row.payload` on the *next* row, which the rollback had
+  expired, and the lazy load had no greenlet to run in (`MissingGreenlet`).
+  `expire_on_commit=False` protects against commits and says nothing about
+  rollbacks. Three rules. A batch on an async session carries **ids** and
+  loads each row on its turn (`await db.get(...)` refreshes an expired one;
+  an attribute read cannot). **One row must not decide the night**: every
+  iteration of an unattended job runs inside a guard that records the failure
+  on the row and moves on, with a cap on consecutive failures so an outage is
+  not charged to 150 rows. And a test of a failure path needs **something
+  queued behind the failure** — `test_re_promoting_a_reverted_book…` covered
+  this exact conflict and passed for a month, with one row in the queue.
+  Corollary, and the second time in two days (PyJWT, 4 Oct): the job's only
+  report was a traceback in a log nobody reads, and the owner found it by
+  noticing a number. A job that publishes unattended has to report its own bad
+  nights where a person looks — the console's Nightly intake screen now does.
+- **An action that removes something has to say what the queue should do
+  about it next.** `revert` soft-deleted the book and put its candidate back to
+  `complete` — "due again" — while the soft-deleted edition went on holding the
+  ISBN, so the candidate could never be created again and was first in line
+  every night to prove it. Undoing a book is a person saying "not this one";
+  the queue now reads it that way (`removed_earlier`: settled, with a note,
+  before anything is fetched), and a settled row is not reopened by the next
+  crawl. When writing an undo, follow the undone thing one cycle forward.
 
 ## Open decisions
 

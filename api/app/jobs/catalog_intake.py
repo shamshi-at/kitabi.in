@@ -97,20 +97,66 @@ async def catalog_intake(client: httpx.AsyncClient | None = None) -> None:
                 if released.get("complete"):
                     logger.info("intake: rescreen released %s", released["complete"])
 
-                covers = cover_ingest.ingester(client, settings)
-                if covers is None:
-                    # Not an error — a dev box has no bucket — but in
-                    # production it means every cover from a publisher's own
-                    # site is being held, and that should be findable.
-                    logger.warning(
-                        "intake: R2 cover storage is not configured — only covers "
-                        "the edge proxy already serves will be promoted"
-                    )
-                promoted = await intake_service.promote(
-                    session, limit=settings.catalog_intake_daily_limit, covers=covers
+                await _publish(session, client, settings, settings.catalog_intake_daily_limit)
+    finally:
+        if owned:
+            await client.aclose()
+
+
+async def _publish(session, client: httpx.AsyncClient, settings, limit: int) -> dict[str, int]:
+    """The last step of a night: turn up to `limit` ready candidates into books."""
+    covers = cover_ingest.ingester(client, settings)
+    if covers is None:
+        # Not an error — a dev box has no bucket — but in production it means
+        # every cover from a publisher's own site is being held, and that
+        # should be findable.
+        logger.warning(
+            "intake: R2 cover storage is not configured — only covers "
+            "the edge proxy already serves will be promoted"
+        )
+    promoted = await intake_service.promote(session, limit=limit, covers=covers)
+    if promoted:
+        logger.info("intake: promoted %s", promoted)
+    return promoted
+
+
+async def catch_up(
+    limit: int | None = None, client: httpx.AsyncClient | None = None
+) -> dict[str, int] | None:
+    """Publish what is already ready, now — a night's last step on its own.
+
+    For the morning after a run that stopped early (5 Oct 2026: one book out,
+    1,070 ready). It crawls nothing and asks the LLM nothing: the books it
+    publishes were found, screened and queued by a run that has already paid
+    for all that. Same advisory lock as the nightly job, so it cannot overlap
+    one; same dormancy switch, so running it on a laptop — where `api/.env`
+    points at production — publishes nothing.
+
+    Run inside the production container:
+
+        python -m app.jobs.catalog_intake          # up to the nightly limit
+        python -m app.jobs.catalog_intake 40       # up to 40
+
+    Returns what `promote` counted, or None when it did not run.
+    """
+    settings = get_settings()
+    if not settings.catalog_intake_enabled:
+        logger.warning("intake: catch-up not run — the intake is not enabled here")
+        return None
+
+    owned = client is None
+    client = client or httpx.AsyncClient(
+        timeout=TIMEOUT_SECONDS, headers={"User-Agent": USER_AGENT}
+    )
+    try:
+        async with SessionLocal() as session:
+            async with advisory_lock(session, LOCK_CATALOG_INTAKE) as acquired:
+                if not acquired:
+                    logger.warning("intake: another run holds the lock — catch-up not run")
+                    return None
+                return await _publish(
+                    session, client, settings, limit or settings.catalog_intake_daily_limit
                 )
-                if promoted:
-                    logger.info("intake: promoted %s", promoted)
     finally:
         if owned:
             await client.aclose()
@@ -186,3 +232,12 @@ async def _author_roles(session, client: httpx.AsyncClient, settings) -> None:
         return
     if resolved:
         logger.info("intake: author roles %s", resolved)
+
+
+if __name__ == "__main__":  # pragma: no cover — the operator's door; `catch_up` is tested
+    import asyncio
+    import sys
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    asked = int(sys.argv[1]) if len(sys.argv) > 1 else None
+    print("catch-up:", asyncio.run(catch_up(asked)))
