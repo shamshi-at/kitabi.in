@@ -496,16 +496,22 @@ h3{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:500;
 <section class="sec" id="catalog-finding">
 <h3>Finding things</h3>
 <p>The search box at the top of every page searches everything at once — books, authors, publishers, readers — and understands typos and both scripts, so “chemmeen” finds “ചെമ്മീൻ”. Press <code>/</code> anywhere to jump into it.</p>
-<p>The catalogue page&#x27;s own filters narrow by language, type and what is missing. The “missing a cover / description / ISBN” counts are the best to-do list in the console.</p>
+<p>The catalogue page lists every work, newest first, and keeps loading as you scroll. Its filters narrow by language, type and what is missing. The “missing a cover / description / ISBN” counts are the best to-do list in the console.</p>
+<p>Every number in the list opens what it counts: <b>Editions</b> the book&#x27;s printings, <b>Shelved</b>, <b>Ratings</b> and <b>Reviews</b> the readers behind them.</p>
 </section>
 <section class="sec" id="catalog-editing">
 <h3>Editing</h3>
 <p>Open a book to edit its details, set its series, add a buy link to an edition, or delete it. Everything you change is logged.</p>
+<p><b>Covers</b> are at the bottom of a book&#x27;s page, one row per edition, front and back. Choose a file or paste a link to an image — a phone photo or a big scan is fine, Kitabi shrinks it and keeps its own copy. <b>Swap</b> fixes a front and back that are the wrong way round. To undo any cover change, find it in the <a href="https://admin.kitabi.in/audit?q=edition.cover&amp;period=all">audit log</a> and paste the “was …” link back into the link box.</p>
 <p><b>Delete</b> is a soft delete — the book stops appearing but is not destroyed. Kitabi refuses to delete a book that readers have shelved, rated or reviewed, and tells you so. That refusal is correct: deleting it would take the book off somebody&#x27;s shelf.</p>
 </section>
 <section class="sec" id="catalog-buy-links">
 <h3>Buy links</h3>
 <p><a href="https://admin.kitabi.in/catalog/buy-links">Buy links</a> is a worklist of editions with no shop link yet. Adding one puts a “buy” button on the book&#x27;s public page. Paste the normal product address; Kitabi handles the rest.</p>
+<p>Narrow the list the way you narrow the catalogue: <b>Search</b> (title or author), <b>Language</b>, <b>Type</b>, <b>Missing</b> (no cover, no ISBN, no description) and <b>Sort</b>. The page links keep whatever you chose.</p>
+<p><b>Tap a cover</b> to copy the picture — paste it into the shop&#x27;s image search to find the exact edition. The small button beside a title copies the title. A short message confirms each copy; if your browser will not copy a picture, it copies the picture&#x27;s link instead and says so.</p>
+<p>After you <b>Save</b> a link the row counts down from five and leaves the list, so the list is always what is still to do. <b>Press the countdown</b> to keep the row where it is. Leaving the list deletes nothing — the book has its link now, which is the only reason it was here.</p>
+<p>Which of these links readers actually open is on <a href="https://admin.kitabi.in/buy-clicks">Buy clicks</a>.</p>
 </section>
 </article>
 <article class="topic" id="promotions">

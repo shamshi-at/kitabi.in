@@ -721,6 +721,19 @@ TOPICS: tuple[Topic, ...] = (
                     "[Buy links](/catalog/buy-links) is a worklist of editions with no shop link "
                     "yet. Adding one puts a “buy” button on the book's public page. Paste the "
                     "normal product address; Kitabi handles the rest.",
+                    "Narrow the list the way you narrow the catalogue: **Search** (title or "
+                    "author), **Language**, **Type**, **Missing** (no cover, no ISBN, no "
+                    "description) and **Sort**. The page links keep whatever you chose.",
+                    "**Tap a cover** to copy the picture — paste it into the shop's image "
+                    "search to find the exact edition. The small button beside a title copies "
+                    "the title. A short message confirms each copy; if your browser will not "
+                    "copy a picture, it copies the picture's link instead and says so.",
+                    "After you **Save** a link the row counts down from five and leaves the "
+                    "list, so the list is always what is still to do. **Press the countdown** "
+                    "to keep the row where it is. Leaving the list deletes nothing — the book "
+                    "has its link now, which is the only reason it was here.",
+                    "Which of these links readers actually open is on "
+                    "[Buy clicks](/buy-clicks).",
                 ),
             ),
         ),

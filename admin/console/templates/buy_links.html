@@ -2,41 +2,71 @@
 {% block title %}Buy links · Kitabi Admin{% endblock %}
 {% block heading %}Buy links{% endblock %}
 {% block subheading %}Editions with no curated Amazon link — each translation is its own edition, so each language gets its own link{% endblock %}
-{% block topactions %}<a class="btn s" href="/handbook/catalog" title="How this screen works">? Help</a>{% endblock %}
+{% block topactions %}
+<a class="btn s" href="/buy-clicks" title="Which of these links readers actually open">Buy clicks</a>
+<a class="btn s" href="/handbook/catalog#buy-links" title="How this screen works">? Help</a>
+{% endblock %}
 {% block content %}
 
-<div class="card" style="margin-bottom:14px">
-  <form method="get" action="/catalog/buy-links" class="bl-filters">
-    <input class="search" name="q" value="{{ q }}" placeholder="Filter by title…"
-      style="flex:1;min-width:160px">
-    <select name="lang" class="search">
+{# The works list's own filters — search, language, Type, what is missing,
+   order. The selects submit on change; the search box needs Apply (or Enter).
+   Language keeps its counts: they say how much work each choice is. #}
+<form method="get" action="/catalog/buy-links" class="filterbar bl-filters" data-no-loader>
+  <label class="bl-q">Search
+    <input class="search" type="search" name="q" value="{{ q }}" placeholder="Title or author…"></label>
+  <label>Language
+    <select name="lang" onchange="this.form.requestSubmit()">
       <option value="">All languages</option>
       {% for l in langs %}
       <option value="{{ l.value }}" {% if lang == l.value %}selected{% endif %}>
         {{ l.label }} ({{ "{:,}".format(l.count) }})</option>
       {% endfor %}
-    </select>
-    <button class="btn">Apply</button>
-    {% if q or lang %}<a class="btn s" href="/catalog/buy-links">Clear</a>{% endif %}
-  </form>
-  <p class="hint" style="margin-top:8px">Every edition here still serves the <i>generated</i>
-    ISBN-derived link, so nothing is broken — but a pasted product link is edition-exact and
-    always beats a search page. <b>Search Amazon</b> opens the pre-filled search in a new tab;
-    paste the product URL back and <b>Save</b>. The row saves in place — no reload.</p>
-</div>
+    </select></label>
+  <label>Type
+    <select name="form" onchange="this.form.requestSubmit()">
+      <option value="">All types</option>
+      {% for F in forms %}<option value="{{ F }}"{% if F == form %} selected{% endif %}>{{ F }}</option>{% endfor %}
+    </select></label>
+  <label>Missing
+    <select name="filter" onchange="this.form.requestSubmit()">
+      <option value="">Anything or nothing</option>
+      {% for key, lbl in gaps.items() %}<option value="{{ key }}"{% if key == gap %} selected{% endif %}>{{ lbl }}</option>{% endfor %}
+    </select></label>
+  <label>Sort
+    <select name="sort" onchange="this.form.requestSubmit()">
+      {% for key, lbl in sort_options.items() %}<option value="{{ key }}"{% if key == sort %} selected{% endif %}>{{ lbl }}</option>{% endfor %}
+    </select></label>
+  <button class="btn s">Apply</button>
+  {% if filtered %}<a class="btn s ghost" href="/catalog/buy-links">Clear filters</a>{% endif %}
+</form>
+<p class="hint" style="margin:8px 0 14px">Every edition here still serves the <i>generated</i>
+  ISBN-derived link, so nothing is broken — but a pasted product link is edition-exact and
+  always beats a search page. <b>Search Amazon</b> opens the pre-filled search in a new tab;
+  paste the product URL back and <b>Save</b>. Tap a <b>cover</b> to copy the picture, or the
+  small button beside a title to copy the title. A saved row leaves the list after five
+  seconds — tap the countdown to keep it.</p>
 
 <div class="worklist-head">
   <div><span class="lbl">Worklist</span>
-    <b>{{ "{:,}".format(total) }} edition{{ 's' if total != 1 }} missing a link</b>
+    <b data-bl-count="{{ total }}">{{ "{:,}".format(total) }} edition{{ 's' if total != 1 }} missing a link</b>
     {% if pages > 1 %} · page {{ page }} of {{ pages }}{% endif %}</div>
 </div>
 
 {% for r in rows %}
-<div class="bl-row" data-row>
-  {% if r.e.cover_url %}<img class="bl-cover" src="{{ r.e.cover_url }}" alt="" loading="lazy">
-  {% else %}<div class="bl-cover"></div>{% endif %}
+{# data-autoremove: once its link is saved the row counts down and leaves
+   (admin.js). The book is not deleted — it has simply left this worklist. #}
+<div class="bl-row" data-row data-autoremove>
+  {% if r.e.cover_url %}
+  <button type="button" class="bl-cover" data-copy-image="/catalog/editions/{{ r.e.id }}/cover.png"
+    title="Copy this cover" aria-label="Copy the cover of {{ r.w.title }}">
+    <img src="{{ r.e.cover_url }}" alt="" loading="lazy"></button>
+  {% else %}<div class="bl-cover" title="No cover"></div>{% endif %}
   <div class="bl-info">
-    <button type="button" class="peek t" data-peek="/catalog/peek/works/{{ r.w.id }}">{{ r.w.title }}</button>
+    <div class="bl-title">
+      <button type="button" class="peek t" data-peek="/catalog/peek/works/{{ r.w.id }}">{{ r.w.title }}</button>
+      <button type="button" class="copybtn" data-copy="{{ r.w.title }}" data-copied="Title copied"
+        title="Copy the title" aria-label="Copy the title {{ r.w.title }}"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></button>
+    </div>
     <div class="m">{{ r.author or '—' }}</div>
     <div class="m bl-meta">{{ r.e.language or 'language not set' }}
       {%- if r.e.format %} · {{ r.e.format }}{% endif %}
@@ -56,16 +86,21 @@
   </div>
 </div>
 {% else %}
-<div class="note">Nothing here — every edition{% if q or lang %} matching this filter{% endif %}
+<div class="note">Nothing here — every edition{% if filtered %} matching these filters{% endif %}
   has a curated Amazon link. 🎉</div>
 {% endfor %}
 
+{# Shown by admin.js when the last row on the page has left. #}
+{% if rows %}
+<div class="note" data-bl-cleared hidden>That is this page done.
+  <a href="{{ first_url }}">Load the next ones →</a></div>
+{% endif %}
+
 {% if pages > 1 %}
 <div class="bl-pager">
-  {% set keep_q = (('&q=' ~ (q | urlencode)) if q else '') ~ (('&lang=' ~ (lang | urlencode)) if lang else '') %}
-  {% if page > 1 %}<a class="btn s" href="/catalog/buy-links?page={{ page - 1 }}{{ keep_q }}">← Previous</a>{% endif %}
+  {% if prev_url %}<a class="btn s" href="{{ prev_url }}">← Previous</a>{% endif %}
   <span class="m">page {{ page }} of {{ pages }}</span>
-  {% if page < pages %}<a class="btn s" href="/catalog/buy-links?page={{ page + 1 }}{{ keep_q }}">Next →</a>{% endif %}
+  {% if next_url %}<a class="btn s" href="{{ next_url }}">Next →</a>{% endif %}
 </div>
 {% endif %}
 {% endblock %}

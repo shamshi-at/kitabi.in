@@ -706,25 +706,63 @@ def _no_stored_amazon():  # noqa: ANN202 — SQLAlchemy boolean expression
 
 _BL_PER_PAGE = 50
 
+#: What the worklist can be narrowed to "missing". The same three gaps the
+#: works list has, asked of the *edition* on this row where the works list
+#: asks it of any edition of the work — this screen is one row per printing.
+BL_GAPS = {
+    "no_cover": "No cover",
+    "no_isbn": "No ISBN",
+    "no_desc": "No description",
+}
 
-@router.get("/buy-links")
-async def buy_links_worklist(
-    request: Request,
-    admin: RequireEditor,
-    db: DbSession,
-    q: str = Query(default=""),
-    lang: str = Query(default=""),
-    page: int = Query(default=1, ge=1),
-) -> HTMLResponse:
-    """The bulk curation table: every edition still missing a stored Amazon
-    link, one row per edition (a translation is its own edition, so each
-    language gets its own link), with the amazon.in search open-in-new-tab so
-    the loop is search → copy → paste → save, never retype."""
-    q, lang = q.strip(), lang.strip()
+#: The works list opens newest-first; this one has always opened A–Z, and
+#: people have a place in it. The other orders are offered, not imposed.
+BL_DEFAULT_SORT = "title"
+
+
+def _bl_gap_cond(gap: str):  # noqa: ANN202 — SQLAlchemy boolean expression
+    if gap == "no_cover":
+        return Edition.cover_url.is_(None)
+    if gap == "no_isbn":
+        return Edition.isbn.is_(None)
+    if gap == "no_desc":
+        return Work.description.is_(None)
+    return None
+
+
+def bl_page_url(params: dict, page: int) -> str:
+    """The worklist's address for `page`, keeping every filter in effect.
+
+    Pure. Empty filters are left out, and so is page 1, so the plain worklist
+    stays `/catalog/buy-links` however it is reached.
+    """
+    kept = [(k, v) for k, v in params.items() if v]
+    if page > 1:
+        kept.append(("page", str(page)))
+    return "/catalog/buy-links" + (f"?{urlencode(kept)}" if kept else "")
+
+
+async def _bl_page(
+    db: DbSession, *, q: str, lang: str, form: str, gap: str, sort: str, page: int
+) -> dict:
+    """One page of the worklist: its rows, the total behind them, and the
+    language facets. The only part of the screen that talks to the database,
+    so the route around it is tested without one."""
     cond = [Edition.deleted_at.is_(None), Work.deleted_at.is_(None), _no_stored_amazon()]
     if q:
         like = f"%{q}%"
-        cond.append(or_(Work.title.ilike(like), Work.title_translit.ilike(like)))
+        cond.append(
+            or_(
+                Work.title.ilike(like),
+                Work.title_translit.ilike(like),
+                # The works list searches title *or author*; so does this.
+                Work.authors.any(or_(Author.name.ilike(like), Author.name_translit.ilike(like))),
+            )
+        )
+    if form:
+        cond.append(Work.form == form)
+    if gap:
+        cond.append(_bl_gap_cond(gap))
 
     # Language facets, counted before the language filter is applied so the
     # other options stay visible (and pickable) while one is active. One
@@ -762,7 +800,9 @@ async def buy_links_worklist(
                 .join(Work, Edition.work_id == Work.id)
                 .where(*cond)
                 .options(joinedload(Edition.work).selectinload(Work.authors))
-                .order_by(Work.title.asc(), Edition.id)
+                # `_list_order` ends on Work.id; a work with two printings
+                # still needs one more key or its rows can swap across a page.
+                .order_by(*_list_order(sort), Edition.id)
                 .limit(_BL_PER_PAGE)
                 .offset((page - 1) * _BL_PER_PAGE)
             )
@@ -770,17 +810,58 @@ async def buy_links_worklist(
         .scalars()
         .all()
     )
-    rows = [
-        {
-            "e": e,
-            "w": e.work,
-            "author": ", ".join(a.name for a in e.work.authors) if e.work.authors else "",
-            "search": buy_links_service.search_url(
-                e.isbn, e.work.title, e.work.authors[0].name if e.work.authors else None
-            ),
-        }
-        for e in editions
-    ]
+    return {
+        "total": total,
+        "langs": [
+            {"value": value or "none", "label": value or "(not set)", "count": count_}
+            for value, count_ in lang_rows
+        ],
+        "rows": [
+            {
+                "e": e,
+                "w": e.work,
+                "author": ", ".join(a.name for a in e.work.authors) if e.work.authors else "",
+                "search": buy_links_service.search_url(
+                    e.isbn, e.work.title, e.work.authors[0].name if e.work.authors else None
+                ),
+            }
+            for e in editions
+        ],
+    }
+
+
+@router.get("/buy-links")
+async def buy_links_worklist(
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    q: str = Query(default=""),
+    lang: str = Query(default=""),
+    form: str = Query(default=""),
+    gap: str = Query(default="", alias="filter"),
+    sort: str = Query(default=""),
+    page: int = Query(default=1, ge=1),
+) -> HTMLResponse:
+    """The bulk curation table: every edition still missing a stored Amazon
+    link, one row per edition (a translation is its own edition, so each
+    language gets its own link), with the amazon.in search open-in-new-tab so
+    the loop is search → copy → paste → save, never retype.
+
+    Narrowed the way the works list is — search, language, Type, what is
+    missing, and order (owner request, 5 Oct 2026): at 1,500 editions "the
+    Malayalam novels that have a cover" is a morning's work, and the whole
+    list is not.
+    """
+    q, lang, form = q.strip(), lang.strip(), form.strip()
+    gap = gap if gap in BL_GAPS else ""
+    sort = sort if sort in SORT_LABELS else ""
+    found = await _bl_page(
+        db, q=q, lang=lang, form=form, gap=gap, sort=sort or BL_DEFAULT_SORT, page=page
+    )
+    total = found["total"]
+    pages = max(1, -(-total // _BL_PER_PAGE))
+    # `filter`, not `gap`: the address keeps the works list's own spelling.
+    params = {"q": q, "lang": lang, "form": form, "filter": gap, "sort": sort}
     here = request.url.path + (f"?{request.url.query}" if request.url.query else "")
     badges = await queries.nav_badges(db)
     flash = pop_flash(request)
@@ -791,16 +872,26 @@ async def buy_links_worklist(
             "admin": admin,
             "active": "buylinks",
             "badges": badges,
-            "rows": rows,
+            "rows": found["rows"],
             "total": total,
             "page": page,
-            "pages": max(1, -(-total // _BL_PER_PAGE)),
+            "pages": pages,
+            "prev_url": bl_page_url(params, page - 1) if page > 1 else None,
+            "next_url": bl_page_url(params, page + 1) if page < pages else None,
+            # Where a cleared page sends you: the same filters from the top —
+            # the rows that just got their links are gone, so the next ones
+            # have moved up into page 1.
+            "first_url": bl_page_url(params, 1),
             "q": q,
             "lang": lang,
-            "langs": [
-                {"value": value or "none", "label": value or "(not set)", "count": count_}
-                for value, count_ in lang_rows
-            ],
+            "langs": found["langs"],
+            "form": form,
+            "forms": await catalog_service.catalog_forms(db),
+            "gap": gap,
+            "gaps": BL_GAPS,
+            "sort": sort or BL_DEFAULT_SORT,
+            "sort_options": SORT_LABELS,
+            "filtered": bool(q or lang or form or gap or sort),
             "here": here,
             "flash": flash,
         },
@@ -808,6 +899,25 @@ async def buy_links_worklist(
     if flash:
         resp.delete_cookie("admin_flash", path="/")
     return resp
+
+
+@router.get("/editions/{edition_id}/cover.png")
+async def edition_cover_png(admin: RequireEditor, db: DbSession, edition_id: uuid.UUID) -> Response:
+    """An edition's cover as a PNG, for the clipboard (`assets.cover_png`).
+
+    The worklist's cover is a button that copies the picture, so it can be
+    pasted into a shop's image search. The address to fetch is read from the
+    edition's own row — this route takes an id and nothing else, so it cannot
+    be pointed at a URL of the caller's choosing.
+    """
+    url = await db.scalar(
+        select(Edition.cover_url).where(Edition.id == edition_id, Edition.deleted_at.is_(None))
+    )
+    try:
+        png = await assets.cover_png(url)
+    except assets.CoverError as exc:
+        return PlainTextResponse(str(exc), status_code=404)
+    return Response(png, media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
 
 
 @router.post("/works/{work_id}/series")

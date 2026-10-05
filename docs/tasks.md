@@ -1636,6 +1636,10 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
       links carry `rel="sponsored"` and a disclosure line on both surfaces.
       Owner action outstanding: sign up Amazon Associates India, set the tag in
       Railway
+- [x] **Buy links worklist: filters, copy, auto-leave** (owner, 5 Oct 2026) — the works
+      list's filters and orders; tap a cover to copy the picture, a button to copy the
+      title; a saved row counts down from five and leaves unless the countdown is
+      pressed; a top/end jump button on every long console page.
 - [x] **Count buy-link clicks** (owner, 5 Oct 2026) — who, which book, which shop, app or
       website: `buy_clicks` table, `POST /buy-clicks` (app outbox) and the anonymous
       `POST /public/buy-click` (website beacon — the one write the public web makes),

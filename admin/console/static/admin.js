@@ -213,6 +213,9 @@
         const row = form.closest("[data-row]") || form;
         row.classList.add("done");
         btn.textContent = "Saved ✓";
+        // For whoever cares that this row is now saved (the worklist's
+        // countdown, below). The save itself is finished either way.
+        row.dispatchEvent(new CustomEvent("inline:saved", { bubbles: true }));
       } else {
         if (err) err.textContent = await res.text();
         btn.disabled = false;
@@ -230,7 +233,9 @@
     if (btn.textContent.startsWith("Saved")) {
       btn.textContent = "Save";
       btn.disabled = false;
-      (form.closest("[data-row]") || form).classList.remove("done");
+      const row = form.closest("[data-row]") || form;
+      row.classList.remove("done");
+      row.dispatchEvent(new CustomEvent("inline:edited", { bubbles: true }));
     }
   });
 })();
@@ -756,5 +761,210 @@ if ("serviceWorker" in navigator) {
       // over the link in a box it can be copied from by hand.
       window.prompt("Copy this link", url);
     }
+  });
+})();
+
+
+// A message that confirms something and gets out of the way — "Title copied".
+// One element, reused; a live region, so a screen reader hears it too.
+window.kitabiToast = (function () {
+  let el = null;
+  let timer = null;
+  return function (text, isError) {
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "toast";
+      el.setAttribute("role", "status");
+      el.setAttribute("aria-live", "polite");
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.toggle("err", !!isError);
+    // Next frame, so a toast replacing a toast still animates in.
+    requestAnimationFrame(() => el.classList.add("on"));
+    clearTimeout(timer);
+    timer = setTimeout(() => el.classList.remove("on"), isError ? 4200 : 2200);
+  };
+})();
+
+// Copy buttons.
+//
+//  data-copy="text"        copies the text; says data-copied (or "Copied").
+//  data-copy-image="/url"  copies the PICTURE at that same-origin URL, which
+//                          must answer image/png — a browser's clipboard takes
+//                          no other kind, and will not read an image back from
+//                          another origin, which is why the Buy links covers
+//                          go through /catalog/editions/<id>/cover.png.
+//
+// The image write is started inside the click itself with a *promise* for the
+// bytes: Safari only allows a clipboard write that begins in the gesture, and
+// the fetch cannot finish in time. Browsers that reject a promise there get
+// the plain await-then-write, which they do allow.
+(function () {
+  async function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    // An older browser, or a page that is not a secure context.
+    const box = document.createElement("textarea");
+    box.value = text;
+    box.setAttribute("readonly", "");
+    box.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(box);
+    box.select();
+    const ok = document.execCommand("copy");
+    box.remove();
+    if (!ok) throw new Error("copy refused");
+  }
+
+  async function pngFrom(url) {
+    const res = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
+    if (!res.ok) throw new Error((await res.text()) || "no image");
+    const blob = await res.blob();
+    if (blob.type !== "image/png") throw new Error("not a PNG");
+    return blob;
+  }
+
+  async function copyImage(url) {
+    if (!navigator.clipboard || !navigator.clipboard.write || !window.ClipboardItem) {
+      throw new Error("no image clipboard");
+    }
+    const bytes = pngFrom(url);
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": bytes })]);
+    } catch (first) {
+      // Either this browser wants the bytes themselves rather than a promise
+      // for them, or the fetch failed — `await bytes` tells which.
+      const blob = await bytes;
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    }
+  }
+
+  document.addEventListener("click", async (e) => {
+    const text = e.target.closest("[data-copy]");
+    if (text) {
+      try {
+        await copyText(text.dataset.copy);
+        window.kitabiToast(text.dataset.copied || "Copied");
+      } catch (_) {
+        window.kitabiToast("Couldn't copy — select the text and copy it by hand.", true);
+      }
+      return;
+    }
+    const pic = e.target.closest("[data-copy-image]");
+    if (!pic || pic.getAttribute("aria-busy")) return;
+    pic.setAttribute("aria-busy", "true");
+    try {
+      await copyImage(pic.dataset.copyImage);
+      window.kitabiToast("Cover image copied");
+    } catch (_) {
+      // Say what happened rather than pretending: the picture did not make it,
+      // and its address is the next most useful thing to have in hand.
+      const img = pic.querySelector("img");
+      try {
+        if (!img) throw new Error("no image");
+        await copyText(img.currentSrc || img.src);
+        window.kitabiToast("Couldn't copy the picture here — its link was copied instead.", true);
+      } catch (__) {
+        window.kitabiToast("Couldn't copy this cover.", true);
+      }
+    } finally {
+      pic.removeAttribute("aria-busy");
+    }
+  });
+})();
+
+// The Buy links worklist: a row whose link has just been saved counts down
+// and leaves the list, so the list is always "what is still to do" without a
+// reload (owner request, 5 Oct 2026).
+//
+// The countdown is a button, and pressing it is how you stop it — a saved row
+// you wanted another look at stays put. Editing the link again stops it too.
+// Nothing is deleted when a row leaves: the book has a link now, which is the
+// only reason it was on this list.
+(function () {
+  const SECONDS = 5;
+  const running = new WeakMap();
+
+  function stop(row, label) {
+    const state = running.get(row);
+    if (!state) return;
+    clearInterval(state.timer);
+    running.delete(row);
+    if (label) {
+      state.btn.textContent = label;
+      state.btn.disabled = true;
+      setTimeout(() => state.btn.remove(), 1400);
+    } else {
+      state.btn.remove();
+    }
+  }
+
+  function recount() {
+    const count = document.querySelector("[data-bl-count]");
+    if (count) {
+      const n = Math.max(0, Number(count.dataset.blCount || 0) - 1);
+      count.dataset.blCount = String(n);
+      count.textContent =
+        n.toLocaleString("en-IN") + (n === 1 ? " edition" : " editions") + " missing a link";
+    }
+    if (!document.querySelector("[data-row][data-autoremove]")) {
+      const cleared = document.querySelector("[data-bl-cleared]");
+      if (cleared) cleared.hidden = false;
+    }
+  }
+
+  function leave(row) {
+    running.delete(row);
+    const calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    row.classList.add("leaving");
+    setTimeout(
+      () => {
+        row.remove();
+        recount();
+      },
+      calm ? 0 : 260
+    );
+  }
+
+  document.addEventListener("inline:saved", (e) => {
+    const row = e.target.closest("[data-row][data-autoremove]");
+    if (!row || running.has(row)) return;
+    const saved = row.querySelector("form[data-inline] button");
+    if (!saved) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn s bl-undo";
+    btn.setAttribute("data-keep", "");
+    btn.title = "Stop — keep this row on the list";
+    let left = SECONDS;
+    const paint = () => (btn.textContent = "Leaving in " + left + " · keep");
+    paint();
+    saved.insertAdjacentElement("afterend", btn);
+    const timer = setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        clearInterval(timer);
+        leave(row);
+      } else {
+        paint();
+      }
+    }, 1000);
+    running.set(row, { timer, btn });
+  });
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-keep]");
+    if (!btn) return;
+    e.preventDefault();
+    const row = btn.closest("[data-row]");
+    if (row) stop(row, "Kept on the list");
+  });
+
+  // The link is being changed again: this row is not finished after all.
+  document.addEventListener("inline:edited", (e) => {
+    const row = e.target.closest("[data-row]");
+    if (row) stop(row, null);
   });
 })();

@@ -282,8 +282,14 @@ dialog.pk>div{display:flex;flex-direction:column;max-height:inherit}
   border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .bl-row+.bl-row{margin-top:8px}
 .bl-row.done{border-color:var(--moss);background:#F2F5EC}
-.bl-cover{width:34px;height:50px;object-fit:cover;border-radius:3px;flex-shrink:0;
-  background:var(--paper-deep);border:1px solid var(--line)}
+.bl-cover{width:34px;height:50px;border-radius:3px;flex-shrink:0;display:block;padding:0;
+  background:var(--paper-deep);border:1px solid var(--line);overflow:hidden}
+.bl-cover img{width:100%;height:100%;object-fit:cover;display:block}
+/* A cover that is a button copies its picture (admin.js). */
+button.bl-cover{cursor:copy}
+button.bl-cover:hover,button.bl-cover:focus-visible{border-color:var(--oxblood);outline:none;
+  box-shadow:0 0 0 2px var(--gold-soft)}
+button.bl-cover[aria-busy]{opacity:.5}
 .bl-info{flex:1;min-width:0}
 .bl-info .t{font-weight:600;font-size:13px}
 .bl-meta{margin-top:2px}
@@ -709,3 +715,35 @@ table.feed td{vertical-align:top}
 .btn.icon svg{display:block;flex:none}
 .daynum{font-family:'Fraunces',serif;font-size:21px;font-weight:500}
 .bar{display:inline-block;height:7px;border-radius:4px;background:var(--gold);vertical-align:middle;margin-right:7px}
+
+/* ---- Buy links worklist: filters, copy buttons, the leaving row ---------- */
+.bl-filters{margin-bottom:0}
+.bl-filters .bl-q{flex:1;min-width:180px}
+.bl-filters .bl-q input{width:100%;padding:7px 10px;font-size:12.5px}
+.bl-title{display:flex;align-items:center;gap:6px;min-width:0}
+.bl-title .peek{text-align:left;min-width:0}
+/* A small "copy this" button beside a piece of text. */
+.copybtn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;
+  border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink-soft);
+  cursor:pointer;padding:0}
+.copybtn:hover,.copybtn:focus-visible{border-color:var(--oxblood);color:var(--oxblood);outline:none}
+/* The countdown on a saved row. It is a button because it is also the way to
+   stop it. tabular-nums so the label does not twitch as the digit changes. */
+.bl-undo{font-variant-numeric:tabular-nums;white-space:nowrap;border-color:var(--moss);color:var(--moss)}
+.bl-undo:hover{background:#fff}
+.bl-row.leaving{opacity:0;transform:translateX(12px)}
+@media (prefers-reduced-motion:no-preference){
+  .bl-row{transition:opacity .25s, transform .25s}
+}
+
+/* ---- A message that confirms something and gets out of the way ----------- */
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));
+  transform:translate(-50%,10px);z-index:9100;max-width:min(92vw,420px);
+  background:var(--ink);color:#F6F0E3;border-radius:10px;padding:10px 16px;
+  font-size:13px;font-weight:600;text-align:center;box-shadow:0 10px 28px rgba(20,14,9,.32);
+  opacity:0;visibility:hidden;pointer-events:none}
+.toast.on{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.toast.err{background:var(--oxblood)}
+@media (prefers-reduced-motion:no-preference){
+  .toast{transition:opacity .18s, transform .18s, visibility .18s}
+}

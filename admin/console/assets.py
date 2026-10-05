@@ -23,12 +23,14 @@ a URL instead. Nothing breaks and nothing 500s.
 
 import asyncio
 import hashlib
+import io
 import os
 import uuid
 
 import httpx
 from app.core.config import get_settings
 from app.services import cover_ingest
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 # The bucket the app writes to. Public-read, which is what makes the stored URL
 # usable directly as `cover_url` / `logo_url` / a campaign image.
@@ -226,3 +228,72 @@ async def cover_from_url(url: str) -> str:
             "or save the picture and upload the file instead."
         )
     return await store_cover(fetched.body)
+
+
+# ---------------------------------------------------------------------------
+# A cover as a PNG the browser can put on the clipboard.
+#
+# The Buy links worklist copies a book's cover so it can be pasted into a
+# shop's image search (owner request, 5 Oct 2026). A browser's clipboard takes
+# PNG and nothing else, and it will not let a page read back an image from
+# another origin unless that origin says so — our covers live on three
+# (covers.kitabi.in, the Supabase bucket, the odd hotlink) and none of them is
+# set up to. So the console fetches the picture itself and hands it over,
+# same-origin, already a PNG.
+# ---------------------------------------------------------------------------
+
+#: The copy is for recognising a book, not printing it.
+CLIPBOARD_MAX_EDGE = 800
+
+
+def to_clipboard_png(body: bytes) -> bytes | None:
+    """`body` as a PNG no larger than `CLIPBOARD_MAX_EDGE`, or None if it is
+    not a picture we will decode.
+
+    The same four decoders and the same pixel ceiling as `cover_ingest.normalize`
+    — but none of its opinions about what makes a *usable cover*: a 150px
+    thumbnail or an odd-shaped scan is still worth copying if it is what the
+    catalogue has. Pure and synchronous; the caller runs it in a thread.
+    """
+    try:
+        with Image.open(io.BytesIO(body), formats=cover_ingest._FORMATS) as source:  # noqa: SLF001
+            width, height = source.size
+            if width * height > cover_ingest.MAX_PIXELS:
+                return None
+            source.draft(None, (CLIPBOARD_MAX_EDGE * 2, CLIPBOARD_MAX_EDGE * 2))
+            image = ImageOps.exif_transpose(source)
+            if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+                rgba = image.convert("RGBA")
+                image = Image.new("RGB", rgba.size, (255, 255, 255))
+                image.paste(rgba, mask=rgba.getchannel("A"))
+            else:
+                image = image.convert("RGB")
+            image.thumbnail((CLIPBOARD_MAX_EDGE, CLIPBOARD_MAX_EDGE), Image.Resampling.LANCZOS)
+            out = io.BytesIO()
+            image.save(out, "PNG", optimize=True)
+            return out.getvalue()
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError, SyntaxError):
+        return None
+
+
+async def cover_png(url: str | None) -> bytes:
+    """The cover at `url`, fetched and converted for the clipboard.
+
+    `url` is never the caller's: the route reads it from the edition's own row.
+    It is still fetched the way the intake fetches anything — https only, a
+    public hostname, every redirect re-checked, the body capped — because a
+    cover URL in the catalogue may have been typed by a reader years ago.
+    """
+    url = (url or "").strip()
+    if not url:
+        raise CoverError("This edition has no cover.")
+    if not cover_ingest.safe_source(url):
+        raise CoverError("That cover's address is not one the console will fetch.")
+    async with httpx.AsyncClient(timeout=20, headers={"User-Agent": USER_AGENT}) as client:
+        fetched = await cover_ingest._fetch(client, url)  # noqa: SLF001
+    if not fetched.body:
+        raise CoverError("Couldn't fetch the cover just now.")
+    png = await asyncio.to_thread(to_clipboard_png, fetched.body)
+    if png is None:
+        raise CoverError("That cover isn't an image the console can copy.")
+    return png
