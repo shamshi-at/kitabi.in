@@ -104,6 +104,53 @@ def fold_days(published: list[tuple], found: list[tuple], limit: int = DAYS_SHOW
     return ordered
 
 
+#: When the job runs, UTC — `api/app/jobs/catalog_intake.py`'s cron. A night is
+#: not judged until it has had this long to finish (the first two took ~20 min).
+RUN_AT = (2, 30)
+RUN_SETTLES_AFTER = timedelta(hours=1)
+
+
+def short_night(days: list[dict], ready: int, limit: int, now: datetime) -> dict | None:
+    """Say so when the last run fell far short — or left no trace at all.
+
+    On 5 Oct 2026 the job crashed two seconds into publishing: one book out,
+    1,070 ready, and the only record was a traceback in a server log nobody
+    reads. The owner found it by noticing the number on this screen. A job
+    that publishes unattended has to report its own bad nights, here, in words.
+
+    "Far short" is under half the nightly limit while a full night's worth was
+    ready. A little short is ordinary — a cover that would not load, a book
+    that turned out to be here already — and is not worth a warning.
+
+    Pure: `days` is `fold_days`' output, `now` is passed in.
+    """
+    hour, minute = RUN_AT
+    last_run = now.astimezone(UTC).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if now < last_run + RUN_SETTLES_AFTER:
+        last_run -= timedelta(days=1)
+    night = last_run.date()
+    row = next((d for d in days if d["day"] == night), None)
+    if not days:
+        return None  # the intake has never run; nothing is late
+    if row is None:
+        return {"day": night, "kind": "missing", "published": 0, "ready": ready, "limit": limit}
+    if row["published"] < limit / 2 and ready >= limit:
+        return {
+            "day": night,
+            "kind": "short",
+            "published": row["published"],
+            "ready": ready,
+            "limit": limit,
+        }
+    return None
+
+
+def daily_limit() -> int:
+    from app.core.config import get_settings  # noqa: PLC0415 — lazy, keeps the import cheap
+
+    return get_settings().catalog_intake_daily_limit
+
+
 async def _days(db: DbSession) -> list[dict]:
     published_day = _utc_day(CatalogIntake.promoted_at)
     published = (
@@ -247,6 +294,7 @@ def parse_day(value: str) -> date | None:
 @router.get("")
 async def index(request: Request, admin: RequireEditor, db: DbSession) -> HTMLResponse:
     days = await _days(db)
+    queue = await _queue(db)
     flash = pop_flash(request)
     resp = templates.TemplateResponse(
         request,
@@ -258,7 +306,8 @@ async def index(request: Request, admin: RequireEditor, db: DbSession) -> HTMLRe
             "days": days,
             "sources": [s for s in SOURCES if any(s in d["by_source"] for d in days)],
             "source_label": source_label,
-            "queue": await _queue(db),
+            "queue": queue,
+            "short": short_night(days, queue["ready"], daily_limit(), datetime.now(UTC)),
             "flash": flash,
         },
     )

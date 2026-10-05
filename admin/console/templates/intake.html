@@ -6,12 +6,27 @@
 <a class="btn s" href="/handbook/intake" title="How to use this screen">? Help</a>
 {% endblock %}
 {% block content %}
+{# A night that fell far short, or never ran, says so here — the job runs with
+   nobody watching, and its only other record is a server log. #}
+{% if short %}
+<div class="flash err" style="font-weight:500;line-height:1.6">
+  {% if short.kind == 'missing' %}
+  <b>No sign of the run on {{ short.day.strftime('%A %-d %B') }}.</b>
+  Nothing was found and nothing was published that night, though the job is due every night at 02:30 UTC.
+  {% else %}
+  <b>The run on {{ short.day.strftime('%A %-d %B') }} stopped early.</b>
+  It published {{ short.published }} book{{ '' if short.published == 1 else 's' }}, though
+  {{ "{:,}".format(short.ready) }} were ready and a night can take {{ short.limit }}.
+  {% endif %}
+  Tell whoever runs the server — see <a href="/handbook/intake#short">the handbook</a>.
+</div>
+{% endif %}
 <div class="kpis">
   <div class="kpi"><div class="v">{{ "{:,}".format(queue.published) }}</div><div class="k">Published so far</div></div>
   <div class="kpi"><div class="v">{{ "{:,}".format(queue.ready) }}</div><div class="k">Ready for coming nights</div></div>
   <div class="kpi"><div class="v">{{ "{:,}".format(queue.held) }}</div><div class="k">Waiting on something</div></div>
   <div class="kpi"><div class="v">{{ "{:,}".format(queue.refused) }}</div><div class="k">Refused — not a book</div></div>
-  <div class="kpi"><div class="v">{{ "{:,}".format(queue.duplicate) }}</div><div class="k">Already in the catalogue</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(queue.duplicate) }}</div><div class="k">Already here, or removed</div></div>
 </div>
 
 <div class="tbl" style="margin-top:14px">

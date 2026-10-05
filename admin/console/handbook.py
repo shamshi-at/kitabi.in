@@ -354,6 +354,21 @@ TOPICS: tuple[Topic, ...] = (
                     "They are published automatically once the missing piece turns up.",
                     "**Refused** — things a publisher's shop sells that are not one book: "
                     "combos, box sets, gift cards, or a listing whose name is not a title.",
+                    "**Already here, or removed** — books the job will never add: the "
+                    "catalogue already has them, or had them and someone took them out. A "
+                    "book that was removed is not put back by the job.",
+                ),
+            ),
+            Section(
+                "short",
+                "If a night stopped early",
+                (
+                    "A red notice at the top of the screen means last night's run published "
+                    "far fewer books than it could have, or left no trace of running at all. "
+                    "Nothing is lost — the books it did not reach are still waiting and go "
+                    "out on the following nights.",
+                    "It does mean something went wrong on the server. Tell whoever runs it: "
+                    "the reason is in the server's log for 02:30 UTC that night.",
                 ),
             ),
             Section(

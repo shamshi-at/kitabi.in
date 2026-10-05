@@ -150,6 +150,68 @@ def test_a_reason_nobody_translated_is_still_readable():
     assert intake.waiting_label("some_new_rule") == "some new rule"
 
 
+# --- a night that fell short says so ----------------------------------------
+
+MORNING = datetime(2026, 10, 5, 4, 30, tzinfo=UTC)  # two hours after the run
+
+
+def _nights(*published: tuple[date, int]) -> list[dict]:
+    return intake.fold_days(
+        [(d, "speakingtiger", n) for d, n in published if n], [(d, 600) for d, _ in published]
+    )
+
+
+def test_the_night_of_5_oct_is_reported_as_stopped_early():
+    """One book out, 1,070 ready, a limit of 150 — found by the owner noticing
+    the number. The screen has to notice it first."""
+    days = _nights((date(2026, 10, 5), 1), (date(2026, 10, 4), 142))
+    short = intake.short_night(days, ready=1070, limit=150, now=MORNING)
+    assert short == {
+        "day": date(2026, 10, 5),
+        "kind": "short",
+        "published": 1,
+        "ready": 1070,
+        "limit": 150,
+    }
+
+
+def test_a_full_night_is_not_a_warning():
+    days = _nights((date(2026, 10, 5), 150), (date(2026, 10, 4), 142))
+    assert intake.short_night(days, ready=920, limit=150, now=MORNING) is None
+
+
+def test_a_night_a_little_short_is_ordinary():
+    """A cover that would not load, a book that was here already: every night
+    loses a few, and a warning that fires every morning is one nobody reads."""
+    days = _nights((date(2026, 10, 5), 131))
+    assert intake.short_night(days, ready=900, limit=150, now=MORNING) is None
+
+
+def test_a_small_night_is_fine_when_the_queue_was_small():
+    """Publishing 40 is not a failure when 40 is what there was."""
+    days = _nights((date(2026, 10, 5), 40))
+    assert intake.short_night(days, ready=0, limit=150, now=MORNING) is None
+
+
+def test_a_night_with_no_trace_at_all_is_reported():
+    days = _nights((date(2026, 10, 4), 142))
+    short = intake.short_night(days, ready=1070, limit=150, now=MORNING)
+    assert short["kind"] == "missing" and short["day"] == date(2026, 10, 5)
+
+
+def test_tonights_run_is_not_judged_before_it_has_had_time_to_finish():
+    """At 02:45 the run is mid-flight: the night to judge is still yesterday's."""
+    days = _nights((date(2026, 10, 4), 142))
+    mid_run = datetime(2026, 10, 5, 2, 45, tzinfo=UTC)
+    assert intake.short_night(days, ready=1070, limit=150, now=mid_run) is None
+    before_run = datetime(2026, 10, 5, 1, 0, tzinfo=UTC)
+    assert intake.short_night(days, ready=1070, limit=150, now=before_run) is None
+
+
+def test_an_intake_that_has_never_run_is_not_late():
+    assert intake.short_night([], ready=0, limit=150, now=MORNING) is None
+
+
 # --- the pages --------------------------------------------------------------
 
 
@@ -190,6 +252,7 @@ def client(monkeypatch):
         return {"claims": 0, "revisions": 0, "reports": 0, "merges": 0, "promotions_live": 0}
 
     monkeypatch.setattr(intake, "_days", days)
+    monkeypatch.setattr(intake, "daily_limit", lambda: 150)
     monkeypatch.setattr(intake, "_queue", queue)
     monkeypatch.setattr(intake, "_books", books)
     monkeypatch.setattr(queries, "nav_badges", badges)
@@ -227,6 +290,46 @@ def test_the_nights_page_says_what_the_waiting_books_wait_for(client):
     assert "468" in html
     assert "656" in html  # ready for coming nights
     assert "757" in html  # waiting
+
+
+def test_the_nights_page_warns_when_the_last_run_stopped_early(client, monkeypatch):
+    monkeypatch.setattr(
+        intake,
+        "short_night",
+        lambda days, ready, limit, now: {
+            "day": date(2026, 10, 5),
+            "kind": "short",
+            "published": 1,
+            "ready": ready,
+            "limit": limit,
+        },
+    )
+    html = client.get("/intake").text
+    assert "The run on Monday 5 October stopped early." in html
+    assert "It published 1 book," in html
+    assert "656 were ready and a night can take 150" in html
+    assert 'href="/handbook/intake#short"' in html
+
+
+def test_the_nights_page_says_when_a_night_left_no_trace(client, monkeypatch):
+    monkeypatch.setattr(
+        intake,
+        "short_night",
+        lambda days, ready, limit, now: {
+            "day": date(2026, 10, 5),
+            "kind": "missing",
+            "published": 0,
+            "ready": ready,
+            "limit": limit,
+        },
+    )
+    assert "No sign of the run on Monday 5 October." in client.get("/intake").text
+
+
+def test_an_ordinary_morning_has_no_warning(client, monkeypatch):
+    monkeypatch.setattr(intake, "short_night", lambda days, ready, limit, now: None)
+    html = client.get("/intake").text
+    assert "stopped early" not in html and "No sign of the run" not in html
 
 
 def test_the_nights_page_before_the_first_night(client):
