@@ -28,7 +28,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from .. import activity, insights, queries, security
 from ..deps import CurrentAdmin, DbSession, client_ip
 from ..models_ref import Profile, Work
-from ..templating import templates
+from ..templating import templates, to_ist
 
 router = APIRouter(prefix="/activity")
 
@@ -61,13 +61,17 @@ def _display_name(p: Profile | None) -> str:
 
 
 def _span_label(start: datetime, end: datetime | None) -> str:
+    """What an explicit window reads as — in IST, the same clock the rows use.
+    The window itself is still the UTC bucket the chart column summed (so the
+    rows add up to the number clicked); only its description moves, which is why
+    an hour is 13:30–14:30 and a day runs 05:30 to 05:30."""
+    first = to_ist(start)
     if end is None:
-        return f"Since {start:%-d %b %Y, %H:%M} UTC"
+        return f"Since {first:%-d %b %Y, %H:%M} IST"
+    last = to_ist(end)
     if (end - start).total_seconds() <= 3600:
-        return f"{start:%-d %b %Y, %H:00}–{end:%H:00} UTC"
-    if start.time() == end.time() == datetime.min.time() and (end - start).days == 1:
-        return f"{start:%-d %b %Y} (UTC)"
-    return f"{start:%-d %b %Y, %H:%M} – {end:%-d %b %Y, %H:%M} UTC"
+        return f"{first:%-d %b %Y, %H:%M}–{last:%H:%M} IST"
+    return f"{first:%-d %b %Y, %H:%M} – {last:%-d %b %Y, %H:%M} IST"
 
 
 def page_url(request: Request, page: int) -> str:

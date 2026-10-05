@@ -1059,8 +1059,9 @@ TOPICS: tuple[Topic, ...] = (
                     "**Soft delete** — hidden everywhere, but kept in the database and "
                     "recoverable. Almost every “delete” here is one of these.",
                     "**Suspend** — lock a reader out, keep all their data.",
-                    "**UTC** — the clock all times here are shown in. Indian time is 5 hours "
-                    "30 minutes ahead.",
+                    "**UTC** — the clock most times here are shown in. Indian time (IST) is 5 "
+                    "hours 30 minutes ahead. The Activity lists are the exception: they show IST, "
+                    "and hovering a time shows the UTC it was stored as.",
                     "**Sync** — a reader's phone sending its changes to Kitabi. The app works "
                     "offline and catches up later, so a change can be minutes old before it "
                     "reaches here.",

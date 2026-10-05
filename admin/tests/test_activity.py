@@ -323,8 +323,52 @@ def test_a_kind_that_does_not_belong_in_a_scope_redirects_to_one_that_does(clien
 
 
 def test_a_chart_column_opens_its_own_window(client):
+    """The window is still the UTC hour the chart summed; it is *described* on
+    the clock the rows use, which is half an hour out of step with it."""
     html = client.get("/activity/works?from=2026-10-04T08:00Z&to=2026-10-04T09:00Z").text
-    assert "4 Oct 2026, 08:00–09:00 UTC" in html
+    assert "4 Oct 2026, 13:30–14:30 IST" in html
+
+
+def test_a_chart_day_and_an_open_window_are_described_in_ist(client):
+    day = client.get("/activity/works?from=2026-10-04T00:00Z&to=2026-10-05T00:00Z").text
+    assert "4 Oct 2026, 05:30 – 5 Oct 2026, 05:30 IST" in day
+    since = client.get("/activity/works?from=2026-10-04T08:03Z").text
+    assert "Since 4 Oct 2026, 13:33 IST" in since
+
+
+@pytest.mark.parametrize("kind", ["log", *[k.key for k in activity.KINDS if "all" in k.contexts]])
+def test_every_list_draws_its_times_in_ist(client, kind):
+    """The report: the activity log showed UTC. It is one cell every kind draws
+    through, so each kind is checked — a list half in IST is worse than none."""
+    scope = SCOPE_PARAMS["reader" if kind == "log" else "all"]
+    html = client.get(f"/activity/{kind}?{scope}").text
+    assert "4 Oct 2026, 13:33 IST" in html, "08:03 UTC is 13:33 in India"
+    assert "4 Oct 2026, 08:03 UTC" in html, "the stored instant stays one hover away"
+    assert ">4 Oct 2026, 08:03<" not in html, "no bare UTC clock time left in a cell"
+
+
+def test_a_time_after_half_past_six_in_the_evening_lands_on_the_next_day(client):
+    """The conversion moves the date too, not just the hour — 20:00 UTC on the
+    4th is 01:30 on the 5th, which is the one place a naive `+ 5:30` on the
+    formatted hour would be wrong."""
+    late = datetime(2026, 10, 4, 20, 0, tzinfo=UTC)
+    ROWS["log"][0]["at"] = late
+    try:
+        html = client.get(f"/activity/log?{SCOPE_PARAMS['reader']}").text
+    finally:
+        ROWS["log"][0]["at"] = NOW
+    assert "5 Oct 2026, 01:30 IST" in html
+    assert 'title="4 Oct 2026, 20:00 UTC"' in html
+
+
+def test_a_row_with_no_time_draws_a_dash_not_a_crash(client):
+    ROWS["log"][0]["at"] = None
+    try:
+        res = client.get(f"/activity/log?{SCOPE_PARAMS['reader']}")
+    finally:
+        ROWS["log"][0]["at"] = NOW
+    assert res.status_code == 200
+    assert "—</td>" in res.text
 
 
 def test_every_live_tile_on_the_dashboard_opens_its_rows():

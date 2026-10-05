@@ -3,12 +3,13 @@
    page (admin.js swaps the sentinel for the next batch), so the two can never
    draw a row differently. `context` hides the column that would only repeat
    the page's own subject: a reader's list doesn't name the reader on every
-   row, a book's list doesn't name the book. #}
+   row, a book's list doesn't name the book. Times are drawn in IST (the stored
+   instant is UTC; the cell's tooltip says what that is). #}
 {% import "_links.html" as L with context %}
 {% set show_reader = context != 'reader' %}
 {% set show_book = context != 'work' %}
 {% set STATUS = {'pending': 'Not started', 'reading': 'Reading', 'read': 'Read', 'dnf': 'Did not finish'} %}
-{% macro when(at) -%}<td class="m mono" style="white-space:nowrap;text-align:right">{{ at.strftime('%-d %b %Y, %H:%M') if at else '—' }}</td>{%- endmacro %}
+{% macro when(at) -%}<td class="m mono" style="white-space:nowrap;text-align:right"{% if at %} title="{{ at.strftime('%-d %b %Y, %H:%M') }} UTC"{% endif %}>{{ at|ist('%-d %b %Y, %H:%M') ~ ' IST' if at else '—' }}</td>{%- endmacro %}
 {% macro reader_cell(r) -%}{% if context != 'reader' %}<td>{{ L.reader(r.reader_id, r.reader) }}</td>{% endif %}{%- endmacro %}
 {% macro book_cell(r) -%}{% if context != 'work' %}<td>{{ L.work(r.work_id, r.title) }}</td>{% endif %}{%- endmacro %}
 {% macro day(d) -%}{{ d.strftime('%-d %b %Y') if d else '—' }}{%- endmacro %}
