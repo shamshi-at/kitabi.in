@@ -32,6 +32,12 @@
       <option value="">Anything or nothing</option>
       {% for key, lbl in gaps.items() %}<option value="{{ key }}"{% if key == gap %} selected{% endif %}>{{ lbl }}</option>{% endfor %}
     </select></label>
+  <label>Show
+    <select name="show" onchange="this.form.requestSubmit()">
+      {% for key, lbl in shows.items() %}
+      <option value="{{ key }}"{% if key == show %} selected{% endif %}>{{ lbl }} ({{ "{:,}".format(show_counts[key]) }})</option>
+      {% endfor %}
+    </select></label>
   <label>Sort
     <select name="sort" onchange="this.form.requestSubmit()">
       {% for key, lbl in sort_options.items() %}<option value="{{ key }}"{% if key == sort %} selected{% endif %}>{{ lbl }}</option>{% endfor %}
@@ -44,11 +50,16 @@
   always beats a search page. <b>Search Amazon</b> opens the pre-filled search in a new tab;
   paste the product URL back and <b>Save</b>. Tap a <b>cover</b> to copy the picture, or the
   small button beside a title to copy the title. A saved row leaves the list after five
-  seconds — tap the countdown to keep it.</p>
+  seconds — tap the countdown to keep it. Searched and it is not on Amazon? <b>No link found</b>
+  takes the row off this list and files it under <b>Show → No Amazon link found</b>, where
+  <b>Put back</b> undoes it. The book itself is untouched.</p>
 
+{# The words after the number ride on the element, so the countdown that
+   recounts it (admin.js) says the same thing on either side of the list. #}
+{% set count_suffix = ' marked no Amazon link found' if show == 'not_found' else ' missing a link' %}
 <div class="worklist-head">
-  <div><span class="lbl">Worklist</span>
-    <b data-bl-count="{{ total }}">{{ "{:,}".format(total) }} edition{{ 's' if total != 1 }} missing a link</b>
+  <div><span class="lbl">{{ 'Marked' if show == 'not_found' else 'Worklist' }}</span>
+    <b data-bl-count="{{ total }}" data-bl-suffix="{{ count_suffix }}">{{ "{:,}".format(total) }} edition{{ 's' if total != 1 }}{{ count_suffix }}</b>
     {% if pages > 1 %} · page {{ page }} of {{ pages }}{% endif %}</div>
 </div>
 
@@ -72,9 +83,26 @@
       {%- if r.e.format %} · {{ r.e.format }}{% endif %}
       · {{ 'ISBN ' ~ r.e.isbn if r.e.isbn else 'no ISBN' }}
       {%- if r.e.publisher %} · {{ r.e.publisher.name }}{% endif %}</div>
+    {% if r.e.amazon_not_found_at %}<div class="bl-meta"><span class="pill mute">No Amazon link found · {{ r.e.amazon_not_found_at|ist('%-d %b %Y') }}</span></div>{% endif %}
   </div>
   <div class="bl-act">
     <a class="btn s" href="{{ r.search }}" target="_blank" rel="noopener">Search Amazon ↗</a>
+    {# Mark or put back — beside Search Amazon, because that is the moment it is
+       for ("looked, nothing there"). A form of its own, so it saves in place like
+       Save does and the row counts down and leaves the same way. #}
+    <form class="bl-none" data-inline method="post"
+      action="/catalog/works/{{ r.w.id }}/editions/{{ r.e.id }}/amazon-not-found">
+      <input type="hidden" name="next" value="{{ here }}">
+      {% if r.e.amazon_not_found_at %}
+      <input type="hidden" name="state" value="clear">
+      <button class="btn s" data-done="Put back ✓"
+        title="Take the mark off — this edition goes back on the list of links to find">Put back</button>
+      {% else %}
+      <input type="hidden" name="state" value="set">
+      <button class="btn s" data-done="Marked ✓"
+        title="Searched Amazon and it is not there — take this off the list">No link found</button>
+      {% endif %}
+    </form>
     <form data-inline method="post"
       action="/catalog/works/{{ r.w.id }}/editions/{{ r.e.id }}/amazon-link">
       <input type="hidden" name="next" value="{{ here }}">
@@ -86,8 +114,12 @@
   </div>
 </div>
 {% else %}
+{% if show == 'not_found' %}
+<div class="note">Nothing is marked <i>no Amazon link found</i>{% if q or lang or form or gap %} under these filters{% endif %}.</div>
+{% else %}
 <div class="note">Nothing here — every edition{% if filtered %} matching these filters{% endif %}
   has a curated Amazon link. 🎉</div>
+{% endif %}
 {% endfor %}
 
 {# Shown by admin.js when the last row on the page has left. #}

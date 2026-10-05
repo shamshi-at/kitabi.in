@@ -2,10 +2,10 @@
 the cover, page count, format, and buy links that vary between physical copies."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, ForeignKey, String, Uuid
+from sqlalchemy import Date, DateTime, ForeignKey, String, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,6 +51,13 @@ class Edition(CatalogMixin, Base):
     # "Flipkart", ...}]). Display-only, per-edition (ISBN-specific), populated
     # later; the book page lists each retailer, dormant while the list is empty.
     buy_links: Mapped[list | None] = mapped_column(JSONB, default=None)
+    # When an operator searched Amazon and found no listing for this printing
+    # (console → Buy links). It takes the row off that worklist and files it
+    # under "No Amazon link found"; nothing public reads it. Cleared when a link
+    # is saved after all, or when the mark is undone.
+    amazon_not_found_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
 
     external_source: Mapped[str | None] = mapped_column(String, default=None)
     external_id: Mapped[str | None] = mapped_column(String, default=None, index=True)

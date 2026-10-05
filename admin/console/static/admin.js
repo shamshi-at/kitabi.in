@@ -212,10 +212,16 @@
       if (res.ok) {
         const row = form.closest("[data-row]") || form;
         row.classList.add("done");
-        btn.textContent = "Saved ✓";
+        // A form can name its own finished state (the worklist's "No link
+        // found" says "Marked ✓"); the default is the save every other one is.
+        btn.textContent = btn.dataset.done || "Saved ✓";
         // For whoever cares that this row is now saved (the worklist's
-        // countdown, below). The save itself is finished either way.
-        row.dispatchEvent(new CustomEvent("inline:saved", { bubbles: true }));
+        // countdown, below). The save itself is finished either way. The
+        // button rides along so the countdown can sit beside the one that was
+        // pressed, not beside whichever form is first in the row.
+        row.dispatchEvent(
+          new CustomEvent("inline:saved", { bubbles: true, detail: { button: btn } })
+        );
       } else {
         if (err) err.textContent = await res.text();
         btn.disabled = false;
@@ -230,13 +236,16 @@
     const form = e.target.closest("form[data-inline]");
     if (!form) return;
     const btn = form.querySelector("button");
+    const row = form.closest("[data-row]") || form;
     if (btn.textContent.startsWith("Saved")) {
       btn.textContent = "Save";
       btn.disabled = false;
-      const row = form.closest("[data-row]") || form;
       row.classList.remove("done");
-      row.dispatchEvent(new CustomEvent("inline:edited", { bubbles: true }));
     }
+    // Typing in a row is "this row is not finished" whichever button was
+    // pressed last: a row marked "no link found" and then given a link must not
+    // leave from under the cursor. Harmless when no countdown is running.
+    row.dispatchEvent(new CustomEvent("inline:edited", { bubbles: true }));
   });
 })();
 
@@ -907,7 +916,9 @@ window.kitabiToast = (function () {
       const n = Math.max(0, Number(count.dataset.blCount || 0) - 1);
       count.dataset.blCount = String(n);
       count.textContent =
-        n.toLocaleString("en-IN") + (n === 1 ? " edition" : " editions") + " missing a link";
+        n.toLocaleString("en-IN") +
+        (n === 1 ? " edition" : " editions") +
+        (count.dataset.blSuffix || " missing a link");
     }
     if (!document.querySelector("[data-row][data-autoremove]")) {
       const cleared = document.querySelector("[data-bl-cleared]");
@@ -931,7 +942,7 @@ window.kitabiToast = (function () {
   document.addEventListener("inline:saved", (e) => {
     const row = e.target.closest("[data-row][data-autoremove]");
     if (!row || running.has(row)) return;
-    const saved = row.querySelector("form[data-inline] button");
+    const saved = (e.detail && e.detail.button) || row.querySelector("form[data-inline] button");
     if (!saved) return;
     const btn = document.createElement("button");
     btn.type = "button";

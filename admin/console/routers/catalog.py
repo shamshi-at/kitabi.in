@@ -715,6 +715,15 @@ BL_GAPS = {
     "no_desc": "No description",
 }
 
+#: Which side of the worklist is open. "" is the work still to do — editions
+#: with no link and nobody having looked; the other is the ones somebody
+#: searched Amazon for and found nothing (`Edition.amazon_not_found_at`), which
+#: leave the first so it can be finished, and live here so they can be put back.
+BL_SHOWS = {
+    "": "Still to find",
+    "not_found": "No Amazon link found",
+}
+
 #: The works list opens newest-first; this one has always opened A–Z, and
 #: people have a place in it. The other orders are offered, not imposed.
 BL_DEFAULT_SORT = "title"
@@ -742,8 +751,8 @@ def bl_page_url(params: dict, page: int) -> str:
     return "/catalog/buy-links" + (f"?{urlencode(kept)}" if kept else "")
 
 
-async def _bl_page(
-    db: DbSession, *, q: str, lang: str, form: str, gap: str, sort: str, page: int
+async def _bl_page(  # noqa: PLR0913
+    db: DbSession, *, q: str, lang: str, form: str, gap: str, show: str, sort: str, page: int
 ) -> dict:
     """One page of the worklist: its rows, the total behind them, and the
     language facets. The only part of the screen that talks to the database,
@@ -763,6 +772,23 @@ async def _bl_page(
         cond.append(Work.form == form)
     if gap:
         cond.append(_bl_gap_cond(gap))
+
+    # How many sit on each side, under the filters above — so "No Amazon link
+    # found (12)" says how much is parked before you open it, the way the
+    # language options say how much work each is. Counted before the side is
+    # chosen, for the same reason the language facets are.
+    marked = Edition.amazon_not_found_at.is_not(None)
+    side_rows = (
+        await db.execute(
+            select(marked, func.count())
+            .select_from(Edition)
+            .join(Work, Edition.work_id == Work.id)
+            .where(*cond)
+            .group_by(marked)
+        )
+    ).all()
+    sides = {bool(flag): int(n) for flag, n in side_rows}
+    cond.append(marked if show == "not_found" else Edition.amazon_not_found_at.is_(None))
 
     # Language facets, counted before the language filter is applied so the
     # other options stay visible (and pickable) while one is active. One
@@ -812,6 +838,7 @@ async def _bl_page(
     )
     return {
         "total": total,
+        "shows": {"": sides.get(False, 0), "not_found": sides.get(True, 0)},
         "langs": [
             {"value": value or "none", "label": value or "(not set)", "count": count_}
             for value, count_ in lang_rows
@@ -839,6 +866,7 @@ async def buy_links_worklist(
     lang: str = Query(default=""),
     form: str = Query(default=""),
     gap: str = Query(default="", alias="filter"),
+    show: str = Query(default=""),
     sort: str = Query(default=""),
     page: int = Query(default=1, ge=1),
 ) -> HTMLResponse:
@@ -851,17 +879,22 @@ async def buy_links_worklist(
     missing, and order (owner request, 5 Oct 2026): at 1,500 editions "the
     Malayalam novels that have a cover" is a morning's work, and the whole
     list is not.
+
+    An edition an operator searched Amazon for and found nothing is *marked*
+    (`amazon_not_found_at`): it leaves the list and is shown under
+    `show=not_found`, where the mark can be undone (owner request, 5 Oct 2026).
     """
     q, lang, form = q.strip(), lang.strip(), form.strip()
     gap = gap if gap in BL_GAPS else ""
+    show = show if show in BL_SHOWS else ""
     sort = sort if sort in SORT_LABELS else ""
     found = await _bl_page(
-        db, q=q, lang=lang, form=form, gap=gap, sort=sort or BL_DEFAULT_SORT, page=page
+        db, q=q, lang=lang, form=form, gap=gap, show=show, sort=sort or BL_DEFAULT_SORT, page=page
     )
     total = found["total"]
     pages = max(1, -(-total // _BL_PER_PAGE))
     # `filter`, not `gap`: the address keeps the works list's own spelling.
-    params = {"q": q, "lang": lang, "form": form, "filter": gap, "sort": sort}
+    params = {"q": q, "lang": lang, "form": form, "filter": gap, "show": show, "sort": sort}
     here = request.url.path + (f"?{request.url.query}" if request.url.query else "")
     badges = await queries.nav_badges(db)
     flash = pop_flash(request)
@@ -889,9 +922,12 @@ async def buy_links_worklist(
             "forms": await catalog_service.catalog_forms(db),
             "gap": gap,
             "gaps": BL_GAPS,
+            "show": show,
+            "shows": BL_SHOWS,
+            "show_counts": found["shows"],
             "sort": sort or BL_DEFAULT_SORT,
             "sort_options": SORT_LABELS,
-            "filtered": bool(q or lang or form or gap or sort),
+            "filtered": bool(q or lang or form or gap or show or sort),
             "here": here,
             "flash": flash,
         },
@@ -1019,6 +1055,11 @@ async def set_edition_amazon_link(
     # Reassigned, never mutated in place — a JSONB column only registers a
     # change when the attribute is set to a new object.
     edition.buy_links = ([{"retailer": "Amazon", "url": url}] if url else []) + kept or None
+    if url:
+        # A link was found after all: "no Amazon link found" is no longer true.
+        # (Clearing the override leaves the mark alone — that says nothing about
+        # whether Amazon has the book.)
+        edition.amazon_not_found_at = None
     await db.commit()
     await security.audit(
         db,
@@ -1038,6 +1079,79 @@ async def set_edition_amazon_link(
         resp,
         "ok",
         "Amazon link saved." if url else "Amazon link cleared — back to the generated one.",
+    )
+    return resp
+
+
+@router.post("/works/{work_id}/editions/{edition_id}/amazon-not-found")
+async def set_edition_amazon_not_found(  # noqa: PLR0913
+    request: Request,
+    admin: RequireEditor,
+    db: DbSession,
+    work_id: uuid.UUID,
+    edition_id: uuid.UUID,
+    state: Annotated[str, Form()],
+    next_url: Annotated[str, Form(alias="next")] = "",
+) -> Response:
+    """Mark an edition "searched Amazon, no listing" — or take the mark off.
+
+    The Buy links worklist is "editions with no Amazon link", and some books
+    are simply not on Amazon: without a mark they come back every time and
+    bury the ones that can be finished. A marked edition leaves the worklist and
+    is listed under *No Amazon link found*. Nothing public reads the mark — the
+    book page serves exactly what it did before.
+
+    `state=set` marks, `state=clear` undoes. Both are idempotent (a second tap
+    keeps the first time), and refuse an edition that already has a stored
+    Amazon link, which would make the mark a lie. Serves the worklist (fetch →
+    bare status) and, as a fallback without JS, a redirect to a console-local
+    `next` — anything else is ignored, so it cannot become a redirector.
+    """
+    is_fetch = request.headers.get("x-requested-with") == "fetch"
+    back = next_url if next_url.startswith("/catalog") else "/catalog/buy-links"
+
+    def fail(message: str) -> Response:
+        if is_fetch:
+            return PlainTextResponse(message, status_code=400)
+        r = RedirectResponse(back, status_code=303)
+        set_flash(r, "err", message)
+        return r
+
+    if state not in {"set", "clear"}:
+        return fail("Say whether to mark it or put it back.")
+    edition = await db.get(Edition, edition_id)
+    if edition is None or edition.work_id != work_id or edition.deleted_at is not None:
+        return fail("Edition not found on this work.")
+    marking = state == "set"
+    if marking and any(
+        isinstance(link, dict) and buy_links_service.is_amazon(str(link.get("url") or ""))
+        for link in (edition.buy_links or [])
+    ):
+        return fail("This edition already has an Amazon link — there is nothing to mark.")
+
+    if marking and edition.amazon_not_found_at is None:
+        edition.amazon_not_found_at = datetime.now(UTC)
+    elif not marking:
+        edition.amazon_not_found_at = None
+    await db.commit()
+    await security.audit(
+        db,
+        "catalog.amazon_link.not_found" if marking else "catalog.amazon_link.not_found_clear",
+        admin_id=admin.id,
+        target_type="edition",
+        target_id=str(edition_id),
+        summary=("Marked: no Amazon link found" if marking else "Mark removed: back on the list")
+        + f" (edition {edition.isbn or 'no ISBN'})",
+        ip=client_ip(request),
+    )
+    await db.commit()
+    if is_fetch:
+        return Response(status_code=204)
+    resp = RedirectResponse(back, status_code=303)
+    set_flash(
+        resp,
+        "ok",
+        "Marked: no Amazon link found." if marking else "Back on the list of links to find.",
     )
     return resp
 

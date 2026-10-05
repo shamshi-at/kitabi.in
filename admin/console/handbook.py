@@ -723,7 +723,13 @@ TOPICS: tuple[Topic, ...] = (
                     "normal product address; Kitabi handles the rest.",
                     "Narrow the list the way you narrow the catalogue: **Search** (title or "
                     "author), **Language**, **Type**, **Missing** (no cover, no ISBN, no "
-                    "description) and **Sort**. The page links keep whatever you chose.",
+                    "description), **Show** and **Sort**. The page links keep whatever you chose.",
+                    "**Not on Amazon?** Search for it; if there is no listing, press **No link "
+                    "found**. The row leaves the list, so what is left is what can still be "
+                    "finished. Open **Show → No Amazon link found** to see them all, and "
+                    "**Put back** on any row to undo it. If you find a link later, saving it "
+                    "takes the mark off by itself. The mark is only for you: the book's public "
+                    "page is exactly as it was.",
                     "**Tap a cover** to copy the picture — paste it into the shop's image "
                     "search to find the exact edition. The small button beside a title copies "
                     "the title. A short message confirms each copy; if your browser will not "

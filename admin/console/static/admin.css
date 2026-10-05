@@ -295,7 +295,11 @@ button.bl-cover[aria-busy]{opacity:.5}
 .bl-meta{margin-top:2px}
 .bl-act{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1;min-width:260px;
   justify-content:flex-end}
-.bl-act form{display:flex;gap:6px;align-items:center;flex:1;min-width:0;flex-wrap:wrap}
+/* Basis, not just grow: on a phone the link field and Save take a line of their own
+   rather than shrinking under the buttons beside them. */
+.bl-act form{display:flex;gap:6px;align-items:center;flex:1 1 230px;min-width:0;flex-wrap:wrap}
+/* The mark/put-back button is not a second link field: it keeps its own width. */
+.bl-act form.bl-none{flex:0 0 auto}
 .bl-url{flex:1;min-width:150px;padding:6px 10px;font-size:12px}
 .inline-err{font-size:11px;color:var(--danger);flex-basis:100%}
 .inline-err:empty{display:none}

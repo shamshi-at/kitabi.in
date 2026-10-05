@@ -24,6 +24,7 @@ import asyncio
 import io
 import sys
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -36,7 +37,7 @@ from fastapi.testclient import TestClient
 from jinja2 import StrictUndefined
 from PIL import Image
 
-from console import assets, deps, queries
+from console import assets, deps, queries, security
 from console.routers import catalog
 from console.templating import templates
 
@@ -55,8 +56,9 @@ def _row(**over) -> dict:
         format="Paperback",
         isbn="9789376881192",
         publisher=SimpleNamespace(name="Mathrubhumi Books"),
+        amazon_not_found_at=None,
     )
-    for key in ("cover_url", "isbn", "publisher", "format", "language"):
+    for key in ("cover_url", "isbn", "publisher", "format", "language", "amazon_not_found_at"):
         if key in over:
             setattr(edition, key, over.pop(key))
     return {
@@ -94,6 +96,12 @@ def test_the_plain_worklist_keeps_its_plain_address():
     assert catalog.bl_page_url({**empty, "lang": "Malayalam"}, 1) == (
         "/catalog/buy-links?lang=Malayalam"
     )
+
+
+def test_a_page_link_keeps_which_side_of_the_list_is_open():
+    params = {"q": "", "lang": "", "form": "", "filter": "", "show": "not_found", "sort": ""}
+    assert catalog.bl_page_url(params, 1) == "/catalog/buy-links?show=not_found"
+    assert catalog.bl_page_url(params, 2) == "/catalog/buy-links?show=not_found&page=2"
 
 
 def test_a_filter_value_cannot_add_parameters_of_its_own():
@@ -185,18 +193,34 @@ def test_a_cover_that_cannot_be_fetched_or_decoded_says_so(monkeypatch):
 
 
 class _DB:
-    """Answers the cover route's one question: an edition's stored cover URL."""
+    """Answers the cover route's one question (an edition's stored cover URL)
+    and holds the one edition the mark/link routes load and commit."""
 
     def __init__(self):
         self.cover = COVER
+        self.commits = 0
+        self.edition = SimpleNamespace(
+            id=EDITION_ID,
+            work_id=WORK_ID,
+            deleted_at=None,
+            isbn="9789376881192",
+            buy_links=None,
+            amazon_not_found_at=None,
+        )
 
     async def scalar(self, _stmt):  # noqa: ANN001, ANN202
         return self.cover
 
+    async def get(self, _model, edition_id):  # noqa: ANN001, ANN202
+        return self.edition if edition_id == EDITION_ID else None
+
+    async def commit(self):  # noqa: ANN202
+        self.commits += 1
+
 
 @pytest.fixture
 def client(monkeypatch):
-    state = {"rows": [_row()], "total": 1, "asked": [], "role": "editor"}
+    state = {"rows": [_row()], "total": 1, "asked": [], "role": "editor", "audits": []}
     db = _DB()
 
     async def page(db_, **kw):  # noqa: ANN001
@@ -204,8 +228,12 @@ def client(monkeypatch):
         return {
             "rows": state["rows"],
             "total": state["total"],
+            "shows": {"": 118, "not_found": 5},
             "langs": [{"value": "Malayalam", "label": "Malayalam", "count": 100}],
         }
+
+    async def audit(db_, action, **kw):  # noqa: ANN001
+        state["audits"].append({"action": action, **kw})
 
     async def badges(db_):  # noqa: ANN001
         return {"claims": 0, "revisions": 0, "reports": 0, "merges": 0, "promotions_live": 0}
@@ -214,6 +242,7 @@ def client(monkeypatch):
         return ["Novel", "Poetry"]
 
     monkeypatch.setattr(catalog, "_bl_page", page)
+    monkeypatch.setattr(security, "audit", audit)
     monkeypatch.setattr(queries, "nav_badges", badges)
     monkeypatch.setattr(catalog.catalog_service, "catalog_forms", forms)
     monkeypatch.setattr(templates.env, "undefined", StrictUndefined)
@@ -251,6 +280,7 @@ def test_the_filters_reach_the_query_and_keep_their_selection(client):
         "lang": "Malayalam",
         "form": "Novel",
         "gap": "no_isbn",
+        "show": "",
         "sort": "added",
         "page": 1,
     }
@@ -319,6 +349,164 @@ def test_an_empty_worklist_says_so(client):
     html = client.get("/catalog/buy-links?lang=Tamil").text
     assert "matching these filters" in html
     assert "data-bl-cleared" not in html
+
+
+# --------------------------------------------------------------------------
+# "no Amazon link found" — owner request, 5 Oct 2026
+#
+# Some books are simply not on Amazon, so "editions with no link" never ends for
+# them and they bury the ones that can be finished. The mark takes a row off the
+# list; a filter shows the marked ones; and nothing public reads it.
+# --------------------------------------------------------------------------
+
+MARK_URL = f"/catalog/works/{WORK_ID}/editions/{EDITION_ID}/amazon-not-found"
+FETCH = {"X-Requested-With": "fetch"}
+
+
+def test_the_worklist_offers_a_filter_for_the_marked_ones_with_both_counts(client):
+    html = client.get("/catalog/buy-links").text
+    assert 'name="show"' in html
+    assert '<option value="" selected>Still to find (118)</option>' in html
+    assert '<option value="not_found">No Amazon link found (5)</option>' in html
+
+
+def test_opening_the_marked_side_reaches_the_query_and_keeps_its_selection(client):
+    html = client.get("/catalog/buy-links?show=not_found").text
+    assert client.state["asked"][-1]["show"] == "not_found"
+    assert '<option value="not_found" selected>' in html
+    assert "Clear filters" in html, "a side that is not the default is a filter in effect"
+    assert "marked no Amazon link found" in html and "missing a link" not in html
+
+
+def test_a_side_nobody_offers_is_ignored_not_trusted(client):
+    client.get("/catalog/buy-links?show=%27;drop")
+    assert client.state["asked"][-1]["show"] == ""
+
+
+def test_a_row_still_to_find_offers_to_be_marked_and_says_what_that_means(client):
+    html = client.get("/catalog/buy-links").text
+    assert f'action="{MARK_URL}"' in html
+    assert '<input type="hidden" name="state" value="set">' in html
+    assert ">No link found</button>" in html
+    assert 'data-done="Marked ✓"' in html, "the button says what it did, not 'Saved'"
+    assert ">Put back</button>" not in html, "nothing to undo on an unmarked row"
+    assert 'class="bl-none" data-inline' in html, "saves in place, like Save, and counts down"
+
+
+def test_a_marked_row_says_when_and_offers_to_be_put_back(client):
+    when = datetime(2026, 10, 5, 20, 0, tzinfo=UTC)  # 01:30 on the 6th, in India
+    client.state["rows"] = [_row(amazon_not_found_at=when)]
+    html = client.get("/catalog/buy-links?show=not_found").text
+    assert "No Amazon link found · 6 Oct 2026" in html, "drawn on the console's clock (IST)"
+    assert '<input type="hidden" name="state" value="clear">' in html
+    assert ">Put back</button>" in html and 'data-done="Put back ✓"' in html
+    assert ">No link found</button>" not in html
+    assert "Search Amazon" in html and 'name="url"' in html, "a link found later can still be saved"
+
+
+def test_an_empty_marked_side_says_so(client):
+    client.state["rows"], client.state["total"] = [], 0
+    html = client.get("/catalog/buy-links?show=not_found").text
+    assert "Nothing is marked" in html
+    assert "every edition" not in html, "not the 'all done' message — that would be a lie here"
+    html = client.get("/catalog/buy-links?show=not_found&lang=Tamil").text
+    assert "under these filters" in html
+
+
+def test_marking_stamps_the_edition_and_leaves_a_line_in_the_audit(client):
+    resp = client.post(MARK_URL, data={"state": "set"}, headers=FETCH)
+    assert resp.status_code == 204
+    assert client.db.edition.amazon_not_found_at is not None
+    assert client.db.commits >= 1
+    (line,) = client.state["audits"]
+    assert line["action"] == "catalog.amazon_link.not_found"
+    assert line["target_type"] == "edition" and line["target_id"] == str(EDITION_ID)
+
+
+def test_marking_twice_keeps_the_first_time(client):
+    client.post(MARK_URL, data={"state": "set"}, headers=FETCH)
+    first = client.db.edition.amazon_not_found_at
+    client.post(MARK_URL, data={"state": "set"}, headers=FETCH)
+    assert client.db.edition.amazon_not_found_at == first
+
+
+def test_putting_back_clears_the_mark_and_says_so_in_the_audit(client):
+    client.db.edition.amazon_not_found_at = datetime(2026, 10, 5, tzinfo=UTC)
+    resp = client.post(MARK_URL, data={"state": "clear"}, headers=FETCH)
+    assert resp.status_code == 204
+    assert client.db.edition.amazon_not_found_at is None
+    assert client.state["audits"][-1]["action"] == "catalog.amazon_link.not_found_clear"
+
+
+def test_an_edition_that_already_has_an_amazon_link_cannot_be_marked(client):
+    """The mark would say "there is no listing" about a book whose listing is
+    right there on its own row."""
+    client.db.edition.buy_links = [{"retailer": "Amazon", "url": "https://www.amazon.in/dp/X"}]
+    resp = client.post(MARK_URL, data={"state": "set"}, headers=FETCH)
+    assert resp.status_code == 400 and "already has an Amazon link" in resp.text
+    assert client.db.edition.amazon_not_found_at is None
+    assert client.state["audits"] == []
+    # Another shop's link is not an Amazon link.
+    client.db.edition.buy_links = [{"retailer": "Flipkart", "url": "https://flipkart.com/x"}]
+    assert client.post(MARK_URL, data={"state": "set"}, headers=FETCH).status_code == 204
+
+
+@pytest.mark.parametrize("data", [{}, {"state": ""}, {"state": "maybe"}, {"state": "SET"}])
+def test_a_state_nobody_offers_changes_nothing(client, data):
+    """Including none at all: a bare POST must not quietly mean "mark it"."""
+    resp = client.post(MARK_URL, data=data, headers=FETCH)
+    assert resp.status_code in (400, 422)
+    assert client.db.edition.amazon_not_found_at is None and client.state["audits"] == []
+
+
+def test_the_edition_must_belong_to_the_work_in_the_address(client):
+    other = uuid.uuid4()
+    url = f"/catalog/works/{other}/editions/{EDITION_ID}/amazon-not-found"
+    assert client.post(url, data={"state": "set"}, headers=FETCH).status_code == 400
+    gone = f"/catalog/works/{WORK_ID}/editions/{uuid.uuid4()}/amazon-not-found"
+    assert client.post(gone, data={"state": "set"}, headers=FETCH).status_code == 400
+    client.db.edition.deleted_at = datetime(2026, 10, 1, tzinfo=UTC)
+    assert client.post(MARK_URL, data={"state": "set"}, headers=FETCH).status_code == 400
+    assert client.db.edition.amazon_not_found_at is None
+
+
+def test_without_script_it_redirects_back_and_never_to_somewhere_else(client):
+    ok = client.post(
+        MARK_URL,
+        data={"state": "set", "next": "/catalog/buy-links?lang=Malayalam"},
+        follow_redirects=False,
+    )
+    assert ok.status_code == 303 and ok.headers["location"] == "/catalog/buy-links?lang=Malayalam"
+    away = client.post(
+        MARK_URL,
+        data={"state": "set", "next": "https://evil.example/"},
+        follow_redirects=False,
+    )
+    assert away.headers["location"] == "/catalog/buy-links", "a console-local path or nothing"
+
+
+def test_a_moderator_cannot_mark_an_edition(client):
+    client.state["role"] = "moderator"
+    with pytest.raises(deps.RedirectException):
+        client.post(MARK_URL, data={"state": "set"}, headers=FETCH)
+    assert client.db.edition.amazon_not_found_at is None
+
+
+def test_saving_a_link_takes_the_mark_off_but_clearing_the_override_does_not(client):
+    """Found one after all: "no Amazon link found" is no longer true. But an
+    emptied override says nothing about whether Amazon has the book."""
+    save = f"/catalog/works/{WORK_ID}/editions/{EDITION_ID}/amazon-link"
+    client.db.edition.amazon_not_found_at = datetime(2026, 10, 5, tzinfo=UTC)
+
+    assert client.post(save, data={"url": ""}, headers=FETCH).status_code == 204
+    assert client.db.edition.amazon_not_found_at is not None
+
+    resp = client.post(save, data={"url": "https://www.amazon.in/dp/B0TEST"}, headers=FETCH)
+    assert resp.status_code == 204
+    assert client.db.edition.amazon_not_found_at is None
+    assert client.db.edition.buy_links == [
+        {"retailer": "Amazon", "url": "https://www.amazon.in/dp/B0TEST"}
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -400,6 +588,27 @@ def test_a_saved_row_counts_down_from_five_and_the_countdown_is_the_way_to_stop_
     ]
     assert "row.remove()" in removal
     assert "fetch(" not in removal
+
+
+def test_a_form_can_name_its_own_done_state_and_the_countdown_sits_beside_it():
+    js = _script()
+    assert 'btn.dataset.done || "Saved ✓"' in js, "'Marked ✓' for a mark, 'Saved ✓' for a link"
+    assert (
+        "detail: { button: btn }" in js and "e.detail.button" in js
+    ), "the countdown follows the button that was pressed, not the first form in the row"
+    assert "count.dataset.blSuffix" in js, "recounting says the same words as the heading"
+
+
+def test_typing_in_a_row_stops_its_countdown_whichever_button_was_pressed():
+    """Mark a row, then start pasting a link: it must not leave from under you."""
+    js = _script()
+    start = js.index("// Retyping after a save re-arms the button.")
+    handler = js[start : js.index("})();", start)]
+    assert 'new CustomEvent("inline:edited"' in handler
+    assert handler.index('new CustomEvent("inline:edited"') > handler.index("if (btn.textContent")
+    assert (
+        "inline:edited" not in handler.split("if (btn.textContent", 1)[1].split("}", 1)[0]
+    ), "dispatched outside the 'was Saved' branch, or a marked row would still leave"
 
 
 def test_copying_says_what_it_did_including_when_it_could_not():
