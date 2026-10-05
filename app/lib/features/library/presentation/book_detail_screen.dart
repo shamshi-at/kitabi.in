@@ -1419,23 +1419,41 @@ class _ShareButton extends ConsumerWidget {
 /// the same design the public web's book page renders. Shown only when the
 /// edition carries buy_links; tolerant of an older API still sending several
 /// links (the first is the one the button opens).
-class _BuySection extends StatelessWidget {
-  const _BuySection({required this.links});
+class _BuySection extends ConsumerWidget {
+  const _BuySection({required this.links, required this.editionId});
 
   final List<Map<String, dynamic>> links;
 
-  Future<void> _open(BuildContext context, String url) async {
+  /// The printing the link is for — what a recorded tap says was looked at.
+  final String editionId;
+
+  Future<void> _open(BuildContext context, WidgetRef ref, Map<String, dynamic> link) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final uri = Uri.tryParse(url);
+    // Read before the await: opening the shop backgrounds the app, and this
+    // widget may not be here when it returns (19 Jul 2026).
+    final clicks = ref.read(buyClicksRepositoryProvider);
+    final uri = Uri.tryParse((link['url'] as String?) ?? '');
     final ok = uri != null && await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.bookBuyFailed)));
+      return;
     }
+    // Counted only once the shop actually opened. Recorded on the device
+    // first, sent when it can be; none of it is awaited by the reader.
+    unawaited(
+      clicks
+          .record(
+            editionId: editionId,
+            retailer: (link['retailer'] as String?) ?? '',
+            affiliate: link['affiliate'] == true,
+          )
+          .then((_) => clicks.drain()),
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final valid = [
       for (final link in links)
@@ -1465,7 +1483,7 @@ class _BuySection extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              onTap: () => _open(context, link['url'] as String),
+              onTap: () => _open(context, ref, link),
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                 child: Row(
@@ -1870,7 +1888,7 @@ class _AboutTabContent extends StatelessWidget {
         _TranslationsSection(work: work),
         if (buyLinks.isNotEmpty) ...[
           SizedBox(height: 16),
-          _BuySection(links: buyLinks.cast<Map<String, dynamic>>()),
+          _BuySection(links: buyLinks.cast<Map<String, dynamic>>(), editionId: editionId),
         ],
       ],
     );

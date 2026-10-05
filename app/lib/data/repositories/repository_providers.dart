@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/api_client.dart';
 import '../sync/sync_providers.dart';
+import 'buy_clicks_repository.dart';
 import 'repositories.dart';
 
 /// Riverpod providers exposing each repository, bound to the current
@@ -70,4 +72,12 @@ final lendingRepositoryProvider = FutureProvider<LendingRepository>((ref) async 
     session,
     onMutation: ref.watch(syncTriggerProvider),
   );
+});
+
+/// The outbox for taps on a bookseller link. Not session-bound like the
+/// repositories above: it stores no user id (the server files a batch under
+/// whoever is signed in when it arrives), which is why sign-out clears it.
+final buyClicksRepositoryProvider = Provider<BuyClicksRepository>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return BuyClicksRepository(ref.watch(appDatabaseProvider), send: api.postBuyClicks);
 });

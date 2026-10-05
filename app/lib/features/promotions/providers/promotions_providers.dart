@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/api/api_client.dart';
 import '../../../data/db/database.dart';
 import '../../../data/repositories/promotions_repository.dart';
+import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 
 final promotionsRepositoryProvider = Provider<PromotionsRepository>((ref) {
@@ -24,6 +25,10 @@ final promotionsProvider = StreamProvider<List<CachedPromotion>>((ref) {
   ref.read(promotionsRepositoryProvider)
     ..refresh()
     ..drainEvents();
+  // The other telemetry outbox rides the same kick: taps on a bookseller link
+  // that could not be reported when they were made (offline, a timeout) go
+  // out the next time Home is on screen.
+  ref.read(buyClicksRepositoryProvider).drain();
   return db.promotionsDao.watchServable(DateTime.now().toUtc());
 });
 

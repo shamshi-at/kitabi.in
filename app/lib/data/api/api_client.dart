@@ -364,6 +364,12 @@ class ApiClient {
   Future<void> postPromotionEvents(List<Map<String, dynamic>> events) =>
       _dio.post('/promotions/events', data: {'events': events});
 
+  /// Report taps on bookseller links from the device's outbox
+  /// (`BuyClicksRepository`). Each event carries a device-generated id, so
+  /// the server drops a replayed batch instead of double-counting it.
+  Future<void> postBuyClicks(List<Map<String, dynamic>> events) =>
+      _dio.post('/buy-clicks', data: {'events': events});
+
   // --- Lending connections (peer-to-peer consent layer) ---
 
   /// The connections screen in one call: `{incoming, outgoing, accepted}`, each

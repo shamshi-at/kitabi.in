@@ -19,6 +19,7 @@ import '../../../core/widgets/pulsing_dot.dart';
 import '../../../core/widgets/section_label.dart';
 import '../../../core/widgets/sheet_grabber.dart';
 import '../../../data/api/api_client.dart';
+import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../import_books/csv_export.dart';
@@ -520,6 +521,10 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
       // next person to sign in on this device would otherwise inherit the last
       // one's targeting — and their dismissals.
       await ref.read(promotionsRepositoryProvider).clearForSignOut();
+      // Unsent buy-link taps carry no user id — the server files them under
+      // whoever is signed in when they arrive — so they must not outlive
+      // the reader who made them.
+      await ref.read(buyClicksRepositoryProvider).clearForSignOut();
       await ref.read(authServiceProvider).signOut();
     }
   }
