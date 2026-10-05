@@ -44,6 +44,29 @@ export async function fetchPage(path, { timeoutMs = 8000 } = {}) {
 }
 
 /**
+ * Send a small report to the API and forget it — the one POST the edge makes
+ * (buy-link clicks; see _lib/buyclick.js).
+ *
+ * Never throws and resolves either way: the caller hands this to waitUntil and
+ * has already answered the browser. The visitor's own user agent is passed on
+ * so the API can tell a reader from a link-preview bot; nothing else about
+ * them is.
+ */
+export function reportToApi(path, body, userAgent, { timeoutMs = 4000 } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(`${API}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8', 'User-Agent': userAgent || '' },
+    body,
+    signal: controller.signal,
+  })
+    .then(() => true)
+    .catch(() => false)
+    .finally(() => clearTimeout(timer));
+}
+
+/**
  * Serve `render()` through the edge cache.
  *
  * Cache-first with a background revalidate: on a hit we return immediately and,

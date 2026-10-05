@@ -9,6 +9,8 @@
 // Escaping
 // --------------------------------------------------------------------------
 
+function count(haystack, needle) { return haystack.split(needle).length - 1; }
+
 var XSS = '<script>alert(1)</script>';
 
 assert(h(XSS) === '&lt;script&gt;alert(1)&lt;/script&gt;', 'h() escapes tags');
@@ -387,6 +389,98 @@ var noAffiliate = String(
 assertIncludes(noAffiliate, 'rel="nofollow noopener"', 'an unpaid link is still nofollow');
 assertExcludes(noAffiliate, 'may earn a commission', 'no disclosure when no link pays');
 assertExcludes(noAffiliate, 'rel="sponsored', 'no sponsored rel when no link pays');
+
+// --------------------------------------------------------------------------
+// Counting buy-link clicks (5 Oct 2026). The button stays a plain link to the
+// shop; what is added is a report that the click happened. Pinned: the link is
+// untouched, the report says which edition and which shop and nothing about
+// the visitor, it goes to OUR origin, and the edge forwards only a report it
+// has rebuilt itself.
+// --------------------------------------------------------------------------
+
+assertIncludes(bookDoc, 'href="https://www.amazon.in/dp/8126403454?tag=kitabi0f-21"',
+  'the buy button still goes straight to the shop — nothing of ours stands in between');
+assertIncludes(bookDoc, ' data-buy="Amazon" data-edition="e1" data-aff',
+  'the button says which shop, which edition, and that it carries our tag');
+assertExcludes(bookDoc, 'data-buy=&quot;', 'the hooks are real attributes, not escaped text');
+assert(count(bookDoc, "closest('a[data-buy]')") === 1, 'the click report script is inlined once');
+assertIncludes(bookDoc, "sendBeacon('/api/buy-click'", 'the report goes to our own origin');
+assertExcludes(bookDoc, 'api.kitabi.in', 'no public page names the API host — the report included');
+assertIncludes(noAffiliate, ' data-buy="Amazon" data-edition="e1"', 'an untagged link is counted too');
+assertExcludes(noAffiliate, 'data-edition="e1" data-aff',
+  '…but is not marked as one that could have earned');
+
+var noEditionId = String(
+  renderBook(Object.assign({}, BOOK, {
+    editions: [Object.assign({}, BOOK.editions[0], { id: null })],
+  })).text(),
+);
+assertIncludes(noEditionId, 'class="amzn"', 'a book whose edition has no id still gets its button');
+assertExcludes(noEditionId, 'data-buy', '…but a click that cannot say which book is not reported');
+assertExcludes(noEditionId, "closest('a[data-buy]')", '…and the script is not shipped for it');
+
+var noBuyLinks = String(
+  renderBook(Object.assign({}, BOOK, {
+    editions: [Object.assign({}, BOOK.editions[0], { buy_links: [] })],
+  })).text(),
+);
+assertExcludes(noBuyLinks, "closest('a[data-buy]')", 'no buy link, no script');
+
+var oddShop = String(
+  renderBook(Object.assign({}, BOOK, {
+    editions: [Object.assign({}, BOOK.editions[0],
+      { buy_links: [{ retailer: 'A"><script>x</script>', url: 'https://www.amazon.in/dp/1' }] })],
+  })).text(),
+);
+assertExcludes(oddShop, 'data-buy="A"><script>x', 'a shop name cannot break out of its attribute');
+assertIncludes(oddShop, 'data-buy="A&quot;&gt;&lt;script&gt;x&lt;/script&gt;"', '…it is escaped inside it');
+
+assertExcludes(BUY_CLICK_JS, '`', 'no backtick inside the inlined script');
+assertExcludes(BUY_CLICK_JS, '</script', 'the inlined script cannot close its own tag');
+assertExcludes(BUY_CLICK_JS, 'http', 'the script names no host at all — same origin only');
+
+// What the edge forwards. Rebuilt from three validated fields, so nothing a
+// caller adds to the body reaches the API.
+var ED = '11111111-2222-3333-4444-555555555555';
+assert(
+  buyClickReport(JSON.stringify({ edition_id: ED, retailer: 'Amazon', affiliate: true })) ===
+    '{"edition_id":"' + ED + '","retailer":"Amazon","affiliate":true}',
+  'a real report is forwarded as the three fields it is',
+);
+assert(
+  buyClickReport(JSON.stringify({ edition_id: ED, retailer: 'Amazon', user_id: 'x', url: 'https://evil' })) ===
+    '{"edition_id":"' + ED + '","retailer":"Amazon","affiliate":false}',
+  'anything else in the body stops at the edge',
+);
+assert(
+  buyClickReport(JSON.stringify({ edition_id: ED, retailer: 'Amazon', affiliate: 'yes' }))
+    .indexOf('"affiliate":false') !== -1,
+  'only a literal true is "carries our tag"',
+);
+[
+  ['', 'an empty body'],
+  ['not json', 'something that is not JSON'],
+  ['[]', 'an array'],
+  ['"text"', 'a bare string'],
+  [JSON.stringify({ retailer: 'Amazon' }), 'no edition'],
+  [JSON.stringify({ edition_id: 'e1', retailer: 'Amazon' }), 'an edition id that is not a UUID'],
+  [JSON.stringify({ edition_id: ED, retailer: 'https://evil.example/x' }), 'a URL where a shop name goes'],
+  [JSON.stringify({ edition_id: ED, retailer: '<b>' }), 'markup where a shop name goes'],
+  [JSON.stringify({ edition_id: ED, retailer: { a: 1 } }), 'an object where a shop name goes'],
+  [JSON.stringify({ edition_id: ED, retailer: 'Amazon', pad: new Array(600).join('x') }), 'an oversized body'],
+].forEach(function (pair) {
+  assert(buyClickReport(pair[0]) === null, 'not forwarded: ' + pair[1]);
+});
+assert(buyClickReport(null) === null && buyClickReport(undefined) === null, 'not forwarded: no body at all');
+
+assert(fromOurOwnPage('https://kitabi.in/api/buy-click', 'https://kitabi.in') === true,
+  'a report from our own page is taken');
+assert(fromOurOwnPage('https://kitabi.in/api/buy-click', 'https://evil.example') === false,
+  'another site scripting its visitors at this endpoint is not');
+assert(fromOurOwnPage('https://kitabi.in/api/buy-click', null) === false,
+  'a request that does not say where it came from is not');
+assert(fromOurOwnPage('https://kitabi.in/api/buy-click', 'not a url') === false,
+  'a nonsense origin is not');
 // The covers viewer (owner report, 1 Sep 2026): the site had no way to show a
 // back cover at all. Field name is `back_cover_url`, from PublicEdition in
 // api/app/schemas/public.py — written from the schema, never from the
@@ -753,7 +847,6 @@ assertIncludes(String(bookStrip([{ id: 'w', title: 'T', authors: [] }], { list: 
 assertExcludes(String(bookStrip([{ id: 'w', title: 'T', authors: [] }])), 'data-list',
   'a shelf that is not the paged list is not');
 
-function count(haystack, needle) { return haystack.split(needle).length - 1; }
 assert(count(hubSortBar, ' data-list') === 1,
   'a hub has ONE paged list — "Start here" is a shelf, and appending page 2 to it would be wrong');
 assertIncludes(hubSortBar, '<nav class="pager" aria-label="Pagination" data-pager>',
@@ -779,8 +872,8 @@ assertIncludes(peopleList, '<div class="people" data-list>', '…on the grid its
 assert(count(hubSortBar, 'function startFeed(){') === 1, 'the scroll script is inlined once');
 assertIncludes(hubSortBar, '.jmp{', '…and the jump button\'s styles with it');
 assertIncludes(hubSortBar, '.scm{', '…and the continuous list\'s');
-var bookDoc = String(renderHub(Object.assign({}, HUB, { total: 1 })).text());
-assertExcludes(bookDoc, '<nav class="pager"',
+var onePageHub = String(renderHub(Object.assign({}, HUB, { total: 1 })).text());
+assertExcludes(onePageHub, '<nav class="pager"',
   'a list that fits on one page has no pager, so the script leaves it alone');
 
 var browseDoc = String(

@@ -26,6 +26,7 @@ import {
   authorPath,
   bookPath,
   clamp,
+  h,
   html,
   joinDot,
   num,
@@ -36,8 +37,25 @@ import {
   seriesPath,
 } from '../html.js';
 import { page } from '../layout.js';
+import { BUY_CLICK_JS } from '../buyclick.js';
 
 const LANG_PATH = (l) => `/language/${seg(String(l).toLowerCase())}`;
+
+/**
+ * What the click report reads off a buy link (_lib/buyclick.js): the shop as
+ * the API named it, the edition the link is for, and whether it carries our
+ * tag. Through raw(), because an attribute interpolated as a template value
+ * ships entity-escaped (9 Aug 2026) — and with the values escaped by hand,
+ * because raw() means nobody else will. Nothing at all without an edition id:
+ * a click that cannot say which book is not worth sending.
+ */
+function buyHooks(link, edition) {
+  if (!edition?.id || !link?.retailer) return '';
+  return raw(
+    ` data-buy="${h(link.retailer)}" data-edition="${h(edition.id)}"` +
+      (link.affiliate ? ' data-aff' : ''),
+  );
+}
 
 function translationModule(data) {
   const others = data.translations || [];
@@ -354,7 +372,7 @@ export function renderBook(data) {
                 <h2 class="rh">Get this book</h2>
                 <div class="rb" style="padding:12px 15px 6px">
                   ${primaryEdition.buy_links.map(
-                    (b) => html`<a class="amzn" href="${b.url}"
+                    (b) => html`<a class="amzn" href="${b.url}"${buyHooks(b, primaryEdition)}
                       rel="${b.affiliate ? 'sponsored nofollow noopener' : 'nofollow noopener'}"
                       ><span class="wm" aria-hidden="true"
                         >amazon${raw(
@@ -370,7 +388,8 @@ export function renderBook(data) {
                     ? html`<p class="buydisc">Kitabi may earn a commission from bookseller links.</p>`
                     : ''}
                 </div>
-              </div>`
+              </div>
+              ${primaryEdition.id ? raw('<script>' + BUY_CLICK_JS + '</script>') : ''}`
             : ''}
           ${primaryEdition.id
             ? html`<div class="rail">

@@ -44,6 +44,7 @@ MODULES = [
     "api.js",
     "suggest.js",
     "scroll.js",
+    "buyclick.js",
     "layout.js",
     "jsonld.js",
     "components.js",
