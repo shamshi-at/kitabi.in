@@ -29,6 +29,36 @@ class _FakeApi extends ApiClient {
   Future<void> putActiveSession(Map<String, dynamic> body) async {}
 }
 
+/// How long the platform takes to answer in this test, on the test's own
+/// clock.
+const _platformDelay = Duration(milliseconds: 400);
+
+/// Room for everything behind a discard to finish when each platform call in
+/// it takes [_platformDelay] — about sixty frames of waiting, so the default
+/// ten seconds would do, but nothing is gained by cutting it fine.
+const _slowTeardownTimeout = Duration(seconds: 30);
+
+/// Make every platform call slow to answer. The answer itself is unchanged —
+/// whatever a mock or the engine would have said, only later.
+///
+/// Why: discarding a sitting takes down the lock-screen clock, a notification
+/// and a background task before it tells the account, and the app waits for
+/// each. How long that takes depends on the machine. On a Mac every one of
+/// them is a channel nobody is listening on, which fails within the frame. On
+/// Linux — which is what CI runs — `flutter test` registers the notification
+/// plugin's Dart implementation, and its `cancel` reads files before it
+/// answers. A test that only ever meets the fast case can be right by luck;
+/// this one was. So it runs against the slow case on every machine, and a
+/// wait that is merely *long enough here* now fails here too.
+void _slowPlatform(WidgetTester tester) {
+  final messenger = tester.binding.defaultBinaryMessenger;
+  messenger.allMessagesHandler = (channel, handler, message) async {
+    await Future<void>.delayed(_platformDelay);
+    return handler != null ? handler(message) : messenger.delegate.send(channel, message);
+  };
+  addTearDown(() => messenger.allMessagesHandler = null);
+}
+
 /// The mini-bar's own way out of a sitting that was never reading (owner
 /// request, 12 Sep 2026). It is the door that matters most in practice — a
 /// reader who left a timer running meets this bar before they meet anything
@@ -141,12 +171,38 @@ void main() {
     // that is unmounted by its own success.
     await tester.tap(discard);
     await pumpUntilFound(tester, find.text('Discard this sitting?'));
+    // From here the platform is slow to answer, on every machine — see
+    // [_slowPlatform]. It is what makes the waits below mean something.
+    _slowPlatform(tester);
     await tester.tap(find.text('Discard'));
     await pumpUntil(tester, () => container.read(activeSessionProvider) == null,
         reason: 'the sitting to end');
-    await pumpFrames(tester, 10);
+    await pumpUntil(tester, () => discard.evaluate().isEmpty,
+        reason: 'the bar — the caller — to go with it');
 
-    expect(discard, findsNothing, reason: 'the caller is gone');
+    // The clock stops the moment the reader says so: `state` is cleared before
+    // the first await. Everything behind that — the rows, the three takedowns
+    // and only then the account being told — is still in flight when the bar
+    // disappears, and nothing on screen waits for it. So each fact below is
+    // waited *for*, never waited *out*.
+    //
+    // This was `pumpFrames(tester, 10)` followed by the assertions, which is a
+    // budget rather than a condition: plenty on a laptop, where the whole
+    // chain lands within one frame, and not enough on the CI runner. `app-ci`
+    // was red on this one assertion from 14 Sep to 5 Oct 2026 while the test
+    // passed locally every time. The sitting was always discarded correctly;
+    // the test asked too soon.
+    await pumpUntil(tester, () => api.deletes > 0,
+        reason: 'the account to be told — until then it still believes a timer is running',
+        timeout: _slowTeardownTimeout);
+
+    // The snackbar is the whole feedback for this door: there is no wax-seal
+    // face to land on, so without it the timer simply vanishes and the reader
+    // has to guess whether the time was filed. It has to survive the caller's
+    // unmounting, which is what the captured messenger is for.
+    await pumpUntilFound(tester, find.text('Sitting discarded — nothing was logged'),
+        reason: 'the snackbar that says nothing was filed', timeout: _slowTeardownTimeout);
+
     final sessions = await tester.runAsync(
       () => db.readingSessionsDao.watchForEntry(entryId!).first,
     );
@@ -154,15 +210,10 @@ void main() {
         reason: 'the reader said they did not read — nothing may be logged');
     expect(await tester.runAsync(() => db.keyValuesDao.getValue(activeSessionEntryKey)),
         isNull);
-    expect(api.deletes, greaterThan(0),
-        reason: 'the account still believes a timer is running');
 
-    // The snackbar is the whole feedback for this door: there is no wax-seal
-    // face to land on, so without it the timer simply vanishes and the reader
-    // has to guess whether the time was filed. It has to survive the caller's
-    // unmounting, which is what the captured messenger is for.
-    expect(find.text('Sitting discarded — nothing was logged'), findsOneWidget);
-
+    // Back to an ordinary platform before the teardown, so the drain below
+    // is not left waiting on a slow answer of its own.
+    tester.binding.defaultBinaryMessenger.allMessagesHandler = null;
     await tester.pumpWidget(const SizedBox());
     await drainPendingTimers(tester);
     reportTestException = reportOriginal;
