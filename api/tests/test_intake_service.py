@@ -949,6 +949,95 @@ async def test_new_releases_are_published_ahead_of_the_backlog(session):
     assert titles == {"Out This Week", "Backlist One"}
 
 
+async def _queue_backlist(session, order: list[tuple[str, str]]) -> None:
+    """Stage one ready backlist book per (source, key), in this order — each in
+    its own call, so "the order it was found" is the order of the list."""
+    for n, (source, key) in enumerate(order):
+        book = candidate(
+            key, source=source, title=f"Backlist Book {n}", isbn=_isbn13(f"978817130{n:03d}")
+        )
+        await intake_service.record(session, [book], source=source)
+
+
+async def test_the_backlist_takes_turns_between_sources(session):
+    """Owner, 5 Oct 2026: "why none from Mathrubhumi?" Its 237 ready books sat
+    behind 181 of OpenLibrary's, because OpenLibrary is crawled first each
+    night and the backlist was taken strictly in the order it was found — two
+    nights of nothing but English. Sources take turns, as new releases do."""
+    await _queue_backlist(
+        session,
+        [
+            ("openlibrary_en", "/works/OL1"),
+            ("openlibrary_en", "/works/OL2"),
+            ("openlibrary_en", "/works/OL3"),
+            ("openlibrary_en", "/works/OL4"),
+            ("mathrubhumi", "mbi-1"),
+            ("mathrubhumi", "mbi-2"),
+            ("speakingtiger", "st-1"),
+        ],
+    )
+
+    due = await intake_service._due(session, 5)
+
+    assert [(r.source, r.source_key) for r in await _rows(session, due)] == [
+        ("openlibrary_en", "/works/OL1"),
+        ("mathrubhumi", "mbi-1"),
+        ("speakingtiger", "st-1"),
+        ("openlibrary_en", "/works/OL2"),
+        ("mathrubhumi", "mbi-2"),
+    ]
+
+
+async def test_a_night_is_still_full_when_only_one_source_has_a_backlist(session):
+    """Turn-taking must not shrink a night: when the others run dry, the one
+    that has books fills the rest of it."""
+    await _queue_backlist(
+        session,
+        [("mathrubhumi", "mbi-1")] + [("openlibrary_en", f"/works/OL{n}") for n in range(1, 7)],
+    )
+
+    due = await _rows(session, await intake_service._due(session, 5))
+
+    assert len(due) == 5
+    assert [r.source for r in due].count("openlibrary_en") == 4
+    assert [r.source_key for r in due if r.source == "openlibrary_en"] == [
+        "/works/OL1",
+        "/works/OL2",
+        "/works/OL3",
+        "/works/OL4",
+    ], "within a source, still the order it was found"
+
+
+async def test_new_releases_still_go_before_any_backlist(session):
+    await _queue_backlist(session, [("openlibrary_en", "/works/OL1"), ("mathrubhumi", "mbi-1")])
+    await intake_service.record(
+        session,
+        [candidate("st-new", source="speakingtiger", title="Out This Week")],
+        source="speakingtiger",
+        fresh=True,
+    )
+
+    due = await _rows(session, await intake_service._due(session, 2))
+
+    assert [r.source_key for r in due] == ["st-new", "/works/OL1"]
+
+
+async def test_choosing_tonights_books_does_not_load_their_blurbs(session):
+    """The queue holds every candidate's whole payload — blurb, biographies,
+    the LLM's reply. Choosing 150 of ~900 used to load up to 600 of them in
+    full; this database's bytes out are metered (7 Sep 2026). The choice is
+    made on ids and sources, and a row is loaded when its turn comes."""
+    await _queue_backlist(session, [("openlibrary_en", "/works/OL1"), ("mathrubhumi", "mbi-1")])
+    due = await intake_service._due(session, 5)
+    assert all(not isinstance(item, CatalogIntake) for item in due)
+    assert {tuple(item._fields) for item in due} == {("id", "source")}
+
+
+async def _rows(session, due) -> list[CatalogIntake]:
+    """The queued rows `_due` chose, in the order it chose them."""
+    return [await session.get(CatalogIntake, item.id) for item in due]
+
+
 async def test_seeing_a_staged_book_on_the_newest_page_does_not_make_it_new(session):
     await intake_service.record(session, [candidate(isbn=None)], source=SOURCE)
     await intake_service.record(session, [candidate()], source=SOURCE, fresh=True)

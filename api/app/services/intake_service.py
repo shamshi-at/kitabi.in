@@ -49,7 +49,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException
-from sqlalchemy import or_, select
+from sqlalchemy import Row, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -590,18 +590,19 @@ async def already_catalogued(db: AsyncSession, candidate: Candidate) -> uuid.UUI
 _FRESH_SOURCES_WINDOW = 4
 
 
-def _taking_turns(rows: Sequence[CatalogIntake], limit: int) -> list[CatalogIntake]:
-    """Up to `limit` rows, one source at a time.
+def _taking_turns(rows: Sequence[Row], limit: int) -> list[Row]:
+    """Up to `limit` rows, one source at a time. Anything with a `.source` will
+    do; `_due` passes `(id, source)` rows.
 
     Every shop's newest page is staged within the same minute, so "newest
     first" alone means whichever shop was read last fills the whole night — on
     the first night, fifty books from one publisher and none in Malayalam.
     Sources take turns instead; within a source the order is kept.
     """
-    queues: dict[str, list[CatalogIntake]] = {}
+    queues: dict[str, list[Row]] = {}
     for row in rows:
         queues.setdefault(row.source, []).append(row)
-    taken: list[CatalogIntake] = []
+    taken: list[Row] = []
     while queues and len(taken) < limit:
         for source in list(queues):
             taken.append(queues[source].pop(0))
@@ -640,46 +641,66 @@ async def removed_earlier(db: AsyncSession, candidate: Candidate) -> uuid.UUID |
     ).scalar_one_or_none()
 
 
-async def _due(db: AsyncSession, limit: int) -> Sequence[CatalogIntake]:
-    """Tonight's candidates: new releases first, then the backlog in the order
-    it was found.
+async def _due(db: AsyncSession, limit: int) -> list[Row]:
+    """Tonight's candidates, as `(id, source)`: new releases first, then the
+    backlist — and in both, one source at a time.
 
     Without the first half a book published this week waits behind every
     backlist title staged before it — months, at the daily limit. The newest
     of the new go first, so a busy week never pushes this week's books out by
     last week's.
+
+    The backlist takes turns too (5 Oct 2026). It used to be taken strictly in
+    the order it was found, and OpenLibrary is crawled first every night — so
+    Mathrubhumi's 237 ready books sat behind 181 of OpenLibrary's and two
+    nights went out entirely in English. Within a source the order found is
+    kept; when the others run dry, the one that has books fills the night.
+
+    Ids and sources only. The rows carry every candidate's whole payload
+    (blurb, biographies, the LLM's reply), choosing a night used to load up to
+    600 of them to keep 150, and this database's bytes out are metered —
+    `promote` loads each row when its turn comes.
     """
     ready = (CatalogIntake.state == STATE_COMPLETE, CatalogIntake.attempts < MAX_ATTEMPTS)
     is_fresh = CatalogIntake.payload.has_key(FRESH_KEY)  # noqa: W601 — JSONB `?`, not dict
     newest = (
-        (
-            await db.execute(
-                select(CatalogIntake)
-                .where(*ready, is_fresh)
-                .order_by(CatalogIntake.first_seen_at.desc(), CatalogIntake.id)
-                # Wider than the limit, so there is something to take turns over.
-                .limit(limit * _FRESH_SOURCES_WINDOW)
-            )
+        await db.execute(
+            select(CatalogIntake.id, CatalogIntake.source)
+            .where(*ready, is_fresh)
+            .order_by(CatalogIntake.first_seen_at.desc(), CatalogIntake.id)
+            # Wider than the limit, so there is something to take turns over.
+            .limit(limit * _FRESH_SOURCES_WINDOW)
         )
-        .scalars()
-        .all()
-    )
+    ).all()
     fresh = _taking_turns(newest, limit)
     if len(fresh) >= limit:
         return fresh
-    backlog = (
-        (
-            await db.execute(
-                select(CatalogIntake)
-                .where(*ready, ~is_fresh)
-                .order_by(CatalogIntake.first_seen_at, CatalogIntake.id)
-                .limit(limit - len(fresh))
-            )
+
+    room = limit - len(fresh)
+    # Each source's own oldest `room` — enough for any one of them to fill the
+    # night alone — ranked in the database so no source's long queue has to be
+    # read past to reach another's.
+    turn = (
+        func.row_number()
+        .over(
+            partition_by=CatalogIntake.source,
+            order_by=(CatalogIntake.first_seen_at, CatalogIntake.id),
         )
-        .scalars()
-        .all()
+        .label("turn")
     )
-    return [*fresh, *backlog]
+    queued = (
+        select(CatalogIntake.id, CatalogIntake.source, CatalogIntake.first_seen_at, turn)
+        .where(*ready, ~is_fresh)
+        .subquery()
+    )
+    backlist = (
+        await db.execute(
+            select(queued.c.id, queued.c.source)
+            .where(queued.c.turn <= room)
+            .order_by(queued.c.first_seen_at, queued.c.id)
+        )
+    ).all()
+    return [*fresh, *_taking_turns(backlist, room)]
 
 
 async def _own_covers(
@@ -743,7 +764,7 @@ async def promote(
     """
     counts: dict[str, int] = {}
     run = _Run()
-    for row_id in [row.id for row in await _due(db, limit)]:
+    for row_id in [due.id for due in await _due(db, limit)]:
         try:
             row = await db.get(CatalogIntake, row_id)
             if row is None or row.state != STATE_COMPLETE:

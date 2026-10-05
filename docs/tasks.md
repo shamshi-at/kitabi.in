@@ -1423,6 +1423,9 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
         Malayalam (or a person adds the book by hand). No code change — this
         is what the gate already does. They are counted on the console's
         Nightly intake screen under "Title is not in the book's own script".
+  - [x] **The backlist takes turns between sources** (owner, 5 Oct 2026) — it was
+        taken in the order found, which put 181 OpenLibrary books ahead of
+        Mathrubhumi's 237. One book per source in turn; new releases still first.
   - [x] **One row cannot end a night** (5 Oct 2026 — the second night published 1
         book with 1,070 ready). `promote` carries ids and guards every row; a book
         that was removed is recognised by its ISBN and not re-added; a settled row

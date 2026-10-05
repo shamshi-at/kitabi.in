@@ -585,11 +585,17 @@ and not the gate: the run crashed two seconds into publishing, on the row after
 an undone book (see STATUS.md, 5 Oct). Fixed the same day — one row can no
 longer end a run, a removed book is not re-added, and the console reports a
 night that stops early. The 600 rows found that night and the 149 that should
-have gone out are in the queue; nothing was lost. One thing that night made
-visible and that is *not* changed: the backlog is taken strictly in the order
-it was found, so after the new releases the next ~270 backlist books are all
-OpenLibrary's — the shops' backlists (Mathrubhumi 237, Speaking Tiger 425,
-HarperCollins 79 ready) wait behind them rather than taking turns.
+have gone out are in the queue; nothing was lost (they were published the
+same morning by a catch-up run).
+
+**The backlist takes turns between sources** (owner decision, 5 Oct 2026).
+It was taken strictly in the order it was found, and OpenLibrary is crawled
+first every night — so Mathrubhumi's 237 ready books sat behind 181 of
+OpenLibrary's and two nights went out entirely in English. Now each source
+gives one book in turn, oldest first within a source, and a source with books
+fills the night when the others run dry. On the queue as it stood that
+morning, a night of 150 is HarperCollins 37, Mathrubhumi 38, OpenLibrary 38,
+Speaking Tiger 37. New releases still go before any backlist.
 
 ## 6. Open decisions for the owner
 
