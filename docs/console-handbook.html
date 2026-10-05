@@ -153,6 +153,7 @@ h3{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:500;
 <li><a href="#dashboard">The dashboard</a></li>
 <li><a href="#incoming">New in catalog</a><em>Editor and above</em></li>
 <li><a href="#intake">Nightly intake</a><em>Editor and above</em></li>
+<li><a href="#buyclicks">Buy clicks</a><em>Editor and above</em></li>
 <li><a href="#images">Uploaded images</a><em>Editor and above</em></li>
 <li><a href="#reports">Reported content</a></li>
 <li><a href="#claims">Author claims</a></li>
@@ -329,6 +330,33 @@ h3{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-weight:500;
 <p>A book you delete by hand stays on its night&#x27;s list, with a <b>removed</b> mark, so the list still shows what the job did.</p>
 <p>A book marked <b>printing</b> was not added as a new book: it is another printing (a paperback, a new edition) of a book the catalogue already had.</p>
 <aside class="warn"><b>Careful</b><p>A book the job removed does not come back by itself. If it was removed by mistake, add it again by hand.</p></aside>
+</section>
+</article>
+<article class="topic" id="buyclicks">
+<div class="topic-head">
+<h2>Buy clicks</h2>
+<p class="summary">Which books readers go on to look at buying, and from where.</p>
+<div class="meta">
+<span class="chip role">Editor and above</span>
+<a class="chip screen" href="https://admin.kitabi.in/buy-clicks"><code>/buy-clicks</code> open</a>
+</div></div>
+<section class="sec" id="buyclicks-what">
+<h3>What this counts</h3>
+<p>Every book page — in the app and on the website — has a button that opens the book in a bookshop. This screen counts the times that button was pressed: which book, which shop, and whether it was pressed in the app or on the website.</p>
+<p>It counts <b>clicks, not purchases</b>. Kitabi never learns whether anyone bought anything; that is in the shop&#x27;s own report. A book with many clicks and no sales there is still worth knowing about — something on the shop&#x27;s page is putting readers off, or the link lands on the wrong edition (fix that under <a href="https://admin.kitabi.in/catalog/buy-links">Buy links</a>).</p>
+</section>
+<section class="sec" id="buyclicks-reading">
+<h3>Reading the screen</h3>
+<p><b>Signed-in readers</b> — how many different readers pressed the button in the app. Website visitors are not in this number: nothing about them is kept, so they cannot be told apart.</p>
+<p><b>By shop</b> — one row per bookshop. There is one today; a new shop appears here by itself on the day its first click arrives.</p>
+<p><b>tagged</b> — the link carried Kitabi&#x27;s affiliate tag when it was pressed, so a purchase could have earned a commission.</p>
+<p>The list at the bottom is the most recent hundred clicks in the period, newest first.</p>
+</section>
+<section class="sec" id="buyclicks-privacy">
+<h3>Who you can see, and what is recorded</h3>
+<p>A click made in the app is shown with the reader who made it. A click on the website shows as <b>A website visitor</b> — that is not a missing name; no account, address or device is stored for those.</p>
+<p>Because this screen names readers, <b>opening it is written to the <a href="https://admin.kitabi.in/audit?q=privacy.view&amp;period=all">audit log</a></b> with your name, like opening a reader&#x27;s shelf.</p>
+<aside class="warn"><b>Careful</b><p>What a reader looked at buying is theirs. Use this to understand books, not to follow people.</p></aside>
 </section>
 </article>
 <article class="topic" id="images">

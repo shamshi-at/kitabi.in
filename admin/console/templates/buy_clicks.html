@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Buy clicks · Kitabi Admin{% endblock %}
+{% block heading %}Buy clicks{% endblock %}
+{% block subheading %}Which books readers go on to look at buying, and where{% endblock %}
+{% block topactions %}
+<a class="btn s" href="/catalog/buy-links">Buy links</a>
+<a class="btn s" href="/handbook/buyclicks" title="How to read this screen">? Help</a>
+{% endblock %}
+{% block content %}
+<div class="rangebar">
+  <div><span class="lbl">Window</span> <b style="font-size:13px">{{ window_label }}</b></div>
+  <div class="rangepick" style="flex-wrap:wrap">
+    {% for key, label in windows.items() %}
+    <a class="btn s {% if range_key == key %}on{% endif %}" href="/buy-clicks?range={{ key }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="kpis" style="margin-top:12px">
+  <div class="kpi"><div class="v">{{ "{:,}".format(totals.clicks) }}</div><div class="k">Clicks</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(totals.books) }}</div><div class="k">Different books</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(totals.readers) }}</div><div class="k">Signed-in readers</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(totals.app) }}</div><div class="k">From the app</div></div>
+  <div class="kpi"><div class="v">{{ "{:,}".format(totals.web) }}</div><div class="k">From the website</div></div>
+</div>
+
+{% if not totals.clicks %}
+<div class="note" style="margin-top:14px">No buy link was opened in this period. Clicks are counted
+from the website as soon as this is live, and from the app once readers are on a version that
+reports them.</div>
+{% else %}
+
+<div class="split3" style="margin-top:14px">
+  <div class="card">
+    <div class="lbl">By shop</div>
+    <table style="margin-top:8px">
+      <tr><th>Shop</th><th style="text-align:right">Clicks</th><th style="text-align:right">Share</th>
+        <th style="text-align:right">Books</th><th style="text-align:right">App</th><th style="text-align:right">Website</th></tr>
+      {% for s in shops %}
+      <tr><td class="t"><b>{{ s.label }}</b></td>
+        <td style="text-align:right">{{ "{:,}".format(s.clicks) }}</td>
+        <td class="m" style="text-align:right">{{ s.share }}%</td>
+        <td class="m" style="text-align:right">{{ "{:,}".format(s.books) }}</td>
+        <td class="m" style="text-align:right">{{ "{:,}".format(s.app) }}</td>
+        <td class="m" style="text-align:right">{{ "{:,}".format(s.web) }}</td></tr>
+      {% endfor %}
+    </table>
+    <div class="m" style="margin-top:8px">{{ "{:,}".format(totals.tagged) }} of
+      {{ "{:,}".format(totals.clicks) }} clicks were on a link carrying Kitabi's tag — the ones that
+      could earn a commission. What was actually bought is in the shop's own report, not here.</div>
+  </div>
+  <div class="card">
+    <div class="lbl">By day <span class="m">(UTC)</span></div>
+    <div class="scrolly" style="max-height:300px;overflow:auto;margin-top:8px">
+    <table>
+      <tr><th>Day</th><th>Clicks</th><th style="text-align:right">App</th><th style="text-align:right">Website</th></tr>
+      {% for d in days %}
+      <tr><td class="m">{{ d.day.strftime('%a %-d %b') }}</td>
+        <td>{% if d.total %}<span class="bar" style="width:{{ [d.share, 4]|max }}px"></span>{{ d.total }}{% else %}<span class="m">—</span>{% endif %}</td>
+        <td class="m" style="text-align:right">{{ d.app or '—' }}</td>
+        <td class="m" style="text-align:right">{{ d.web or '—' }}</td></tr>
+      {% endfor %}
+    </table>
+    </div>
+  </div>
+</div>
+
+<div class="tbl" style="margin-top:14px">
+  <table>
+    <tr><th>Book</th><th>Clicks</th><th style="text-align:right">Share</th><th style="text-align:right">App</th>
+      <th style="text-align:right">Website</th><th style="text-align:right">Readers</th><th>Last click</th></tr>
+    {% for b in books %}
+    <tr>
+      <td><a href="/catalog/works/{{ b.work_id }}"><b>{{ b.title }}</b></a></td>
+      <td><span class="bar" style="width:{{ [b.share, 4]|max }}px"></span>{{ "{:,}".format(b.clicks) }}</td>
+      <td class="m" style="text-align:right">{{ b.share }}%</td>
+      <td class="m" style="text-align:right">{{ b.app or '—' }}</td>
+      <td class="m" style="text-align:right">{{ b.web or '—' }}</td>
+      <td class="m" style="text-align:right" title="Signed-in readers; website visitors are not people this can count">{{ b.readers or '—' }}</td>
+      <td class="m">{{ b.last.strftime('%-d %b %Y, %H:%M') }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="tbl" style="margin-top:14px">
+  <table>
+    <tr><th>When (UTC)</th><th>Who</th><th>Book</th><th>Shop</th><th>From</th><th></th></tr>
+    {% for c in recent %}
+    <tr>
+      <td class="m" style="white-space:nowrap">{{ c.at.strftime('%-d %b %Y, %H:%M') }}</td>
+      <td>{% if c.reader_id %}<a href="/readers/{{ c.reader_id }}">{{ c.reader }}</a>
+        {% else %}<span class="m">A website visitor</span>{% endif %}</td>
+      <td><a href="/catalog/works/{{ c.work_id }}">{{ c.title }}</a></td>
+      <td>{{ c.shop }}</td>
+      <td class="m">{{ c.surface }}</td>
+      <td>{% if c.tagged %}<span class="pill ok" title="The link carried Kitabi's affiliate tag">tagged</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% if recent|length >= recent_limit %}
+<div class="m" style="margin-top:8px">The {{ recent_limit }} most recent clicks in this period.</div>
+{% endif %}
+{% endif %}
+{% endblock %}

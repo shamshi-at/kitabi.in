@@ -20,6 +20,7 @@ from .routers import (
     admins,
     audit,
     auth,
+    buy_clicks,
     catalog,
     claims,
     dashboard,
@@ -85,6 +86,7 @@ app.include_router(intake.router)
 app.include_router(reports.router)
 app.include_router(promotions.router)
 app.include_router(catalog.router)
+app.include_router(buy_clicks.router)
 app.include_router(readers.router)
 app.include_router(admins.router)
 app.include_router(audit.router)

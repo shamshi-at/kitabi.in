@@ -406,6 +406,59 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        slug="buyclicks",
+        title="Buy clicks",
+        summary="Which books readers go on to look at buying, and from where.",
+        role="editor",
+        screen="/buy-clicks",
+        sections=(
+            Section(
+                "what",
+                "What this counts",
+                (
+                    "Every book page — in the app and on the website — has a button that opens "
+                    "the book in a bookshop. This screen counts the times that button was "
+                    "pressed: which book, which shop, and whether it was pressed in the app or "
+                    "on the website.",
+                    "It counts **clicks, not purchases**. Kitabi never learns whether anyone "
+                    "bought anything; that is in the shop's own report. A book with many clicks "
+                    "and no sales there is still worth knowing about — something on the shop's "
+                    "page is putting readers off, or the link lands on the wrong edition "
+                    "(fix that under [Buy links](/catalog/buy-links)).",
+                ),
+            ),
+            Section(
+                "reading",
+                "Reading the screen",
+                (
+                    "**Signed-in readers** — how many different readers pressed the button in "
+                    "the app. Website visitors are not in this number: nothing about them is "
+                    "kept, so they cannot be told apart.",
+                    "**By shop** — one row per bookshop. There is one today; a new shop appears "
+                    "here by itself on the day its first click arrives.",
+                    "**tagged** — the link carried Kitabi's affiliate tag when it was pressed, "
+                    "so a purchase could have earned a commission.",
+                    "The list at the bottom is the most recent hundred clicks in the period, "
+                    "newest first.",
+                ),
+            ),
+            Section(
+                "privacy",
+                "Who you can see, and what is recorded",
+                (
+                    "A click made in the app is shown with the reader who made it. A click on "
+                    "the website shows as **A website visitor** — that is not a missing name; "
+                    "no account, address or device is stored for those.",
+                    "Because this screen names readers, **opening it is written to the "
+                    "[audit log](/audit?q=privacy.view&period=all)** with your name, like "
+                    "opening a reader's shelf.",
+                ),
+                warn="What a reader looked at buying is theirs. Use this to understand books, "
+                "not to follow people.",
+            ),
+        ),
+    ),
+    Topic(
         slug="images",
         title="Uploaded images",
         summary="Cover photos and portraits readers upload — the fastest way to get hurt.",

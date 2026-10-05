@@ -106,6 +106,7 @@ catalogue newest-first as a scrolling list / book·author·publisher pages /
 duplicate merge / quality gaps); reader support (search / every item on the
 account / suspend); a drill-down list behind every number (`/activity`); what the
 nightly catalogue intake published, night by night and book by book (`/intake`);
+which books readers open in a bookshop, from the app or the website (`/buy-clicks`);
 admin-user
 management; and the audit log. Opening any of a reader's private data writes a
 `privacy.view` line to the audit log (owner decision, 4 Oct 2026).
