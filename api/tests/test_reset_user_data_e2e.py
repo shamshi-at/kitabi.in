@@ -23,6 +23,7 @@ from app.models.activity_log_entry import ActivityLogEntry
 from app.models.admin import ContentReport
 from app.models.author import Author
 from app.models.author_claim import AuthorClaim
+from app.models.buy_click import BuyClick
 from app.models.conflict_history import ConflictHistory
 from app.models.connection import Connection
 from app.models.device_token import DeviceToken
@@ -180,6 +181,25 @@ async def _seed(db, user_id: uuid.UUID) -> dict:
                 promotion_id=promotion.id,
                 user_id=user_id,
                 kind="impression",
+                occurred_at=now,
+            ),
+            # One the reader made in the app, and one from the website with
+            # nobody attached — a wipe takes both; the book they point at stays.
+            BuyClick(
+                user_id=user_id,
+                work_id=work.id,
+                edition_id=edition.id,
+                retailer="amazon",
+                surface="app",
+                affiliate=True,
+                occurred_at=now,
+            ),
+            BuyClick(
+                user_id=None,
+                work_id=work.id,
+                edition_id=edition.id,
+                retailer="amazon",
+                surface="web",
                 occurred_at=now,
             ),
         ]

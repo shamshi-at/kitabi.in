@@ -12,14 +12,16 @@ to crawlers, because spending a new domain's crawl budget on slow responses is
 how 1,400 pages take three months to index instead of three weeks.
 """
 
+import json
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
 from app.api.deps import DbSession
 from app.models import Author, Publisher, Series, Work
 from app.schemas import public as P
-from app.services import merge_service, public_service
+from app.services import buy_click_service, merge_service, public_service
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -319,3 +321,49 @@ async def resolve_id(kind: str, key: str, db: DbSession, response: Response) -> 
         raise _not_found(kind.title())
     _cached(response, _CACHE)
     return {"id": str(row.id), "slug": row.slug or str(row.id)}
+
+
+# A click report is a few dozen bytes. Anything bigger is not one.
+_BUY_CLICK_MAX_BYTES = 512
+# Link previews and crawlers that run scripts are not readers on their way to
+# a shop. The website only reports real click events, so this is a second
+# line, not the first.
+_NOT_A_READER = ("bot", "crawl", "spider", "preview", "headless", "lighthouse")
+
+
+@router.post("/buy-click", status_code=status.HTTP_204_NO_CONTENT)
+async def buy_click(request: Request, db: DbSession) -> Response:
+    """One anonymous click on a bookseller link, reported by the website.
+
+    **The one write the public web makes** (owner decision, 5 Oct 2026). It
+    appends "somebody opened shop X for edition Y" and nothing else: no
+    account, and nothing about the visitor is stored — not their IP, not their
+    browser. The edition and the shop must both exist, and the service caps how
+    many it will take (`buy_click_service.record_web`).
+
+    Always 204. The page that sent this has already let the visitor go to the
+    shop; there is nobody to show an error to, and an honest "that was not
+    counted" would only tell a prober which of its guesses were close.
+
+    The body is read raw rather than declared: `navigator.sendBeacon` sends a
+    string as `text/plain`, and declaring a JSON model would 422 every real
+    click while accepting a hand-made one.
+    """
+    done = Response(status_code=status.HTTP_204_NO_CONTENT)
+    agent = (request.headers.get("user-agent") or "").lower()
+    if any(word in agent for word in _NOT_A_READER):
+        return done
+    try:
+        if int(request.headers.get("content-length") or 0) > _BUY_CLICK_MAX_BYTES:
+            return done
+        raw = await request.body()
+        if len(raw) > _BUY_CLICK_MAX_BYTES:
+            return done
+        data = json.loads(raw)
+        edition_id = uuid.UUID(str(data["edition_id"]))
+        retailer = data["retailer"]
+        affiliate = data.get("affiliate") is True
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return done
+    await buy_click_service.record_web(db, edition_id, retailer, affiliate=affiliate)
+    return done

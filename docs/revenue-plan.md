@@ -121,6 +121,13 @@ The best idea on the list, and it's fully automatable today:
   tagged links in push/email (Associates ToS). Amazon Associates requires ~3
   qualifying sales within 180 days to keep the account — expect to re-apply once.
 
+- **Measured since 5 Oct 2026.** Amazon's report shows orders per tag, not which of our
+  pages sent them. Every click on the button is now counted — book, shop, app or website
+  — and read at `admin.kitabi.in/buy-clicks`. Clicks, not purchases; and deliberately
+  **not** by routing the link through a kitabi.in redirect, which is the "cloaked link"
+  the compliance line above rules out: the button stays a plain link and a separate
+  report says it was pressed.
+
 **Expectation:** covers the domain, not the infra, until search traffic is real.
 It's a compounding asset bolted onto the SEO work that's already live.
 

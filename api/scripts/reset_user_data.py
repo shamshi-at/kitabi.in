@@ -77,6 +77,7 @@ USER_TABLES: tuple[str, ...] = (
     "llm_usage",
     "rec_cache",  # cached picks are derived from the shelf being wiped
     "promotion_events",  # reader impressions/clicks; the campaign itself stays
+    "buy_clicks",  # who opened which bookseller link; → works/editions, which stay
     "profiles",
 )
 

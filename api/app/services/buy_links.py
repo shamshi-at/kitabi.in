@@ -45,6 +45,21 @@ from app.services import isbn as isbn_service
 
 AMAZON = "Amazon"
 
+#: The shops a buy link can point at, as the short keys a click is recorded
+#: under (`models/buy_click.py`). One today. A second shop is added here, in
+#: `merged`, and nowhere else — the click log, its endpoints and the console's
+#: report all read this vocabulary rather than naming Amazon themselves.
+RETAILER_KEYS = frozenset({"amazon"})
+
+
+def retailer_key(name: object) -> str | None:
+    """The key a served link's `retailer` is recorded under, or None when it
+    is not a shop we serve. Folds case and spacing, so the display name the
+    clients were given ("Amazon") and the key ("amazon") both work."""
+    key = str(name or "").strip().lower()
+    return key if key in RETAILER_KEYS else None
+
+
 # Hostname labels that identify the Amazon family, so a stored short link
 # (amzn.to) or foreign marketplace (amazon.com) still counts as "the admin
 # entered an Amazon link" and suppresses the generated one.

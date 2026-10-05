@@ -226,6 +226,17 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   into the app, so RLS deny-by-default and a zero public attack surface both hold),
   and **content is server-rendered** — a page whose body needs JS to appear is a page
   crawlers don't have.
+  **One named exception to read-only, owner decision 5 Oct 2026: counting clicks on
+  the bookseller button.** The book page reports a click (which edition, which shop)
+  to `POST /api/buy-click` on our own origin, which forwards a report it has rebuilt
+  from validated fields to `POST /public/buy-click`. What keeps it one exception
+  rather than a precedent: it can only *append* a row to `buy_clicks`, for an
+  edition and a shop that exist; it stores **nothing about the visitor** (no
+  account, IP, user agent or cookie — a test pins the table's columns); it always
+  answers 204; and the API caps how many it will take. The button itself stays a
+  plain link to the shop — no redirect through us ("no cloaked links",
+  docs/revenue-plan.md §3.1). A second public write needs its own decision, not
+  this one's.
 - **Logo:** `landing-page/logo.svg` is the master mark — "The Gold Line": an open
   book with a gold ribbon bookmark and text lines on both pages, one line gold on
   the recto ("the line that stays with you"), on an oxblood tile with a gold

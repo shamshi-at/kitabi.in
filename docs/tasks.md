@@ -1636,6 +1636,12 @@ or it is not created. No post-hoc repair passes; `09`/`10` stay for the existing
       links carry `rel="sponsored"` and a disclosure line on both surfaces.
       Owner action outstanding: sign up Amazon Associates India, set the tag in
       Railway
+- [x] **Count buy-link clicks** (owner, 5 Oct 2026) — who, which book, which shop, app or
+      website: `buy_clicks` table, `POST /buy-clicks` (app outbox) and the anonymous
+      `POST /public/buy-click` (website beacon — the one write the public web makes),
+      report at `admin.kitabi.in/buy-clicks`. Built for more than one shop: the shop is a
+      key from `buy_links.RETAILER_KEYS`, never a column type. Privacy policy updated.
+      The app half ships with the next app build.
 
 ## Phase A — The author page as a reference page
 

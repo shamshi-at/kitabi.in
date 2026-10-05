@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app.api import (
     auth,
+    buy_clicks,
     catalog,
     connections,
     devices,
@@ -127,6 +128,7 @@ def create_app() -> FastAPI:
     app.include_router(sitemap.router)
     app.include_router(recommendations.router)
     app.include_router(promotions.router)
+    app.include_router(buy_clicks.router)
     app.include_router(import_api.router)
     app.include_router(reading.router)
     app.include_router(sync.router)
