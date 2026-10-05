@@ -271,6 +271,21 @@ def test_the_worklist_has_the_works_lists_filters(client):
     assert "Clear filters" not in html, "nothing to clear yet"
 
 
+def test_there_is_no_apply_button_because_every_control_submits_itself(client):
+    """The selects submit on change and the search box on Enter, so a visible
+    Apply did nothing a control did not already do (owner, 5 Oct 2026). What is
+    kept: the <noscript> button the works list has, and the keyboard hint that
+    makes a phone's Enter key read "Search" — which is what stands in for it."""
+    html = client.get("/catalog/buy-links").text
+    form = html[html.index('<form method="get" action="/catalog/buy-links"') :]
+    form = form[: form.index("</form>")]
+    assert form.count('onchange="this.form.requestSubmit()"') == 5, "every select"
+    assert 'enterkeyhint="search"' in form
+    visible = form.replace('<noscript><button class="btn s">Apply</button></noscript>', "")
+    assert "Apply" not in visible, "no button is on screen"
+    assert "<noscript><button" in form, "and a browser with no script still has one"
+
+
 def test_the_filters_reach_the_query_and_keep_their_selection(client):
     html = client.get(
         "/catalog/buy-links?q=kaalam&lang=Malayalam&form=Novel&filter=no_isbn&sort=added"
