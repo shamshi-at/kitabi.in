@@ -218,6 +218,14 @@ async def _storefronts(session, client: httpx.AsyncClient, settings) -> None:
         logger.info("intake: product pages read %s", enriched)
 
 
+SOURCE_KBS = intake_keralabookstore.SOURCE
+
+
+def _add(total: dict[str, int], more: dict[str, int]) -> None:
+    for key, n in more.items():
+        total[key] = total.get(key, 0) + n
+
+
 async def _keralabookstore(session, client: httpx.AsyncClient, settings) -> None:
     """Read the next Kerala Book Store pages, newest not-yet-staged first.
 
@@ -238,18 +246,27 @@ async def _keralabookstore(session, client: httpx.AsyncClient, settings) -> None
         todo = intake_keralabookstore.unstaged(
             found, await intake_keralabookstore.staged_ids(session), pages
         )
-        candidates = await intake_keralabookstore.read_pages(
+        # End the read transaction above before the slow part: ten seconds a
+        # page is minutes with the connection open and nothing happening on it.
+        await session.commit()
+        # Staged as it is read, a few dozen pages at a time: the whole night's
+        # reading is ~25 minutes, and a deploy in the middle (every push to main
+        # restarts this process) must cost a batch, not the night.
+        read = 0
+        staged: dict[str, int] = {}
+        batch: list = []
+        async for candidate in intake_keralabookstore.iter_pages(
             client, todo, may_fetch=lambda url: rules.can_fetch(USER_AGENT, url)
-        )
-        staged = await intake_service.record(
-            session, candidates, source=intake_keralabookstore.SOURCE
-        )
+        ):
+            read += 1
+            batch.append(candidate)
+            if len(batch) >= intake_keralabookstore.STAGE_EVERY:
+                _add(staged, await intake_service.record(session, batch, source=SOURCE_KBS))
+                batch = []
+        if batch:
+            _add(staged, await intake_service.record(session, batch, source=SOURCE_KBS))
         logger.info(
-            "intake/%s: %s of %s pages read, staged %s",
-            intake_keralabookstore.SOURCE,
-            len(candidates),
-            len(todo),
-            staged,
+            "intake/%s: %s of %s pages read, staged %s", SOURCE_KBS, read, len(todo), staged
         )
     except Exception:  # noqa: BLE001 — one shop must not cost the night
         logger.exception("intake/%s: crawl failed", intake_keralabookstore.SOURCE)

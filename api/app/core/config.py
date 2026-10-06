@@ -87,6 +87,8 @@ class Settings(BaseSettings):
     # retailer, not a publisher's own shop, so whether its covers may be copied
     # to our bucket is the owner's decision, not a default. Ten seconds a page
     # (the shop's stated crawl delay), so 150 is about twenty-five minutes.
+    # Production sets it to 150 in api/Dockerfile (owner, 6 Oct 2026) — the
+    # same place, and the same reason, as CATALOG_INTAKE_ENABLED.
     catalog_intake_keralabookstore_pages: int = 0
 
     # Version gate: the app sends `X-App-Version`; anything older than this gets

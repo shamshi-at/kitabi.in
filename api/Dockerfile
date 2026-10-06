@@ -46,5 +46,15 @@ ENV INDEXNOW_ENABLED=1
 # published is touched. To undo a night, api/scripts/revert_intake.py.
 ENV CATALOG_INTAKE_ENABLED=1
 
+# Kerala Book Store (services/intake_keralabookstore.py): read this many of its
+# newest not-yet-staged pages each night — ON at 150, by owner decision,
+# 6 Oct 2026. Ten seconds a page (the shop's own stated crawl delay), so about
+# twenty-five minutes added to the night; staged every 25 pages, so a deploy in
+# the middle loses a batch rather than the night. Setting this is also the
+# decision that a retailer's covers are copied to our bucket as a publisher's
+# own are (docs/catalog-intake-plan.md section 4). To stop it, delete this line
+# (or set it to 0) and push; nothing it staged or published is touched.
+ENV CATALOG_INTAKE_KERALABOOKSTORE_PAGES=150
+
 # Railway injects PORT; default to 8000 locally.
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

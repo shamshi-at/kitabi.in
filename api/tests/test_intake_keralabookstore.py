@@ -395,6 +395,45 @@ async def test_a_second_night_goes_on_where_the_first_stopped(monkeypatch, sessi
     assert sorted(keys) == ["1007624", "1007625"], "the next-newest, not the same one again"
 
 
+async def test_a_night_cut_short_keeps_the_pages_already_read(monkeypatch, session):
+    """Reading 150 pages at ten seconds each is twenty-five minutes, and a push
+    to main restarts this process in the middle of it. Staged only at the end,
+    that deploy would throw the whole night away; staged as it goes it costs the
+    batch in flight."""
+    monkeypatch.setattr(kbs, "PAUSE_SECONDS", 0)
+    monkeypatch.setattr(kbs, "STAGE_EVERY", 2)
+    settings = get_settings().model_copy(update={"catalog_intake_keralabookstore_pages": 4})
+    reads = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url.endswith("/robots.txt"):
+            return httpx.Response(200, text="")
+        if url == kbs.SITEMAP_URL:
+            return httpx.Response(200, text=sitemap())
+        reads["n"] += 1
+        if reads["n"] == 3:
+            raise RuntimeError("the process was killed here")
+        return httpx.Response(200, text=book_page())
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        await intake_job._keralabookstore(session, client, settings)
+
+    keys = (await session.execute(select(CatalogIntake.source_key))).scalars().all()
+    assert sorted(keys) == ["1007624", "1007625"], "the first batch of two was already staged"
+
+
+def test_production_switches_it_on_through_the_environment(monkeypatch):
+    """`ENV CATALOG_INTAKE_KERALABOOKSTORE_PAGES=150` in api/Dockerfile is how the
+    owner's decision reaches the setting; the code default stays off."""
+    from app.core.config import Settings
+
+    monkeypatch.delenv("CATALOG_INTAKE_KERALABOOKSTORE_PAGES", raising=False)
+    assert Settings(_env_file=None).catalog_intake_keralabookstore_pages == 0
+    monkeypatch.setenv("CATALOG_INTAKE_KERALABOOKSTORE_PAGES", "150")
+    assert Settings(_env_file=None).catalog_intake_keralabookstore_pages == 150
+
+
 async def test_a_shop_whose_robots_txt_says_no_costs_only_itself(monkeypatch, session):
     settings = get_settings().model_copy(update={"catalog_intake_keralabookstore_pages": 5})
     seen: list[str] = []

@@ -305,7 +305,11 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   publishes up to `catalog_intake_daily_limit` (150) books as public pages, with
   nobody watching. It also spends money: books a shop credits to several people
   without roles are put to the LLM (`services/author_roles.py`, metered as
-  `FEATURE_AUTHOR_ROLES`, ≤100 calls a day). So **a push to `main` that touches `services/intake_*`,
+  `FEATURE_AUTHOR_ROLES`, ≤100 calls a day). It also reads 150 Kerala Book Store
+  pages a night at ten seconds each (`ENV CATALOG_INTAKE_KERALABOOKSTORE_PAGES`
+  in the Dockerfile), so the run is about an hour long — a push to `main` while it
+  runs (roughly 02:30–03:45 IST) restarts the process mid-night; Kerala Book Store
+  stages every 25 pages, so that costs a batch, but prefer not to. So **a push to `main` that touches `services/intake_*`,
   `cover_ingest` or the gate changes what is published tonight** — read a
   night first with `api/scripts/preview_intake.py` (read-only, point it at
   production). The way back is `api/scripts/revert_intake.py --since <date>`

@@ -211,10 +211,12 @@ other houses (Kerala Bhasha Institute, Olive, Pusthaka Prasadhaka Sangham, Green
 Books, NBS, Logos…) — **this is how DC Books' list reaches us without touching
 its store.**
 
-**Off until the owner turns it on** (`catalog_intake_keralabookstore_pages`, 0 by
-default): it is a *retailer*, so the §4 cover question is sharper than for a
-publisher's own shop — the cover is a publisher's, served by a bookseller, and
-the intake copies it to our bucket. Facts about a book are not the shop's to
+**Switched on at 150 pages a night by the owner, 6 Oct 2026**
+(`ENV CATALOG_INTAKE_KERALABOOKSTORE_PAGES=150` in `api/Dockerfile`; the code
+default stays 0, so a laptop or a test database reads nothing). It is a
+*retailer*, so the §4 cover question is sharper than for a publisher's own shop
+— the cover is a publisher's, served by a bookseller, and the intake copies it
+to our bucket; turning it on is the decision that this is acceptable. Facts about a book are not the shop's to
 own; its pictures and its blurbs are a different matter. Pace is the shop's own
 stated `Crawl-delay: 10`, so 150 pages a night is about twenty-five minutes,
 and the 28,673 are ~190 nights at that rate — the number to raise if the owner
@@ -694,11 +696,11 @@ Speaking Tiger 37. New releases still go before any backlist.
    (`title_script`). This reverses the earlier recommendation, on the owner's
    "name doesn't seem like a valid book" — and it is one rule in
    `intake_gate`, easily relaxed if a later source only has romanized titles.
-6. **Switch on Kerala Book Store, and how fast** (§2). Set
-   `catalog_intake_keralabookstore_pages` (150 ≈ 25 minutes a night). The
-   decision under it is whether a *retailer's* covers and blurbs may be copied to
-   our bucket the way a publisher's own are (§4) — the code does the same thing
-   either way, so this is the owner's call to make before the number is set.
+6. ~~**Switch on Kerala Book Store, and how fast** (§2).~~ **Decided 6 Oct 2026:
+   on, at 150 pages a night** (≈ 25 minutes added to the run). That also settles
+   that a *retailer's* covers and blurbs are copied to our bucket the way a
+   publisher's own are (§4). Raise the number to take the 28,673 faster; it is
+   staged every 25 pages, so a deploy mid-run costs a batch, not the night.
 5. **Confirm the reading of "no more adjustment records"** — this plan reads it
    as *"records must be born complete; no post-hoc repair passes"*, and that
    reading is what produced the gate in §3. If it meant something else, §3

@@ -21,8 +21,10 @@ publisher and number — are not the shop's to own, and the page is a public one
 that `robots.txt` leaves open to an agent it has not named. The cover is a
 publisher's, served by the retailer; the intake copies it to our own bucket
 exactly as it does for a publisher's own shop, which is a decision the owner
-made about publishers' shops and has not yet made about a retailer's. That is
-why nothing here runs until `catalog_intake_keralabookstore_pages` is set.
+made about publishers' shops and has not yet made about a retailer's. The
+owner turned it on at 150 pages a night on 6 Oct 2026 — which is that decision
+(`ENV CATALOG_INTAKE_KERALABOOKSTORE_PAGES` in `api/Dockerfile`); the code default
+stays off, so a laptop or a test database reads nothing.
 
 **Polite.** The shop's `robots.txt` names a `Crawl-delay: 10` for a few bots and
 none for anyone else; ten seconds is the delay it states, so ten seconds is the
@@ -64,7 +66,7 @@ import asyncio
 import html
 import logging
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import AsyncIterator, Iterable, Sequence
 from dataclasses import dataclass
 from urllib import robotparser
 from urllib.parse import urlsplit
@@ -93,6 +95,12 @@ MAX_SITEMAP_BYTES = 12_000_000
 
 #: Consecutive failed reads that mean "the shop is down or refusing us tonight".
 MAX_CONSECUTIVE_FAILURES = 4
+
+#: How many pages are read between writes to the staging table. At ten seconds a
+#: page a night's reading is twenty-five minutes, and this service redeploys on
+#: every push to main: staged only at the end, a deploy in the middle would throw
+#: away everything read so far. Staged as it goes, it loses at most this many.
+STAGE_EVERY = 25
 
 #: `https://keralabookstore.com/book/anaswara-smaranakal/3/`
 _BOOK_URL = re.compile(r"^https://keralabookstore\.com/book/[^/\s]+/(\d+)/$")
@@ -263,14 +271,14 @@ def owns(url: str) -> bool:
     return parts.scheme == "https" and (parts.hostname or "").removeprefix("www.") == HOST
 
 
-async def read_pages(
+async def iter_pages(
     client: httpx.AsyncClient,
     todo: Sequence[Listing],
     *,
     may_fetch=None,  # noqa: ANN001 — Callable[[str], bool]
     pause: float | None = None,
-) -> list[Candidate]:
-    """Read each page and return what it said, as candidates.
+) -> AsyncIterator[Candidate]:
+    """Read each page and yield what it said, as a candidate, as soon as it is read.
 
     A page that cannot be read costs itself; four in a row end the night's
     reading, because that is a shop that is down or has stopped answering us.
@@ -278,7 +286,6 @@ async def read_pages(
     # Read at call time, not bound at definition, so the pace is one constant
     # that a test can set rather than a default it has to reach into.
     pause = PAUSE_SECONDS if pause is None else pause
-    out: list[Candidate] = []
     failures = 0
     for listing in todo:
         if not owns(listing.url) or (may_fetch is not None and not may_fetch(listing.url)):
@@ -295,7 +302,7 @@ async def read_pages(
                 logger.warning(
                     "intake/%s: %s failures in a row — stopping tonight", SOURCE, failures
                 )
-                break
+                return
             continue
         failures = 0
         if response.status_code in (404, 410):
@@ -303,12 +310,23 @@ async def read_pages(
             # records it as held for a title and no night asks about it again —
             # at ten seconds a page, a dead address at the head of the list
             # would otherwise be re-read every night for ever.
-            out.append(parse_page("", listing.url, listing.book_id))
+            yield parse_page("", listing.url, listing.book_id)
             continue
         if response.status_code != 200 or len(response.content) > MAX_PAGE_BYTES:
             continue  # refused or not a book page: left unstaged and asked about again
         try:
-            out.append(parse_page(response.text, listing.url, listing.book_id))
+            yield parse_page(response.text, listing.url, listing.book_id)
         except Exception:  # noqa: BLE001 — a page we cannot read is a page with nothing
             logger.warning("intake/%s: could not read page %s", SOURCE, listing.url)
-    return out
+
+
+async def read_pages(
+    client: httpx.AsyncClient,
+    todo: Sequence[Listing],
+    *,
+    may_fetch=None,  # noqa: ANN001 — Callable[[str], bool]
+    pause: float | None = None,
+) -> list[Candidate]:
+    """`iter_pages`, all at once — for a caller that wants the whole night's
+    reading in hand (the preview script, which writes nothing)."""
+    return [c async for c in iter_pages(client, todo, may_fetch=may_fetch, pause=pause)]
