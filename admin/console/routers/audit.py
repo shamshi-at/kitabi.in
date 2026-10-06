@@ -14,7 +14,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import func, or_, select
 
-from .. import queries
+from .. import audit_targets, queries
 from ..deps import CurrentAdmin, DbSession
 from ..models_ref import AdminAuditLog, AdminUser
 from ..templating import templates
@@ -93,6 +93,9 @@ async def audit_log(
     actors = (
         await db.execute(select(AdminUser.id, AdminUser.email).order_by(AdminUser.email.asc()))
     ).all()
+    # What each line is *about*, by name and with the page that opens it — one
+    # query per kind of record on this page (audit_targets.py).
+    targets = await audit_targets.resolve(rows, audit_targets.DbLookup(db))
     badges = await queries.nav_badges(db)
     return templates.TemplateResponse(
         request,
@@ -102,6 +105,7 @@ async def audit_log(
             "active": "audit",
             "badges": badges,
             "rows": rows,
+            "targets": targets,
             "admins": admins,
             "actors": actors,
             "q": q,
@@ -111,5 +115,6 @@ async def audit_log(
             "page": page,
             "pages": pages,
             "matching": matching,
+            "flash": None,
         },
     )

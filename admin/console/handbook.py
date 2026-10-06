@@ -900,6 +900,12 @@ TOPICS: tuple[Topic, ...] = (
                     "deleted — not by you, not by a super admin.",
                     "Filter by person, by period, or type a word to find an action, a target or a "
                     "detail. Times are UTC, which is 5 hours 30 minutes behind Indian time.",
+                    "The **Target** column says what the line was about, by name — a book's "
+                    "title and ISBN, an author, a reader, a campaign — and opens it. An edition "
+                    "or an edit opens the book it belongs to; a review opens the book or series "
+                    "it is a review of. A record that has since been deleted is named and marked "
+                    "“deleted” (or “record gone”) but not linked, because there is no page left "
+                    "to open. Hover the name to see the record's id.",
                 ),
             ),
             Section(

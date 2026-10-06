@@ -44,7 +44,11 @@
           else ('gold' if r.action.startswith('admin.') else 'info')) %}
         <a href="/audit?q={{ r.action|urlencode }}&amp;period={{ period }}{% if who %}&amp;who={{ who }}{% endif %}" title="Only “{{ r.action }}” entries" style="text-decoration:none"><span class="pill {{ cls }}">{{ r.action }}</span></a>
       </td>
-      <td class="m">{% if r.target_type %}{{ r.target_type }}{% if r.target_id %} · {{ L.target(r.target_type, r.target_id, (r.target_id)[:12]) }}{% endif %}{% else %}—{% endif %}</td>
+      {# What it is about: the record's name, opening the page that shows it (the id
+         is the tooltip). A deleted or vanished record is named and marked, not
+         linked; a target that is not a record (a failed sign-in's email) is just
+         its text. #}
+      <td class="m">{% if r.target_type %}{{ r.target_type }}{% if r.target_id %} · {% set t = targets.get(r.id) %}{% if t and t.linked %}<span title="{{ r.target_id }}">{{ L.target(t.kind, t.id, t.label) }}</span>{% elif t %}<span title="{{ r.target_id }}">{{ t.label }}</span>{% else %}{{ (r.target_id)[:40] }}{% endif %}{% endif %}{% else %}—{% endif %}</td>
       <td class="m">{{ r.summary or '' }}{% if r.ip %} <span style="color:#b3a68d">· {{ r.ip }}</span>{% endif %}</td>
     </tr>
     {% endfor %}
