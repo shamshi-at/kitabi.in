@@ -20,6 +20,10 @@ switch for that is `CATALOG_INTAKE_ENABLED` in `api/Dockerfile`.
     .venv/bin/python scripts/preview_intake.py --pages 40
     .venv/bin/python scripts/preview_intake.py --no-storefronts
 
+    # what the Kerala Book Store step would stage: its newest 30 pages, read at
+    # the shop's own ten-second pace (five minutes)
+    .venv/bin/python scripts/preview_intake.py --keralabookstore 30 --no-storefronts --seeds 1
+
 **Two kinds of source.** Each publisher's storefront is asked for its newest
 page — tonight's new releases, which the job publishes first — and, for a shop
 whose feed is thin, the product pages of the first `--pages` books are read the
@@ -62,6 +66,7 @@ from app.core.db import _engine_kwargs, _normalize  # noqa: E402
 from app.jobs.catalog_intake import USER_AGENT  # noqa: E402
 from app.services import (  # noqa: E402
     intake_gate,
+    intake_keralabookstore,
     intake_openlibrary,
     intake_service,
     intake_storefront,
@@ -116,6 +121,28 @@ async def _storefronts(pages: int) -> list[Candidate]:
     return found
 
 
+async def _keralabookstore(pages: int) -> list[Candidate]:
+    """The newest `pages` Kerala Book Store pages, read at the shop's pace — the
+    pages tonight's step would read if nothing of its were staged yet."""
+    async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as client:
+        rules = await intake_keralabookstore.read_robots(client)
+        if rules is None or not rules.can_fetch(USER_AGENT, intake_keralabookstore.SITEMAP_URL):
+            print("  keralabookstore    robots.txt does not allow the sitemap — skipped")
+            return []
+        found = await intake_keralabookstore.listings(client)
+        if not found:
+            print("  keralabookstore    sitemap could not be read — skipped")
+            return []
+        todo = found[:pages]
+        read = await intake_keralabookstore.read_pages(
+            client, todo, may_fetch=lambda url: rules.can_fetch(USER_AGENT, url)
+        )
+        print(
+            f"  keralabookstore    {len(found)} book pages listed, {len(read)} of {len(todo)} read"
+        )
+        return read
+
+
 async def main() -> int:
     settings = get_settings()
     p = argparse.ArgumentParser(description=__doc__)
@@ -129,6 +156,12 @@ async def main() -> int:
     )
     p.add_argument("--pages", type=int, default=20, help="product pages to read per storefront")
     p.add_argument("--no-storefronts", action="store_true", help="OpenLibrary only")
+    p.add_argument(
+        "--keralabookstore",
+        type=int,
+        default=0,
+        help="also read the newest N Kerala Book Store pages (ten seconds each; 0 = skip)",
+    )
     p.add_argument("--show-held", action="store_true", help="list every held candidate")
     p.add_argument("--show-refused", action="store_true", help="list every refused candidate")
     args = p.parse_args()
@@ -143,6 +176,10 @@ async def main() -> int:
     if not args.no_storefronts:
         print("publishers' storefronts:")
         candidates += await _storefronts(args.pages)
+        print()
+    if args.keralabookstore:
+        print("Kerala Book Store:")
+        candidates += await _keralabookstore(args.keralabookstore)
         print()
     candidates += await _discover(args.seeds, args.per_seed)
     print(f"discovered {len(candidates)} candidates\n")

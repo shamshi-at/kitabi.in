@@ -1396,6 +1396,29 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   skipped out loud and CI is where it is enforced. Rule: a harness that
   flattens module boundaries needs a second check that keeps them.
 
+- **A survey's "zero" is only as good as the pattern that found nothing — try it
+  on a known positive before reporting it.** The first pass over the Malayalam
+  sellers reported "ISBN visible on 0 of 12 pages" for three shops; the ISBN
+  pattern was `97[89][\d\- ]{10,14}\d`, which needs fourteen characters and so
+  cannot match a bare thirteen-digit number (6 Oct 2026). It was caught only
+  because the next page looked at, `dcbooks.com`'s, plainly printed
+  `ISBN: 9788169853507` and the same script said it had none. Corrected, one of
+  the three had an ISBN on 11 of 12 pages and the other two really had none —
+  but a "this source has no ISBNs" written into the plan on the first number
+  would have ruled a source out for the wrong reason. Same family as the 9 Aug
+  fixture lesson: write the instrument so it can say yes, and make it say yes
+  once, on purpose, before believing it says no.
+- **A site's own app calling an endpoint is not permission to crawl it.**
+  `dcbookstore.com` is a client-side app whose every list comes from
+  `/dc-admin/api/v1/…` — findable in the browser's network panel in a minute —
+  and whose `robots.txt` says `Disallow: /dc-admin/` beside an open welcome to
+  search engines (6 Oct 2026). The plan's earlier note ("half an hour with the
+  network panel") read as a way in; it is only a way to learn that the door is
+  marked. The intake's rule is that `robots.txt` is read per shop and asked per
+  page, and the app's own traffic is not an exception to it. The route to that
+  catalogue is the owner's conversation with DC Books — or a retailer that
+  publishes the same facts openly (`services/intake_keralabookstore`).
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

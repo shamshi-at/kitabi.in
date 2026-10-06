@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     # (services/author_roles.py). A paid call each, so this is a spend limit as
     # much as a pace; `llm_daily_quota_author_roles` is the hard ceiling.
     catalog_intake_roles_limit: int = 60
+    # Kerala Book Store pages read per night (services/intake_keralabookstore.py).
+    # **0 — off — by default**, and that is the point: it is a multi-publisher
+    # retailer, not a publisher's own shop, so whether its covers may be copied
+    # to our bucket is the owner's decision, not a default. Ten seconds a page
+    # (the shop's stated crawl delay), so 150 is about twenty-five minutes.
+    catalog_intake_keralabookstore_pages: int = 0
 
     # Version gate: the app sends `X-App-Version`; anything older than this gets
     # a 426 with an update payload (CLAUDE.md — the update-gate). Bump when a

@@ -10,6 +10,8 @@ Four steps, deliberately in this order and deliberately separable:
    the backlist, then each publisher's storefront — its newest page first
    (tonight's new releases), then a few more pages of its backlist. Writes
    candidates to `catalog_intake` and touches no catalogue table.
+1a. **Kerala Book Store** (off unless configured) — the next few pages of the
+   Malayalam retailer's sitemap, newest first. One page is a complete record.
 1b. **enrich** — for rows a storefront's feed left incomplete, read that
    book's own page for the ISBN, the author and the title in its own script.
 1c. **author roles** — for books a shop credits to several people without
@@ -44,6 +46,7 @@ from app.jobs.scheduler import LOCK_CATALOG_INTAKE, advisory_lock
 from app.services import (
     author_roles,
     cover_ingest,
+    intake_keralabookstore,
     intake_openlibrary,
     intake_service,
     intake_storefront,
@@ -91,6 +94,7 @@ async def catalog_intake(client: httpx.AsyncClient | None = None) -> None:
                     logger.info("intake: staged %s", staged)
 
                 await _storefronts(session, client, settings)
+                await _keralabookstore(session, client, settings)
                 await _author_roles(session, client, settings)
 
                 released = await intake_service.rescreen_incomplete(session)
@@ -212,6 +216,44 @@ async def _storefronts(session, client: httpx.AsyncClient, settings) -> None:
         return
     if enriched:
         logger.info("intake: product pages read %s", enriched)
+
+
+async def _keralabookstore(session, client: httpx.AsyncClient, settings) -> None:
+    """Read the next Kerala Book Store pages, newest not-yet-staged first.
+
+    Off unless `catalog_intake_keralabookstore_pages` is set. A shop that fails,
+    or whose robots.txt cannot be read or says no, costs only itself.
+    """
+    pages = settings.catalog_intake_keralabookstore_pages
+    if pages <= 0:
+        return
+    try:
+        rules = await intake_keralabookstore.read_robots(client)
+        if rules is None or not rules.can_fetch(USER_AGENT, intake_keralabookstore.SITEMAP_URL):
+            logger.warning("intake/%s: robots.txt does not allow the sitemap", "keralabookstore")
+            return
+        found = await intake_keralabookstore.listings(client)
+        if not found:
+            return
+        todo = intake_keralabookstore.unstaged(
+            found, await intake_keralabookstore.staged_ids(session), pages
+        )
+        candidates = await intake_keralabookstore.read_pages(
+            client, todo, may_fetch=lambda url: rules.can_fetch(USER_AGENT, url)
+        )
+        staged = await intake_service.record(
+            session, candidates, source=intake_keralabookstore.SOURCE
+        )
+        logger.info(
+            "intake/%s: %s of %s pages read, staged %s",
+            intake_keralabookstore.SOURCE,
+            len(candidates),
+            len(todo),
+            staged,
+        )
+    except Exception:  # noqa: BLE001 — one shop must not cost the night
+        logger.exception("intake/%s: crawl failed", intake_keralabookstore.SOURCE)
+        await session.rollback()
 
 
 async def _author_roles(session, client: httpx.AsyncClient, settings) -> None:

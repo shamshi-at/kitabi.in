@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="https://keralabookstore.com/sitemap.xsl"?>
+<urlset 
+	xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+	http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+	<url>
+		<loc>https://keralabookstore.com/</loc>
+		<lastmod>2026-10-06</lastmod>
+		<changefreq>daily</changefreq>
+		<priority>1.0000</priority>
+	</url>
+<url>
+		<loc>https://keralabookstore.com/new-books.do</loc>
+		<lastmod>2026-10-06</lastmod>
+		<changefreq>daily</changefreq>
+		<priority>1.0000</priority>
+	</url>
+<url>
+		<loc>https://keralabookstore.com/best-sellers.do</loc>
+		<lastmod>2026-10-06</lastmod>
+		<changefreq>daily</changefreq>
+		<priority>1.0000</priority>
+	</url>
+<url>
+		<loc>https://keralabookstore.com/show-all-books.do</loc>
+		<lastmod>2026-10-06</lastmod>
+		<changefreq>daily</changefreq>
+		<priority>1.0000</priority>
+	</url>
+<url>
+		<loc>https://keralabookstore.com/offers.do</loc>
+		<lastmod>2026-10-06</lastmod>
+		<changefreq>daily</changefreq>
+		<priority>1.0000</priority>
+	</url>
+<url>
+		<loc>https://keralabookstore.com/browse-books.do</loc>
+		<lastmod>2026-10-06</lastmod>
+		<changefreq>daily</changefreq>
+		<priority>1.0000</priority>
+	</url>
+<url> 
+		<loc>https://keralabookstore.com/book/dhanushkodi-when-the-sea-came-ashore/1007625/</loc> 
+		<lastmod>2026-10-06</lastmod> 
+		<changefreq>weekly</changefreq> 
+		<priority>0.9000</priority> 
+	</url>
+<url> 
+		<loc>https://keralabookstore.com/book/anu-anandam-2/1007624/</loc> 
+		<lastmod>2026-10-06</lastmod> 
+		<changefreq>weekly</changefreq> 
+		<priority>0.9000</priority> 
+	</url>
+<url> 
+		<loc>https://keralabookstore.com/book/jaivarashtriyavum-janasanchayavum/1007623/</loc> 
+		<lastmod>2026-10-06</lastmod> 
+		<changefreq>weekly</changefreq> 
+		<priority>0.9000</priority> 
+	</url>
+<url> 
+		<loc>https://keralabookstore.com/book/gandhi-prabhashanangal/1007622/</loc> 
+		<lastmod>2026-10-06</lastmod> 
+		<changefreq>weekly</changefreq> 
+		<priority>0.9000</priority> 
+	</url>
+<url> 
+		<loc>https://keralabookstore.com/book/anaswara-smaranakal/3/</loc> 
+		<lastmod>2026-10-06</lastmod> 
+		<changefreq>weekly</changefreq> 
+		<priority>0.9000</priority> 
+	</url>
+<url> 
+		<loc>https://keralabookstore.com/book/o-v-vijayan-oru-ormappusthakam/2/</loc> 
+		<lastmod>2026-10-06</lastmod> 
+		<changefreq>weekly</changefreq> 
+		<priority>0.9000</priority> 
+	</url>
+<url> 
+		<loc>https://keralabookstore.com/book/sruthimandalam/1/</loc> 
+		<lastmod>2026-10-06</lastmod> 
+		<changefreq>weekly</changefreq> 
+		<priority>0.9000</priority> 
+	</url>
+</urlset>

@@ -164,6 +164,63 @@ Two things to know before building against them:
   the honest position is that a romanized publisher title is a *good* record,
   and a native-script one is a better one.
 
+### Malayalam — a retailer, not a publisher: Kerala Book Store (surveyed 6 Oct 2026)
+
+DC Books had not answered, so the other Malayalam sellers were read — politely
+(one request a second, the job's own User-Agent, `robots.txt` first) and only
+what a shop publishes openly. A dozen sites, one result that matters:
+
+| Seller | What it exposes | ISBN on the page | Verdict |
+|---|---|---|---|
+| **keralabookstore.com** | server-rendered pages with schema.org microdata; sitemap of **28,673** books, some hundred publishers | **~80%** (12 of 60 held for it) | **built** — `services/intake_keralabookstore` |
+| dcbookstore.com (DC Books) | a client-side app; its catalogue API is `/dc-admin/api/v1/…` | not reachable | **no** — `robots.txt` says `Disallow: /dc-admin/`, and our rule is to honour it. Still a conversation, not a crawler |
+| dcbooks.com (DC's publisher site) | WordPress; 473 book pages, `robots.txt` open | yes, plus language | **no use alone** — no author or publisher on the page and romanized titles, so every row would wait on `authors` and `title_script`; 372 of the 461 are Malayalam |
+| indulekha.com | open WooCommerce Store API | 11 of 12 | small — the feed lists **139** books, and titles are romanized (held on `title_script`) |
+| bookcarry.com | open Store API, 1,950 books; author, publisher, pages and the **native title after a pipe** in the feed | **0 of 12** | no — no ISBN anywhere. A discovery list, never a source |
+| kairalibooks.com | open Store API, 1,056 books | **0 of 12**; author only in the blurb | no |
+| mbibooks.com | open Store API | — | already built |
+| lookabook.in | aggregator | 15.6% (measured 9 Sep) | discovery only, as above |
+| greenbooksindia.com, currentbooksonline.in, quickerala.com | a bot-verification page answers every request | — | **no** — not worked around |
+| subscribe.manoramaonline.com, keralabhashainstitute.org | e-editions; a small institute shop | — | not pursued |
+
+**Kerala Book Store is the breadth.** Its pages carry, from one request, the
+title and author **in Malayalam script**, the publisher, a 13-digit ISBN, the
+language, the page count and a front cover — every field the gate asks for, in
+the book's own script, which the romanized storefronts never have. Measured on
+60 pages (the newest 20 and 40 at random): **44 pass the gate (73%)**; asked of
+production read-only, **29 would be new books, 15 we already have, 16 wait**.
+Twelve of the 16 are `isbn`: six pages carry `9780000…`, a number with a valid
+check digit that the shop mints for books it has no ISBN for (refused in the
+adapter — it would pass the gate's checksum and is not a book's number), and six
+carry none. Four are English books whose author the shop writes in Malayalam
+script (it does so for every author): the catalogue spells an English book's
+author in Latin, so the name is dropped and the book waits for a source that has
+it.
+
+**What the first preview showed** (the owner's, 30 pages, 6 Oct 2026): 11 of the
+30 would become books, 3 held for the ISBN, and **16 of the 30 were already here**
+— the newest ids are Mathrubhumi's list again, matched by ISBN, which is the
+dedupe doing its job. One thing it cannot do yet: a Malayalam-script author
+(`ബെന്യാമിൻ`) beside the Latin-script one Mathrubhumi's pages produce
+(`Benyamin`) is a second author row, found by the merge queue's folded-name
+match rather than prevented — 1 of 33 in the sample, and more as both sources
+run. Auto-linking across scripts would be wrong for the common names that fold
+to the same skeleton, so it stays a human's merge.
+Of the 60, 20 were Mathrubhumi's own list, 5 DC Books', the rest some thirty
+other houses (Kerala Bhasha Institute, Olive, Pusthaka Prasadhaka Sangham, Green
+Books, NBS, Logos…) — **this is how DC Books' list reaches us without touching
+its store.**
+
+**Off until the owner turns it on** (`catalog_intake_keralabookstore_pages`, 0 by
+default): it is a *retailer*, so the §4 cover question is sharper than for a
+publisher's own shop — the cover is a publisher's, served by a bookseller, and
+the intake copies it to our bucket. Facts about a book are not the shop's to
+own; its pictures and its blurbs are a different matter. Pace is the shop's own
+stated `Crawl-delay: 10`, so 150 pages a night is about twenty-five minutes,
+and the 28,673 are ~190 nights at that rate — the number to raise if the owner
+wants the breadth faster. To see exactly what a night would add before turning
+it on: `scripts/preview_intake.py --keralabookstore 30 --no-storefronts --seeds 1`.
+
 ### Indian English — OpenLibrary, already integrated
 
 Free, no key, `services/openlibrary_client.py` already wraps it.
@@ -207,11 +264,14 @@ an automatic accept.
 - **Nielsen BookData India** — enterprise sales contact, no self-serve pricing;
   the right call *if* we ever want point-of-sale bestseller data, not for
   metadata.
-- **dcbookstore.com** — a React SPA with no discoverable JSON API; every path,
-  including `/api/books`, returns the HTML shell. **This is now on the critical
-  path, not a footnote**: DC Books is the breadth gap. Two ways in, in order —
-  ask them (below), or find the XHR endpoints the SPA itself calls, which is
-  half an hour with the browser network panel.
+- **dcbookstore.com** — a React SPA. Found 6 Oct 2026 by loading the home page
+  once in a browser: every list it draws comes from `/dc-admin/api/v1/…`
+  (`home/new-releases`, `categories/books`, …) — and its `robots.txt` says
+  `Disallow: /dc-admin/`, alongside an explicit welcome to search engines. The
+  endpoints are findable and not ours to crawl: the rule here is that `robots.txt`
+  is asked per page and honoured, and "the site's own app calls it" is not an
+  exception to that. **DC Books is still the breadth gap, and still a
+  conversation** — the only route that does not need one is the retailer above.
 
 ### The one that is now critical: ask DC Books
 
@@ -618,9 +678,10 @@ Speaking Tiger 37. New releases still go before any backlist.
 
 1. ~~**Cover storage — A, B or C** (§4).~~ **Decided 3 Oct 2026: C, Cloudflare
    R2.** Remaining owner action is the one-time setup listed in §4.
-2. **Approach DC Books about a feed + buy links.** Now the critical path for
-   Malayalam breadth, not a nice-to-have — without it, "Malayalam" means one
-   publisher's ~3,300 titles. Should start now; blocks P4, not P1–P3.
+2. **Approach DC Books about a feed + buy links.** No longer the *only* road to
+   Malayalam breadth (Kerala Book Store, §2, lists DC's titles without touching
+   its store), but still the clean one: a feed would carry the whole ~6,500, with
+   their say on covers. Not heard back as of 6 Oct 2026.
 3. ~~**Daily promotion budget**~~ — **150 a night since 4 Oct 2026** (owner).
    At 50 the three storefronts' ~10,000 titles would have taken most of a year.
    Product-page reads were raised with it (300 a night), because two of the
@@ -632,6 +693,11 @@ Speaking Tiger 37. New releases still go before any backlist.
    (`title_script`). This reverses the earlier recommendation, on the owner's
    "name doesn't seem like a valid book" — and it is one rule in
    `intake_gate`, easily relaxed if a later source only has romanized titles.
+6. **Switch on Kerala Book Store, and how fast** (§2). Set
+   `catalog_intake_keralabookstore_pages` (150 ≈ 25 minutes a night). The
+   decision under it is whether a *retailer's* covers and blurbs may be copied to
+   our bucket the way a publisher's own are (§4) — the code does the same thing
+   either way, so this is the owner's call to make before the number is set.
 5. **Confirm the reading of "no more adjustment records"** — this plan reads it
    as *"records must be born complete; no post-hoc repair passes"*, and that
    reading is what produced the gate in §3. If it meant something else, §3
