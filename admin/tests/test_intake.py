@@ -117,7 +117,11 @@ def test_a_night_that_found_books_and_published_none_still_has_a_row():
 
 def test_the_bar_is_scaled_to_the_busiest_night_shown():
     days = intake.fold_days(
-        [(date(2026, 10, 4), "mathrubhumi", 150), (date(2026, 10, 5), "mathrubhumi", 75)], []
+        [
+            (date(2026, 10, 4), "mathrubhumi", 150),
+            (date(2026, 10, 5), "mathrubhumi", 75),
+        ],
+        [],
     )
     assert [d["share"] for d in days] == [50, 100]
 
@@ -157,7 +161,8 @@ MORNING = datetime(2026, 10, 5, 4, 30, tzinfo=UTC)  # two hours after the run
 
 def _nights(*published: tuple[date, int]) -> list[dict]:
     return intake.fold_days(
-        [(d, "speakingtiger", n) for d, n in published if n], [(d, 600) for d, _ in published]
+        [(d, "speakingtiger", n) for d, n in published if n],
+        [(d, 600) for d, _ in published],
     )
 
 
@@ -200,12 +205,46 @@ def test_a_night_with_no_trace_at_all_is_reported():
 
 
 def test_tonights_run_is_not_judged_before_it_has_had_time_to_finish():
-    """At 02:45 the run is mid-flight: the night to judge is still yesterday's."""
+    """The run is at 02:30 IST (21:00 UTC the evening before). At 03:00 IST it is
+    mid-flight: the night to judge is still yesterday's."""
     days = _nights((date(2026, 10, 4), 142))
-    mid_run = datetime(2026, 10, 5, 2, 45, tzinfo=UTC)
+    mid_run = datetime(2026, 10, 4, 21, 30, tzinfo=UTC)  # 03:00 IST on the 5th
     assert intake.short_night(days, ready=1070, limit=150, now=mid_run) is None
-    before_run = datetime(2026, 10, 5, 1, 0, tzinfo=UTC)
+    before_run = datetime(2026, 10, 4, 19, 30, tzinfo=UTC)  # 01:00 IST on the 5th
     assert intake.short_night(days, ready=1070, limit=150, now=before_run) is None
+
+
+def test_a_night_is_judged_once_it_has_had_its_hour():
+    """03:45 IST is past the run and its hour: the 5th has no row, so it is the
+    5th that is missing — read on the IST clock, not the UTC one (at 22:15 UTC
+    on the 4th it is still "the 4th" by the calendar of the server)."""
+    days = _nights((date(2026, 10, 4), 142))
+    judged = datetime(2026, 10, 4, 22, 15, tzinfo=UTC)  # 03:45 IST on the 5th
+    short = intake.short_night(days, ready=1070, limit=150, now=judged)
+    assert short is not None and short["kind"] == "missing" and short["day"] == date(2026, 10, 5)
+
+
+def test_the_screen_runs_its_clock_off_the_schedules_own_settings():
+    """One decision, two places: the cron registers from these settings and the
+    screen reads them, so moving the job moves what is judged. 21:00 UTC is
+    02:30 IST."""
+    assert intake.run_at() == (2, 30)
+
+
+def test_moving_the_run_moves_the_night_the_screen_judges(monkeypatch):
+    from types import SimpleNamespace
+
+    import app.core.config as config
+
+    monkeypatch.setattr(
+        config,
+        "get_settings",
+        lambda: SimpleNamespace(catalog_intake_run_hour_utc=2, catalog_intake_run_minute_utc=30),
+    )
+    assert intake.run_at() == (
+        8,
+        0,
+    ), "02:30 UTC — where the job used to run — is 08:00 IST"
 
 
 def test_an_intake_that_has_never_run_is_not_late():
@@ -217,7 +256,9 @@ def test_an_intake_that_has_never_run_is_not_late():
 
 def _admin(role: str = "editor") -> SimpleNamespace:
     return SimpleNamespace(
-        id=uuid.UUID("99999999-9999-9999-9999-999999999999"), role=role, email="op@kitabi.in"
+        id=uuid.UUID("99999999-9999-9999-9999-999999999999"),
+        role=role,
+        email="op@kitabi.in",
     )
 
 
@@ -249,7 +290,13 @@ def client(monkeypatch):
         return state["books"]
 
     async def badges(db):  # noqa: ANN001
-        return {"claims": 0, "revisions": 0, "reports": 0, "merges": 0, "promotions_live": 0}
+        return {
+            "claims": 0,
+            "revisions": 0,
+            "reports": 0,
+            "merges": 0,
+            "promotions_live": 0,
+        }
 
     monkeypatch.setattr(intake, "_days", days)
     monkeypatch.setattr(intake, "daily_limit", lambda: 150)

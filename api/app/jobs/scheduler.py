@@ -43,12 +43,15 @@ async def advisory_lock(session: AsyncSession, lock_id: int) -> AsyncIterator[bo
 
 
 def start() -> None:
+    from app.core.config import get_settings
     from app.jobs.backfill_covers import backfill_covers
     from app.jobs.backfill_series_search import backfill_series_search
     from app.jobs.backfill_slugs import backfill_slugs
     from app.jobs.catalog_intake import catalog_intake
     from app.jobs.keep_warm import keep_warm
     from app.jobs.merge_exact import merge_exact_duplicates
+
+    settings = get_settings()
 
     # Every 6 hours — comfortably under Supabase's 7-day idle-pause threshold.
     scheduler.add_job(keep_warm, "interval", hours=6, id="keep_warm", replace_existing=True)
@@ -105,9 +108,10 @@ def start() -> None:
         replace_existing=True,
         next_run_time=datetime.now(UTC) + timedelta(minutes=4),
     )
-    # Daily catalogue intake (docs/catalog-intake-plan.md), 02:30 UTC — 08:00
-    # in Kerala, so a night's additions are there when readers wake up, and
-    # well clear of the nightly backup window.
+    # Daily catalogue intake (docs/catalog-intake-plan.md), 02:30 IST = 21:00
+    # UTC (`catalog_intake_run_hour_utc` / `_minute_utc`; moved from 02:30 UTC
+    # on 6 Oct 2026). Finished long before the 03:00 UTC backup, where the old
+    # time ended minutes before it.
     #
     # `cron`, not `interval`: an interval job re-runs from boot, and this
     # service redeploys on every push to main, so an interval of 24h would
@@ -117,8 +121,8 @@ def start() -> None:
     scheduler.add_job(
         catalog_intake,
         "cron",
-        hour=2,
-        minute=30,
+        hour=settings.catalog_intake_run_hour_utc,
+        minute=settings.catalog_intake_run_minute_utc,
         id="catalog_intake",
         replace_existing=True,
         misfire_grace_time=3600,

@@ -1,6 +1,6 @@
 """What the nightly intake put into the catalogue — by day, then book by book.
 
-The intake (`api/app/jobs/catalog_intake.py`) runs at 02:30 UTC with nobody
+The intake (`api/app/jobs/catalog_intake.py`) runs at 02:30 IST with nobody
 watching and publishes up to 150 books as public pages. Its first night
 (4 Oct 2026) had to be read back out of the database with ad-hoc queries, and
 eight of the books it published turned out to be ones it should not have. A
@@ -35,7 +35,7 @@ from .. import queries
 from ..deps import DbSession, RequireEditor
 from ..flash import pop_flash
 from ..models_ref import Author, CatalogIntake, Edition, Publisher, Work, work_authors
-from ..templating import templates
+from ..templating import IST, templates, to_ist
 
 router = APIRouter(prefix="/intake")
 
@@ -76,10 +76,13 @@ def waiting_label(reason: str) -> str:
     return WAITING.get(reason, reason.replace("_", " "))
 
 
-def _utc_day(column):
-    """The UTC calendar day of a timestamp column. The job runs at 02:30 UTC,
-    so a night's books all fall on one UTC date whatever the server's zone."""
-    return func.date(func.timezone("UTC", column))
+def _ist_day(column):
+    """The IST calendar day of a timestamp column. The job runs at 02:30 IST, so
+    a night's books all fall on one IST date whatever the server's zone — and it
+    is the date the owner reads the night under. (Until 6 Oct 2026 the run was
+    02:30 UTC, 08:00 IST: every night before that lands on the same date either
+    way, so no earlier row moved.) The zone is Postgres's own, not ours."""
+    return func.date(func.timezone("Asia/Kolkata", column))
 
 
 def fold_days(published: list[tuple], found: list[tuple], limit: int = DAYS_SHOWN) -> list[dict]:
@@ -104,10 +107,33 @@ def fold_days(published: list[tuple], found: list[tuple], limit: int = DAYS_SHOW
     return ordered
 
 
-#: When the job runs, UTC — `api/app/jobs/catalog_intake.py`'s cron. A night is
-#: not judged until it has had this long to finish (the first two took ~20 min).
-RUN_AT = (2, 30)
+#: A night is not judged until it has had this long to finish (the first two
+#: took ~20 min; the Kerala Book Store step can add 25 more).
 RUN_SETTLES_AFTER = timedelta(hours=1)
+
+
+def run_at() -> tuple[int, int]:
+    """When the job runs, as an IST clock time — `(2, 30)`.
+
+    Read from the same two settings the scheduler registers its cron from
+    (`catalog_intake_run_hour_utc` / `_minute_utc`), so the screen and the
+    schedule are one decision and cannot be moved apart by editing one of them.
+    """
+    from app.core.config import (
+        get_settings,
+    )  # noqa: PLC0415 — lazy, keeps the import cheap
+
+    settings = get_settings()
+    at = datetime(
+        2000,
+        1,
+        1,
+        settings.catalog_intake_run_hour_utc,
+        settings.catalog_intake_run_minute_utc,
+        tzinfo=UTC,
+    )
+    local = to_ist(at)
+    return local.hour, local.minute
 
 
 def short_night(days: list[dict], ready: int, limit: int, now: datetime) -> dict | None:
@@ -124,8 +150,9 @@ def short_night(days: list[dict], ready: int, limit: int, now: datetime) -> dict
 
     Pure: `days` is `fold_days`' output, `now` is passed in.
     """
-    hour, minute = RUN_AT
-    last_run = now.astimezone(UTC).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    hour, minute = run_at()
+    now = to_ist(now)
+    last_run = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
     if now < last_run + RUN_SETTLES_AFTER:
         last_run -= timedelta(days=1)
     night = last_run.date()
@@ -133,7 +160,13 @@ def short_night(days: list[dict], ready: int, limit: int, now: datetime) -> dict
     if not days:
         return None  # the intake has never run; nothing is late
     if row is None:
-        return {"day": night, "kind": "missing", "published": 0, "ready": ready, "limit": limit}
+        return {
+            "day": night,
+            "kind": "missing",
+            "published": 0,
+            "ready": ready,
+            "limit": limit,
+        }
     if row["published"] < limit / 2 and ready >= limit:
         return {
             "day": night,
@@ -146,13 +179,15 @@ def short_night(days: list[dict], ready: int, limit: int, now: datetime) -> dict
 
 
 def daily_limit() -> int:
-    from app.core.config import get_settings  # noqa: PLC0415 — lazy, keeps the import cheap
+    from app.core.config import (
+        get_settings,
+    )  # noqa: PLC0415 — lazy, keeps the import cheap
 
     return get_settings().catalog_intake_daily_limit
 
 
 async def _days(db: DbSession) -> list[dict]:
-    published_day = _utc_day(CatalogIntake.promoted_at)
+    published_day = _ist_day(CatalogIntake.promoted_at)
     published = (
         await db.execute(
             select(published_day, CatalogIntake.source, func.count())
@@ -160,7 +195,7 @@ async def _days(db: DbSession) -> list[dict]:
             .group_by(published_day, CatalogIntake.source)
         )
     ).all()
-    found_day = _utc_day(CatalogIntake.first_seen_at)
+    found_day = _ist_day(CatalogIntake.first_seen_at)
     found = (await db.execute(select(found_day, func.count()).group_by(found_day))).all()
     return fold_days([tuple(r) for r in published], [tuple(r) for r in found])
 
@@ -204,7 +239,7 @@ async def _queue(db: DbSession) -> dict:
 
 async def _books(db: DbSession, day: date, source: str | None) -> list[dict]:
     """Every book published on `day`, as it stands in the catalogue now."""
-    start = datetime(day.year, day.month, day.day, tzinfo=UTC)
+    start = datetime(day.year, day.month, day.day, tzinfo=IST)
     stmt = (
         select(
             CatalogIntake.source,
@@ -341,7 +376,7 @@ async def one_day(
             "sources": SOURCES,
             "source": source,
             "previous": when - timedelta(days=1),
-            "next": when + timedelta(days=1) if when < datetime.now(UTC).date() else None,
+            "next": (when + timedelta(days=1) if when < to_ist(datetime.now(UTC)).date() else None),
             "flash": None,
         },
     )

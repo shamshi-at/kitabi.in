@@ -51,6 +51,14 @@ class Settings(BaseSettings):
     # place that publishes is readable from a checkout (the same shape as
     # INDEXNOW_ENABLED and ALLOW_PROD_MIGRATION).
     catalog_intake_enabled: bool = False
+    # When the nightly run starts, in UTC (the scheduler's zone). 21:00 UTC is
+    # **02:30 IST** — owner decision, 6 Oct 2026, moved from 02:30 UTC (08:00
+    # IST). A fixed UTC time rather than a zone name: India has no DST, and a
+    # slim image may not ship tzdata. The admin console's "nightly intake"
+    # screen reads these two to know which night it is judging, so the screen
+    # and the schedule cannot drift apart.
+    catalog_intake_run_hour_utc: int = 21
+    catalog_intake_run_minute_utc: int = 0
     # Books promoted per run. The ceiling on how fast the catalogue can grow,
     # and therefore the ceiling on how much a mistake in a source adapter can
     # cost before anyone looks. 150 since 4 Oct 2026 (owner): at 50 the three

@@ -332,7 +332,7 @@ TOPICS: tuple[Topic, ...] = (
                 "what",
                 "What this is",
                 (
-                    "Every night at 02:30 UTC (08:00 in Kerala) Kitabi reads the newest books "
+                    "Every night at 02:30 in India (IST) Kitabi reads the newest books "
                     "on publishers' own websites — and older ones from OpenLibrary — and adds "
                     "up to 150 of them to the catalogue by itself. Nobody presses a button, and "
                     "the books are on the public website as soon as the job finishes.",
@@ -368,7 +368,7 @@ TOPICS: tuple[Topic, ...] = (
                     "Nothing is lost — the books it did not reach are still waiting and go "
                     "out on the following nights.",
                     "It does mean something went wrong on the server. Tell whoever runs it: "
-                    "the reason is in the server's log for 02:30 UTC that night.",
+                    "the reason is in the server's log for 02:30 IST that night.",
                 ),
             ),
             Section(

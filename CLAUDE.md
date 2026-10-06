@@ -298,7 +298,9 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   refused, the CMD fails, the health check fails, and Railway restart-loops
   production. `tests/test_migration_guard.py` asserts it is still there.
   **The nightly catalogue intake is ON in production** (owner decision, 4 Oct
-  2026 — `ENV CATALOG_INTAKE_ENABLED=1` in `api/Dockerfile`). At 02:30 UTC the
+  2026 — `ENV CATALOG_INTAKE_ENABLED=1` in `api/Dockerfile`). At **02:30 IST**
+  (21:00 UTC — `catalog_intake_run_hour_utc`; it was 02:30 UTC until 6 Oct 2026,
+  and the console's Nightly intake screen reads the same two settings) the
   API process stages what OpenLibrary and three publishers' storefronts list and
   publishes up to `catalog_intake_daily_limit` (150) books as public pages, with
   nobody watching. It also spends money: books a shop credits to several people

@@ -34,7 +34,7 @@
       <td>{{ b.authors or '—' }}</td>
       <td class="m">{{ b.publisher or '—' }}</td>
       <td class="m" style="font-family:'JetBrains Mono',monospace">{{ b.isbn or '—' }}</td>
-      <td class="m">{{ b.source }}<br>{{ b.at.strftime('%H:%M') }} UTC</td>
+      <td class="m">{{ b.source }}<br>{{ b.at|ist('%H:%M') }} IST</td>
       <td style="text-align:right;white-space:nowrap">
         <a class="btn s" href="/catalog/works/{{ b.work_id }}">Open</a>
         {% if b.slug and not b.removed %}<a class="btn s" href="https://kitabi.in/book/{{ b.slug }}" target="_blank" rel="noopener">On the site ↗</a>{% endif %}

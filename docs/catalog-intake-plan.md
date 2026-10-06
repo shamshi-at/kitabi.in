@@ -520,7 +520,8 @@ has not been proved first.
 `catalog_intake` + migration 000053 (RLS on, zero policies); `intake_gate` pure
 and 53-test-covered; `intake_service` promoting through
 `catalog_service.create_work_with_edition`; `intake_openlibrary`;
-`jobs/catalog_intake` on a 02:30 UTC cron under an advisory lock, **dormant
+`jobs/catalog_intake` on a cron under an advisory lock (02:30 UTC; **02:30 IST /
+21:00 UTC from 6 Oct 2026**, owner decision — `catalog_intake_run_hour_utc`), **dormant
 unless `CATALOG_INTAKE_ENABLED=1`**. Verified end-to-end against live
 OpenLibrary into the dev database: 47 discovered, **0 catalogue rows written by
 discovery**, 10 promoted with valid ISBNs, real publishers, slugs and covers.

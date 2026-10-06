@@ -10,7 +10,7 @@ stack is a lot of dependency for one verb.
 `sign` is pure and takes the clock as an argument, so it is tested directly
 against the worked example AWS publishes for exactly this request shape
 (`tests/test_r2_client.py`). A signer that reproduces that signature is right;
-one that does not fails there rather than as a 403 from production at 02:30.
+one that does not fails there rather than as a 403 from production in the middle of the night.
 
 **Dormant without all five `R2_*` settings** (rule 8): `configured` is false,
 nothing here is called, and no request leaves the process.

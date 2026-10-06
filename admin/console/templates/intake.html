@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Nightly intake · Kitabi Admin{% endblock %}
 {% block heading %}Nightly intake{% endblock %}
-{% block subheading %}What the 02:30 UTC job added to the catalogue, night by night{% endblock %}
+{% block subheading %}What the 02:30 IST job added to the catalogue, night by night{% endblock %}
 {% block topactions %}
 <a class="btn s" href="/handbook/intake" title="How to use this screen">? Help</a>
 {% endblock %}
@@ -12,7 +12,7 @@
 <div class="flash err" style="font-weight:500;line-height:1.6">
   {% if short.kind == 'missing' %}
   <b>No sign of the run on {{ short.day.strftime('%A %-d %B') }}.</b>
-  Nothing was found and nothing was published that night, though the job is due every night at 02:30 UTC.
+  Nothing was found and nothing was published that night, though the job is due every night at 02:30 IST.
   {% else %}
   <b>The run on {{ short.day.strftime('%A %-d %B') }} stopped early.</b>
   It published {{ short.published }} book{{ '' if short.published == 1 else 's' }}, though

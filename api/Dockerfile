@@ -35,7 +35,8 @@ ENV ALLOW_PROD_MIGRATION=1
 ENV INDEXNOW_ENABLED=1
 
 # Daily catalogue intake (docs/catalog-intake-plan.md): ON, by owner decision,
-# 4 Oct 2026. Every night at 02:30 UTC the job stages what OpenLibrary and the
+# 4 Oct 2026. Every night at 02:30 IST (21:00 UTC; `catalog_intake_run_hour_utc`)
+# the job stages what OpenLibrary and the
 # publishers' storefronts list, and publishes up to
 # `catalog_intake_daily_limit` complete books as public pages — unattended.
 #
