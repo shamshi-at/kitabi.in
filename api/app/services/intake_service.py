@@ -327,10 +327,16 @@ def apply_page_facts(row: CatalogIntake, facts: dict) -> str:
 
 def _note_for(screened: intake_gate.Screened) -> str | None:
     if screened.fatal:
-        return "refused: " + ", ".join(screened.fatal)
-    if screened.missing:
-        return "waiting on: " + ", ".join(screened.missing)
-    return None
+        note = "refused: " + ", ".join(screened.fatal)
+    elif screened.missing:
+        note = "waiting on: " + ", ".join(screened.missing)
+    else:
+        note = None
+    if screened.dropped:
+        # The cleaning the gate did, where a person reading the queue can see it.
+        said = "credit dropped: " + "; ".join(screened.dropped)
+        note = f"{note} ({said})" if note else said
+    return note
 
 
 async def rescreen_incomplete(db: AsyncSession, *, limit: int = 500) -> dict[str, int]:

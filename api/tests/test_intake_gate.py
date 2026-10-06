@@ -33,6 +33,7 @@ from app.services.intake_gate import (
     MISSING_PUBLISHER,
     MISSING_TITLE,
     Candidate,
+    _without_fragments,
     screen,
 )
 
@@ -511,6 +512,59 @@ def test_a_refused_name_is_refused_whatever_else_is_right():
     result = screen(candidate(title="Madhavikutty 3 Book Combo"))
     assert result.rejected
     assert result.missing == ()
+
+
+# --------------------------------------------------------------------------
+# a credit that is another credit cut off (6 Oct 2026)
+#
+# Mathrubhumi's data credited one book to "Ernes" *and* "Hemingway Ernest". The
+# catalogue made "Ernes" a second author with a page of its own. The gate drops
+# a credit that is a cut-off copy of another on the same book — narrowly, since
+# it acts unattended — and says so.
+# --------------------------------------------------------------------------
+
+
+def test_a_credit_that_is_a_cut_off_of_another_is_dropped_and_said_so():
+    result = screen(candidate(authors=("Ernes", "Hemingway Ernest")))
+    assert result.ok
+    assert result.candidate.authors == ("Hemingway Ernest",)
+    assert result.dropped == ("Ernes (a cut-off of Hemingway Ernest)",)
+
+
+def test_the_order_a_shop_lists_credits_in_does_not_change_the_outcome():
+    first = screen(candidate(authors=("Ernes", "Hemingway Ernest")))
+    last = screen(candidate(authors=("Hemingway Ernest", "Ernes")))
+    assert first.candidate.authors == last.candidate.authors == ("Hemingway Ernest",)
+
+
+@pytest.mark.parametrize(
+    "authors",
+    [
+        # Two people, or one person written two ways — a human's call, not ours.
+        ("Sudha", "Sudhamurthy"),  # the longer word is more than three letters longer
+        ("Hemingway", "Ernest Hemingway"),  # the whole word, not a cut-off of it
+        ("Ann", "Anna Smith"),  # under four letters is a name, not a fragment
+        ("K.V.M", "K.V.Madhavan"),  # initials are not a word that can be cut
+        ("രാമൻ", "രാമനാഥൻ"),  # another script: prefixes there are ordinary names
+        ("Osho",),  # nothing to be a cut-off of
+        ("Arundhati Roy", "Arundhati Roy"),  # an exact repeat is the dedupe's job
+    ],
+)
+def test_credits_that_could_be_two_people_are_left_alone(authors):
+    result = screen(candidate(authors=authors))
+    assert result.dropped == ()
+    assert result.candidate.authors == tuple(dict.fromkeys(authors))
+
+
+def test_a_book_is_never_left_with_nobody_credited():
+    kept, dropped = _without_fragments(["Ernes", "Ernest", "Ernestin"])
+    assert kept == ["Ernestin"], "each is a cut-off of a longer one; the longest stays"
+    assert len(dropped) == 2
+
+
+def test_dropping_a_fragment_is_not_a_reason_to_hold_the_book():
+    result = screen(candidate(authors=("Ernes", "Hemingway Ernest")))
+    assert result.missing == () and result.fatal == ()
 
 
 # --------------------------------------------------------------------------

@@ -342,6 +342,48 @@ async def test_revert_on_an_unknown_id_is_a_no_op(session):
 # --------------------------------------------------------------------------
 
 
+async def test_a_queued_row_with_a_cut_off_credit_is_published_without_it(session):
+    """The 6 Oct 2026 case. The row was screened and queued as `complete` the
+    day before the rule existed, so it is the promotion-time screen — the gate
+    again on the row about to be published — that has to catch it; recording
+    never sees it twice. Reproduced from the real payload: the shop credited
+    the book to "Ernes" and "Hemingway Ernest"."""
+    raw = candidate(
+        "837343",
+        title="Sooryanum Udikkunnu",
+        authors=("Ernes", "Hemingway Ernest"),
+        isbn="9789376880072",
+    )
+    session.add(
+        CatalogIntake(
+            source=SOURCE,
+            source_key="837343",
+            state=STATE_COMPLETE,
+            isbn=raw.isbn,
+            payload=raw.to_payload(),
+        )
+    )
+    await session.commit()
+
+    counts = await intake_service.promote(session, limit=10)
+
+    assert counts == {STATE_PROMOTED: 1}
+    names = (await session.execute(select(Author.name).order_by(Author.name))).scalars().all()
+    assert names == ["Hemingway Ernest"], "no author called Ernes was created"
+
+
+async def test_the_row_says_which_credit_was_dropped(session):
+    await intake_service.record(
+        session,
+        [candidate("837343", authors=("Ernes", "Hemingway Ernest"))],
+        source=SOURCE,
+    )
+    row = (await session.execute(select(CatalogIntake))).scalar_one()
+    assert row.state == STATE_COMPLETE
+    assert row.note == "credit dropped: Ernes (a cut-off of Hemingway Ernest)"
+    assert row.payload["authors"] == ["Hemingway Ernest"]
+
+
 async def test_two_books_by_one_author_share_the_author_row(session):
     await intake_service.record(
         session,

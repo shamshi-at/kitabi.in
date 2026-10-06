@@ -323,6 +323,18 @@ not named like one. Now also refused:
 - **Products that are not one book** (`title_not_a_book`): combos, box sets,
   `(Set)`, "3 Book Pack", gift cards, calendars and dated diaries.
 
+One thing the gate *cleans* rather than refuses (6 Oct 2026): **a credit that is
+another credit cut off.** Mathrubhumi's data credited one book to `Ernes` and
+`Hemingway Ernest`, and the catalogue grew a second author, "Ernes", with a page
+of its own. A credit that is one Latin-script word of four letters or more, and
+the start of a word in another credit on the same book with at most three
+letters missing, is taken off the book — and the row's note says so
+(`credit dropped: Ernes (a cut-off of Hemingway Ernest)`). Deliberately narrow,
+because it acts unattended: `Sudha` beside `Sudhamurthy`, `Hemingway` beside
+`Ernest Hemingway` and anything in another script are left alone. Measured on
+2,256 queued rows and 106 live books with two or more credits: it touches
+exactly one, the book that prompted it.
+
 On ~2,750 real storefront titles the *not-a-book* rules refused 18, every one
 a true non-book. The *shop-styling* rules refuse far more, and that is the
 point of putting them here: **58 of 300 Mathrubhumi titles and 86 of 300 Olive

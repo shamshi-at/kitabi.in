@@ -202,6 +202,11 @@ class Screened:
     candidate: Candidate
     missing: tuple[str, ...] = ()
     fatal: tuple[str, ...] = ()
+    #: Credits the gate took off the book as cut-off copies of another credit,
+    #: each worded for a person reading the queue (`Ernes (a cut-off of
+    #: Hemingway Ernest)`). Not a reason to hold the book — it is what was
+    #: cleaned, said out loud, so the cleaning is never silent.
+    dropped: tuple[str, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -451,6 +456,51 @@ def _title_refusal(title: str, publisher: str | None) -> str | None:
 _TRAILING_JUNK = re.compile(r"[\s,;:/=\-]+$")
 
 
+#: A credit that is the start of another credit's word, with the last few
+#: letters missing — `Ernes` beside `Hemingway Ernest` on one Mathrubhumi book
+#: (6 Oct 2026). The shop's data holds the truncation; the catalogue made it a
+#: second author, "Ernes", with a page of its own. Narrow on purpose, because
+#: the gate acts on it unattended: one Latin-script word of at least four
+#: letters, whose longer twin is no more than three letters longer. `Sudha`
+#: beside `Sudhamurthy`, `Hemingway` beside `Ernest Hemingway` and anything in
+#: another script are left alone — each is as likely to be two people (or one
+#: person written two ways) as a cut-off, and that is a judgement for a human.
+FRAGMENT_MIN_LETTERS = 4
+FRAGMENT_MAX_TAIL = 3
+_NAME_WORDS = re.compile(r"[^\s.\-]+")
+
+
+def _fragment_of(name: str, credits: list[str]) -> str | None:
+    """The credit `name` is a cut-off of, or None if it is not one."""
+    if len(name) < FRAGMENT_MIN_LETTERS or not (name.isascii() and name.isalpha()):
+        return None
+    start = name.casefold()
+    for other in credits:
+        if other == name:
+            continue
+        for word in _NAME_WORDS.findall(other):
+            tail = len(word) - len(start)
+            if 0 < tail <= FRAGMENT_MAX_TAIL and word.casefold().startswith(start):
+                return other
+    return None
+
+
+def _without_fragments(names: list[str]) -> tuple[list[str], tuple[str, ...]]:
+    """`names` without the credits that are cut-off copies of another, and what
+    was dropped. Judged against the whole list as it came, so the order a shop
+    lists them in cannot change the outcome; the strict-prefix relation has no
+    cycles, so a book is never left with nobody."""
+    dropped: list[str] = []
+    kept: list[str] = []
+    for name in names:
+        twin = _fragment_of(name, names)
+        if twin is None:
+            kept.append(name)
+        else:
+            dropped.append(f"{name} (a cut-off of {twin})")
+    return kept, tuple(dropped)
+
+
 def _tidy_name(name: str | None) -> str | None:
     cleaned = _text(name)
     return _text(_TRAILING_JUNK.sub("", cleaned)) if cleaned else None
@@ -582,6 +632,7 @@ def screen(candidate: Candidate) -> Screened:
             continue
         if cleaned not in authors:
             authors.append(cleaned)
+    authors, dropped = _without_fragments(authors)
     contributors = tuple(
         dict.fromkeys(name for raw in candidate.contributors if (name := _tidy_name(_plain(raw))))
     )
@@ -678,4 +729,5 @@ def screen(candidate: Candidate) -> Screened:
         candidate=cleaned_candidate,
         missing=() if fatal else tuple(dict.fromkeys(missing)),
         fatal=tuple(dict.fromkeys(fatal)),
+        dropped=dropped,
     )
