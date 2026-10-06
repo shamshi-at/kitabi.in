@@ -5,6 +5,7 @@ library entries hang off), so it always previews what will move before it runs,
 is editor+ only, and is audited. It reuses the API's merge_preview / merge_works.
 """
 
+import re
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated
@@ -938,22 +939,43 @@ async def buy_links_worklist(
 
 
 @router.get("/editions/{edition_id}/cover.png")
-async def edition_cover_png(admin: RequireEditor, db: DbSession, edition_id: uuid.UUID) -> Response:
-    """An edition's cover as a PNG, for the clipboard (`assets.cover_png`).
+async def edition_cover_png(
+    admin: RequireEditor,
+    db: DbSession,
+    edition_id: uuid.UUID,
+    download: bool = Query(default=False),
+) -> Response:
+    """An edition's cover as a PNG (`assets.cover_png`).
 
-    The worklist's cover is a button that copies the picture, so it can be
-    pasted into a shop's image search. The address to fetch is read from the
-    edition's own row — this route takes an id and nothing else, so it cannot
-    be pointed at a URL of the caller's choosing.
+    The worklist's cover is a link that **downloads** the picture (owner request,
+    6 Oct 2026 — it was a button that copied it to the clipboard), so it can be
+    uploaded to a shop's image search. `?download=1` adds
+    `Content-Disposition: attachment` with the ISBN as the file name, so the file
+    on the phone says which book it is.
+
+    The address to fetch is read from the edition's own row — this route takes an
+    id and a flag, nothing that names a URL, so it cannot be pointed at one of the
+    caller's choosing.
     """
-    url = await db.scalar(
-        select(Edition.cover_url).where(Edition.id == edition_id, Edition.deleted_at.is_(None))
-    )
+    row = (
+        await db.execute(
+            select(Edition.cover_url, Edition.isbn).where(
+                Edition.id == edition_id, Edition.deleted_at.is_(None)
+            )
+        )
+    ).first()
+    url, isbn = (row[0], row[1]) if row else (None, None)
     try:
         png = await assets.cover_png(url)
     except assets.CoverError as exc:
         return PlainTextResponse(str(exc), status_code=404)
-    return Response(png, media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
+    headers = {"Cache-Control": "private, max-age=300"}
+    if download:
+        # ASCII by construction: an ISBN is digits (and an X), the fallback is
+        # the start of a UUID — nothing from the request or the title reaches a header.
+        stem = re.sub(r"[^0-9Xx]", "", isbn or "") or f"cover-{str(edition_id)[:8]}"
+        headers["Content-Disposition"] = f'attachment; filename="{stem}.png"'
+    return Response(png, media_type="image/png", headers=headers)
 
 
 @router.post("/works/{work_id}/series")
@@ -1017,6 +1039,7 @@ async def set_edition_amazon_link(
     edition_id: uuid.UUID,
     url: Annotated[str, Form()] = "",
     next_url: Annotated[str, Form(alias="next")] = "",
+    if_empty: Annotated[str, Form()] = "",
 ) -> Response:
     """Curate the edition's Amazon link. A stored link wins over the read-time
     generated one (services/buy_links.py), so this is the override for the
@@ -1027,7 +1050,17 @@ async def set_edition_amazon_link(
     Serves two callers: the book page (plain form → redirect + flash) and the
     buy-links worklist (fetch → bare status, the row marks itself saved without
     a reload). `next` sends the non-JS fallback back to the worklist; it must
-    be a console-local path or it is ignored, so it can't become a redirector."""
+    be a console-local path or it is ignored, so it can't become a redirector.
+
+    **`if_empty` — "only if nobody has got there first."** The worklist sends it:
+    a row there means "this edition has no link", and a stale copy of the list
+    (an old tab, the browser's back button, a second device) still shows rows that
+    were saved since. Without the flag a save from such a row silently replaced
+    the link that was already there — several editions were saved two and three
+    times on 6 Oct 2026, the later link overwriting the earlier. With it, an
+    edition that already has an Amazon link is left as it is: the same link is a
+    plain success, a different one is a 409 that says what is stored.
+    """
     is_fetch = request.headers.get("x-requested-with") == "fetch"
     back = next_url if next_url.startswith("/catalog") else f"/catalog/works/{work_id}"
 
@@ -1044,6 +1077,23 @@ async def set_edition_amazon_link(
     url = url.strip()
     if url and not buy_links_service.is_amazon(url):
         return fail("That doesn't look like an Amazon link (amazon.in / amzn.to).")
+    if if_empty and url:
+        stored = next(
+            (
+                str(link["url"])
+                for link in (edition.buy_links or [])
+                if isinstance(link, dict)
+                and link.get("url")
+                and buy_links_service.is_amazon(str(link["url"]))
+            ),
+            None,
+        )
+        if stored == url:
+            return Response(status_code=204)  # already exactly this: nothing to do
+        if stored:
+            return PlainTextResponse(
+                f"Already has an Amazon link ({stored}) — left as it was.", status_code=409
+            )
 
     kept = [
         link

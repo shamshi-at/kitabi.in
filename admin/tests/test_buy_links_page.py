@@ -208,8 +208,10 @@ class _DB:
             amazon_not_found_at=None,
         )
 
-    async def scalar(self, _stmt):  # noqa: ANN001, ANN202
-        return self.cover
+    async def execute(self, _stmt):  # noqa: ANN001, ANN202
+        """The cover route's one query: `(cover_url, isbn)` of the edition."""
+        row = (self.cover, self.edition.isbn)
+        return SimpleNamespace(first=lambda: row)
 
     async def get(self, _model, edition_id):  # noqa: ANN001, ANN202
         return self.edition if edition_id == EDITION_ID else None
@@ -328,17 +330,25 @@ def test_paging_keeps_the_filters(client):
     assert "page 2 of 3" in html
 
 
-def test_a_cover_is_a_button_that_copies_the_picture(client):
+def test_a_cover_is_a_link_that_downloads_the_picture(client):
+    """Owner request, 6 Oct 2026: tapping a cover downloads it (it used to copy
+    it to the clipboard). A plain link, so every browser does it the same way and
+    a keyboard reaches it."""
     html = client.get("/catalog/buy-links").text
-    assert f'data-copy-image="/catalog/editions/{EDITION_ID}/cover.png"' in html
+    assert (
+        f'<a class="bl-cover" href="/catalog/editions/{EDITION_ID}/cover.png?download=1" download'
+        in html
+    )
+    assert "data-download-image" in html
     assert f'<img src="{COVER}"' in html, "it still shows the cover it has"
-    assert 'type="button" class="bl-cover"' in html, "a real button: reachable by keyboard"
+    assert "data-copy-image" not in html, "nothing copies the picture any more"
+    assert 'type="button" class="bl-cover"' not in html
 
 
-def test_a_row_without_a_cover_offers_nothing_to_copy(client):
+def test_a_row_without_a_cover_offers_nothing_to_download(client):
     client.state["rows"] = [_row(cover_url=None)]
     html = client.get("/catalog/buy-links").text
-    assert "data-copy-image" not in html
+    assert "data-download-image" not in html and "cover.png" not in html
     assert '<div class="bl-cover" title="No cover">' in html
 
 
@@ -507,6 +517,67 @@ def test_a_moderator_cannot_mark_an_edition(client):
     assert client.db.edition.amazon_not_found_at is None
 
 
+SAVE_URL = f"/catalog/works/{WORK_ID}/editions/{EDITION_ID}/amazon-link"
+HAS_LINK = [{"retailer": "Amazon", "url": "https://amzn.in/d/FIRST"}]
+
+
+def test_the_worklist_saves_only_if_the_row_is_still_empty(client):
+    html = client.get("/catalog/buy-links").text
+    assert '<input type="hidden" name="if_empty" value="1">' in html
+
+
+def test_a_stale_row_does_not_overwrite_the_link_that_was_saved_since(client):
+    """6 Oct 2026: editions were saved two and three times over, each later link
+    replacing the earlier, because a stale copy of the list still showed the row.
+    From the worklist (`if_empty`) a different link is refused and nothing moves."""
+    client.db.edition.buy_links = list(HAS_LINK)
+    resp = client.post(
+        SAVE_URL, data={"url": "https://amzn.in/d/SECOND", "if_empty": "1"}, headers=FETCH
+    )
+    assert resp.status_code == 409
+    assert "Already has an Amazon link (https://amzn.in/d/FIRST)" in resp.text
+    assert client.db.edition.buy_links == HAS_LINK, "the first link is still the link"
+    assert client.state["audits"] == [], "nothing was changed, so nothing is recorded"
+    assert client.db.commits == 0
+
+
+def test_saving_the_same_link_again_is_a_plain_success(client):
+    client.db.edition.buy_links = list(HAS_LINK)
+    resp = client.post(
+        SAVE_URL, data={"url": "https://amzn.in/d/FIRST", "if_empty": "1"}, headers=FETCH
+    )
+    assert resp.status_code == 204
+    assert client.db.edition.buy_links == HAS_LINK and client.db.commits == 0
+
+
+def test_the_book_page_can_still_change_a_link_that_is_there(client):
+    """`if_empty` is the worklist's promise, not the route's: the book page
+    exists to replace a link that landed wrong."""
+    client.db.edition.buy_links = list(HAS_LINK)
+    resp = client.post(SAVE_URL, data={"url": "https://amzn.in/d/SECOND"}, headers=FETCH)
+    assert resp.status_code == 204
+    assert client.db.edition.buy_links == [
+        {"retailer": "Amazon", "url": "https://amzn.in/d/SECOND"}
+    ]
+
+
+def test_an_empty_row_still_saves_through_the_guard(client):
+    resp = client.post(
+        SAVE_URL, data={"url": "https://amzn.in/d/FIRST", "if_empty": "1"}, headers=FETCH
+    )
+    assert resp.status_code == 204
+    assert client.db.edition.buy_links == HAS_LINK
+
+
+def test_another_shops_link_is_not_an_amazon_link_for_the_guard(client):
+    client.db.edition.buy_links = [{"retailer": "Flipkart", "url": "https://flipkart.com/x"}]
+    resp = client.post(
+        SAVE_URL, data={"url": "https://amzn.in/d/FIRST", "if_empty": "1"}, headers=FETCH
+    )
+    assert resp.status_code == 204
+    assert {"retailer": "Flipkart", "url": "https://flipkart.com/x"} in client.db.edition.buy_links
+
+
 def test_saving_a_link_takes_the_mark_off_but_clearing_the_override_does_not(client):
     """Found one after all: "no Amazon link found" is no longer true. But an
     emptied override says nothing about whether Amazon has the book."""
@@ -545,6 +616,44 @@ def test_the_cover_route_serves_a_png_of_the_editions_own_cover(client, monkeypa
     assert Image.open(io.BytesIO(resp.content)).format == "PNG"
     assert fetched == [COVER], "the address fetched is the one on the edition's row"
     assert "private" in resp.headers["cache-control"]
+
+
+def test_the_download_is_an_attachment_named_for_the_isbn(client, monkeypatch):
+    async def fetch(http, url):  # noqa: ANN001
+        return SimpleNamespace(body=_image("JPEG", (600, 900)), gone=False)
+
+    monkeypatch.setattr(assets.cover_ingest, "_fetch", fetch)
+
+    plain = client.get(f"/catalog/editions/{EDITION_ID}/cover.png")
+    assert "content-disposition" not in plain.headers, "without the flag it is just a picture"
+
+    resp = client.get(f"/catalog/editions/{EDITION_ID}/cover.png?download=1")
+    assert resp.status_code == 200 and resp.headers["content-type"] == "image/png"
+    assert resp.headers["content-disposition"] == 'attachment; filename="9789376881192.png"'
+    assert Image.open(io.BytesIO(resp.content)).format == "PNG"
+
+
+def test_the_downloads_file_name_can_only_be_digits_or_the_start_of_an_id(client, monkeypatch):
+    """The name is built from the edition's ISBN column. Whatever is in it, a
+    header gets digits (and an X) or a fallback — never a quote or a newline."""
+
+    async def fetch(http, url):  # noqa: ANN001
+        return SimpleNamespace(body=_image(), gone=False)
+
+    monkeypatch.setattr(assets.cover_ingest, "_fetch", fetch)
+    client.db.edition.isbn = '97"; filename="evil.exe\r\nX: y'
+    header = client.get(f"/catalog/editions/{EDITION_ID}/cover.png?download=1").headers[
+        "content-disposition"
+    ]
+    import re
+
+    assert re.fullmatch(r'attachment; filename="[0-9Xx]+\.png"', header), header
+    assert "\r" not in header and "\n" not in header and "evil" not in header
+    client.db.edition.isbn = None
+    header = client.get(f"/catalog/editions/{EDITION_ID}/cover.png?download=1").headers[
+        "content-disposition"
+    ]
+    assert header == f'attachment; filename="cover-{str(EDITION_ID)[:8]}.png"'
 
 
 def test_the_cover_route_cannot_be_pointed_at_a_url(client, monkeypatch):
@@ -626,11 +735,41 @@ def test_typing_in_a_row_stops_its_countdown_whichever_button_was_pressed():
     ), "dispatched outside the 'was Saved' branch, or a marked row would still leave"
 
 
-def test_copying_says_what_it_did_including_when_it_could_not():
+def test_the_title_still_copies_and_says_so_and_the_cover_no_longer_does():
     js = _script()
-    assert '"Cover image copied"' in js
-    assert "its link was copied instead" in js, "a failed picture copy is not reported as a success"
-    assert '"image/png"' in js
+    assert '"Copied"' in js and "Couldn't copy" in js, "title copy keeps its messages"
+    assert (
+        "ClipboardItem" not in js and "dataset.copyImage" not in js
+    ), "no picture goes on the clipboard"
+
+
+def test_a_cover_download_says_it_has_started():
+    """On a phone a download changes nothing on the page; the toast is the only
+    sign that the tap did something."""
+    js = _script()
+    assert 'e.target.closest("[data-download-image]")' in js
+    assert '"Downloading the cover…"' in js
+
+
+def test_a_row_that_was_already_linked_is_treated_as_done_and_says_why():
+    js = _script()
+    assert "res.status === 409" in js
+    assert '"Already linked ✓"' in js
+    block = js[js.index("res.status === 409") : js.index("res.status === 409") + 900]
+    assert (
+        'new CustomEvent("inline:saved"' in block
+    ), "so it counts down and leaves like any saved row"
+
+
+def test_a_page_restored_from_the_browsers_cache_reloads_itself():
+    js = _script()
+    assert 'window.addEventListener("pageshow"' in js
+    assert "e.persisted" in js and "data-reload-on-restore" in js
+
+
+def test_the_worklist_asks_to_be_reloaded_when_restored(client):
+    html = client.get("/catalog/buy-links").text
+    assert "data-reload-on-restore" in html
 
 
 def test_the_console_has_the_jump_button_on_every_page():

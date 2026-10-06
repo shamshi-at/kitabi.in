@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .deps import RedirectException
+from .freshness import NoStoreMiddleware
 from .noindex import NoIndexMiddleware, robots
 from .routers import (
     account,
@@ -45,6 +46,8 @@ app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 # The back office is not a public site — see noindex.py. Added before the
 # routers so it wraps every response, static files and error pages included.
 app.add_middleware(NoIndexMiddleware)
+# A page is a live query, so a cached one is a wrong one — see freshness.py.
+app.add_middleware(NoStoreMiddleware)
 app.add_route("/robots.txt", robots, methods=["GET"])
 
 

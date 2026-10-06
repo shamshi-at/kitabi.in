@@ -730,14 +730,17 @@ TOPICS: tuple[Topic, ...] = (
                     "**Put back** on any row to undo it. If you find a link later, saving it "
                     "takes the mark off by itself. The mark is only for you: the book's public "
                     "page is exactly as it was.",
-                    "**Tap a cover** to copy the picture — paste it into the shop's image "
-                    "search to find the exact edition. The small button beside a title copies "
-                    "the title. A short message confirms each copy; if your browser will not "
-                    "copy a picture, it copies the picture's link instead and says so.",
+                    "**Tap a cover** to download the picture — it saves to your phone, named "
+                    "for the book's ISBN, ready to upload to the shop's image search to find the "
+                    "exact edition. The small button beside a title copies the title, and a "
+                    "short message confirms it.",
                     "After you **Save** a link the row counts down from five and leaves the "
                     "list, so the list is always what is still to do. **Press the countdown** "
                     "to keep the row where it is. Leaving the list deletes nothing — the book "
-                    "has its link now, which is the only reason it was here.",
+                    "has its link now, which is the only reason it was here. If you ever "
+                    "save a link on a row that already has one — a list left open in another "
+                    "tab, say — nothing is overwritten: the row says “Already linked” and "
+                    "leaves.",
                     "Which of these links readers actually open is on "
                     "[Buy clicks](/buy-clicks).",
                 ),

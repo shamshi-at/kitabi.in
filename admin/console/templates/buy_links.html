@@ -51,7 +51,7 @@
 <p class="hint" style="margin:8px 0 14px">Every edition here still serves the <i>generated</i>
   ISBN-derived link, so nothing is broken — but a pasted product link is edition-exact and
   always beats a search page. <b>Search Amazon</b> opens the pre-filled search in a new tab;
-  paste the product URL back and <b>Save</b>. Tap a <b>cover</b> to copy the picture, or the
+  paste the product URL back and <b>Save</b>. Tap a <b>cover</b> to download the picture, or the
   small button beside a title to copy the title. A saved row leaves the list after five
   seconds — tap the countdown to keep it. Searched and it is not on Amazon? <b>No link found</b>
   takes the row off this list and files it under <b>Show → No Amazon link found</b>, where
@@ -66,14 +66,21 @@
     {% if pages > 1 %} · page {{ page }} of {{ pages }}{% endif %}</div>
 </div>
 
+{# Brought back from the browser's page cache (an iOS back-swipe, say), this list
+   reloads: a row removed here is removed on screen only, so a restored page can
+   show rows that were saved since (admin.js). #}
+<div data-reload-on-restore hidden></div>
+
 {% for r in rows %}
 {# data-autoremove: once its link is saved the row counts down and leaves
    (admin.js). The book is not deleted — it has simply left this worklist. #}
 <div class="bl-row" data-row data-autoremove>
   {% if r.e.cover_url %}
-  <button type="button" class="bl-cover" data-copy-image="/catalog/editions/{{ r.e.id }}/cover.png"
-    title="Copy this cover" aria-label="Copy the cover of {{ r.w.title }}">
-    <img src="{{ r.e.cover_url }}" alt="" loading="lazy"></button>
+  {# A plain link: the browser downloads it (the route answers with an
+     attachment named for the ISBN). data-download-image only adds the toast. #}
+  <a class="bl-cover" href="/catalog/editions/{{ r.e.id }}/cover.png?download=1" download
+    data-download-image title="Download this cover" aria-label="Download the cover of {{ r.w.title }}">
+    <img src="{{ r.e.cover_url }}" alt="" loading="lazy"></a>
   {% else %}<div class="bl-cover" title="No cover"></div>{% endif %}
   <div class="bl-info">
     <div class="bl-title">
@@ -109,6 +116,9 @@
     <form data-inline method="post"
       action="/catalog/works/{{ r.w.id }}/editions/{{ r.e.id }}/amazon-link">
       <input type="hidden" name="next" value="{{ here }}">
+      {# "Only if still empty": a stale copy of this list must not overwrite a link
+         that was saved since (admin/console/routers/catalog.py). #}
+      <input type="hidden" name="if_empty" value="1">
       <input class="search bl-url" type="url" name="url" placeholder="Paste amazon.in link…"
         aria-label="Amazon link for {{ r.w.title }}">
       <button class="btn s p">Save</button>

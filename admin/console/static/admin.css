@@ -285,11 +285,10 @@ dialog.pk>div{display:flex;flex-direction:column;max-height:inherit}
 .bl-cover{width:34px;height:50px;border-radius:3px;flex-shrink:0;display:block;padding:0;
   background:var(--paper-deep);border:1px solid var(--line);overflow:hidden}
 .bl-cover img{width:100%;height:100%;object-fit:cover;display:block}
-/* A cover that is a button copies its picture (admin.js). */
-button.bl-cover{cursor:copy}
-button.bl-cover:hover,button.bl-cover:focus-visible{border-color:var(--oxblood);outline:none;
+/* A cover that is a link downloads its picture (admin.js). */
+a.bl-cover{cursor:pointer}
+a.bl-cover:hover,a.bl-cover:focus-visible{border-color:var(--oxblood);outline:none;
   box-shadow:0 0 0 2px var(--gold-soft)}
-button.bl-cover[aria-busy]{opacity:.5}
 .bl-info{flex:1;min-width:0}
 .bl-info .t{font-weight:600;font-size:13px}
 .bl-meta{margin-top:2px}

@@ -1425,6 +1425,26 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   catalogue is the owner's conversation with DC Books — or a retailer that
   publishes the same facts openly (`services/intake_keralabookstore`).
 
+- **A list that removes a row in the browser is a list the browser's cache can
+  put back — and a form on it then overwrites what was saved.** The Buy links
+  worklist takes a saved row off the screen with JavaScript; the HTML the server
+  sent still has it. Press Back after saving and the browser returns its cached
+  copy of that HTML (`transferSize: 0`, navigation type `back_forward` — reproduced
+  in a browser), the card is there again with an empty field, and saving it again
+  *replaced the link that was already saved*: four editions were saved two and
+  three times over on 6 Oct 2026, each later link overwriting the earlier, with
+  nothing in the audit log to say anything was wrong (owner report: "the same
+  item popped up again without the link I gave"). The server had been right the
+  whole time — a reload from the network never showed the row — which is why
+  reading the server code found nothing and the audit log did. Three layers, each
+  covering what the one before cannot: `Cache-Control: no-store` on every console
+  HTML page (`freshness.py`) so Back asks the server; a `pageshow` reload for the
+  browsers that keep a page anyway; and a write that says what it expects —
+  `if_empty` turns "save this link" into "save this link *if the row is still
+  empty*", so the one stale copy that gets through is refused instead of
+  believed. A screen that mutates production should not be cacheable, and a
+  save from a list should say which state of the world it was written against.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

@@ -222,6 +222,18 @@
         row.dispatchEvent(
           new CustomEvent("inline:saved", { bubbles: true, detail: { button: btn } })
         );
+      } else if (res.status === 409) {
+        // "Already has an Amazon link": this row came from a stale copy of the
+        // list, and the book is done — the server left its link as it was and
+        // said what it is. Treated as saved, so the row leaves like any other,
+        // with the message up while it counts down.
+        const row = form.closest("[data-row]") || form;
+        if (err) err.textContent = await res.text();
+        row.classList.add("done");
+        btn.textContent = "Already linked ✓";
+        row.dispatchEvent(
+          new CustomEvent("inline:saved", { bubbles: true, detail: { button: btn } })
+        );
       } else {
         if (err) err.textContent = await res.text();
         btn.disabled = false;
@@ -796,19 +808,19 @@ window.kitabiToast = (function () {
   };
 })();
 
-// Copy buttons.
+// Copy buttons, and cover downloads.
 //
 //  data-copy="text"        copies the text; says data-copied (or "Copied").
-//  data-copy-image="/url"  copies the PICTURE at that same-origin URL, which
-//                          must answer image/png — a browser's clipboard takes
-//                          no other kind, and will not read an image back from
-//                          another origin, which is why the Buy links covers
-//                          go through /catalog/editions/<id>/cover.png.
+//  data-download-image     marks a plain <a download> link to a cover. The
+//                          browser does the downloading — the server answers
+//                          with an attachment named for the ISBN — so this only
+//                          says so: a download is easy to miss on a phone, where
+//                          nothing on the page changes.
 //
-// The image write is started inside the click itself with a *promise* for the
-// bytes: Safari only allows a clipboard write that begins in the gesture, and
-// the fetch cannot finish in time. Browsers that reject a promise there get
-// the plain await-then-write, which they do allow.
+// (Covers used to be *copied* to the clipboard instead — `data-copy-image`, 5–6
+// Oct 2026. Downloaded they go into the shop's image search from the Photos app,
+// the same on every phone, instead of depending on what the browser lets a page
+// put on the clipboard.)
 (function () {
   async function copyText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -827,62 +839,31 @@ window.kitabiToast = (function () {
     if (!ok) throw new Error("copy refused");
   }
 
-  async function pngFrom(url) {
-    const res = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
-    if (!res.ok) throw new Error((await res.text()) || "no image");
-    const blob = await res.blob();
-    if (blob.type !== "image/png") throw new Error("not a PNG");
-    return blob;
-  }
-
-  async function copyImage(url) {
-    if (!navigator.clipboard || !navigator.clipboard.write || !window.ClipboardItem) {
-      throw new Error("no image clipboard");
-    }
-    const bytes = pngFrom(url);
-    try {
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": bytes })]);
-    } catch (first) {
-      // Either this browser wants the bytes themselves rather than a promise
-      // for them, or the fetch failed — `await bytes` tells which.
-      const blob = await bytes;
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-    }
-  }
-
   document.addEventListener("click", async (e) => {
-    const text = e.target.closest("[data-copy]");
-    if (text) {
-      try {
-        await copyText(text.dataset.copy);
-        window.kitabiToast(text.dataset.copied || "Copied");
-      } catch (_) {
-        window.kitabiToast("Couldn't copy — select the text and copy it by hand.", true);
-      }
-      return;
+    if (e.target.closest("[data-download-image]")) {
+      window.kitabiToast("Downloading the cover…");
+      return; // the link does the rest
     }
-    const pic = e.target.closest("[data-copy-image]");
-    if (!pic || pic.getAttribute("aria-busy")) return;
-    pic.setAttribute("aria-busy", "true");
+    const text = e.target.closest("[data-copy]");
+    if (!text) return;
     try {
-      await copyImage(pic.dataset.copyImage);
-      window.kitabiToast("Cover image copied");
+      await copyText(text.dataset.copy);
+      window.kitabiToast(text.dataset.copied || "Copied");
     } catch (_) {
-      // Say what happened rather than pretending: the picture did not make it,
-      // and its address is the next most useful thing to have in hand.
-      const img = pic.querySelector("img");
-      try {
-        if (!img) throw new Error("no image");
-        await copyText(img.currentSrc || img.src);
-        window.kitabiToast("Couldn't copy the picture here — its link was copied instead.", true);
-      } catch (__) {
-        window.kitabiToast("Couldn't copy this cover.", true);
-      }
-    } finally {
-      pic.removeAttribute("aria-busy");
+      window.kitabiToast("Couldn't copy — select the text and copy it by hand.", true);
     }
   });
 })();
+
+// A page brought back from the browser's page cache (an iOS back-swipe, an
+// Android tab restore) is a snapshot: the worklist removes a saved row on screen
+// only, so the snapshot can show rows that were saved since. Pages that say so
+// (`data-reload-on-restore`) ask the server again. The server also sends
+// `Cache-Control: no-store` (freshness.py), which stops most browsers keeping
+// the page at all; this is for the ones that keep it anyway.
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted && document.querySelector("[data-reload-on-restore]")) location.reload();
+});
 
 // The Buy links worklist: a row whose link has just been saved counts down
 // and leaves the list, so the list is always "what is still to do" without a
