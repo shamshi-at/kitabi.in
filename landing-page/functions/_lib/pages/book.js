@@ -385,7 +385,7 @@ export function renderBook(data) {
                     >`,
                   )}
                   ${primaryEdition.buy_links.some((b) => b.affiliate)
-                    ? html`<p class="buydisc">Kitabi may earn a commission from bookseller links.</p>`
+                    ? html`<p class="buydisc">As an Amazon Associate, Kitabi earns from qualifying purchases.</p>`
                     : ''}
                 </div>
               </div>

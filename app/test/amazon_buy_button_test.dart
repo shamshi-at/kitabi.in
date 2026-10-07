@@ -140,7 +140,7 @@ void main() {
     expect(find.text('Buy on Amazon.in', skipOffstage: false), findsOneWidget);
     expect(find.text('amazon', skipOffstage: false), findsOneWidget);
     expect(
-      find.text('Kitabi may earn a commission from these links.', skipOffstage: false),
+      find.text('As an Amazon Associate, Kitabi earns from qualifying purchases.', skipOffstage: false),
       findsOneWidget,
     );
     await flushTree(tester);
@@ -156,7 +156,7 @@ void main() {
 
     expect(find.text('Buy on Amazon.in', skipOffstage: false), findsOneWidget);
     expect(
-      find.text('Kitabi may earn a commission from these links.', skipOffstage: false),
+      find.text('As an Amazon Associate, Kitabi earns from qualifying purchases.', skipOffstage: false),
       findsNothing,
     );
     await flushTree(tester);

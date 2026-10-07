@@ -7159,7 +7159,7 @@ abstract class AppLocalizations {
   /// Small disclosure under the buy links when any of them is an affiliate link
   ///
   /// In en, this message translates to:
-  /// **'Kitabi may earn a commission from these links.'**
+  /// **'As an Amazon Associate, Kitabi earns from qualifying purchases.'**
   String get bookBuyDisclosure;
 
   /// Label on the browse sort control

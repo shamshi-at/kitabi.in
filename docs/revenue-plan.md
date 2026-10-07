@@ -116,8 +116,11 @@ The best idea on the list, and it's fully automatable today:
   not be in the network at all). One CID would also unlock other book retailers
   in the network later, which is the reason to prefer it over EarnKaro/ExtraPe
   (creator-focused, link-at-a-time, nothing to automate against).
-- **Compliance:** visible disclosure ("Kitabi may earn a commission from these
-  links") on web pages and the app screen that show them; no cloaked links; no
+- **Compliance:** visible disclosure on web pages and the app screen that show
+  them, in the words Amazon's Associates agreement asks for — "As an Amazon
+  Associate, Kitabi earns from qualifying purchases." (7 Oct 2026; it was a
+  generic "may earn a commission" line that never named Amazon). Shown only
+  when the link actually pays; no cloaked links; no
   tagged links in push/email (Associates ToS). Amazon Associates requires ~3
   qualifying sales within 180 days to keep the account — expect to re-apply once.
 

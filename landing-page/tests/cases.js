@@ -379,7 +379,8 @@ assertIncludes(bookDoc, 'https://www.amazon.in/dp/8126403454?tag=kitabi0f-21',
 // so to crawlers (rel=sponsored is Google's requirement for paid links) and
 // to readers (the disclosure line) — and only when something actually pays.
 assertIncludes(bookDoc, 'rel="sponsored nofollow noopener"', 'affiliate links are rel=sponsored');
-assertIncludes(bookDoc, 'may earn a commission', 'the affiliate disclosure renders');
+assertIncludes(bookDoc, 'As an Amazon Associate, Kitabi earns from qualifying purchases.',
+  'the affiliate disclosure renders, in the words the Associates agreement asks for');
 var noAffiliate = String(
   renderBook(Object.assign({}, BOOK, {
     editions: [Object.assign({}, BOOK.editions[0],
@@ -387,7 +388,7 @@ var noAffiliate = String(
   })).text(),
 );
 assertIncludes(noAffiliate, 'rel="nofollow noopener"', 'an unpaid link is still nofollow');
-assertExcludes(noAffiliate, 'may earn a commission', 'no disclosure when no link pays');
+assertExcludes(noAffiliate, 'Amazon Associate', 'no disclosure when no link pays');
 assertExcludes(noAffiliate, 'rel="sponsored', 'no sponsored rel when no link pays');
 
 // --------------------------------------------------------------------------

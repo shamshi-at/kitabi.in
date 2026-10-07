@@ -4434,7 +4434,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookBuyDisclosure =>
-      'Kitabi may earn a commission from these links.';
+      'As an Amazon Associate, Kitabi earns from qualifying purchases.';
 
   @override
   String get browseSortLabel => 'Sort';

@@ -3506,7 +3506,7 @@
   "@bookBuyAmazon": {"description": "CTA text inside the branded Amazon buy button"},
   "bookBuyFailed": "Couldn't open the store link.",
   "@bookBuyFailed": {"description": "Snackbar when the external buy link fails to open"},
-  "bookBuyDisclosure": "Kitabi may earn a commission from these links.",
+  "bookBuyDisclosure": "As an Amazon Associate, Kitabi earns from qualifying purchases.",
   "@bookBuyDisclosure": {"description": "Small disclosure under the buy links when any of them is an affiliate link"},
   "browseSortLabel": "Sort",
   "@browseSortLabel": {"description": "Label on the browse sort control"},
