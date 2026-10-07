@@ -584,6 +584,12 @@ assertExcludes(noIsbnDesc, ' · ', 'and no orphaned separator left behind');
 // The editions table still says so out loud — that is a different statement.
 assertIncludes(noIsbnDoc, 'No ISBN', 'the editions table still reports the absence');
 
+// The hero's facts row counts editions too, and plural() was never used there:
+// every single-edition book said "1 editions" (seen live on /book/nrittam,
+// 7 Oct 2026) — most of the catalogue, since most works hold one printing.
+assertIncludes(bookDoc, '<b>1</b> edition</span>', 'one edition is "1 edition"');
+assertExcludes(bookDoc, '<b>1</b> editions', 'never "1 editions"');
+
 // A book with no blurb: the description is a sentence, not a "·" list. Google
 // declined the list and quoted the affiliate disclosure under the result
 // instead (site: search, 7 Oct 2026).

@@ -463,7 +463,9 @@ export function renderBook(data) {
             ${data.language ? html`<span><b>${data.language}</b></span>` : ''}
             ${data.form ? html`<span><b>${data.form}</b></span>` : ''}
             ${primaryEdition.page_count ? html`<span><b>${primaryEdition.page_count}</b> pages</span>` : ''}
-            ${data.editions?.length ? html`<span><b>${data.editions.length}</b> editions</span>` : ''}
+            ${data.editions?.length
+              ? html`<span><b>${num(data.editions.length)}</b> ${data.editions.length === 1 ? 'edition' : 'editions'}</span>`
+              : ''}
           </p>
           ${data.genres?.length
             ? html`<p class="chips" style="margin-top:14px">
