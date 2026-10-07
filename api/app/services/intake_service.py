@@ -44,7 +44,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from collections.abc import Iterable, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
@@ -594,6 +594,10 @@ async def already_catalogued(db: AsyncSession, candidate: Candidate) -> uuid.UUI
 #: How many times the nightly limit of new releases to look at when sharing
 #: the night between sources.
 _FRESH_SOURCES_WINDOW = 4
+#: Rows `promote` will look at per book of its budget before giving up on the
+#: shortfall — duplicates are cheap (no cover is fetched, nothing is written
+#: but the row), but a night of nothing else must still end.
+_EXAMINE_AT_MOST = 3
 
 
 def _taking_turns(rows: Sequence[Row], limit: int) -> list[Row]:
@@ -647,9 +651,13 @@ async def removed_earlier(db: AsyncSession, candidate: Candidate) -> uuid.UUID |
     ).scalar_one_or_none()
 
 
-async def _due(db: AsyncSession, limit: int) -> list[Row]:
+async def _due(db: AsyncSession, limit: int, skip: Collection[uuid.UUID] = ()) -> list[Row]:
     """Tonight's candidates, as `(id, source)`: new releases first, then the
     backlist — and in both, one source at a time.
+
+    `skip` is the rows this run has already taken (see `promote`): a row that
+    failed in a way worth retrying is still `complete`, and would otherwise
+    come straight round again in the same night.
 
     Without the first half a book published this week waits behind every
     backlist title staged before it — months, at the daily limit. The newest
@@ -668,6 +676,8 @@ async def _due(db: AsyncSession, limit: int) -> list[Row]:
     `promote` loads each row when its turn comes.
     """
     ready = (CatalogIntake.state == STATE_COMPLETE, CatalogIntake.attempts < MAX_ATTEMPTS)
+    if skip:
+        ready = (*ready, CatalogIntake.id.not_in(skip))
     is_fresh = CatalogIntake.payload.has_key(FRESH_KEY)  # noqa: W601 — JSONB `?`, not dict
     newest = (
         await db.execute(
@@ -770,26 +780,47 @@ async def promote(
     """
     counts: dict[str, int] = {}
     run = _Run()
-    for row_id in [due.id for due in await _due(db, limit)]:
-        try:
-            row = await db.get(CatalogIntake, row_id)
-            if row is None or row.state != STATE_COMPLETE:
-                continue
-            stop = await _promote_one(db, row, covers, counts, run)
-        except Exception as exc:  # noqa: BLE001 — one row must not end the night
-            logger.exception("intake: promoting %s failed in a way nobody planned for", row_id)
-            await _charge_unplanned(db, row_id, exc)
-            counts["error"] = counts.get("error", 0) + 1
-            run.errors += 1
-            if run.errors >= MAX_CONSECUTIVE_ERRORS:
-                logger.error(
-                    "intake: %s unplanned failures in a row — stopping this run", run.errors
-                )
-                break
-            continue
-        run.errors = 0
-        if stop:
+    # The budget is books *created*, not rows taken. It used to be the second: the
+    # night's `limit` rows were chosen up front, so every candidate that turned out
+    # to be a book we already hold — recognised at the last moment, by ISBN, at no
+    # cost and with nothing published — used up one of the slots. 6 Oct 2026, the
+    # first night with Kerala Book Store reading the newest ids, which are the
+    # ones Mathrubhumi's own feed had already given us: 24 of 150 slots went on
+    # duplicates and the night published 125. So the run goes round again for the
+    # shortfall — bounded by `_EXAMINE_AT_MOST` rows per book of budget, and never
+    # taking a row it has already tried.
+    tried: set[uuid.UUID] = set()
+    stopped = False
+    while not stopped:
+        created = counts.get(STATE_PROMOTED, 0) + counts.get("printing", 0)
+        if created >= limit or len(tried) >= limit * _EXAMINE_AT_MOST:
             break
+        batch = [due.id for due in await _due(db, limit - created, skip=tried)]
+        if not batch:
+            break
+        for row_id in batch:
+            tried.add(row_id)
+            try:
+                row = await db.get(CatalogIntake, row_id)
+                if row is None or row.state != STATE_COMPLETE:
+                    continue
+                stop = await _promote_one(db, row, covers, counts, run)
+            except Exception as exc:  # noqa: BLE001 — one row must not end the night
+                logger.exception("intake: promoting %s failed in a way nobody planned for", row_id)
+                await _charge_unplanned(db, row_id, exc)
+                counts["error"] = counts.get("error", 0) + 1
+                run.errors += 1
+                if run.errors >= MAX_CONSECUTIVE_ERRORS:
+                    logger.error(
+                        "intake: %s unplanned failures in a row — stopping this run", run.errors
+                    )
+                    stopped = True
+                    break
+                continue
+            run.errors = 0
+            if stop:
+                stopped = True
+                break
 
     return counts
 

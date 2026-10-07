@@ -687,7 +687,8 @@ Speaking Tiger 37. New releases still go before any backlist.
    their say on covers. Not heard back as of 6 Oct 2026.
 3. ~~**Daily promotion budget**~~ — **150 a night since 4 Oct 2026** (owner).
    At 50 the three storefronts' ~10,000 titles would have taken most of a year.
-   Product-page reads were raised with it (300 a night), because two of the
+   Product-page reads were raised with it (300 a night; **500 from 7 Oct 2026**, once
+   HarperCollins's unread backlog was seen growing), because two of the
    three shops are complete only once their page is read.
 4. ~~**Romanized publisher titles**~~ — **settled 3 Oct 2026 by what the
    source turned out to have.** Mathrubhumi's product pages carry the title in

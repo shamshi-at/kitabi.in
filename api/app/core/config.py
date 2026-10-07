@@ -74,10 +74,13 @@ class Settings(BaseSettings):
     catalog_intake_backlist_pages: int = 3
     # Product pages read per night to fill what a feed leaves out (ISBN,
     # author, the title in its own script). One request a second, so this is
-    # also roughly how many seconds the pass takes. Kept at twice the daily
-    # limit: two of the three shops are complete only once their page is read,
-    # so reading has to stay ahead of publishing or the limit is never reached.
-    catalog_intake_enrich_limit: int = 300
+    # also roughly how many seconds the pass takes. Reading has to stay ahead of
+    # publishing, because two of the three shops are complete only once their page
+    # is read — and ahead of *arrivals*: 300 was twice the daily limit, and by
+    # 7 Oct 2026 HarperCollins's books waiting on a page read had grown from 441 to
+    # 534 in a day (Mathrubhumi's ~200 new books a night, all incomplete until read,
+    # took 228 of the 300). 500, newest first, is about three more minutes a night.
+    catalog_intake_enrich_limit: int = 500
     # Held books whose credits the LLM is asked about per night
     # (services/author_roles.py). A paid call each, so this is a spend limit as
     # much as a pace; `llm_daily_quota_author_roles` is the hard ceiling.

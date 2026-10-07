@@ -182,6 +182,74 @@ async def test_the_daily_limit_is_a_ceiling_on_what_can_be_created(session):
     assert works <= 1
 
 
+def _isbn_no(n: int) -> str:
+    """A checksum-valid ISBN-13 for test number `n` (`_isbn13` is further down)."""
+    return _isbn13(f"97860{n:07d}")
+
+
+async def test_a_book_we_already_hold_does_not_use_up_the_budget(session):
+    """6 Oct 2026, the first night with Kerala Book Store: its newest pages were
+    books Mathrubhumi's feed had already given us, each recognised by ISBN at the
+    last moment — and each had used one of the night's 150 slots, so the night
+    published 125. The budget is books *created*."""
+    held = [candidate(f"/works/HAVE{i}", isbn=_isbn_no(i), title=f"Held {i}") for i in range(3)]
+    await intake_service.record(session, held, source=SOURCE)
+    assert await intake_service.promote(session, limit=10) == {STATE_PROMOTED: 3}
+
+    # The same three found again under other keys — staged *first*, so they are
+    # at the head of tomorrow's queue — then four books that are really new.
+    again = [candidate(f"/works/AGAIN{i}", isbn=_isbn_no(i), title=f"Held {i}") for i in range(3)]
+    new = [candidate(f"/works/NEW{i}", isbn=_isbn_no(10 + i), title=f"New {i}") for i in range(4)]
+    await intake_service.record(session, again, source=SOURCE)
+    await intake_service.record(session, new, source=SOURCE)
+
+    counts = await intake_service.promote(session, limit=3)
+
+    assert counts == {STATE_DUPLICATE: 3, STATE_PROMOTED: 3}
+    works, _ = await catalogue_size(session)
+    assert works == 6, "three held before, three created tonight — the full budget"
+    left = await session.scalar(
+        select(func.count()).select_from(CatalogIntake).where(CatalogIntake.state == STATE_COMPLETE)
+    )
+    assert left == 1, "and the fourth new book waits for tomorrow, not lost"
+
+
+async def test_a_night_of_nothing_but_duplicates_still_ends(session):
+    """The shortfall is made up from further down the queue — but a queue that is
+    all duplicates must not be walked to the end: three rows are looked at per
+    book of budget."""
+    held = candidate("/works/HELD", isbn=_isbn_no(1))
+    await intake_service.record(session, [held], source=SOURCE)
+    await intake_service.promote(session, limit=10)
+    dupes = [candidate(f"/works/D{i}", isbn=_isbn_no(1)) for i in range(20)]
+    await intake_service.record(session, dupes, source=SOURCE)
+
+    counts = await intake_service.promote(session, limit=2)
+
+    assert counts == {STATE_DUPLICATE: 6}, "2 books of budget x 3 rows each, then it stops"
+    left = await session.scalar(
+        select(func.count()).select_from(CatalogIntake).where(CatalogIntake.state == STATE_COMPLETE)
+    )
+    assert left == 14
+
+
+async def test_a_row_that_failed_is_not_tried_again_the_same_night(session):
+    """A cover that did not answer leaves the row `complete` with an attempt
+    counted — and, with the run now going round again for a shortfall, it would
+    have come straight back and spent all its attempts in one night."""
+    await intake_service.record(session, [candidate(isbn=_isbn_no(1))], source=SOURCE)
+    covers = fake_covers(
+        {"https://covers.openlibrary.org/b/id/1-L.jpg": Ingested(gone=False, reason="no answer")}
+    )
+
+    counts = await intake_service.promote(session, limit=5, covers=covers)
+
+    assert counts == {"cover_retry": 1}
+    row = await only_row(session)
+    assert row.state == STATE_COMPLETE and row.attempts == 1
+    assert covers.calls == ["https://covers.openlibrary.org/b/id/1-L.jpg"], "asked once"
+
+
 async def test_promotion_is_resumable_rather_than_repeating(session):
     """A Railway redeploy mid-batch kills the job. The next run must continue,
     not re-publish what it already did."""
