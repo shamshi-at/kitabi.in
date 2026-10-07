@@ -1457,6 +1457,20 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   because a day is a window, not an instant. When a report names one screen, ask
   what rule it is an instance of and grep for the rest before closing it.
 
+- **Google writes the text under a result itself when the meta description
+  reads like a list — and it quotes the first prose it finds, which on a
+  page with little prose is the boilerplate.** The snippet under many no-blurb
+  book pages was the affiliate disclosure, and under the home page and hubs the
+  app band's pitch (found 7 Oct 2026); nothing in the HTML was wrong, and only
+  a `site:` search showed it. Two rules: a description is a sentence
+  about *this* page (`factsDescription`), never a `·` list of fields; and
+  repeated calls to action carry `data-nosnippet`, which Google honours on
+  `<div>`, `<section>` and `<span>` only — on a `<p>` it is silently ignored.
+  Corollary: a sentence makes a weak fact louder. "First published in 2016"
+  under a 1984 novel was in the data all along (the year of the one edition we
+  hold); it only became a problem once it was the most visible line about the
+  book.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

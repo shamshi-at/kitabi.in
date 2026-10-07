@@ -584,6 +584,117 @@ assertExcludes(noIsbnDesc, ' · ', 'and no orphaned separator left behind');
 // The editions table still says so out loud — that is a different statement.
 assertIncludes(noIsbnDoc, 'No ISBN', 'the editions table still reports the absence');
 
+// A book with no blurb: the description is a sentence, not a "·" list. Google
+// declined the list and quoted the affiliate disclosure under the result
+// instead (site: search, 7 Oct 2026).
+var factsDoc = String(renderBook(Object.assign({}, BOOK, { description: null })).text());
+var factsDesc = /<meta name="description" content="([^"]*)"/.exec(factsDoc)[1];
+assert(
+  factsDesc ===
+    'Chemmeen by Thakazhi Sivasankara Pillai — a Malayalam novel first published in 1956. ' +
+      'DC Books edition, 2019, 218 pages, ISBN 9788126403455.',
+  'a book with no blurb is described in a sentence built from its facts — got: ' + factsDesc,
+);
+
+// "First published" only when the year is older than the edition shown. With
+// one edition catalogued the two are the same number, and the claim would be
+// about the book when the evidence is about the printing — Randamoozham (1984)
+// read "first published in 2016" (7 Oct 2026).
+var sameYearDesc = factsDescription(
+  { title: 'Randamoozham', language: 'Malayalam', form: 'Novel', first_publish_year: 2016 },
+  { isbn: '9788122613704', page_count: 328, year: 2016, publisher: { name: 'Current Books' } },
+  'M. T. Vasudevan Nair',
+);
+assertExcludes(sameYearDesc, 'first published',
+  'a first-published year that only matches the edition is not claimed for the book');
+assertIncludes(sameYearDesc, 'Current Books edition, 2016,', 'it is given as the edition\'s year');
+assertIncludes(
+  factsDescription({ title: 'X', first_publish_year: 1956 }, {}, 'A'),
+  'X by A, first published in 1956.',
+  'with no edition year to compare against, the work\'s year still stands',
+);
+assert(factsDesc.length <= 155, 'the facts sentence stays within the budget');
+assertExcludes(factsDesc, ' · ', 'no "·" list left in it');
+
+assertIncludes(
+  factsDescription({ title: 'X', language: 'English', form: 'Novel' }, {}, 'A'),
+  'an English novel',
+  '"an" before a vowel — English, Odia, Urdu, Assamese',
+);
+assertIncludes(
+  factsDescription({ title: 'X', language: 'Malayalam', form: 'Poetry' }, {}, 'A'),
+  'a Malayalam poetry collection',
+  'a shelf label becomes a noun — never "a Malayalam poetry"',
+);
+assertIncludes(
+  factsDescription({ title: 'X', language: 'Malayalam', form: 'Short stories' }, {}, 'A'),
+  'a Malayalam short story collection',
+  'and never "a Malayalam short stories"',
+);
+assertIncludes(
+  factsDescription({ title: 'X', language: 'Malayalam', form: 'തിരക്കഥാസമാഹാരം' }, {}, 'A'),
+  'a Malayalam book',
+  'a form outside the suggested list (the vocabulary is open) is just "a book"',
+);
+assert(
+  factsDescription({ title: 'Stub' }, {}, '') === 'Stub on Kitabi.',
+  'a book with nothing known about it still gets a description',
+);
+assertExcludes(
+  factsDescription({ title: 'X', language: 'Hindi', form: 'Novel' }, { page_count: 200 }, 'A'),
+  'ISBN',
+  'no ISBN on the edition means none in the description',
+);
+
+var alsoDesc = factsDescription(
+  {
+    title: 'X', language: 'Malayalam',
+    original: { language: 'Malayalam' },
+    translations: [{ language: 'English' }, { language: 'Hindi' }, { language: 'English' },
+                   { language: 'Tamil' }, { language: 'Kannada' }],
+  },
+  {},
+  'A',
+);
+assertIncludes(alsoDesc, 'Also in English, Hindi, Tamil and more.',
+  'other languages are listed once each, never the book\'s own, and capped at three');
+
+// The budget gives way from the least useful end, and the ISBN never goes.
+var longDesc = factsDescription(
+  { title: 'Cards on the Table; Five Little Pigs; Hercule Poirot’s Christmas',
+    language: 'English', form: 'Novel', first_publish_year: 1991,
+    translations: [{ language: 'Hindi' }] },
+  { isbn: '9780583313483', page_count: 640, publisher: { name: 'Diamond Books' } },
+  'Agatha Christie',
+);
+assert(longDesc.length <= 155, 'a long title still fits the budget — got ' + longDesc.length);
+assertIncludes(longDesc, 'ISBN 9780583313483.', 'the ISBN survives the cut');
+assertIncludes(longDesc, 'by Agatha Christie', 'so does the author');
+assertExcludes(longDesc, 'Also in', 'other languages are the first thing dropped');
+
+var hugeDesc = factsDescription(
+  { title: 'A '.repeat(120) + 'Title', language: 'English', form: 'Novel' },
+  { isbn: '9780583313483' },
+  'Somebody',
+);
+assert(hugeDesc.length <= 155, 'even a title longer than the budget fits — got ' + hugeDesc.length);
+assertIncludes(hugeDesc, 'ISBN 9780583313483.', 'the lead is cut, never the ISBN');
+
+// The calls to action are kept out of search snippets, and nothing else is.
+// Google quoted them as the text under our results; a reader still sees them.
+assertIncludes(bookDoc, '<div class="act" data-nosnippet>', '"Track this in Kitabi" is not a snippet');
+assertIncludes(bookDoc, '<div class="rail dark" data-nosnippet>', '"On your shelf?" is not a snippet');
+var buyRail = /<div class="rail" data-nosnippet>\s*<h2 class="rh">Get this book<\/h2>[\s\S]*?<h2 class="rh">This edition/.exec(bookDoc);
+assert(buyRail, 'the bookseller rail is not a snippet');
+assertIncludes(buyRail && buyRail[0], 'As an Amazon Associate',
+  'the disclosure is inside it — still on the page, no longer the result\'s text');
+assert(
+  (bookDoc.match(/data-nosnippet/g) || []).length === 4,
+  'exactly four blocks are hidden from snippets — the act row, two rails, the app band — never the book itself',
+);
+assert(!/<p\b[^>]*data-nosnippet/.test(bookDoc),
+  'data-nosnippet is never on a <p> — Google ignores it there');
+
 // A thin book: same renderer, different robots tag, and no invented rating.
 var thinDoc = String(
   renderBook({ id: 'u', slug: 'stub', title: 'Stub', authors: [], genres: [], editions: [],
@@ -1358,6 +1469,9 @@ assert(
 // --------------------------------------------------------------------------
 
 var band = String(appBand());
+
+assertIncludes(band, '<section class="sec" data-nosnippet>',
+  'the band is kept out of search snippets — it was the text under the home page\'s result');
 
 assertIncludes(band, PLAY_STORE_URL, 'the app band carries the real Play Store URL');
 assertIncludes(

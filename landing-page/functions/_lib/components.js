@@ -244,9 +244,17 @@ function storeButton(name, kicker, icon, url) {
 }
 
 /** The one honest call to action. A door into the app, never a wall — the
- *  public web is strictly read-only, so every write lives on the other side. */
+ *  public web is strictly read-only, so every write lives on the other side.
+ *
+ *  `data-nosnippet` because Google kept choosing this paragraph as the text
+ *  under our results — the home page, /languages and /genres all appeared in
+ *  search as "Kitabi is a personal library app — track what you own…" rather
+ *  than as what the page is (site: search, 7 Oct 2026). It is the same words
+ *  on every page, so it says nothing about any one of them. The attribute
+ *  only keeps it out of snippets; the band is still crawled and still shown.
+ *  Google honours it on <section>, <div> and <span> only — not on <p>. */
 export function appBand() {
-  return html`<section class="sec">
+  return html`<section class="sec" data-nosnippet>
     <div class="appband">
       <div>
         <h2>Keep the shelf in your pocket</h2>

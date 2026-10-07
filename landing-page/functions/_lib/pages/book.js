@@ -293,6 +293,115 @@ function coverBlock(work, edition) {
   </div>`;
 }
 
+// What each suggested form is called in a sentence. The vocabulary
+// (WORK_FORMS, api/app/schemas/catalog.py) is written as shelf labels —
+// "Poetry", "Short stories" — and "a Malayalam poetry" is not English.
+// The vocabulary is open, so a form not listed here is just "a book".
+const FORM_NOUN = {
+  novel: 'novel',
+  'short stories': 'short story collection',
+  poetry: 'poetry collection',
+  memoir: 'memoir',
+  biography: 'biography',
+  essays: 'essay collection',
+  play: 'play',
+  screenplay: 'screenplay',
+  travelogue: 'travelogue',
+  "children's": "children's book",
+  'graphic novel': 'graphic novel',
+};
+
+const DESCRIPTION_MAX = 155;
+
+/**
+ * The meta description for a book with no blurb — a sentence, not a list.
+ *
+ * It was "by എം മുകുന്ദൻ · Malayalam · Novel · 2008 · ISBN …", and Google
+ * declined it: for book after book the result's text was taken from the page
+ * instead, and the first prose it found was the affiliate disclosure — "Kitabi
+ * may earn a commission from bookseller links. This edition. Publisher…"
+ * under Harry Potter, The Hitchhiker's Guide and a dozen more (site: search,
+ * 7 Oct 2026). Google rewrites a description that reads like a keyword list;
+ * one that says what the book is has a chance of being shown.
+ *
+ * "First published" is said only when the year is older than the edition on
+ * the page. Most of the catalogue holds one edition, and its first-published
+ * year is then that edition's year — Randamoozham (1984) would have read
+ * "first published in 2016" — so a year that only matches the edition is
+ * given as the edition's year, which is true, and not the book's, which
+ * nobody here knows.
+ *
+ * The ISBN is never the part that gives way to the budget (see the note in
+ * renderBook). The rest is dropped least-useful first — other languages,
+ * then pages, the edition's year, publisher, first-published year, kind —
+ * and only then is the lead cut short.
+ */
+export function factsDescription(data, edition, authorNames) {
+  const title = String(data.title || '').trim();
+  const lead = authorNames ? `${title} by ${authorNames}` : title;
+
+  const form = String(data.form || '').trim();
+  const noun = form ? FORM_NOUN[form.toLowerCase()] || 'book' : data.language ? 'book' : null;
+  const phrase = noun ? [data.language, noun].filter(Boolean).join(' ') : null;
+  const kind = phrase ? `${/^[aeiou]/i.test(phrase) ? 'an' : 'a'} ${phrase}` : null;
+
+  const firstYear =
+    data.first_publish_year && !(edition.year && edition.year <= data.first_publish_year)
+      ? data.first_publish_year
+      : null;
+  const editionYear = edition.year || (firstYear ? null : data.first_publish_year) || null;
+
+  const also = [
+    ...new Set(
+      [data.original?.language, ...(data.translations || []).map((t) => t.language)].filter(
+        (l) => l && l !== data.language,
+      ),
+    ),
+  ];
+  const alsoLine =
+    also.length > 3
+      ? `Also in ${also.slice(0, 3).join(', ')} and more.`
+      : also.length
+        ? `Also in ${also.length > 1 ? `${also.slice(0, -1).join(', ')} and ${also[also.length - 1]}` : also[0]}.`
+        : null;
+
+  const publisher = edition.publisher?.name;
+  const isbnLine = edition.isbn ? `ISBN ${edition.isbn}` : null;
+
+  const build = (keep, leadText = lead) => {
+    const k = keep.has('kind') ? kind : null;
+    const y = keep.has('year') && firstYear ? `first published in ${firstYear}` : null;
+    const first =
+      !authorNames && !k && !y
+        ? `${leadText} on Kitabi.`
+        : `${leadText}${k ? ` — ${k}${y ? ` ${y}` : ''}` : y ? `, ${y}` : ''}.`;
+    const pub = keep.has('publisher') && publisher ? publisher : null;
+    const ey = keep.has('edyear') && editionYear ? editionYear : null;
+    const ed = [
+      pub || ey ? `${pub ? `${pub} edition` : `${ey} edition`}${pub && ey ? `, ${ey}` : ''}` : null,
+      keep.has('pages') && edition.page_count ? plural(edition.page_count, 'page') : null,
+      isbnLine,
+    ].filter(Boolean);
+    return [first, ed.length ? `${ed.join(', ')}.` : null, keep.has('also') ? alsoLine : null]
+      .filter(Boolean)
+      .join(' ');
+  };
+
+  const order = ['also', 'pages', 'edyear', 'publisher', 'year', 'kind'];
+  const keep = new Set(order);
+  let text = build(keep);
+  for (const part of order) {
+    if (text.length <= DESCRIPTION_MAX) return text;
+    keep.delete(part);
+    text = build(keep);
+  }
+  if (text.length <= DESCRIPTION_MAX) return text;
+  // Only the lead and the ISBN are left, and they still don't fit: a very long
+  // title or author list. Cut the lead; the ISBN keeps its place.
+  const tail = text.length - lead.length;
+  return build(keep, clamp(lead, Math.max(DESCRIPTION_MAX - tail, 20)));
+}
+
 export function renderBook(data) {
   const primaryEdition = (data.editions || []).find((e) => e.cover_url) || data.editions?.[0] || {};
   const heroWork = {
@@ -315,19 +424,20 @@ export function renderBook(data) {
   // page's body text, where it carries almost no weight. `<title>` is the
   // stronger signal still, but it belongs to the title and author: a number
   // there would cost every reader-facing query to win one machine-facing one.
-  // The description is the slot where both fit.
+  // The description is the slot where both fit. A book with no blurb gets a
+  // sentence built from its facts instead, ISBN included (factsDescription).
   const isbnSuffix = primaryEdition.isbn ? ` · ISBN ${primaryEdition.isbn}` : '';
-  const blurbBudget = 155 - isbnSuffix.length;
-  const description =
-    (clamp(data.description, blurbBudget) ||
-      joinDot([
-        authorNames ? `by ${authorNames}` : null,
-        data.language,
-        data.form,
-        data.first_publish_year,
-      ]) ||
-      `${data.title} on Kitabi.`) + isbnSuffix;
+  const blurb = clamp(data.description, DESCRIPTION_MAX - isbnSuffix.length);
+  const description = blurb
+    ? blurb + isbnSuffix
+    : factsDescription(data, primaryEdition, authorNames);
 
+  // The calls to action — "Track this in Kitabi", the bookseller rail and its
+  // disclosure, "On your shelf?" — are `data-nosnippet`: Google was quoting
+  // them as the text under the result (see factsDescription). A reader still
+  // sees every word, the disclosure included; only the search snippet skips
+  // them. Google honours the attribute on <div>, <section> and <span>, which
+  // is why the act row is a <div>.
   const body = html`
     <div class="wrap">
       ${breadcrumb(crumbs)}
@@ -363,12 +473,12 @@ export function renderBook(data) {
               </p>`
             : ''}
           ${data.description ? html`<p class="blurb">${data.description}</p>` : ''}
-          <p class="act"><a class="prim" href="/app">Track this in Kitabi</a></p>
+          <div class="act" data-nosnippet><a class="prim" href="/app">Track this in Kitabi</a></div>
         </div>
 
         <div>
           ${primaryEdition.buy_links?.length
-            ? html`<div class="rail">
+            ? html`<div class="rail" data-nosnippet>
                 <h2 class="rh">Get this book</h2>
                 <div class="rb" style="padding:12px 15px 6px">
                   ${primaryEdition.buy_links.map(
@@ -410,7 +520,7 @@ export function renderBook(data) {
                 </div>
               </div>`
             : ''}
-          <div class="rail dark">
+          <div class="rail dark" data-nosnippet>
             <h2 class="rh">On your shelf?</h2>
             <div class="rb">
               Track it, log your reading, and lend it to a friend — without losing it.
