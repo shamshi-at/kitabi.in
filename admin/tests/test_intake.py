@@ -316,6 +316,69 @@ def client(monkeypatch):
     return c
 
 
+def test_kerala_book_store_has_a_column_and_its_count(client):
+    """Owner, 7 Oct 2026: *"add keralabookstore in admin panel — currently I can't
+    see the count from them."* It had published 16 books the night before and the
+    screen had no column for it."""
+    client.state["days"] = intake.fold_days(
+        [
+            (NIGHT, "mathrubhumi", 33),
+            (NIGHT, "keralabookstore", 16),
+            (NIGHT, "speakingtiger", 29),
+        ],
+        [(NIGHT, 750)],
+    )
+    html = client.get("/intake").text
+    assert "Kerala Book Store" in html
+    assert ">16<" in html, "its count is on the night's row"
+    assert "keralabookstore" not in html.replace(
+        'href="/intake/', ""
+    ), "under its name, not its key"
+
+
+def test_a_source_the_table_has_not_heard_of_still_gets_a_column(client):
+    """An adapter added without touching this file published books that no column
+    counted. It now shows under its own name."""
+    client.state["days"] = intake.fold_days(
+        [(NIGHT, "mathrubhumi", 30), (NIGHT, "someshop", 12)], [(NIGHT, 100)]
+    )
+    html = client.get("/intake").text
+    assert "someshop" in html and ">12<" in html
+
+
+def test_the_columns_come_in_a_stable_order_known_shops_first():
+    days = intake.fold_days(
+        [
+            (NIGHT, "zzz_new", 1),
+            (NIGHT, "keralabookstore", 2),
+            (NIGHT, "aaa_new", 3),
+            (NIGHT, "mathrubhumi", 4),
+        ],
+        [(NIGHT, 10)],
+    )
+    assert intake.source_columns(days) == ["mathrubhumi", "keralabookstore", "aaa_new", "zzz_new"]
+    assert intake.source_columns([]) == []
+
+
+def test_every_source_the_job_can_run_has_a_name_here():
+    """The job's adapters live in the API; this table names them. A new adapter
+    fails here until someone adds its label — the column would appear anyway, but
+    under its key."""
+    from app.services import intake_keralabookstore, intake_openlibrary, intake_storefront
+
+    running = {
+        intake_openlibrary.SOURCE,
+        intake_keralabookstore.SOURCE,
+        *(store.source for store in intake_storefront.STORES),
+    }
+    assert running <= set(intake.SOURCES), sorted(running - set(intake.SOURCES))
+
+
+def test_the_days_source_filter_offers_kerala_book_store(client):
+    html = client.get(f"/intake/{NIGHT.isoformat()}").text
+    assert "Kerala Book Store" in html
+
+
 def test_the_nights_page_shows_each_nights_count_and_links_to_its_books(client):
     page = client.get("/intake")
     assert page.status_code == 200

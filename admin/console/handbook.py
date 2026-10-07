@@ -333,7 +333,8 @@ TOPICS: tuple[Topic, ...] = (
                 "What this is",
                 (
                     "Every night at 02:30 in India (IST) Kitabi reads the newest books "
-                    "on publishers' own websites — and older ones from OpenLibrary — and adds "
+                    "on publishers' own websites and from a Malayalam bookshop (Kerala Book "
+                    "Store) — and older ones from OpenLibrary — and adds "
                     "up to 150 of them to the catalogue by itself. Nobody presses a button, and "
                     "the books are on the public website as soon as the job finishes.",
                     "This screen is where you see what it did. Look at it in the morning the way "

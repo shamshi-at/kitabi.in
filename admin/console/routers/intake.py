@@ -47,6 +47,11 @@ SOURCES = {
     "harpercollins_in": "HarperCollins India",
     "mathrubhumi": "Mathrubhumi",
     "speakingtiger": "Speaking Tiger",
+    # A multi-publisher Malayalam bookshop, read a page at a time
+    # (`api/app/services/intake_keralabookstore.py`) — on since 6 Oct 2026. It was
+    # missing from this table for its first night, and the screen only has a column
+    # for a source it knows, so its books were published and not counted anywhere.
+    "keralabookstore": "Kerala Book Store",
     "openlibrary_en": "OpenLibrary",
 }
 
@@ -70,6 +75,19 @@ DAYS_SHOWN = 60
 
 def source_label(source: str) -> str:
     return SOURCES.get(source, source)
+
+
+def source_columns(days: list[dict]) -> list[str]:
+    """The sources that published on any listed night: the ones named above, in
+    that order, then any this table has not heard of, by name.
+
+    The second half is the point. The table used to be filtered *through* `SOURCES`,
+    so an adapter nobody had added to it published books that no column counted —
+    while the comment on `SOURCES` promised that an unlisted one "shows under its own
+    name rather than disappearing". It now does.
+    """
+    present = {source for day in days for source in day["by_source"]}
+    return [s for s in SOURCES if s in present] + sorted(present - set(SOURCES))
 
 
 def waiting_label(reason: str) -> str:
@@ -339,7 +357,7 @@ async def index(request: Request, admin: RequireEditor, db: DbSession) -> HTMLRe
             "active": "intake",
             "badges": await queries.nav_badges(db),
             "days": days,
-            "sources": [s for s in SOURCES if any(s in d["by_source"] for d in days)],
+            "sources": source_columns(days),
             "source_label": source_label,
             "queue": queue,
             "short": short_night(days, queue["ready"], daily_limit(), datetime.now(UTC)),
