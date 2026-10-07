@@ -48,7 +48,7 @@ log with your name, and hides the row from the default view.</div>
         <a href="{{ r.href }}">{{ r.name }}</a>
         {% if r.reviewed %}<span class="pill ok">reviewed</span>{% endif %}</td>
       <td class="m">{% if r.adder_id %}<a href="/readers/{{ r.adder_id }}">{{ r.adder_label }}</a>{% else %}{{ r.adder_label }}{% endif %}</td>
-      <td class="m">{{ r.created_at.strftime('%-d %b %Y, %H:%M') }}</td>
+      <td class="m">{{ r.created_at|ist('%-d %b %Y, %H:%M') }}</td>
       <td style="text-align:right;white-space:nowrap">
         <a class="btn s" href="{{ r.href }}">Open</a>
         {% if not r.reviewed %}

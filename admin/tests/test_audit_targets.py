@@ -360,3 +360,22 @@ def test_a_failed_sign_ins_email_and_a_line_with_no_target_are_untouched(page):
     html = page.get("/audit").text
     assert "email · someone@example.com" in html, "the whole attempted address, not a stub"
     assert 'href="/readers/' not in html
+
+
+def test_the_audit_log_reads_in_indian_time_with_the_utc_one_hover_away(page):
+    """Owner, 7 Oct 2026, *"still audit log is displayed in UTC"*: the column was
+    headed "When (UTC)" and drew the stored instant as it came. 11:45:26 UTC is
+    17:15:26 in India."""
+    page.state["rows"] = [row("edition", EDITION)]
+    html = page.get("/audit").text
+    assert "<th" in html and "When (IST)" in html and "When (UTC)" not in html
+    assert ">06 Oct 17:15:26<" in html, "the time, on the clock the operators live by"
+    assert 'title="06 Oct 2026 11:45:26 UTC"' in html, "what was stored, for the curious"
+    assert ">06 Oct 11:45:26<" not in html
+
+
+def test_a_line_near_midnight_lands_on_the_right_indian_date(page):
+    r = row("edition", EDITION)
+    r.created_at = datetime(2026, 10, 6, 20, 0, 0, tzinfo=UTC)  # 01:30 on the 7th in India
+    page.state["rows"] = [r]
+    assert ">07 Oct 01:30:00<" in page.get("/audit").text

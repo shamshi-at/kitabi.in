@@ -34,6 +34,7 @@ from .models_ref import (
     SyncOp,
     Work,
 )
+from .templating import to_ist
 
 
 class Range(NamedTuple):
@@ -130,8 +131,12 @@ def bucket_start(bucket: date | datetime) -> datetime:
 
 
 def bucket_label(bucket: date | datetime) -> str:
+    """A chart column's label. An hour is labelled on the clock the operators live
+    by — its start in IST, so the 11:00 UTC hour reads "6 Oct, 16:30" — which is
+    also what the list a click on that column opens calls it ("16:30–17:30 IST").
+    A day is a UTC day and keeps its plain date: it is a window, not an instant."""
     if isinstance(bucket, datetime):
-        return bucket.strftime("%-d %b, %H:00")
+        return to_ist(bucket_start(bucket)).strftime("%-d %b, %H:%M")
     return bucket.strftime("%-d %b")
 
 

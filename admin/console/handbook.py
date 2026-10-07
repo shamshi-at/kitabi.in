@@ -900,7 +900,8 @@ TOPICS: tuple[Topic, ...] = (
                     "with who, what, when and from which address. It can never be edited or "
                     "deleted — not by you, not by a super admin.",
                     "Filter by person, by period, or type a word to find an action, a target or a "
-                    "detail. Times are UTC, which is 5 hours 30 minutes behind Indian time.",
+                    "detail. Times are Indian time (IST); hover one to see the UTC it was "
+                    "stored as.",
                     "The **Target** column says what the line was about, by name — a book's "
                     "title and ISBN, an author, a reader, a campaign — and opens it. An edition "
                     "or an edit opens the book it belongs to; a review opens the book or series "
@@ -1075,9 +1076,10 @@ TOPICS: tuple[Topic, ...] = (
                     "**Soft delete** — hidden everywhere, but kept in the database and "
                     "recoverable. Almost every “delete” here is one of these.",
                     "**Suspend** — lock a reader out, keep all their data.",
-                    "**UTC** — the clock most times here are shown in. Indian time (IST) is 5 "
-                    "hours 30 minutes ahead. The Activity lists are the exception: they show IST, "
-                    "and hovering a time shows the UTC it was stored as.",
+                    "**IST and UTC** — every time on every screen here is Indian time (IST). "
+                    "UTC, 5 hours 30 minutes behind, is what a time is stored as, and what the "
+                    "day-by-day counts use: a “day” on the dashboard or the buy-clicks table "
+                    "runs from 5:30 am to 5:30 am IST, and those headings say UTC.",
                     "**Sync** — a reader's phone sending its changes to Kitabi. The app works "
                     "offline and catches up later, so a change can be minutes old before it "
                     "reaches here.",

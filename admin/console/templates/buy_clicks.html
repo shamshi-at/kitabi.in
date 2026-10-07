@@ -77,7 +77,7 @@ reports them.</div>
       <td class="m" style="text-align:right">{{ b.app or '—' }}</td>
       <td class="m" style="text-align:right">{{ b.web or '—' }}</td>
       <td class="m" style="text-align:right" title="Signed-in readers; website visitors are not people this can count">{{ b.readers or '—' }}</td>
-      <td class="m">{{ b.last.strftime('%-d %b %Y, %H:%M') }}</td>
+      <td class="m">{{ b.last|ist('%-d %b %Y, %H:%M') }}</td>
     </tr>
     {% endfor %}
   </table>
@@ -85,10 +85,10 @@ reports them.</div>
 
 <div class="tbl" style="margin-top:14px">
   <table>
-    <tr><th>When (UTC)</th><th>Who</th><th>Book</th><th>Shop</th><th>From</th><th></th></tr>
+    <tr><th>When (IST)</th><th>Who</th><th>Book</th><th>Shop</th><th>From</th><th></th></tr>
     {% for c in recent %}
     <tr>
-      <td class="m" style="white-space:nowrap">{{ c.at.strftime('%-d %b %Y, %H:%M') }}</td>
+      <td class="m" style="white-space:nowrap">{{ c.at|ist('%-d %b %Y, %H:%M') }}</td>
       <td>{% if c.reader_id %}<a href="/readers/{{ c.reader_id }}">{{ c.reader }}</a>
         {% else %}<span class="m">A website visitor</span>{% endif %}</td>
       <td><a href="/catalog/works/{{ c.work_id }}">{{ c.title }}</a></td>

@@ -27,7 +27,7 @@
         </form>
       </td>
       <td>{% if a.totp_enrolled_at %}<span class="pill ok">Enrolled</span>{% else %}<span class="pill no">Not enrolled</span>{% endif %}</td>
-      <td class="m">{% if a.last_sign_in_at %}<a href="/audit?who={{ a.id }}&amp;period=all">{{ a.last_sign_in_at.strftime('%d %b, %H:%M') }}</a>{% else %}never{% endif %}</td>
+      <td class="m">{% if a.last_sign_in_at %}<a href="/audit?who={{ a.id }}&amp;period=all">{{ a.last_sign_in_at|ist('%d %b, %H:%M') }}</a>{% else %}never{% endif %}</td>
       <td>{% if a.is_active %}<span class="pill ok">Active</span>{% else %}<span class="pill mute">Revoked</span>{% endif %}</td>
       <td style="text-align:right">
         {% if a.id == admin.id %}<span class="m">you</span>

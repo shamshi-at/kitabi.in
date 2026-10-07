@@ -163,3 +163,13 @@ def test_each_chart_column_opens_the_series_that_moved_most_in_it():
     assert [c["kind"] for c in cols] == ["readers", "shelved", "works"]
     assert cols[2]["from"] == "2026-10-04T08:00Z"
     assert cols[2]["to"] == "2026-10-04T09:00Z"
+
+
+def test_an_hourly_column_is_labelled_on_the_indian_clock_and_a_daily_one_by_its_date():
+    """The 11:00 UTC hour starts at 16:30 in India — the same time the list a click
+    on that column opens gives it. A day is a UTC window and keeps its plain date."""
+    from datetime import date, datetime
+
+    assert insights.bucket_label(datetime(2026, 10, 6, 11, 0)) == "6 Oct, 16:30"
+    assert insights.bucket_label(datetime(2026, 10, 6, 20, 0)) == "7 Oct, 01:30"
+    assert insights.bucket_label(date(2026, 10, 6)) == "6 Oct"

@@ -152,7 +152,7 @@
       {% for p in signups %}
       <tr><td><a href="/readers/{{ p.id }}">{{ p.full_name or 'Unnamed reader' }}</a>
           <div class="m">{{ p.email }}</div></td>
-        <td style="text-align:right" class="m">{{ p.created_at.strftime('%-d %b, %H:%M') }}</td></tr>
+        <td style="text-align:right" class="m">{{ p.created_at|ist('%-d %b, %H:%M') }}</td></tr>
       {% endfor %}
       {% if not signups %}<tr><td class="m" style="padding:14px 0">No readers yet.</td></tr>{% endif %}
     </table>
@@ -165,7 +165,7 @@
       <tr><td><span class="pill mute">{{ r.label }}</span>
           {% if r.kind == 'work' %}{{ L.work(r.id, r.name) }}{% elif r.kind == 'author' %}{{ L.author(r.id, r.name) }}{% else %}{{ L.publisher(r.id, r.name) }}{% endif %}
           <div class="m">added by {% if r.adder_id %}{{ L.reader(r.adder_id, none, r.adder_label) }}{% else %}{{ r.adder_label }}{% endif %}</div></td>
-        <td style="text-align:right" class="m">{{ r.created_at.strftime('%-d %b, %H:%M') }}</td></tr>
+        <td style="text-align:right" class="m">{{ r.created_at|ist('%-d %b, %H:%M') }}</td></tr>
       {% endfor %}
       {% if not additions %}<tr><td class="m" style="padding:14px 0">Nothing added yet.</td></tr>{% endif %}
     </table>

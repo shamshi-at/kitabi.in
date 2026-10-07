@@ -36,7 +36,7 @@ kept in the audit log, so a mistake can be undone.</div>
     <div class="imgmeta">
       <span class="pill mute">{{ r.label }}</span>
       <a href="{{ r.href }}" class="imgname">{{ r.name }}</a>
-      <div class="m">{{ r.updated_at.strftime('%-d %b, %H:%M') }}{% if r.adder_id %} ·
+      <div class="m">{{ r.updated_at|ist('%-d %b, %H:%M') }}{% if r.adder_id %} ·
         <a href="/readers/{{ r.adder_id }}">{{ r.adder_label }}</a>{% endif %}</div>
       <form method="post" action="/moderation/images/{{ r.source }}/{{ r.id }}/remove"
         onsubmit="return confirm('Remove this picture from “{{ r.name }}”? It can be put back from the audit log.')">

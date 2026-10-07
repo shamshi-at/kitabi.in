@@ -1445,6 +1445,18 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   believed. A screen that mutates production should not be cacheable, and a
   save from a list should say which state of the world it was written against.
 
+- **Converting one screen at a time is how "still UTC" gets reported.** The owner
+  asked for the Activity lists in IST (6 Oct 2026) and got exactly that; the next
+  morning the audit log, the dashboard lists, buy clicks and four other screens
+  were still drawing the stored UTC instant (7 Oct). Nothing was wrong with any
+  one fix — the *request* was about a convention ("times here are Indian time"),
+  and a convention is satisfied by a rule over every template, not by a diff on the
+  one that was named. `tests/test_times_are_ist.py` reads all of them and fails on
+  an hour printed without `|ist`; the only allowed UTC is a `title=` hover that
+  says so, and the day-bucketed tables, which count in UTC days and are headed so
+  because a day is a window, not an instant. When a report names one screen, ask
+  what rule it is an instance of and grep for the rest before closing it.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

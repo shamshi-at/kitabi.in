@@ -19,7 +19,7 @@ locked out of the app until reinstated.</div>
         {% if p.library_visible %}<span class="pill ok">Visible</span>{% else %}<span class="pill mute">Private</span>{% endif %}</td></tr>
       <tr><td>Joined</td><td style="text-align:right">{{ p.created_at.strftime('%d %b %Y') }}</td></tr>
       <tr><td>Last used the app</td><td style="text-align:right">
-        {% if last_seen %}<a href="/activity/log?reader={{ p.id }}" title="What they did, newest first">{{ last_seen.strftime('%d %b %Y, %H:%M') }} UTC</a>{% else %}<span class="m">no sync recorded</span>{% endif %}</td></tr>
+        {% if last_seen %}<a href="/activity/log?reader={{ p.id }}" title="What they did, newest first">{{ last_seen|ist('%d %b %Y, %H:%M') }} IST</a>{% else %}<span class="m">no sync recorded</span>{% endif %}</td></tr>
       <tr><td>Devices</td><td style="text-align:right">
         {% if platforms %}{% for name, n in platforms %}<span class="pill mute">{{ name }}{% if n > 1 %} ×{{ n }}{% endif %}</span> {% endfor %}
         {% else %}<span class="m">none registered</span>{% endif %}</td></tr>
