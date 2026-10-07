@@ -792,8 +792,7 @@ assertIncludes(logoDoc, 'src="/img/c?u=', '…and so is a publisher logo');
 // Home, search, browse, hubs
 // --------------------------------------------------------------------------
 
-var homeDoc = String(
-  renderHome({
+var HOME = {
     featured: { id: 'f', slug: 'chemmeen', title: 'Chemmeen', authors: [{ name: 'Thakazhi' }],
                 year: 1956, language: 'Malayalam', cover_url: 'https://x/c.jpg' },
     recent: [{ id: 'r', slug: 'kayar', title: 'Kayar', authors: [] }],
@@ -806,8 +805,8 @@ var homeDoc = String(
                           translation: { id: 'g', slug: 'goat-days', title: 'Goat Days',
                                          language: 'English', year: 2012, authors: [] } }],
     work_count: 1403, author_count: 1190, publisher_count: 1067,
-  }).text(),
-);
+};
+var homeDoc = String(renderHome(HOME).text());
 assertIncludes(homeDoc, 'action="/search"', 'home leads with a working search form');
 assertIncludes(homeDoc, 'href="/language/malayalam"', 'home links every language hub — the crawl root');
 assertIncludes(homeDoc, 'href="/genre/literary-fiction"', 'home links the genre hubs');
@@ -817,6 +816,35 @@ assertIncludes(homeDoc, 'Goat Days', 'the translation-pairs module renders');
 assertIncludes(homeDoc, '"@type":"WebSite"', 'home emits WebSite');
 assertIncludes(homeDoc, 'SearchAction', 'home declares a SearchAction for the sitelinks box');
 assertIncludes(homeDoc, 'content="index, follow"', 'home is indexable');
+
+// "Translations traced both ways" only once a pair is linked. It was in the
+// hero and the meta description with none (7 Oct 2026), so a search result
+// promised a page that /translations then could not show.
+assertIncludes(homeDoc, 'with the translations traced both ways.', 'with a pair linked, the hero makes the claim');
+assertIncludes(
+  /<meta name="description" content="([^"]*)"/.exec(homeDoc)[1],
+  'with translations traced in both directions',
+  '…and so does the description',
+);
+var homeNoPairs = String(renderHome(Object.assign({}, HOME, { translation_pairs: [] })).text());
+assertExcludes(homeNoPairs, 'traced', 'with no pair linked, neither the hero nor the description claims it');
+assertIncludes(homeNoPairs, 'in 2 languages.', 'the hero sentence still ends cleanly');
+assert(
+  /<meta name="description" content="([^"]*)"/.exec(homeNoPairs)[1] ===
+    '1,403 works and 1,190 authors across 2 Indian languages. Search a book, an author or a publisher.',
+  'and so does the description',
+);
+
+// The translation index asks to be indexed only once it holds something.
+var PAIR = HOME.translation_pairs[0];
+var emptyIndex = String(renderTranslationIndex([]).text());
+assertIncludes(emptyIndex, 'content="noindex, follow"',
+  'an empty translation index is noindex — it was in the sitemap reading "No linked translations yet"');
+assertIncludes(emptyIndex, 'No linked translations yet', 'and still says so to a reader');
+assertIncludes(String(renderTranslationIndex([PAIR, PAIR]).text()), 'content="noindex, follow"',
+  'two pairs is still below the floor');
+assertIncludes(String(renderTranslationIndex([PAIR, PAIR, PAIR]).text()), 'content="index, follow"',
+  'the third pair makes it indexable, with no deploy');
 
 var searchDoc = String(
   renderSearch({ q: 'chemmeen', works: [{ id: 'w', slug: 'chemmeen', title: 'ചെമ്മീൻ', authors: [] }],

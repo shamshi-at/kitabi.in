@@ -276,7 +276,43 @@ def main() -> int:
         )
         return 1
     print(f"{result['passes']} assertions passed")
-    return check_real_modules()
+    sitemap = check_sitemap()
+    return check_real_modules() or sitemap
+
+
+def check_sitemap() -> int:
+    """Every editorial list is in the static sitemap, and every list there exists.
+
+    The lists are the pages the SEO plan expects to rank first, and for two
+    months none was in any sitemap — linked from /lists, held by Google not at
+    all (7 Oct 2026). sitemap.xml is hand-maintained, so adding a list is now
+    two edits, and this is what makes forgetting the second one fail the
+    deploy. The other direction matters as much: a list deleted from lists.js
+    404s, and a sitemap that lists a 404 is reported in Search Console.
+
+    The list parser is check_lists.py's, so "what counts as a list" has one
+    definition across both scripts.
+    """
+    from check_lists import parse_lists
+
+    lists = {slug for slug, _ in parse_lists()}
+    locs = re.findall(r"<loc>https://kitabi\.in/list/([^<]+)</loc>", (ROOT / "sitemap.xml").read_text())
+    failures = []
+    if not lists:
+        failures.append("parsed no lists out of lists.js — this check would pass vacuously")
+    for slug in sorted(lists - set(locs)):
+        failures.append(f"/list/{slug} is in lists.js but not in sitemap.xml")
+    for slug in sorted(set(locs) - lists):
+        failures.append(f"sitemap.xml lists /list/{slug}, which lists.js does not have (a 404)")
+    if len(locs) != len(set(locs)):
+        failures.append("a list appears more than once in sitemap.xml")
+    for failure in failures:
+        print(f"  FAIL  {failure}")
+    if failures:
+        print(f"\n{len(failures)} sitemap check(s) failed")
+        return 1
+    print(f"all {len(lists)} editorial lists are in the static sitemap")
+    return 0
 
 
 def check_real_modules() -> int:

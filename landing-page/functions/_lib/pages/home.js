@@ -49,6 +49,11 @@ function translationPairs(pairs) {
 export function renderHome(data) {
   const featured = data.featured;
   const langNames = (data.languages || []).slice(0, 3).map((l) => l.name);
+  // "Translations traced both ways" is the site's pitch, and it was in the
+  // hero and the meta description while not one pair was linked (7 Oct 2026)
+  // — a claim a search result made on our behalf that the page then failed to
+  // keep. Said only once there is a pair to show.
+  const traced = Boolean(data.translation_pairs?.length);
 
   const body = html`
     <div class="hhero">
@@ -57,8 +62,9 @@ export function renderHome(data) {
           <h1>Every book you've read,<br />and <em>every language</em> it lives in.</h1>
           <p>
             A reference library for Indian literature — ${plural(data.work_count, 'work')},
-            ${plural(data.author_count, 'author')}, in ${data.languages?.length || 0} languages, with the
-            translations traced both ways.
+            ${plural(data.author_count, 'author')}, in ${data.languages?.length || 0} languages${traced
+              ? ', with the translations traced both ways'
+              : ''}.
           </p>
           <form class="bigsearch" action="/search" method="get" role="search">
             <label class="sr" for="hq">Search books, authors and publishers</label>
@@ -140,7 +146,9 @@ export function renderHome(data) {
     description: clamp(
       `${plural(data.work_count, 'work')} and ${plural(data.author_count, 'author')} across ${
         data.languages?.length || 0
-      } Indian languages, with translations traced in both directions. Search a book, an author or a publisher.`,
+      } Indian languages${
+        traced ? ', with translations traced in both directions' : ''
+      }. Search a book, an author or a publisher.`,
       160,
     ),
     canonical: '/',

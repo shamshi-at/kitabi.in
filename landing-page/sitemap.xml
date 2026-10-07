@@ -47,12 +47,11 @@
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
-    <loc>https://kitabi.in/translations</loc>
-    <lastmod>2026-08-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
+  <!-- /translations is deliberately NOT here. It renders `noindex, follow`
+       until it holds MIN_TRANSLATION_PAIRS (pages/more.js) — on 7 Oct 2026 it
+       held none and said "No linked translations yet", so listing it asked
+       Google to index an empty page (rule 2). When the index has pairs, put
+       it back. -->
   <url>
     <loc>https://kitabi.in/genres</loc>
     <lastmod>2026-08-09</lastmod>
@@ -71,6 +70,22 @@
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
+
+  <!-- The editorial lists (functions/_lib/lists.js) — hand-written, and the
+       pages the SEO plan expects to rank first. They were linked from /lists
+       but listed nowhere, and Google held none of them (7 Oct 2026).
+       tests/run.py fails if a list in lists.js is missing here, or if a list
+       here no longer exists. lastmod is the day the list was last edited. -->
+  <url><loc>https://kitabi.in/list/where-to-start-with-malayalam</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kitabi.in/list/the-world-in-indian-languages</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kitabi.in/list/books-that-crossed-languages</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kitabi.in/list/the-malayalam-canon</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kitabi.in/list/premchand-and-the-hindi-novel</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kitabi.in/list/shakespeare-in-hindi</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kitabi.in/list/detectives-in-translation</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kitabi.in/list/what-children-read</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kitabi.in/list/indian-english-read-back-home</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kitabi.in/list/the-european-novel-in-hindi</loc><lastmod>2026-08-04</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
 
   <!-- The fourteen language hubs. A fixed set that changes only when the
        catalogue gains a language, so hand-listing them is honest, not lazy. -->

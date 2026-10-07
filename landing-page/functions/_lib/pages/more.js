@@ -541,6 +541,15 @@ export function renderReader(data) {
 // /translations — the index
 // --------------------------------------------------------------------------
 
+// Below this the index is `noindex, follow` — the same floor of three that a
+// list (MIN_LIST_ENTRIES, handler.js) and a reviews page need before they ask
+// to be indexed. On 7 Oct 2026 it
+// held no pairs at all, read "No linked translations yet", and was in the
+// sitemap as an indexable page; an empty page is the one kind a young domain
+// cannot afford to have Google read as representative. It indexes itself the
+// day the third pair is linked. The static sitemap leaves it out until then.
+export const MIN_TRANSLATION_PAIRS = 3;
+
 export function renderTranslationIndex(pairs) {
   const body = html`
     <div class="wrap">
@@ -591,6 +600,7 @@ export function renderTranslationIndex(pairs) {
     canonical: '/translations',
     body,
     nav: 'books',
+    indexable: pairs.length >= MIN_TRANSLATION_PAIRS,
     jsonLd: [ld.collectionPage('Translations', null, '/translations')],
   });
 }

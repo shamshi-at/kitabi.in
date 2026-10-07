@@ -1292,7 +1292,15 @@ out of the sitemap until a work actually carries a genre.
 - [x] `sitemap_service.build_page` emits **only indexable rows**, at canonical slug URLs — it emits every
       non-deleted row today, which is exactly the signal we don't want to send
 - [ ] Extend sitemaps to series / genres / languages / lists / translation groups,
-      with `<image:image>` for covers
+      with `<image:image>` for covers — genres, languages and the ten editorial
+      lists are in the static `sitemap.xml` (lists 7 Oct 2026, kept in step with
+      `lists.js` by `tests/run.py`); series, translation groups and cover images
+      are still to do
+- [ ] **The translation index can never show more than four pairs.** `/translations`
+      renders the home payload's `translation_pairs`, which `public_service.
+      _translation_pairs` caps at `limit=4` for the home module. It needs its own
+      `/public/translations` before it is worth anything; until it holds three
+      pairs it renders `noindex` and stays out of the sitemap (7 Oct 2026)
 - [x] JSON-LD per page type; `AggregateRating` **only when a real rating exists** — never
       zeroed, never invented
 - [x] Pagination: unique title + self-canonical per page; never canonical page 2 → page 1
