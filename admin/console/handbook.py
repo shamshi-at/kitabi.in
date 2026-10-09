@@ -869,6 +869,10 @@ TOPICS: tuple[Topic, ...] = (
                     "authenticator app before they can reach anything.",
                     "Give a new person **moderator** first. Roles are easy to raise later and "
                     "awkward to explain after a mistake.",
+                    "Until they set their password the row says **Invite pending**. If the link "
+                    "expired (it lasts 48 hours) or never arrived, **Resend invite** sends a fresh "
+                    "one and the old link stops working. Once they've accepted, the button goes — "
+                    "a forgotten password is theirs to reset from the sign-in page.",
                 ),
             ),
             Section(

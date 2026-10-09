@@ -1,8 +1,9 @@
-"""Admin user management — super-admin only. Create an admin with an initial
-password (shared out of band; they enrol TOTP on first sign-in), change a role,
-or revoke access. Three self-protections make the last super admin impossible
-to lock out: no self-revoke, no self-demote, and the final super admin cannot
-be removed or downgraded by anyone.
+"""Admin user management — super-admin only. Invite an admin (they set their own
+password from an emailed link and enrol TOTP on first sign-in), resend an invite
+that hasn't been accepted, change a role, or revoke access. Three
+self-protections make the last super admin impossible to lock out: no
+self-revoke, no self-demote, and the final super admin cannot be removed or
+downgraded by anyone.
 """
 
 import uuid
@@ -15,7 +16,13 @@ from .. import emails, mail, queries, security
 from ..deps import DbSession, RequireSuperAdmin, client_ip
 from ..flash import pop_flash as _pop_flash
 from ..flash import set_flash as _flash
-from ..models_ref import ADMIN_ROLES, ROLE_SUPER_ADMIN, TOKEN_INVITE, AdminUser
+from ..models_ref import (
+    ADMIN_ROLES,
+    ROLE_SUPER_ADMIN,
+    TOKEN_INVITE,
+    AdminAuditLog,
+    AdminUser,
+)
 from ..templating import templates
 
 router = APIRouter(prefix="/admins")
@@ -30,6 +37,54 @@ async def _super_admin_count(db: DbSession) -> int:
         )
         or 0
     )
+
+
+async def _invite_pending(db: DbSession, rows) -> set:
+    """Ids of the admins still waiting on their invite: active, never signed in,
+    and no `admin.invite_accepted` in the trail. The trail is the one record of
+    acceptance — the token's `used_at` can't say, because minting a new invite
+    stamps the old one used too. The seeded founder has signed in, so never
+    counts."""
+    candidates = [a.id for a in rows if a.is_active and a.last_sign_in_at is None]
+    if not candidates:
+        return set()
+    accepted = set(
+        (
+            await db.execute(
+                select(AdminAuditLog.admin_id).where(
+                    AdminAuditLog.action == "admin.invite_accepted",
+                    AdminAuditLog.admin_id.in_(candidates),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return {i for i in candidates if i not in accepted}
+
+
+async def _send_invite(
+    request: Request, resp: RedirectResponse, db: DbSession, admin: AdminUser, target: AdminUser
+) -> None:
+    """Mint a fresh 48h setup link for `target` and email it. Minting voids any
+    earlier unused link, so only the newest one works. Without a mail transport
+    the link is surfaced once on the next page instead."""
+    token = security.new_url_token()
+    await security.create_auth_token(db, target.id, TOKEN_INVITE, token, ttl_minutes=48 * 60)
+    link = f"{mail.base_url()}/invite/{token}"
+    subject, text, html = emails.invite_email(link, target.role)
+    mail.send(target.email, subject, text, html=html)
+    if not mail.is_configured():
+        # No mail transport yet — surface the link so the super admin can share
+        # it out of band (and it's also in the server log).
+        resp.set_cookie(
+            "admin_invite",
+            f"{target.email}|{link}",
+            max_age=60,
+            httponly=True,
+            samesite="strict",
+            path="/",
+        )
 
 
 @router.get("")
@@ -49,6 +104,7 @@ async def list_admins(request: Request, admin: RequireSuperAdmin, db: DbSession)
             "badges": badges,
             "admins": rows,
             "roles": ADMIN_ROLES,
+            "pending": await _invite_pending(db, rows),
             "invited": invited,
             "flash": flash,
         },
@@ -102,11 +158,7 @@ async def create_admin(
     db.add(new)
     await db.commit()
 
-    token = security.new_url_token()
-    await security.create_auth_token(db, new.id, TOKEN_INVITE, token, ttl_minutes=48 * 60)
-    link = f"{mail.base_url()}/invite/{token}"
-    subject, text, html = emails.invite_email(link, role)
-    mail.send(email, subject, text, html=html)
+    await _send_invite(request, resp, db, admin, new)
     await security.audit(
         db,
         "admin.invite",
@@ -120,17 +172,44 @@ async def create_admin(
     if mail.is_configured():
         _flash(resp, "ok", f"Invitation emailed to {email}.")
     else:
-        # No mail transport yet — surface the link so the super admin can share
-        # it out of band (and it's also in the server log).
-        resp.set_cookie(
-            "admin_invite",
-            f"{email}|{link}",
-            max_age=60,
-            httponly=True,
-            samesite="strict",
-            path="/",
-        )
         _flash(resp, "ok", "Admin invited. Email isn't configured — copy the setup link below.")
+    return resp
+
+
+@router.post("/{admin_id}/resend-invite")
+async def resend_invite(
+    request: Request, admin: RequireSuperAdmin, db: DbSession, admin_id: uuid.UUID
+) -> RedirectResponse:
+    """Send a pending admin a fresh setup link — the first expired, went to spam,
+    or was lost. Refused once the invite has been accepted: a setup link sets
+    the password, so on an accepted account it would be a way for one admin to
+    take over another's."""
+    resp = RedirectResponse("/admins", status_code=303)
+    target = await db.get(AdminUser, admin_id)
+    if target is None:
+        _flash(resp, "err", "No such admin.")
+        return resp
+    if target.id not in await _invite_pending(db, [target]):
+        _flash(resp, "err", f"{target.email} has already accepted their invite.")
+        return resp
+    await _send_invite(request, resp, db, admin, target)
+    await security.audit(
+        db,
+        "admin.invite_resend",
+        admin_id=admin.id,
+        target_type="admin",
+        target_id=str(target.id),
+        summary=f"{target.email} as {target.role}",
+        ip=client_ip(request),
+    )
+    if mail.is_configured():
+        _flash(
+            resp,
+            "ok",
+            f"A new invitation was emailed to {target.email}. The old link no longer works.",
+        )
+    else:
+        _flash(resp, "ok", "New setup link made — the old one no longer works. Copy it below.")
     return resp
 
 
