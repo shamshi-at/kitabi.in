@@ -14,8 +14,9 @@ second device that finds out a few seconds late (it re-reads on foreground).
 """
 
 import uuid
+from datetime import datetime, timedelta
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -77,15 +78,60 @@ async def clear(db: AsyncSession, user_id: uuid.UUID) -> ActiveReadingSession | 
     return row
 
 
-async def stale_before(db: AsyncSession, cutoff) -> list[ActiveReadingSession]:
-    """Live sittings older than [cutoff] — the sweeper's input.
+#: How long after a sitting's last sign of life the server gives up on it.
+#: The app stops a sitting itself at check-in delay + grace after the start or
+#: the last "still reading" — at most 240 + 30 minutes. A row still here a day
+#: past that belongs to a device that will never send its DELETE (uninstalled,
+#: wiped, never opened again), so taking it down cannot cut a live sitting
+#: short. Generous on purpose: an app that predates the overdue-stop rule reads
+#: an empty server as "stopped elsewhere" and drops its sitting unlogged, so
+#: the sweep must only ever reach sittings that device has long since stopped.
+STALE_AFTER = timedelta(hours=24)
+
+
+def _last_alive():
+    """The later of `started_at` and `confirmed_at` — the same base the app's
+    `readingSessionDeadline` counts from (a "still reading" moves it)."""
+    return func.greatest(
+        ActiveReadingSession.started_at,
+        func.coalesce(ActiveReadingSession.confirmed_at, ActiveReadingSession.started_at),
+    )
+
+
+async def stale_before(db: AsyncSession, cutoff: datetime) -> list[ActiveReadingSession]:
+    """Live sittings whose last sign of life is older than [cutoff].
 
     A device that is uninstalled, wiped or simply never comes back would
     otherwise leave a timer running on the account forever, and every other
     device would keep showing it. The app's own safety net stops a sitting at
-    start + 90 minutes; this is the server-side mirror of that promise.
+    its deadline; this is the server-side mirror of that promise.
     """
-    result = await db.execute(
-        select(ActiveReadingSession).where(ActiveReadingSession.started_at < cutoff)
-    )
+    result = await db.execute(select(ActiveReadingSession).where(_last_alive() < cutoff))
     return list(result.scalars().all())
+
+
+async def sweep_stale(db: AsyncSession, now: datetime) -> list[ActiveReadingSession]:
+    """Take down every live sitting abandoned for longer than [STALE_AFTER],
+    returning what was removed so the caller can tell the reader's devices.
+
+    The delete re-checks the cutoff rather than deleting by user id alone: a
+    device that refreshes or restarts its sitting between the read and the
+    delete has just proven it is alive, and must keep it.
+    """
+    cutoff = now - STALE_AFTER
+    rows = await stale_before(db, cutoff)
+    if not rows:
+        return []
+    deleted = (
+        await db.execute(
+            delete(ActiveReadingSession)
+            .where(
+                ActiveReadingSession.user_id.in_([r.user_id for r in rows]),
+                _last_alive() < cutoff,
+            )
+            .returning(ActiveReadingSession.user_id)
+        )
+    ).scalars()
+    gone = set(deleted)
+    await db.commit()
+    return [r for r in rows if r.user_id in gone]

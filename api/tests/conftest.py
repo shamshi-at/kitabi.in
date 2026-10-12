@@ -36,6 +36,7 @@ TABLES: list[str] = [
     "profiles",
     "connections",
     "device_tokens",
+    "active_reading_sessions",
     "conflict_history",
     "sync_ops",
     "activity_log_entries",

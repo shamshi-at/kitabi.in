@@ -117,3 +117,111 @@ async def test_started_at_survives_the_round_trip(client):
 
     got = (await client.get("/reading/active")).json()
     assert abs((datetime.fromisoformat(got["started_at"]) - started).total_seconds()) < 1
+
+
+# --- The sweeper: a sitting whose device never comes back ------------------
+#
+# Owner report, 12 Oct 2026: two sittings had been "Reading now" in the console
+# for a month. Only a device's DELETE removes the row, and a phone that
+# auto-stopped in the background and was never opened again never sends it.
+
+
+async def _seed(db_sessionmaker, *, started_ago, confirmed_ago=None):
+    from app.schemas.reading import ActiveSessionIn
+    from app.services import active_session_service
+
+    now = datetime.now(UTC)
+    user_id = uuid.uuid4()
+    body = _payload(started_at=(now - started_ago).isoformat())
+    if confirmed_ago is not None:
+        body["confirmed_at"] = (now - confirmed_ago).isoformat()
+    async with db_sessionmaker() as db:
+        await active_session_service.start(db, user_id, ActiveSessionIn(**body))
+    return user_id
+
+
+async def _running(db_sessionmaker) -> set:
+    from sqlalchemy import select
+
+    from app.models.active_reading_session import ActiveReadingSession
+
+    async with db_sessionmaker() as db:
+        return set((await db.execute(select(ActiveReadingSession.user_id))).scalars())
+
+
+@pytest.mark.anyio
+async def test_the_sweep_takes_down_a_sitting_abandoned_for_a_day(db_sessionmaker):
+    from app.services import active_session_service
+
+    abandoned = await _seed(db_sessionmaker, started_ago=timedelta(days=30))
+    reading = await _seed(db_sessionmaker, started_ago=timedelta(minutes=20))
+
+    async with db_sessionmaker() as db:
+        swept = await active_session_service.sweep_stale(db, datetime.now(UTC))
+
+    assert [r.user_id for r in swept] == [abandoned]
+    assert await _running(db_sessionmaker) == {reading}
+
+
+@pytest.mark.anyio
+async def test_the_sweep_never_cuts_short_a_sitting_the_app_would_still_run(db_sessionmaker):
+    """The app's longest deadline is 240 + 30 minutes after the start. Nothing
+    a device could still be timing may be swept — the margin is the point."""
+    from app.services import active_session_service
+
+    longest = await _seed(db_sessionmaker, started_ago=timedelta(hours=5))
+    async with db_sessionmaker() as db:
+        assert await active_session_service.sweep_stale(db, datetime.now(UTC)) == []
+    assert await _running(db_sessionmaker) == {longest}
+
+
+@pytest.mark.anyio
+async def test_a_still_reading_answer_moves_the_sweep_too(db_sessionmaker):
+    """Same rule as the app's deadline (the 26 Jul lesson): a confirmation
+    counts as a sign of life for every mechanism, the server's included."""
+    from app.services import active_session_service
+
+    confirmed = await _seed(
+        db_sessionmaker, started_ago=timedelta(hours=30), confirmed_ago=timedelta(hours=2)
+    )
+    stale = await _seed(
+        db_sessionmaker, started_ago=timedelta(hours=60), confirmed_ago=timedelta(hours=30)
+    )
+    async with db_sessionmaker() as db:
+        swept = await active_session_service.sweep_stale(db, datetime.now(UTC))
+
+    assert [r.user_id for r in swept] == [stale]
+    assert await _running(db_sessionmaker) == {confirmed}
+
+
+@pytest.mark.anyio
+async def test_the_sweep_job_runs_against_the_database(db_sessionmaker, monkeypatch):
+    """Through the scheduled entry point, so the job and its lock are exercised
+    — a sweeper that exists but is never called is how this bug happened."""
+    from app.jobs import sweep_active_sessions as job
+
+    stopped = []
+
+    async def fake_stop(user_id, *, session_id, device_id):
+        stopped.append((user_id, device_id))
+
+    monkeypatch.setattr(job, "SessionLocal", db_sessionmaker)
+    monkeypatch.setattr(job.push_service, "notify_reading_stopped", fake_stop)
+
+    abandoned = await _seed(db_sessionmaker, started_ago=timedelta(days=2))
+    await job.sweep_active_sessions()
+
+    assert await _running(db_sessionmaker) == set()
+    # To every device on the account, the one that held the sitting included.
+    assert stopped == [(abandoned, None)]
+
+
+def test_the_sweep_is_scheduled(monkeypatch):
+    from app.jobs import scheduler
+
+    monkeypatch.setattr(scheduler.scheduler, "start", lambda: None)
+    scheduler.start()
+    try:
+        assert scheduler.scheduler.get_job("sweep_active_sessions") is not None
+    finally:
+        scheduler.scheduler.remove_all_jobs()

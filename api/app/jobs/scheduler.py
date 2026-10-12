@@ -23,6 +23,7 @@ LOCK_BACKFILL_COVERS = 1004
 LOCK_MERGE_EXACT = 1005
 LOCK_BACKFILL_SERIES = 1006
 LOCK_CATALOG_INTAKE = 1007
+LOCK_SWEEP_ACTIVE_SESSIONS = 1008
 
 
 @asynccontextmanager
@@ -50,6 +51,7 @@ def start() -> None:
     from app.jobs.catalog_intake import catalog_intake
     from app.jobs.keep_warm import keep_warm
     from app.jobs.merge_exact import merge_exact_duplicates
+    from app.jobs.sweep_active_sessions import sweep_active_sessions
 
     settings = get_settings()
 
@@ -107,6 +109,17 @@ def start() -> None:
         id="backfill_series_search",
         replace_existing=True,
         next_run_time=datetime.now(UTC) + timedelta(minutes=4),
+    )
+    # Hourly. A live sitting whose device never sends its stop (uninstalled,
+    # never reopened) would otherwise stay "running" on the account for good —
+    # see jobs/sweep_active_sessions.py. Usually matches nothing.
+    scheduler.add_job(
+        sweep_active_sessions,
+        "interval",
+        hours=1,
+        id="sweep_active_sessions",
+        replace_existing=True,
+        next_run_time=datetime.now(UTC) + timedelta(minutes=5),
     )
     # Daily catalogue intake (docs/catalog-intake-plan.md), 02:30 IST = 21:00
     # UTC (`catalog_intake_run_hour_utc` / `_minute_utc`; moved from 02:30 UTC
