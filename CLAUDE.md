@@ -424,8 +424,8 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   `updateProgress` sent `DateTime.now().toUtc().toIso8601String()` for
   `start_date`/`finish_date`, so every such op died as `invalid_payload` and reading
   dates never synced (16 Jul 2026). Anything mapped to a Postgres `Date` goes on the
-  wire as `YYYY-MM-DD` (`.toIso8601String().split('T').first`, like `lent_date`
-  always did).
+  wire as `YYYY-MM-DD` — through `wireDate` (`data/sync/wire_date.dart`), the
+  reader's *local* day; see 13 Oct 2026 below for why not `toUtc()` first.
 - **`ref.read(someStreamProvider).valueOrNull` is null until that stream has
   emitted — never depend on it for a write.** The reading timer looked the
   book's edition id up via `ref.read(libraryEntriesProvider).valueOrNull` to
@@ -1485,6 +1485,26 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   logged it", and after a sweep nobody has — so before a server starts deleting
   rows, ask what each client concludes from not finding one, and keep the
   server's margin wide enough for the clients already installed.
+
+- **A calendar date has no time zone — converting it to UTC before taking the
+  day moves it.** Every Postgres `Date` on `/sync/push` was serialised as
+  `d.toUtc().toIso8601String().split('T').first`. In IST that is the *previous*
+  day for anything between 00:00 and 05:30 local — a book lent at 01:22 on
+  13 Oct was stored as lent on 12 Oct for lender and borrower alike, and the
+  borrower's ledger said "since 12 Oct" (emulator, 13 Oct 2026). The window was
+  far wider than the report: `showDatePicker` returns local *midnight*, so every
+  **picked** date (every due date, every changed lent or start date) went a day
+  early at any hour, and the pull then wrote the early day over the device's own
+  correct copy. It hid because a UTC host can't see it and an IST evening can't
+  either. One helper now, `wireDate`, formats the local day; the pull's
+  `DateTime.parse('YYYY-MM-DD')` gives local midnight of the same day, so it
+  round-trips. Two corollaries: the dedupe test had pinned the bug in place by
+  writing its expectation with the same `toUtc()` expression as the code (a
+  fixture that agrees with the code, again); and a time-zone test has to pick a
+  time whose UTC day differs from its local day — 00:30 *and* 23:30 — since
+  Dart can't change zone in-process (`TZ=Asia/Kolkata flutter test` shows it).
+  Rows already stored a day early were not backfilled — nothing records which
+  ones were picked versus defaulted to now.
 
 ## Open decisions
 

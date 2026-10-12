@@ -222,7 +222,7 @@ void main() {
     final keeperPayload = jsonDecode(keeperOp.payload) as Map<String, dynamic>;
     expect(
       keeperPayload['start_date'],
-      DateTime(2026, 7, 10).toUtc().toIso8601String().split('T').first, // date-only on the wire
+      '2026-07-10', // the reader's local day, date-only on the wire
     );
     expect(keeperPayload['status'], 'reading');
   });

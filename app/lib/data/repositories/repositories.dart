@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../db/database.dart';
 import '../sync/note_session_links.dart';
+import '../sync/wire_date.dart';
 
 /// Shared UUID generator for client-side ids (rule 4: the client assigns ids
 /// for offline-created rows).
@@ -166,10 +167,10 @@ class LibraryRepository extends Repo {
     // Plain `date` columns on the server — a full timestamp is rejected as
     // invalid_payload (Pydantic only accepts zero-time datetimes for a date).
     if (startDate != null) {
-      changes['start_date'] = startDate.toUtc().toIso8601String().split('T').first;
+      changes['start_date'] = wireDate(startDate);
     }
     if (finishDate != null) {
-      changes['finish_date'] = finishDate.toUtc().toIso8601String().split('T').first;
+      changes['finish_date'] = wireDate(finishDate);
     }
     if (changes.isEmpty) return;
 
@@ -827,8 +828,8 @@ class LendingRepository extends Repo {
         // Set when the borrower is a Kitabi user (found by username); null for a
         // private contact typed by hand.
         'borrower_user_id': ?borrowerUserId,
-        'lent_date': lentDate.toUtc().toIso8601String().split('T').first,
-        if (dueDate != null) 'due_date': dueDate.toUtc().toIso8601String().split('T').first,
+        'lent_date': wireDate(lentDate),
+        if (dueDate != null) 'due_date': wireDate(dueDate),
         if (trimmedNote != null && trimmedNote.isNotEmpty) 'note': trimmedNote,
       },
     );
@@ -890,8 +891,8 @@ class LendingRepository extends Repo {
         'borrower_name': lenderName,
         // The Kitabi user I borrowed from, when matched by username.
         'borrower_user_id': ?borrowerUserId,
-        'lent_date': borrowedDate.toUtc().toIso8601String().split('T').first,
-        if (dueDate != null) 'due_date': dueDate.toUtc().toIso8601String().split('T').first,
+        'lent_date': wireDate(borrowedDate),
+        if (dueDate != null) 'due_date': wireDate(dueDate),
         if (trimmedNote != null && trimmedNote.isNotEmpty) 'note': trimmedNote,
       },
     );
@@ -911,7 +912,7 @@ class LendingRepository extends Repo {
       entity: 'lending_records',
       entityId: id,
       opType: 'update',
-      data: {'returned_date': returnedDate.toUtc().toIso8601String().split('T').first},
+      data: {'returned_date': wireDate(returnedDate)},
     );
   }
 
