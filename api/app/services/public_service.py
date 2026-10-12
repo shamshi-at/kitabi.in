@@ -1530,11 +1530,18 @@ async def indexable_ids(db: AsyncSession, kind: str, ids: list[uuid.UUID]) -> se
     if kind == "works":
         return await indexable_work_ids(db, ids)
 
+    # Count only live works, as the pages do (`author_works`/`publisher_works`
+    # filter `Work.deleted_at`). Counting the soft-deleted ones too — every book
+    # the intake's revert undoes is one — advertised pages that then rendered
+    # `noindex`, which Search Console reports against the sitemap (12 Oct 2026,
+    # /author/malayattoor-ramakrishnan: one live work, listed as if two).
     if kind == "authors":
+        live_work = (Work.id == work_authors.c.work_id) & Work.deleted_at.is_(None)
         rows = (
             await db.execute(
-                select(Author.id, Author.bio, func.count(work_authors.c.work_id))
+                select(Author.id, Author.bio, func.count(Work.id))
                 .outerjoin(work_authors, work_authors.c.author_id == Author.id)
+                .outerjoin(Work, live_work)
                 .where(Author.id.in_(ids))
                 .group_by(Author.id)
             )
@@ -1548,8 +1555,9 @@ async def indexable_ids(db: AsyncSession, kind: str, ids: list[uuid.UUID]) -> se
     if kind == "publishers":
         rows = (
             await db.execute(
-                select(Publisher.id, func.count(Edition.id))
+                select(Publisher.id, func.count(Work.id))
                 .outerjoin(Edition, Edition.publisher_id == Publisher.id)
+                .outerjoin(Work, (Work.id == Edition.work_id) & Work.deleted_at.is_(None))
                 .where(Publisher.id.in_(ids))
                 .group_by(Publisher.id)
             )

@@ -188,3 +188,39 @@ async def test_thin_authors_and_publishers_are_not_advertised_either(
     publishers = (await unauthenticated_client.get("/catalog/sitemap/publishers-1.xml")).text
     assert "big-pub" in publishers
     assert "small-pub" not in publishers
+
+
+async def test_the_floor_counts_only_live_works(unauthenticated_client, db_sessionmaker):
+    """The sitemap must agree with the page it advertises. The author and
+    publisher pages count live works only; the sitemap used to count the
+    soft-deleted ones too, so an author with one live book and one undone by the
+    intake's revert was listed — and then rendered `noindex` (Search Console,
+    12 Oct 2026). Each row here clears the floor only if a deleted work counts."""
+    gone = datetime.now(UTC)
+    async with db_sessionmaker() as db:
+        author = Author(name="One Live Book", slug="one-live-book")
+        publisher = Publisher(name="Two Live Editions", slug="two-live-editions")
+        db.add_all([author, publisher])
+        await db.flush()
+        live = Work(title="Live", authors=[author])
+        dead = Work(title="Undone", authors=[author], deleted_at=gone)
+        db.add_all([live, dead])
+        await db.flush()
+        db.add_all(
+            [
+                Edition(work_id=live.id, publisher_id=publisher.id),
+                Edition(work_id=live.id, publisher_id=publisher.id),
+                Edition(work_id=dead.id, publisher_id=publisher.id),
+            ]
+        )
+        await db.commit()
+
+    authors = (await unauthenticated_client.get("/catalog/sitemap/authors-1.xml")).text
+    assert "one-live-book" not in authors
+    page = (await unauthenticated_client.get("/public/author/one-live-book")).json()
+    assert page["indexable"] is False
+
+    publishers = (await unauthenticated_client.get("/catalog/sitemap/publishers-1.xml")).text
+    assert "two-live-editions" not in publishers
+    page = (await unauthenticated_client.get("/public/publisher/two-live-editions")).json()
+    assert page["indexable"] is False
