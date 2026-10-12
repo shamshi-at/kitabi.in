@@ -1471,6 +1471,21 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   hold); it only became a problem once it was the most visible line about the
   book.
 
+- **A cleanup function that nothing schedules is a comment, not a cleanup.**
+  The shared reading timer shipped (14 Aug 2026) with
+  `active_session_service.stale_before` — docstring and all, "the sweeper's
+  input", "the server-side mirror of that promise" — and no job ever called it,
+  so two abandoned sittings sat in the console's "Reading now" for a month (owner
+  question, 12 Oct 2026). Reading the function made the problem look solved;
+  only grepping for its *callers* showed it wasn't. A job is tested through its
+  scheduled entry point and its registration (`test_the_sweep_is_scheduled`),
+  not only as a service function. Second half, the part that would have lost
+  data: a server-side cleanup changes what an *absence* means to every client.
+  `pullAndApply` read "no row on the account" as "the other device stopped and
+  logged it", and after a sweep nobody has — so before a server starts deleting
+  rows, ask what each client concludes from not finding one, and keep the
+  server's margin wide enough for the clients already installed.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

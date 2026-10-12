@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/api/api_client.dart';
+import '../../../data/db/database.dart';
 import '../../../data/sync/sync_providers.dart';
 import 'reading_timer_providers.dart';
 
@@ -22,9 +23,25 @@ import 'reading_timer_providers.dart';
 /// another phone was unreachable would be a far worse bug than a second device
 /// that finds out a few seconds late — it re-reads on every foreground anyway.
 class ActiveSessionSync {
-  ActiveSessionSync(this._ref);
+  ActiveSessionSync(this._ref, {DateTime Function()? now}) : _now = now ?? DateTime.now;
 
   final Ref _ref;
+  final DateTime Function() _now;
+
+  /// Whether the local sitting is past the deadline every stop mechanism on
+  /// this device agrees on ([readingSessionOverdue]).
+  Future<bool> _overdue(AppDatabase db) async {
+    final startedRaw = await db.keyValuesDao.getValue(activeSessionStartedKey);
+    final startedAt = startedRaw == null ? null : DateTime.tryParse(startedRaw);
+    if (startedAt == null) return false;
+    final confirmedRaw = await db.keyValuesDao.getValue(activeSessionConfirmedKey);
+    return readingSessionOverdue(
+      startedAt: startedAt,
+      confirmedAt: confirmedRaw == null ? null : DateTime.tryParse(confirmedRaw),
+      now: _now(),
+      checkInDelay: await readingCheckInDelayOf(db),
+    );
+  }
 
   Future<String?> _deviceId() async {
     try {
@@ -153,6 +170,25 @@ class ActiveSessionSync {
       // *mirroring* — never one it started itself and hasn't published yet,
       // which would throw away the reader's own running timer.
       if (localId == null) return false;
+
+      // Ours, and already past the deadline this device stops a sitting at.
+      // Whatever the empty answer means — the server's sweep took the row
+      // down after a day with no stop from us (an auto-stop whose background
+      // task never ran, a phone left in a drawer), or we simply never
+      // published — this sitting is over, and the reader's time in it is
+      // real. Log it the way the safety net would have. The branch below
+      // reads "gone from the account" as "the other device logged it", and
+      // after a sweep nobody has: clearing here dropped the sitting unlogged
+      // (12 Oct 2026). Republishing it would be worse — a dead clock put back
+      // on every device. An *adopted* sitting is not ours to log: its own
+      // device writes that row, and a second write under the same id would
+      // overwrite the real one with a guessed end.
+      final adopted = await db.keyValuesDao.getValue(activeSessionAdoptedKey);
+      if (adopted != localId && await _overdue(db)) {
+        await _ref.read(activeSessionProvider.notifier).stop(autoStopped: true);
+        return true;
+      }
+
       final mine = await db.keyValuesDao.getValue(activeSessionMirroredKey);
       if (mine != localId) {
         // Ours, and the account has never heard of it — the publish at `start`
@@ -257,4 +293,4 @@ class ActiveSessionSync {
   }
 }
 
-final activeSessionSyncProvider = Provider<ActiveSessionSync>(ActiveSessionSync.new);
+final activeSessionSyncProvider = Provider<ActiveSessionSync>((ref) => ActiveSessionSync(ref));

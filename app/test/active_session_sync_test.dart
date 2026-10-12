@@ -50,8 +50,10 @@ void main() {
   late AppDatabase db;
   late _FakeApi api;
   late ProviderContainer container;
+  var now = DateTime.utc(2026, 8, 14, 10, 20);
 
   setUp(() {
+    now = DateTime.utc(2026, 8, 14, 10, 20);
     db = AppDatabase.forTesting(NativeDatabase.memory());
     api = _FakeApi();
     container = ProviderContainer(overrides: [
@@ -64,6 +66,13 @@ void main() {
         (ref) async => const SessionContext(userId: 'u1', deviceId: 'd1'),
       ),
       syncTriggerProvider.overrideWithValue(() {}),
+      // The fixtures start their sittings on 14 Aug 2026, so the wall clock
+      // would find every one of them long past its deadline — and an overdue
+      // sitting is logged on an empty answer, not cleared or published. Pin
+      // "now" twenty minutes in, where those rules are the ones under test.
+      activeSessionSyncProvider.overrideWith(
+        (ref) => ActiveSessionSync(ref, now: () => now),
+      ),
     ]);
   });
 
@@ -228,6 +237,9 @@ void main() {
     final offlineContainer = ProviderContainer(overrides: [
       appDatabaseProvider.overrideWithValue(db),
       apiClientProvider.overrideWithValue(_PutFailsApi()),
+      activeSessionSyncProvider.overrideWith(
+        (ref) => ActiveSessionSync(ref, now: () => now),
+      ),
     ]);
     addTearDown(offlineContainer.dispose);
 
@@ -239,6 +251,67 @@ void main() {
 
     expect(await db.keyValuesDao.getValue(activeSessionMirroredKey), isNull,
         reason: 'an unpublished sitting is the one a pull must never throw away');
+  });
+
+  /// Owner report, 12 Oct 2026: two sittings "Reading now" in the console for a
+  /// month. The server now sweeps a sitting a day past any device's deadline —
+  /// and an empty answer used to mean only "the other device logged it", so
+  /// the phone that held the sitting dropped it unlogged when it woke up.
+  group('a sitting past its deadline', () {
+    test('is logged when the account has let go of it', () async {
+      await writeLocal(id: 's-mine', mirroredId: 's-mine'); // published, then swept
+      now = DateTime.utc(2026, 9, 14);
+      api.active = null;
+
+      expect(await sync().pullAndApply(), isTrue);
+
+      final rows = await db.readingSessionsDao.allSince(DateTime.utc(2020));
+      expect(rows.map((r) => r.id), ['s-mine']);
+      expect(rows.single.autoStopped, isTrue);
+      expect(await db.keyValuesDao.getValue(activeSessionIdKey), isNull);
+      expect(container.read(activeSessionProvider), isNull);
+    });
+
+    test('is logged, not published, when it never reached the account', () async {
+      await writeLocal(id: 's-mine'); // no mirrored id — never published
+      now = DateTime.utc(2026, 9, 14);
+      api.active = null;
+
+      expect(await sync().pullAndApply(), isTrue);
+
+      expect(api.lastPut, isNull, reason: 'a dead clock must not go back on the account');
+      final rows = await db.readingSessionsDao.allSince(DateTime.utc(2020));
+      expect(rows.map((r) => r.id), ['s-mine']);
+    });
+
+    test('adopted from another device is cleared, not logged here', () async {
+      // Its own device writes that row; a second write under the same id would
+      // replace the real end with a guessed one.
+      await writeLocal(id: 's-theirs', mirroredId: 's-theirs');
+      await db.keyValuesDao.setValue(activeSessionAdoptedKey, 's-theirs');
+      now = DateTime.utc(2026, 9, 14);
+      api.active = null;
+
+      expect(await sync().pullAndApply(), isTrue);
+
+      expect(await db.keyValuesDao.getValue(activeSessionIdKey), isNull);
+      expect(await db.readingSessionsDao.allSince(DateTime.utc(2020)), isEmpty);
+    });
+
+    test('a "still reading" moves the deadline here too', () async {
+      await writeLocal(id: 's-mine');
+      now = DateTime.utc(2026, 8, 14, 14); // past start + 120 + 30 minutes…
+      await db.keyValuesDao.setValue(
+        activeSessionConfirmedKey,
+        DateTime.utc(2026, 8, 14, 13).toIso8601String(), // …but not past the answer
+      );
+      api.active = null;
+
+      expect(await sync().pullAndApply(), isFalse);
+
+      expect(await db.readingSessionsDao.allSince(DateTime.utc(2020)), isEmpty);
+      expect(api.lastPut?['session_id'], 's-mine', reason: 'still live, so published');
+    });
   });
 
   test('a sitting this device started is never cleared by an empty server',
@@ -260,6 +333,9 @@ void main() {
     final offlineContainer = ProviderContainer(overrides: [
       appDatabaseProvider.overrideWithValue(db),
       apiClientProvider.overrideWithValue(offline),
+      activeSessionSyncProvider.overrideWith(
+        (ref) => ActiveSessionSync(ref, now: () => now),
+      ),
     ]);
     addTearDown(offlineContainer.dispose);
 
@@ -329,6 +405,9 @@ void main() {
     final offlineContainer = ProviderContainer(overrides: [
       appDatabaseProvider.overrideWithValue(db),
       apiClientProvider.overrideWithValue(flaky),
+      activeSessionSyncProvider.overrideWith(
+        (ref) => ActiveSessionSync(ref, now: () => now),
+      ),
     ]);
     addTearDown(offlineContainer.dispose);
 
@@ -375,6 +454,9 @@ void main() {
     final offlineContainer = ProviderContainer(overrides: [
       appDatabaseProvider.overrideWithValue(db),
       apiClientProvider.overrideWithValue(offline),
+      activeSessionSyncProvider.overrideWith(
+        (ref) => ActiveSessionSync(ref, now: () => now),
+      ),
     ]);
     addTearDown(offlineContainer.dispose);
 
@@ -485,6 +567,9 @@ void main() {
           (ref) async => SessionContext(userId: 'u1', deviceId: deviceId),
         ),
         syncTriggerProvider.overrideWithValue(() {}),
+        activeSessionSyncProvider.overrideWith(
+          (ref) => ActiveSessionSync(ref, now: () => DateTime.utc(2026, 8, 15, 10, 40)),
+        ),
       ]);
       addTearDown(c.dispose);
       return c;
