@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitabi — Your circle is reading</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F0E3; --paper-deep:#EFE6D2; --card:#FFFCF4;
+  --ink:#2B2118; --ink-soft:#7A6A55; --line:#E2D6BD;
+  --oxblood:#7E2A33; --gold:#B8862B; --gold-soft:#F0E2C2;
+  --moss:#48663F; --slate:#43617E; --stamp-grey:#9A8F7C;
+  /* connection avatar tints — derived from the person, like generated covers */
+  --anu:#7E2A33; --rahul:#43617E; --meera:#48663F; --faisal:#8F681E; --lakshmi:#6B4E7A; --joseph:#5C3A24;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#EDE5D3;color:var(--ink);padding-bottom:90px}
+.hero{background:radial-gradient(900px 420px at 75% -10%,#4a3526 0%,#33241a 45%,#241811 100%);
+  color:#F6F0E3;padding:52px 32px 44px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero h1{font-family:'Fraunces',serif;font-size:38px;font-weight:400;margin:0 0 8px}
+.hero .tag{font-size:14.5px;color:#CBB897;max-width:860px;margin:0 auto;line-height:1.65}
+.hero .tag b{color:#F0E2C2;font-weight:600}
+.area{max-width:1520px;margin:52px auto 0;padding:0 36px}
+.ah{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.an{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:#7E2A33;background:#F3DFDA;padding:4px 11px;border-radius:999px}
+.an.gold{color:#7a5a16;background:#F3E7C8}
+.an.moss{color:var(--moss);background:#E3EAD9}
+.area h2{font-family:'Fraunces',serif;font-size:28px;font-weight:450}
+.area .desc{color:#6d5f4b;margin:8px 0 26px;max-width:980px;font-size:14.5px;line-height:1.65}
+.area .desc b{color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:34px}
+.shot{display:flex;flex-direction:column;gap:12px}
+.cap{width:272px;font-size:12.5px;color:#6d5f4b;line-height:1.55}
+.cap b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:3px;font-weight:600}
+.cap .pro{color:var(--moss);display:block;margin-top:6px}
+.cap .con{color:var(--oxblood);display:block;margin-top:3px}
+.phone{width:272px;height:588px;border-radius:34px;border:8px solid #241B12;background:var(--paper);
+  overflow:hidden;position:relative;box-shadow:0 24px 50px rgba(43,33,24,.30)}
+.scr{height:100%;display:flex;flex-direction:column;background:var(--paper);position:relative}
+.sbar{display:flex;justify-content:space-between;padding:9px 16px 5px;font-size:9.5px;font-weight:600}
+.body{flex:1;display:flex;flex-direction:column;padding:0 13px;overflow:hidden}
+.pgtitle{font-family:'Fraunces',serif;font-size:17px;font-weight:500}
+.sub{font-size:9px;color:var(--ink-soft)}
+.lbl{font-size:7px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft)}
+.ser{font-family:'Fraunces',serif}
+.cover{border-radius:3px;box-shadow:0 3px 8px rgba(43,33,24,.30);position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;text-align:center;flex-shrink:0}
+.cover:after{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:linear-gradient(90deg,rgba(0,0,0,.28),transparent)}
+.ct{font-family:'Fraunces',serif;font-size:6px;color:#F6EDD5;padding:0 3px;line-height:1.2}
+.c-rand{background:linear-gradient(150deg,#2F4A66,#1B2C40)}
+.c-naal{background:linear-gradient(150deg,#6B3A2A,#40221A)}
+.c-manju{background:linear-gradient(150deg,#7D8C93,#4D5A60)}
+.c-kaal{background:linear-gradient(150deg,#8F681E,#5A4012)}
+.c-khas{background:linear-gradient(150deg,#48663F,#2A3F25)}
+.c-aadu{background:linear-gradient(150deg,#5C3A24,#3A2114)}
+.c-path{background:linear-gradient(150deg,#B07A2A,#7A5216)}
+.pill{display:inline-block;font-size:7px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  padding:3px 7px;border-radius:99px}
+.p-read{color:var(--moss);background:#E3EAD9}
+.p-reading{color:var(--oxblood);background:#F2DEDA}
+.p-toread{color:#8F681E;background:#F2E6C4}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.rule{height:1px;background:var(--line);margin:9px 0}
+.gline{height:1px;background:var(--gold);opacity:.55}
+.btn{height:34px;border-radius:9px;background:linear-gradient(175deg,#7E2A33,#571E25);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 0 0 1px rgba(184,134,43,.55)}
+.btn span{font-family:'Fraunces',serif;font-size:11.5px;color:#EFD9A4}
+.btn.ghost{background:none;box-shadow:none;border:1px solid var(--line)}
+.btn.ghost span{color:var(--ink-soft);font-family:'Inter',sans-serif;font-size:10px;font-weight:600}
+.btn.gold{background:var(--gold-soft);box-shadow:inset 0 0 0 1px rgba(184,134,43,.45)}
+.btn.gold span{color:#6E4E12;font-family:'Inter',sans-serif;font-size:10px;font-weight:700}
+.stars{color:var(--gold);letter-spacing:.5px}
+.stars .off{color:#DCCDAF}
+.dark{background:#3A2C1E;border-radius:12px;padding:11px;color:#EFE6C8}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);
+  border-radius:16px 16px 0 0;border-top:1px solid var(--line);padding:12px 14px 14px;
+  box-shadow:0 -12px 30px rgba(43,33,24,.22)}
+.scrim{position:absolute;inset:0;background:rgba(43,33,24,.38)}
+.grab{width:32px;height:3px;border-radius:99px;background:var(--line);margin:0 auto 10px}
+.nav{display:flex;align-items:flex-end;justify-content:space-around;
+  padding:6px 8px 11px;background:var(--card);border-top:1px solid var(--line)}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-size:7.5px;font-weight:600;color:var(--ink-soft);width:42px}
+.nav div.on{color:var(--oxblood)}
+.nav .ic{font-size:13px;line-height:1}
+.nav .fab{width:36px;height:36px;border-radius:13px;background:var(--oxblood);color:#F6F0E3;
+  display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:2px;
+  box-shadow:0 6px 14px rgba(126,42,51,.4)}
+
+/* ---- the circle: avatars ---- */
+.av{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--card);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:6.5px;font-weight:700;color:#FFF7E6}
+.stack{display:flex;align-items:center}
+.stack .av+.av{margin-left:-5px}
+.stack.lg .av{width:22px;height:22px;font-size:8.5px;border-width:2px}
+.stack.lg .av+.av{margin-left:-7px}
+.av.more{background:var(--paper-deep);color:var(--ink-soft);font-size:6.5px}
+.a-anu{background:var(--anu)} .a-rahul{background:var(--rahul)} .a-meera{background:var(--meera)}
+.a-faisal{background:var(--faisal)} .a-lak{background:var(--lakshmi)} .a-jos{background:var(--joseph)}
+.a-me{background:#2B2118}
+/* one line under a search row: avatars + a sentence, never a badge soup */
+.cline{display:flex;align-items:center;gap:5px;margin-top:5px;font-size:8px;color:var(--ink-soft)}
+.cline b{color:var(--ink);font-weight:600}
+.cline .ox{color:var(--oxblood);font-weight:600}
+.cline .gd{color:#8F681E;font-weight:600}
+/* the circle card on the book page */
+.circle{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.circle .strip{height:3px;background:linear-gradient(90deg,var(--gold),#D9B96A 60%,var(--gold))}
+.circle .in{padding:9px 10px 10px}
+.qt{font-family:'Fraunces',serif;font-style:italic;font-size:10px;line-height:1.45;color:var(--ink)}
+.who{font-size:7.5px;color:var(--ink-soft);margin-top:3px}
+.lendrow{display:flex;align-items:center;gap:7px;background:#F7EED8;border-radius:8px;padding:6px 8px;margin-top:8px}
+.lendrow .t{flex:1;font-size:8.5px;color:#6E4E12;line-height:1.35}
+.lendrow .t b{color:var(--ink)}
+.lendrow .go{font-size:8px;font-weight:700;color:var(--oxblood);white-space:nowrap}
+/* list rows in the circle sheet */
+.prow{display:flex;gap:8px;align-items:flex-start;padding:7px 0}
+.prow .av{width:22px;height:22px;font-size:8.5px;border:none}
+.prow .m{flex:1;font-size:8px;color:var(--ink-soft);line-height:1.45}
+.prow .m b{display:block;color:var(--ink);font-size:9.5px;font-weight:600}
+.prow .r{font-size:8.5px;text-align:right;white-space:nowrap}
+/* switches */
+.sw{width:26px;height:15px;border-radius:99px;background:#DCCDAF;position:relative;flex-shrink:0}
+.sw:after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw.on{background:var(--moss)}
+.sw.on:after{left:13px}
+.setrow{display:flex;align-items:center;gap:9px;padding:8px 0}
+.setrow .t{flex:1;font-size:9.5px;font-weight:600;line-height:1.3}
+.setrow .t small{display:block;font-weight:400;font-size:7.8px;color:var(--ink-soft);margin-top:2px;line-height:1.4}
+.chk{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--line);flex-shrink:0;background:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:800}
+.chk.on{background:var(--moss);border-color:var(--moss)}
+/* the home card — the wax seal */
+.seal{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces',serif;font-size:13px;color:#F6E7C4;flex-shrink:0;
+  box-shadow:0 0 0 2px var(--card),0 0 0 3px rgba(184,134,43,.6),0 3px 6px rgba(43,33,24,.3)}
+.x{font-size:10px;color:var(--stamp-grey)}
+.eyebrow{font-size:7px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#8F681E}
+.mini{font-size:7.5px;color:var(--ink-soft)}
+.note{max-width:980px;margin:52px auto 0;padding:0 36px;font-size:13.5px;line-height:1.7;color:#5d5140}
+.note h3{font-family:'Fraunces',serif;font-size:20px;font-weight:500;margin:28px 0 8px;color:var(--ink)}
+.note ul,.note ol{margin:8px 0 0 20px}.note li{margin-bottom:8px}
+.note code{background:#E4DAC4;padding:1px 5px;border-radius:4px;font-size:12px}
+.note b{color:var(--ink)}
+.note table{border-collapse:collapse;width:100%;margin-top:10px;font-size:12.5px}
+.note th,.note td{text-align:left;padding:7px 10px;border-bottom:1px solid #D9CCB0;vertical-align:top}
+.note th{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:#7A6A55}
+.dec{background:#FFFCF4;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:12px 16px;margin-top:12px}
+.dec b{display:block;margin-bottom:2px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Your circle is reading</h1>
+  <p class="tag">The most persuasive line a book can carry isn’t a star average from strangers — it’s
+  <b>“Anu loved this.”</b> Kitabi already knows who your circle is: <b>connections are mutual and
+  consented</b>, mostly people you lend books to. This shows what they read, rated and own —
+  <b>only for connections who chose to share it, never one book they kept to themselves</b> —
+  in four places: search, the book page, a sheet behind it, and one quiet card on Home.</p>
+</div>
+
+<!-- ============================================================ AREA 1 -->
+<div class="area">
+  <div class="ah"><span class="an">Area 1</span><h2>Where a book is being chosen</h2></div>
+  <p class="desc">Search and the book page are the two moments a reader is deciding. The circle earns
+  <b>one line</b> in a search row and <b>one card</b> on the book page — always a sentence, always with faces,
+  and absent entirely when there’s nothing to say. No “0 connections”, no empty card, no greyed placeholder.
+  And on a book that also has <b>a copy on a connection’s shelf</b>, the card turns into Kitabi’s own wedge:
+  <b>ask to borrow</b> instead of buy.</p>
+  <div class="row">
+
+    <!-- 1a. Search results -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 9px;margin-top:4px">
+            <span style="font-size:10px;color:var(--ink-soft)">⌕</span>
+            <span style="font-size:10px">m t vasudevan</span>
+            <span style="margin-left:auto;font-size:9px;color:var(--ink-soft)">✕</span>
+          </div>
+          <div class="lbl" style="margin:10px 0 2px">Books · 14</div>
+
+          <div style="display:flex;gap:9px;padding:8px 0">
+            <div class="cover c-rand" style="width:36px;height:54px"><div class="ct">Randa<br>moozham</div></div>
+            <div style="flex:1;min-width:0">
+              <div class="ser" style="font-size:11px">Randamoozham</div>
+              <div class="sub" style="color:var(--oxblood)">M. T. Vasudevan Nair <span style="color:var(--ink-soft)">· 1984</span></div>
+              <div class="cline">
+                <div class="stack"><div class="av a-anu">A</div><div class="av a-meera">M</div><div class="av a-lak">L</div></div>
+                <span><b>Anu, Lakshmi</b> &amp; 2 more read it</span>
+              </div>
+            </div>
+            <span style="font-size:13px;color:var(--oxblood);align-self:center">＋</span>
+          </div>
+          <div class="rule" style="margin:0"></div>
+
+          <div style="display:flex;gap:9px;padding:8px 0">
+            <div class="cover c-naal" style="width:36px;height:54px"><div class="ct">Naalu<br>kettu</div></div>
+            <div style="flex:1;min-width:0">
+              <div class="ser" style="font-size:11px">Naalukettu</div>
+              <div class="sub" style="color:var(--oxblood)">M. T. Vasudevan Nair <span style="color:var(--ink-soft)">· 1958</span></div>
+              <div class="cline">
+                <div class="stack"><div class="av a-rahul">R</div></div>
+                <span><span class="ox">Rahul</span> is reading it now</span>
+              </div>
+            </div>
+            <span style="font-size:13px;color:var(--oxblood);align-self:center">＋</span>
+          </div>
+          <div class="rule" style="margin:0"></div>
+
+          <div style="display:flex;gap:9px;padding:8px 0">
+            <div class="cover c-kaal" style="width:36px;height:54px"><div class="ct">Kaalam</div></div>
+            <div style="flex:1;min-width:0">
+              <div class="ser" style="font-size:11px">Kaalam</div>
+              <div class="sub" style="color:var(--oxblood)">M. T. Vasudevan Nair <span style="color:var(--ink-soft)">· 1969</span></div>
+              <div class="cline">
+                <div class="stack"><div class="av a-faisal">F</div></div>
+                <span><span class="gd">Faisal has a copy</span> · ask to borrow</span>
+              </div>
+            </div>
+            <span style="font-size:13px;color:var(--oxblood);align-self:center">＋</span>
+          </div>
+          <div class="rule" style="margin:0"></div>
+
+          <div style="display:flex;gap:9px;padding:8px 0">
+            <div class="cover c-manju" style="width:36px;height:54px"><div class="ct">Manju</div></div>
+            <div style="flex:1;min-width:0">
+              <div class="ser" style="font-size:11px">Manju</div>
+              <div class="sub" style="color:var(--oxblood)">M. T. Vasudevan Nair <span style="color:var(--ink-soft)">· 1964</span></div>
+            </div>
+            <span style="font-size:13px;color:var(--oxblood);align-self:center">＋</span>
+          </div>
+          <div class="rule" style="margin:0"></div>
+
+          <div style="display:flex;gap:9px;padding:8px 0">
+            <div class="cover c-khas" style="width:36px;height:54px;opacity:.9"><div class="ct">Asuravithu</div></div>
+            <div style="flex:1;min-width:0">
+              <div class="ser" style="font-size:11px">Asuravithu</div>
+              <div class="sub" style="color:var(--oxblood)">M. T. Vasudevan Nair <span style="color:var(--ink-soft)">· 1972</span></div>
+              <div class="cline">
+                <div class="stack"><div class="av a-jos">J</div><div class="av a-anu">A</div></div>
+                <span><b>Joseph &amp; Anu</b> read this · ★ 4.5</span>
+              </div>
+            </div>
+            <span style="font-size:13px;color:var(--oxblood);align-self:center">＋</span>
+          </div>
+        </div>
+        <div class="nav">
+          <div><span class="ic">⌂</span>Home</div><div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">＋</span></div><div><span class="ic">⇄</span>Lending</div><div class="on"><span class="ic">⌕</span>Search</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>1a · Search results</b> One line under the author, only on rows that have something
+      to say. Priority when several apply: <i>read it</i> (with names) › <i>reading now</i> › <i>has a copy</i>.
+      Names lead — two first names, then “&amp; N more” — because a face you know beats any count.
+      <span class="pro">Doesn’t re-rank results: search stays an honest answer to what you typed.</span>
+      <span class="pro">One batched request for the whole page of results, not one per row.</span></p>
+    </div>
+
+    <!-- 1b. Book page, unowned -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;padding:4px 0 8px">
+            <span style="font-size:12px">←</span><span style="font-size:11px;color:var(--gold)">⇲</span>
+          </div>
+          <div style="display:flex;gap:11px">
+            <div class="cover c-rand" style="width:62px;height:93px"><div class="ct" style="font-size:7.5px">Randa<br>moozham</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="ser" style="font-size:14px;line-height:1.2">Randamoozham</div>
+              <div class="sub" style="margin-top:2px;color:var(--oxblood)">M. T. Vasudevan Nair</div>
+              <div class="mini" style="margin-top:5px"><span class="stars">★★★★</span><span class="stars"><span class="off">★</span></span> 4.3 · 128 ratings</div>
+              <div class="mini" style="margin-top:2px">Novel · Malayalam · 340 pp</div>
+            </div>
+          </div>
+          <div class="btn" style="margin-top:10px"><span>＋ Add to library</span></div>
+
+          <div class="circle" style="margin-top:11px">
+            <div class="strip"></div>
+            <div class="in">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span class="eyebrow">Your circle</span>
+                <span style="font-size:8px;color:var(--oxblood);font-weight:600">See all 6 ›</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:7px">
+                <div class="stack lg"><div class="av a-anu">A</div><div class="av a-lak">L</div><div class="av a-jos">J</div><div class="av a-rahul">R</div></div>
+              </div>
+              <div class="ser" style="font-size:12px;line-height:1.3;margin-top:7px">4 of your connections have read this</div>
+              <div class="mini" style="margin-top:2px">They gave it <b style="color:var(--ink)">★ 4.6</b> · Meera is reading it now</div>
+              <div class="rule" style="margin:8px 0"></div>
+              <div style="display:flex;gap:7px">
+                <div class="av a-anu" style="width:18px;height:18px;font-size:7px;border:none">A</div>
+                <div style="flex:1">
+                  <div class="qt">“The Bhima I never knew I needed. Read it slowly — the silences are the book.”</div>
+                  <div class="who">Anu · <span class="stars">★★★★★</span> · Aug 2026</div>
+                </div>
+              </div>
+              <div class="lendrow">
+                <div class="av a-faisal" style="border:none">F</div>
+                <div class="t"><b>Faisal has a copy</b><br>DC Books, 2019 printing</div>
+                <span class="go">Ask to borrow ›</span>
+              </div>
+            </div>
+          </div>
+          <div class="lbl" style="margin-top:11px">About this book</div>
+          <div style="font-size:8.5px;line-height:1.5;color:var(--ink-soft);margin-top:4px">The Mahabharata retold through
+            Bhima — the second-born, always in the shadow…</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>1b · Book page — not on your shelf</b> The circle card sits <i>right under</i> Add to
+      library: it’s the reason to tap it. A headline written as a sentence, the faces, the circle’s own average
+      (labelled as theirs, kept apart from the catalogue’s 4.3), one public review line, and — when a connection
+      owns it — the lending door.
+      <span class="pro">Gold strip = the same accent as lending, because “ask Faisal” <i>is</i> lending.</span>
+      <span class="pro">“Ask to borrow” opens the existing lending request; nothing new to learn.</span></p>
+    </div>
+
+    <!-- 1c. Book page, read -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;padding:4px 0 8px">
+            <span style="font-size:12px">←</span><span style="font-size:11px;color:var(--gold)">⇲</span>
+          </div>
+          <div style="display:flex;gap:11px">
+            <div class="cover c-khas" style="width:62px;height:93px"><div class="ct" style="font-size:7px">Khasakkinte<br>Itihasam</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="ser" style="font-size:14px;line-height:1.2">Khasakkinte Itihasam</div>
+              <div class="sub" style="margin-top:2px;color:var(--oxblood)">O. V. Vijayan</div>
+              <div style="margin-top:7px"><span class="pill p-read">✓ Read</span></div>
+              <div class="mini" style="margin-top:5px">You: <span class="stars">★★★★★</span></div>
+            </div>
+          </div>
+
+          <!-- compact strip: you already read it, so this is company, not persuasion -->
+          <div style="display:flex;align-items:center;gap:8px;margin-top:11px;padding:8px 9px;background:var(--card);border:1px solid var(--line);border-radius:10px">
+            <div class="stack"><div class="av a-me">S</div><div class="av a-lak">L</div><div class="av a-meera">M</div><div class="av a-jos">J</div></div>
+            <div style="flex:1;font-size:8.5px;line-height:1.4;color:var(--ink-soft)"><b style="color:var(--ink)">You and 3 connections</b> read this ·
+              Lakshmi gave it <span class="stars">★5</span> too</div>
+            <span style="font-size:10px;color:var(--ink-soft)">›</span>
+          </div>
+
+          <div style="display:flex;gap:0;margin-top:12px;border-bottom:1px solid var(--line)">
+            <div style="font-size:9.5px;font-weight:700;color:var(--oxblood);padding:6px 10px;border-bottom:2px solid var(--oxblood)">Yours</div>
+            <div style="font-size:9.5px;color:var(--ink-soft);padding:6px 10px">Book</div>
+            <div style="font-size:9.5px;color:var(--ink-soft);padding:6px 10px">Reviews</div>
+          </div>
+          <div class="card" style="margin-top:9px">
+            <div style="display:flex;justify-content:space-between;font-size:9.5px"><span style="color:var(--ink-soft)">Finished</span><span style="font-weight:600">2 Sep 2026</span></div>
+            <div class="rule" style="margin:7px 0"></div>
+            <div style="display:flex;justify-content:space-between;font-size:9.5px"><span style="color:var(--ink-soft)">Time spent</span><span style="font-weight:600">7h 40m</span></div>
+          </div>
+          <div class="card" style="margin-top:8px;border-style:dashed;background:#FBF6EA">
+            <div class="lbl">Your notes · private</div>
+            <div class="qt" style="font-size:9px;margin-top:4px;color:var(--ink-soft)">Ravi’s bus at the end…</div>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>1c · Book page — you’ve read it</b> Once it’s on your shelf the circle shrinks to a
+      single strip above the tabs. You’re past choosing, so it stops persuading and simply keeps you company:
+      who else has been to Khasak, and who agreed with your five stars.
+      <span class="pro">You lead the stack (your own initial), so it reads as “us”, not “them”.</span>
+      <span class="con">While a book is still <i>Reading</i>, their stars and quotes stay folded (decision 4).</span></p>
+    </div>
+
+    <!-- 1d. The circle sheet -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="opacity:.5">
+          <div style="display:flex;gap:11px;margin-top:20px">
+            <div class="cover c-rand" style="width:62px;height:93px"></div>
+            <div style="flex:1"><div class="ser" style="font-size:14px">Randamoozham</div></div>
+          </div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet" style="top:70px">
+          <div class="grab"></div>
+          <div class="ser" style="font-size:14px">Randamoozham in your circle</div>
+          <div class="mini" style="margin-top:2px">6 connections · only people who share their reading</div>
+
+          <div class="lbl" style="margin-top:10px">Read it · 4</div>
+          <div class="prow">
+            <div class="av a-anu">A</div>
+            <div class="m"><b>Anu Thomas</b>Finished Aug 2026<div class="qt" style="font-size:8.5px;margin-top:3px">“The Bhima I never knew I needed…”</div></div>
+            <div class="r stars">★★★★★</div>
+          </div>
+          <div class="gline"></div>
+          <div class="prow">
+            <div class="av a-lak">L</div>
+            <div class="m"><b>Lakshmi R</b>Finished 2024 · read it twice</div>
+            <div class="r stars">★★★★★</div>
+          </div>
+          <div class="gline"></div>
+          <div class="prow">
+            <div class="av a-jos">J</div>
+            <div class="m"><b>Joseph Mathew</b>Finished Jan 2026</div>
+            <div class="r stars">★★★★<span class="off">★</span></div>
+          </div>
+          <div class="gline"></div>
+          <div class="prow">
+            <div class="av a-rahul">R</div>
+            <div class="m"><b>Rahul Menon</b>Finished Mar 2025</div>
+            <div class="r mini">no rating shared</div>
+          </div>
+
+          <div class="lbl" style="margin-top:8px">Reading now · 1</div>
+          <div class="prow">
+            <div class="av a-meera">M</div>
+            <div class="m"><b>Meera K</b>Started 28 Sep</div>
+            <div class="r"><span class="pill p-reading">Reading</span></div>
+          </div>
+
+          <div class="lbl" style="margin-top:8px">Has a copy · 1</div>
+          <div class="prow" style="align-items:center">
+            <div class="av a-faisal">F</div>
+            <div class="m"><b>Faisal P</b>DC Books, 2019 · on his shelf</div>
+            <div class="r" style="color:var(--oxblood);font-weight:700">Ask to borrow ›</div>
+          </div>
+
+          <div style="margin-top:8px;padding:7px 9px;background:var(--paper-deep);border-radius:8px;font-size:8px;color:var(--ink-soft);line-height:1.45">
+            ↔ <b style="color:var(--ink)">Joseph also read the English translation</b>, <i>Second Turn</i> — tap to see it.
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>1d · “See all” sheet</b> Grouped by what each person did, not a feed. Each name is a
+      door to their profile, like every name in Kitabi. A connection who shares their reading but not their
+      ratings shows as <i>“no rating shared”</i> — the sheet never guesses.
+      <span class="pro">“Read it twice” comes free from rule 19 — a read is a record.</span>
+      <span class="pro">Translations are their own Works, so the footer bridges them: the regional angle, made social.</span></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ AREA 2 -->
+<div class="area">
+  <div class="ah"><span class="an gold">Area 2</span><h2>One card on Home, never a feed</h2></div>
+  <p class="desc">Home gets <b>one</b> “From your circle” card — the same discipline as the AI pick (“one labelled
+  pick on Home, never a feed”). It draws from what connections <b>finished and rated 4★ or more in the last
+  60 days</b>, skips books already on your shelf, and stays the same all day (seeded by date) so it doesn’t
+  shuffle every time you open the app. It’s styled as a letter, not an ad: a wax-seal initial, the friend’s
+  own words if they made a review public, and two doors — <b>Want to read</b> and, when they own it,
+  <b>Ask to borrow</b>.</p>
+  <div class="row">
+
+    <!-- 2a. Home -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle" style="margin-top:6px">Good evening, Shamshi</div>
+          <div class="sub">Tuesday · 3 books on the go</div>
+
+          <div class="card" style="margin-top:10px;display:flex;gap:9px;align-items:center">
+            <div class="cover c-naal" style="width:34px;height:51px"><div class="ct">Naalu<br>kettu</div></div>
+            <div style="flex:1">
+              <div class="lbl">Continue reading</div>
+              <div class="ser" style="font-size:11px;margin-top:2px">Naalukettu</div>
+              <div class="mini">p. 142 of 230 · 62%</div>
+              <div style="height:3px;background:var(--paper-deep);border-radius:9px;margin-top:5px"><div style="width:62%;height:100%;background:var(--oxblood);border-radius:9px"></div></div>
+            </div>
+            <span style="font-size:15px;color:var(--oxblood)">▶</span>
+          </div>
+
+          <!-- the circle card -->
+          <div class="card" style="margin-top:10px;padding:0;overflow:hidden;background:linear-gradient(180deg,#FFFCF4,#FBF4E2)">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px 0">
+              <span class="eyebrow">From your circle</span><span class="x">✕</span>
+            </div>
+            <div style="display:flex;gap:10px;padding:8px 10px 0">
+              <div style="flex:1">
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div class="seal a-anu">A</div>
+                  <div class="ser" style="font-size:11.5px;line-height:1.3"><b style="font-weight:600">Anu</b> finished <i>Randamoozham</i> last week</div>
+                </div>
+                <div style="margin-top:6px;font-size:9px"><span class="stars" style="font-size:11px">★★★★★</span> <span class="mini">her rating</span></div>
+                <div class="qt" style="margin-top:5px;font-size:9.5px">“The Bhima I never knew I needed.”</div>
+              </div>
+              <div class="cover c-rand" style="width:46px;height:69px;align-self:flex-start;transform:rotate(3deg)"><div class="ct">Randa<br>moozham</div></div>
+            </div>
+            <div class="mini" style="padding:6px 10px 0">Also read by Lakshmi &amp; 2 others in your circle</div>
+            <div style="display:flex;gap:6px;padding:8px 10px 10px">
+              <div class="btn" style="flex:1;height:28px"><span style="font-size:10px">＋ Want to read</span></div>
+              <div class="btn gold" style="flex:1;height:28px"><span>Ask Faisal to lend</span></div>
+            </div>
+          </div>
+
+          <div class="dark" style="margin-top:10px;padding:9px 10px">
+            <div style="font-size:7px;font-weight:800;letter-spacing:1.3px;color:#D9B96A">KITABI PICK</div>
+            <div class="ser" style="font-size:11px;margin-top:3px">Pathummayude Aadu</div>
+            <div style="font-size:7.5px;color:#CBB897;margin-top:2px">WHY THIS? You gave Balyakalasakhi ★5…</div>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="on"><span class="ic">⌂</span>Home</div><div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">＋</span></div><div><span class="ic">⇄</span>Lending</div><div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>2a · Home</b> The circle card sits between Continue reading and the AI pick — a person
+      before an algorithm. The cover is tilted slightly, like a book handed across a table. ✕ means “not this
+      one”; the card won’t show that book again, and three dismissals in a row quiet the card for a week.
+      <span class="pro">The secondary button only appears when someone in the circle owns the book.</span>
+      <span class="con">Shown only if the reader shares too (reciprocity, decision 1).</span></p>
+    </div>
+
+    <!-- 2b. Card variants -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="lbl" style="margin:6px 0 6px">The same card, four reasons</div>
+
+          <div class="card" style="padding:9px 10px;background:#FBF4E2">
+            <div class="eyebrow">From your circle</div>
+            <div style="display:flex;gap:9px;margin-top:6px;align-items:center">
+              <div class="stack lg"><div class="av a-anu">A</div><div class="av a-lak">L</div><div class="av a-meera">M</div></div>
+              <div class="ser" style="flex:1;font-size:10.5px;line-height:1.3">3 of your circle finished <i>Aadujeevitham</i> in September</div>
+              <div class="cover c-aadu" style="width:30px;height:45px"></div>
+            </div>
+            <div class="mini" style="margin-top:5px">All three rated it <span class="stars">★★★★★</span></div>
+          </div>
+          <div class="mini" style="margin:3px 2px 9px;font-style:italic">① A cluster — when several finished the same book.</div>
+
+          <div class="card" style="padding:9px 10px;background:#FBF4E2">
+            <div class="eyebrow">From your circle</div>
+            <div style="display:flex;gap:9px;margin-top:6px;align-items:center">
+              <div class="seal a-rahul" style="width:24px;height:24px;font-size:11px">R</div>
+              <div class="ser" style="flex:1;font-size:10.5px;line-height:1.3">Rahul started <i>Manju</i> — it’s been on your To-read since June</div>
+              <div class="cover c-manju" style="width:30px;height:45px"></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:7px"><div class="btn" style="flex:1;height:24px"><span style="font-size:9px">Start it too</span></div></div>
+          </div>
+          <div class="mini" style="margin:3px 2px 9px;font-style:italic">② Read along — a book you both have waiting.</div>
+
+          <div class="card" style="padding:9px 10px;background:#FBF4E2">
+            <div class="eyebrow">From your circle</div>
+            <div style="display:flex;gap:9px;margin-top:6px;align-items:center">
+              <div class="seal a-faisal" style="width:24px;height:24px;font-size:11px">F</div>
+              <div class="ser" style="flex:1;font-size:10.5px;line-height:1.3">Faisal shelved <i>Kaalam</i> — it’s on your Wishlist</div>
+              <div class="cover c-kaal" style="width:30px;height:45px"></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:7px"><div class="btn gold" style="flex:1;height:24px"><span style="font-size:9px">Ask to borrow</span></div></div>
+          </div>
+          <div class="mini" style="margin:3px 2px 9px;font-style:italic">③ Borrow, don’t buy — a wishlist book a friend owns.</div>
+
+          <div class="card" style="padding:9px 10px;background:#FBF4E2">
+            <div class="eyebrow">From your circle</div>
+            <div style="display:flex;gap:9px;margin-top:6px;align-items:center">
+              <div class="seal a-lak" style="width:24px;height:24px;font-size:11px">L</div>
+              <div class="ser" style="flex:1;font-size:10.5px;line-height:1.3">Lakshmi gave <i>Khasakkinte Itihasam</i> ★5 — so did you</div>
+              <div class="cover c-khas" style="width:30px;height:45px"></div>
+            </div>
+          </div>
+          <div class="mini" style="margin:3px 2px 0;font-style:italic">④ Kindred — agreement on a book you loved.</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>2b · Four reasons, one shape</b> The card’s frame never changes; only the sentence does.
+      Order of preference when several are available: <i>③ borrow</i> (actionable, and Kitabi’s wedge) ›
+      <i>②&nbsp;read along</i> › <i>the single 5★</i> (2a) › <i>① cluster</i> › <i>④ kindred</i> (the
+      fallback that never sells — on a quiet week, warmth instead of a recommendation).
+      <span class="pro">Every variant is built from data that already syncs; nothing new is logged.</span></p>
+    </div>
+
+    <!-- 2c. Empty / edge -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div class="pgtitle" style="margin-top:6px">Good evening, Shamshi</div>
+          <div class="sub">Tuesday · 3 books on the go</div>
+          <div class="card" style="margin-top:10px;display:flex;gap:9px;align-items:center;opacity:.55">
+            <div class="cover c-naal" style="width:34px;height:51px"></div>
+            <div style="flex:1"><div class="lbl">Continue reading</div><div class="ser" style="font-size:11px">Naalukettu</div></div>
+          </div>
+
+          <div class="card" style="margin-top:10px;padding:10px;background:#FBF4E2">
+            <div style="display:flex;justify-content:space-between"><span class="eyebrow">Your circle</span><span class="x">✕</span></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:7px">
+              <div class="stack lg"><div class="av a-anu">A</div><div class="av a-rahul">R</div><div class="av a-faisal">F</div><div class="av a-lak">L</div></div>
+              <div class="ser" style="flex:1;font-size:11px;line-height:1.3">4 of your connections share what they read</div>
+            </div>
+            <div class="mini" style="margin-top:6px;line-height:1.5">Share yours to see what they’ve finished, what they loved and which of their books you could borrow.</div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <div class="btn" style="flex:1;height:28px"><span style="font-size:10px">Choose what to share</span></div>
+            </div>
+          </div>
+          <div class="mini" style="margin:4px 2px 0;font-style:italic">The reader hasn’t opted in yet. This is the invitation — shown once a week at most, gone for good after two ✕.</div>
+
+          <div class="rule" style="margin:14px 0 10px"></div>
+          <div class="lbl">And when there’s nothing</div>
+          <div style="margin-top:6px;font-size:8.5px;line-height:1.55;color:var(--ink-soft)">
+            No connections, or none of them share, or nothing new in 60 days → <b style="color:var(--ink)">no card at all.</b>
+            Home doesn’t grow a hole or a “connect with friends!” banner. The one place that invites you to
+            connect is the existing Connections screen.
+          </div>
+        </div>
+        <div class="nav">
+          <div class="on"><span class="ic">⌂</span>Home</div><div><span class="ic">▤</span>Library</div>
+          <div><span class="fab">＋</span></div><div><span class="ic">⇄</span>Lending</div><div><span class="ic">◔</span>Insights</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>2c · Before you’ve opted in</b> The honest invitation: it shows a count of people who
+      <i>already chose</i> to share (their consent, so the count is theirs to reveal) and asks you to do the same.
+      It’s the moment the feature proves its worth, which is why the opt-in lives here and not in a launch
+      pop-up.
+      <span class="pro">No empty states anywhere else — silence is the empty state.</span></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ AREA 3 -->
+<div class="area">
+  <div class="ah"><span class="an moss">Area 3</span><h2>Privacy — what each connection agreed to</h2></div>
+  <p class="desc">Today Kitabi has no “connections-only” tier: <code>library_visible</code> means <i>public</i>, and an
+  individual’s star rating is never shown to anyone — it only feeds the book’s average. So this feature
+  can’t borrow an existing switch; it needs <b>its own consent, off by default, asked at the moment of value</b>.
+  Three separate things to share, because they’re three different disclosures — and a <b>per-book
+  “keep this one to myself”</b>, because the book a reader least wants their circle to see is exactly the one
+  a blanket switch can’t protect.</p>
+  <div class="row">
+
+    <!-- 3a. Opt-in sheet -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body" style="opacity:.45"><div class="pgtitle" style="margin-top:6px">Good evening, Shamshi</div></div>
+        <div class="scrim"></div>
+        <div class="sheet" style="top:84px">
+          <div class="grab"></div>
+          <div class="ser" style="font-size:15px;line-height:1.25">Share your reading with your circle?</div>
+          <div class="mini" style="margin-top:4px;line-height:1.5">Only your <b style="color:var(--ink)">7 connections</b> — people you
+            approved, mostly people you lend to. Not your public profile, not strangers.</div>
+
+          <div style="margin-top:8px">
+            <div class="setrow">
+              <div class="chk on">✓</div>
+              <div class="t">What I’m reading and have read<small>“Shamshi is reading Naalukettu” · “Shamshi read this”</small></div>
+            </div>
+            <div class="gline"></div>
+            <div class="setrow">
+              <div class="chk on">✓</div>
+              <div class="t">My star ratings<small>Your ★ next to your name. Without this, they see that you read it, not what you thought.</small></div>
+            </div>
+            <div class="gline"></div>
+            <div class="setrow">
+              <div class="chk"></div>
+              <div class="t">Which books I own<small>So they can ask to borrow. Lend requests still need your yes.</small></div>
+            </div>
+          </div>
+
+          <div style="margin-top:6px;padding:7px 9px;background:var(--paper-deep);border-radius:8px;font-size:7.8px;line-height:1.5;color:var(--ink-soft)">
+            <b style="color:var(--ink)">Never shared:</b> notes, wishlist, reading time, pages, or any book you mark
+            “keep to myself”. Reviews follow their own switch — only ones you’ve made public appear.
+          </div>
+          <div style="margin-top:6px;font-size:7.8px;color:var(--ink-soft);line-height:1.5">
+            You’ll see your circle’s reading in return. Change any of this in Profile → Privacy.</div>
+
+          <div class="btn" style="margin-top:9px"><span>Share what I ticked</span></div>
+          <div style="text-align:center;font-size:9px;color:var(--ink-soft);margin-top:7px;font-weight:600">Not now</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>3a · The ask</b> Reached from the invitation (2c) or Profile → Privacy, never a pop-up at
+      launch. Each box names the sentence a friend would see, so consent is to something concrete. The
+      mockup shows a reader who ticked two of three — every box <i>starts unticked</i>.
+      <span class="pro">“Which books I own” is separate because it invites requests — a different ask from being seen.</span>
+      <span class="pro">“Never shared” is printed, not implied.</span></p>
+    </div>
+
+    <!-- 3b. Privacy settings -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 0 6px">
+            <span style="font-size:12px">←</span><span class="pgtitle">Privacy</span>
+          </div>
+          <div class="lbl" style="margin-top:4px">Public — anyone on Kitabi</div>
+          <div class="card" style="padding:0 10px;margin-top:5px">
+            <div class="setrow"><div class="t">Profile visible</div><div class="sw on"></div></div>
+            <div class="gline"></div>
+            <div class="setrow"><div class="t">Library public</div><div class="sw"></div></div>
+            <div class="gline"></div>
+            <div class="setrow"><div class="t">New reviews public by default</div><div class="sw"></div></div>
+          </div>
+
+          <div class="lbl" style="margin-top:11px">Your circle — 7 connections</div>
+          <div class="card" style="padding:0 10px;margin-top:5px;border-color:#D9C08A">
+            <div class="setrow"><div class="t">What I’m reading and have read</div><div class="sw on"></div></div>
+            <div class="gline"></div>
+            <div class="setrow"><div class="t">My star ratings</div><div class="sw on"></div></div>
+            <div class="gline"></div>
+            <div class="setrow"><div class="t">Which books I own<small>Lets them ask to borrow</small></div><div class="sw"></div></div>
+            <div class="gline"></div>
+            <div class="setrow"><div class="t">Kept to myself<small>Books your circle never sees</small></div><span style="font-size:9px;color:var(--ink-soft)">2 ›</span></div>
+          </div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:10px;background:#F7EED8">
+            <div class="av a-anu" style="border:none;width:20px;height:20px;font-size:8px">A</div>
+            <div style="flex:1;font-size:8.5px;color:#6E4E12;line-height:1.35"><b style="color:var(--ink)">See what Anu sees</b><br>Your circle card, as a connection</div>
+            <span style="font-size:10px;color:#8F681E">›</span>
+          </div>
+          <div class="mini" style="margin-top:8px;line-height:1.5">Turn a switch off and it leaves every connection’s
+            screen the next time their app checks; anything a phone remembered for offline expires within a day.</div>
+        </div>
+      </div></div>
+      <p class="cap"><b>3b · Profile → Privacy</b> The existing three public switches gain a second, clearly
+      separate group. Two audiences, two boxes — a reader should never wonder whether “share with my circle”
+      just made something public.
+      <span class="pro">“See what Anu sees” renders the real circle card (1b) with your data — the
+      cheapest way to make a privacy setting believable.</span></p>
+    </div>
+
+    <!-- 3c. Per-book hide -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="sbar"><span>9:41</span><span>▪▪▪ ⌇ ▮</span></div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;padding:4px 0 8px">
+            <span style="font-size:12px">←</span><span style="font-size:11px;color:var(--gold)">⇲</span>
+          </div>
+          <div style="display:flex;gap:11px">
+            <div class="cover c-path" style="width:52px;height:78px"><div class="ct">Pathumma<br>yude Aadu</div></div>
+            <div style="flex:1;align-self:center">
+              <div class="ser" style="font-size:13px;line-height:1.2">Pathummayude Aadu</div>
+              <div class="sub" style="margin-top:2px;color:var(--oxblood)">Vaikom Muhammad Basheer</div>
+              <div style="margin-top:6px"><span class="pill p-reading">Reading</span></div>
+            </div>
+          </div>
+          <div style="display:flex;margin-top:12px;border-bottom:1px solid var(--line)">
+            <div style="font-size:9.5px;font-weight:700;color:var(--oxblood);padding:6px 10px;border-bottom:2px solid var(--oxblood)">Yours</div>
+            <div style="font-size:9.5px;color:var(--ink-soft);padding:6px 10px">Book</div>
+            <div style="font-size:9.5px;color:var(--ink-soft);padding:6px 10px">Reviews</div>
+          </div>
+          <div class="card" style="margin-top:9px">
+            <div style="display:flex;justify-content:space-between;font-size:9.5px"><span style="color:var(--ink-soft)">Progress</span><span style="font-weight:600">p. 64 of 120</span></div>
+            <div class="rule" style="margin:7px 0"></div>
+            <div style="display:flex;justify-content:space-between;font-size:9.5px"><span style="color:var(--ink-soft)">Shelf</span><span style="font-weight:600">Owned</span></div>
+          </div>
+
+          <div class="card" style="margin-top:9px;padding:2px 10px">
+            <div class="setrow">
+              <div style="font-size:12px">◐</div>
+              <div class="t">Keep this one to myself<small>Your circle won’t see you’re reading it, your rating, or that you own it.</small></div>
+              <div class="sw on"></div>
+            </div>
+          </div>
+          <div style="margin-top:7px;display:flex;align-items:center;gap:6px;font-size:8px;color:var(--moss);font-weight:600">
+            <span>✓</span> Hidden from your 7 connections
+          </div>
+          <div class="mini" style="margin-top:6px;line-height:1.5">A review you made public stays public — it lives on the
+            book’s page for everyone, and hiding the book doesn’t take it back. Make the review private to remove it.</div>
+
+          <div class="lbl" style="margin-top:12px">Also on the add sheet</div>
+          <div class="card" style="margin-top:5px;padding:7px 10px;display:flex;align-items:center;gap:8px">
+            <div class="chk on">✓</div>
+            <span style="font-size:9px">Keep this book to myself</span>
+          </div>
+        </div>
+      </div></div>
+      <p class="cap"><b>3c · Per book: keep this one to myself</b> On the Yours tab (and optionally at add time,
+      so a book never flashes into anyone’s view first). It’s a property of <i>your copy</i> — the library
+      entry — so it syncs like everything else on it and works offline.
+      <span class="pro">The one honest exception is spelled out: a public review is public.</span></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ NOTES -->
+<div class="note">
+  <h3>The privacy rules, in order of precedence</h3>
+  <ol>
+    <li><b>Only accepted connections.</b> Pending, denied and blocked rows never qualify; blocking someone
+      removes both directions at once. Strangers and public visitors see nothing new — the public web is untouched.</li>
+    <li><b>Only what the person ticked.</b> Three separate switches on the <i>sharer’s</i> profile:
+      reading (status + finished), ratings, ownership. All default <b>off</b>.</li>
+    <li><b>Never a book they kept to themselves.</b> A per-entry flag beats every switch.</li>
+    <li><b>Reviews keep their own flag.</b> Only reviews already marked public are quoted; this feature
+      can’t make a private review visible.</li>
+    <li><b>Never shared, regardless of switches:</b> notes, wishlist / to-read, pages and progress, reading
+      time, lending history, tags. (Read-along ② uses <i>your</i> To-read and <i>their</i> “reading” — your
+      wishlist is never shown to them.)</li>
+    <li><b>Counts only count consenters.</b> “4 connections read this” is four people who agreed to be
+      counted; there is no “and 2 who hid it”. A count can therefore never reveal a hidden read.</li>
+    <li><b>Enforced on the server, in one query.</b> The app never receives a row it shouldn’t display, so
+      there is nothing to filter client-side and nothing to leak from a cache.</li>
+    <li><b>No pushes.</b> “Anu finished a book” is not worth a notification. The circle is ambient, never
+      interruptive — in keeping with the Reading Room voice.</li>
+  </ol>
+
+  <h3>Data shape — mostly already there</h3>
+  <table>
+    <tr><th>Need</th><th>Source</th><th>New?</th></tr>
+    <tr><td>Who is in my circle</td><td><code>connections</code> (status = accepted)</td><td>exists</td></tr>
+    <tr><td>Read / reading / finished date</td><td><code>library_entries</code> status + <code>reads</code> (rule 19 — count of passes is derived)</td><td>exists</td></tr>
+    <tr><td>Their star</td><td><code>ratings</code> (Work-level, rule 17)</td><td>exists</td></tr>
+    <tr><td>Their words</td><td><code>reviews</code> where <code>visible = true</code></td><td>exists</td></tr>
+    <tr><td>Owns a copy (and which printing)</td><td><code>library_entries</code> ownership → Edition</td><td>exists</td></tr>
+    <tr><td>Consent</td><td><code>profiles.circle_share_reading</code>, <code>circle_share_ratings</code>, <code>circle_share_owned</code> — bool, default false</td><td><b>new</b> (migration)</td></tr>
+    <tr><td>Keep to myself</td><td><code>library_entries.circle_hidden</code> — bool, syncable column</td><td><b>new</b> (migration + Drift column)</td></tr>
+    <tr><td>Home card dismissals</td><td><code>key_values</code> on device (work ids, last-shown date)</td><td>local only</td></tr>
+  </table>
+
+  <h3>Endpoints — and why they stay cheap</h3>
+  <ul>
+    <li><code>POST /circle/signals</code> <code>{work_ids:[…≤50]}</code> → per work: <code>{read, reading, owns, names[≤2], avg}</code>.
+      One round trip for a whole search page (1a). Payload is a few hundred bytes — the Sep 2026 egress lesson applies.</li>
+    <li><code>GET /circle/works/{work_id}</code> → the full card + sheet (1b, 1c, 1d), including the translation bridge.</li>
+    <li><code>GET /circle/pick</code> → zero or one Home card (2a/2b), chosen server-side, seeded by <code>user_id + date</code>
+      so it’s stable all day; dismissed ids are sent along so the server skips them.</li>
+    <li>Every query starts from the caller’s accepted connections <b>who opted in</b> — a handful of user ids —
+      then hits <code>library_entries</code> / <code>ratings</code> by <code>user_id = ANY(:ids)</code>, already indexed. No fan-out, no
+      precomputed feed table, no job. Wrap in <code>ttl_cache</code> per caller (≈10 min) so search typing doesn’t re-query.</li>
+    <li><b>Offline:</b> this is cross-user data, so it follows rule 2 (server-authoritative, cached for reading) rather than the
+      sync engine. Cache the last answer per work in Drift with its fetch time; show it for up to a day offline, then show
+      nothing. The UI never blocks on it — the card simply appears when the answer lands.</li>
+    <li><b>Reciprocity check</b> (if adopted) is the first line of each endpoint: a caller with all three switches off gets
+      <code>{"invite": n}</code> instead of signals, which is exactly what 2c renders.</li>
+  </ul>
+
+  <h3>Decisions for the owner</h3>
+  <p><b>Taken 13 Oct 2026:</b> the owner went with every recommendation below, and the feature
+  is built (docs/tasks.md Phase C). Built as drawn except: the “Kept to myself · N” list,
+  the “See what Anu sees” preview and the add-sheet checkbox (3b/3c) are still open, and
+  circle answers are cached in memory for two minutes rather than a day in Drift.</p>
+  <div class="dec"><b>1 · Reciprocity — see your circle only if you share?</b>
+    Recommended <b>yes</b> (any one switch on is enough). It’s fair, it explains itself in one sentence, and it’s the
+    honest nudge out of the off-by-default trap that would otherwise leave the feature dark for almost everyone
+    (the <code>recaps_visible</code> note in <code>profile.py</code> names the same risk).</div>
+  <div class="dec"><b>2 · Defaults — off for everyone, asked once?</b>
+    Recommended <b>off, all three, asked via 2c</b>. Connections are consented, so “on by default for connections”
+    is defensible — but it would retroactively expose ratings that every reader gave believing they were anonymous.
+    That’s the line: a rating given privately must not become attributed without a fresh yes.</div>
+  <div class="dec"><b>3 · Should circle signals re-rank search?</b>
+    Recommended <b>no</b>. Annotate, don’t reorder — search answers the query. (Browse/discovery could later
+    offer a “Loved by your circle” shelf, which is a different surface with a different promise.)</div>
+  <div class="dec"><b>4 · Ratings on a book you’re mid-way through?</b>
+    Recommended: show faces and “read this”, but <b>hold back their stars and review quotes while your status is
+    Reading</b>, with a one-tap “show anyway”. A five-star from a friend mid-book is pressure; a two-star is a spoiler of mood.</div>
+  <div class="dec"><b>5 · Scope tag.</b>
+    This is the first slice of “Follow users / public profiles” <code>[LATER]</code> in feature-map.md — but limited to
+    the existing, consented connection graph. Suggest adding it as its own line (e.g. “Circle signals —
+    connection-only, opt-in”) tagged for the phase you want, plus tasks in <code>docs/tasks.md</code>, before building.</div>
+</div>
+
+</body>
+</html>

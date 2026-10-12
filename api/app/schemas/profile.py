@@ -40,6 +40,10 @@ class ProfileOut(BaseModel):
     # "Show promotions from Kitabi" inverted — false means show them (the
     # default). Stored as an opt-*out* so an absent/legacy row means shown.
     promotions_opt_out: bool = False
+    # What the reader's accepted connections may see (docs/circle-reading-mockups.html).
+    circle_share_reading: bool = False
+    circle_share_ratings: bool = False
+    circle_share_owned: bool = False
     # The reader's languages (e.g. ["Malayalam", "English"]) — set at onboarding,
     # editable in profile; drives the add-book language dropdown.
     preferred_languages: list[str] = []
@@ -62,6 +66,9 @@ class ProfileUpdate(BaseModel):
     reviews_visible_default: bool | None = None
     recaps_visible: bool | None = None
     promotions_opt_out: bool | None = None
+    circle_share_reading: bool | None = None
+    circle_share_ratings: bool | None = None
+    circle_share_owned: bool | None = None
     preferred_languages: list[str] | None = None
     # Minutes east of UTC, sent by the app so the server can cut a recap on the
     # reader's own calendar days rather than on UTC's. Bounded to the real

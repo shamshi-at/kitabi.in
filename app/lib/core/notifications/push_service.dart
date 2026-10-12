@@ -203,6 +203,14 @@ String pushTapRoute(Map<String, dynamic> data) {
     case 'connection_request':
     case 'connection_accepted':
       return Routes.connections;
+    case 'borrow_ask':
+      // A connection asked to borrow one of the reader's books — open that
+      // copy, where the lend sheet already lives.
+      final workId = (data['work_id'] as String?)?.trim() ?? '';
+      final editionId = (data['edition_id'] as String?)?.trim() ?? '';
+      return workId.isEmpty || editionId.isEmpty
+          ? Routes.home
+          : Routes.bookDetailPath(workId, editionId);
     case 'reading_started':
       // The running sitting itself — the screen that can show and stop it.
       final entryId = (data['library_entry_id'] as String?)?.trim() ?? '';

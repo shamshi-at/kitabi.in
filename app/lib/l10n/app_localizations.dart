@@ -7923,6 +7923,414 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{done} of {needed} timed sittings · finish one and log the page you reached'**
   String paceNotEnoughProgress(int done, int needed);
+
+  /// Label on circle cards (connections' reading)
+  ///
+  /// In en, this message translates to:
+  /// **'Your circle'**
+  String get circleEyebrow;
+
+  /// Eyebrow on Home's circle card
+  ///
+  /// In en, this message translates to:
+  /// **'From your circle'**
+  String get circleFromYourCircle;
+
+  /// Opens the circle sheet on the book page
+  ///
+  /// In en, this message translates to:
+  /// **'See all {count} ›'**
+  String circleSeeAll(int count);
+
+  /// Search row: one connection read the book
+  ///
+  /// In en, this message translates to:
+  /// **'{name} read this'**
+  String circleSearchReadOne(String name);
+
+  /// Search row: two connections read the book
+  ///
+  /// In en, this message translates to:
+  /// **'{first} & {second} read this'**
+  String circleSearchReadTwo(String first, String second);
+
+  /// Search row: several connections read the book
+  ///
+  /// In en, this message translates to:
+  /// **'{first}, {second} & {more} more read this'**
+  String circleSearchReadMany(String first, String second, int more);
+
+  /// A connection is reading the book
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is reading it now'**
+  String circleSearchReading(String name);
+
+  /// Several connections are reading the book
+  ///
+  /// In en, this message translates to:
+  /// **'{name} & {more} more are reading it'**
+  String circleSearchReadingMany(String name, int more);
+
+  /// Search row: a connection owns the book
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has a copy · ask to borrow'**
+  String circleSearchOwns(String name);
+
+  /// Action: ask a connection to lend their copy
+  ///
+  /// In en, this message translates to:
+  /// **'Ask to borrow'**
+  String get circleAskToBorrow;
+
+  /// Book page circle card headline
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 of your connections has read this} other{{count} of your connections have read this}}'**
+  String circleHeadlineRead(int count);
+
+  /// Book page circle card headline when nobody has finished it
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is reading this now'**
+  String circleHeadlineReading(String name);
+
+  /// Book page circle card headline when a connection only owns it
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has a copy'**
+  String circleHeadlineOwns(String name);
+
+  /// Circle card when only a translation was read
+  ///
+  /// In en, this message translates to:
+  /// **'Your circle read it in another language'**
+  String get circleTranslationsOnly;
+
+  /// The circle's own average rating for the book
+  ///
+  /// In en, this message translates to:
+  /// **'They gave it ★ {rating}'**
+  String circleTheyGaveIt(String rating);
+
+  /// Second line of the circle card
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is reading it now'**
+  String circleAlsoReading(String name);
+
+  /// A connection owns this book
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has a copy'**
+  String circleHasACopy(String name);
+
+  /// Compact circle strip on a book the reader has read
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You and 1 connection read this} other{You and {count} connections read this}}'**
+  String circleStripYouAnd(int count);
+
+  /// Compact circle strip on a book on the reader's shelf
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 connection read this} other{{count} connections read this}}'**
+  String circleStripRead(int count);
+
+  /// Compact strip: a connection also gave it five stars
+  ///
+  /// In en, this message translates to:
+  /// **'{name} gave it ★5 too'**
+  String circleStripAgree(String name);
+
+  /// Shown in the circle sheet while the reader is mid-book
+  ///
+  /// In en, this message translates to:
+  /// **'Their ratings stay folded while you\'re reading it.'**
+  String get circleFoldedNote;
+
+  /// Reveal folded ratings
+  ///
+  /// In en, this message translates to:
+  /// **'Show anyway'**
+  String get circleShowAnyway;
+
+  /// Title of the circle sheet
+  ///
+  /// In en, this message translates to:
+  /// **'{title} in your circle'**
+  String circleSheetTitle(String title);
+
+  /// Subtitle of the circle sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Only connections who share their reading appear here'**
+  String get circleSheetSubtitle;
+
+  /// Circle sheet group
+  ///
+  /// In en, this message translates to:
+  /// **'Read it · {count}'**
+  String circleSheetRead(int count);
+
+  /// Circle sheet group
+  ///
+  /// In en, this message translates to:
+  /// **'Reading now · {count}'**
+  String circleSheetReading(int count);
+
+  /// Circle sheet group
+  ///
+  /// In en, this message translates to:
+  /// **'Has a copy · {count}'**
+  String circleSheetOwns(int count);
+
+  /// When a connection finished the book
+  ///
+  /// In en, this message translates to:
+  /// **'Finished {date}'**
+  String circleFinishedOn(String date);
+
+  /// When a connection started the book
+  ///
+  /// In en, this message translates to:
+  /// **'Started {date}'**
+  String circleStartedOn(String date);
+
+  /// A connection's number of finished reads
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =2{read it twice} other{read it {count} times}}'**
+  String circleReadTimes(int count);
+
+  /// A connection who shares reading but not ratings
+  ///
+  /// In en, this message translates to:
+  /// **'no rating shared'**
+  String get circleNoRatingShared;
+
+  /// Suffix on a reader who also owns the book
+  ///
+  /// In en, this message translates to:
+  /// **'has a copy'**
+  String get circleOwnsToo;
+
+  /// Bridge to a translation read by the circle
+  ///
+  /// In en, this message translates to:
+  /// **'{names} also read it as {title}'**
+  String circleTranslationLine(String names, String title);
+
+  /// Borrow request confirmation title
+  ///
+  /// In en, this message translates to:
+  /// **'Ask {name} to lend it?'**
+  String circleBorrowTitle(String name);
+
+  /// Borrow request confirmation body
+  ///
+  /// In en, this message translates to:
+  /// **'They\'ll get a notification asking to borrow “{title}”. Lending is still their call.'**
+  String circleBorrowBody(String title);
+
+  /// Confirm sending a borrow request
+  ///
+  /// In en, this message translates to:
+  /// **'Ask'**
+  String get circleBorrowSend;
+
+  /// Borrow request sent
+  ///
+  /// In en, this message translates to:
+  /// **'Asked {name}'**
+  String circleBorrowSent(String name);
+
+  /// Borrow request failed
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send that — try again when you\'re online'**
+  String get circleBorrowFailed;
+
+  /// Home circle card: a connection finished and loved a book
+  ///
+  /// In en, this message translates to:
+  /// **'{name} finished “{title}”'**
+  String circlePickLoved(String name, String title);
+
+  /// Beside a connection's stars on Home
+  ///
+  /// In en, this message translates to:
+  /// **'their rating'**
+  String get circlePickTheirRating;
+
+  /// Home circle card footnote
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Also read by 1 other in your circle} other{Also read by {count} others in your circle}}'**
+  String circlePickAlsoRead(int count);
+
+  /// Home circle card: several connections finished a book
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of your circle finished “{title}” recently'**
+  String circlePickCluster(int count, String title);
+
+  /// Home circle card: read along
+  ///
+  /// In en, this message translates to:
+  /// **'{name} started “{title}” — it\'s on your To-read'**
+  String circlePickReadAlong(String name, String title);
+
+  /// Home circle card: borrow a wishlist book
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has “{title}” — it\'s on your Wishlist'**
+  String circlePickBorrow(String name, String title);
+
+  /// Home circle card: shared love of a book
+  ///
+  /// In en, this message translates to:
+  /// **'{name} gave “{title}” ★{rating} — so did you'**
+  String circlePickKindred(String name, String title, int rating);
+
+  /// Adds the book to the wishlist
+  ///
+  /// In en, this message translates to:
+  /// **'Want to read'**
+  String get circleWantToRead;
+
+  /// Home circle card borrow button
+  ///
+  /// In en, this message translates to:
+  /// **'Ask {name} to lend'**
+  String circleAskNameToLend(String name);
+
+  /// Home circle card button
+  ///
+  /// In en, this message translates to:
+  /// **'Open the book'**
+  String get circleOpenBook;
+
+  /// Home invitation to share with the circle
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 of your connections shares what they read} other{{count} of your connections share what they read}}'**
+  String circleInviteHeadline(int count);
+
+  /// Home invitation body
+  ///
+  /// In en, this message translates to:
+  /// **'Share yours to see what they\'ve finished, what they loved and which of their books you could borrow.'**
+  String get circleInviteBody;
+
+  /// Opens the circle share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what to share'**
+  String get circleInviteButton;
+
+  /// Circle share sheet title
+  ///
+  /// In en, this message translates to:
+  /// **'Share your reading with your circle?'**
+  String get circleShareTitle;
+
+  /// Circle share sheet intro
+  ///
+  /// In en, this message translates to:
+  /// **'Only your connections — people you approved, mostly people you lend to. Not your public profile, not strangers.'**
+  String get circleShareIntro;
+
+  /// Circle sharing option
+  ///
+  /// In en, this message translates to:
+  /// **'What I\'m reading and have read'**
+  String get circleShareReading;
+
+  /// Circle sharing option hint
+  ///
+  /// In en, this message translates to:
+  /// **'They\'ll see that you\'re reading a book, and that you\'ve read it.'**
+  String get circleShareReadingHint;
+
+  /// Circle sharing option
+  ///
+  /// In en, this message translates to:
+  /// **'My star ratings'**
+  String get circleShareRatings;
+
+  /// Circle sharing option hint
+  ///
+  /// In en, this message translates to:
+  /// **'Your stars beside your name on books you\'ve read. Needs the one above.'**
+  String get circleShareRatingsHint;
+
+  /// Circle sharing option
+  ///
+  /// In en, this message translates to:
+  /// **'Which books I own'**
+  String get circleShareOwned;
+
+  /// Circle sharing option hint
+  ///
+  /// In en, this message translates to:
+  /// **'So they can ask to borrow. Lending is still your call.'**
+  String get circleShareOwnedHint;
+
+  /// What the circle never sees
+  ///
+  /// In en, this message translates to:
+  /// **'Never shared: notes, wishlist, reading time, pages, or any book you keep to yourself. Reviews follow their own switch — only public ones appear.'**
+  String get circleShareNever;
+
+  /// Reciprocity note on the share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll see your circle\'s reading in return. Change this any time in Profile.'**
+  String get circleShareReciprocity;
+
+  /// Save circle sharing choices
+  ///
+  /// In en, this message translates to:
+  /// **'Share what I ticked'**
+  String get circleShareSave;
+
+  /// Dismiss the circle share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get circleShareNotNow;
+
+  /// Profile section for circle sharing
+  ///
+  /// In en, this message translates to:
+  /// **'Your circle — connections only'**
+  String get circlePrivacyHeader;
+
+  /// Profile circle section footnote
+  ///
+  /// In en, this message translates to:
+  /// **'Turn a switch off and it leaves your connections\' screens the next time their app checks.'**
+  String get circlePrivacyNote;
+
+  /// Per-book switch hiding it from the circle
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this one to myself'**
+  String get circleKeepToMyself;
+
+  /// Per-book hide switch hint
+  ///
+  /// In en, this message translates to:
+  /// **'Your circle won\'t see that you\'re reading it, your rating, or that you own it. A public review stays public.'**
+  String get circleKeepToMyselfHint;
+
+  /// Per-book hide switch hint when on
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden from your connections. A public review stays public.'**
+  String get circleKeptHint;
 }
 
 class _AppLocalizationsDelegate

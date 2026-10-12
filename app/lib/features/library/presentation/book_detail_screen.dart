@@ -27,6 +27,8 @@ import '../../../core/notifications/notification_service.dart';
 import '../../../core/notifications/reading_timer_notifications.dart';
 import '../../../core/widgets/report_review.dart';
 import '../../catalog/providers/catalog_providers.dart';
+import '../../circle/widgets/circle_privacy.dart';
+import '../../circle/widgets/circle_widgets.dart';
 import '../../lending/lending_format.dart';
 import '../../lending/presentation/lend_sheet.dart';
 import '../../lending/reminder.dart';
@@ -173,6 +175,13 @@ class _BookDetailBodyState extends ConsumerState<_BookDetailBody> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // The reason to tap Add — what the reader's circle made
+                    // of this book (docs/circle-reading-mockups.html, 1b).
+                    BookCircleSection(
+                      workId: workId,
+                      title: work['title'] as String? ?? '',
+                      padding: EdgeInsets.only(bottom: 14),
+                    ),
                     about,
                     // A borrowed (unowned) book still shows its history —
                     // "from Anu · out now", close-out action and all.
@@ -182,6 +191,17 @@ class _BookDetailBodyState extends ConsumerState<_BookDetailBody> {
                 ),
               )
             else ...[
+              // On the shelf the circle keeps the reader company (1c); a
+              // wishlisted book is still being chosen, so it gets the full
+              // card — with "ask to borrow" — like a book not yet added.
+              BookCircleSection(
+                workId: workId,
+                title: work['title'] as String? ?? '',
+                myStatus: entry.valueOrNull?.status == 'wishlist'
+                    ? null
+                    : entry.valueOrNull?.status ?? 'pending',
+                padding: EdgeInsets.fromLTRB(13, 12, 13, 0),
+              ),
               Padding(
                 padding: EdgeInsets.fromLTRB(13, 12, 13, 0),
                 child: _TabBar(selected: _tab, onChanged: (t) => setState(() => _tab = t)),
@@ -1819,6 +1839,8 @@ class _YoursTabContent extends ConsumerWidget {
           SizedBox(height: 8),
         ],
         _ShelfSection(entry: entry),
+        SizedBox(height: 8),
+        CircleHiddenRow(entry: entry),
       ],
     );
   }

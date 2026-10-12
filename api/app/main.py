@@ -13,6 +13,7 @@ from app.api import (
     auth,
     buy_clicks,
     catalog,
+    circle,
     connections,
     devices,
     health,
@@ -122,6 +123,7 @@ def create_app() -> FastAPI:
     app.include_router(me.router)
     app.include_router(users.router)
     app.include_router(connections.router)
+    app.include_router(circle.router)
     app.include_router(devices.router)
     app.include_router(catalog.router)
     app.include_router(public.router)

@@ -129,6 +129,18 @@ per-user sync engine stays simple.
 - **Rejected-loan handling.** The ledger's Rejected tab shows still-out loans whose
   borrower declined — the lender re-sends, or "makes a private contact"
   (`updateBorrower` clears `borrower_user_id` via a sync op).
+- **Your circle (13 Oct 2026).** What a reader's *accepted* connections read, rated and
+  own — each only if they switched it on (`profiles.circle_share_reading` /
+  `_ratings` / `_owned`, all default false; ratings ride on reading) and never a
+  book they kept to themselves (`library_entries.circle_hidden`, a synced column
+  that beats every switch). Reciprocal: a caller who shares nothing gets an
+  `invite` count instead of anyone's reading. Every rule lives in
+  `circle_service._people_for_works`, the single gate behind `POST /circle/signals`
+  (a page of search rows in one request), `GET /circle/works/{id}` (book page card
+  + sheet, translation bridge), `GET /circle/pick` (Home's one card, stable per day)
+  and `POST /circle/borrow-ask` (a push to the owner, one per copy per day).
+  Online-only and never synced; the app treats a failure as "nothing to show".
+  Design: [circle-reading-mockups.html](circle-reading-mockups.html).
 - **Reputation.** `scoring_service` computes a StackOverflow-style score at read time
   from countable rows the user owns (books/authors added, reviews, tracked/finished,
   lends) — no ledger to keep in sync.
@@ -212,6 +224,7 @@ markers are omitted.
 - `api/users.py` — Search other users' public profiles for connections/lending.
 - `api/health.py` — Liveness + DB-reachability probe for deploy health checks.
 - `api/connections.py` — Request/accept/list user connections and send lending reminders (optional FCM push).
+- `api/circle.py` — Your circle: connections' reading for search rows, the book page and Home's card, plus asking to borrow.
 - `api/recommendations.py` — Opt-in LLM-reasoned recommendations, dormant unless an Anthropic key is set.
 - `api/import_.py` — Preview and commit CSV library imports matched against the catalog.
 - `api/devices.py` — Register/unregister an install's FCM push token for the signed-in user.
@@ -221,6 +234,7 @@ markers are omitted.
 - `schemas/sync.py` — Sync push/pull protocol: op payloads, results, cursored deltas.
 - `schemas/device.py` — FCM device-token registration.
 - `schemas/profile.py` — Profile read/update, username validation, public user search, scoring.
+- `schemas/circle.py` — Your circle: a person on a book, search-row signals, the book page answer, Home's pick.
 - `schemas/connection.py` — User-to-user connections and lending reminders.
 
 **Models — `models/`** (SQLAlchemy 2.0)
@@ -248,6 +262,7 @@ markers are omitted.
 - `services/catalog_service.py` — Layer-1 catalog logic: works/editions/authors/publishers/genres/series with dedupe, ISBN+OpenLibrary lookup, tuned eager-loading.
 - `services/openlibrary_client.py` — Thin, mockable OpenLibrary metadata client — the V1 zero-credential metadata source.
 - `services/sync_service.py` — Push/pull for Layer-2: idempotent op application, delete-wins/LWW conflicts, `server_seq` cursor.
+- `services/circle_service.py` — Your circle: the one gate deciding which connection may be seen on which book, and Home's daily pick.
 - `services/connection_service.py` — Reader-to-reader requests, accept/block, and directional status over one deduped row per pair.
 - `services/lend_mirror_service.py` — Mirrors an outgoing loan onto a linked borrower's Borrowed shelf, committed independently after the lender's sync op.
 - `services/profile_service.py` — Profile bootstrap-on-first-login and update; visibility toggles; case-insensitive username uniqueness.
@@ -323,6 +338,7 @@ markers are omitted.
 - `features/catalog/presentation/publisher_picker_screen.dart` — S7b search/add a catalog publisher.
 - `features/catalog/presentation/work_picker_screen.dart` — Search-and-pick a Work when linking a translation.
 - `features/catalog/providers/catalog_providers.dart` — Providers for catalog-only + global search results.
+- `features/circle/` — Your circle: models + providers (`circle_models.dart`, `circle_providers.dart`), the search line / book page card / sheet / borrow ask (`widgets/circle_widgets.dart`), Home's card (`widgets/circle_home_card.dart`), the opt-in sheet and privacy controls (`widgets/circle_share_sheet.dart`, `widgets/circle_privacy.dart`).
 - `features/connections/connections_providers.dart` — Connection identity model + providers for the peer-to-peer layer.
 - `features/connections/presentation/connection_loans_screen.dart` — Loans (lent + borrowed) shared with one connection.
 - `features/connections/presentation/connections_screen.dart` — S8b connections inbox: the consent layer for lending.

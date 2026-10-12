@@ -1814,6 +1814,67 @@ and guess a pass for. R2–R4 are the dormant UI and can follow whenever.
 - [ ] `[LATER]` — "★★★★★ after this read" needs a timestamp on the existing rating
       matched to the read that was open; skippable in v1
 
+## Phase C — Your circle
+
+Owner request, 13 Oct 2026: "5 connections read this" on search and the book page,
+and a "your connection read and rated this" card on Home — respecting each
+connection's privacy. Design and every rule in
+[circle-reading-mockups.html](circle-reading-mockups.html); the owner took all five
+recommended decisions (reciprocity on; all switches off and asked once; search not
+re-ranked; stars folded while you're reading; tagged `[V1]` in feature-map.md).
+
+### C1 — Consent and the gate ✅ 13 Oct 2026
+
+- [x] Migration `000056`: `profiles.circle_share_reading` / `_ratings` / `_owned`
+      (default false) and `library_entries.circle_hidden` (synced, Drift v15)
+- [x] `circle_service._people_for_works` — the one gate: accepted connections only,
+      only what each person switched on, ratings only alongside reading, one hidden
+      copy hides the person on that book, only public reviews quoted, counts count
+      only who appears; reciprocity returns an `invite` count instead
+- [x] `POST /circle/signals` (≤50 works, one request per search page),
+      `GET /circle/works/{id}` (+ translation bridge), `GET /circle/pick`
+      (borrow › read along › loved › cluster › kindred, stable per day, dismissals
+      honoured), `POST /circle/borrow-ask` (push `borrow_ask`, one per copy per day)
+- [x] `tests/test_circle.py` — a case per privacy rule
+
+### C2 — The app ✅ 13 Oct 2026
+
+- [x] Search rows: one line, names first ("Anu, Lakshmi & 2 more read this")
+- [x] Book page: full card under the cover when not on your shelf (or wishlisted),
+      compact strip above the tabs when it is; "See all" sheet grouped by
+      read / reading / has a copy; stars and quotes folded while you're reading
+- [x] Ask to borrow — confirm, push to the owner, tap lands on their copy
+- [x] Home: one "From your circle" card, or the invitation (≤ once a week, gone
+      after two ✕), or nothing
+- [x] Opt-in sheet (every box unticked), Profile → "Your circle" switches,
+      "Keep this one to myself" on the Yours tab
+- [x] `test/circle_test.dart` — parsing from the server schema, hide-switch sync
+      (an older API's missing field never un-hides), dedupe keeps hidden, v15
+      migration re-runnable, widgets render silence when there's nothing to say
+
+### C3 — Still open
+
+- [x] On-device pass, two Android emulators, two connected accounts (13 Oct 2026,
+      local API + a scratch mock of Supabase auth): connect → accept; invitation →
+      opt-in sheet (all unticked) → Home pick "Ben has … — it's on your Wishlist";
+      search lines incl. "has a copy" and a kept-to-myself book showing nothing;
+      book page card, sheet, compact strip both ways; ask to borrow (204, repeat
+      suppressed); lend → borrower's linked Borrowed shelf → returned on both
+      ledgers; switching sharing off removes the reader from the other phone.
+      Fixed on the way: circle sheets opened under the bottom nav (now root
+      navigator); answer cache cut from 10 to 2 minutes so a revoked share leaves
+      the other screen quickly
+- [ ] Airplane-mode check (owner testing): circle surfaces must simply disappear offline
+- [ ] The borrow-ask push itself on a real build (local API had no Firebase credentials)
+- [ ] Owner's side of a borrow ask: the push opens their copy, but the lend sheet
+      doesn't yet arrive with the asker pre-filled (`showLendSheet` takes no
+      initial borrower)
+- [ ] Mockup 3b extras not built: "Kept to myself · N ›" list and "See what Anu
+      sees" preview; mockup 3c's add-sheet checkbox
+- [ ] Offline cache of circle answers (currently in-memory for 2 minutes; the
+      mockup notes proposed a day in Drift)
+- [ ] Privacy policy paragraph: connections can see what a reader chose to share
+
 ## Parking lot — v1.5 (designed or deliberately deferred)
 
 - [ ] Quote capture with OCR (regional scripts) — S14 designed

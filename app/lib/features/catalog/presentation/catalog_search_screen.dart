@@ -17,6 +17,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../providers/catalog_providers.dart';
+import '../../circle/circle_providers.dart';
 import 'catalog_entity_tiles.dart';
 import 'catalog_result_tile.dart';
 
@@ -437,6 +438,10 @@ class _SearchResults extends ConsumerWidget {
     final authors = (data['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     final publishers = (data['publishers'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     final readers = ref.watch(_readerSearchProvider(remoteQuery));
+    // One request for the whole page of results; rows with nothing to say
+    // simply aren't in the map. Never blocks or errors the results.
+    final circle =
+        ref.watch(circleSignalsProvider(circleSignalsKey(works))).valueOrNull ?? const {};
 
     if (library.isLoading && catalog.isLoading) {
       return ListSkeleton();
@@ -487,7 +492,8 @@ class _SearchResults extends ConsumerWidget {
         if (works.isNotEmpty) ...[
           SectionLabel(l10n.catalogSearchSectionCatalog, padding: EdgeInsets.zero),
           SizedBox(height: 8),
-          for (final work in works) CatalogResultTile(work: work),
+          for (final work in works)
+            CatalogResultTile(work: work, circleSignal: circle[work['id']]),
           SizedBox(height: 16),
         ],
         if (authors.isNotEmpty) ...[

@@ -188,6 +188,15 @@ and what remains is a book page (owner request, 14 Aug 2026).
   because it improves the *shared* Edition, and the copy says so. One sheet
   serves all four callers (timer face, mini-bar, Home card, manual log): CLAUDE.md's
   own lesson is that those surfaces drift the moment they're built separately.
+- **Your circle is a sentence with faces, and silence when it has nothing to say**
+  (built 13 Oct 2026, [circle-reading-mockups.html](circle-reading-mockups.html)).
+  One line under a search row, one gold-striped card under the cover of a book
+  you don't have (compact strip above the tabs once you do), one "From your
+  circle" card on Home — never a feed, never "0 connections", never an empty
+  card. Names lead ("Anu, Lakshmi & 2 more read this"); the circle's average is
+  labelled as theirs, apart from the catalogue's. Gold is the accent because
+  "ask Faisal to lend it" *is* lending. Every surface shows only what each
+  connection chose to share; the opt-in sheet starts unticked.
 - **A chip row is a shortcut, never the vocabulary** (designed 21 Jul 2026,
   mockups **M10–M11**). Type and Genre stay at ~6 visible chips no matter how big
   the catalogue grows: selected values pin first, then the reader's *own*

@@ -4936,4 +4936,328 @@ class AppLocalizationsEn extends AppLocalizations {
   String paceNotEnoughProgress(int done, int needed) {
     return '$done of $needed timed sittings · finish one and log the page you reached';
   }
+
+  @override
+  String get circleEyebrow => 'Your circle';
+
+  @override
+  String get circleFromYourCircle => 'From your circle';
+
+  @override
+  String circleSeeAll(int count) {
+    return 'See all $count ›';
+  }
+
+  @override
+  String circleSearchReadOne(String name) {
+    return '$name read this';
+  }
+
+  @override
+  String circleSearchReadTwo(String first, String second) {
+    return '$first & $second read this';
+  }
+
+  @override
+  String circleSearchReadMany(String first, String second, int more) {
+    return '$first, $second & $more more read this';
+  }
+
+  @override
+  String circleSearchReading(String name) {
+    return '$name is reading it now';
+  }
+
+  @override
+  String circleSearchReadingMany(String name, int more) {
+    return '$name & $more more are reading it';
+  }
+
+  @override
+  String circleSearchOwns(String name) {
+    return '$name has a copy · ask to borrow';
+  }
+
+  @override
+  String get circleAskToBorrow => 'Ask to borrow';
+
+  @override
+  String circleHeadlineRead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count of your connections have read this',
+      one: '1 of your connections has read this',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String circleHeadlineReading(String name) {
+    return '$name is reading this now';
+  }
+
+  @override
+  String circleHeadlineOwns(String name) {
+    return '$name has a copy';
+  }
+
+  @override
+  String get circleTranslationsOnly =>
+      'Your circle read it in another language';
+
+  @override
+  String circleTheyGaveIt(String rating) {
+    return 'They gave it ★ $rating';
+  }
+
+  @override
+  String circleAlsoReading(String name) {
+    return '$name is reading it now';
+  }
+
+  @override
+  String circleHasACopy(String name) {
+    return '$name has a copy';
+  }
+
+  @override
+  String circleStripYouAnd(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'You and $count connections read this',
+      one: 'You and 1 connection read this',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String circleStripRead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count connections read this',
+      one: '1 connection read this',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String circleStripAgree(String name) {
+    return '$name gave it ★5 too';
+  }
+
+  @override
+  String get circleFoldedNote =>
+      'Their ratings stay folded while you\'re reading it.';
+
+  @override
+  String get circleShowAnyway => 'Show anyway';
+
+  @override
+  String circleSheetTitle(String title) {
+    return '$title in your circle';
+  }
+
+  @override
+  String get circleSheetSubtitle =>
+      'Only connections who share their reading appear here';
+
+  @override
+  String circleSheetRead(int count) {
+    return 'Read it · $count';
+  }
+
+  @override
+  String circleSheetReading(int count) {
+    return 'Reading now · $count';
+  }
+
+  @override
+  String circleSheetOwns(int count) {
+    return 'Has a copy · $count';
+  }
+
+  @override
+  String circleFinishedOn(String date) {
+    return 'Finished $date';
+  }
+
+  @override
+  String circleStartedOn(String date) {
+    return 'Started $date';
+  }
+
+  @override
+  String circleReadTimes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'read it $count times',
+      two: 'read it twice',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get circleNoRatingShared => 'no rating shared';
+
+  @override
+  String get circleOwnsToo => 'has a copy';
+
+  @override
+  String circleTranslationLine(String names, String title) {
+    return '$names also read it as $title';
+  }
+
+  @override
+  String circleBorrowTitle(String name) {
+    return 'Ask $name to lend it?';
+  }
+
+  @override
+  String circleBorrowBody(String title) {
+    return 'They\'ll get a notification asking to borrow “$title”. Lending is still their call.';
+  }
+
+  @override
+  String get circleBorrowSend => 'Ask';
+
+  @override
+  String circleBorrowSent(String name) {
+    return 'Asked $name';
+  }
+
+  @override
+  String get circleBorrowFailed =>
+      'Couldn\'t send that — try again when you\'re online';
+
+  @override
+  String circlePickLoved(String name, String title) {
+    return '$name finished “$title”';
+  }
+
+  @override
+  String get circlePickTheirRating => 'their rating';
+
+  @override
+  String circlePickAlsoRead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Also read by $count others in your circle',
+      one: 'Also read by 1 other in your circle',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String circlePickCluster(int count, String title) {
+    return '$count of your circle finished “$title” recently';
+  }
+
+  @override
+  String circlePickReadAlong(String name, String title) {
+    return '$name started “$title” — it\'s on your To-read';
+  }
+
+  @override
+  String circlePickBorrow(String name, String title) {
+    return '$name has “$title” — it\'s on your Wishlist';
+  }
+
+  @override
+  String circlePickKindred(String name, String title, int rating) {
+    return '$name gave “$title” ★$rating — so did you';
+  }
+
+  @override
+  String get circleWantToRead => 'Want to read';
+
+  @override
+  String circleAskNameToLend(String name) {
+    return 'Ask $name to lend';
+  }
+
+  @override
+  String get circleOpenBook => 'Open the book';
+
+  @override
+  String circleInviteHeadline(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count of your connections share what they read',
+      one: '1 of your connections shares what they read',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get circleInviteBody =>
+      'Share yours to see what they\'ve finished, what they loved and which of their books you could borrow.';
+
+  @override
+  String get circleInviteButton => 'Choose what to share';
+
+  @override
+  String get circleShareTitle => 'Share your reading with your circle?';
+
+  @override
+  String get circleShareIntro =>
+      'Only your connections — people you approved, mostly people you lend to. Not your public profile, not strangers.';
+
+  @override
+  String get circleShareReading => 'What I\'m reading and have read';
+
+  @override
+  String get circleShareReadingHint =>
+      'They\'ll see that you\'re reading a book, and that you\'ve read it.';
+
+  @override
+  String get circleShareRatings => 'My star ratings';
+
+  @override
+  String get circleShareRatingsHint =>
+      'Your stars beside your name on books you\'ve read. Needs the one above.';
+
+  @override
+  String get circleShareOwned => 'Which books I own';
+
+  @override
+  String get circleShareOwnedHint =>
+      'So they can ask to borrow. Lending is still your call.';
+
+  @override
+  String get circleShareNever =>
+      'Never shared: notes, wishlist, reading time, pages, or any book you keep to yourself. Reviews follow their own switch — only public ones appear.';
+
+  @override
+  String get circleShareReciprocity =>
+      'You\'ll see your circle\'s reading in return. Change this any time in Profile.';
+
+  @override
+  String get circleShareSave => 'Share what I ticked';
+
+  @override
+  String get circleShareNotNow => 'Not now';
+
+  @override
+  String get circlePrivacyHeader => 'Your circle — connections only';
+
+  @override
+  String get circlePrivacyNote =>
+      'Turn a switch off and it leaves your connections\' screens the next time their app checks.';
+
+  @override
+  String get circleKeepToMyself => 'Keep this one to myself';
+
+  @override
+  String get circleKeepToMyselfHint =>
+      'Your circle won\'t see that you\'re reading it, your rating, or that you own it. A public review stays public.';
+
+  @override
+  String get circleKeptHint =>
+      'Hidden from your connections. A public review stays public.';
 }

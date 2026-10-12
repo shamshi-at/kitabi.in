@@ -74,6 +74,7 @@ class LibraryEntryCreate(BaseModel):
     current_page: int | None = None
     is_favorite: bool = False
     notes: str | None = None
+    circle_hidden: bool = False
 
 
 class LibraryEntryUpdate(BaseModel):
@@ -87,6 +88,7 @@ class LibraryEntryUpdate(BaseModel):
     current_page: int | None = None
     is_favorite: bool | None = None
     notes: str | None = None
+    circle_hidden: bool | None = None
 
 
 class _OneSubject(BaseModel):

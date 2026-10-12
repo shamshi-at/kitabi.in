@@ -18,6 +18,7 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../circle/widgets/circle_home_card.dart';
 import '../../insights/providers/insights_providers.dart';
 import '../../library/mark_finished.dart';
 import '../../library/presentation/finished_review_prompt.dart';
@@ -228,6 +229,9 @@ class _Dashboard extends ConsumerWidget {
         ],
         if (activeLent.isNotEmpty) _LendingNudge(item: activeLent.first, l10n: l10n),
         SizedBox(height: 14),
+        // A person before an algorithm: one card from the reader's circle,
+        // or nothing at all (docs/circle-reading-mockups.html, 2a–2c).
+        const CircleHomeCard(),
         // Hidden rather than shown empty: now that wishlisted books are filtered
         // out, a reader whose only entries are wishlist would otherwise get a
         // section heading over a 96px hole.

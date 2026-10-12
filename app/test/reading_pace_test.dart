@@ -51,6 +51,7 @@ LibraryHit _hit(String entryId, String editionId, {String? language}) {
       finishDate: null,
       currentPage: null,
       isFavorite: false,
+      circleHidden: false,
       notes: null,
     ),
     book: CachedBook(

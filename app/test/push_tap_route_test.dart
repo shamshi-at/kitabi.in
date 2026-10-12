@@ -34,6 +34,14 @@ void main() {
     expect(pushTapRoute({'type': 'connection_accepted'}), Routes.connections);
   });
 
+  test('a borrow ask opens the copy being asked for', () {
+    expect(
+      pushTapRoute({'type': 'borrow_ask', 'work_id': 'w-1', 'edition_id': 'e-2'}),
+      Routes.bookDetailPath('w-1', 'e-2'),
+    );
+    expect(pushTapRoute({'type': 'borrow_ask', 'work_id': 'w-1'}), Routes.home);
+  });
+
   test('an unknown type goes home rather than somewhere unrelated', () {
     // The bug in one line: an unhandled type must not inherit another
     // feature's screen just because it was the last branch written.

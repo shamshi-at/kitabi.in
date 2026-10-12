@@ -11,6 +11,8 @@ import '../../../data/db/catalog_cache.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../circle/circle_models.dart';
+import '../../circle/widgets/circle_widgets.dart';
 import '../../library/providers/library_providers.dart';
 
 /// One row for a catalog work — shared by search results and author/publisher
@@ -18,9 +20,13 @@ import '../../library/providers/library_providers.dart';
 /// everywhere they appear, per feature-map.md. A quick "＋" adds it straight to
 /// the library (or shows a check once owned).
 class CatalogResultTile extends ConsumerWidget {
-  const CatalogResultTile({super.key, required this.work});
+  const CatalogResultTile({super.key, required this.work, this.circleSignal});
 
   final Map<String, dynamic> work;
+
+  /// "Anu & 2 more read this" — what the reader's circle did with this book,
+  /// when the list it sits in has asked (search does; browse lists don't).
+  final CircleSignal? circleSignal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -152,6 +158,8 @@ class CatalogResultTile extends ConsumerWidget {
                                 ),
                             ],
                           ),
+                        if (circleSignal != null && !circleSignal!.isEmpty)
+                          CircleSearchLine(signal: circleSignal!),
                       ],
                     ),
                   ),

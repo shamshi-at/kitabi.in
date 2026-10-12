@@ -141,6 +141,32 @@ async def notify_return_reminder(
     )
 
 
+async def notify_borrow_ask(
+    actor_id: uuid.UUID,
+    target_id: uuid.UUID,
+    book_title: str,
+    work_id: uuid.UUID,
+    edition_id: uuid.UUID,
+    book_cover: str | None = None,
+) -> None:
+    """A connection asks to borrow a book the target shares owning ("your
+    circle" — docs/circle-reading-mockups.html). The tap opens the owner's own
+    copy, where the lend sheet already lives."""
+    await _notify_from_actor(
+        actor_id,
+        target_id,
+        title="Could they borrow it?",
+        body_suffix=f"would like to borrow “{book_title}”",
+        data={
+            "type": "borrow_ask",
+            "work_id": str(work_id),
+            "edition_id": str(edition_id),
+            "actor_id": str(actor_id),
+        },
+        image=book_cover,
+    )
+
+
 async def notify_reading_started(
     user_id: uuid.UUID,
     *,

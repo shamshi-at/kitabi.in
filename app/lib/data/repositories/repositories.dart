@@ -138,6 +138,26 @@ class LibraryRepository extends Repo {
     );
   }
 
+  /// "Keep this one to myself" — hides (or shows again) this book from the
+  /// reader's circle. Local first like every entry change; the server reads
+  /// the flag on every circle request, so it takes effect on the next sync.
+  Future<void> setCircleHidden(String id, bool hidden) async {
+    await db.libraryEntriesDao.patch(
+      id,
+      LibraryEntriesCompanion(
+        circleHidden: Value(hidden),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: Value('pending'),
+      ),
+    );
+    await enqueue(
+      entity: 'library_entries',
+      entityId: id,
+      opType: 'update',
+      data: {'circle_hidden': hidden},
+    );
+  }
+
   Future<void> updateStatus(String id, String status) async {
     await db.libraryEntriesDao.patch(
       id,

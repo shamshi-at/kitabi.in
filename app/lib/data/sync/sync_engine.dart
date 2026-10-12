@@ -429,6 +429,11 @@ class SyncEngine {
                 currentPage: Value(d['current_page'] as int?),
                 isFavorite: Value(d['is_favorite'] as bool),
                 notes: Value(d['notes'] as String?),
+                // Absent from an API that predates the circle — "not told",
+                // never "not hidden" (the 15 Aug withheld-field lesson).
+                circleHidden: d.containsKey('circle_hidden')
+                    ? Value(d['circle_hidden'] as bool? ?? false)
+                    : const Value.absent(),
               ),
             );
       case 'ratings':

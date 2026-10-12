@@ -50,3 +50,8 @@ class LibraryEntry(SyncableMixin, Base):
     current_page: Mapped[int | None] = mapped_column(Integer, default=None)
     is_favorite: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     notes: Mapped[str | None] = mapped_column(String, default=None)
+    # "Keep this one to myself" — hides this book from the reader's circle
+    # (status, rating and ownership alike), whatever their circle switches say.
+    circle_hidden: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )

@@ -7,7 +7,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 // API base URL — passed via --dart-define; empty is fine for now (every call
 // simply fails until the API is deployed and this is set).
-const _apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000');
+const _apiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://localhost:8000',
+);
 
 /// The client version, sent as `X-App-Version` so the API's update-gate can
 /// force old builds to upgrade. Keep in step with pubspec.yaml.
@@ -67,24 +70,26 @@ class ApiClient {
     TokenReader? readToken,
     SessionRefresher? refreshSession,
     Future<void> Function()? onAuthLost,
-  })  : _readToken = readToken ?? _supabaseToken,
-        _refreshSession = refreshSession ?? _supabaseRefresh,
-        _onAuthLost = onAuthLost ?? _supabaseSignOut,
-        _dio = Dio(BaseOptions(
-          baseUrl: _apiBaseUrl,
-          // Airplane mode fails fast on its own (the OS answers "network
-          // unreachable" immediately). The case that needs a ceiling is the
-          // *other* offline: a network the phone is joined to that goes
-          // nowhere — hotel wifi, a captive portal, a dead mobile cell. With
-          // no timeout Dio inherits the OS socket default, which is minutes,
-          // and every awaited call on a user-action path (Stop & log among
-          // them) stalls behind it. `receiveTimeout` is generous because the
-          // slowest legitimate endpoints are LLM-backed and raise it further
-          // themselves ([_llmOptions]).
-          connectTimeout: const Duration(seconds: 15),
-          sendTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 30),
-        )) {
+  }) : _readToken = readToken ?? _supabaseToken,
+       _refreshSession = refreshSession ?? _supabaseRefresh,
+       _onAuthLost = onAuthLost ?? _supabaseSignOut,
+       _dio = Dio(
+         BaseOptions(
+           baseUrl: _apiBaseUrl,
+           // Airplane mode fails fast on its own (the OS answers "network
+           // unreachable" immediately). The case that needs a ceiling is the
+           // *other* offline: a network the phone is joined to that goes
+           // nowhere — hotel wifi, a captive portal, a dead mobile cell. With
+           // no timeout Dio inherits the OS socket default, which is minutes,
+           // and every awaited call on a user-action path (Stop & log among
+           // them) stalls behind it. `receiveTimeout` is generous because the
+           // slowest legitimate endpoints are LLM-backed and raise it further
+           // themselves ([_llmOptions]).
+           connectTimeout: const Duration(seconds: 15),
+           sendTimeout: const Duration(seconds: 30),
+           receiveTimeout: const Duration(seconds: 30),
+         ),
+       ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
@@ -148,10 +153,14 @@ class ApiClient {
             DioExceptionType.receiveTimeout,
             DioExceptionType.sendTimeout,
           };
-          final attempt = (error.requestOptions.extra['retry_attempt'] as int?) ?? 0;
+          final attempt =
+              (error.requestOptions.extra['retry_attempt'] as int?) ?? 0;
           if (retryable.contains(error.type) && attempt < 3) {
-            await Future<void>.delayed(Duration(milliseconds: 300 * (1 << attempt)));
-            final opts = error.requestOptions..extra['retry_attempt'] = attempt + 1;
+            await Future<void>.delayed(
+              Duration(milliseconds: 300 * (1 << attempt)),
+            );
+            final opts = error.requestOptions
+              ..extra['retry_attempt'] = attempt + 1;
             try {
               return handler.resolve(await _dio.fetch<dynamic>(opts));
             } on DioException catch (e) {
@@ -177,14 +186,16 @@ class ApiClient {
   @visibleForTesting
   Dio get dio => _dio;
 
-  static String? _supabaseToken() => Supabase.instance.client.auth.currentSession?.accessToken;
+  static String? _supabaseToken() =>
+      Supabase.instance.client.auth.currentSession?.accessToken;
 
   static Future<String?> _supabaseRefresh() async {
     final res = await Supabase.instance.client.auth.refreshSession();
     return res.session?.accessToken;
   }
 
-  static Future<void> _supabaseSignOut() => Supabase.instance.client.auth.signOut();
+  static Future<void> _supabaseSignOut() =>
+      Supabase.instance.client.auth.signOut();
 
   /// A refresh outcome. [conclusive] is false when the attempt never reached
   /// Supabase — "we don't know", not "the session is gone".
@@ -218,7 +229,9 @@ class ApiClient {
   /// client raises [AuthRetryableFetchException] for exactly this, which is
   /// the name it gives the case: try again, don't conclude anything.
   static bool _isUnreachable(Object err) =>
-      isOfflineError(err) || err is SocketException || err is AuthRetryableFetchException;
+      isOfflineError(err) ||
+      err is SocketException ||
+      err is AuthRetryableFetchException;
 
   /// Idempotent — safe to call on every sign-in, not just the first.
   Future<void> bootstrap() => _dio.post('/auth/bootstrap');
@@ -243,7 +256,10 @@ class ApiClient {
 
   /// Live username availability check — `{username, available}`.
   Future<bool> usernameAvailable(String username) async {
-    final res = await _dio.get('/me/username-available', queryParameters: {'username': username});
+    final res = await _dio.get(
+      '/me/username-available',
+      queryParameters: {'username': username},
+    );
     return (res.data as Map<String, dynamic>)['available'] as bool? ?? false;
   }
 
@@ -284,7 +300,9 @@ class ApiClient {
   /// widget's `build` far from the cause (the genre-rows lesson, 21 Jul 2026).
   Future<List<Map<String, dynamic>>> getPublicReviews(String userId) async {
     final res = await _dio.get('/users/$userId/reviews');
-    return [for (final row in res.data as List) Map<String, dynamic>.from(row as Map)];
+    return [
+      for (final row in res.data as List) Map<String, dynamic>.from(row as Map),
+    ];
   }
 
   // --- Push notifications (FCM device tokens) ---
@@ -292,12 +310,14 @@ class ApiClient {
   /// Register this install's FCM token for the signed-in user. [deviceId] is
   /// what lets the server push to the reader's *other* devices only — without
   /// it, a fan-out to the account comes back to the device that caused it.
-  Future<void> registerDevice(String token, String platform, {String? deviceId}) =>
-      _dio.post('/devices', data: {
-        'token': token,
-        'platform': platform,
-        'device_id': ?deviceId,
-      });
+  Future<void> registerDevice(
+    String token,
+    String platform, {
+    String? deviceId,
+  }) => _dio.post(
+    '/devices',
+    data: {'token': token, 'platform': platform, 'device_id': ?deviceId},
+  );
 
   /// Drop this token on sign-out.
   Future<void> unregisterDevice(String token) =>
@@ -323,10 +343,8 @@ class ApiClient {
       _dio.put('/reading/active', data: payload);
 
   /// End it — from whichever device the reader reached for.
-  Future<void> deleteActiveSession({String? deviceId}) => _dio.delete(
-        '/reading/active',
-        queryParameters: {'device_id': ?deviceId},
-      );
+  Future<void> deleteActiveSession({String? deviceId}) =>
+      _dio.delete('/reading/active', queryParameters: {'device_id': ?deviceId});
 
   // --- In-app promotions (docs/promotions-plan.md) ---
 
@@ -342,7 +360,8 @@ class ApiClient {
       options: Options(
         headers: etag == null ? null : {'If-None-Match': etag},
         // 304 is a success here, not an error to be thrown.
-        validateStatus: (code) => code != null && (code == 304 || (code >= 200 && code < 300)),
+        validateStatus: (code) =>
+            code != null && (code == 304 || (code >= 200 && code < 300)),
       ),
     );
     if (res.statusCode == 304) return null;
@@ -372,6 +391,47 @@ class ApiClient {
 
   // --- Lending connections (peer-to-peer consent layer) ---
 
+  // ---- Your circle (docs/circle-reading-mockups.html) ----------------------
+  // Cross-user and online-only, like connections: never queued, never synced.
+  // Every rule about who may be seen is server-side (services/circle_service.py).
+
+  /// One-line summaries for a page of search results, in one request.
+  /// `{invite, signals: {workId: {...}}}`.
+  Future<Map<String, dynamic>> circleSignals(List<String> workIds) async {
+    final res = await _dio.post('/circle/signals', data: {'work_ids': workIds});
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// The book page's circle card and "See all" sheet.
+  Future<Map<String, dynamic>> circleWork(String workId) async {
+    final res = await _dio.get('/circle/works/$workId');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// Home's one "From your circle" card (or an invitation, or nothing).
+  Future<Map<String, dynamic>> circlePick({
+    List<String> dismissed = const [],
+  }) async {
+    final res = await _dio.get(
+      '/circle/pick',
+      queryParameters: {
+        if (dismissed.isNotEmpty) 'dismissed': dismissed.join(','),
+      },
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// Ask a connection to lend the copy they share owning — a push to them.
+  Future<void> circleBorrowAsk({
+    required String ownerId,
+    required String editionId,
+  }) async {
+    await _dio.post(
+      '/circle/borrow-ask',
+      data: {'owner_id': ownerId, 'edition_id': editionId},
+    );
+  }
+
   /// The connections screen in one call: `{incoming, outgoing, accepted}`, each
   /// a list of `{id, status, role, other:{id,username,full_name}, created_at}`.
   Future<Map<String, dynamic>> getConnections() async {
@@ -382,7 +442,10 @@ class ApiClient {
   /// Ask to connect with a Kitabi user (or accept, if they already asked you).
   /// Idempotent. Returns `{status, connection_id?}`.
   Future<Map<String, dynamic>> requestConnection(String addresseeId) async {
-    final res = await _dio.post('/connections', data: {'addressee_id': addresseeId});
+    final res = await _dio.post(
+      '/connections',
+      data: {'addressee_id': addresseeId},
+    );
     return (res.data as Map).cast<String, dynamic>();
   }
 
@@ -410,18 +473,27 @@ class ApiClient {
 
   /// Nudge a connected borrower to return a book (push). 403 if not connected.
   /// The cover URL rides along as the notification's rich image.
-  Future<void> remindToReturn(String userId, String bookTitle, {String? bookCoverUrl}) =>
-      _dio.post('/connections/remind', data: {
-        'user_id': userId,
-        'book_title': bookTitle,
-        'book_cover_url': ?bookCoverUrl,
-      });
+  Future<void> remindToReturn(
+    String userId,
+    String bookTitle, {
+    String? bookCoverUrl,
+  }) => _dio.post(
+    '/connections/remind',
+    data: {
+      'user_id': userId,
+      'book_title': bookTitle,
+      'book_cover_url': ?bookCoverUrl,
+    },
+  );
 
   /// Catalog-only search (title / author / exact ISBN) — Phase 2 scope.
   /// The "in your library" merge lands once the personal library (Phase 3)
   /// and its Drift cache exist; for now every result is a catalog work.
   Future<List<Map<String, dynamic>>> searchCatalog(String query) async {
-    final res = await _dio.get('/catalog/search', queryParameters: {'q': query});
+    final res = await _dio.get(
+      '/catalog/search',
+      queryParameters: {'q': query},
+    );
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
@@ -429,7 +501,10 @@ class ApiClient {
   /// Returns `{works, authors, publishers}`. The personal-library section is
   /// searched separately on-device (Drift), not here.
   Future<Map<String, dynamic>> searchAll(String query) async {
-    final res = await _dio.get('/catalog/search/all', queryParameters: {'q': query});
+    final res = await _dio.get(
+      '/catalog/search/all',
+      queryParameters: {'q': query},
+    );
     return res.data as Map<String, dynamic>;
   }
 
@@ -497,10 +572,12 @@ class ApiClient {
   /// without standing up a Dio adapter.
   @visibleForTesting
   static List<Map<String, dynamic>> parseGenreRows(List<dynamic> rows) => [
-        for (final row in rows)
-          if (row is Map) Map<String, dynamic>.from(row)
-          else if (row is String) {'name': row, 'work_count': null},
-      ];
+    for (final row in rows)
+      if (row is Map)
+        Map<String, dynamic>.from(row)
+      else if (row is String)
+        {'name': row, 'work_count': null},
+  ];
 
   /// Decode a list of object rows **eagerly**, element by element.
   ///
@@ -515,9 +592,9 @@ class ApiClient {
   /// page-shaped response (a series' reviews, say) needs the same eager parse,
   /// and pushing it through here is what keeps that guarantee in one place.
   static List<Map<String, dynamic>> parseRows(dynamic data) => [
-        for (final row in data as List)
-          if (row is Map) Map<String, dynamic>.from(row),
-      ];
+    for (final row in data as List)
+      if (row is Map) Map<String, dynamic>.from(row),
+  ];
 
   Future<List<Map<String, dynamic>>> browseAuthors({
     int limit = 40,
@@ -561,12 +638,17 @@ class ApiClient {
   /// Series typeahead — cross-script, so "aithihyamala" finds "ഐതിഹ്യമാല"
   /// rather than the reader creating a second series beside it.
   Future<List<Map<String, dynamic>>> searchSeries(String query) async {
-    final res = await _dio.get('/catalog/search/series', queryParameters: {'q': query});
+    final res = await _dio.get(
+      '/catalog/search/series',
+      queryParameters: {'q': query},
+    );
     return parseRows(res.data);
   }
 
   /// The picker's "add new series". Idempotent on name server-side.
-  Future<Map<String, dynamic>> createSeries(Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> createSeries(
+    Map<String, dynamic> payload,
+  ) async {
     final res = await _dio.post('/catalog/series', data: payload);
     return res.data as Map<String, dynamic>;
   }
@@ -593,7 +675,10 @@ class ApiClient {
   /// matches for the title being typed (server-side trigram similarity), best
   /// first. Empty when nothing is close.
   Future<List<Map<String, dynamic>>> similarWorks(String title) async {
-    final res = await _dio.get('/catalog/works/similar', queryParameters: {'title': title});
+    final res = await _dio.get(
+      '/catalog/works/similar',
+      queryParameters: {'title': title},
+    );
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
@@ -613,11 +698,11 @@ class ApiClient {
     String? backUrl,
     String? part,
   }) async {
-    final res = await _dio.post('/catalog/cover-extract', data: {
-      'front_url': ?frontUrl,
-      'back_url': ?backUrl,
-      'part': ?part,
-    }, options: _llmOptions);
+    final res = await _dio.post(
+      '/catalog/cover-extract',
+      data: {'front_url': ?frontUrl, 'back_url': ?backUrl, 'part': ?part},
+      options: _llmOptions,
+    );
     return res.data as Map<String, dynamic>;
   }
 
@@ -672,7 +757,10 @@ class ApiClient {
   /// Wiki-style edit — the response wrapper says whether the change applied
   /// live (`applied: true`, contributor or unowned work) or was queued as a
   /// pending revision for the contributor to approve.
-  Future<Map<String, dynamic>> updateWork(String workId, Map<String, dynamic> patch) async {
+  Future<Map<String, dynamic>> updateWork(
+    String workId,
+    Map<String, dynamic> patch,
+  ) async {
     final res = await _dio.patch('/catalog/works/$workId', data: patch);
     return res.data as Map<String, dynamic>;
   }
@@ -682,7 +770,10 @@ class ApiClient {
   /// The server refuses (403 `not_yours_to_merge`) any row another reader
   /// contributed, and checks every id before moving anything, so a partial
   /// merge is not a state this can produce.
-  Future<Map<String, dynamic>> mergeWorks(String workId, List<String> absorbIds) async {
+  Future<Map<String, dynamic>> mergeWorks(
+    String workId,
+    List<String> absorbIds,
+  ) async {
     final res = await _dio.post(
       '/catalog/works/$workId/merge',
       data: {'absorb_ids': absorbIds},
@@ -709,7 +800,10 @@ class ApiClient {
   /// boundary rather than deep inside a build() (CLAUDE.md, 21 Jul 2026).
   Future<List<Map<String, dynamic>>> myAuthorClaims() async {
     final res = await _dio.get('/catalog/claims/mine');
-    return [for (final row in (res.data as List)) Map<String, dynamic>.from(row as Map)];
+    return [
+      for (final row in (res.data as List))
+        Map<String, dynamic>.from(row as Map),
+    ];
   }
 
   /// Take back an unreviewed claim — the accidental-tap escape hatch.
@@ -719,25 +813,35 @@ class ApiClient {
 
   /// Typeahead for the add/edit form's author field (dropdown-cum-add-new).
   Future<List<Map<String, dynamic>>> searchAuthors(String query) async {
-    final res = await _dio.get('/catalog/authors', queryParameters: {'q': query});
+    final res = await _dio.get(
+      '/catalog/authors',
+      queryParameters: {'q': query},
+    );
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
   /// Typeahead for the add/edit form's publisher field.
   Future<List<Map<String, dynamic>>> searchPublishers(String query) async {
-    final res = await _dio.get('/catalog/publishers', queryParameters: {'q': query});
+    final res = await _dio.get(
+      '/catalog/publishers',
+      queryParameters: {'q': query},
+    );
     return (res.data as List).cast<Map<String, dynamic>>();
   }
 
   /// Author picker "add new" — create a catalog author with details
   /// (name, image, primary language, bio). Idempotent on name server-side.
-  Future<Map<String, dynamic>> createAuthor(Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> createAuthor(
+    Map<String, dynamic> payload,
+  ) async {
     final res = await _dio.post('/catalog/authors', data: payload);
     return res.data as Map<String, dynamic>;
   }
 
   /// Publisher picker "add new" — create a catalog publisher with details.
-  Future<Map<String, dynamic>> createPublisher(Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> createPublisher(
+    Map<String, dynamic> payload,
+  ) async {
     final res = await _dio.post('/catalog/publishers', data: payload);
     return res.data as Map<String, dynamic>;
   }
@@ -753,7 +857,10 @@ class ApiClient {
   ///
   /// [editionFrom] unwraps the reply for callers that only want the row, and
   /// tolerates an older API that still answers with a bare edition.
-  Future<Map<String, dynamic>> updateEdition(String editionId, Map<String, dynamic> patch) async {
+  Future<Map<String, dynamic>> updateEdition(
+    String editionId,
+    Map<String, dynamic> patch,
+  ) async {
     final res = await _dio.patch('/catalog/editions/$editionId', data: patch);
     return res.data as Map<String, dynamic>;
   }
@@ -769,7 +876,8 @@ class ApiClient {
   /// Whether an [updateEdition] / [updateWork] reply says the change reached
   /// the live catalogue. A body with no `applied` key is an older API, which
   /// only ever applied live.
-  static bool appliedLive(Map<String, dynamic> result) => result['applied'] != false;
+  static bool appliedLive(Map<String, dynamic> result) =>
+      result['applied'] != false;
 
   /// Add another edition (printing/ISBN) to an existing Work — returns the new
   /// edition.
@@ -777,7 +885,10 @@ class ApiClient {
     String workId,
     Map<String, dynamic> payload,
   ) async {
-    final res = await _dio.post('/catalog/works/$workId/editions', data: payload);
+    final res = await _dio.post(
+      '/catalog/works/$workId/editions',
+      data: payload,
+    );
     return res.data as Map<String, dynamic>;
   }
 
@@ -830,13 +941,22 @@ class ApiClient {
   }
 
   /// Sync engine wire calls — see data/sync/sync_engine.dart.
-  Future<List<Map<String, dynamic>>> syncPush(List<Map<String, dynamic>> ops) async {
+  Future<List<Map<String, dynamic>>> syncPush(
+    List<Map<String, dynamic>> ops,
+  ) async {
     final res = await _dio.post('/sync/push', data: {'ops': ops});
-    return ((res.data as Map<String, dynamic>)['results'] as List).cast<Map<String, dynamic>>();
+    return ((res.data as Map<String, dynamic>)['results'] as List)
+        .cast<Map<String, dynamic>>();
   }
 
-  Future<Map<String, dynamic>> syncPull({required int cursor, int limit = 500}) async {
-    final res = await _dio.get('/sync/pull', queryParameters: {'cursor': cursor, 'limit': limit});
+  Future<Map<String, dynamic>> syncPull({
+    required int cursor,
+    int limit = 500,
+  }) async {
+    final res = await _dio.get(
+      '/sync/pull',
+      queryParameters: {'cursor': cursor, 'limit': limit},
+    );
     return res.data as Map<String, dynamic>;
   }
 }
@@ -861,6 +981,7 @@ final updateRequiredProvider = StateProvider<bool>((ref) => false);
 
 final apiClientProvider = Provider<ApiClient>(
   (ref) => ApiClient(
-    onUpdateRequired: () => ref.read(updateRequiredProvider.notifier).state = true,
+    onUpdateRequired: () =>
+        ref.read(updateRequiredProvider.notifier).state = true,
   ),
 );

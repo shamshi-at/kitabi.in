@@ -37,6 +37,11 @@ class LibraryEntries extends Table with SyncColumns {
   IntColumn get currentPage => integer().nullable()();
   BoolColumn get isFavorite => boolean().withDefault(Constant(false))();
   TextColumn get notes => text().nullable()();
+
+  /// "Keep this one to myself" — hides this book from the reader's circle
+  /// (status, rating and ownership alike), whatever their circle switches say.
+  /// A property of the copy, so it syncs and can be set offline.
+  BoolColumn get circleHidden => boolean().withDefault(Constant(false))();
 }
 
 /// Star rating (1-5) — attaches to the Work (rule 17), shared across every

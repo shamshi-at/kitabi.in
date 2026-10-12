@@ -22,6 +22,7 @@ import '../../../data/api/api_client.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../circle/widgets/circle_privacy.dart';
 import '../../import_books/csv_export.dart';
 import '../../insights/providers/insights_providers.dart';
 import '../../library/providers/library_providers.dart';
@@ -316,6 +317,9 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
             ),
           ),
         ),
+        SizedBox(height: 16),
+        // Connections only — a second audience, so a second box.
+        CirclePrivacyCard(profile: widget.profile),
         SizedBox(height: 16),
         _ActionButton(
           icon: Icons.visibility_outlined,
