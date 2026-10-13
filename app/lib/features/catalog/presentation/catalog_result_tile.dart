@@ -48,6 +48,11 @@ class CatalogResultTile extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Outside the row's tap target, so wishlisting never opens the book.
+          if (editionId != null)
+            _QuickWishlist(work: work, editionId: editionId)
+          else
+            SizedBox(width: _QuickWishlist.width),
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -211,3 +216,61 @@ class _QuickAdd extends ConsumerWidget {
     );
   }
 }
+
+/// Leading "save for later" on a catalog result (owner request, 14 Oct 2026):
+/// a bookmark left of the cover for a book that isn't anywhere on the reader's
+/// shelves yet, the mirror of the trailing "＋". Slate, the Wishlist status
+/// colour. Once wishlisted it stays as a filled bookmark so the row says so; a
+/// book the reader already has in any other state gets the empty slot, which
+/// keeps every cover in the list on the same line.
+class _QuickWishlist extends ConsumerWidget {
+  const _QuickWishlist({required this.work, required this.editionId});
+
+  final Map<String, dynamic> work;
+  final String editionId;
+
+  static const double width = 34;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final entry = ref.watch(libraryEntryProvider(editionId)).valueOrNull;
+    final Widget child;
+    if (entry == null) {
+      child = IconButton(
+        icon: Icon(Icons.bookmark_add_outlined, color: AppColors.slate, size: 22),
+        tooltip: l10n.bookWishlistShort,
+        padding: EdgeInsets.zero,
+        constraints: BoxConstraints.tightFor(width: width, height: 44),
+        onPressed: () async {
+          try {
+            final edition = work['edition'] as Map<String, dynamic>;
+            await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+            final repo = await ref.read(libraryRepositoryProvider.future);
+            await repo.add(editionId: editionId, status: 'wishlist');
+            Haptics.success();
+            ref.invalidate(libraryEntryProvider(editionId));
+            if (context.mounted) {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(l10n.bookWishlistAdded)));
+            }
+          } catch (err) {
+            if (context.mounted) showQuietError(context, l10n.quickAddFailed, err);
+          }
+        },
+      );
+    } else if (entry.status == 'wishlist') {
+      child = Semantics(
+        label: l10n.bookWishlistShort,
+        child: SizedBox(
+          height: 44,
+          child: Icon(Icons.bookmark, color: AppColors.slate, size: 22),
+        ),
+      );
+    } else {
+      child = const SizedBox.shrink();
+    }
+    return SizedBox(width: width, child: Center(child: child));
+  }
+}
+
