@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -191,7 +192,12 @@ class CircleSearchLine extends StatelessWidget {
     } else if (signal.ownsCount > 0) {
       faces = signal.owners;
       accent = AppColors.goldInk;
-      text = l10n.circleSearchOwns(signal.owners.first.shortName);
+      final owner = signal.owners.first;
+      text = !signal.canAsk
+          ? l10n.circleHasACopy(owner.shortName)
+          : owner.asked
+          ? l10n.circleSearchAsked(owner.shortName)
+          : l10n.circleSearchOwns(owner.shortName);
     } else {
       return const SizedBox.shrink();
     }
@@ -251,7 +257,10 @@ class BookCircleSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final circle = ref.watch(circleWorkProvider(workId)).valueOrNull;
+    final answer = ref.watch(circleWorkProvider(workId)).valueOrNull;
+    final circle = answer == null || answer.canAsk
+        ? answer
+        : answer.withoutCopies();
     // Silence is the empty state: no connections, nobody sharing, the reader
     // not sharing (the invitation lives on Home), offline — all the same here.
     if (circle == null || circle.invite != null || circle.isEmpty) {
@@ -295,7 +304,9 @@ class _CircleCard extends StatelessWidget {
         l10n.circleAlsoReading(reading.first.shortName),
     ];
     final quoted = readers.where((p) => p.review != null).firstOrNull;
-    final lender = owners.firstOrNull;
+    // No lending door on a book the reader already has (owner request,
+    // 14 Oct 2026) — "has a copy" means nothing to someone holding one.
+    final lender = circle.canAsk ? owners.firstOrNull : null;
     final faces = [
       ...readers,
       ...reading,
@@ -469,7 +480,9 @@ class _LendRow extends ConsumerWidget {
       borderRadius: BorderRadius.circular(9),
       child: InkWell(
         borderRadius: BorderRadius.circular(9),
-        onTap: () => askToBorrow(context, ref, person: person, title: title),
+        onTap: person.asked
+            ? null
+            : () => askToBorrow(context, ref, person: person, title: title),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
@@ -500,11 +513,13 @@ class _LendRow extends ConsumerWidget {
                 ),
               ),
               Text(
-                '${l10n.circleAskToBorrow} ›',
+                person.asked
+                    ? '${l10n.circleRequested} ✓'
+                    : '${l10n.circleAskToBorrow} ›',
                 style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.oxblood,
+                  color: person.asked ? AppColors.moss : AppColors.oxblood,
                 ),
               ),
             ],
@@ -755,17 +770,32 @@ class _CircleSheetState extends State<_CircleSheet> {
         if (c.readers.isNotEmpty) ...[
           label(l10n.circleSheetRead(c.readers.length)),
           for (final p in c.readers)
-            _PersonRow(person: p, title: widget.title, folded: _folded),
+            _PersonRow(
+              person: p,
+              title: widget.title,
+              folded: _folded,
+              canAsk: c.canAsk,
+            ),
         ],
         if (c.readingNow.isNotEmpty) ...[
           label(l10n.circleSheetReading(c.readingNow.length)),
           for (final p in c.readingNow)
-            _PersonRow(person: p, title: widget.title, folded: _folded),
+            _PersonRow(
+              person: p,
+              title: widget.title,
+              folded: _folded,
+              canAsk: c.canAsk,
+            ),
         ],
         if (ownersOnly.isNotEmpty) ...[
           label(l10n.circleSheetOwns(ownersOnly.length)),
           for (final p in ownersOnly)
-            _PersonRow(person: p, title: widget.title, folded: _folded),
+            _PersonRow(
+              person: p,
+              title: widget.title,
+              folded: _folded,
+              canAsk: c.canAsk,
+            ),
         ],
         for (final t in c.translations) ...[
           const SizedBox(height: 12),
@@ -781,11 +811,15 @@ class _PersonRow extends ConsumerWidget {
     required this.person,
     required this.title,
     required this.folded,
+    required this.canAsk,
   });
 
   final CirclePerson person;
   final String title;
   final bool folded;
+
+  /// False for a book the reader already has — no ask on any row.
+  final bool canAsk;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -847,7 +881,19 @@ class _PersonRow extends ConsumerWidget {
                       ),
                     ),
                   ),
-                if (p.owns)
+                if (p.owns && canAsk && p.asked)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '${l10n.circleRequested} ✓',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.moss,
+                      ),
+                    ),
+                  )
+                else if (p.owns && canAsk)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
@@ -902,6 +948,9 @@ Future<void> askToBorrow(
   final l10n = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
   final api = ref.read(apiClientProvider);
+  // Captured now: the surface that asked may be gone by the time it lands
+  // (Home's card is replaced by the next pick), and the refresh must not be.
+  final container = ProviderScope.containerOf(context);
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -926,7 +975,28 @@ Future<void> askToBorrow(
     messenger.showSnackBar(
       SnackBar(content: Text(l10n.circleBorrowSent(person.shortName))),
     );
+  } on DioException catch (e) {
+    final alreadyYours = e.response?.statusCode == 409;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          alreadyYours ? l10n.circleAlreadyYours : l10n.circleBorrowFailed,
+        ),
+      ),
+    );
   } catch (_) {
     messenger.showSnackBar(SnackBar(content: Text(l10n.circleBorrowFailed)));
   }
+  // Asked from one place, "Requested" everywhere (owner request, 14 Oct 2026):
+  // every circle answer the app holds is re-read, not just this screen's.
+  refreshCircleAnswers(container);
+}
+
+/// Re-read every circle answer the app is holding — after an ask, so the
+/// book page, its sheet, search rows and Home's card agree at once.
+void refreshCircleAnswers(ProviderContainer container) {
+  container.invalidate(circleWorkProvider);
+  container.invalidate(circleSignalsProvider);
+  container.invalidate(circlePickProvider);
+  container.invalidate(borrowAsksProvider);
 }

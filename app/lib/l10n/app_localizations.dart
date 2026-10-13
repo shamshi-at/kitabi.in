@@ -8481,6 +8481,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 new notification} other{{count} new notifications}}'**
   String notificationsUnreadTooltip(int count);
+
+  /// Shown instead of Ask to borrow once the reader has asked
+  ///
+  /// In en, this message translates to:
+  /// **'Requested'**
+  String get circleRequested;
+
+  /// Search row once the reader has asked this owner
+  ///
+  /// In en, this message translates to:
+  /// **'You asked {name} to lend it'**
+  String circleSearchAsked(String name);
+
+  /// Ask refused: the reader already has the book
+  ///
+  /// In en, this message translates to:
+  /// **'That book is already on your shelves.'**
+  String get circleAlreadyYours;
 }
 
 class _AppLocalizationsDelegate

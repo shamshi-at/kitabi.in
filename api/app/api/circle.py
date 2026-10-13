@@ -49,7 +49,9 @@ async def circle_signals(
     people = await circle_service.sharers(db, me.id)
     if not circle_service.shares_anything(me):
         return CircleSignalsOut(invite=len(people))
-    return CircleSignalsOut(signals=await circle_service.signals(db, people, payload.work_ids))
+    return CircleSignalsOut(
+        signals=await circle_service.signals(db, me.id, people, payload.work_ids)
+    )
 
 
 @router.get("/works/{work_id}", response_model=CircleWorkOut)
@@ -59,7 +61,7 @@ async def circle_work(work_id: uuid.UUID, user: CurrentUser, db: DbSession) -> C
     people = await circle_service.sharers(db, me.id)
     if not circle_service.shares_anything(me):
         return CircleWorkOut(invite=len(people))
-    return await circle_service.for_work(db, people, work_id)
+    return await circle_service.for_work(db, me.id, people, work_id)
 
 
 @router.get("/pick", response_model=CirclePickResponse)
@@ -117,12 +119,21 @@ async def borrow_ask(
     owner = people.get(payload.owner_id)
     visible = None
     if edition is not None and owner is not None:
-        persons = (await circle_service.for_work(db, {owner.id: owner}, edition.work_id)).people
+        persons = (
+            await circle_service.for_work(db, me.id, {owner.id: owner}, edition.work_id)
+        ).people
         visible = next((p for p in persons if p.owns), None)
     if visible is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "not_found", "message": "That copy isn't on their shared shelf."},
+        )
+    # Not for a book already on the asker's shelves — the app hides the ask,
+    # and this keeps an older app (or a stale screen) from making one anyway.
+    if edition.work_id in await circle_service.holdings(db, me.id, {edition.work_id}):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "already_yours", "message": "That book is already on your shelves."},
         )
     asked_edition = visible.owned_edition_id or edition.id
     request, is_new = await borrow_request_service.ask(db, me.id, owner.id, asked_edition)

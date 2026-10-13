@@ -189,9 +189,13 @@ class _PickCard extends ConsumerWidget {
     final lender = person != null && person.owns ? person : null;
     final Widget primary = switch (pick.kind) {
       'borrow' => _CardButton(
-        label: l10n.circleAskNameToLend(person!.shortName),
+        label: person!.asked
+            ? '${l10n.circleRequested} ✓'
+            : l10n.circleAskNameToLend(person.shortName),
         gold: true,
-        onTap: () => askToBorrow(context, ref, person: person, title: title),
+        onTap: person.asked
+            ? null
+            : () => askToBorrow(context, ref, person: person, title: title),
       ),
       'read_along' ||
       'kindred' => _CardButton(label: l10n.circleOpenBook, onTap: openBook),
@@ -311,14 +315,18 @@ class _PickCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _CardButton(
-                      label: l10n.circleAskNameToLend(lender.shortName),
+                      label: lender.asked
+                          ? '${l10n.circleRequested} ✓'
+                          : l10n.circleAskNameToLend(lender.shortName),
                       gold: true,
-                      onTap: () => askToBorrow(
-                        context,
-                        ref,
-                        person: lender,
-                        title: title,
-                      ),
+                      onTap: lender.asked
+                          ? null
+                          : () => askToBorrow(
+                              context,
+                              ref,
+                              person: lender,
+                              title: title,
+                            ),
                     ),
                   ),
                 ],

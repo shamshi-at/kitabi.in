@@ -33,6 +33,8 @@ class CirclePersonOut(BaseModel):
     owns: bool = False
     owned_edition_id: uuid.UUID | None = None
     owned_edition_label: str | None = None
+    # The caller has an open ask with this owner for this book.
+    asked: bool = False
 
 
 class CircleSignalOut(BaseModel):
@@ -46,6 +48,9 @@ class CircleSignalOut(BaseModel):
     reading: list[CirclePersonOut] = []
     owners: list[CirclePersonOut] = []
     avg_rating: float | None = None
+    # False when the caller already has this book on a shelf (any but
+    # Wishlist) — no "ask to borrow" for a book you hold or have read.
+    can_ask: bool = True
 
 
 class CircleSignalsIn(BaseModel):
@@ -81,6 +86,7 @@ class CircleWorkOut(BaseModel):
     owns_count: int = 0
     avg_rating: float | None = None
     translations: list[CircleTranslationOut] = []
+    can_ask: bool = True
 
 
 PickKind = Literal["borrow", "read_along", "loved", "cluster", "kindred"]

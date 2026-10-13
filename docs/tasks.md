@@ -1883,6 +1883,15 @@ re-ranked; stars folded while you're reading; tagged `[V1]` in feature-map.md).
 - [x] Lending mirror turns a borrower's *wishlisted* entry into a borrowed
       to-read book when the loan lands (it stayed a wish, so Home kept offering
       to borrow it); migration `000059` repairs entries already in that state
+- [x] No ask for a book already on your shelves (any state but Wishlist, any
+      printing — owner request, 14 Oct 2026): the server sends `can_ask` with
+      every circle answer, Home's borrow card skips held books, and
+      `POST /circle/borrow-ask` refuses with 409 `already_yours`. People known
+      only for owning a copy drop out of the card for a reader who holds it
+- [x] "Requested" everywhere: each circle answer flags owners the reader has an
+      open ask with (`asked`, matched on the work), and an ask from any screen
+      re-reads every circle answer — Home card, book page, sheet and search line
+      all say so. Verified on two emulators
 - [ ] Airplane-mode check (owner testing): circle surfaces must simply disappear offline
 - [ ] The borrow-ask push itself on a real build (local API had no Firebase credentials)
 - [x] An ask to borrow is a record (14 Oct 2026, owner report: the push "took me

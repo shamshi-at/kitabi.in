@@ -5367,4 +5367,15 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get circleRequested => 'Requested';
+
+  @override
+  String circleSearchAsked(String name) {
+    return 'You asked $name to lend it';
+  }
+
+  @override
+  String get circleAlreadyYours => 'That book is already on your shelves.';
 }

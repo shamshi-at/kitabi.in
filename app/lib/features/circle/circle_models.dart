@@ -53,6 +53,7 @@ class CirclePerson {
     this.owns = false,
     this.ownedEditionId,
     this.ownedEditionLabel,
+    this.asked = false,
   });
 
   factory CirclePerson.fromJson(Map<String, dynamic> j) => CirclePerson(
@@ -68,6 +69,7 @@ class CirclePerson {
     owns: j['owns'] == true,
     ownedEditionId: _str(j['owned_edition_id']),
     ownedEditionLabel: _str(j['owned_edition_label']),
+    asked: j['asked'] == true,
   );
 
   final String userId;
@@ -84,6 +86,10 @@ class CirclePerson {
   final bool owns;
   final String? ownedEditionId;
   final String? ownedEditionLabel;
+
+  /// The reader has an open ask with this owner for this book — every surface
+  /// says "Requested" instead of offering to ask again.
+  final bool asked;
 
   bool get hasRead => status == 'read';
   bool get isReading => status == 'reading';
@@ -106,6 +112,7 @@ class CircleSignal {
     this.reading = const [],
     this.owners = const [],
     this.avgRating,
+    this.canAsk = true,
   });
 
   factory CircleSignal.fromJson(Map<String, dynamic> j) => CircleSignal(
@@ -116,6 +123,7 @@ class CircleSignal {
     reading: _list(j['reading'], CirclePerson.fromJson),
     owners: _list(j['owners'], CirclePerson.fromJson),
     avgRating: (j['avg_rating'] as num?)?.toDouble(),
+    canAsk: j['can_ask'] != false,
   );
 
   final int readCount;
@@ -125,6 +133,9 @@ class CircleSignal {
   final List<CirclePerson> reading;
   final List<CirclePerson> owners;
   final double? avgRating;
+
+  /// See [CircleWork.canAsk].
+  final bool canAsk;
 
   bool get isEmpty => readCount == 0 && readingCount == 0 && ownsCount == 0;
 
@@ -184,6 +195,7 @@ class CircleWork {
     this.ownsCount = 0,
     this.avgRating,
     this.translations = const [],
+    this.canAsk = true,
   });
 
   factory CircleWork.fromJson(Map<String, dynamic> j) => CircleWork(
@@ -194,7 +206,12 @@ class CircleWork {
     ownsCount: _int(j['owns_count']),
     avgRating: (j['avg_rating'] as num?)?.toDouble(),
     translations: _list(j['translations'], CircleTranslation.fromJson),
+    canAsk: j['can_ask'] != false,
   );
+
+  /// False when the book is already on one of the reader's shelves (any but
+  /// Wishlist): nobody asks to borrow a book they hold or have read.
+  final bool canAsk;
 
   /// Set instead of people when the reader shares nothing themselves.
   final int? invite;
@@ -204,6 +221,18 @@ class CircleWork {
   final int ownsCount;
   final double? avgRating;
   final List<CircleTranslation> translations;
+
+  /// For a reader who already has the book: who *owns* a copy is no news to
+  /// them, so people known only for owning it drop out (readers stay).
+  CircleWork withoutCopies() => CircleWork(
+    invite: invite,
+    people: people.where((p) => p.status != null).toList(),
+    readCount: readCount,
+    readingCount: readingCount,
+    avgRating: avgRating,
+    translations: translations,
+    canAsk: canAsk,
+  );
 
   List<CirclePerson> get readers => people.where((p) => p.hasRead).toList();
   List<CirclePerson> get readingNow =>

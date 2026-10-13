@@ -33,6 +33,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.borrow_request import BorrowRequest
 from app.models.connection import Connection
 from app.models.edition import Edition
 from app.models.library_entry import LibraryEntry
@@ -284,19 +285,81 @@ def summarize(persons: list[CirclePersonOut]) -> CircleSignalOut:
     )
 
 
+async def holdings(db: AsyncSession, me: uuid.UUID, work_ids: set[uuid.UUID]) -> set[uuid.UUID]:
+    """The books the caller already has — on any shelf but Wishlist, in any
+    printing (reading, read, to read, stopped, owned or borrowed). Nobody asks
+    to borrow those (owner request, 14 Oct 2026); a wish is exactly what an
+    ask is for."""
+    if not work_ids:
+        return set()
+    rows = await db.execute(
+        select(Edition.work_id)
+        .select_from(LibraryEntry)
+        .join(Edition, Edition.id == LibraryEntry.edition_id)
+        .where(
+            LibraryEntry.user_id == me,
+            LibraryEntry.deleted_at.is_(None),
+            LibraryEntry.status != "wishlist",
+            Edition.work_id.in_(work_ids),
+        )
+        .distinct()
+    )
+    return set(rows.scalars().all())
+
+
+async def _mark_asked(
+    db: AsyncSession, me: uuid.UUID, by_work: dict[uuid.UUID, list[CirclePersonOut]]
+) -> None:
+    """Flag each owner the caller has an open ask with for that book, so every
+    surface says "Requested" rather than offering to ask again — whichever
+    screen the ask was made from (owner request, 14 Oct 2026). Matched on the
+    work, like the ask itself is closed on the work."""
+    owners = {p.user_id for persons in by_work.values() for p in persons if p.owns}
+    if not owners:
+        return
+    rows = await db.execute(
+        select(BorrowRequest.owner_id, Edition.work_id)
+        .join(Edition, Edition.id == BorrowRequest.edition_id)
+        .where(
+            BorrowRequest.requester_id == me,
+            BorrowRequest.status == "open",
+            BorrowRequest.owner_id.in_(owners),
+            Edition.work_id.in_(by_work.keys()),
+        )
+    )
+    asked = set(rows.all())
+    for work_id, persons in by_work.items():
+        for p in persons:
+            if (p.user_id, work_id) in asked:
+                p.asked = True
+
+
 async def signals(
-    db: AsyncSession, people: dict[uuid.UUID, Profile], work_ids: list[uuid.UUID]
+    db: AsyncSession,
+    me: uuid.UUID,
+    people: dict[uuid.UUID, Profile],
+    work_ids: list[uuid.UUID],
 ) -> dict[str, CircleSignalOut]:
     """One search page's worth of one-line summaries, in one round trip. Works
     with nothing to say are left out rather than sent as zeros."""
     by_work = await _people_for_works(db, people, set(work_ids))
-    return {str(w): summarize(p) for w, p in by_work.items() if p}
+    await _mark_asked(db, me, by_work)
+    held = await holdings(db, me, set(by_work))
+    out = {}
+    for w, persons in by_work.items():
+        if persons:
+            summary = summarize(persons)
+            summary.can_ask = w not in held
+            out[str(w)] = summary
+    return out
 
 
 async def for_work(
-    db: AsyncSession, people: dict[uuid.UUID, Profile], work_id: uuid.UUID
+    db: AsyncSession, me: uuid.UUID, people: dict[uuid.UUID, Profile], work_id: uuid.UUID
 ) -> CircleWorkOut:
-    persons = (await _people_for_works(db, people, {work_id})).get(work_id, [])
+    by_work = await _people_for_works(db, people, {work_id})
+    await _mark_asked(db, me, by_work)
+    persons = by_work.get(work_id, [])
     summary = summarize(persons)
     out = CircleWorkOut(
         people=persons,
@@ -304,6 +367,7 @@ async def for_work(
         reading_count=summary.reading_count,
         owns_count=summary.owns_count,
         avg_rating=summary.avg_rating,
+        can_ask=work_id not in await holdings(db, me, {work_id}),
     )
     group_id = (
         await db.execute(select(Work.translation_group_id).where(Work.id == work_id))
@@ -394,7 +458,9 @@ async def pick(
     my_statuses: dict[uuid.UUID, set[str]] = defaultdict(set)
     for work_id, status in mine.all():
         my_statuses[work_id].add(status)
-    wishlist = {w for w, s in my_statuses.items() if "wishlist" in s}
+    # A book wished for in one printing but already held in another is held.
+    held = {w for w, s in my_statuses.items() if s - {"wishlist"}}
+    wishlist = {w for w, s in my_statuses.items() if "wishlist" in s} - held
     to_read = {w for w, s in my_statuses.items() if "pending" in s}
 
     my_ratings = dict(
@@ -458,6 +524,7 @@ async def pick(
     if not candidates:
         return None
     by_work = await _people_for_works(db, people, candidates)
+    await _mark_asked(db, me, by_work)
 
     def ordered(ids: set[uuid.UUID]) -> list[uuid.UUID]:
         return sorted(ids, key=lambda w: _day_order(me, today, w))

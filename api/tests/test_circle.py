@@ -495,3 +495,79 @@ async def test_circle_hidden_syncs_on_library_entries(client, db_sessionmaker, w
     pulled = (await client.get("/sync/pull?cursor=0")).json()["changes"]
     row = next(c["data"] for c in pulled if c["entity"] == "library_entries")
     assert row["circle_hidden"] is True
+
+
+async def test_no_ask_for_a_book_already_on_your_shelves(
+    client, db_sessionmaker, user, world, monkeypatch
+):
+    """Owner request, 14 Oct 2026: a book I've read or shelved is not one to
+    ask for — in any printing. A wish is exactly what an ask is for."""
+
+    async def fake_notify(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(circle_api.push_service, "notify_borrow_ask", fake_notify)
+    async with db_sessionmaker() as db:
+        work, faisals = await _book(db, "Kaalam")
+        _entry(db, world["faisal"], faisals, status="pending")
+        mine = Edition(work_id=work.id)  # my copy is a different printing
+        db.add(mine)
+        await db.flush()
+        _entry(db, user, mine, status="read")
+        wished, wished_ed = await _book(db, "Manju")
+        _entry(db, world["faisal"], wished_ed, status="pending")
+        _entry(db, user, wished_ed, status="wishlist")
+        await db.commit()
+
+    assert (await client.get(f"/circle/works/{work.id}")).json()["can_ask"] is False
+    assert (await client.get(f"/circle/works/{wished.id}")).json()["can_ask"] is True
+    sig = (
+        await client.post("/circle/signals", json={"work_ids": [str(work.id), str(wished.id)]})
+    ).json()["signals"]
+    assert sig[str(work.id)]["can_ask"] is False
+    assert sig[str(wished.id)]["can_ask"] is True
+
+    ask = {"owner_id": world["faisal"]["id"], "edition_id": str(faisals.id)}
+    resp = await client.post("/circle/borrow-ask", json=ask)
+    assert resp.status_code == 409 and resp.json()["code"] == "already_yours"
+
+    # Home's borrow card is for the wish, never for the book I've read.
+    pick = (await client.get("/circle/pick")).json()["pick"]
+    assert pick["kind"] == "borrow" and pick["work"]["id"] == str(wished.id)
+
+
+async def test_an_ask_reads_as_requested_everywhere(
+    client, db_sessionmaker, user, world, monkeypatch
+):
+    """Owner request, 14 Oct 2026: ask from Home, and the book page, its sheet
+    and the search line all say so — not "Ask to borrow" again."""
+
+    async def fake_notify(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(circle_api.push_service, "notify_borrow_ask", fake_notify)
+    async with db_sessionmaker() as db:
+        work, faisals = await _book(db, "Kaalam")
+        _entry(db, world["faisal"], faisals, status="pending")
+        _entry(db, user, faisals, status="wishlist")
+        await db.commit()
+
+    def asked_on(person_lists) -> list[bool]:
+        return [p["asked"] for p in person_lists if p["name"] == "Faisal"]
+
+    assert asked_on((await client.get(f"/circle/works/{work.id}")).json()["people"]) == [False]
+    ask = {"owner_id": world["faisal"]["id"], "edition_id": str(faisals.id)}
+    assert (await client.post("/circle/borrow-ask", json=ask)).status_code == 204
+
+    assert asked_on((await client.get(f"/circle/works/{work.id}")).json()["people"]) == [True]
+    sig = (await client.post("/circle/signals", json={"work_ids": [str(work.id)]})).json()
+    assert asked_on(sig["signals"][str(work.id)]["owners"]) == [True]
+    pick = (await client.get("/circle/pick")).json()["pick"]
+    assert pick["kind"] == "borrow" and pick["person"]["asked"] is True
+
+    # Once Faisal declines, it's askable again (after the day's grace).
+    client.as_user(world["faisal"])
+    request_id = (await client.get("/circle/borrow-asks")).json()["incoming"][0]["id"]
+    await client.post(f"/circle/borrow-asks/{request_id}/decline")
+    client.as_user(user)
+    assert asked_on((await client.get(f"/circle/works/{work.id}")).json()["people"]) == [False]

@@ -4271,5 +4271,18 @@
   "@notificationsUnreadTooltip": {
     "description": "Bell tooltip with unread count",
     "placeholders": {"count": {"type": "int"}}
+  },
+  "circleRequested": "Requested",
+  "@circleRequested": {
+    "description": "Shown instead of Ask to borrow once the reader has asked"
+  },
+  "circleSearchAsked": "You asked {name} to lend it",
+  "@circleSearchAsked": {
+    "description": "Search row once the reader has asked this owner",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleAlreadyYours": "That book is already on your shelves.",
+  "@circleAlreadyYours": {
+    "description": "Ask refused: the reader already has the book"
   }
 }
