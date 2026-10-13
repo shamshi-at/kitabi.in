@@ -5378,4 +5378,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get circleAlreadyYours => 'That book is already on your shelves.';
+
+  @override
+  String get catalogWishlistRemoved => 'Off your wishlist.';
+
+  @override
+  String get catalogWishlistRemoveTooltip => 'Remove from wishlist';
 }

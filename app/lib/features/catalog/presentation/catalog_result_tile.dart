@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/typeset_cover.dart';
 import '../../../data/db/catalog_cache.dart';
+import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
@@ -234,37 +235,34 @@ class _QuickWishlist extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final entry = ref.watch(libraryEntryProvider(editionId)).valueOrNull;
+    final answer = ref.watch(libraryEntryProvider(editionId));
+    final entry = answer.valueOrNull;
     final Widget child;
-    if (entry == null) {
+    if (!answer.hasValue) {
+      // Not yet known: hold the slot empty rather than flash a bookmark on a
+      // book that turns out to be on a shelf already.
+      child = const SizedBox.shrink();
+    } else if (entry == null) {
       child = IconButton(
         icon: Icon(Icons.bookmark_add_outlined, color: AppColors.slate, size: 22),
         tooltip: l10n.bookWishlistShort,
         padding: EdgeInsets.zero,
         constraints: BoxConstraints.tightFor(width: width, height: 44),
-        onPressed: () async {
-          try {
-            final edition = work['edition'] as Map<String, dynamic>;
-            await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
-            final repo = await ref.read(libraryRepositoryProvider.future);
-            await repo.add(editionId: editionId, status: 'wishlist');
-            Haptics.success();
-            ref.invalidate(libraryEntryProvider(editionId));
-            if (context.mounted) {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(l10n.bookWishlistAdded)));
-            }
-          } catch (err) {
-            if (context.mounted) showQuietError(context, l10n.quickAddFailed, err);
-          }
-        },
+        onPressed: () => toggleCatalogWishlist(context, ref, work: work, editionId: editionId),
       );
     } else if (entry.status == 'wishlist') {
-      child = Semantics(
-        label: l10n.bookWishlistShort,
-        child: SizedBox(
-          height: 44,
-          child: Icon(Icons.bookmark, color: AppColors.slate, size: 22),
+      // Tapping it again takes the book off the wishlist.
+      child = IconButton(
+        icon: Icon(Icons.bookmark, color: AppColors.slate, size: 22),
+        tooltip: l10n.catalogWishlistRemoveTooltip,
+        padding: EdgeInsets.zero,
+        constraints: BoxConstraints.tightFor(width: width, height: 44),
+        onPressed: () => toggleCatalogWishlist(
+          context,
+          ref,
+          work: work,
+          editionId: editionId,
+          entry: entry,
         ),
       );
     } else {
@@ -274,3 +272,51 @@ class _QuickWishlist extends ConsumerWidget {
   }
 }
 
+/// The catalog's wishlist bookmark, as one rule for the list rows and the
+/// Browse grid (owner requests, 14 Oct 2026): on a book that's on none of the
+/// reader's shelves it wishlists it; on a wishlisted one it takes it off again.
+/// Off means off — the entry goes (soft, rule 3), not "kept as To read" like
+/// the book page's un-wishlist, because a book you only ever bookmarked here
+/// was never on a shelf. A snackbar offers Undo, since it is a single tap.
+Future<void> toggleCatalogWishlist(
+  BuildContext context,
+  WidgetRef ref, {
+  required Map<String, dynamic> work,
+  required String editionId,
+  LibraryEntry? entry,
+}) async {
+  final l10n = AppLocalizations.of(context)!;
+  final messenger = ScaffoldMessenger.of(context);
+  Future<void> wish() async {
+    final edition = work['edition'] as Map<String, dynamic>;
+    await cacheBookForOffline(ref.read(appDatabaseProvider), work, edition);
+    final repo = await ref.read(libraryRepositoryProvider.future);
+    await repo.add(editionId: editionId, status: 'wishlist');
+    ref.invalidate(libraryEntryProvider(editionId));
+  }
+
+  try {
+    if (entry != null && entry.status == 'wishlist') {
+      final repo = await ref.read(libraryRepositoryProvider.future);
+      await repo.remove(entry.id);
+      Haptics.selection();
+      ref.invalidate(libraryEntryProvider(editionId));
+      // Replace, don't queue: a quick on-off would otherwise sit behind
+      // "On your wishlist." for its full four seconds.
+      messenger.removeCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.catalogWishlistRemoved),
+          action: SnackBarAction(label: l10n.undoAction, onPressed: () => wish()),
+        ),
+      );
+    } else if (entry == null) {
+      await wish();
+      Haptics.success();
+      messenger.removeCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text(l10n.bookWishlistAdded)));
+    }
+  } catch (err) {
+    if (context.mounted) showQuietError(context, l10n.quickAddFailed, err);
+  }
+}

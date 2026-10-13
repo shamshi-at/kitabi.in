@@ -1879,7 +1879,10 @@ re-ranked; stars folded while you're reading; tagged `[V1]` in feature-map.md).
       carries it onto the book page (owner report, 14 Oct 2026)
 - [x] Catalog rows: a leading wishlist bookmark for a book on none of the
       reader's shelves (filled once wishlisted; empty slot otherwise, so covers
-      stay aligned) — owner request, 14 Oct 2026
+      stay aligned) — owner request, 14 Oct 2026. The Browse grid got the same
+      badge mirrored top-left of the cover (it was list-only at first: "I can't
+      find the wishlist icon"), and the bookmark is a toggle — the filled one
+      takes the book off again (soft delete, with Undo), not "kept as To read"
 - [x] Lending mirror turns a borrower's *wishlisted* entry into a borrowed
       to-read book when the loan lands (it stayed a wish, so Home kept offering
       to borrow it); migration `000059` repairs entries already in that state

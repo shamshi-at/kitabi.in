@@ -4284,5 +4284,13 @@
   "circleAlreadyYours": "That book is already on your shelves.",
   "@circleAlreadyYours": {
     "description": "Ask refused: the reader already has the book"
+  },
+  "catalogWishlistRemoved": "Off your wishlist.",
+  "@catalogWishlistRemoved": {
+    "description": "Snackbar after un-bookmarking a book in the catalogue"
+  },
+  "catalogWishlistRemoveTooltip": "Remove from wishlist",
+  "@catalogWishlistRemoveTooltip": {
+    "description": "Tooltip on a filled wishlist bookmark in the catalogue"
   }
 }

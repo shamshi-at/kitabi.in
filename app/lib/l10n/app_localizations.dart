@@ -8499,6 +8499,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That book is already on your shelves.'**
   String get circleAlreadyYours;
+
+  /// Snackbar after un-bookmarking a book in the catalogue
+  ///
+  /// In en, this message translates to:
+  /// **'Off your wishlist.'**
+  String get catalogWishlistRemoved;
+
+  /// Tooltip on a filled wishlist bookmark in the catalogue
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from wishlist'**
+  String get catalogWishlistRemoveTooltip;
 }
 
 class _AppLocalizationsDelegate
