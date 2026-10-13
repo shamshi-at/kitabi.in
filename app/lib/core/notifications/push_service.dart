@@ -13,6 +13,7 @@ import '../auth/auth_providers.dart';
 import '../auth/auth_service.dart';
 import '../../features/library/providers/active_session_sync.dart';
 import '../../features/circle/circle_providers.dart';
+import '../../features/notifications/notifications_providers.dart';
 import '../router/app_router.dart';
 
 /// Handles a push that arrives while the app is backgrounded/terminated. Must be
@@ -44,6 +45,7 @@ class PushService {
     void Function()? onLendEvent,
     void Function()? onReadingEvent,
     void Function()? onBorrowAsk,
+    void Function()? onAnyMessage,
   }) async {
     if (_started || !_available) return;
     _started = true;
@@ -75,9 +77,13 @@ class PushService {
     // A reading push is the same idea for the running timer: the reader's other
     // device started or stopped a sitting, and this one should agree at once
     // rather than at the next 15-minute sync (owner request, 14 Aug 2026).
-    if (onLendEvent != null || onReadingEvent != null || onBorrowAsk != null) {
+    if (onLendEvent != null ||
+        onReadingEvent != null ||
+        onBorrowAsk != null ||
+        onAnyMessage != null) {
       FirebaseMessaging.onMessage.listen((m) {
         final type = m.data['type'];
+        onAnyMessage?.call();
         if (type == 'lend_new' || type == 'lend_returned' || type == 'lend_reminder') {
           onLendEvent?.call();
         } else if (type == 'borrow_ask') {
@@ -245,6 +251,8 @@ final pushLifecycleProvider = Provider<void>((ref) {
             if (message.data['type'] == 'borrow_ask') {
               ref.invalidate(borrowAsksProvider);
             }
+            // Whatever it was is in the inbox now too.
+            ref.invalidate(unreadNotificationsProvider);
             if (message.data['type'] == 'reading_started') {
               // A tapped notification is the one case where this device has
               // *not* seen the sitting yet: a background push does no work, so
@@ -264,6 +272,9 @@ final pushLifecycleProvider = Provider<void>((ref) {
           },
           onLendEvent: () => ref.read(syncTriggerProvider)(),
           onBorrowAsk: () => ref.invalidate(borrowAsksProvider),
+          // Every reader-to-reader push also lands in the inbox; keep the
+          // bell's number honest while the app is open.
+          onAnyMessage: () => ref.invalidate(unreadNotificationsProvider),
           // The payload carries the sitting, but the *server* is the authority
           // on what is running — so the push is only a nudge to re-read, which
           // also makes a missed or duplicated push harmless.

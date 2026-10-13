@@ -13,7 +13,7 @@ import httpx
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.models.profile import Profile
-from app.services import device_service, fcm_client
+from app.services import device_service, fcm_client, notification_text
 
 
 def _display_name(p: Profile | None) -> str:
@@ -83,8 +83,7 @@ async def notify_connection_request(actor_id: uuid.UUID, target_id: uuid.UUID) -
     await _notify_from_actor(
         actor_id,
         target_id,
-        title="New connection request",
-        body_suffix="wants to connect on Kitabi",
+        *notification_text.render("connection_request"),
         data={"type": "connection_request"},
     )
 
@@ -93,8 +92,7 @@ async def notify_connection_accepted(actor_id: uuid.UUID, target_id: uuid.UUID) 
     await _notify_from_actor(
         actor_id,
         target_id,
-        title="Connection accepted",
-        body_suffix="accepted your connection on Kitabi",
+        *notification_text.render("connection_accepted"),
         data={"type": "connection_accepted"},
     )
 
@@ -106,8 +104,7 @@ async def notify_book_lent(
     await _notify_from_actor(
         actor_id,
         target_id,
-        title="A book's on its way to you",
-        body_suffix=f"lent you “{book_title}” on Kitabi",
+        *notification_text.render("lend_new", book_title),
         data={"type": "lend_new"},
         image=book_cover,
     )
@@ -120,8 +117,7 @@ async def notify_book_returned(
     await _notify_from_actor(
         actor_id,
         target_id,
-        title="Loan marked returned",
-        body_suffix=f"marked “{book_title}” returned",
+        *notification_text.render("lend_returned", book_title),
         data={"type": "lend_returned"},
         image=book_cover,
     )
@@ -134,8 +130,7 @@ async def notify_return_reminder(
     await _notify_from_actor(
         actor_id,
         target_id,
-        title="A gentle nudge",
-        body_suffix=f"would like “{book_title}” back",
+        *notification_text.render("lend_reminder", book_title),
         data={"type": "lend_reminder"},
         image=book_cover,
     )
@@ -156,8 +151,7 @@ async def notify_borrow_ask(
     await _notify_from_actor(
         actor_id,
         target_id,
-        title="Could they borrow it?",
-        body_suffix=f"would like to borrow “{book_title}”",
+        *notification_text.render("borrow_ask", book_title),
         data={
             "type": "borrow_ask",
             "work_id": str(work_id),

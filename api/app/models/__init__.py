@@ -46,6 +46,7 @@ from app.models.connection import Connection
 from app.models.device_token import DeviceToken
 from app.models.edition import Edition
 from app.models.genre import Genre
+from app.models.inbox_notification import InboxNotification
 from app.models.lending_record import LendingRecord
 from app.models.library_entry import LibraryEntry
 from app.models.library_entry_tag import LibraryEntryTag
@@ -124,6 +125,7 @@ __all__ = [
     "CLAIM_REJECTED",
     "Publisher",
     "Genre",
+    "InboxNotification",
     "Series",
     "Work",
     "Edition",

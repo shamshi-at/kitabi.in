@@ -1497,6 +1497,14 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   nothing appeared on any phone. When a feature needs both sides to opt in, ask
   the first one too; check the empty world, not just the populated one.
 
+- **A row reused for a new purpose keeps its old meaning unless you change
+  it.** The lending mirror reuses a borrower's existing entry for the book —
+  right for a returned borrow or an owned copy — and left a *wishlisted* one
+  as a wish while the book sat in the reader's hands, so Home kept offering to
+  borrow it (two emulators, 14 Oct 2026). It became the common path the day
+  asks to borrow made "wishlist → ask → lend" the way books change hands. When
+  a write reuses a row, decide what each of its states should become.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

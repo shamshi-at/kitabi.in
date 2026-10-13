@@ -391,6 +391,32 @@ class ApiClient {
 
   // --- Lending connections (peer-to-peer consent layer) ---
 
+  // ---- The in-app inbox (the bell on Home) ---------------------------------
+
+  /// `{unread, items: [...]}`, newest first.
+  Future<Map<String, dynamic>> getNotifications() async {
+    final res = await _dio.get('/notifications');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// Just the badge number.
+  Future<int> getUnreadNotifications() async {
+    final res = await _dio.get('/notifications/unread');
+    return ((res.data as Map)['unread'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<void> markNotificationsRead(List<String> ids) async {
+    await _dio.post('/notifications/read', data: {'ids': ids});
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await _dio.post('/notifications/read-all');
+  }
+
+  Future<void> clearNotifications() async {
+    await _dio.post('/notifications/clear');
+  }
+
   // ---- Your circle (docs/circle-reading-mockups.html) ----------------------
   // Cross-user and online-only, like connections: never queued, never synced.
   // Every rule about who may be seen is server-side (services/circle_service.py).

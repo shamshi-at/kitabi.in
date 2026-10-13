@@ -72,6 +72,7 @@ USER_TABLES: tuple[str, ...] = (
     "device_tokens",
     "connections",
     "borrow_requests",  # asks between readers; → editions, which stay
+    "notifications",  # the in-app inbox; who was told what
     "content_reports",
     "author_claims",  # → authors (kept)
     "work_revisions",  # → works (kept)

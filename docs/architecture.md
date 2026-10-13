@@ -145,6 +145,13 @@ per-user sync engine stays simple.
   when the owner lends that book to the asker.
   Online-only and never synced; the app treats a failure as "nothing to show".
   Design: [circle-reading-mockups.html](circle-reading-mockups.html).
+- **Inbox (14 Oct 2026).** Every reader-to-reader push (connection request /
+  accepted, lend new / returned / reminder, ask to borrow) is also a
+  `notifications` row, written by `inbox_service.record` on the request's own
+  session at each call site — never inside `push_service`, whose sessions come
+  from the configured database URL — so the bell works with push off.
+  `GET /notifications` (+ `/unread`), `POST /notifications/read|read-all|clear`;
+  clear is soft. Text comes from `notification_text.TEXTS`, shared with the push.
 - **Reputation.** `scoring_service` computes a StackOverflow-style score at read time
   from countable rows the user owns (books/authors added, reviews, tracked/finished,
   lends) — no ledger to keep in sync.
@@ -228,6 +235,7 @@ markers are omitted.
 - `api/users.py` — Search other users' public profiles for connections/lending.
 - `api/health.py` — Liveness + DB-reachability probe for deploy health checks.
 - `api/connections.py` — Request/accept/list user connections and send lending reminders (optional FCM push).
+- `api/notifications.py` — The in-app inbox behind Home's bell: list, unread count, mark read, clear.
 - `api/circle.py` — Your circle: connections' reading for search rows, the book page and Home's card, plus asking to borrow.
 - `api/recommendations.py` — Opt-in LLM-reasoned recommendations, dormant unless an Anthropic key is set.
 - `api/import_.py` — Preview and commit CSV library imports matched against the catalog.
@@ -267,6 +275,8 @@ markers are omitted.
 - `services/openlibrary_client.py` — Thin, mockable OpenLibrary metadata client — the V1 zero-credential metadata source.
 - `services/sync_service.py` — Push/pull for Layer-2: idempotent op application, delete-wins/LWW conflicts, `server_seq` cursor.
 - `services/borrow_request_service.py` — Asks to borrow as records: create/reuse, list both directions, decline, close on loan.
+- `services/inbox_service.py` — Records each reader-to-reader notification for the inbox; list, read, clear.
+- `services/notification_text.py` — The words of each notification, shared by the push and the inbox.
 - `services/circle_service.py` — Your circle: the one gate deciding which connection may be seen on which book, and Home's daily pick.
 - `services/connection_service.py` — Reader-to-reader requests, accept/block, and directional status over one deduped row per pair.
 - `services/lend_mirror_service.py` — Mirrors an outgoing loan onto a linked borrower's Borrowed shelf, committed independently after the lender's sync op.

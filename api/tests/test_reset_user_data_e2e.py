@@ -23,12 +23,14 @@ from app.models.activity_log_entry import ActivityLogEntry
 from app.models.admin import ContentReport
 from app.models.author import Author
 from app.models.author_claim import AuthorClaim
+from app.models.borrow_request import BorrowRequest
 from app.models.buy_click import BuyClick
 from app.models.conflict_history import ConflictHistory
 from app.models.connection import Connection
 from app.models.device_token import DeviceToken
 from app.models.edition import Edition
 from app.models.genre import Genre
+from app.models.inbox_notification import InboxNotification
 from app.models.lending_record import LendingRecord
 from app.models.library_entry import LibraryEntry
 from app.models.library_entry_tag import LibraryEntryTag
@@ -166,6 +168,10 @@ async def _seed(db, user_id: uuid.UUID) -> dict:
                 device_id="phone-a",
             ),
             Connection(requester_id=user_id, addressee_id=uuid.uuid4()),
+            BorrowRequest(requester_id=uuid.uuid4(), owner_id=user_id, edition_id=edition.id),
+            InboxNotification(
+                user_id=user_id, type="borrow_ask", title="Could they borrow it?", body="x"
+            ),
             ContentReport(reporter_user_id=user_id, target_type="review", target_id=uuid.uuid4()),
             AuthorClaim(author_id=author.id, user_id=user_id),
             WorkRevision(work_id=work.id, proposed_by_user_id=user_id, payload={"title": "x"}),

@@ -5306,4 +5306,65 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get borrowAskUpdateFailed =>
       'Couldn\'t update that — try again when you\'re online';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsMarkAllRead => 'Mark all as read';
+
+  @override
+  String get notificationsClearAll => 'Clear all';
+
+  @override
+  String get notificationsClearTitle => 'Clear all notifications?';
+
+  @override
+  String get notificationsClearBody =>
+      'They\'ll be gone from this list. Nothing else changes — an ask to borrow stays on the Lending tab until you answer it.';
+
+  @override
+  String get notificationsClearConfirm => 'Clear';
+
+  @override
+  String get notificationsUpdateFailed =>
+      'Couldn\'t update that — try again when you\'re online';
+
+  @override
+  String get notificationsEmpty =>
+      'Nothing here yet. When a connection lends you a book, asks to borrow one or connects with you, it shows up here.';
+
+  @override
+  String get notificationsOffline =>
+      'Notifications need a connection. Pull down to try again.';
+
+  @override
+  String get notificationsJustNow => 'Just now';
+
+  @override
+  String notificationsMinutesAgo(int count) {
+    return '${count}m ago';
+  }
+
+  @override
+  String notificationsHoursAgo(int count) {
+    return '${count}h ago';
+  }
+
+  @override
+  String get notificationsYesterday => 'Yesterday';
+
+  @override
+  String get notificationsNew => 'New';
+
+  @override
+  String notificationsUnreadTooltip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count new notifications',
+      one: '1 new notification',
+    );
+    return '$_temp0';
+  }
 }

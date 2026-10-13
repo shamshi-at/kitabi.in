@@ -19,7 +19,13 @@ from app.schemas.circle import (
     CircleSignalsOut,
     CircleWorkOut,
 )
-from app.services import borrow_request_service, catalog_service, circle_service, push_service
+from app.services import (
+    borrow_request_service,
+    catalog_service,
+    circle_service,
+    inbox_service,
+    push_service,
+)
 
 router = APIRouter(prefix="/circle", tags=["circle"])
 
@@ -125,6 +131,21 @@ async def borrow_ask(
     # buzz a friend's phone twice.
     if not is_new:
         return
+    await inbox_service.record(
+        db,
+        recipient_id=owner.id,
+        actor_id=me.id,
+        kind="borrow_ask",
+        book_title=edition.work.title,
+        data={
+            "work_id": str(edition.work_id),
+            "edition_id": str(asked_edition),
+            "actor_id": str(me.id),
+            "request_id": str(request.id),
+        },
+        image_url=edition.cover_url,
+    )
+    await db.commit()
     background_tasks.add_task(
         push_service.notify_borrow_ask,
         me.id,

@@ -8391,6 +8391,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t update that — try again when you\'re online'**
   String get borrowAskUpdateFailed;
+
+  /// Inbox screen title and bell tooltip
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsTitle;
+
+  /// Inbox action
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all as read'**
+  String get notificationsMarkAllRead;
+
+  /// Inbox action
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get notificationsClearAll;
+
+  /// Clear confirmation title
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all notifications?'**
+  String get notificationsClearTitle;
+
+  /// Clear confirmation body
+  ///
+  /// In en, this message translates to:
+  /// **'They\'ll be gone from this list. Nothing else changes — an ask to borrow stays on the Lending tab until you answer it.'**
+  String get notificationsClearBody;
+
+  /// Confirm clearing the inbox
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get notificationsClearConfirm;
+
+  /// Inbox action failed
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update that — try again when you\'re online'**
+  String get notificationsUpdateFailed;
+
+  /// Empty inbox
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet. When a connection lends you a book, asks to borrow one or connects with you, it shows up here.'**
+  String get notificationsEmpty;
+
+  /// Inbox could not load
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications need a connection. Pull down to try again.'**
+  String get notificationsOffline;
+
+  /// Relative time
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get notificationsJustNow;
+
+  /// Relative time in minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{count}m ago'**
+  String notificationsMinutesAgo(int count);
+
+  /// Relative time in hours
+  ///
+  /// In en, this message translates to:
+  /// **'{count}h ago'**
+  String notificationsHoursAgo(int count);
+
+  /// Relative time
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get notificationsYesterday;
+
+  /// Screen-reader label on an unread notification's dot
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get notificationsNew;
+
+  /// Bell tooltip with unread count
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 new notification} other{{count} new notifications}}'**
+  String notificationsUnreadTooltip(int count);
 }
 
 class _AppLocalizationsDelegate

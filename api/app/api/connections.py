@@ -12,7 +12,7 @@ from app.schemas.connection import (
     ConnectionStatusOut,
     RemindIn,
 )
-from app.services import connection_service, lend_mirror_service, push_service
+from app.services import connection_service, inbox_service, lend_mirror_service, push_service
 
 router = APIRouter(prefix="/connections", tags=["connections"])
 
@@ -46,12 +46,18 @@ async def request_connection(
     conn = await connection_service.request(db, me, payload.addressee_id)
     if conn.status == "pending" and conn.requester_id == me:
         # I asked → let the addressee know (this is also the lend-to-a-user case).
+        await inbox_service.record(
+            db, recipient_id=conn.addressee_id, actor_id=me, kind="connection_request"
+        )
+        await db.commit()
         background_tasks.add_task(push_service.notify_connection_request, me, conn.addressee_id)
     elif conn.status == "accepted":
         # Mutual request auto-accepted → fan out any loans that predate the
         # link (the borrower's shelf fills in), then tell the other side.
         await lend_mirror_service.backfill_mirrors(db, conn.requester_id, conn.addressee_id)
         other = conn.requester_id if conn.addressee_id == me else conn.addressee_id
+        await inbox_service.record(db, recipient_id=other, actor_id=me, kind="connection_accepted")
+        await db.commit()
         background_tasks.add_task(push_service.notify_connection_accepted, me, other)
     return connection_service.to_status(conn, me)
 
@@ -72,6 +78,15 @@ async def remind_to_return(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "not_connected", "message": "You aren't connected to this reader."},
         )
+    await inbox_service.record(
+        db,
+        recipient_id=payload.user_id,
+        actor_id=me,
+        kind="lend_reminder",
+        book_title=payload.book_title,
+        image_url=payload.book_cover_url,
+    )
+    await db.commit()
     background_tasks.add_task(
         push_service.notify_return_reminder,
         me,
@@ -95,6 +110,10 @@ async def accept_connection(
     # mirroring is gated on an accepted connection and was never retried).
     await lend_mirror_service.backfill_mirrors(db, conn.requester_id, conn.addressee_id)
     # Tell the original requester their request was accepted.
+    await inbox_service.record(
+        db, recipient_id=conn.requester_id, actor_id=me, kind="connection_accepted"
+    )
+    await db.commit()
     background_tasks.add_task(push_service.notify_connection_accepted, me, conn.requester_id)
 
 

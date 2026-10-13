@@ -4208,5 +4208,68 @@
   "borrowAskUpdateFailed": "Couldn't update that — try again when you're online",
   "@borrowAskUpdateFailed": {
     "description": "Declining an ask failed"
+  },
+  "notificationsTitle": "Notifications",
+  "@notificationsTitle": {
+    "description": "Inbox screen title and bell tooltip"
+  },
+  "notificationsMarkAllRead": "Mark all as read",
+  "@notificationsMarkAllRead": {
+    "description": "Inbox action"
+  },
+  "notificationsClearAll": "Clear all",
+  "@notificationsClearAll": {
+    "description": "Inbox action"
+  },
+  "notificationsClearTitle": "Clear all notifications?",
+  "@notificationsClearTitle": {
+    "description": "Clear confirmation title"
+  },
+  "notificationsClearBody": "They'll be gone from this list. Nothing else changes — an ask to borrow stays on the Lending tab until you answer it.",
+  "@notificationsClearBody": {
+    "description": "Clear confirmation body"
+  },
+  "notificationsClearConfirm": "Clear",
+  "@notificationsClearConfirm": {
+    "description": "Confirm clearing the inbox"
+  },
+  "notificationsUpdateFailed": "Couldn't update that — try again when you're online",
+  "@notificationsUpdateFailed": {
+    "description": "Inbox action failed"
+  },
+  "notificationsEmpty": "Nothing here yet. When a connection lends you a book, asks to borrow one or connects with you, it shows up here.",
+  "@notificationsEmpty": {
+    "description": "Empty inbox"
+  },
+  "notificationsOffline": "Notifications need a connection. Pull down to try again.",
+  "@notificationsOffline": {
+    "description": "Inbox could not load"
+  },
+  "notificationsJustNow": "Just now",
+  "@notificationsJustNow": {
+    "description": "Relative time"
+  },
+  "notificationsMinutesAgo": "{count}m ago",
+  "@notificationsMinutesAgo": {
+    "description": "Relative time in minutes",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "notificationsHoursAgo": "{count}h ago",
+  "@notificationsHoursAgo": {
+    "description": "Relative time in hours",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "notificationsYesterday": "Yesterday",
+  "@notificationsYesterday": {
+    "description": "Relative time"
+  },
+  "notificationsNew": "New",
+  "@notificationsNew": {
+    "description": "Screen-reader label on an unread notification's dot"
+  },
+  "notificationsUnreadTooltip": "{count, plural, =1{1 new notification} other{{count} new notifications}}",
+  "@notificationsUnreadTooltip": {
+    "description": "Bell tooltip with unread count",
+    "placeholders": {"count": {"type": "int"}}
   }
 }

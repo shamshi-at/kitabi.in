@@ -404,6 +404,11 @@ async def test_an_ask_is_a_record_the_owner_can_find_and_decline(
     assert [(a["person"]["name"], a["title"]) for a in mine["outgoing"]] == [("Faisal", "Kaalam")]
 
     client.as_user(world["faisal"])
+    bell = (await client.get("/notifications")).json()["items"]
+    assert [(i["type"], i["body"]) for i in bell] == [
+        ("borrow_ask", "Me would like to borrow “Kaalam”")
+    ]
+    assert bell[0]["data"]["request_id"] == str(request_id)
     theirs = (await client.get("/circle/borrow-asks")).json()
     assert [(a["person"]["name"], a["title"]) for a in theirs["incoming"]] == [("Me", "Kaalam")]
     assert theirs["incoming"][0]["id"] == str(request_id)
@@ -456,6 +461,9 @@ async def test_lending_the_book_answers_the_ask(client, db_sessionmaker, user, w
     resp = await client.post("/sync/push", json={"ops": [op]})
     assert resp.json()["results"][0]["status"] == "applied"
     assert (await client.get("/circle/borrow-asks")).json()["incoming"] == []
+    client.as_user(user)
+    bodies = [i["body"] for i in (await client.get("/notifications")).json()["items"]]
+    assert "Faisal lent you “Kaalam” on Kitabi" in bodies
     async with db_sessionmaker() as db:
         row = (await db.execute(select(BorrowRequest))).scalar_one()
         assert row.status == "lent" and row.resolved_at is not None

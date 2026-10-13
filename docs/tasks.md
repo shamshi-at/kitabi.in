@@ -1868,6 +1868,21 @@ re-ranked; stars folded while you're reading; tagged `[V1]` in feature-map.md).
       Fixed on the way: circle sheets opened under the bottom nav (now root
       navigator); answer cache cut from 10 to 2 minutes so a revoked share leaves
       the other screen quickly
+- [x] The in-app inbox (owner request, 14 Oct 2026): every reader-to-reader
+      push is also written to `notifications` (migration `000058`) by the
+      server on the request's own session — even with push unconfigured — from
+      one text table shared with the push (`notification_text.py`). Bell on
+      Home's header with the unread count; inbox screen with new ones
+      highlighted, tap = mark read + go where the push would have gone, Mark all
+      read, Clear all (soft). Verified on two emulators
+- [x] Search results dismiss the keyboard on touch, so opening a book no longer
+      carries it onto the book page (owner report, 14 Oct 2026)
+- [x] Catalog rows: a leading wishlist bookmark for a book on none of the
+      reader's shelves (filled once wishlisted; empty slot otherwise, so covers
+      stay aligned) — owner request, 14 Oct 2026
+- [x] Lending mirror turns a borrower's *wishlisted* entry into a borrowed
+      to-read book when the loan lands (it stayed a wish, so Home kept offering
+      to borrow it); migration `000059` repairs entries already in that state
 - [ ] Airplane-mode check (owner testing): circle surfaces must simply disappear offline
 - [ ] The borrow-ask push itself on a real build (local API had no Firebase credentials)
 - [x] An ask to borrow is a record (14 Oct 2026, owner report: the push "took me
