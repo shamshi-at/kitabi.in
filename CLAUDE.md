@@ -1486,6 +1486,17 @@ missing one fails silently rather than loudly. See "Lessons learned" below.
   rows, ask what each client concludes from not finding one, and keep the
   server's margin wide enough for the clients already installed.
 
+- **A notification is not a record, and an opt-in with no first mover is a
+  feature that never starts.** Two reports on the first day of "your circle"
+  (13–14 Oct 2026). "Ask to borrow" was a push and nothing else: the tap opened
+  a book page that never mentioned the ask, and afterwards the app had no trace
+  of it — anything a person must *act on* needs a row and a place to find it
+  (`borrow_requests`, the Lending tab), with the push only pointing there. And
+  every sharing switch started off while Home's invitation waited until a
+  connection *already* shared — so on launch day nobody was ever asked and
+  nothing appeared on any phone. When a feature needs both sides to opt in, ask
+  the first one too; check the empty world, not just the populated one.
+
 ## Open decisions
 
 - ~~Metadata source~~ — **resolved 5 Jul 2026: OpenLibrary.** Zero API key/credential

@@ -35,6 +35,7 @@ TABLES: list[str] = [
     "promotions",
     "profiles",
     "connections",
+    "borrow_requests",
     "device_tokens",
     "active_reading_sessions",
     "conflict_history",

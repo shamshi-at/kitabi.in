@@ -7,12 +7,14 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from app.api import circle as circle_api
 from app.core.db import get_db
 from app.core.security import get_current_user
 from app.main import create_app
 from app.models import Author, Connection, Edition, LibraryEntry, Profile, Rating, Review, Work
+from app.models.borrow_request import BorrowRequest
 from app.models.read import Read
 
 TODAY = datetime.now(UTC).date()
@@ -29,7 +31,6 @@ async def client(db_sessionmaker, user):
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_current_user] = lambda: current["user"]
-    circle_api._ASKED.clear()
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         c.as_user = lambda u: current.update(user=u)  # type: ignore[attr-defined]
         yield c
@@ -377,6 +378,87 @@ async def test_borrow_ask_only_for_a_visible_copy(client, db_sessionmaker, world
     stranger = {"owner_id": world["stranger"]["id"], "edition_id": str(edition.id)}
     assert (await client.post("/circle/borrow-ask", json=stranger)).status_code == 404
     assert len(sent) == 1
+
+
+async def test_an_ask_is_a_record_the_owner_can_find_and_decline(
+    client, db_sessionmaker, user, world, monkeypatch
+):
+    """Owner report, 14 Oct 2026: the ask arrived as a push and existed nowhere
+    else — tapping it found nothing, and the app had no trace of it."""
+    sent = []
+
+    async def fake_notify(*args, **kwargs):
+        sent.append(args)
+
+    monkeypatch.setattr(circle_api.push_service, "notify_borrow_ask", fake_notify)
+    async with db_sessionmaker() as db:
+        _, edition = await _book(db, "Kaalam")
+        _entry(db, world["faisal"], edition, status="pending")
+        await db.commit()
+    ask = {"owner_id": world["faisal"]["id"], "edition_id": str(edition.id)}
+    assert (await client.post("/circle/borrow-ask", json=ask)).status_code == 204
+    request_id = sent[0][5]
+
+    mine = (await client.get("/circle/borrow-asks")).json()
+    assert mine["incoming"] == []
+    assert [(a["person"]["name"], a["title"]) for a in mine["outgoing"]] == [("Faisal", "Kaalam")]
+
+    client.as_user(world["faisal"])
+    theirs = (await client.get("/circle/borrow-asks")).json()
+    assert [(a["person"]["name"], a["title"]) for a in theirs["incoming"]] == [("Me", "Kaalam")]
+    assert theirs["incoming"][0]["id"] == str(request_id)
+    assert theirs["incoming"][0]["edition_id"] == str(edition.id)
+
+    # Only the owner can answer it.
+    client.as_user(user)
+    assert (await client.post(f"/circle/borrow-asks/{request_id}/decline")).status_code == 404
+    client.as_user(world["faisal"])
+    assert (await client.post(f"/circle/borrow-asks/{request_id}/decline")).status_code == 204
+    assert (await client.get("/circle/borrow-asks")).json()["incoming"] == []
+
+    # "Not now" must not turn into a fresh notification a minute later.
+    client.as_user(user)
+    assert (await client.post("/circle/borrow-ask", json=ask)).status_code == 204
+    assert len(sent) == 1
+    assert (await client.get("/circle/borrow-asks")).json()["outgoing"] == []
+
+
+async def test_lending_the_book_answers_the_ask(client, db_sessionmaker, user, world, monkeypatch):
+    async def fake_notify(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(circle_api.push_service, "notify_borrow_ask", fake_notify)
+    async with db_sessionmaker() as db:
+        _, edition = await _book(db, "Kaalam")
+        faisals = _entry(db, world["faisal"], edition, status="pending")
+        await db.commit()
+    ask = {"owner_id": world["faisal"]["id"], "edition_id": str(edition.id)}
+    await client.post("/circle/borrow-ask", json=ask)
+
+    # Faisal lends it to me from anywhere — here, the ordinary sync push.
+    client.as_user(world["faisal"])
+    loan_id = str(uuid.uuid4())
+    op = {
+        "op_id": str(uuid.uuid4()),
+        "device_id": str(uuid.uuid4()),
+        "entity": "lending_records",
+        "entity_id": loan_id,
+        "op_type": "create",
+        "payload": {
+            "id": loan_id,
+            "direction": "lent",
+            "library_entry_id": str(faisals.id),
+            "borrower_name": "Me",
+            "borrower_user_id": user["id"],
+            "lent_date": TODAY.isoformat(),
+        },
+    }
+    resp = await client.post("/sync/push", json={"ops": [op]})
+    assert resp.json()["results"][0]["status"] == "applied"
+    assert (await client.get("/circle/borrow-asks")).json()["incoming"] == []
+    async with db_sessionmaker() as db:
+        row = (await db.execute(select(BorrowRequest))).scalar_one()
+        assert row.status == "lent" and row.resolved_at is not None
 
 
 async def test_me_exposes_and_updates_circle_switches(client, world):

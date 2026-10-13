@@ -147,11 +147,12 @@ async def notify_borrow_ask(
     book_title: str,
     work_id: uuid.UUID,
     edition_id: uuid.UUID,
+    request_id: uuid.UUID,
     book_cover: str | None = None,
 ) -> None:
     """A connection asks to borrow a book the target shares owning ("your
-    circle" — docs/circle-reading-mockups.html). The tap opens the owner's own
-    copy, where the lend sheet already lives."""
+    circle" — docs/circle-reading-mockups.html). The tap opens the owner's
+    requests on the Lending tab, where it can be lent or declined."""
     await _notify_from_actor(
         actor_id,
         target_id,
@@ -162,6 +163,7 @@ async def notify_borrow_ask(
             "work_id": str(work_id),
             "edition_id": str(edition_id),
             "actor_id": str(actor_id),
+            "request_id": str(request_id),
         },
         image=book_cover,
     )

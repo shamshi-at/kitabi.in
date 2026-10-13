@@ -138,7 +138,11 @@ per-user sync engine stays simple.
   `circle_service._people_for_works`, the single gate behind `POST /circle/signals`
   (a page of search rows in one request), `GET /circle/works/{id}` (book page card
   + sheet, translation bridge), `GET /circle/pick` (Home's one card, stable per day)
-  and `POST /circle/borrow-ask` (a push to the owner, one per copy per day).
+  and `POST /circle/borrow-ask` (records a `borrow_requests` row and pushes the
+  owner; one open ask per copy, no re-ask within a day). Asks are listed by
+  `GET /circle/borrow-asks` (incoming + outgoing), declined by
+  `POST /circle/borrow-asks/{id}/decline`, and closed by `lend_mirror_service`
+  when the owner lends that book to the asker.
   Online-only and never synced; the app treats a failure as "nothing to show".
   Design: [circle-reading-mockups.html](circle-reading-mockups.html).
 - **Reputation.** `scoring_service` computes a StackOverflow-style score at read time
@@ -262,6 +266,7 @@ markers are omitted.
 - `services/catalog_service.py` — Layer-1 catalog logic: works/editions/authors/publishers/genres/series with dedupe, ISBN+OpenLibrary lookup, tuned eager-loading.
 - `services/openlibrary_client.py` — Thin, mockable OpenLibrary metadata client — the V1 zero-credential metadata source.
 - `services/sync_service.py` — Push/pull for Layer-2: idempotent op application, delete-wins/LWW conflicts, `server_seq` cursor.
+- `services/borrow_request_service.py` — Asks to borrow as records: create/reuse, list both directions, decline, close on loan.
 - `services/circle_service.py` — Your circle: the one gate deciding which connection may be seen on which book, and Home's daily pick.
 - `services/connection_service.py` — Reader-to-reader requests, accept/block, and directional status over one deduped row per pair.
 - `services/lend_mirror_service.py` — Mirrors an outgoing loan onto a linked borrower's Borrowed shelf, committed independently after the lender's sync op.

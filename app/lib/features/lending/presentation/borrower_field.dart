@@ -24,12 +24,17 @@ class BorrowerField extends ConsumerStatefulWidget {
     required this.onUserIdChanged,
     required this.onChanged,
     this.autofocus = false,
+    this.initialLinkedHandle,
   });
 
   final TextEditingController controller;
   final String label;
   final String hint;
   final bool autofocus;
+
+  /// Shows the field already linked to a Kitabi user (the controller holds
+  /// their name, the caller holds their id) — a lend answering an ask.
+  final String? initialLinkedHandle;
 
   /// The chosen Kitabi user's id, or null once the text is a plain private
   /// contact (manual edit clears any prior link).
@@ -52,6 +57,7 @@ class _BorrowerFieldState extends ConsumerState<BorrowerField> {
   @override
   void initState() {
     super.initState();
+    _linkedHandle = widget.initialLinkedHandle;
     _loadContacts();
   }
 

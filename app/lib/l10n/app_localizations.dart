@@ -8343,6 +8343,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'They\'ll see what you finish and love, and which of your books they could borrow. As they share too, you\'ll see theirs.'**
   String get circleInviteFirstBody;
+
+  /// Section on the Lending tab: connections' asks to borrow
+  ///
+  /// In en, this message translates to:
+  /// **'Asked to borrow'**
+  String get borrowAsksLabel;
+
+  /// An incoming ask to borrow
+  ///
+  /// In en, this message translates to:
+  /// **'{name} would like to borrow “{title}”'**
+  String borrowAskIncoming(String name, String title);
+
+  /// When the ask was made
+  ///
+  /// In en, this message translates to:
+  /// **'Asked {date}'**
+  String borrowAskAskedOn(String date);
+
+  /// Opens the lend sheet for the asker
+  ///
+  /// In en, this message translates to:
+  /// **'Lend it'**
+  String get borrowAskLendIt;
+
+  /// Declines an ask to borrow (silently)
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get borrowAskNotNow;
+
+  /// An ask the reader sent that is still open
+  ///
+  /// In en, this message translates to:
+  /// **'You asked {name} for “{title}” — waiting for them'**
+  String borrowAskOutgoing(String name, String title);
+
+  /// Lend it when the owner's copy is gone
+  ///
+  /// In en, this message translates to:
+  /// **'That book isn\'t on your shelf any more.'**
+  String get borrowAskNotOnShelf;
+
+  /// Declining an ask failed
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update that — try again when you\'re online'**
+  String get borrowAskUpdateFailed;
 }
 
 class _AppLocalizationsDelegate

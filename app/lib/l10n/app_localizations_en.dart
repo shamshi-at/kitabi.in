@@ -5275,4 +5275,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get circleInviteFirstBody =>
       'They\'ll see what you finish and love, and which of your books they could borrow. As they share too, you\'ll see theirs.';
+
+  @override
+  String get borrowAsksLabel => 'Asked to borrow';
+
+  @override
+  String borrowAskIncoming(String name, String title) {
+    return '$name would like to borrow “$title”';
+  }
+
+  @override
+  String borrowAskAskedOn(String date) {
+    return 'Asked $date';
+  }
+
+  @override
+  String get borrowAskLendIt => 'Lend it';
+
+  @override
+  String get borrowAskNotNow => 'Not now';
+
+  @override
+  String borrowAskOutgoing(String name, String title) {
+    return 'You asked $name for “$title” — waiting for them';
+  }
+
+  @override
+  String get borrowAskNotOnShelf => 'That book isn\'t on your shelf any more.';
+
+  @override
+  String get borrowAskUpdateFailed =>
+      'Couldn\'t update that — try again when you\'re online';
 }

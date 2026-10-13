@@ -2,7 +2,7 @@
 chose to share have read, rated and own (docs/circle-reading-mockups.html)."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -103,3 +103,29 @@ class CirclePickOut(BaseModel):
 class CirclePickResponse(BaseModel):
     invite: int | None = None
     pick: CirclePickOut | None = None
+
+
+class BorrowAskPersonOut(BaseModel):
+    user_id: uuid.UUID
+    name: str
+    username: str | None = None
+    avatar_url: str | None = None
+
+
+class BorrowAskOut(BaseModel):
+    """One open ask to borrow. `person` is the other side: who asked, on the
+    owner's list; whom you asked, on the asker's."""
+
+    id: uuid.UUID
+    person: BorrowAskPersonOut
+    work_id: uuid.UUID
+    edition_id: uuid.UUID
+    title: str
+    author: str | None = None
+    cover_url: str | None = None
+    created_at: datetime
+
+
+class BorrowAsksOut(BaseModel):
+    incoming: list[BorrowAskOut] = []
+    outgoing: list[BorrowAskOut] = []

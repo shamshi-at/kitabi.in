@@ -1870,9 +1870,14 @@ re-ranked; stars folded while you're reading; tagged `[V1]` in feature-map.md).
       the other screen quickly
 - [ ] Airplane-mode check (owner testing): circle surfaces must simply disappear offline
 - [ ] The borrow-ask push itself on a real build (local API had no Firebase credentials)
-- [ ] Owner's side of a borrow ask: the push opens their copy, but the lend sheet
-      doesn't yet arrive with the asker pre-filled (`showLendSheet` takes no
-      initial borrower)
+- [x] An ask to borrow is a record (14 Oct 2026, owner report: the push "took me
+      nowhere" and the request was nowhere in the app). `borrow_requests`
+      (migration `000057`), `GET /circle/borrow-asks`, decline; the lending
+      mirror closes an ask when the owner lends that book to the asker from any
+      screen; one open ask per copy, no re-ask within a day. App: "Asked to
+      borrow" above the Lending tabs with Lend it (lend sheet pre-filled and
+      linked to the asker) / Not now; the asker sees "waiting for them"; the
+      push lands on the Lending tab. Verified on two emulators end to end
 - [ ] Mockup 3b extras not built: "Kept to myself · N ›" list and "See what Anu
       sees" preview; mockup 3c's add-sheet checkbox
 - [ ] Offline cache of circle answers (currently in-memory for 2 minutes; the

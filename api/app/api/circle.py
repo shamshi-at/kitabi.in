@@ -3,7 +3,6 @@ have read, rated and own — for search rows, the book page and Home's one card 
 plus asking one of them to lend a copy. Every rule is in services/circle_service.py."""
 
 import uuid
-from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 from pydantic import BaseModel
@@ -13,13 +12,14 @@ from app.api.deps import CurrentUser, DbSession
 from app.models.edition import Edition
 from app.models.profile import Profile
 from app.schemas.circle import (
+    BorrowAsksOut,
     CirclePickOut,
     CirclePickResponse,
     CircleSignalsIn,
     CircleSignalsOut,
     CircleWorkOut,
 )
-from app.services import catalog_service, circle_service, push_service
+from app.services import borrow_request_service, catalog_service, circle_service, push_service
 
 router = APIRouter(prefix="/circle", tags=["circle"])
 
@@ -90,14 +90,6 @@ class BorrowAskIn(BaseModel):
     edition_id: uuid.UUID
 
 
-# One ask per (asker, owner, edition) a day — a borrow request is a favour, and
-# a button that can be tapped twice must not buzz a friend's phone twice.
-# SCALE: in-process, so it resets on deploy and divides by instance count; a
-# duplicate ask after a restart is a nuisance, not a leak, so Postgres can wait.
-_ASKED: dict[tuple[uuid.UUID, uuid.UUID, uuid.UUID], datetime] = {}
-_ASK_WINDOW = timedelta(hours=24)
-
-
 @router.post("/borrow-ask", status_code=status.HTTP_204_NO_CONTENT)
 async def borrow_ask(
     payload: BorrowAskIn,
@@ -126,21 +118,32 @@ async def borrow_ask(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "not_found", "message": "That copy isn't on their shared shelf."},
         )
-    now = datetime.now(UTC)
-    key = (me.id, owner.id, payload.edition_id)
-    last = _ASKED.get(key)
-    if last is not None and now - last < _ASK_WINDOW:
+    asked_edition = visible.owned_edition_id or edition.id
+    request, is_new = await borrow_request_service.ask(db, me.id, owner.id, asked_edition)
+    # Re-tapping an open ask (or asking again within a day of the last) is
+    # harmless and silent: the record already says it, and a favour must not
+    # buzz a friend's phone twice.
+    if not is_new:
         return
-    _ASKED[key] = now
-    if len(_ASKED) > 5000:
-        for k in [k for k, t in _ASKED.items() if now - t >= _ASK_WINDOW]:
-            _ASKED.pop(k, None)
     background_tasks.add_task(
         push_service.notify_borrow_ask,
         me.id,
         owner.id,
         edition.work.title,
         edition.work_id,
-        visible.owned_edition_id or edition.id,
+        asked_edition,
+        request.id,
         edition.cover_url,
     )
+
+
+@router.get("/borrow-asks", response_model=BorrowAsksOut)
+async def borrow_asks(user: CurrentUser, db: DbSession) -> BorrowAsksOut:
+    """Open asks to me (to lend or decline) and from me (still waiting)."""
+    return await borrow_request_service.list_for(db, uuid.UUID(user["id"]))
+
+
+@router.post("/borrow-asks/{request_id}/decline", status_code=status.HTTP_204_NO_CONTENT)
+async def decline_borrow_ask(request_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
+    """The owner's "not now" — silent to the asker."""
+    await borrow_request_service.decline(db, uuid.UUID(user["id"]), request_id)

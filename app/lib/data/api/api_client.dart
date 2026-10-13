@@ -421,6 +421,17 @@ class ApiClient {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  /// Open asks to borrow: `{incoming: [...], outgoing: [...]}`.
+  Future<Map<String, dynamic>> circleBorrowAsks() async {
+    final res = await _dio.get('/circle/borrow-asks');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// The owner's "not now" on an ask — silent to the asker.
+  Future<void> circleDeclineBorrowAsk(String requestId) async {
+    await _dio.post('/circle/borrow-asks/$requestId/decline');
+  }
+
   /// Ask a connection to lend the copy they share owning — a push to them.
   Future<void> circleBorrowAsk({
     required String ownerId,

@@ -29,6 +29,7 @@ from app.models.author_claim import (
     AuthorClaim,
 )
 from app.models.base import Base, CatalogMixin, SyncableMixin
+from app.models.borrow_request import BorrowRequest
 from app.models.buy_click import SURFACE_APP, SURFACE_WEB, SURFACES, BuyClick
 from app.models.catalog_intake import (
     STATE_COMPLETE,
@@ -108,6 +109,7 @@ from app.models import translit_hooks as _translit_hooks  # noqa: E402,F401  iso
 
 __all__ = [
     "Base",
+    "BorrowRequest",
     "BuyClick",
     "SURFACE_APP",
     "SURFACE_WEB",

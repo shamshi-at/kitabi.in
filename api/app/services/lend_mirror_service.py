@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Edition, LendingRecord, LibraryEntry, Work
 from app.models.profile import Profile
-from app.services import connection_service, push_service
+from app.services import borrow_request_service, connection_service, push_service
 
 
 def _display_name(p: Profile | None) -> str:
@@ -154,6 +154,9 @@ async def _mirror_onto_borrower(
                 await _mirror_onto_borrower(db, lender_id, fresh)
             return
         await db.refresh(mirror, ["server_seq"])
+        # Lending them the book answers their ask for it, whichever screen
+        # the loan was made from.
+        await borrow_request_service.close_for_loan(db, lender_id, borrower_id, edition_id)
     else:
         # Keep the mirror in step — returns, due-date edits, un/deletes.
         just_returned = mirror.returned_date is None and lent.returned_date is not None

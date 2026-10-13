@@ -165,3 +165,11 @@ final circleInviteDismissalsProvider =
           .getValue(circleInviteDismissedKey);
       return InviteDismissals.parse(raw);
     });
+
+/// Open asks to borrow, both directions. Not kept alive: the Lending tab
+/// re-asks each time it opens, and a borrow-ask push invalidates it.
+final borrowAsksProvider = FutureProvider.autoDispose<BorrowAsks>((ref) async {
+  final api = ref.watch(apiClientProvider);
+  final body = await _quietly(() => api.circleBorrowAsks());
+  return body == null ? const BorrowAsks() : BorrowAsks.fromJson(body);
+});
