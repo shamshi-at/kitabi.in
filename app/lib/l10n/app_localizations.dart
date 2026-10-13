@@ -8331,6 +8331,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hidden from your connections. A public review stays public.'**
   String get circleKeptHint;
+
+  /// Home invitation when none of the reader's connections share yet
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Share your reading with your connection} other{Share your reading with your {count} connections}}'**
+  String circleInviteFirstHeadline(int count);
+
+  /// Home invitation body when none of the reader's connections share yet
+  ///
+  /// In en, this message translates to:
+  /// **'They\'ll see what you finish and love, and which of your books they could borrow. As they share too, you\'ll see theirs.'**
+  String get circleInviteFirstBody;
 }
 
 class _AppLocalizationsDelegate

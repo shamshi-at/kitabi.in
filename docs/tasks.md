@@ -1845,7 +1845,11 @@ re-ranked; stars folded while you're reading; tagged `[V1]` in feature-map.md).
       read / reading / has a copy; stars and quotes folded while you're reading
 - [x] Ask to borrow — confirm, push to the owner, tap lands on their copy
 - [x] Home: one "From your circle" card, or the invitation (≤ once a week, gone
-      after two ✕), or nothing
+      after two ✕), or nothing. The invitation goes to **any reader with a
+      connection**, not only once a connection already shares — the first cut
+      waited for a sharer, so on launch day (everything off) nobody was invited
+      and the feature was dark on every phone (owner report, 13 Oct 2026, 1.0.8);
+      fixed in 1.0.9
 - [x] Opt-in sheet (every box unticked), Profile → "Your circle" switches,
       "Keep this one to myself" on the Yours tab
 - [x] `test/circle_test.dart` — parsing from the server schema, hide-switch sync

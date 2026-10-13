@@ -11,6 +11,7 @@ import '../../../data/db/catalog_cache.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../connections/connections_providers.dart';
 import '../circle_models.dart';
 import '../circle_providers.dart';
 import 'circle_share_sheet.dart';
@@ -18,8 +19,13 @@ import 'circle_widgets.dart';
 
 /// Home's one "From your circle" card (mockups 2a–2c) — the same discipline as
 /// the AI pick: one card, never a feed. It's the pick for today, an invitation
-/// for a reader who doesn't share yet (only when some of their connections
-/// do), or nothing at all — Home never grows a hole for it.
+/// for a reader who doesn't share yet and has someone to share with, or
+/// nothing at all — Home never grows a hole for it.
+///
+/// The invitation used to wait until a connection *already* shared. Everything
+/// starts off, so on launch day nobody shared, nobody was invited, and the
+/// feature stayed dark on every phone (owner report, 13 Oct 2026). A reader
+/// with connections is invited either way; only the sentence changes.
 class CircleHomeCard extends ConsumerWidget {
   const CircleHomeCard({super.key});
 
@@ -34,15 +40,24 @@ class CircleHomeCard extends ConsumerWidget {
         child: _PickCard(pick: pick),
       );
     }
-    final invite = response.invite ?? 0;
-    if (invite <= 0) return const SizedBox.shrink();
+    // Null means the reader already shares — there is nothing to invite to.
+    final invite = response.invite;
+    if (invite == null) return const SizedBox.shrink();
+    final connections = invite > 0
+        ? invite
+        : ref.watch(connectionsProvider).valueOrNull?.accepted.length ?? 0;
+    if (connections <= 0) return const SizedBox.shrink();
     final dismissals = ref.watch(circleInviteDismissalsProvider).valueOrNull;
     if (dismissals == null || !dismissals.allowsShowing(DateTime.now())) {
       return const SizedBox.shrink();
     }
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: _InviteCard(count: invite, dismissals: dismissals),
+      child: _InviteCard(
+        sharing: invite,
+        connections: connections,
+        dismissals: dismissals,
+      ),
     );
   }
 }
@@ -360,9 +375,17 @@ class _CardButton extends StatelessWidget {
 /// Mockup 2c — some connections share and the reader doesn't. The count is
 /// of people who already chose to share, so it is theirs to reveal.
 class _InviteCard extends ConsumerWidget {
-  const _InviteCard({required this.count, required this.dismissals});
+  const _InviteCard({
+    required this.sharing,
+    required this.connections,
+    required this.dismissals,
+  });
 
-  final int count;
+  /// Connections who already share — their consent, theirs to reveal.
+  final int sharing;
+
+  /// Accepted connections, used when nobody shares yet.
+  final int connections;
   final InviteDismissals dismissals;
 
   @override
@@ -389,7 +412,9 @@ class _InviteCard extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            l10n.circleInviteHeadline(count),
+            sharing > 0
+                ? l10n.circleInviteHeadline(sharing)
+                : l10n.circleInviteFirstHeadline(connections),
             style: GoogleFonts.fraunces(
               fontSize: 15,
               height: 1.3,
@@ -398,7 +423,7 @@ class _InviteCard extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            l10n.circleInviteBody,
+            sharing > 0 ? l10n.circleInviteBody : l10n.circleInviteFirstBody,
             style: TextStyle(
               fontSize: 12,
               height: 1.45,

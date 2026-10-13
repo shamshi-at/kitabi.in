@@ -15,6 +15,7 @@ import 'package:kitabi/features/circle/circle_models.dart';
 import 'package:kitabi/features/circle/circle_providers.dart';
 import 'package:kitabi/features/circle/widgets/circle_home_card.dart';
 import 'package:kitabi/features/circle/widgets/circle_widgets.dart';
+import 'package:kitabi/features/connections/connections_providers.dart';
 import 'package:kitabi/l10n/app_localizations.dart';
 import 'package:sqlite3/sqlite3.dart';
 
@@ -75,41 +76,56 @@ const _workBody = {
 
 class _SyncApi extends ApiClient {
   final List<Map<String, dynamic>> pushed = [];
-  Map<String, dynamic> nextPull = {'changes': [], 'next_cursor': 0, 'has_more': false};
+  Map<String, dynamic> nextPull = {
+    'changes': [],
+    'next_cursor': 0,
+    'has_more': false,
+  };
 
   @override
-  Future<List<Map<String, dynamic>>> syncPush(List<Map<String, dynamic>> ops) async {
+  Future<List<Map<String, dynamic>>> syncPush(
+    List<Map<String, dynamic>> ops,
+  ) async {
     pushed.addAll(ops);
     return [
-      for (final op in ops) {'op_id': op['op_id'], 'status': 'applied', 'server_seq': 1},
+      for (final op in ops)
+        {'op_id': op['op_id'], 'status': 'applied', 'server_seq': 1},
     ];
   }
 
   @override
-  Future<Map<String, dynamic>> syncPull({required int cursor, int limit = 500}) async => nextPull;
+  Future<Map<String, dynamic>> syncPull({
+    required int cursor,
+    int limit = 500,
+  }) async => nextPull;
 
   @override
-  Future<Map<String, dynamic>> getWorkByEdition(String editionId) async =>
-      {'id': 'w', 'title': 't', 'authors': const [], 'genres': const [], 'editions': const []};
+  Future<Map<String, dynamic>> getWorkByEdition(String editionId) async => {
+    'id': 'w',
+    'title': 't',
+    'authors': const [],
+    'genres': const [],
+    'editions': const [],
+  };
 }
 
 Map<String, dynamic> _pulledEntry({Object? circleHidden = _absent}) => {
-      'id': 'le-1',
-      'user_id': 'user-1',
-      'edition_id': 'e-1',
-      'status': 'read',
-      'ownership': 'owned',
-      'start_date': null,
-      'finish_date': null,
-      'current_page': null,
-      'is_favorite': false,
-      'notes': null,
-      if (circleHidden != _absent) 'circle_hidden': circleHidden,
-      'created_at': '2026-10-01T10:00:00+00:00',
-      'updated_at': '2026-10-02T10:00:00+00:00',
-      'deleted_at': null,
-      'server_seq': 7,
-    };
+  'id': 'le-1',
+  'user_id': 'user-1',
+  'edition_id': 'e-1',
+  'status': 'read',
+  'ownership': 'owned',
+  'start_date': null,
+  'finish_date': null,
+  'current_page': null,
+  'is_favorite': false,
+  'notes': null,
+  if (circleHidden != _absent) 'circle_hidden': circleHidden,
+  'created_at': '2026-10-01T10:00:00+00:00',
+  'updated_at': '2026-10-02T10:00:00+00:00',
+  'deleted_at': null,
+  'server_seq': 7,
+};
 const _absent = Object();
 
 void main() {
@@ -138,28 +154,36 @@ void main() {
       expect(p.owns, isFalse);
       expect(p.shortName, '@anu');
       expect(CircleSignal.parseAll({'invite': 2}), isEmpty);
-      expect(CirclePickResponse.fromJson({'invite': null, 'pick': null}).pick, isNull);
+      expect(
+        CirclePickResponse.fromJson({'invite': null, 'pick': null}).pick,
+        isNull,
+      );
     });
 
     test('ratings alone share nothing', () {
-      expect(
-        CircleSharing.fromMe({'circle_share_ratings': true}).any,
-        isFalse,
-      );
+      expect(CircleSharing.fromMe({'circle_share_ratings': true}).any, isFalse);
       expect(CircleSharing.fromMe({'circle_share_owned': true}).any, isTrue);
     });
   });
 
   group('the invitation', () {
     final now = DateTime(2026, 10, 13);
-    test('shows until dismissed, then waits a week, then is gone after two', () {
-      expect(InviteDismissals.parse(null).allowsShowing(now), isTrue);
-      final once = InviteDismissals.parse(InviteDismissals.parse(null).bumped(now));
-      expect(once.allowsShowing(now.add(const Duration(days: 3))), isFalse);
-      expect(once.allowsShowing(now.add(const Duration(days: 8))), isTrue);
-      final twice = InviteDismissals.parse(once.bumped(now));
-      expect(twice.allowsShowing(now.add(const Duration(days: 400))), isFalse);
-    });
+    test(
+      'shows until dismissed, then waits a week, then is gone after two',
+      () {
+        expect(InviteDismissals.parse(null).allowsShowing(now), isTrue);
+        final once = InviteDismissals.parse(
+          InviteDismissals.parse(null).bumped(now),
+        );
+        expect(once.allowsShowing(now.add(const Duration(days: 3))), isFalse);
+        expect(once.allowsShowing(now.add(const Duration(days: 8))), isTrue);
+        final twice = InviteDismissals.parse(once.bumped(now));
+        expect(
+          twice.allowsShowing(now.add(const Duration(days: 400))),
+          isFalse,
+        );
+      },
+    );
   });
 
   group('keep this one to myself', () {
@@ -184,55 +208,71 @@ void main() {
       expect(update['payload'], {'circle_hidden': true});
     });
 
-    test('a pull from an API that predates the flag never un-hides a book', () async {
-      await db.libraryEntriesDao.insertOne(
-        LibraryEntriesCompanion.insert(
-          id: 'le-1',
-          userId: 'user-1',
-          editionId: 'e-1',
-          circleHidden: const Value(true),
-        ),
-      );
-      api.nextPull = {
-        'changes': [
-          {'entity': 'library_entries', 'data': _pulledEntry()},
-        ],
-        'next_cursor': 7,
-        'has_more': false,
-      };
-      await SyncEngine(db, api).syncNow('user-1');
-      expect((await db.libraryEntriesDao.getById('le-1'))!.circleHidden, isTrue);
-
-      api.nextPull = {
-        'changes': [
-          {'entity': 'library_entries', 'data': _pulledEntry(circleHidden: false)},
-        ],
-        'next_cursor': 8,
-        'has_more': false,
-      };
-      await SyncEngine(db, api).syncNow('user-1');
-      expect(
-        (await db.libraryEntriesDao.getById('le-1'))!.circleHidden,
-        isFalse,
-        reason: 'an explicit answer from another device does apply',
-      );
-    });
-
-    test('merging duplicate copies keeps a book hidden if either copy was', () async {
-      for (final (id, hidden) in [('a', false), ('b', true)]) {
+    test(
+      'a pull from an API that predates the flag never un-hides a book',
+      () async {
         await db.libraryEntriesDao.insertOne(
           LibraryEntriesCompanion.insert(
-            id: id,
+            id: 'le-1',
             userId: 'user-1',
             editionId: 'e-1',
-            circleHidden: Value(hidden),
+            circleHidden: const Value(true),
           ),
         );
-      }
-      await healDuplicateLibraryEntries(db, userId: 'user-1', deviceId: 'device-1');
-      final survivor = await db.libraryEntriesDao.getByEditionId('e-1');
-      expect(survivor!.circleHidden, isTrue);
-    });
+        api.nextPull = {
+          'changes': [
+            {'entity': 'library_entries', 'data': _pulledEntry()},
+          ],
+          'next_cursor': 7,
+          'has_more': false,
+        };
+        await SyncEngine(db, api).syncNow('user-1');
+        expect(
+          (await db.libraryEntriesDao.getById('le-1'))!.circleHidden,
+          isTrue,
+        );
+
+        api.nextPull = {
+          'changes': [
+            {
+              'entity': 'library_entries',
+              'data': _pulledEntry(circleHidden: false),
+            },
+          ],
+          'next_cursor': 8,
+          'has_more': false,
+        };
+        await SyncEngine(db, api).syncNow('user-1');
+        expect(
+          (await db.libraryEntriesDao.getById('le-1'))!.circleHidden,
+          isFalse,
+          reason: 'an explicit answer from another device does apply',
+        );
+      },
+    );
+
+    test(
+      'merging duplicate copies keeps a book hidden if either copy was',
+      () async {
+        for (final (id, hidden) in [('a', false), ('b', true)]) {
+          await db.libraryEntriesDao.insertOne(
+            LibraryEntriesCompanion.insert(
+              id: id,
+              userId: 'user-1',
+              editionId: 'e-1',
+              circleHidden: Value(hidden),
+            ),
+          );
+        }
+        await healDuplicateLibraryEntries(
+          db,
+          userId: 'user-1',
+          deviceId: 'device-1',
+        );
+        final survivor = await db.libraryEntriesDao.getByEditionId('e-1');
+        expect(survivor!.circleHidden, isTrue);
+      },
+    );
   });
 
   group('migration v14 → v15', () {
@@ -248,42 +288,53 @@ void main() {
       if (await dir.exists()) await dir.delete(recursive: true);
     });
 
-    test('adds circle_hidden, keeps every entry, and is safe to re-run', () async {
-      final seed = AppDatabase.forTesting(NativeDatabase(file, setup: device));
-      await seed.customStatement('SELECT 1');
-      await seed.customStatement('ALTER TABLE library_entries DROP COLUMN circle_hidden');
-      await seed.customStatement(
-        'INSERT INTO library_entries (id, user_id, created_at, updated_at, sync_status, '
-        "edition_id) VALUES ('le-1', 'u1', 1, 1, 'synced', 'e-1')",
-      );
-      await seed.customStatement('PRAGMA user_version = 14');
-      await seed.close();
+    test(
+      'adds circle_hidden, keeps every entry, and is safe to re-run',
+      () async {
+        final seed = AppDatabase.forTesting(
+          NativeDatabase(file, setup: device),
+        );
+        await seed.customStatement('SELECT 1');
+        await seed.customStatement(
+          'ALTER TABLE library_entries DROP COLUMN circle_hidden',
+        );
+        await seed.customStatement(
+          'INSERT INTO library_entries (id, user_id, created_at, updated_at, sync_status, '
+          "edition_id) VALUES ('le-1', 'u1', 1, 1, 'synced', 'e-1')",
+        );
+        await seed.customStatement('PRAGMA user_version = 14');
+        await seed.close();
 
-      final db = AppDatabase.forTesting(NativeDatabase(file, setup: device));
-      final entry = await db.libraryEntriesDao.getById('le-1');
-      expect(entry, isNotNull);
-      expect(entry!.circleHidden, isFalse);
-      await db.close();
+        final db = AppDatabase.forTesting(NativeDatabase(file, setup: device));
+        final entry = await db.libraryEntriesDao.getById('le-1');
+        expect(entry, isNotNull);
+        expect(entry!.circleHidden, isFalse);
+        await db.close();
 
-      // A half-applied upgrade (column there, version not stamped) replays.
-      final again = AppDatabase.forTesting(NativeDatabase(file, setup: device));
-      await again.customStatement('PRAGMA user_version = 14');
-      await again.close();
-      final reopened = AppDatabase.forTesting(NativeDatabase(file, setup: device));
-      expect(await reopened.libraryEntriesDao.getById('le-1'), isNotNull);
-      await reopened.close();
-    });
+        // A half-applied upgrade (column there, version not stamped) replays.
+        final again = AppDatabase.forTesting(
+          NativeDatabase(file, setup: device),
+        );
+        await again.customStatement('PRAGMA user_version = 14');
+        await again.close();
+        final reopened = AppDatabase.forTesting(
+          NativeDatabase(file, setup: device),
+        );
+        expect(await reopened.libraryEntriesDao.getById('le-1'), isNotNull);
+        await reopened.close();
+      },
+    );
   });
 
   group('widgets', () {
     Widget host(Widget child, List<Override> overrides) => ProviderScope(
-          overrides: overrides,
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: SingleChildScrollView(child: child)),
-          ),
-        );
+      overrides: overrides,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: SingleChildScrollView(child: child)),
+      ),
+    );
 
     /// Fraunces isn't bundled in tests; its "not in assets" report is noise.
     /// Returns the restorer, which must run before the test body ends.
@@ -299,38 +350,54 @@ void main() {
     testWidgets('a search row names faces first', (tester) async {
       final signal = CircleSignal.fromJson({
         'read_count': 4,
-        'readers': [_anu, {..._anu, 'user_id': 'u-l', 'name': 'Lakshmi R'}],
+        'readers': [
+          _anu,
+          {..._anu, 'user_id': 'u-l', 'name': 'Lakshmi R'},
+        ],
         'avg_rating': 4.5,
       });
       await tester.pumpWidget(host(CircleSearchLine(signal: signal), const []));
-      expect(find.text('Anu, Lakshmi & 2 more read this · ★ 4.5'), findsOneWidget);
+      expect(
+        find.text('Anu, Lakshmi & 2 more read this · ★ 4.5'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('the book page card: headline, quote and the lending door', (tester) async {
+    testWidgets('the book page card: headline, quote and the lending door', (
+      tester,
+    ) async {
       final restore = quietFonts();
-      await tester.pumpWidget(host(
-        const BookCircleSection(workId: 'w-1', title: 'Randamoozham'),
-        [
+      await tester.pumpWidget(
+        host(const BookCircleSection(workId: 'w-1', title: 'Randamoozham'), [
           circleWorkProvider('w-1').overrideWith(
-            (ref) async => CircleWork.fromJson(Map<String, dynamic>.from(_workBody)),
+            (ref) async =>
+                CircleWork.fromJson(Map<String, dynamic>.from(_workBody)),
           ),
-        ],
-      ));
+        ]),
+      );
       await tester.pump();
       expect(find.text('1 of your connections has read this'), findsOneWidget);
       expect(find.text('“The Bhima I never knew I needed.”'), findsOneWidget);
       expect(find.text('Faisal has a copy'), findsOneWidget);
       expect(find.text('Ask to borrow ›'), findsOneWidget);
-      expect(find.text('Joseph Mathew also read it as Second Turn'), findsOneWidget);
+      expect(
+        find.text('Joseph Mathew also read it as Second Turn'),
+        findsOneWidget,
+      );
       restore();
     });
 
     testWidgets('silence is the empty state', (tester) async {
-      for (final body in <CircleWork?>[null, const CircleWork(), const CircleWork(invite: 3)]) {
-        await tester.pumpWidget(host(
-          const BookCircleSection(workId: 'w-2', title: 'Manju'),
-          [circleWorkProvider('w-2').overrideWith((ref) async => body)],
-        ));
+      for (final body in <CircleWork?>[
+        null,
+        const CircleWork(),
+        const CircleWork(invite: 3),
+      ]) {
+        await tester.pumpWidget(
+          host(const BookCircleSection(workId: 'w-2', title: 'Manju'), [
+            circleWorkProvider('w-2').overrideWith((ref) async => body),
+          ]),
+        );
         await tester.pump();
         expect(find.text('YOUR CIRCLE'), findsNothing);
       }
@@ -358,10 +425,11 @@ void main() {
           'my_rating': null,
         },
       });
-      await tester.pumpWidget(host(
-        const CircleHomeCard(),
-        [circlePickProvider.overrideWith((ref) async => pick)],
-      ));
+      await tester.pumpWidget(
+        host(const CircleHomeCard(), [
+          circlePickProvider.overrideWith((ref) async => pick),
+        ]),
+      );
       await tester.pump();
       expect(find.text('FROM YOUR CIRCLE'), findsOneWidget);
       expect(find.text('Anu finished “Randamoozham”'), findsOneWidget);
@@ -370,18 +438,89 @@ void main() {
       restore();
     });
 
-    testWidgets('no pick and nobody sharing: Home shows nothing', (tester) async {
-      await tester.pumpWidget(host(
-        const CircleHomeCard(),
-        [
-          circlePickProvider.overrideWith(
-            (ref) async => const CirclePickResponse(invite: 0),
+    ConnectionsData connected(int n) => ConnectionsData(
+      incoming: const [],
+      outgoing: const [],
+      accepted: [
+        for (var i = 0; i < n; i++)
+          Connection(
+            id: 'c$i',
+            status: 'accepted',
+            role: 'requester',
+            other: ConnectionUser(id: 'u$i', fullName: 'Reader $i'),
           ),
-        ],
-      ));
-      await tester.pump();
+      ],
+    );
+
+    Future<void> pumpInvite(
+      WidgetTester tester,
+      int sharing,
+      int connections,
+    ) async {
+      await tester.pumpWidget(
+        host(const CircleHomeCard(), [
+          circlePickProvider.overrideWith(
+            (ref) async => CirclePickResponse(invite: sharing),
+          ),
+          connectionsProvider.overrideWith(
+            (ref) async => connected(connections),
+          ),
+          circleInviteDismissalsProvider.overrideWith(
+            (ref) async => InviteDismissals.parse(null),
+          ),
+        ]),
+      );
+      // Connections, then the dismissal record: two async reads, one after
+      // the other, so three frames before the card can appear.
+      for (var i = 0; i < 3; i++) {
+        await tester.pump();
+      }
+    }
+
+    // Owner report, 13 Oct 2026: every switch starts off, so on launch day
+    // nobody shared — and an invitation that waited for someone to share first
+    // was shown to nobody, leaving the feature dark on every phone.
+    testWidgets(
+      'nobody shares yet: a reader with connections is still invited',
+      (tester) async {
+        final restore = quietFonts();
+        await pumpInvite(tester, 0, 3);
+        expect(
+          find.text('Share your reading with your 3 connections'),
+          findsOneWidget,
+        );
+        expect(find.text('Choose what to share'), findsOneWidget);
+        restore();
+      },
+    );
+
+    testWidgets('someone shares: the invitation says so', (tester) async {
+      final restore = quietFonts();
+      await pumpInvite(tester, 1, 3);
+      expect(
+        find.text('1 of your connections shares what they read'),
+        findsOneWidget,
+      );
+      restore();
+    });
+
+    testWidgets('no connections at all: Home shows nothing', (tester) async {
+      await pumpInvite(tester, 0, 0);
       expect(find.text('YOUR CIRCLE'), findsNothing);
       expect(find.text('FROM YOUR CIRCLE'), findsNothing);
+    });
+
+    testWidgets('a reader who already shares is never invited', (tester) async {
+      await tester.pumpWidget(
+        host(const CircleHomeCard(), [
+          circlePickProvider.overrideWith(
+            (ref) async => const CirclePickResponse(),
+          ),
+          connectionsProvider.overrideWith((ref) async => connected(3)),
+        ]),
+      );
+      await tester.pump();
+      expect(find.text('YOUR CIRCLE'), findsNothing);
     });
   });
 }

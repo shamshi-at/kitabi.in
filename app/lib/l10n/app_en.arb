@@ -4164,5 +4164,14 @@
   "circleKeptHint": "Hidden from your connections. A public review stays public.",
   "@circleKeptHint": {
     "description": "Per-book hide switch hint when on"
+  },
+  "circleInviteFirstHeadline": "{count, plural, =1{Share your reading with your connection} other{Share your reading with your {count} connections}}",
+  "@circleInviteFirstHeadline": {
+    "description": "Home invitation when none of the reader's connections share yet",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleInviteFirstBody": "They'll see what you finish and love, and which of your books they could borrow. As they share too, you'll see theirs.",
+  "@circleInviteFirstBody": {
+    "description": "Home invitation body when none of the reader's connections share yet"
   }
 }

@@ -5260,4 +5260,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get circleKeptHint =>
       'Hidden from your connections. A public review stays public.';
+
+  @override
+  String circleInviteFirstHeadline(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Share your reading with your $count connections',
+      one: 'Share your reading with your connection',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get circleInviteFirstBody =>
+      'They\'ll see what you finish and love, and which of your books they could borrow. As they share too, you\'ll see theirs.';
 }
