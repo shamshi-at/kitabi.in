@@ -632,6 +632,11 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [~] Catalog matching on import (ISBN → title/author fallback; create-if-missing). Match is
       ISBN-exact → title against the local catalog; **create-if-missing for unmatched rows
       (OpenLibrary fetch on import) is a follow-up** — unmatched rows are skipped for now
+- [ ] **Read a Libib or LibraryThing export, not only Goodreads'.** `_ISBN_KEYS`/
+      `_AUTHOR_KEYS` match headers exactly, so Libib's `ean_isbn13`/`upc_isbn10`/`creators`
+      fall through: a Libib file imports titles, ratings and reviews and matches on title
+      alone. Until this lands, `/compare/libib` and `/compare/librarything` deliberately
+      don't promise a move (16 Oct 2026)
 - [x] CSV export (own data out — trust feature, pairs with import) — `buildLibraryCsv`
       (RFC-4180 quoted, Goodreads-shaped columns) shared from the profile via share_plus
 
@@ -1304,7 +1309,14 @@ out of the sitemap until a work actually carries a genre.
 - [x] JSON-LD per page type; `AggregateRating` **only when a real rating exists** — never
       zeroed, never invented
 - [x] Pagination: unique title + self-canonical per page; never canonical page 2 → page 1
-- [ ] `hreflang` scaffolding for a future `/ml/`, so it isn't a retrofit
+- [x] **Pages for the searches that come before the name** (16 Oct 2026) — `/app` was the
+      only page about the app, its H1 the brand. Now `/compare` and
+      `/compare/{goodreads,libib,librarything}` (every claim about another app read off that
+      app's own pages, with a Sources list and the date it was read), `/lending-tracker`, and
+      `/ml/app` in Malayalam. Content in `functions/_lib/guides.js` — its header has the
+      rules; `tests/run.py` keeps the sitemap and the hreflang pair in step
+- [ ] `hreflang` scaffolding for a future `/ml/`, so it isn't a retrofit — started:
+      `/app` ↔ `/ml/app` are a reciprocal pair (16 Oct 2026)
 - [ ] Search Console + Bing Webmaster verified; Lighthouse CI failing the build on
       LCP > 1.2 s or a document-size regression
 

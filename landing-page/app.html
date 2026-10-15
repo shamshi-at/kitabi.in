@@ -9,6 +9,11 @@
 <meta name="author" content="Kitabi">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://kitabi.in/app">
+<!-- The Malayalam page names this one and this one names it back; hreflang is
+     ignored unless the pair is reciprocal (functions/_lib/pages/guides.js). -->
+<link rel="alternate" hreflang="en" href="https://kitabi.in/app">
+<link rel="alternate" hreflang="ml" href="https://kitabi.in/ml/app">
+<link rel="alternate" hreflang="x-default" href="https://kitabi.in/app">
 <meta name="theme-color" content="#241811">
 <link rel="icon" href="/logo.svg?v=3" type="image/svg+xml">
 <link rel="icon" href="/ico.png?v=3" type="image/png">
@@ -1037,6 +1042,17 @@ footer .fm{font-family:'Fraunces',Georgia,serif;font-size:15px;color:var(--ink)}
 
 <footer>
   <p class="fm">Kitabi <span style="color:var(--gold)">·</span> beyond the bookshelf</p>
+  <p style="margin-top:10px;line-height:2">
+    <a href="/compare/goodreads" style="color:var(--oxblood);text-decoration:none">Kitabi vs Goodreads</a>
+    <span style="color:var(--line)">·</span>
+    <a href="/compare/libib" style="color:var(--oxblood);text-decoration:none">Kitabi vs Libib</a>
+    <span style="color:var(--line)">·</span>
+    <a href="/compare/librarything" style="color:var(--oxblood);text-decoration:none">Kitabi vs LibraryThing</a>
+    <span style="color:var(--line)">·</span>
+    <a href="/lending-tracker" style="color:var(--oxblood);text-decoration:none">Book lending tracker</a>
+    <span style="color:var(--line)">·</span>
+    <a href="/ml/app" lang="ml" hreflang="ml" style="color:var(--oxblood);text-decoration:none">മലയാളത്തിൽ</a>
+  </p>
   <p style="margin-top:8px">
     <a href="/privacy" style="color:var(--oxblood);text-decoration:none">Privacy</a>
     <span style="color:var(--line)">·</span>
