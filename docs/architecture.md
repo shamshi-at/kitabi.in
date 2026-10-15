@@ -285,7 +285,7 @@ markers are omitted.
 - `services/device_service.py` — Device FCM token registry: upsert/rebind on sign-in, unregister on sign-out.
 - `services/fcm_client.py` — Minimal FCM HTTP v1 sender (PyJWT-minted token, httpx POST); dormant unless push is configured.
 - `services/push_service.py` — High-level `notify_*` bridge between app events and FCM; each opens its own session (BackgroundTasks-safe), no-op unless configured.
-- `services/import_service.py` — CSV import parsing (Goodreads/generic) into normalized rows for catalog matching.
+- `services/import_service.py` — CSV import parsing (Goodreads/Libib/LibraryThing/generic) into normalized rows for catalog matching.
 - `services/recommendation_service.py` — Opt-in LLM-reasoned recommendations with a plain-words "why"; dormant unless an Anthropic key is set.
 
 **Jobs — `jobs/`**

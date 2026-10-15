@@ -625,6 +625,14 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       unit-tested
 - [x] Generic CSV / Google Sheets export mapping (title column minimum, fuzzy column match) —
       same `parse_csv`, header-alias matching for title/author/isbn/rating/review/status
+- [x] Read a Libib or LibraryThing export (16 Oct 2026) — `detect_format` reads the header
+      row and each known export is read by its own column names: Libib's `creators`,
+      `ean_isbn13`/`upc_isbn10`, `began`/`completed` and four statuses (Not begun → pending,
+      In progress → reading, Completed → read, Abandoned → stopped), skipping its non-book
+      items; LibraryThing's surname-first `Primary Author`, bracketed ISBNs and dates, status
+      from Date Read/Date Started, comma- or tab-delimited. Notes/comments never become the
+      review. Half stars round up. Fixtures carry real export headers
+      (`api/tests/fixtures/imports/README.md`)
 - [x] Import preview UI (matched rows table) + one-tap import — S2. `POST /import/preview`
       parses + matches; app screen lets you **pick a CSV file** (`file_selector`) or paste it,
       shows matched/unmatched rows, and imports the matched ones into the library
@@ -632,11 +640,6 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
 - [~] Catalog matching on import (ISBN → title/author fallback; create-if-missing). Match is
       ISBN-exact → title against the local catalog; **create-if-missing for unmatched rows
       (OpenLibrary fetch on import) is a follow-up** — unmatched rows are skipped for now
-- [ ] **Read a Libib or LibraryThing export, not only Goodreads'.** `_ISBN_KEYS`/
-      `_AUTHOR_KEYS` match headers exactly, so Libib's `ean_isbn13`/`upc_isbn10`/`creators`
-      fall through: a Libib file imports titles, ratings and reviews and matches on title
-      alone. Until this lands, `/compare/libib` and `/compare/librarything` deliberately
-      don't promise a move (16 Oct 2026)
 - [x] CSV export (own data out — trust feature, pairs with import) — `buildLibraryCsv`
       (RFC-4180 quoted, Goodreads-shaped columns) shared from the profile via share_plus
 

@@ -1,8 +1,5 @@
-"""Import router: preview and commit CSV library imports (e.g. Goodreads),
-matching rows against the shared catalog."""
-
-import csv
-import io
+"""Import router: preview and commit CSV library imports (Goodreads, Libib,
+LibraryThing), matching rows against the shared catalog."""
 
 from fastapi import APIRouter
 
@@ -16,11 +13,11 @@ router = APIRouter(prefix="/import", tags=["import"])
 
 @router.post("/preview", response_model=ImportPreviewOut)
 async def preview(payload: ImportPreviewIn, user: CurrentUser, db: DbSession) -> ImportPreviewOut:
-    """S2 — parse a Goodreads/generic CSV and match each row to the catalog
-    (local, by ISBN then title). Read-only: the app creates the library entries
-    itself on confirm (offline-first). Unmatched rows can be resolved by ISBN."""
-    headers = next(csv.reader(io.StringIO(payload.csv)), [])
-    fmt = "goodreads" if import_service.is_goodreads(headers) else "generic"
+    """S2 — parse a Goodreads/Libib/LibraryThing/generic CSV and match each row
+    to the catalog (local, by ISBN then title). Read-only: the app creates the
+    library entries itself on confirm (offline-first). Unmatched rows can be
+    resolved by ISBN."""
+    fmt = import_service.detect_format(payload.csv)
 
     rows = import_service.parse_csv(payload.csv)
     out_rows: list[ImportRowOut] = []
@@ -47,6 +44,7 @@ async def preview(payload: ImportPreviewIn, user: CurrentUser, db: DbSession) ->
                 review=row.review,
                 status=row.status,
                 date_read=row.date_read,
+                date_started=row.date_started,
                 tags=row.tags,
                 match=work_summary(work) if work is not None else None,
             )
