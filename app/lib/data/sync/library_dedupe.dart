@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../db/database.dart';
+import 'wire_date.dart';
 
 const _uuid = Uuid();
 
@@ -99,8 +100,8 @@ Future<void> _mergeGroup(
     if (status != keeper.status) 'status': status,
     if (ownership != keeper.ownership) 'ownership': ownership,
     if (currentPage != keeper.currentPage) 'current_page': currentPage,
-    if (startDate != keeper.startDate && startDate != null) 'start_date': _dateOnly(startDate),
-    if (finishDate != keeper.finishDate && finishDate != null) 'finish_date': _dateOnly(finishDate),
+    if (startDate != keeper.startDate && startDate != null) 'start_date': wireDate(startDate),
+    if (finishDate != keeper.finishDate && finishDate != null) 'finish_date': wireDate(finishDate),
     if (isFavorite != keeper.isFavorite) 'is_favorite': isFavorite,
     if (circleHidden != keeper.circleHidden) 'circle_hidden': circleHidden,
     if (notes != keeper.notes && notes != null) 'notes': notes,
@@ -252,10 +253,6 @@ bool _isBlank(LibraryEntry e) =>
     (e.notes == null || e.notes!.trim().isEmpty);
 
 String? _nonEmpty(String? s) => (s == null || s.trim().isEmpty) ? null : s;
-
-/// The server's start/finish/lent dates are plain `date` columns — send
-/// date-only strings (a full timestamp is rejected as invalid_payload).
-String _dateOnly(DateTime d) => d.toUtc().toIso8601String().split('T').first;
 
 Future<void> _enqueue(
   AppDatabase db, {
