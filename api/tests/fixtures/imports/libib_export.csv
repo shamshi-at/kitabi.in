@@ -1,0 +1,7 @@
+id,item_type,title,creators,first_name,last_name,collection,ean_isbn13,upc_isbn10,description,publisher,publish_date,group,tags,notes,price,length,number_of_discs,number_of_players,age_group,ensemble,aspect_ratio,esrb,rating,review,review_date,status,began,completed,added,copies
+k3p1m8w2qa,book,"Chemmeen","Thakazhi Sivasankara Pillai",Thakazhi Sivasankara,Pillai,"Home",9788126403455,8126403454,"A fisherman's daughter, a trader's son, and the sea between them.","DC Books",2008-01-01,,"malayalam, classics","Bought at the DC Books stall, Kochi",,232,,,,,,,4.5,"The sea takes what it is owed.",2024-03-12," Completed","2024-02-20","2024-03-10",2023-12-01,1
+r7x2c9d4mb,book,"Aadujeevitham","Benyamin",,Benyamin,"Home",9788126429981,8126429984,,"Green Books",2008-01-01,,,,,216,,,,,,,,,," In progress","2026-10-01"," ",2026-09-28,1
+t5n8q1v6ze,book,"Khasakkinte Itihasam","O. V. Vijayan",O. V.,Vijayan,"Home",,812641541X,,"DC Books",1969-01-01,,,"Lent to Anu - ask for it back",,,,,,,,,,,," Not begun"," "," ",2023-12-01,1
+y2b6h3k8rp,book,"Randamoozham","M. T. Vasudevan Nair",M. T. Vasudevan,Nair,"Home",9788126412051,8126412054,,"Current Books",1984-01-01,,,,,,,,,,,,3,,," Abandoned","2025-06-01"," ",2025-05-30,1
+f9d4s2l7gt,movie,"Chemmeen","Ramu Kariat",Ramu,Kariat,"Home",8901234567890,,,,1965-01-01,,,,,,,,,,,,,,," Completed"," "," ",2024-01-15,1
+w1j5g8n3xc,book,"Malayalam Short Stories","Lalithambika Antharjanam, K. Saraswathi Amma",Lalithambika,Antharjanam,"Home",9788126433100,8126433108,,"DC Books",,,,,,,,,,,,,,,,,,,2026-10-12,1

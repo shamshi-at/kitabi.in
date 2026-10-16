@@ -16,10 +16,12 @@ import '../../../data/db/database.dart';
 import '../../../data/repositories/repository_providers.dart';
 import '../../../data/sync/sync_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../circle/circle_providers.dart';
 import '../../connections/connections_providers.dart';
 import '../../library/providers/library_providers.dart';
 import '../lending_format.dart';
 import '../reminder.dart';
+import 'borrow_asks_section.dart';
 import 'lend_pick_book_sheet.dart';
 import 'log_borrowed_sheet.dart';
 
@@ -146,6 +148,9 @@ class LendingLedgerScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
+                        // A connection's ask to borrow — where its push
+                        // lands, and where it waits until it's answered.
+                        const BorrowAsksSection(),
                         Padding(
                           padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
                           child: SegTabBar(
@@ -198,6 +203,7 @@ class _RefreshableTab extends ConsumerWidget {
         await ref.read(syncNowProvider)();
         ref.invalidate(allLendingProvider);
         ref.invalidate(connectionsProvider);
+        ref.invalidate(borrowAsksProvider);
       },
       child: child,
     );

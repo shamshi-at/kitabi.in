@@ -35,7 +35,7 @@ from jinja2 import StrictUndefined
 
 from console import deps, queries
 from console.routers import intake
-from console.templating import templates
+from console.templating import templates, to_ist
 
 NIGHT = date(2026, 10, 4)
 WORK_ID = uuid.UUID("33333333-3333-3333-3333-333333333333")
@@ -528,7 +528,10 @@ def test_something_that_is_not_a_date_goes_back_to_the_nights(client):
 
 
 def test_today_has_no_night_after(client):
-    today = datetime.now(UTC).date()
+    # The console's "today" is the IST calendar day (intake.py), so the test's
+    # must be too: a UTC date is yesterday between 00:00 and 05:30 IST, and the
+    # page rightly offers a night after it (failed CI at 01:50 IST, 13 Oct 2026).
+    today = to_ist(datetime.now(UTC)).date()
     assert "Night after" not in client.get(f"/intake/{today.isoformat()}").text
     assert "Night after" in client.get("/intake/2026-10-01").text
 

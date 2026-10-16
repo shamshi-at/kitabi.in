@@ -18,6 +18,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
 import '../../profile/providers/profile_providers.dart';
 import 'catalog_entity_tiles.dart';
+import 'catalog_result_tile.dart';
 
 /// Discover (S4/browse) — wander the whole catalog: every book, author and
 /// publisher. Rebuilt 18 Jul 2026 to match the library's "cool" feel (owner
@@ -714,7 +715,7 @@ class _BooksGridSliver extends StatelessWidget {
           childAspectRatio: 0.50,
         ),
         delegate: SliverChildBuilderDelegate(
-          (context, i) => _CatalogGridCell(work: works[i]),
+          (context, i) => CatalogGridCell(work: works[i]),
           childCount: works.length,
         ),
       ),
@@ -741,8 +742,11 @@ class _RowsSliver extends StatelessWidget {
 /// One book on the wall: a standing cover on a gold ledge, a quick-add badge in
 /// the corner, and the title/author beneath. Tapping the cover opens the book;
 /// the badge adds it to the library (or shows a moss check once owned).
-class _CatalogGridCell extends StatelessWidget {
-  const _CatalogGridCell({required this.work});
+/// One cover in the Books grid. Public only so its corner badges can be
+/// tested without standing up the whole browse screen.
+@visibleForTesting
+class CatalogGridCell extends StatelessWidget {
+  const CatalogGridCell({super.key, required this.work});
 
   final Map<String, dynamic> work;
 
@@ -789,6 +793,14 @@ class _CatalogGridCell extends StatelessWidget {
                           left: 5,
                           bottom: 5,
                           child: CoverRatingChip(rating: rating),
+                        ),
+                      // Save-for-later on the opposite corner from "＋" —
+                      // the same badge, mirrored (owner request, 14 Oct 2026).
+                      if (editionId != null)
+                        Positioned(
+                          top: -4,
+                          left: -4,
+                          child: _QuickWishlistBadge(work: work, editionId: editionId),
                         ),
                       if (editionId != null)
                         Positioned(
@@ -888,6 +900,69 @@ class _QuickAddBadge extends ConsumerWidget {
               owned ? Icons.check : Icons.add,
               size: 15,
               color: owned ? Colors.white : AppColors.oxblood,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The wishlist badge on a catalog cover, top-left — the mirror of
+/// [_QuickAddBadge] (owner request, 14 Oct 2026). Offered only for a book on
+/// none of the reader's shelves: an outline bookmark that wishlists it in one
+/// tap, then a filled slate one (Wishlist's colour) that takes it off again
+/// ([toggleCatalogWishlist]). A
+/// book already on a shelf in any other state shows nothing here — the moss
+/// check on the other corner already speaks for it.
+class _QuickWishlistBadge extends ConsumerWidget {
+  const _QuickWishlistBadge({required this.work, required this.editionId});
+
+  final Map<String, dynamic> work;
+  final String editionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entry = ref.watch(libraryEntryProvider(editionId));
+    // Nothing until the entry has answered: a bookmark that flashes and then
+    // vanishes on every book already shelved is worse than a beat of nothing.
+    if (!entry.hasValue) return const SizedBox.shrink();
+    final value = entry.value;
+    final wished = value?.status == 'wishlist';
+    if (value != null && !wished) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      button: true,
+      label: wished ? l10n.catalogWishlistRemoveTooltip : l10n.bookWishlistShort,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        // A second tap takes it off the wishlist again.
+        onTap: () => toggleCatalogWishlist(
+          context,
+          ref,
+          work: work,
+          editionId: editionId,
+          entry: value,
+        ),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Center(
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: wished ? AppColors.slate : AppColors.card.withValues(alpha: 0.95),
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 1)),
+                ],
+              ),
+              child: Icon(
+                wished ? Icons.bookmark : Icons.bookmark_add_outlined,
+                size: 14,
+                color: wished ? Colors.white : AppColors.slate,
+              ),
             ),
           ),
         ),

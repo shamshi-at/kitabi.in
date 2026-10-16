@@ -29,6 +29,7 @@ from app.models.author_claim import (
     AuthorClaim,
 )
 from app.models.base import Base, CatalogMixin, SyncableMixin
+from app.models.borrow_request import BorrowRequest
 from app.models.buy_click import SURFACE_APP, SURFACE_WEB, SURFACES, BuyClick
 from app.models.catalog_intake import (
     STATE_COMPLETE,
@@ -45,6 +46,7 @@ from app.models.connection import Connection
 from app.models.device_token import DeviceToken
 from app.models.edition import Edition
 from app.models.genre import Genre
+from app.models.inbox_notification import InboxNotification
 from app.models.lending_record import LendingRecord
 from app.models.library_entry import LibraryEntry
 from app.models.library_entry_tag import LibraryEntryTag
@@ -108,6 +110,7 @@ from app.models import translit_hooks as _translit_hooks  # noqa: E402,F401  iso
 
 __all__ = [
     "Base",
+    "BorrowRequest",
     "BuyClick",
     "SURFACE_APP",
     "SURFACE_WEB",
@@ -122,6 +125,7 @@ __all__ = [
     "CLAIM_REJECTED",
     "Publisher",
     "Genre",
+    "InboxNotification",
     "Series",
     "Work",
     "Edition",

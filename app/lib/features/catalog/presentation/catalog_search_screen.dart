@@ -17,6 +17,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../library/providers/library_providers.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../providers/catalog_providers.dart';
+import '../../circle/circle_providers.dart';
 import 'catalog_entity_tiles.dart';
 import 'catalog_result_tile.dart';
 
@@ -162,33 +163,37 @@ class _CatalogSearchScreenState extends ConsumerState<CatalogSearchScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: Icon(Icons.qr_code_scanner, size: 18),
-                      label: Text(l10n.catalogScanButton),
-                      onPressed: () => context.push(Routes.catalogScan),
+            _DismissKeyboardOnTouch(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: Icon(Icons.qr_code_scanner, size: 18),
+                        label: Text(l10n.catalogScanButton),
+                        onPressed: () => context.push(Routes.catalogScan),
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: Icon(Icons.edit_note, size: 18),
-                      label: Text(l10n.catalogAddManualButton),
-                      onPressed: () => context.push(Routes.catalogAdd),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: Icon(Icons.edit_note, size: 18),
+                        label: Text(l10n.catalogAddManualButton),
+                        onPressed: () => context.push(Routes.catalogAdd),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             SizedBox(height: 12),
             Expanded(
-              child: _query.trim().isEmpty
-                  ? _SearchIdle(onPickRecent: _runRecent)
-                  : _SearchResults(query: _query, remoteQuery: _remoteQuery),
+              child: _DismissKeyboardOnTouch(
+                child: _query.trim().isEmpty
+                    ? _SearchIdle(onPickRecent: _runRecent)
+                    : _SearchResults(query: _query, remoteQuery: _remoteQuery),
+              ),
             ),
           ],
         ),
@@ -437,6 +442,10 @@ class _SearchResults extends ConsumerWidget {
     final authors = (data['authors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     final publishers = (data['publishers'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     final readers = ref.watch(_readerSearchProvider(remoteQuery));
+    // One request for the whole page of results; rows with nothing to say
+    // simply aren't in the map. Never blocks or errors the results.
+    final circle =
+        ref.watch(circleSignalsProvider(circleSignalsKey(works))).valueOrNull ?? const {};
 
     if (library.isLoading && catalog.isLoading) {
       return ListSkeleton();
@@ -487,7 +496,8 @@ class _SearchResults extends ConsumerWidget {
         if (works.isNotEmpty) ...[
           SectionLabel(l10n.catalogSearchSectionCatalog, padding: EdgeInsets.zero),
           SizedBox(height: 8),
-          for (final work in works) CatalogResultTile(work: work),
+          for (final work in works)
+            CatalogResultTile(work: work, circleSignal: circle[work['id']]),
           SizedBox(height: 16),
         ],
         if (authors.isNotEmpty) ...[
@@ -634,4 +644,23 @@ class _LibraryHitTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Puts the keyboard away the moment the reader touches anything below the
+/// search field. Opening a result used to push the book page with the search
+/// field still focused, so the keyboard followed the reader onto it and covered
+/// most of the screen (owner report, 14 Oct 2026). A [Listener], not a
+/// [GestureDetector], so it never competes with the row's own tap or the
+/// list's scroll — it only observes the pointer going down.
+class _DismissKeyboardOnTouch extends StatelessWidget {
+  const _DismissKeyboardOnTouch({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+        child: child,
+      );
 }

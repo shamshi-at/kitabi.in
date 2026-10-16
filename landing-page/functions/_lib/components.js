@@ -263,12 +263,17 @@ export function appBand() {
           to a friend without losing it. Free, offline-first, no ads.
         </p>
       </div>
-      <div class="stores">
-        ${storeButton('Google Play', 'Get it on', PLAY_ICON, PLAY_STORE_URL)}
-        ${storeButton('App Store', APP_STORE_URL ? 'Download on the' : 'In review', APPLE_ICON, APP_STORE_URL)}
-      </div>
+      <div class="stores">${storeButtons()}</div>
     </div>
   </section>`;
+}
+
+/** The pair of store buttons, for a band that needs its own words around them
+ *  (the Malayalam page). The kickers are the only part that translates — the
+ *  store names are the stores' own. */
+export function storeButtons({ play = 'Get it on', apple = 'Download on the' } = {}) {
+  return html`${storeButton('Google Play', play, PLAY_ICON, PLAY_STORE_URL)}
+    ${storeButton('App Store', APP_STORE_URL ? apple : 'In review', APPLE_ICON, APP_STORE_URL)}`;
 }
 
 export function factsLine(parts) {

@@ -3857,5 +3857,440 @@
   "@paceNotEnoughProgress": {
     "description": "Progress toward a measured reading pace",
     "placeholders": {"done": {"type": "int"}, "needed": {"type": "int"}}
+  },
+  "circleEyebrow": "Your circle",
+  "@circleEyebrow": {
+    "description": "Label on circle cards (connections' reading)"
+  },
+  "circleFromYourCircle": "From your circle",
+  "@circleFromYourCircle": {
+    "description": "Eyebrow on Home's circle card"
+  },
+  "circleSeeAll": "See all {count} ›",
+  "@circleSeeAll": {
+    "description": "Opens the circle sheet on the book page",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleSearchReadOne": "{name} read this",
+  "@circleSearchReadOne": {
+    "description": "Search row: one connection read the book",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleSearchReadTwo": "{first} & {second} read this",
+  "@circleSearchReadTwo": {
+    "description": "Search row: two connections read the book",
+    "placeholders": {"first": {"type": "String"}, "second": {"type": "String"}}
+  },
+  "circleSearchReadMany": "{first}, {second} & {more} more read this",
+  "@circleSearchReadMany": {
+    "description": "Search row: several connections read the book",
+    "placeholders": {"first": {"type": "String"}, "second": {"type": "String"}, "more": {"type": "int"}}
+  },
+  "circleSearchReading": "{name} is reading it now",
+  "@circleSearchReading": {
+    "description": "A connection is reading the book",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleSearchReadingMany": "{name} & {more} more are reading it",
+  "@circleSearchReadingMany": {
+    "description": "Several connections are reading the book",
+    "placeholders": {"name": {"type": "String"}, "more": {"type": "int"}}
+  },
+  "circleSearchOwns": "{name} has a copy · ask to borrow",
+  "@circleSearchOwns": {
+    "description": "Search row: a connection owns the book",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleAskToBorrow": "Ask to borrow",
+  "@circleAskToBorrow": {
+    "description": "Action: ask a connection to lend their copy"
+  },
+  "circleHeadlineRead": "{count, plural, =1{1 of your connections has read this} other{{count} of your connections have read this}}",
+  "@circleHeadlineRead": {
+    "description": "Book page circle card headline",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleHeadlineReading": "{name} is reading this now",
+  "@circleHeadlineReading": {
+    "description": "Book page circle card headline when nobody has finished it",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleHeadlineOwns": "{name} has a copy",
+  "@circleHeadlineOwns": {
+    "description": "Book page circle card headline when a connection only owns it",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleTranslationsOnly": "Your circle read it in another language",
+  "@circleTranslationsOnly": {
+    "description": "Circle card when only a translation was read"
+  },
+  "circleTheyGaveIt": "They gave it ★ {rating}",
+  "@circleTheyGaveIt": {
+    "description": "The circle's own average rating for the book",
+    "placeholders": {"rating": {"type": "String"}}
+  },
+  "circleAlsoReading": "{name} is reading it now",
+  "@circleAlsoReading": {
+    "description": "Second line of the circle card",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleHasACopy": "{name} has a copy",
+  "@circleHasACopy": {
+    "description": "A connection owns this book",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleStripYouAnd": "{count, plural, =1{You and 1 connection read this} other{You and {count} connections read this}}",
+  "@circleStripYouAnd": {
+    "description": "Compact circle strip on a book the reader has read",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleStripRead": "{count, plural, =1{1 connection read this} other{{count} connections read this}}",
+  "@circleStripRead": {
+    "description": "Compact circle strip on a book on the reader's shelf",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleStripAgree": "{name} gave it ★5 too",
+  "@circleStripAgree": {
+    "description": "Compact strip: a connection also gave it five stars",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleFoldedNote": "Their ratings stay folded while you're reading it.",
+  "@circleFoldedNote": {
+    "description": "Shown in the circle sheet while the reader is mid-book"
+  },
+  "circleShowAnyway": "Show anyway",
+  "@circleShowAnyway": {
+    "description": "Reveal folded ratings"
+  },
+  "circleSheetTitle": "{title} in your circle",
+  "@circleSheetTitle": {
+    "description": "Title of the circle sheet",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "circleSheetSubtitle": "Only connections who share their reading appear here",
+  "@circleSheetSubtitle": {
+    "description": "Subtitle of the circle sheet"
+  },
+  "circleSheetRead": "Read it · {count}",
+  "@circleSheetRead": {
+    "description": "Circle sheet group",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleSheetReading": "Reading now · {count}",
+  "@circleSheetReading": {
+    "description": "Circle sheet group",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleSheetOwns": "Has a copy · {count}",
+  "@circleSheetOwns": {
+    "description": "Circle sheet group",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleFinishedOn": "Finished {date}",
+  "@circleFinishedOn": {
+    "description": "When a connection finished the book",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "circleStartedOn": "Started {date}",
+  "@circleStartedOn": {
+    "description": "When a connection started the book",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "circleReadTimes": "{count, plural, =2{read it twice} other{read it {count} times}}",
+  "@circleReadTimes": {
+    "description": "A connection's number of finished reads",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleNoRatingShared": "no rating shared",
+  "@circleNoRatingShared": {
+    "description": "A connection who shares reading but not ratings"
+  },
+  "circleOwnsToo": "has a copy",
+  "@circleOwnsToo": {
+    "description": "Suffix on a reader who also owns the book"
+  },
+  "circleTranslationLine": "{names} also read it as {title}",
+  "@circleTranslationLine": {
+    "description": "Bridge to a translation read by the circle",
+    "placeholders": {"names": {"type": "String"}, "title": {"type": "String"}}
+  },
+  "circleBorrowTitle": "Ask {name} to lend it?",
+  "@circleBorrowTitle": {
+    "description": "Borrow request confirmation title",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleBorrowBody": "They'll get a notification asking to borrow “{title}”. Lending is still their call.",
+  "@circleBorrowBody": {
+    "description": "Borrow request confirmation body",
+    "placeholders": {"title": {"type": "String"}}
+  },
+  "circleBorrowSend": "Ask",
+  "@circleBorrowSend": {
+    "description": "Confirm sending a borrow request"
+  },
+  "circleBorrowSent": "Asked {name}",
+  "@circleBorrowSent": {
+    "description": "Borrow request sent",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleBorrowFailed": "Couldn't send that — try again when you're online",
+  "@circleBorrowFailed": {
+    "description": "Borrow request failed"
+  },
+  "circlePickLoved": "{name} finished “{title}”",
+  "@circlePickLoved": {
+    "description": "Home circle card: a connection finished and loved a book",
+    "placeholders": {"name": {"type": "String"}, "title": {"type": "String"}}
+  },
+  "circlePickTheirRating": "their rating",
+  "@circlePickTheirRating": {
+    "description": "Beside a connection's stars on Home"
+  },
+  "circlePickAlsoRead": "{count, plural, =1{Also read by 1 other in your circle} other{Also read by {count} others in your circle}}",
+  "@circlePickAlsoRead": {
+    "description": "Home circle card footnote",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circlePickCluster": "{count} of your circle finished “{title}” recently",
+  "@circlePickCluster": {
+    "description": "Home circle card: several connections finished a book",
+    "placeholders": {"count": {"type": "int"}, "title": {"type": "String"}}
+  },
+  "circlePickReadAlong": "{name} started “{title}” — it's on your To-read",
+  "@circlePickReadAlong": {
+    "description": "Home circle card: read along",
+    "placeholders": {"name": {"type": "String"}, "title": {"type": "String"}}
+  },
+  "circlePickBorrow": "{name} has “{title}” — it's on your Wishlist",
+  "@circlePickBorrow": {
+    "description": "Home circle card: borrow a wishlist book",
+    "placeholders": {"name": {"type": "String"}, "title": {"type": "String"}}
+  },
+  "circlePickKindred": "{name} gave “{title}” ★{rating} — so did you",
+  "@circlePickKindred": {
+    "description": "Home circle card: shared love of a book",
+    "placeholders": {"name": {"type": "String"}, "title": {"type": "String"}, "rating": {"type": "int"}}
+  },
+  "circleWantToRead": "Want to read",
+  "@circleWantToRead": {
+    "description": "Adds the book to the wishlist"
+  },
+  "circleAskNameToLend": "Ask {name} to lend",
+  "@circleAskNameToLend": {
+    "description": "Home circle card borrow button",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleOpenBook": "Open the book",
+  "@circleOpenBook": {
+    "description": "Home circle card button"
+  },
+  "circleInviteHeadline": "{count, plural, =1{1 of your connections shares what they read} other{{count} of your connections share what they read}}",
+  "@circleInviteHeadline": {
+    "description": "Home invitation to share with the circle",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleInviteBody": "Share yours to see what they've finished, what they loved and which of their books you could borrow.",
+  "@circleInviteBody": {
+    "description": "Home invitation body"
+  },
+  "circleInviteButton": "Choose what to share",
+  "@circleInviteButton": {
+    "description": "Opens the circle share sheet"
+  },
+  "circleShareTitle": "Share your reading with your circle?",
+  "@circleShareTitle": {
+    "description": "Circle share sheet title"
+  },
+  "circleShareIntro": "Only your connections — people you approved, mostly people you lend to. Not your public profile, not strangers.",
+  "@circleShareIntro": {
+    "description": "Circle share sheet intro"
+  },
+  "circleShareReading": "What I'm reading and have read",
+  "@circleShareReading": {
+    "description": "Circle sharing option"
+  },
+  "circleShareReadingHint": "They'll see that you're reading a book, and that you've read it.",
+  "@circleShareReadingHint": {
+    "description": "Circle sharing option hint"
+  },
+  "circleShareRatings": "My star ratings",
+  "@circleShareRatings": {
+    "description": "Circle sharing option"
+  },
+  "circleShareRatingsHint": "Your stars beside your name on books you've read. Needs the one above.",
+  "@circleShareRatingsHint": {
+    "description": "Circle sharing option hint"
+  },
+  "circleShareOwned": "Which books I own",
+  "@circleShareOwned": {
+    "description": "Circle sharing option"
+  },
+  "circleShareOwnedHint": "So they can ask to borrow. Lending is still your call.",
+  "@circleShareOwnedHint": {
+    "description": "Circle sharing option hint"
+  },
+  "circleShareNever": "Never shared: notes, wishlist, reading time, pages, or any book you keep to yourself. Reviews follow their own switch — only public ones appear.",
+  "@circleShareNever": {
+    "description": "What the circle never sees"
+  },
+  "circleShareReciprocity": "You'll see your circle's reading in return. Change this any time in Profile.",
+  "@circleShareReciprocity": {
+    "description": "Reciprocity note on the share sheet"
+  },
+  "circleShareSave": "Share what I ticked",
+  "@circleShareSave": {
+    "description": "Save circle sharing choices"
+  },
+  "circleShareNotNow": "Not now",
+  "@circleShareNotNow": {
+    "description": "Dismiss the circle share sheet"
+  },
+  "circlePrivacyHeader": "Your circle — connections only",
+  "@circlePrivacyHeader": {
+    "description": "Profile section for circle sharing"
+  },
+  "circlePrivacyNote": "Turn a switch off and it leaves your connections' screens the next time their app checks.",
+  "@circlePrivacyNote": {
+    "description": "Profile circle section footnote"
+  },
+  "circleKeepToMyself": "Keep this one to myself",
+  "@circleKeepToMyself": {
+    "description": "Per-book switch hiding it from the circle"
+  },
+  "circleKeepToMyselfHint": "Your circle won't see that you're reading it, your rating, or that you own it. A public review stays public.",
+  "@circleKeepToMyselfHint": {
+    "description": "Per-book hide switch hint"
+  },
+  "circleKeptHint": "Hidden from your connections. A public review stays public.",
+  "@circleKeptHint": {
+    "description": "Per-book hide switch hint when on"
+  },
+  "circleInviteFirstHeadline": "{count, plural, =1{Share your reading with your connection} other{Share your reading with your {count} connections}}",
+  "@circleInviteFirstHeadline": {
+    "description": "Home invitation when none of the reader's connections share yet",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleInviteFirstBody": "They'll see what you finish and love, and which of your books they could borrow. As they share too, you'll see theirs.",
+  "@circleInviteFirstBody": {
+    "description": "Home invitation body when none of the reader's connections share yet"
+  },
+  "borrowAsksLabel": "Asked to borrow",
+  "@borrowAsksLabel": {
+    "description": "Section on the Lending tab: connections' asks to borrow"
+  },
+  "borrowAskIncoming": "{name} would like to borrow “{title}”",
+  "@borrowAskIncoming": {
+    "description": "An incoming ask to borrow",
+    "placeholders": {"name": {"type": "String"}, "title": {"type": "String"}}
+  },
+  "borrowAskAskedOn": "Asked {date}",
+  "@borrowAskAskedOn": {
+    "description": "When the ask was made",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "borrowAskLendIt": "Lend it",
+  "@borrowAskLendIt": {
+    "description": "Opens the lend sheet for the asker"
+  },
+  "borrowAskNotNow": "Not now",
+  "@borrowAskNotNow": {
+    "description": "Declines an ask to borrow (silently)"
+  },
+  "borrowAskOutgoing": "You asked {name} for “{title}” — waiting for them",
+  "@borrowAskOutgoing": {
+    "description": "An ask the reader sent that is still open",
+    "placeholders": {"name": {"type": "String"}, "title": {"type": "String"}}
+  },
+  "borrowAskNotOnShelf": "That book isn't on your shelf any more.",
+  "@borrowAskNotOnShelf": {
+    "description": "Lend it when the owner's copy is gone"
+  },
+  "borrowAskUpdateFailed": "Couldn't update that — try again when you're online",
+  "@borrowAskUpdateFailed": {
+    "description": "Declining an ask failed"
+  },
+  "notificationsTitle": "Notifications",
+  "@notificationsTitle": {
+    "description": "Inbox screen title and bell tooltip"
+  },
+  "notificationsMarkAllRead": "Mark all as read",
+  "@notificationsMarkAllRead": {
+    "description": "Inbox action"
+  },
+  "notificationsClearAll": "Clear all",
+  "@notificationsClearAll": {
+    "description": "Inbox action"
+  },
+  "notificationsClearTitle": "Clear all notifications?",
+  "@notificationsClearTitle": {
+    "description": "Clear confirmation title"
+  },
+  "notificationsClearBody": "They'll be gone from this list. Nothing else changes — an ask to borrow stays on the Lending tab until you answer it.",
+  "@notificationsClearBody": {
+    "description": "Clear confirmation body"
+  },
+  "notificationsClearConfirm": "Clear",
+  "@notificationsClearConfirm": {
+    "description": "Confirm clearing the inbox"
+  },
+  "notificationsUpdateFailed": "Couldn't update that — try again when you're online",
+  "@notificationsUpdateFailed": {
+    "description": "Inbox action failed"
+  },
+  "notificationsEmpty": "Nothing here yet. When a connection lends you a book, asks to borrow one or connects with you, it shows up here.",
+  "@notificationsEmpty": {
+    "description": "Empty inbox"
+  },
+  "notificationsOffline": "Notifications need a connection. Pull down to try again.",
+  "@notificationsOffline": {
+    "description": "Inbox could not load"
+  },
+  "notificationsJustNow": "Just now",
+  "@notificationsJustNow": {
+    "description": "Relative time"
+  },
+  "notificationsMinutesAgo": "{count}m ago",
+  "@notificationsMinutesAgo": {
+    "description": "Relative time in minutes",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "notificationsHoursAgo": "{count}h ago",
+  "@notificationsHoursAgo": {
+    "description": "Relative time in hours",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "notificationsYesterday": "Yesterday",
+  "@notificationsYesterday": {
+    "description": "Relative time"
+  },
+  "notificationsNew": "New",
+  "@notificationsNew": {
+    "description": "Screen-reader label on an unread notification's dot"
+  },
+  "notificationsUnreadTooltip": "{count, plural, =1{1 new notification} other{{count} new notifications}}",
+  "@notificationsUnreadTooltip": {
+    "description": "Bell tooltip with unread count",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "circleRequested": "Requested",
+  "@circleRequested": {
+    "description": "Shown instead of Ask to borrow once the reader has asked"
+  },
+  "circleSearchAsked": "You asked {name} to lend it",
+  "@circleSearchAsked": {
+    "description": "Search row once the reader has asked this owner",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "circleAlreadyYours": "That book is already on your shelves.",
+  "@circleAlreadyYours": {
+    "description": "Ask refused: the reader already has the book"
+  },
+  "catalogWishlistRemoved": "Off your wishlist.",
+  "@catalogWishlistRemoved": {
+    "description": "Snackbar after un-bookmarking a book in the catalogue"
+  },
+  "catalogWishlistRemoveTooltip": "Remove from wishlist",
+  "@catalogWishlistRemoveTooltip": {
+    "description": "Tooltip on a filled wishlist bookmark in the catalogue"
   }
 }

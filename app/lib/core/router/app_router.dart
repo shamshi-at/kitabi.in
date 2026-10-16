@@ -28,6 +28,7 @@ import '../../features/library/presentation/book_pager.dart';
 import '../../features/library/presentation/library_grid_screen.dart';
 import '../../features/library/presentation/reading_timer_screen.dart';
 import '../../features/library/presentation/review_editor_screen.dart';
+import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/onboarding/onboarding_providers.dart';
 import '../../features/onboarding/presentation/welcome_screen.dart';
 import '../../features/connections/presentation/connection_loans_screen.dart';
@@ -111,6 +112,7 @@ abstract final class Routes {
   static const library = '/library';
   static const lendingLedger = '/lending';
   static const connections = '/connections';
+  static const notifications = '/notifications';
   static const connectionLoans = '/connections/loans';
   static const insights = '/insights';
   // The list behind the almanac's "Books finished" row (B4); args via extra.
@@ -531,6 +533,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.connections,
         name: 'connections',
         builder: (context, state) => ConnectionsScreen(),
+      ),
+      GoRoute(
+        path: Routes.notifications,
+        name: 'notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
         path: Routes.recommendations,

@@ -77,6 +77,9 @@ Future<void> _mergeGroup(
   DateTime? startDate;
   DateTime? finishDate;
   var isFavorite = false;
+  // Hidden from the circle if *any* copy was — merging must never reveal a
+  // book the reader kept to themselves.
+  final circleHidden = group.any((e) => e.circleHidden);
   String? notes = _nonEmpty(keeper.notes);
   for (final e in group) {
     if (e.currentPage != null && (currentPage == null || e.currentPage! > currentPage)) {
@@ -100,6 +103,7 @@ Future<void> _mergeGroup(
     if (startDate != keeper.startDate && startDate != null) 'start_date': wireDate(startDate),
     if (finishDate != keeper.finishDate && finishDate != null) 'finish_date': wireDate(finishDate),
     if (isFavorite != keeper.isFavorite) 'is_favorite': isFavorite,
+    if (circleHidden != keeper.circleHidden) 'circle_hidden': circleHidden,
     if (notes != keeper.notes && notes != null) 'notes': notes,
   };
   if (changes.isNotEmpty) {
@@ -112,6 +116,7 @@ Future<void> _mergeGroup(
         startDate: Value(startDate),
         finishDate: Value(finishDate),
         isFavorite: Value(isFavorite),
+        circleHidden: Value(circleHidden),
         notes: Value(notes),
         updatedAt: Value(DateTime.now()),
         syncStatus: Value('pending'),

@@ -91,6 +91,7 @@ it on is mostly building **views** over data that was already shaped to be share
 | Feature | Tag | Note |
 |---|---|---|
 | Follow users / public profiles | `[LATER]` | Profile + visibility flags are already wired |
+| Your circle — connections' reading on search, book page and Home | `[V1]` | **Built 13 Oct 2026** — the first slice of the social layer, limited to the existing consented connection graph, never the public. Opt-in per reader (reading / ratings / owned, all off by default), reciprocal, per-book "keep this one to myself". Design + rules: [docs/circle-reading-mockups.html](docs/circle-reading-mockups.html) |
 | Activity feed | `[LATER]` | Your personal activity log *is* this — see below |
 | Aggregate ratings shown publicly | `[LATER]` | Already computing if ratings live in Layer 1 |
 | Book clubs | `[LATER]` | |

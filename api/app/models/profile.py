@@ -74,6 +74,22 @@ class Profile(Base):
         Boolean, default=False, nullable=False, server_default="false"
     )
 
+    # "Your circle" (docs/circle-reading-mockups.html, 13 Oct 2026): what a
+    # reader's *accepted connections* may see — never the public. Three
+    # switches because they are three disclosures: being seen reading, having
+    # your stars attributed to you (a rating otherwise only feeds an anonymous
+    # average), and inviting borrow requests. All off until the reader says so;
+    # ratings only ever ride on reading (services/circle_service.py).
+    circle_share_reading: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
+    circle_share_ratings: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
+    circle_share_owned: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
+
     # Minutes east of UTC on the device that last talked to us. Windows in this
     # app are *local* calendar days (the app computes them in local time and
     # names them in the recap key), the database stores UTC, and without the

@@ -160,6 +160,24 @@ export function publisherOrg(page) {
   return ld;
 }
 
+/** FAQPage for a page that shows the same questions and answers in its body.
+ *  Google no longer gives most sites the FAQ rich result, but the markup is
+ *  still the plainest statement of "this page answers this question" for the
+ *  answer engines — and it must only ever mirror what is visibly on the page. */
+export function faqPage(items, url, inLanguage = null) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    url: abs(url),
+    ...(inLanguage ? { inLanguage } : {}),
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  };
+}
+
 export function collectionPage(name, description, url) {
   return {
     '@context': 'https://schema.org',

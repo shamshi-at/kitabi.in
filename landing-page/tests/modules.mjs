@@ -104,4 +104,28 @@ if (book && discover && more && people && home) {
   );
 }
 
+// The app's own pages, through their route files — the entry points
+// Cloudflare calls. No API behind them, so nothing to stub.
+const compareSlug = loaded['compare/[slug].js'];
+const compareIndex = loaded['compare.js'];
+const lendingTracker = loaded['lending-tracker.js'];
+const mlApp = loaded['ml/app.js'];
+if (compareSlug && compareIndex && lendingTracker && mlApp) {
+  await renders('/compare/libib', 'Kitabi vs Libib', () =>
+    compareSlug.onRequestGet({ params: { slug: 'libib' } }),
+  );
+  await renders('/compare', 'Kitabi vs LibraryThing', () => compareIndex.onRequestGet());
+  await renders('/lending-tracker', 'Book lending tracker', () => lendingTracker.onRequestGet());
+  await renders('/ml/app', 'lang="ml"', () => mlApp.onRequestGet());
+  try {
+    const missing = compareSlug.onRequestGet({ params: { slug: 'no-such-app' } });
+    if (missing.status !== 404) failures.push(`/compare/no-such-app: status ${missing.status}, not 404`);
+    else checks++;
+  } catch (err) {
+    failures.push(`/compare/no-such-app threw: ${err.message}`);
+  }
+} else {
+  failures.push('the app-page routes did not load, so they were not rendered');
+}
+
 console.log(JSON.stringify({ checks, failures }));

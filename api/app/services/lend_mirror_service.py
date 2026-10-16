@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Edition, LendingRecord, LibraryEntry, Work
 from app.models.profile import Profile
-from app.services import connection_service, push_service
+from app.services import borrow_request_service, connection_service, inbox_service, push_service
 
 
 def _display_name(p: Profile | None) -> str:
@@ -128,6 +128,16 @@ async def _mirror_onto_borrower(
             )
             db.add(borrowed_entry)
             await db.flush()
+        elif borrowed_entry.status == "wishlist":
+            # A wish that came true by loan — the ordinary path since asks to
+            # borrow (wishlist → ask → lend). Left as it was, the book stayed a
+            # wish the reader was holding: Home kept suggesting they borrow it
+            # (found on two emulators, 14 Oct 2026). It is a borrowed book to
+            # read now; same id, so anything already on the entry carries over.
+            borrowed_entry.status = "pending"
+            borrowed_entry.ownership = "borrowed"
+            borrowed_entry.server_seq = text("nextval('sync_seq')")
+            await db.flush()
         mirror = LendingRecord(
             id=uuid.uuid4(),
             user_id=borrower_id,
@@ -154,6 +164,9 @@ async def _mirror_onto_borrower(
                 await _mirror_onto_borrower(db, lender_id, fresh)
             return
         await db.refresh(mirror, ["server_seq"])
+        # Lending them the book answers their ask for it, whichever screen
+        # the loan was made from.
+        await borrow_request_service.close_for_loan(db, lender_id, borrower_id, edition_id)
     else:
         # Keep the mirror in step — returns, due-date edits, un/deletes.
         just_returned = mirror.returned_date is None and lent.returned_date is not None
@@ -173,6 +186,16 @@ async def _mirror_onto_borrower(
     # committed transaction). Skip deleted loans.
     if lent.deleted_at is None:
         book_title, book_cover = await _book_title_cover(db, edition_id)
+        if is_new or just_returned:
+            await inbox_service.record(
+                db,
+                recipient_id=borrower_id,
+                actor_id=lender_id,
+                kind="lend_new" if is_new else "lend_returned",
+                book_title=book_title,
+                image_url=book_cover,
+            )
+            await db.commit()
         if is_new:
             await push_service.notify_book_lent(lender_id, borrower_id, book_title, book_cover)
         elif just_returned:
@@ -244,6 +267,15 @@ async def _reflect_onto_lender(
             book_title, book_cover = await _book_title_cover(db, edition_id)
         else:
             book_title, book_cover = "a book", None
+        await inbox_service.record(
+            db,
+            recipient_id=lent.user_id,
+            actor_id=borrower_id,
+            kind="lend_returned",
+            book_title=book_title,
+            image_url=book_cover,
+        )
+        await db.commit()
         await push_service.notify_book_returned(borrower_id, lent.user_id, book_title, book_cover)
 
 

@@ -1694,3 +1694,88 @@ var xssDoc = String(renderRecap(Object.assign({}, RECAP, {
   display_name: XSS, username: 'shamshi',
 })).text());
 assertExcludes(xssDoc, '<script>alert(1)</script>', 'a display name cannot inject markup');
+
+// ---------------------------------------------------------------------------
+// The app's own pages: /compare, /compare/:slug, /lending-tracker, /ml/app
+// (guides.js + pages/guides.js). They exist to rank for "personal library app"
+// searches, so the things asserted are the ones a search engine reads.
+// ---------------------------------------------------------------------------
+
+COMPARISONS.forEach(function (c) {
+  var doc = String(renderCompare(c).text());
+  var label = '/compare/' + c.slug + ': ';
+  assertIncludes(doc, 'content="index, follow"', label + 'a comparison is indexable');
+  assertIncludes(doc, '<link rel="canonical" href="https://kitabi.in/compare/' + c.slug + '">',
+    label + 'it self-canonicals');
+  assertIncludes(doc, '<h1 style="margin-top:8px">' + h(c.h1) + '</h1>', label + 'one H1, the written one');
+  assert((doc.match(/<h1[ >]/g) || []).length === 1, label + 'exactly one H1');
+  assert(c.title.length <= 70, label + 'the title fits a result (' + c.title.length + ' chars)');
+  assert(c.description.length <= 160, label + 'the description is not cut off (' + c.description.length + ')');
+  // Rule 1 and rule 2 of guides.js: every claim has a source, and the page says
+  // where the other app wins. Neither is optional.
+  assert(c.sources.length > 0, label + 'claims about another app name their sources');
+  c.sources.forEach(function (s) {
+    assertIncludes(doc, 'href="' + s.url + '" rel="nofollow noopener"', label + 'each source is linked');
+  });
+  assert(Boolean(c.betterFor), label + 'it says where the other app is the better choice');
+  assertIncludes(doc, 'When ' + c.name + ' is the better choice', label + 'and shows it');
+  assertIncludes(doc, '16 October 2026', label + 'the date the sources were read is on the page');
+  assert((doc.match(/<tr>\s*<th scope="row">/g) || []).length === c.rows.length,
+    label + 'every row of the table renders');
+  // The mobile layout labels each cell from data-l. An attribute written as a
+  // value inside quotes escapes correctly; an entity-escaped quote here would
+  // mean someone interpolated a whole attribute (CLAUDE.md, aria-current).
+  assertIncludes(doc, 'data-l="' + c.name + '"', label + 'cells carry their column name');
+  assertExcludes(doc, '=&quot;', label + 'no attribute shipped entity-escaped');
+  // The FAQ markup may only say what the page shows.
+  assertIncludes(doc, '"@type":"FAQPage"', label + 'the questions are marked up');
+  c.faq.forEach(function (f) {
+    assertIncludes(doc, '<h3>' + h(f.q) + '</h3>', label + 'each marked-up question is visible');
+  });
+  assertIncludes(doc, '"@type":"BreadcrumbList"', label + 'breadcrumbs are marked up');
+  assertIncludes(doc, h(KITABI_IN_BRIEF), label + 'the page says what Kitabi is');
+  assertExcludes(doc, 'undefined', label + 'no undefined field leaks into the page');
+  assertExcludes(doc, 'class="chip" href="/compare/' + c.slug + '"', label + 'a page does not link to itself');
+  COMPARISONS.forEach(function (other) {
+    if (other.slug !== c.slug) {
+      assertIncludes(doc, 'class="chip" href="/compare/' + other.slug + '"', label + 'it links to the other comparisons');
+    }
+  });
+});
+
+var compareIndex = String(renderCompareIndex().text());
+COMPARISONS.forEach(function (c) {
+  assertIncludes(compareIndex, 'href="/compare/' + c.slug + '"', '/compare links to Kitabi vs ' + c.name);
+});
+assertIncludes(compareIndex, 'href="/lending-tracker"', '/compare links to the lending page');
+assertIncludes(compareIndex, 'content="index, follow"', '/compare is indexable');
+
+var lendingDoc = String(renderLendingTracker().text());
+assertIncludes(lendingDoc, '<h1 style="margin-top:8px">' + h(LENDING.h1) + '</h1>', 'the lending page has its H1');
+assertIncludes(lendingDoc, 'book lending tracker', 'the lending H1 says the words people search for');
+assert((lendingDoc.match(/<li><h3>/g) || []).length === LENDING.steps.length, 'every lending step renders');
+LENDING.faq.forEach(function (f) {
+  assertIncludes(lendingDoc, '<h3>' + h(f.q) + '</h3>', 'each lending question is visible');
+});
+assertIncludes(lendingDoc, '<link rel="canonical" href="https://kitabi.in/lending-tracker">',
+  'the lending page self-canonicals');
+
+var mlDoc = String(renderMalayalamApp().text());
+assertIncludes(mlDoc, '<html lang="ml">', 'the Malayalam page says it is in Malayalam');
+assertIncludes(mlDoc, '<link rel="alternate" hreflang="en" href="https://kitabi.in/app">',
+  '/ml/app names its English twin');
+assertIncludes(mlDoc, '<link rel="alternate" hreflang="ml" href="https://kitabi.in/ml/app">',
+  '/ml/app names itself, as hreflang requires');
+assertIncludes(mlDoc, '<link rel="alternate" hreflang="x-default" href="https://kitabi.in/app">',
+  'English is the default for everyone else');
+assertIncludes(mlDoc, '"inLanguage":"ml"', 'the Malayalam FAQ is marked as Malayalam');
+assertIncludes(mlDoc, 'href="' + PLAY_STORE_URL + '"', 'the Malayalam page links to Google Play');
+assertIncludes(mlDoc, 'href="' + APP_STORE_URL + '"', 'the Malayalam page links to the App Store');
+assertIncludes(mlDoc, MALAYALAM.h1, 'the Malayalam H1 renders in its own script');
+assertIncludes(mlDoc, 'ഇംഗ്ലീഷിലാണ്', 'the page is honest that the app itself is in English');
+
+// Every page's footer leads to the app pages, which is most of their links.
+var anyPage = String(notFound().text());
+assertIncludes(anyPage, 'href="/compare"', 'the footer links to the comparisons');
+assertIncludes(anyPage, 'href="/lending-tracker"', 'the footer links to the lending page');
+assertIncludes(anyPage, 'href="/ml/app"', 'the footer links to the Malayalam page');

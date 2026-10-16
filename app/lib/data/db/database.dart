@@ -61,7 +61,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   /// Whether [table] already has [column] — consulted before every
   /// `addColumn` in [migration]. Column-adds are the one step SQLite cannot
@@ -286,6 +286,16 @@ class AppDatabase extends _$AppDatabase {
       await _addColumnIfMissing(m, readingSessions, readingSessions.readId);
       await _addColumnIfMissing(m, readingNotes, readingNotes.readId);
     }
+    if (from < 15) {
+      // "Keep this one to myself" for the circle (13 Oct 2026). Additive with
+      // a default — every existing copy stays visible to whoever the reader
+      // chooses to share with, which is nobody until they opt in.
+      await _addColumnIfMissing(
+        m,
+        libraryEntries,
+        libraryEntries.circleHidden,
+      );
+    }
   }
 
   /// The `KeyValues` keys that belong to the *reader*, not the device — wiped
@@ -293,7 +303,12 @@ class AppDatabase extends _$AppDatabase {
   /// that table (device_id, the active-user marker) is device state and stays.
   /// Add to this list, not to `KeyValues` blindly: a key that holds anything
   /// personal and isn't named here follows the device to the next reader.
-  static const _personalKeys = ['recent_searches', 'reading_goal'];
+  static const _personalKeys = [
+    'recent_searches',
+    'reading_goal',
+    'circle_pick_dismissed',
+    'circle_invite_dismissed',
+  ];
 
   /// Wipe all per-user data (Layer 2 entities, the offline caches, the sync
   /// bookkeeping, and the personal `KeyValues` keys) when the signed-in account

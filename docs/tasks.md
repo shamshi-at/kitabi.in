@@ -625,6 +625,14 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       unit-tested
 - [x] Generic CSV / Google Sheets export mapping (title column minimum, fuzzy column match) —
       same `parse_csv`, header-alias matching for title/author/isbn/rating/review/status
+- [x] Read a Libib or LibraryThing export (16 Oct 2026) — `detect_format` reads the header
+      row and each known export is read by its own column names: Libib's `creators`,
+      `ean_isbn13`/`upc_isbn10`, `began`/`completed` and four statuses (Not begun → pending,
+      In progress → reading, Completed → read, Abandoned → stopped), skipping its non-book
+      items; LibraryThing's surname-first `Primary Author`, bracketed ISBNs and dates, status
+      from Date Read/Date Started, comma- or tab-delimited. Notes/comments never become the
+      review. Half stars round up. Fixtures carry real export headers
+      (`api/tests/fixtures/imports/README.md`)
 - [x] Import preview UI (matched rows table) + one-tap import — S2. `POST /import/preview`
       parses + matches; app screen lets you **pick a CSV file** (`file_selector`) or paste it,
       shows matched/unmatched rows, and imports the matched ones into the library
@@ -1304,7 +1312,14 @@ out of the sitemap until a work actually carries a genre.
 - [x] JSON-LD per page type; `AggregateRating` **only when a real rating exists** — never
       zeroed, never invented
 - [x] Pagination: unique title + self-canonical per page; never canonical page 2 → page 1
-- [ ] `hreflang` scaffolding for a future `/ml/`, so it isn't a retrofit
+- [x] **Pages for the searches that come before the name** (16 Oct 2026) — `/app` was the
+      only page about the app, its H1 the brand. Now `/compare` and
+      `/compare/{goodreads,libib,librarything}` (every claim about another app read off that
+      app's own pages, with a Sources list and the date it was read), `/lending-tracker`, and
+      `/ml/app` in Malayalam. Content in `functions/_lib/guides.js` — its header has the
+      rules; `tests/run.py` keeps the sitemap and the hreflang pair in step
+- [ ] `hreflang` scaffolding for a future `/ml/`, so it isn't a retrofit — started:
+      `/app` ↔ `/ml/app` are a reciprocal pair (16 Oct 2026)
 - [ ] Search Console + Bing Webmaster verified; Lighthouse CI failing the build on
       LCP > 1.2 s or a document-size regression
 
@@ -1813,6 +1828,103 @@ and guess a pass for. R2–R4 are the dormant UI and can follow whenever.
       Needs a frequency cap or it is a nag
 - [ ] `[LATER]` — "★★★★★ after this read" needs a timestamp on the existing rating
       matched to the read that was open; skippable in v1
+
+## Phase C — Your circle
+
+Owner request, 13 Oct 2026: "5 connections read this" on search and the book page,
+and a "your connection read and rated this" card on Home — respecting each
+connection's privacy. Design and every rule in
+[circle-reading-mockups.html](circle-reading-mockups.html); the owner took all five
+recommended decisions (reciprocity on; all switches off and asked once; search not
+re-ranked; stars folded while you're reading; tagged `[V1]` in feature-map.md).
+
+### C1 — Consent and the gate ✅ 13 Oct 2026
+
+- [x] Migration `000056`: `profiles.circle_share_reading` / `_ratings` / `_owned`
+      (default false) and `library_entries.circle_hidden` (synced, Drift v15)
+- [x] `circle_service._people_for_works` — the one gate: accepted connections only,
+      only what each person switched on, ratings only alongside reading, one hidden
+      copy hides the person on that book, only public reviews quoted, counts count
+      only who appears; reciprocity returns an `invite` count instead
+- [x] `POST /circle/signals` (≤50 works, one request per search page),
+      `GET /circle/works/{id}` (+ translation bridge), `GET /circle/pick`
+      (borrow › read along › loved › cluster › kindred, stable per day, dismissals
+      honoured), `POST /circle/borrow-ask` (push `borrow_ask`, one per copy per day)
+- [x] `tests/test_circle.py` — a case per privacy rule
+
+### C2 — The app ✅ 13 Oct 2026
+
+- [x] Search rows: one line, names first ("Anu, Lakshmi & 2 more read this")
+- [x] Book page: full card under the cover when not on your shelf (or wishlisted),
+      compact strip above the tabs when it is; "See all" sheet grouped by
+      read / reading / has a copy; stars and quotes folded while you're reading
+- [x] Ask to borrow — confirm, push to the owner, tap lands on their copy
+- [x] Home: one "From your circle" card, or the invitation (≤ once a week, gone
+      after two ✕), or nothing. The invitation goes to **any reader with a
+      connection**, not only once a connection already shares — the first cut
+      waited for a sharer, so on launch day (everything off) nobody was invited
+      and the feature was dark on every phone (owner report, 13 Oct 2026, 1.0.8);
+      fixed in 1.0.9
+- [x] Opt-in sheet (every box unticked), Profile → "Your circle" switches,
+      "Keep this one to myself" on the Yours tab
+- [x] `test/circle_test.dart` — parsing from the server schema, hide-switch sync
+      (an older API's missing field never un-hides), dedupe keeps hidden, v15
+      migration re-runnable, widgets render silence when there's nothing to say
+
+### C3 — Still open
+
+- [x] On-device pass, two Android emulators, two connected accounts (13 Oct 2026,
+      local API + a scratch mock of Supabase auth): connect → accept; invitation →
+      opt-in sheet (all unticked) → Home pick "Ben has … — it's on your Wishlist";
+      search lines incl. "has a copy" and a kept-to-myself book showing nothing;
+      book page card, sheet, compact strip both ways; ask to borrow (204, repeat
+      suppressed); lend → borrower's linked Borrowed shelf → returned on both
+      ledgers; switching sharing off removes the reader from the other phone.
+      Fixed on the way: circle sheets opened under the bottom nav (now root
+      navigator); answer cache cut from 10 to 2 minutes so a revoked share leaves
+      the other screen quickly
+- [x] The in-app inbox (owner request, 14 Oct 2026): every reader-to-reader
+      push is also written to `notifications` (migration `000058`) by the
+      server on the request's own session — even with push unconfigured — from
+      one text table shared with the push (`notification_text.py`). Bell on
+      Home's header with the unread count; inbox screen with new ones
+      highlighted, tap = mark read + go where the push would have gone, Mark all
+      read, Clear all (soft). Verified on two emulators
+- [x] Search results dismiss the keyboard on touch, so opening a book no longer
+      carries it onto the book page (owner report, 14 Oct 2026)
+- [x] Catalog rows: a leading wishlist bookmark for a book on none of the
+      reader's shelves (filled once wishlisted; empty slot otherwise, so covers
+      stay aligned) — owner request, 14 Oct 2026. The Browse grid got the same
+      badge mirrored top-left of the cover (it was list-only at first: "I can't
+      find the wishlist icon"), and the bookmark is a toggle — the filled one
+      takes the book off again (soft delete, with Undo), not "kept as To read"
+- [x] Lending mirror turns a borrower's *wishlisted* entry into a borrowed
+      to-read book when the loan lands (it stayed a wish, so Home kept offering
+      to borrow it); migration `000059` repairs entries already in that state
+- [x] No ask for a book already on your shelves (any state but Wishlist, any
+      printing — owner request, 14 Oct 2026): the server sends `can_ask` with
+      every circle answer, Home's borrow card skips held books, and
+      `POST /circle/borrow-ask` refuses with 409 `already_yours`. People known
+      only for owning a copy drop out of the card for a reader who holds it
+- [x] "Requested" everywhere: each circle answer flags owners the reader has an
+      open ask with (`asked`, matched on the work), and an ask from any screen
+      re-reads every circle answer — Home card, book page, sheet and search line
+      all say so. Verified on two emulators
+- [ ] Airplane-mode check (owner testing): circle surfaces must simply disappear offline
+- [ ] The borrow-ask push itself on a real build (local API had no Firebase credentials)
+- [x] An ask to borrow is a record (14 Oct 2026, owner report: the push "took me
+      nowhere" and the request was nowhere in the app). `borrow_requests`
+      (migration `000057`), `GET /circle/borrow-asks`, decline; the lending
+      mirror closes an ask when the owner lends that book to the asker from any
+      screen; one open ask per copy, no re-ask within a day. App: "Asked to
+      borrow" above the Lending tabs with Lend it (lend sheet pre-filled and
+      linked to the asker) / Not now; the asker sees "waiting for them"; the
+      push lands on the Lending tab. Verified on two emulators end to end
+- [ ] Mockup 3b extras not built: "Kept to myself · N ›" list and "See what Anu
+      sees" preview; mockup 3c's add-sheet checkbox
+- [ ] Offline cache of circle answers (currently in-memory for 2 minutes; the
+      mockup notes proposed a day in Drift)
+- [ ] Privacy policy paragraph: connections can see what a reader chose to share
 
 ## Parking lot — v1.5 (designed or deliberately deferred)
 

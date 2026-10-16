@@ -76,6 +76,7 @@ LibraryEntry _entry({String status = 'reading', int? currentPage}) {
     finishDate: null,
     currentPage: currentPage,
     isFavorite: false,
+    circleHidden: false,
     notes: null,
   );
 }

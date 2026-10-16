@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitabi/data/db/database.dart';
 import 'package:kitabi/data/repositories/repositories.dart';
+import 'package:kitabi/features/circle/circle_models.dart';
+import 'package:kitabi/features/circle/circle_providers.dart';
 import 'package:kitabi/features/connections/connections_providers.dart';
 import 'package:kitabi/features/lending/presentation/lending_ledger_screen.dart';
 import 'package:kitabi/features/library/providers/library_providers.dart';
@@ -200,6 +202,8 @@ void main() {
           connectionsProvider.overrideWith(
             (ref) async => ConnectionsData(incoming: [], outgoing: [], accepted: []),
           ),
+          // Same for the asks to borrow above the tabs.
+          borrowAsksProvider.overrideWith((ref) async => const BorrowAsks()),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

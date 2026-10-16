@@ -559,6 +559,62 @@ img{max-width:100%;display:block}
 .thin h1,.thin h2{font-family:var(--serif);font-size:22px;font-weight:600}
 .thin p{color:var(--ink-soft);font-size:14px;line-height:1.72;max-width:480px;margin:11px auto 0}
 
+/* ---------- the app's own pages: /compare, /lending-tracker, /ml/app ----------
+   Prefixed gd* ("guide") because this stylesheet is global to every page —
+   see CLAUDE.md on the .lb collision. */
+.gdg ul{list-style:none;margin-top:8px}
+.gdg li{font-size:13px;padding:7px 0 7px 20px;border-bottom:1px solid var(--line);position:relative;line-height:1.45}
+.gdg li::before{content:"✓";position:absolute;left:0;color:var(--moss);font-weight:700}
+.gdg .btn-app{display:inline-block;margin-top:14px}
+.gdt{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
+.gdt th,.gdt td{padding:12px 15px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;line-height:1.6}
+.gdt tbody tr:last-child th,.gdt tbody tr:last-child td{border-bottom:0}
+.gdt thead th{font-family:var(--serif);font-size:16px;font-weight:600;background:var(--paper-deep)}
+.gdt thead td{background:var(--paper-deep)}
+.gdt thead th:nth-child(2){color:var(--oxblood)}
+.gdt tbody th{font-weight:600;color:var(--ink-soft);width:22%}
+.gdt tbody td:nth-child(2){background:#FFFAEB}
+@media(max-width:639px){
+  .gdt thead{display:none}
+  .gdt tr{display:block;border-bottom:1px solid var(--line);padding:4px 0}
+  .gdt tbody tr:last-child{border-bottom:0}
+  .gdt tbody th,.gdt td{display:block;width:auto;border:0;padding:6px 15px}
+  .gdt tbody th{padding-top:12px}
+  .gdt td::before{content:attr(data-l);display:block;font-size:9.5px;font-weight:700;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:2px}
+}
+.gdnote{font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.7}
+.gdnote a,.gdsrc a{color:var(--oxblood);border-bottom:1px solid rgba(126,42,51,.28)}
+.gdp p,.gdq p{font-size:14.5px;line-height:1.78;color:#4a3d2e;max-width:700px;margin-top:11px}
+.gdp p:first-of-type{margin-top:0}
+.gdq h3{font-family:var(--serif);font-size:16.5px;font-weight:600;margin-top:20px;line-height:1.35}
+.gdq h3:first-of-type{margin-top:0}
+.gdq h3+p{margin-top:6px}
+.gdsrc ul{list-style:none}
+.gdsrc li,.gdsrc p{font-size:13px;line-height:1.9;color:var(--ink-soft)}
+.gdsrc p{margin-top:8px}
+.gdl{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));list-style:none}
+.gdl>li,.gdbox,.gdcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:17px 19px}
+.gdl h2,.gdl h3{font-family:var(--serif);font-size:16.5px;font-weight:600;line-height:1.3}
+.gdl p{font-size:13.5px;line-height:1.72;color:#4a3d2e;margin-top:7px}
+/* Four cards: one column, then 2×2, then a row — never three and an orphan. */
+.gd4{grid-template-columns:1fr}
+@media(min-width:640px){.gd4{grid-template-columns:1fr 1fr}}
+@media(min-width:1000px){.gd4{grid-template-columns:repeat(4,1fr)}}
+.gdsteps{counter-reset:gd}
+.gdsteps>li{counter-increment:gd}
+.gdsteps h3::before{content:counter(gd);display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:50%;background:var(--oxblood);color:var(--paper);
+  font-family:var(--sans);font-size:12px;font-weight:700;margin-right:9px;vertical-align:2px}
+.gdcard{display:block}
+.gdcard:hover{border-color:var(--oxblood)}
+.gdcard .gdct{display:block;font-family:var(--serif);font-size:17px;font-weight:600;line-height:1.3;margin-top:8px}
+.gdcard .gdcp{display:block;font-size:13px;line-height:1.65;color:var(--ink-soft);margin-top:7px}
+/* Malayalam: tracking pulls a conjunct apart, and uppercase means nothing to it. */
+.gdml .eyebrow,.gdml .store small{letter-spacing:0;text-transform:none;font-size:12px}
+.gdml .intro,.gdml .gdl p,.gdml .gdq p{line-height:1.9}
+
 /* ---------- footer ---------- */
 .sfoot{background:var(--night);color:#B8A88C;padding:30px 0;margin-top:44px}
 .sfoot-in{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:26px}

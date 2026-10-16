@@ -89,6 +89,27 @@ async def test_mirror_creates_a_library_entry_for_the_borrower(db_sessionmaker, 
         assert entry.deleted_at is None
 
 
+async def test_a_wishlisted_book_becomes_a_borrowed_one(db_sessionmaker, user, user_b):
+    """Wishlist → ask to borrow → lend is the ordinary path now. The mirror
+    reuses the borrower's entry for the book, and a wish left as a wish kept
+    Home suggesting they borrow a book already in their hands (found on two
+    emulators, 14 Oct 2026)."""
+    lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
+    async with db_sessionmaker() as db:
+        rec_id, edition_id = await _seed_lend(db, lender, borrower, connected=True)
+        wish = LibraryEntry(user_id=borrower, edition_id=edition_id, status="wishlist")
+        db.add(wish)
+        await db.commit()
+        wish_id = wish.id
+    async with db_sessionmaker() as db:
+        await lend_mirror_service.mirror_lending(db, lender, rec_id)
+    async with db_sessionmaker() as db:
+        mirror = (await _borrowed(db, borrower))[0]
+        assert mirror.library_entry_id == wish_id  # same entry, not a second one
+        entry = await db.get(LibraryEntry, wish_id)
+        assert (entry.status, entry.ownership) == ("pending", "borrowed")
+
+
 async def test_no_mirror_without_accepted_connection(db_sessionmaker, user, user_b):
     lender, borrower = uuid.UUID(user["id"]), uuid.UUID(user_b["id"])
     async with db_sessionmaker() as db:

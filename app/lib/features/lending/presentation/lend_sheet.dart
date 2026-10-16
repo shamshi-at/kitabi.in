@@ -19,14 +19,18 @@ import 'sheet_fields.dart';
 /// lent-on, an optional due date (which drives the reminder), and a note.
 /// The "this person is on Kitabi" match rides on the cross-user work (Slice D);
 /// for now the counterparty is free text.
-Future<void> showLendSheet(
+///
+/// [initialBorrower] arrives filled in and linked — the "Lend it" on a
+/// connection's ask to borrow. Completes with true once the loan is saved.
+Future<bool?> showLendSheet(
   BuildContext context, {
   required String libraryEntryId,
   required String bookTitle,
   String? author,
   String? coverUrl,
+  LendBorrower? initialBorrower,
 }) {
-  return showModalBottomSheet<void>(
+  return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.card,
@@ -38,8 +42,18 @@ Future<void> showLendSheet(
       bookTitle: bookTitle,
       author: author,
       coverUrl: coverUrl,
+      initialBorrower: initialBorrower,
     ),
   );
+}
+
+/// A Kitabi reader the lend sheet opens already pointed at.
+class LendBorrower {
+  const LendBorrower({required this.userId, required this.name, this.username});
+
+  final String userId;
+  final String name;
+  final String? username;
 }
 
 class _LendSheet extends ConsumerStatefulWidget {
@@ -48,12 +62,14 @@ class _LendSheet extends ConsumerStatefulWidget {
     required this.bookTitle,
     this.author,
     this.coverUrl,
+    this.initialBorrower,
   });
 
   final String libraryEntryId;
   final String bookTitle;
   final String? author;
   final String? coverUrl;
+  final LendBorrower? initialBorrower;
 
   @override
   ConsumerState<_LendSheet> createState() => _LendSheetState();
@@ -66,6 +82,16 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
   DateTime _lentOn = DateTime.now();
   DateTime? _dueOn;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialBorrower;
+    if (initial != null) {
+      _borrower.text = initial.name;
+      _borrowerUserId = initial.userId;
+    }
+  }
 
   @override
   void dispose() {
@@ -117,7 +143,7 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
               payload: notificationPayload(NotificationTarget.lending, id),
             );
       }
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop(true);
     } catch (err) {
       // A throw must not brick the button (busy-flag-without-try/finally
       // pattern, ux-review 2026-07-28).
@@ -208,7 +234,14 @@ class _LendSheetState extends ConsumerState<_LendSheet> {
               controller: _borrower,
               label: l10n.lendSheetToLabel,
               hint: l10n.lendSheetToHint,
-              autofocus: true,
+              // Prefilled from an ask: the keyboard would only cover the
+              // dates the lender is about to set.
+              autofocus: widget.initialBorrower == null,
+              initialLinkedHandle: switch (widget.initialBorrower) {
+                null => null,
+                LendBorrower(:final username?) => '@$username',
+                LendBorrower(:final name) => name,
+              },
               onUserIdChanged: (id) => _borrowerUserId = id,
               onChanged: () => setState(() {}),
             ),

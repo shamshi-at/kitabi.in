@@ -34,6 +34,25 @@ void main() {
     expect(pushTapRoute({'type': 'connection_accepted'}), Routes.connections);
   });
 
+  test('a borrow ask opens the asks on the Lending tab', () {
+    // Owner report, 14 Oct 2026: it opened the book page, which never
+    // mentioned the ask — the reader arrived "nowhere". The ask waits on the
+    // Lending tab, with Lend it / Not now.
+    expect(
+      pushTapRoute({
+        'type': 'borrow_ask',
+        'work_id': 'w-1',
+        'edition_id': 'e-2',
+      }),
+      Routes.lendingLedger,
+    );
+    expect(
+      shellTabRoutes,
+      contains(Routes.lendingLedger),
+      reason: 'a tab is gone to, not pushed',
+    );
+  });
+
   test('an unknown type goes home rather than somewhere unrelated', () {
     // The bug in one line: an unhandled type must not inherit another
     // feature's screen just because it was the last branch written.
