@@ -592,6 +592,7 @@ class ImportRowOut(BaseModel):
     review: str | None = None
     status: str | None = None
     date_read: str | None = None
+    date_started: str | None = None
     tags: list[str] = []
     # The catalog work this row matched, if any — the app adds this edition to
     # the library on confirm; unmatched rows can be resolved by ISBN then.
@@ -599,7 +600,7 @@ class ImportRowOut(BaseModel):
 
 
 class ImportPreviewOut(BaseModel):
-    format: str  # 'goodreads' | 'generic'
+    format: str  # 'goodreads' | 'libib' | 'librarything' | 'generic'
     total: int
     matched: int
     rows: list[ImportRowOut]

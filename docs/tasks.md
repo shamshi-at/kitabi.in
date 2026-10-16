@@ -625,6 +625,14 @@ Sources of truth: [feature-map.md](../feature-map.md) (product),
       unit-tested
 - [x] Generic CSV / Google Sheets export mapping (title column minimum, fuzzy column match) —
       same `parse_csv`, header-alias matching for title/author/isbn/rating/review/status
+- [x] Read a Libib or LibraryThing export (16 Oct 2026) — `detect_format` reads the header
+      row and each known export is read by its own column names: Libib's `creators`,
+      `ean_isbn13`/`upc_isbn10`, `began`/`completed` and four statuses (Not begun → pending,
+      In progress → reading, Completed → read, Abandoned → stopped), skipping its non-book
+      items; LibraryThing's surname-first `Primary Author`, bracketed ISBNs and dates, status
+      from Date Read/Date Started, comma- or tab-delimited. Notes/comments never become the
+      review. Half stars round up. Fixtures carry real export headers
+      (`api/tests/fixtures/imports/README.md`)
 - [x] Import preview UI (matched rows table) + one-tap import — S2. `POST /import/preview`
       parses + matches; app screen lets you **pick a CSV file** (`file_selector`) or paste it,
       shows matched/unmatched rows, and imports the matched ones into the library
@@ -1304,7 +1312,14 @@ out of the sitemap until a work actually carries a genre.
 - [x] JSON-LD per page type; `AggregateRating` **only when a real rating exists** — never
       zeroed, never invented
 - [x] Pagination: unique title + self-canonical per page; never canonical page 2 → page 1
-- [ ] `hreflang` scaffolding for a future `/ml/`, so it isn't a retrofit
+- [x] **Pages for the searches that come before the name** (16 Oct 2026) — `/app` was the
+      only page about the app, its H1 the brand. Now `/compare` and
+      `/compare/{goodreads,libib,librarything}` (every claim about another app read off that
+      app's own pages, with a Sources list and the date it was read), `/lending-tracker`, and
+      `/ml/app` in Malayalam. Content in `functions/_lib/guides.js` — its header has the
+      rules; `tests/run.py` keeps the sitemap and the hreflang pair in step
+- [ ] `hreflang` scaffolding for a future `/ml/`, so it isn't a retrofit — started:
+      `/app` ↔ `/ml/app` are a reciprocal pair (16 Oct 2026)
 - [ ] Search Console + Bing Webmaster verified; Lighthouse CI failing the build on
       LCP > 1.2 s or a document-size regression
 

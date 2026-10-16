@@ -155,9 +155,48 @@
        site's front door, and the two are different pages with different jobs. -->
   <url>
     <loc>https://kitabi.in/app</loc>
-    <lastmod>2026-08-31</lastmod>
+    <lastmod>2026-10-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
+  </url>
+
+  <!-- The app's own pages (functions/_lib/guides.js). tests/run.py fails if a
+       comparison is in guides.js and not here, or here and not there. -->
+  <url>
+    <loc>https://kitabi.in/ml/app</loc>
+    <lastmod>2026-10-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kitabi.in/lending-tracker</loc>
+    <lastmod>2026-10-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kitabi.in/compare</loc>
+    <lastmod>2026-10-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://kitabi.in/compare/goodreads</loc>
+    <lastmod>2026-10-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://kitabi.in/compare/libib</loc>
+    <lastmod>2026-10-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://kitabi.in/compare/librarything</loc>
+    <lastmod>2026-10-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 
   <!-- Store-required pages. Extensionless: the .html forms 308 here. -->

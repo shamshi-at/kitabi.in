@@ -55,6 +55,8 @@ MODULES = [
     "lists.js",
     "pages/more.js",
     "pages/recap.js",
+    "guides.js",
+    "pages/guides.js",
     # Last: it imports from every renderer above. Included so the merge 301 is
     # covered — servePage's cache and fetch are stubbable (a non-GET request
     # skips `cached` entirely), and a redirect nothing tests is a redirect that
@@ -312,6 +314,49 @@ def check_sitemap() -> int:
         print(f"\n{len(failures)} sitemap check(s) failed")
         return 1
     print(f"all {len(lists)} editorial lists are in the static sitemap")
+    return check_app_pages()
+
+
+# The app's own pages that are not comparisons — fixed routes, so listed here.
+APP_PAGES = ["/compare", "/lending-tracker", "/ml/app"]
+
+
+def check_app_pages() -> int:
+    """The app pages are in the sitemap, and /app and /ml/app name each other.
+
+    Same two-direction rule as the lists: a comparison written in guides.js
+    and left out of sitemap.xml is a page nobody is told about, and one left
+    in sitemap.xml after it is deleted is a 404 Search Console reports. The
+    hreflang half is here because the pair lives in two files that are edited
+    separately (app.html by hand, /ml/app by its renderer), and Google drops
+    the annotation without a word if it isn't reciprocal.
+    """
+    guides = (LIB / "guides.js").read_text()
+    block = guides[guides.index("export const COMPARISONS") : guides.index("export const COMPARISON_BY_SLUG")]
+    slugs = set(re.findall(r"^    slug: '([a-z0-9-]+)',$", block, re.MULTILINE))
+    sitemap = (ROOT / "sitemap.xml").read_text()
+    locs = set(re.findall(r"<loc>https://kitabi\.in/compare/([^<]+)</loc>", sitemap))
+    failures = []
+    if not slugs:
+        failures.append("parsed no comparisons out of guides.js — this check would pass vacuously")
+    for slug in sorted(slugs - locs):
+        failures.append(f"/compare/{slug} is in guides.js but not in sitemap.xml")
+    for slug in sorted(locs - slugs):
+        failures.append(f"sitemap.xml lists /compare/{slug}, which guides.js does not have (a 404)")
+    for path in APP_PAGES:
+        if f"<loc>https://kitabi.in{path}</loc>" not in sitemap:
+            failures.append(f"{path} is not in sitemap.xml")
+    app = (ROOT / "app.html").read_text()
+    for lang, path in (("en", "/app"), ("ml", "/ml/app"), ("x-default", "/app")):
+        tag = f'<link rel="alternate" hreflang="{lang}" href="https://kitabi.in{path}">'
+        if tag not in app:
+            failures.append(f"app.html is missing {tag} — /ml/app names it, so it must name /ml/app")
+    for failure in failures:
+        print(f"  FAIL  {failure}")
+    if failures:
+        print(f"\n{len(failures)} app-page check(s) failed")
+        return 1
+    print(f"all {len(slugs)} comparisons and {len(APP_PAGES)} app pages are in the static sitemap")
     return 0
 
 

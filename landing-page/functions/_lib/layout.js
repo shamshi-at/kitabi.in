@@ -63,7 +63,9 @@ const FOOTER = html`
       </div>
       <div>
         <h2>${SITE}</h2>
-        <a href="/app">The app</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a>
+        <a href="/app">The app</a><a href="/lending-tracker">Book lending tracker</a>
+        <a href="/compare">Compare library apps</a><a href="/ml/app" lang="ml" hreflang="ml">മലയാളത്തിൽ</a>
+        <a href="/privacy">Privacy</a><a href="/terms">Terms</a>
       </div>
     </div>
     <div class="wrap"><div class="legal">© 2026 ${SITE}. Book data contributed by readers.</div></div>
